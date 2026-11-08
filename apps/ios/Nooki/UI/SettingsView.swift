@@ -23,6 +23,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
+    @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
     @AppStorage(ComposerStyle.key) private var composerStyle = ComposerStyle.standard
     @State private var confirmingErase = false
     @State private var demoBusy = false
@@ -113,7 +114,8 @@ struct SettingsView: View {
                              footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
                                  + "card shows what the brain has her doing and why: her state, needs and the last thing she "
                                  + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
-                                 + "both on this phone, whatever the test gave your pair. Composer style is how a new note looks.") {
+                                 + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
+                                 + "them baked, from the next launch. Composer style is how a new note looks.") {
                     ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
                     ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
                     ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
@@ -137,6 +139,11 @@ struct SettingsView: View {
                         Row("Play all animations", symbol: "play.fill", tint: UsTint.sage.color) { RowChevron() }
                     }
                     .buttonStyle(PressScaleStyle())
+                    PickerRow("Room shell", symbol: "cube.fill", tint: UsTint.honey.color, selection: roomShellOverride) {
+                        Text("Follow the test").tag(RoomShell?.none)
+                        Text("Live").tag(Optional(RoomShell.live))
+                        Text("Baked").tag(Optional(RoomShell.baked))
+                    }
                 }
             }
 
@@ -188,6 +195,13 @@ struct SettingsView: View {
         if !paired, hasPartner { return "Only without a partner: this account already has one." }
         return "The dev server plays a partner, so you can try Nooki alone: it answers your notes, reacts to "
             + "your photos, cares for \(CatProfile.name()) and opens the daily gift."
+    }
+
+    /// The Labs choice of room shell on this phone; "Follow the test" clears it.
+    private var roomShellOverride: Binding<RoomShell?> {
+        Binding(
+            get: { RoomShell(remoteVariant: roomShellLabs) },
+            set: { roomShellLabs = $0?.remoteVariant ?? "" })
     }
 
     /// The Labs choice of rooms on this phone; "Follow the test" clears it.

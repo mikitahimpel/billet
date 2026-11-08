@@ -61,13 +61,16 @@ extension Entity {
         _ material: some Material,
         at position: SIMD3<Float>,
         scale: SIMD3<Float> = .one,
-        rotation: simd_quatf = .identity
+        rotation: simd_quatf = .identity,
+        shape: ShellPart.Shape? = nil
     ) -> ModelEntity {
+        if skipsForShell(material) { return ModelEntity() }
         let e = ModelEntity(mesh: mesh, materials: [material])
         e.position = position
         e.scale = scale
         e.orientation = rotation
         addChild(e)
+        tagForShell(e, material, shape)
         return e
     }
 
@@ -76,8 +79,10 @@ extension Entity {
         _ w: Float, _ h: Float, _ d: Float, r: Float = 0.01,
         _ material: some Material, at position: SIMD3<Float>, rotation: simd_quatf = .identity
     ) -> ModelEntity {
+        if skipsForShell(material) { return ModelEntity() }
         let radius = min(r, min(w, min(h, d)) / 2 - 0.0005)
-        return model(Meshes.box(w, h, d, cornerRadius: max(radius, 0)), material, at: position, rotation: rotation)
+        return model(Meshes.box(w, h, d, cornerRadius: max(radius, 0)), material, at: position, rotation: rotation,
+                     shape: .box(size: [w, h, d], radius: max(radius, 0)))
     }
 
     @discardableResult
@@ -85,7 +90,7 @@ extension Entity {
         _ radius: Float, _ material: some Material, at position: SIMD3<Float>,
         scale: SIMD3<Float> = .one, rotation: simd_quatf = .identity
     ) -> ModelEntity {
-        model(Meshes.sphere, material, at: position, scale: scale * radius, rotation: rotation)
+        model(Meshes.sphere, material, at: position, scale: scale * radius, rotation: rotation, shape: .sphere)
     }
 
     @discardableResult
@@ -93,7 +98,8 @@ extension Entity {
         _ height: Float, _ radius: Float, _ material: some Material, at position: SIMD3<Float>,
         scale: SIMD3<Float> = .one, rotation: simd_quatf = .identity
     ) -> ModelEntity {
-        model(Meshes.cylinder, material, at: position, scale: scale * [radius, height, radius], rotation: rotation)
+        model(Meshes.cylinder, material, at: position, scale: scale * [radius, height, radius], rotation: rotation,
+              shape: .cylinder)
     }
 
     @discardableResult

@@ -95,6 +95,7 @@ enum Props {
         }
         let hand = { (length: Float, width: Float, x: Float) -> Entity in
             let pivot = g.group(at: [x, 0, 0])
+            pivot.components.set(ShellLive())
             pivot.box(0.002, length, width, r: 0.0008, Clay.matte(0x5B3A28), at: [0, length / 2 - 0.004, 0])
             return pivot
         }
