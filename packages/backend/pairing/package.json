@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./kept-purchases": "./src/kept-purchases.ts",
     "./pair-moods": "./src/pair-moods.ts",
     "./pairing-error": "./src/pairing-error.ts",
     "./pairing-observer": "./src/pairing-observer.ts",

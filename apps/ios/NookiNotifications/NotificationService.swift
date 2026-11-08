@@ -9,6 +9,7 @@ import Wire
 final class NotificationService: UNNotificationServiceExtension {
     override func didReceive(_ request: UNNotificationRequest,
                              withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
+        PushReceipt.stamp()
         if let drawing = LatestDrawing(push: request.content.userInfo), drawing.saveIfNewer() {
             WidgetCenter.shared.reloadTimelines(ofKind: LatestDrawing.widgetKind)
         }

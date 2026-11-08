@@ -84,6 +84,25 @@ describe("pairing routes", () => {
 
   const unpair = (name: string) => handler(request("/v1/pair", name, { method: "DELETE" }));
 
+  it("reports and blocks the partner, and keeps them from pairing again", async () => {
+    const { code } = await invite("cora");
+    expect((await claim("dan", code)).status).toBe(200);
+
+    const report = (name: string, body: unknown) =>
+      handler(request("/v1/pair/report", name, { body: JSON.stringify(body) }));
+    expect((await report("dan", { reason: "spam", details: "again" })).status).toBe(204);
+    expect((await report("dan", { reason: "bogus" })).status).toBe(400);
+    expect((await handler(request("/v1/pair", "dan", { method: "GET" }))).status).toBe(200);
+
+    expect((await handler(request("/v1/pair/block", "dan"))).status).toBe(204);
+    expect((await handler(request("/v1/pair/block", "dan"))).status).toBe(404);
+    expect((await report("dan", { reason: "spam" })).status).toBe(404);
+    expect((await handler(request("/v1/pair", "cora", { method: "GET" }))).status).toBe(404);
+
+    const again = await invite("cora");
+    expect((await claim("dan", again.code)).status).toBe(404);
+  });
+
   it("runs the whole flow: invite, claim, unpair, invite again", async () => {
     const { response, code } = await invite("ana");
     expect(response.status).toBe(200);
@@ -200,6 +219,11 @@ describe("pairing routes without storage", () => {
     pairedAt: () => down,
     findMembers: () => down,
     unpair: () => down,
+    block: () => down,
+    keep: () => down,
+    kept: () => down,
+    clearKept: () => down,
+    saveReport: () => down,
   });
   afterAll(() => app.dispose());
 
