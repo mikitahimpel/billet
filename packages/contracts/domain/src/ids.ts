@@ -22,6 +22,18 @@ export const InviteCode = Schema.String.check(Schema.isPattern(/^[2-9A-HJ-NP-Z]{
 );
 export type InviteCode = typeof InviteCode.Type;
 
+/** 26 symbols of the invite alphabet: 130 random bits, too many to guess or enumerate. */
+export const reviewCodeLength = 26;
+
+/**
+ * The App Review pair's code (docs/app-review.md): reusable while it is live, set from the admin
+ * only, and each claim pairs the claimer with the reserved review partner.
+ */
+export const ReviewCode = Schema.String.check(Schema.isPattern(/^[2-9A-HJ-NP-Z]{26}$/)).pipe(
+  Schema.brand("ReviewCode"),
+);
+export type ReviewCode = typeof ReviewCode.Type;
+
 /**
  * A UUID the client makes once per note and repeats on every retry of the same send. The room
  * remembers it with the note, for as long as it keeps the note.

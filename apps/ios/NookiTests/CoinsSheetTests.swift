@@ -5,16 +5,11 @@ import Wire
 @testable import Billet
 
 @Suite struct CoinsSheetTests {
-    @Test func aMockBuildSellsPacksWhateverTheFlagSays() {
-        #expect(CoinPacksModel.sells(RemoteFlags(), mockStore: true))
-        #expect(CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "off"]), mockStore: true))
-    }
-
-    @Test func aStoreKitBuildSellsPacksOnlyWhenTheServerDoes() {
-        #expect(!CoinPacksModel.sells(RemoteFlags(), mockStore: false))
-        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "off"]), mockStore: false))
-        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "maybe"]), mockStore: false))
-        #expect(CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "on"]), mockStore: false))
+    @Test func everyBuildSellsPacksOnlyWhenTheServerDoes() {
+        #expect(!CoinPacksModel.sells(RemoteFlags()))
+        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "off"])))
+        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "maybe"])))
+        #expect(CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "on"])))
     }
 
     @Test @MainActor func aBoughtPackReadsTheWalletAgain() async throws {

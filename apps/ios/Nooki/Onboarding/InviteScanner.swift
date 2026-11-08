@@ -12,7 +12,8 @@ enum InviteInput {
         }
         let code = OnboardingView.code(from: trimmed)
         let bare = InviteCode.normalized(trimmed).filter { !$0.isWhitespace && $0 != "-" }
-        return code.count == InviteCode.length && bare.count == InviteCode.length ? code : nil
+        let lengths = [InviteCode.length, InviteCode.reviewLength]
+        return lengths.contains(bare.count) && code.count == bare.count ? code : nil
     }
 }
 

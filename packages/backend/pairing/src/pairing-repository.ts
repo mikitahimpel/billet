@@ -1,6 +1,6 @@
 import { Context, type Effect, type Option, Schema } from "effect";
 import { TokenHash } from "@billet/backend-auth/auth-repository";
-import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
+import { EpochMillis, NoteId, UserId } from "@billet/contracts-domain/ids";
 import { ReportReason } from "@billet/contracts-http-api/safety";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
@@ -59,6 +59,7 @@ export const StoredPartnerReport = Schema.Struct({
   pairId: PairId,
   reason: ReportReason,
   details: Schema.NullOr(Schema.String),
+  noteId: Schema.NullOr(NoteId),
   createdAt: EpochMillis,
 });
 
@@ -69,6 +70,8 @@ export interface PartnerReport {
   readonly pairId: PairId;
   readonly reason: ReportReason;
   readonly details: string | undefined;
+  /** The note or photo the report is about, when it is about one. */
+  readonly noteId: NoteId | undefined;
   readonly at: EpochMillis;
 }
 

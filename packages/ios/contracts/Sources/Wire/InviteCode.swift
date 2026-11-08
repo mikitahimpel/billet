@@ -6,6 +6,11 @@ public struct InviteCode: Codable, Hashable, Sendable {
   /// The contract's `inviteCodeAlphabet` and `inviteCodeLength`; a test in contracts keeps them so.
   public static let alphabet = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
   public static let length = 10
+  /// The contract's `reviewCodeLength`: the App Review pair's code, typed in the same field.
+  public static let reviewLength = 26
+
+  /// Whether this is the App Review pair's longer code, claimed on its own route.
+  public var isReview: Bool { rawValue.count == Self.reviewLength }
 
   public init(_ rawValue: String) {
     self.rawValue = rawValue

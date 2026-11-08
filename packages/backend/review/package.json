@@ -1,0 +1,38 @@
+{
+  "name": "@billet/backend-review",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./review-error": "./src/review-error.ts",
+    "./review-repository": "./src/review-repository.ts",
+    "./review-routes": "./src/review-routes.ts",
+    "./review-service": "./src/review-service.ts",
+    "./test/in-memory-review-repository": "./test/in-memory-review-repository.ts",
+    "./test/review-repository-contract": "./test/review-repository-contract.ts"
+  },
+  "scripts": {
+    "lint": "oxlint .",
+    "format:check": "oxfmt --check .",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@billet/backend-auth": "workspace:*",
+    "@billet/backend-demo-partner": "workspace:*",
+    "@billet/backend-observability": "workspace:*",
+    "@billet/backend-pairing": "workspace:*",
+    "@billet/contracts-domain": "workspace:*",
+    "@billet/contracts-http-api": "workspace:*",
+    "effect": "catalog:"
+  },
+  "devDependencies": {
+    "@billet/config-typescript": "workspace:*",
+    "@cloudflare/workers-types": "catalog:",
+    "oxfmt": "catalog:",
+    "oxlint": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}
