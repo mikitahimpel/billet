@@ -91,6 +91,9 @@ public enum ShopMachine: Machine {
     public var moment: Moment?
     /// The Coins sheet, open when set.
     public var ask: CoinsAsk?
+    /// The Coins sheet for a buy the partner outspent: it opens once the room is read again, on
+    /// the balance the server has now.
+    public var askAfterRead: CoinsAsk?
     public var fetch = Fetch.idle
     public var inkLoad = InkLoad.idle
     public var gift = Gift.idle
@@ -298,7 +301,7 @@ public enum ShopMachine: Machine {
       switch error {
       case .notEnoughCoins(let needed, let have):
         // The partner spent the coins first: offer to top up and finish, rather than only refusing.
-        shop.ask = CoinsAsk(missing: needed - have, retry: ShopOrder(purchase))
+        shop.askAfterRead = CoinsAsk(missing: needed - have, retry: ShopOrder(purchase))
       case .alreadyOwned, .giftTaken, .bonusTaken, .collectionIncomplete, .unavailable, .signedOut:
         if purchase.kind != .treat { shop.moment = .refused(purchase) }
       }
@@ -434,8 +437,13 @@ public enum ShopMachine: Machine {
 }
 
 extension ShopMachine.PairShop {
-  /// A gift or bonus refused waits for the room to be read again before the card decides.
+  /// A gift or bonus refused, or a buy outspent, waits for the room to be read again before the
+  /// card or the Coins sheet shows it.
   fileprivate mutating func settleChecks(request: Int) {
+    if let waiting = askAfterRead {
+      ask = waiting
+      askAfterRead = nil
+    }
     if case .checking(let day, request) = gift {
       gift = giftDay == day ? .taken : .failed
     }

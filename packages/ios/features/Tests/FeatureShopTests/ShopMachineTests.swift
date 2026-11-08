@@ -172,9 +172,13 @@ private func shop(_ state: M.State) -> M.PairShop {
       state, .orderFailed(lampID, .notEnoughCoins(needed: 140, have: 20)))
     #expect(shop(state).pending.isEmpty)
     #expect(shop(state).moment == nil)
+    #expect(shop(state).ask == nil, "the sheet waits for the room's balance")
+    #expect(outputs == [.fetch(request: 2)], "the room is read again")
+
+    (state, _) = M.transition(state, .fetched(room(20), request: 2))
+    #expect(shop(state).coins == 20)
     #expect(shop(state).ask?.missing == 120)
     #expect(shop(state).ask?.retry == lamp)
-    #expect(outputs == [.fetch(request: 2)], "the room is read again")
   }
 
   @Test func aRefusedOrderIsTakenBackAndSaidSo() {

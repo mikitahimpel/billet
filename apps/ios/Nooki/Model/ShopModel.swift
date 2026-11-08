@@ -27,6 +27,8 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     @ObservationIgnored var undoWindow: Duration = .seconds(Purchase.undoWindow)
     @ObservationIgnored var retryDelay: Duration = .seconds(2)
     @ObservationIgnored private var store: ShopStore!
+    /// Rooms the wallet file has let go of, so leaving one can wait for it.
+    private var left = 0
 
     init(wallet: WalletStore, couple: CoupleStore, care: CatCare) {
         self.wallet = wallet
@@ -38,8 +40,15 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
                 undoWindow: { [unowned self] in self.undoWindow },
                 retryDelay: { [unowned self] in self.retryDelay },
                 attempts: Self.attempts,
-                mirror: { wallet.mirror(coins: $0.balance, owned: $0.owned, wishlist: $0.wishlist) },
-                mirrorBalance: { wallet.mirror(balance: $0) },
+                // Outputs finish in any order: an answer that lands after the pair ended stays out of the wallet.
+                mirror: { [weak self] in
+                    guard self?.isSynced == true else { return }
+                    wallet.mirror(coins: $0.balance, owned: $0.owned, wishlist: $0.wishlist)
+                },
+                mirrorBalance: { [weak self] in
+                    guard self?.isSynced == true else { return }
+                    wallet.mirror(balance: $0)
+                },
                 mirrorWish: { itemID, wished in
                     wallet.update {
                         if wished {
@@ -50,7 +59,10 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
                     }
                 },
                 markGifted: { added in wallet.update { $0.gifted.formUnion(added) } },
-                leaveWallet: { wallet.leaveSync() },
+                leaveWallet: { [weak self] in
+                    wallet.leaveSync()
+                    self?.left += 1
+                },
                 catFed: { care.fed() },
                 catNoticed: { care.notice() }))
     }
@@ -261,8 +273,14 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     func connect(_ sync: ShopSync?) async {
         self.sync = sync
         guard sync != nil else {
+            guard isSynced else {
+                // No room followed this launch, but the file may still hold the last pair's.
+                if wallet.wallet.isSynced { wallet.leaveSync() }
+                return
+            }
+            let leaving = left
             store.send(.disconnected)
-            return await until { !self.wallet.wallet.isSynced }
+            return await until { self.left != leaving }
         }
         let last = wallet.wallet
         store.send(.connected(last: ShopMachine.Mirror(balance: last.coins, owned: last.owned, wishlist: last.wishlist)))
