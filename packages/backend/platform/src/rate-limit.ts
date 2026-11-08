@@ -19,6 +19,8 @@ export const windowMillis = 60_000;
 export const limits = {
   auth: 30,
   pairing: 20,
+  // A review code is long enough not to be guessed; this keeps anyone from trying all the same.
+  review: 5,
   media: 60,
   events: 60,
   purchases: 30,
@@ -31,6 +33,7 @@ export type LimitedGroup = keyof typeof limits;
 
 export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname.startsWith("/v1/auth/")) return "auth";
+  if (pathname === "/v1/review/claim") return "review";
   if (pathname === "/v1/invites" || pathname === "/v1/invites/claim" || pathname === "/v1/pair") {
     return "pairing";
   }

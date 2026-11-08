@@ -24,7 +24,10 @@ Swift choices in one PR, so the app never ships a variant it cannot show.
 
 ## App: screens and settings that ship
 
-- **Settings > Labs** (`SettingsView.swift`) is in every build; hiding it and account deletion come with #502. It holds:
+- **Settings > Labs and Testing** (`SettingsView.swift`) are compiled into Debug, and into a
+  Release build only with `BILLET_LABS=YES` (`project.yml`). The TestFlight workflow never sets
+  it, so the uploaded binary, which App Review and the App Store get, has neither, and
+  `check-archive.sh` fails when `BilletLabs` is not `NO`. Labs holds:
   - *Cat brain* and *Cat brain card* (owner: the brain is the cat's behaviour, the card is a
     debug view of it, so the card should not ship);
   - *Show all hints now* (a testing tool: remove from release or hide behind `#if DEBUG`);
@@ -50,9 +53,10 @@ for the APNs sandbox in Debug and for production otherwise (`DrawingSync.swift`)
 - **`-perf.script` launch argument** (`NookiPerf.swift`, `ScenePerf`): starts a frame recorder
   and a script that drives the room. It needs a launch argument, so users and reviewers never
   trigger it, but it is test code in the binary. **`-perf.script` must be compiled out of Release** (#515: it touches the app and `packages/ios/pet`, and the perf CI measures Release builds, so it is not a small change).
-- **Mock store.** `BILLET_PAYMENTS` defaults to `mock`: the mock store credits coins without
-  money and shows a Labs payments view. **A release build must be made with
-  `BILLET_PAYMENTS=storekit`**, or the shop sells fake coins. Add this to the upload check (#37).
+- **Mock store.** `BILLET_PAYMENTS` defaults to `mock` for local builds: the mock store credits
+  coins without money on dev, and like StoreKit it sells only while `payments` is `on`. The
+  TestFlight workflow always builds with `BILLET_PAYMENTS=storekit`, and `check-archive.sh` fails
+  any other store.
 - **`XCTestConfigurationFilePath`** in `NookiApp.swift` only detects a test host; no behaviour
   for users.
 
@@ -76,7 +80,8 @@ test path (demo rooms) needs a migration and a deploy that this docs PR must not
 
 Fail the upload when any of these is true:
 
-1. The build was not made with `BILLET_PAYMENTS=storekit`.
-2. The Labs section or `NookiPerf` is still compiled into Release.
+1. The build was not made with `BILLET_PAYMENTS=storekit` (checked by `check-archive.sh`).
+2. The Labs section (checked by `check-archive.sh`) or `NookiPerf` (#515) is still compiled into
+   Release.
 3. `registry` has a flag whose status is `running` or whose `default` differs from the table
    above.

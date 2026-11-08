@@ -225,6 +225,8 @@ export const partnerReports = sqliteTable(
     pairId: text("pair_id").notNull(),
     reason: text("reason").notNull(),
     details: text("details"),
+    // The note or photo reported, if the report is about one. Not a key: the note may be gone.
+    noteId: text("note_id"),
     createdAt: integer("created_at").notNull(),
   },
   (table) => [index("partner_reports_reported_id_index").on(table.reportedId)],
@@ -515,3 +517,37 @@ export const shopItemChanges = sqliteTable(
   },
   (table) => [index("shop_item_changes_item_index").on(table.itemId, table.id)],
 );
+
+// The App Review partner (docs/app-review.md): one ordinary user the team owns, which App Review
+// pairs with through a review code. Deleting the user takes the row with it.
+export const reviewPartners = sqliteTable("review_partners", {
+  userId: text("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  createdAt: integer("created_at").notNull(),
+});
+
+// Review codes, only as their SHA-256, with the last four symbols for the panel. Reusable until
+// `expires_at` or until revoked; a new code revokes every earlier one.
+export const reviewCodes = sqliteTable("review_codes", {
+  codeHash: text("code_hash").primaryKey(),
+  partnerId: text("partner_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  lastFour: text("last_four").notNull(),
+  createdAt: integer("created_at").notNull(),
+  createdBy: text("created_by").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  revokedAt: integer("revoked_at"),
+  claims: integer("claims").notNull().default(0),
+  lastClaimedAt: integer("last_claimed_at"),
+});
+
+// Every review action taken in the admin panel, newest last, with the Cloudflare Access email.
+export const reviewChanges = sqliteTable("review_changes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  at: integer("at").notNull(),
+  by: text("by").notNull(),
+  action: text("action").notNull(),
+  lastFour: text("last_four"),
+});

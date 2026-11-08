@@ -1,7 +1,11 @@
 # App Review: the reviewer's pair
 
-**Status: needs the owner's OK before the first submission.** The backend side does not exist yet;
-it is tracked in the follow-up issue linked from the PR that adds this page.
+**Status: built; needs the owner's OK and a code on prod before the first submission.** The
+backend is `packages/backend/review` (`ReviewService`, `POST /v1/review/claim`), the controls are
+the admin's **App Review** page ([admin.md](admin.md#app-review-pair)), and the app's invite field
+takes the 26-symbol code and sends it to the review route. Not built: a seed of notes and photos
+for the partner, dropping the reviewer's push tokens on a wipe, and leaving the review pair out of
+experiment assignment (it is already out of the funnel).
 
 App Review guideline 2.1 needs the reviewer to use the whole app. Billet needs two paired
 accounts, and a reviewer has one device and no partner. The answer is a **review invite code**: a
@@ -21,10 +25,11 @@ Sign-in is anonymous (a key in the Keychain, no login), so there are no credenti
    partner and sees a room with a cat, notes and photos already in it.
 4. Draw and send a note, add a photo, pet the cat. The review partner answers (see below).
 
-## What the backend needs
+## What the backend does
 
-None of this is built. Each piece is a plain addition to an existing context, with no special
-case for the reviewer inside the normal sign-in and pairing rules.
+Each piece is a plain addition, with no special case for the reviewer inside the normal sign-in
+and pairing rules: a claim makes an ordinary invite for the partner and claims it for the
+reviewer.
 
 - **The review partner.** One ordinary user that we create and own, on prod only, from a seed
   script run by the owner (never by an agent). It has a name, a seeded cat state, a handful of
@@ -59,8 +64,9 @@ case for the reviewer inside the normal sign-in and pairing rules.
 
 ## Before each submission
 
-1. Run the seed (owner) and create a review code that expires after the expected review window
-   (a week is enough; extend it in the admin if review runs long).
+1. In the admin's **App Review** page on prod, make a new code (owner) that expires after the
+   expected review window (a week is enough; make a new one if review runs long). The first code
+   opens the review partner.
 2. Paste the code into the App Review notes below. Put nothing else secret in them.
 3. Claim it once on a real device from a fresh install to check the room, then **wipe the pair**
    so the reviewer starts clean.

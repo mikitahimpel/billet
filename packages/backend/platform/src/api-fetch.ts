@@ -47,6 +47,8 @@ import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { PaymentsConfig, settingsForStage } from "@billet/backend-payments/payments-config";
 import { PaymentsRoutes } from "@billet/backend-payments/payments-routes";
 import { PaymentsService } from "@billet/backend-payments/payments-service";
+import { ReviewRoutes } from "@billet/backend-review/review-routes";
+import { ReviewService } from "@billet/backend-review/review-service";
 import { TitleCache } from "@billet/backend-titles/title-cache";
 import { TitleCatalog } from "@billet/backend-titles/title-catalog";
 import { TitlesRoutes } from "@billet/backend-titles/titles-routes";
@@ -75,6 +77,7 @@ import { PairMoodsLive } from "./pair-moods-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
+import { ReviewRepositoryLive } from "./review-repository-live.ts";
 import { PaymentsRepositoryLive } from "./payments-repository-live.ts";
 import { PaymentsSwitchLive } from "./payments-switch-live.ts";
 import { PairWalletLive } from "./pair-wallet-live.ts";
@@ -103,6 +106,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     settings.devTools ? DemoPartnerRoutes : Layer.empty,
     AccountRoutes,
     PairingRoutes,
+    ReviewRoutes,
     NotesRoutes,
     ActivityRoutes,
     CatRoutes,
@@ -132,6 +136,10 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
           Layer.provide(
             Layer.mergeAll(pairing, AccountDeletion.layer, DemoBotsLive(env.PAIR_ROOM)),
           ),
+        ),
+        // The App Review pair, on every stage: its partner's bot is keyed on the one review user.
+        ReviewService.layer.pipe(
+          Layer.provide(Layer.mergeAll(pairing, DemoBotsLive(env.PAIR_ROOM))),
         ),
         NotesService.layer,
         ActivityService.layer,
@@ -172,6 +180,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         AccountRepositoryLive(env.DB),
         AccountNoticesLive(env.DB),
         DemoPartnerRepositoryLive(env.DB),
+        ReviewRepositoryLive(env.DB),
         AppleTokenRevokerLive(signInWithAppleKeyOf(env)),
         PairingRepositoryLive(env.DB),
         PaymentsRepositoryLive(env.DB),

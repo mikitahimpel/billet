@@ -10,6 +10,7 @@ import {
   pairEvents,
   pairFlags,
   pairMembers,
+  partnerReports,
   purchases,
   coinLedger,
   users,
@@ -141,6 +142,13 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
           accounts: total?.accounts ?? 0,
         })),
       ),
+      reports: (limit) =>
+        guarded(
+          Effect.all([
+            db.select().from(partnerReports).orderBy(desc(partnerReports.createdAt)).limit(limit),
+            db.select({ total: count() }).from(partnerReports),
+          ]),
+        ).pipe(Effect.map(([reports, [row]]) => ({ reports, total: row?.total ?? 0 }))),
       pair: (pairId) =>
         guarded(
           db
