@@ -21,11 +21,13 @@ public struct ErrorLine: View {
 extension View {
   /// The error state of a field: a tinted fill and a border in `Ink.destructive`.
   public func errorField(_ failed: Bool) -> some View {
-    background(failed ? Ink.destructive.opacity(0.12) : .clear, in: .rect(cornerRadius: Radius.card))
-      .overlay {
-        RoundedRectangle(cornerRadius: Radius.card)
-          .strokeBorder(failed ? Ink.destructive : .clear, lineWidth: 1.5)
-      }
+    background(
+      failed ? Ink.destructive.opacity(0.12) : .clear, in: .rect(cornerRadius: Radius.card)
+    )
+    .overlay {
+      RoundedRectangle(cornerRadius: Radius.card)
+        .strokeBorder(failed ? Ink.destructive : .clear, lineWidth: 1.5)
+    }
   }
 }
 
