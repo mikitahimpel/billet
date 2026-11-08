@@ -30,6 +30,8 @@ final class ServerSession {
     private(set) var whoKnows: WhoKnowsModel
     /// The pair's Draw & guess riddles; `unpaired` until this account has a partner.
     private(set) var drawGuess: DrawGuessModel
+    /// What the couple did for the cat, on its way to the pair's journal.
+    @ObservationIgnored let catEvents: CatEventOutbox
     @ObservationIgnored private var inboxLink: InboxLink?
     @ObservationIgnored private let photoReceiving = PhotoReceiving()
     /// What the room socket pages when a photo arrives; set each time the socket is followed.
@@ -52,6 +54,7 @@ final class ServerSession {
         self.backend = backend
         signIn = AnonymousSignInModel(api: backend.api, keys: backend.keys, accounts: backend.accounts)
         pairing = PairingModel(api: backend.api)
+        catEvents = CatEventOutbox(client: backend.catEvents)
         let saved = try? backend.accounts.load()
         hadSavedAccount = saved != nil
         isPaired = saved?.record.isPaired ?? false
@@ -92,7 +95,6 @@ final class ServerSession {
     }
 
     var onboarding: OnboardingClient { backend.onboarding }
-    var catEvents: CatEventsClient { backend.catEvents }
     var api: APIClient { backend.api }
     var baseURL: URL { backend.baseURL }
 

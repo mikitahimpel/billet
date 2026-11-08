@@ -66,7 +66,7 @@ struct HomeView: View {
             room.load()
             for await event in room.events { handle(event) }
         }
-        .task { room.catEvents = session?.catEvents ?? .offline }
+        .task { room.catEvents = session?.catEvents }
         // Nil until the room exists, so the photos are printed once it does and again only when the pins change.
         .task(id: wallPins) {
             guard room.hasHome else { return }
@@ -167,9 +167,11 @@ struct HomeView: View {
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
         .task(id: session?.isPaired) { await followPair() }
-        // A new photo, or one that failed to go earlier, goes to the partner.
-        .task(id: state.moments.unsent.map(\.id)) { await photoSync?.sendUnsent() }
-        .task(id: state.notes.unsent.map(\.id)) { await textSync?.sendUnsent() }
+        .modifier(ResendsUnsent(
+            paired: session?.isPaired == true, photos: state.moments.unsent.map(\.id), notes: state.notes.unsent.map(\.id),
+            sendPhotos: { await photoSync?.sendUnsent() ?? false },
+            sendNotes: { await textSync?.sendUnsent() ?? false },
+            catEvents: session?.catEvents))
         .onReceive(NotificationCenter.default.publisher(for: .pushTokenChanged)) { _ in
             Task { await session?.drawingSync?.registerPushTokens() }
         }
