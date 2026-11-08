@@ -14,6 +14,11 @@ on:
       - .github/workflows/ios.yml
       - .github/scripts/metal-toolchain.sh
       - .github/scripts/install-xcodegen.sh
+      # Read by the app's bundle or the Swift tests.
+      - packages/backend/flags/src/experiments.ts
+      - packages/backend/dates/src/date-catalog.json
+      - packages/backend/guess/src/question-catalog.json
+      - "!**/*.md"
   push:
     branches: [main]
     paths: *paths
@@ -26,8 +31,9 @@ on:
 
 concurrency:
   group: ios-${{ github.ref }}
-  # Pushes to main run to completion; only superseded pull request runs are cancelled.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # A newer commit supersedes a running check on main too: main moves faster than a run, and
+  # finished runs that nobody waits for hold the few macOS runners.
+  cancel-in-progress: true
 
 permissions:
   contents: read

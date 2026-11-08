@@ -9,11 +9,12 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: ios-release
+  group: ios-release-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
   contents: read
+  actions: read
 
 jobs:
   build:
@@ -21,17 +22,19 @@ jobs:
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          fetch-depth: 50
 
-      # The schedule fires every hour; a main without new commits since the last one needs no build.
-      - name: New commits on main
+      # A scheduled run builds unless this commit already passed; a failed or skipped hour is
+      # retried on the next one.
+      - name: New commits since the last green build
         id: changed
         env:
           EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "$EVENT" = schedule ] && [ -z "$(git log -1 --since='65 minutes ago' --format=%H)" ]; then
-            echo "No commits in the last hour"
+          last=$(gh run list --workflow ios-release.yml --branch main --status success --limit 20 \
+            --json headSha,event --jq '[.[] | select(.event == "schedule")][0].headSha // ""')
+          if [ "$EVENT" = schedule ] && [ "$last" = "$GITHUB_SHA" ]; then
+            echo "$GITHUB_SHA already built"
             echo "build=false" >> "$GITHUB_OUTPUT"
           else
             echo "build=true" >> "$GITHUB_OUTPUT"
