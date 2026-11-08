@@ -49,6 +49,11 @@ export class PairRooms extends Context.Service<
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** The ink colours the pair bought, in the order it got them. Never the free ink. */
     readonly inks: (pairId: PairId) => Effect.Effect<ReadonlyArray<InkId>, NotesUnavailable>;
+    /** Gives the pair room pieces it does not have yet. Safe to repeat. */
+    readonly grantItems: (
+      pairId: PairId,
+      items: ReadonlyArray<RoomItemId>,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Gives the pair ink colours it does not have yet. Safe to repeat. */
     readonly grantInks: (
       pairId: PairId,
@@ -133,6 +138,11 @@ export class PairRooms extends Context.Service<
       pairId: PairId,
       user: UserId,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
+    /**
+     * Deletes everything in the room, wallet included, and closes its sockets: the pair is over.
+     * Safe to repeat.
+     */
+    readonly destroy: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Closes the room's open sockets, as the pair has ended. Safe to repeat. */
     readonly endSessions: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Adopts the cat, or renames it. `natureSeed` is used only by the adoption. */

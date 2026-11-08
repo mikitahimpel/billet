@@ -58,6 +58,7 @@ final class DioramaScene: CatRoom {
 
     override init() {
         super.init()
+        useBakedShell(named: "Room_shell")
         buildFloor()
         buildWalls()
         setPolaroids([])
@@ -182,7 +183,11 @@ final class DioramaScene: CatRoom {
     // MARK: - Polaroids
 
     /// Twine garland on the back wall, left of the shelf; each pinned moment hangs from it as a small polaroid.
-    private let garland = Entity()
+    private let garland: Entity = {
+        let garland = Entity()
+        garland.components.set(ShellLive())
+        return garland
+    }()
     private static let garlandSlots = 6
     private static let garlandEnds: (x0: Float, x1: Float, y: Float, sag: Float) = (-0.46, -0.1, 0.64, 0.035)
 
