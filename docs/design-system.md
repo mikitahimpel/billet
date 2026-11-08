@@ -38,7 +38,10 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 12. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
     content; `GlassSegmented` is only the Room | City prototype.
 13. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
-    `.softScrollEdges()` (iOS 26 scroll edge effect); `Page` and `BilletSheet` already apply it.
+    `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
+    `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
+    glass is tinted enough that nothing ghosts through it. `check-design.mjs` fails on a tab's scroll view
+    without it and on any `.hard` edge.
 14. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 15. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new

@@ -61,3 +61,44 @@ if (violations.length > 0) {
   );
   process.exit(1);
 }
+
+// Content scrolling under the Home header and the tab bar fades out on every tab: each tab's vertical scroll
+// view carries `.softScrollEdges()`, and nothing sets a hard edge. The tabs are the views Home switches on.
+const home = join(root, "apps/ios/Nooki/UI/HomeView.swift");
+const tabViews = [
+  ...stripComments(readFileSync(home, "utf8")).matchAll(/case \.\w+:\s*\n\s*(\w+View)\(state:/g),
+].map((match) => match[1]);
+const appFiles = swiftFiles(join(root, "apps/ios"));
+const edgeViolations = [];
+if (tabViews.length < 3) {
+  edgeViolations.push(`HomeView.swift: found only ${tabViews.length} tab views`);
+}
+for (const view of tabViews) {
+  const file = appFiles.find((path) =>
+    new RegExp(`\\bstruct ${view}\\b`).test(readFileSync(path, "utf8")),
+  );
+  if (!file) {
+    edgeViolations.push(`${view}: no file declares it`);
+    continue;
+  }
+  const text = stripComments(readFileSync(file, "utf8"));
+  const scrolls = text.match(/ScrollView\s*(\{|\(\s*\.vertical)/g)?.length ?? 0;
+  const soft = text.match(/\.softScrollEdges\(\)/g)?.length ?? 0;
+  if (scrolls === 0 || soft < scrolls) {
+    edgeViolations.push(
+      `${relative(root, file)}: ${scrolls} vertical scroll views, ${soft} .softScrollEdges()`,
+    );
+  }
+}
+for (const file of appFiles) {
+  if (/scrollEdgeEffectStyle\(\s*\.hard/.test(stripComments(readFileSync(file, "utf8")))) {
+    edgeViolations.push(`${relative(root, file)}: a hard scroll edge`);
+  }
+}
+if (edgeViolations.length > 0) {
+  console.error(edgeViolations.join("\n"));
+  console.error(
+    "Every tab's scroll view fades under the bars with .softScrollEdges() (docs/design-system.md).",
+  );
+  process.exit(1);
+}
