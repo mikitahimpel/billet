@@ -78,7 +78,9 @@ struct OnboardingFlowTests {
         let sent = Sent()
         let (flow, defaults, _) = makeFlow(sent: sent)
         flow.start()
-        for _ in 0..<5 { flow.skip() }
+        for _ in 0..<4 { flow.skip() }
+        #expect(!flow.canSkip)
+        flow.continueTapped()
         #expect(flow.isFinished)
         #expect(defaults.bool(forKey: OnboardingFlow.doneKey))
         await settle { sent.answers.withLock { $0.count } == 5 }
