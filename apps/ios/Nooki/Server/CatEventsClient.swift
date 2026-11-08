@@ -14,7 +14,7 @@ struct CatEventsClient: Sendable {
     var journal: @Sendable (_ after: Int) async throws(TransportError) -> [CatEntry]
 
     /// The server's longest journal page.
-    static let journalPage = 100
+    nonisolated static let journalPage = 100
 
     static let offline = CatEventsClient(
         record: { (_) async throws(TransportError) in throw .network("offline") },
