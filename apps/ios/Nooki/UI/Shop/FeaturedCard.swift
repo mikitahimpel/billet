@@ -56,9 +56,9 @@ struct FeaturedCard: View {
                 SetBuyButton(state: state, set: offer)
             }
             .padding(Space.m)
-            .glass(.rect(cornerRadius: Radius.card, style: .continuous), tint: Ink.heroInk.opacity(0.3))
+            .glass(.rect(cornerRadius: Radius.inner, style: .continuous), tint: Ink.heroInk.opacity(0.3))
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .background {
             // The glow is the card's shape's own, so the countdown ticking inside never redraws it.
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
@@ -121,7 +121,7 @@ private struct ValueBadge: View {
         .foregroundStyle(Ink.heroInk)
         .padding(.horizontal, Space.m)
         .padding(.vertical, Space.xs + 2)
-        .background(ShopInk.gold, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .background(ShopInk.gold, in: .rect(cornerRadius: Radius.inner, style: .continuous))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(multiple) times the value, saves \(saves) coins")
     }

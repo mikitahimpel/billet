@@ -17,19 +17,19 @@ enum PlusPass {
     ]
 }
 
-/// The store's top card: Mochi in a crown on a warm card.
+/// The subscription's card under the packs: Mochi in a crown, the perks and one action.
 struct PlusHero: View {
     let mockStore: Bool
     @AppStorage(PlusPass.key) private var on = false
 
     var body: some View {
-        Card(warm: true) {
+        Card {
             VStack(alignment: .leading, spacing: Space.l) {
                 HStack(spacing: Space.l) {
                     mochi
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Billet Plus")
-                            .font(.nookiLargeTitle)
+                            .font(.nookiTitle)
                             .foregroundStyle(Ink.text)
                         Text(on ? "On for the two of you (test)" : "For the two of you, every month")
                             .font(.nookiCallout)
@@ -90,7 +90,8 @@ struct PlusHero: View {
     }
 }
 
-/// The packs on sale as big cards, each with a pile that grows with the pack and a big price button.
+/// The packs on sale, one card each: a pile that grows with the pack, the amount large, the price in the one honey
+/// capsule. While the store loads the cards wait; when it can't be reached the shelf says so and can try again.
 struct PackStore: View {
     let model: CoinPacksModel
     /// The pack that covers a waiting buy.
@@ -98,18 +99,8 @@ struct PackStore: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
-            Text("Coins")
-                .font(.nookiTitle)
-                .foregroundStyle(Ink.text)
-                .accessibilityAddTraits(.isHeader)
-            ForEach(Array(model.packs.enumerated()), id: \.element.id) { index, pack in
-                PackCard(
-                    pack: pack, tier: min(index, Self.piles.count - 1), badge: badge(for: index, of: model.packs),
-                    buying: model.status == .buying(pack.id), isFit: pack.id == fit?.id
-                ) {
-                    Task { await model.buy(pack) }
-                }
-            }
+            SectionHeader("Coin packs")
+            shelf
             if let line = statusLine {
                 Text(line)
                     .font(.nookiCallout)
@@ -119,6 +110,39 @@ struct PackStore: View {
         }
         .sensoryFeedback(.success, trigger: model.status) { _, new in
             if case .bought = new { true } else { false }
+        }
+    }
+
+    @ViewBuilder private var shelf: some View {
+        switch model.shelf {
+        case .loading:
+            Card {
+                HStack(spacing: Space.m) {
+                    ProgressView().tint(Ink.accentText)
+                    Text("Opening the store…")
+                        .font(.nookiCallout)
+                        .foregroundStyle(Ink.textSecondary)
+                }
+                .frame(maxWidth: .infinity, minHeight: Size.button)
+            }
+        case .ready(let packs):
+            ForEach(Array(packs.enumerated()), id: \.element.id) { index, pack in
+                PackCard(
+                    pack: pack, tier: min(index, Self.piles.count - 1), badge: badge(for: index, of: packs),
+                    buying: model.status == .buying(pack.id), isFit: pack.id == fit?.id
+                ) {
+                    Task { await model.buy(pack) }
+                }
+            }
+        case .unavailable:
+            Card {
+                VStack(spacing: Space.m) {
+                    CardHeader("The store didn't open", detail: "Nothing was charged. You can still earn coins below.",
+                               symbol: "wifi.exclamationmark", tint: Ink.textSecondary, opens: false)
+                    SecondaryButton("Try again", symbol: "arrow.clockwise") { Task { await model.load() } }
+                }
+            }
+            .accessibilityIdentifier("storeUnavailable")
         }
     }
 
@@ -162,56 +186,43 @@ private struct PackCard: View {
     let isFit: Bool
     let buy: () -> Void
 
-    /// Honey for the pack worth noticing, the quiet capsule for the others.
-    @ViewBuilder private var priceButton: some View {
-        let label = Button(action: buy) {
-            if buying {
-                ProgressView()
-            } else {
-                Text(pack.displayPrice).monospacedDigit()
-            }
-        }
-        if badge != nil || isFit {
-            label.buttonStyle(PrimaryButtonStyle())
-        } else {
-            label.buttonStyle(SecondaryButtonStyle())
-        }
-    }
-
     var body: some View {
-        VStack(spacing: Space.l) {
+        Card {
             HStack(spacing: Space.l) {
                 CoinPile(rows: PackStore.piles[tier])
-                    .frame(width: 112)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(pack.stamps.formatted())
-                        .font(.nookiLargeTitle.monospacedDigit())
-                        .foregroundStyle(Ink.text)
-                    Text("coins")
-                        .font(.nookiCallout)
-                        .foregroundStyle(Ink.textSecondary)
+                    .frame(width: 88)
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                        Text(pack.stamps.formatted())
+                            .font(.nookiTitle.monospacedDigit())
+                            .foregroundStyle(Ink.text)
+                        Text("coins")
+                            .font(.nookiCallout)
+                            .foregroundStyle(Ink.textSecondary)
+                    }
                     if isFit {
-                        Text("Covers what you need")
-                            .font(.nookiCaption.weight(.semibold))
-                            .foregroundStyle(Ink.accentText)
+                        Chip("Covers what you need", symbol: "checkmark", style: .honey)
+                    } else if let badge {
+                        Chip(badge, style: .honey)
                     }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            priceButton
+                Spacer(minLength: 0)
+                Button(action: buy) {
+                    if buying {
+                        ProgressView().tint(Ink.heroInk)
+                    } else {
+                        Text(pack.displayPrice).monospacedDigit()
+                    }
+                }
+                .buttonStyle(PrimaryButtonStyle(fullWidth: false))
                 .disabled(buying)
-            .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
+                .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
+            }
         }
-        .padding(Space.l)
-        .frame(maxWidth: .infinity)
-        .cardSurface(warm: true)
         .overlay {
             if isFit {
                 RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.honey, lineWidth: 2)
             }
-        }
-        .overlay(alignment: .topTrailing) {
-            if let badge { Chip(badge, style: .honey).padding(Space.m) }
         }
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier(isFit ? "fitPack" : pack.id)
@@ -223,11 +234,11 @@ private struct CoinPile: View {
     let rows: [Int]
 
     var body: some View {
-        VStack(spacing: -14) {
+        VStack(spacing: -11) {
             ForEach(Array(rows.reversed().enumerated()), id: \.offset) { _, count in
-                HStack(spacing: -8) {
+                HStack(spacing: -6) {
                     ForEach(0..<count, id: \.self) { _ in
-                        CoinIcon(size: 34)
+                        CoinIcon(size: 26)
                     }
                 }
             }

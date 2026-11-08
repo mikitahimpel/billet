@@ -17,8 +17,22 @@ final class CoinPacksModel {
         case failed(String)
     }
 
-    private(set) var packs: [StampPack] = []
+    /// What the store has on sale: nothing yet, the packs, or nothing because it couldn't be reached.
+    enum Shelf: Equatable {
+        case loading
+        case ready([StampPack])
+        case unavailable
+    }
+
+    private(set) var shelf: Shelf = .loading
     private(set) var status: Status = .idle
+
+    var packs: [StampPack] {
+        switch shelf {
+        case .ready(let packs): packs
+        case .loading, .unavailable: []
+        }
+    }
     @ObservationIgnored private let payments: (any Payments)?
     @ObservationIgnored private let credited: () async -> Void
 
@@ -45,8 +59,18 @@ final class CoinPacksModel {
     }
 
     func load() async {
-        guard let payments, packs.isEmpty else { return }
-        packs = (try? await payments.products()) ?? []
+        guard let payments else {
+            shelf = .unavailable
+            return
+        }
+        if case .ready = shelf { return }
+        shelf = .loading
+        do throws(PaymentsError) {
+            let packs = try await payments.products()
+            shelf = packs.isEmpty ? .unavailable : .ready(packs)
+        } catch {
+            shelf = .unavailable
+        }
     }
 
     func buy(_ pack: StampPack) async {
