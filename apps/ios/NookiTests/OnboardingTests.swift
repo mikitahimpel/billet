@@ -92,14 +92,12 @@ struct OnboardingFlowTests {
 
     @Test func leavingTheWelcomeEitherWayAcceptsTheTerms() {
         let (flow, defaults, _) = makeFlow()
-        flow.start()
         #expect(flow.page == .welcome)
         #expect(!flow.termsAccepted)
         flow.continueTapped()
         #expect(flow.termsAccepted)
 
         let (joiner, joinerDefaults, _) = makeFlow()
-        joiner.start()
         joiner.join()
         #expect(joiner.termsAccepted)
         #expect(joinerDefaults.object(forKey: OnboardingFlow.termsAcceptedKey) is Date)
