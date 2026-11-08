@@ -1,7 +1,7 @@
 import FeatureGames
-import GamesInterface
 import Observation
 import Persistence
+import RoomInterface
 import SwiftUI
 import Design
 import WidgetKit
@@ -23,6 +23,8 @@ enum RoomKind: CaseIterable {
     case home, city
 
     var title: String { self == .home ? "Room" : "City" }
+
+    var scene: RoomScene { self == .home ? .home : .city }
 }
 
 /// The Moments tab as a feed of photos and notes, or as the board in Mochi's desk room.
@@ -95,8 +97,6 @@ final class HomeState {
     }
 
     var room: RoomKind = .home
-    /// The mini-game being played in the room, if any.
-    var game: MiniGame?
     var showsProfile = false
     var showsInbox = false
     /// An invite link opened after onboarding: Home's pairing sheet opens with its code.

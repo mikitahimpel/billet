@@ -37,6 +37,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
   ("FeatureGamesTests", ["FeatureGames", "GamesInterface", "Wire"]),
+  ("RoomInterfaceTests", ["RoomInterface", "Pet"]),
 ]
 
 // The mini-games' rules, apart from how they are drawn: the scale, the bowl, the dot, the brush, and what a finished

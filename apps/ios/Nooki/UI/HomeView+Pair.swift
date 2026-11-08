@@ -72,7 +72,7 @@ extension HomeView {
                 || state.openedShopItem != nil
             let buying = state.shop.lastPurchase?.canUndo(at: .now) == true
             return HintContext(
-                screen: screen, busy: sheet || buying || showcase != nil, hasRoomChoice: hasRoomChoice,
+                screen: screen, busy: sheet || buying || room.showcase != nil, hasRoomChoice: hasRoomChoice,
                 canAffordTreat: state.shop.coins >= ShopModel.treatPrice,
                 petted: state.care.petsGiven > 0,
                 added: !state.notes.notes.isEmpty || !state.moments.moments.isEmpty,
@@ -90,18 +90,5 @@ extension HomeView {
 
     var textSync: TextNoteSync? {
         session?.textSync(notes: state.notes, partner: state.otherPartner)
-    }
-
-    /// Builds the corkboard room and draws its first cards, so the tab opens with the board already pinned.
-    func makeBoard() -> BoardRoomScene {
-        let room = BoardRoomScene()
-        let state = self.state
-        room.onOpen = { state.openedPin = PinRoute(id: $0) }
-        room.onDraw = { state.composingNote = .draw }
-        Task {
-            let pins = await BoardFaces.pins(state: state)
-            room.setPins(pins)
-        }
-        return room
     }
 }

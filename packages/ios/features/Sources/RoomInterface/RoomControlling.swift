@@ -39,6 +39,16 @@ public struct CatStatus: Equatable, Sendable {
     self.needs = needs
     self.mind = mind
   }
+
+  /// `needs` rounded to twentieths, so a need that drifts a little changes nothing outside the room.
+  public init(rounding needs: PetNeeds?, mind: CatMind?) {
+    let rounded = needs.map { needs in
+      var out = needs
+      for need in PetNeed.allCases { out[need] = (needs[need] * 20).rounded() / 20 }
+      return out
+    }
+    self.init(needs: rounded, mind: mind)
+  }
 }
 
 @MainActor
