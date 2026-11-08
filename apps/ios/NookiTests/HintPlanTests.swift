@@ -156,7 +156,7 @@ import Wire
         let petted = HintContext(screen: .world, petted: true)
         #expect(hints.show(petted) == "add")
         #expect(hints.seen.contains("pet"))
-        #expect(hints().plan(HintContext(screen: .world, added: true)) == nil)
+        #expect(self.hints().plan(HintContext(screen: .world, added: true)) == nil)
         HintStage.current = ""
     }
 
@@ -210,5 +210,5 @@ private actor Recorded {
 }
 
 private final class TestClock: @unchecked Sendable {
-    var date = Date(timeIntervalSince1970: 1_800_000_000)
+    nonisolated(unsafe) var date = Date(timeIntervalSince1970: 1_800_000_000)
 }
