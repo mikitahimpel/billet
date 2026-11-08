@@ -105,3 +105,15 @@ struct BrainCard: View {
         }
     }
 }
+
+/// The brain card over the room's corner, once her brain is running; looks again now and then, as it starts after
+/// the room has drawn.
+struct RoomBrainCard: View {
+    let controller: RoomController
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { _ in
+            if let director = controller.current?.director { BrainCard(director: director) }
+        }
+    }
+}

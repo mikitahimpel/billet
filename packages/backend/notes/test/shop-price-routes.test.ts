@@ -1,10 +1,12 @@
-import { Effect, Layer, Redacted, Schema } from "effect";
+import { Clock, Effect, Layer, Redacted, Schema } from "effect";
 import { HttpRouter } from "effect/http";
 import { afterAll, describe, expect, it } from "vitest";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
 import { DeviceId } from "@billet/contracts-domain/ids";
-import { welcomeCoins } from "@billet/contracts-domain/shop";
+import { LocalDay } from "@billet/contracts-domain/coins";
+import { dealsOn, welcomeCoins } from "@billet/contracts-domain/shop";
 import { OrderResponse, ShopResponse } from "@billet/contracts-http-api/shop";
+import { priceBookOf } from "@billet/backend-shop/price-book";
 import { seedItems } from "@billet/backend-shop/shop-seed";
 import { ShopStore } from "@billet/backend-shop/shop-store";
 import { NotesRoutes } from "../src/notes-routes.ts";
@@ -36,12 +38,28 @@ const FakeAuth = Layer.succeed(
 
 const world = makeWorld([[pair("pair-a"), user("ana"), user("ben")]]);
 
+/** A day whose deals draw for pair-a has none of the pieces priced below, so each sells at its price. */
+const now = Date.UTC(2026, 0, 26, 12);
+const today = Schema.decodeSync(LocalDay)("2026-01-26");
+const fixedClock: Clock.Clock = {
+  currentTimeMillis: Effect.succeed(now),
+  currentTimeMillisUnsafe: () => now,
+  currentTimeNanos: Effect.succeed(BigInt(now) * 1_000_000n),
+  currentTimeNanosUnsafe: () => BigInt(now) * 1_000_000n,
+  monotonicTimeNanos: Effect.succeed(BigInt(now) * 1_000_000n),
+  monotonicTimeNanosUnsafe: () => BigInt(now) * 1_000_000n,
+  sleep: () => Effect.void,
+};
+
 const { handler, dispose } = HttpRouter.toWebHandler(
   NotesRoutes.pipe(
     Layer.provide(Layer.merge(FakeAuth, NotesService.layer)),
     Layer.provide(world.layer),
   ),
-  { disableLogger: true },
+  {
+    disableLogger: true,
+    middleware: (effect) => Effect.provideService(effect, Clock.Clock, fixedClock),
+  },
 );
 afterAll(dispose);
 
@@ -75,6 +93,11 @@ const orderItem = (item: string, expectedPrice?: number, name = "ana") =>
   });
 
 describe("an order is priced by the server's catalog", () => {
+  it("is tested on a day with no deal on the pieces it prices", () => {
+    const deals = dealsOn(pair("pair-a"), today, priceBookOf(seedItems, now));
+    expect(deals.filter((deal) => ["monstera", "yarn", "mouse"].includes(deal.item))).toEqual([]);
+  });
+
   it("charges the catalog price, whatever the app's price was, when it was not higher", async () => {
     const response = await orderItem("monstera", 200);
     expect(response.status).toBe(200);
