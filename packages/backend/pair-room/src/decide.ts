@@ -36,6 +36,12 @@ import {
   treatPrice,
   welcomeCoins,
 } from "@billet/contracts-domain/shop";
+import {
+  emptyStreak,
+  recordStreakDay,
+  restoreStreak,
+  streakMilestones,
+} from "@billet/contracts-domain/streak";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomCommand } from "./room-command.ts";
 import { RoomDecision, RoomOutput, RoomRejection } from "./room-decision.ts";
@@ -109,6 +115,9 @@ type Quote = {
 };
 
 const hour = 3_600_000;
+
+/** How far back a reported streak day may have happened. */
+const streakReportWindow = 24 * hour;
 
 /** UTC offsets run from -12 to +14 hours: a featured set is on sale wherever its week is. */
 const isFeaturedNow = (setId: string, at: EpochMillis): boolean =>
@@ -452,7 +461,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
             { user: second, presence: "idle" },
           ],
           lastSeq: 0,
-          streakDays: 0,
+          streak: emptyStreak,
           inks: [],
           items: [],
           wishlist: [],
@@ -482,6 +491,8 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "CreditPurchase":
     case "ChangeList":
     case "SaveRiddle":
+    case "RecordStreakDay":
+    case "RestoreStreak":
       return rejected(RoomRejection.cases.RoomNotOpen.make({}));
   }
 };
@@ -676,6 +687,28 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         user === by ? [checkIn] : room.moods.filter((earlier) => earlier.user === user),
       );
       return accepted({ ...room, moods }, [RoomOutput.cases.MoodSet.make({ checkIn })]);
+    }
+    case "RecordStreakDay": {
+      const { by, at, utcOffsetSeconds } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      // A phone that was offline reports a day late; more than a day back, or ahead of the room's
+      // clock, is held to that bound.
+      const happenedAt = Math.min(Math.max(command.happenedAt, at - streakReportWindow), at);
+      const streak = recordStreakDay(room.streak, localDayOf(happenedAt, utcOffsetSeconds));
+      if (streak === room.streak) return accepted(room);
+      const reached = streakMilestones.includes(streak.days) ? { reached: streak.days } : {};
+      return accepted({ ...room, streak }, [
+        RoomOutput.cases.StreakChanged.make({ streak, by, at, ...reached }),
+      ]);
+    }
+    case "RestoreStreak": {
+      const { by, at, utcOffsetSeconds } = command;
+      if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
+      const streak = restoreStreak(room.streak, localDayOf(at, utcOffsetSeconds));
+      if (streak === undefined) return rejected(RoomRejection.cases.StreakNotRestorable.make({}));
+      return accepted({ ...room, streak }, [
+        RoomOutput.cases.StreakChanged.make({ streak, by, at }),
+      ]);
     }
     case "SaveRiddle": {
       const { by, at, write, reward } = command;

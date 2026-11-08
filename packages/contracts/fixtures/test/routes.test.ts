@@ -155,6 +155,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/status",
       },
+      "getStreak": {
+        "method": "GET",
+        "path": "/v1/streak",
+      },
       "getTitle": {
         "method": "GET",
         "path": "/v1/titles/:kind/:tmdb",
@@ -223,6 +227,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/cat/events",
       },
+      "recordStreakDay": {
+        "method": "POST",
+        "path": "/v1/streak/days",
+      },
       "registerPushToken": {
         "method": "PUT",
         "path": "/v1/devices/current/push-token",
@@ -238,6 +246,10 @@ it("pins the routes that clients call", () => {
       "reportPartner": {
         "method": "POST",
         "path": "/v1/pair/report",
+      },
+      "restoreStreak": {
+        "method": "POST",
+        "path": "/v1/streak/restore",
       },
       "saveCat": {
         "method": "PUT",

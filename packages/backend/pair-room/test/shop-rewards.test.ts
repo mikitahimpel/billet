@@ -86,7 +86,7 @@ describe("the welcome coins", () => {
       pairId,
       members: active.members,
       lastSeq: 0,
-      streakDays: 0,
+      streak: { days: 0, best: 0 },
       inks: [],
       items: [],
       wishlist: [],

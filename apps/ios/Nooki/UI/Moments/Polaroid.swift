@@ -97,6 +97,24 @@ struct Polaroid<Photo: View>: View {
     }
 }
 
+/// A small mark on a print or a note written here that hasn't reached the partner yet. It goes once the server
+/// has it; nothing to tap, the app sends it again by itself.
+struct UnsentMark: View {
+    var size: CGFloat = 12
+    var tint: Color = PolaroidPaper.byline
+
+    var body: some View {
+        Image(systemName: "icloud.slash")
+            .resizable()
+            .scaledToFit()
+            .fontWeight(.semibold)
+            .frame(width: size, height: size)
+            .foregroundStyle(tint)
+            .accessibilityLabel("Not sent yet")
+            .accessibilityIdentifier("unsent-mark")
+    }
+}
+
 /// Polaroid paper: the frame color with a soft grain, for prints and the notes that sit with them.
 ///
 /// The grain is baked into a tile of the paper's own color and the shadow is cast by the sheet's shape, so a feed of

@@ -82,29 +82,121 @@ nonisolated struct LoveStreak: Codable, Hashable {
     }
 }
 
-/// The streak in the app group, next to the other shared stores.
+/// The pair's streak in its room. Each call answers with the room's streak; the room counts one streak for the couple
+/// and keeps the restore's cooldown for both.
+nonisolated struct StreakRemote: Sendable {
+    enum Answer: Sendable, Equatable {
+        case streak(LoveStreak)
+        /// The room would not: a restore it can't make, or a pair it no longer has.
+        case refused
+        /// The room could not be reached; nothing changed there.
+        case offline
+    }
+
+    var load: @Sendable () async -> Answer
+    /// Something the couple did at this time on this phone.
+    var record: @Sendable (_ at: Date) async -> Answer
+    var restore: @Sendable () async -> Answer
+}
+
+/// The streak in the app group, next to the other shared stores. Once paired it follows the pair's room: the file is
+/// the room's streak as last read, with this phone's own days on top until the room has them, so it shows the same
+/// flame on both phones and still counts a day done offline.
+@MainActor
 @Observable
 final class StreakStore {
     private(set) var streak: LoveStreak
+    /// When this phone grew the streak while the room had not heard of it yet.
+    private(set) var unsent: [Date]
 
     private let file: String
+    private let unsentFile: String
+    @ObservationIgnored private var remote: StreakRemote?
+    @ObservationIgnored private var flushing = false
 
     init(file: String = "Us/streak.json") {
         self.file = file
+        unsentFile = file.replacingOccurrences(of: ".json", with: "-unsent.json")
         streak = SharedFile.read(LoveStreak.self, from: file) ?? LoveStreak()
+        unsent = SharedFile.read([Date].self, from: unsentFile) ?? []
     }
 
     func reload() {
         if let saved = SharedFile.read(LoveStreak.self, from: file) { streak = saved }
     }
 
-    func record() { update { $0.record() } }
+    /// Follows the pair's streak through `remote`, or keeps it on this phone with nil.
+    func follow(_ remote: StreakRemote?) async {
+        self.remote = remote
+        if remote == nil, !unsent.isEmpty {
+            unsent = []
+            SharedFile.write(unsent, to: unsentFile)
+        }
+        await refresh()
+    }
 
-    func restore() { update { $0.restore() } }
+    /// Sends the days that waited, then reads the room's streak. Offline it stays as kept.
+    func refresh() async {
+        guard let remote else { return }
+        await flush()
+        if case .streak(let shared) = await remote.load() { take(shared) }
+    }
 
-    private func update(_ change: (inout LoveStreak) -> Void) {
+    func record(at date: Date = .now) {
+        guard update({ $0.record(on: date) }), remote != nil else { return }
+        unsent.append(date)
+        SharedFile.write(unsent, to: unsentFile)
+        Task { await flush() }
+    }
+
+    /// Brings the streak back after one missed day: in the pair's room once paired, so the partner sees it too and the
+    /// monthly restore is the couple's. Whether it came back.
+    @discardableResult
+    func restore(on date: Date = .now) async -> Bool {
+        guard let remote else {
+            return update { $0.restore(on: date) }
+        }
+        switch await remote.restore() {
+        case .streak(let shared):
+            take(shared)
+            return true
+        case .refused:
+            await refresh()
+            return false
+        case .offline:
+            return false
+        }
+    }
+
+    /// Sends each waiting day in order; a drop keeps the rest, and a day the room refuses is let go.
+    private func flush() async {
+        guard let remote, !flushing else { return }
+        flushing = true
+        defer { flushing = false }
+        while let date = unsent.first {
+            let answer = await remote.record(date)
+            if answer == .offline { return }
+            unsent.removeFirst()
+            SharedFile.write(unsent, to: unsentFile)
+            if case .streak(let shared) = answer { take(shared) }
+        }
+    }
+
+    /// The room's streak, with the days still waiting counted on top.
+    private func take(_ shared: LoveStreak) {
+        var next = shared
+        for date in unsent { next.record(on: date) }
+        guard next != streak else { return }
+        streak = next
+        SharedFile.write(streak, to: file)
+    }
+
+    @discardableResult
+    private func update(_ change: (inout LoveStreak) -> Void) -> Bool {
         let old = streak
         change(&streak)
-        if streak != old { SharedFile.write(streak, to: file) }
+        guard streak != old else { return false }
+        SharedFile.write(streak, to: file)
+        return true
     }
 }

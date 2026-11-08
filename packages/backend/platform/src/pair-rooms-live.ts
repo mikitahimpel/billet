@@ -16,6 +16,7 @@ import { CoinsResponse } from "@billet/contracts-http-api/coins";
 import { ShopResponse } from "@billet/contracts-http-api/shop";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { LoveStreak } from "@billet/contracts-domain/streak";
 import type { PairRoom } from "./pair-room-durable-object.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
@@ -30,6 +31,7 @@ const decodeInks = Schema.decodeUnknownEffect(Schema.Array(InkId));
 const decodeCoins = Schema.decodeUnknownEffect(Schema.NullOr(CoinsResponse));
 const decodeShop = Schema.decodeUnknownEffect(Schema.NullOr(ShopResponse));
 const decodeMoods = Schema.decodeUnknownEffect(Schema.Array(MoodCheckIn));
+const decodeStreak = Schema.decodeUnknownEffect(Schema.NullOr(LoveStreak));
 const decodeGifts = Schema.decodeUnknownEffect(GiftsResult);
 const decodeLists = Schema.decodeUnknownEffect(ListsResult);
 const decodePickTonight = Schema.decodeUnknownEffect(PickTonightResult);
@@ -119,6 +121,11 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
         setMood: (pairId, by, request) =>
           callRoom(() => rooms.getByName(pairId).setMood(by, request), decodeDecision),
         moods: (pairId) => callRoom(() => rooms.getByName(pairId).moods(), decodeMoods),
+        recordStreakDay: (pairId, by, request) =>
+          callRoom(() => rooms.getByName(pairId).recordStreakDay(by, request), decodeDecision),
+        restoreStreak: (pairId, by, request) =>
+          callRoom(() => rooms.getByName(pairId).restoreStreak(by, request), decodeDecision),
+        streak: (pairId) => callRoom(() => rooms.getByName(pairId).streak(), decodeStreak),
         gifts: (pairId, by, command) =>
           callRoom(() => rooms.getByName(pairId).gifts(by, command), decodeGifts),
         pickTonight: (pairId, by, command) =>

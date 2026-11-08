@@ -74,7 +74,8 @@ final class WebSocketRunner: Sendable {
         await slot.cancelTimer(for: attempt)
         enqueue(
           .resume(
-            lastSeq: resumeFrom, activity: dependencies.followsActivity ? true : nil,
+            lastSeq: resumeFrom, lastCatSeq: await dependencies.lastCatSeq(),
+            activity: dependencies.followsActivity ? true : nil,
             lastReactionRev: await dependencies.lastReactionRev(),
             shop: dependencies.followsShop ? true : nil,
             lists: dependencies.followsLists ? true : nil,

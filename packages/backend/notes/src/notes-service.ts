@@ -357,6 +357,7 @@ export class NotesService extends Context.Service<
           case "CollectionIncomplete":
           case "MoodNoteTooLong":
           case "RoomJournalsGame":
+          case "StreakNotRestorable":
             return new NotesUnavailable({ reason: "room-refused-buy" });
         }
       };

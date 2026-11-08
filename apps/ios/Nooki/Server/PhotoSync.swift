@@ -21,10 +21,11 @@ struct PhotoSync {
     static let cursorKey = "photos.lastSeq"
 
     /// Sends every photo still waiting, oldest first. One that fails stays waiting for the next try; the note's key
-    /// is the moment's id, so a retry after a lost response never sends it twice.
-    func sendUnsent() async {
+    /// is the moment's id, so a retry after a lost response never sends it twice. True when the server couldn't be
+    /// reached, which leaves the rest waiting too, so the caller tries again later.
+    func sendUnsent() async -> Bool {
         for moment in moments.unsent {
-            guard !Task.isCancelled else { return }
+            guard !Task.isCancelled else { return true }
             let url = MomentStore.imageURL(for: moment)
             guard let photo = await Task.detached(priority: .utility, operation: { PhotoUpload(fileAt: url) }).value
             else { continue }
@@ -37,9 +38,10 @@ struct PhotoSync {
                 guard case .photo(let id, _, _, _, _, _, _, _) = sent.note else { continue }
                 moments.setUnsent(false, id: moment.id, noteID: id.rawValue)
             } catch {
-                continue
+                if error.isWorthRetrying { return true }
             }
         }
+        return false
     }
 
     /// Pages through the notes after the last one looked at and keeps each photo the partner sent. Stops at a photo

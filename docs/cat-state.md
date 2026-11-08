@@ -125,6 +125,24 @@ On the room's WebSocket:
 A socket that never sends `lastCatSeq` gets no cat frames, so older builds are unaffected. Push
 comes later; for now a phone in the background catches up from `GET /v1/cat/journal` on launch.
 
+## On the phone
+
+`CatLife` (`apps/ios/Nooki/Model/CatLife.swift`) is the brain's `CatEventSource` in every room. Once the phone is
+paired, `RoomController.connectCat` points it at the pair's room:
+
+- `GET /v1/cat` gives the nature seed, `bornAt` and the pair's offset, so both phones fold the same cat. The phone
+  that finds no cat adopts her with `PUT /v1/cat`, under the name and coat from onboarding.
+- The journal comes from `GET /v1/cat/journal` (at most the last 500 entries on a first sync) and then from the
+  Inbox socket, which resumes with `lastCatSeq`. An entry the phone already has under its `id` replaces it.
+- A touch here appears at once and goes to `POST /v1/cat/events` under the same `id`. A run of strokes is one
+  `Petted` every 10 minutes. Offline, requests wait in an outbox in the user defaults and go on the next sync
+  (connect, or the app coming to the front); a request the room refuses is dropped.
+- A new seed, birth or pair resets the brain from the events (`CatLifeChange.reset`). Unpairing gives the phone a
+  fresh cat of its own.
+
+Everything is kept in the user defaults (`cat.life`), so offline the cat is the one last seen. A phone that kept
+`LocalCatEvents` before carries its seed and events over until it is paired.
+
 ## Storage
 
 In each room's SQLite: a one-row `cat` table (profile and temper, `last_cat_seq`) and
