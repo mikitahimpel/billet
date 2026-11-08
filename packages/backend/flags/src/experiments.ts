@@ -220,6 +220,20 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
+  // The rooms' static shell: built from boxes at launch (`live`), or one baked lightmapped model
+  // per room (`baked`, docs/baked-shell.md). Draft with all weight on `live`: starting it changes
+  // nothing. To roll back for everyone, set `live` as the only weighted variant or kill it.
+  {
+    key: "room-shell",
+    kind: "flag",
+    description:
+      "How the rooms' walls, floor and furniture are made: live boxes or a baked model (Labs > Room shell).",
+    variants: { live: 1, baked: 0 },
+    default: "live",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
   {
     key: "rooms",
     kind: "experiment",

@@ -36,6 +36,8 @@ import Testing
       "createInvite": Routes.createInvite,
       "claimInvite": Routes.claimInvite,
       "unpair": Routes.unpair,
+      "blockPartner": Routes.blockPartner,
+      "reportPartner": Routes.reportPartner,
       "getPair": Routes.getPair,
       "setMood": Routes.setMood,
       "uploadImage": Routes.uploadImage,

@@ -312,6 +312,14 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
           (key) => key.startsWith(mediaPrefix(pairId)) && uploaders.get(key) === uploader,
         ),
       ),
+    removeAll: (pairId) =>
+      Effect.sync(() => {
+        for (const key of objects.keys()) {
+          if (!key.startsWith(mediaPrefix(pairId))) continue;
+          objects.delete(key);
+          uploaders.delete(key);
+        }
+      }),
     remove: (keys) =>
       Effect.sync(() => {
         for (const key of keys) {
@@ -332,6 +340,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     inks: (pairId) =>
       roomOf(pairId).state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
     grantInks: (pairId, inks) => roomOf(pairId).dispatch({ _tag: "GrantInks", inks }),
+    grantItems: (pairId, items) => roomOf(pairId).dispatch({ _tag: "GrantItems", items }),
     coins: (pairId, after, limit) =>
       Effect.all([roomOf(pairId).settled, roomOf(pairId).coinEntriesAfter(after, limit)]).pipe(
         Effect.map(([state, entries]) =>
@@ -353,6 +362,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       roomOf(pairId).setWish(by, item, wished, offered),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),
     forgetMember: (pairId, user) => roomOf(pairId).forgetAuthor(user),
+    destroy: () => Effect.void,
     endSessions: () => Effect.void,
     saveCat: (pairId, user, request, seed) => roomOf(pairId).saveCat(user, request, seed),
     recordCatEvent: (pairId, user, request) => roomOf(pairId).recordCatEvent(user, request),

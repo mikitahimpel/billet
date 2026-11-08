@@ -184,7 +184,7 @@ struct HomeView: View {
                             withAnimation(.easeInOut(duration: 0.25)) { state.game = game }
                         }
                         Spacer(minLength: 0)
-                        PlayAllButton(showcase: showcase) { scene?.playAll() }
+                        if let showcase { ShowcaseLabel(label: showcase) }
                     }
                     .padding(.horizontal, 4)
                 }
@@ -246,6 +246,12 @@ struct HomeView: View {
             let previous: CatRoom? = old ? board : (state.room == .city ? city ?? home : home)
             previous?.stop()
             if new, board == nil { board = makeBoard() }
+        }
+        // Settings › Labs asks for the showcase, once it is closed.
+        .onChange(of: state.showcaseRequested) { _, requested in
+            guard requested else { return }
+            state.showcaseRequested = false
+            scene?.playAll()
         }
         .onChange(of: state.room) {
             showcase = nil
@@ -478,29 +484,22 @@ struct HomeView: View {
     private var wallPins: [Moment]? { home == nil ? nil : state.moments.pinned }
 }
 
-/// Plays all Mochi's animations in turn, naming each as it plays.
-private struct PlayAllButton: View {
-    let showcase: String?
-    var playAll: () -> Void
+/// Names the animation of the showcase that is playing.
+private struct ShowcaseLabel: View {
+    let label: String
 
     var body: some View {
-        Button(action: playAll) {
-            HStack(spacing: 6) {
-                Image(systemName: showcase == nil ? "play.fill" : "sparkles")
-                Text(showcase ?? "Play all")
-                    .contentTransition(.opacity)
-            }
-            .font(.system(size: 14, weight: .semibold, design: .rounded))
-            .foregroundStyle(.white)
-            .padding(.horizontal, 14)
-            .frame(height: 40)
-            // Not interactive: the button style answers the press; interactive glass would track the same touch.
-            .warmGlass(.capsule)
-            .frame(height: 44)
-            .contentShape(.capsule)
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+            Text(label)
+                .contentTransition(.opacity)
         }
-        .buttonStyle(PressScaleStyle())
-        .disabled(showcase != nil)
-        .accessibilityLabel(showcase.map { "Playing \($0)" } ?? "Play all animations")
+        .font(.system(size: 14, weight: .semibold, design: .rounded))
+        .foregroundStyle(.white)
+        .padding(.horizontal, 14)
+        .frame(height: 40)
+        .warmGlass(.capsule)
+        .frame(height: 44)
+        .accessibilityLabel("Playing \(label)")
     }
 }

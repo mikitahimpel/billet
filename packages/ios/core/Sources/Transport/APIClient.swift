@@ -24,6 +24,10 @@ public struct APIClient: Sendable {
   public var claimInvite:
     @Sendable (ClaimInviteRequest) async throws(TransportError) -> ClaimInviteResponse
   public var unpair: @Sendable () async throws(TransportError) -> Void
+  /// Unpairs and keeps the two from pairing again. `.api(.notFound)` while unpaired.
+  public var blockPartner: @Sendable () async throws(TransportError) -> Void
+  /// Reports the partner to the team. `.api(.notFound)` while unpaired.
+  public var reportPartner: @Sendable (ReportPartnerRequest) async throws(TransportError) -> Void
   /// A PNG drawing or a JPEG or HEIC photo, sent with the content type its bytes declare.
   public var uploadImage: @Sendable (Data) async throws(TransportError) -> UploadImageResponse
   public var downloadImage: @Sendable (MediaKey) async throws(TransportError) -> Data
@@ -159,6 +163,9 @@ public struct APIClient: Sendable {
       @escaping @Sendable (ClaimInviteRequest) async throws(TransportError) ->
       ClaimInviteResponse,
     unpair: @escaping @Sendable () async throws(TransportError) -> Void,
+    blockPartner: @escaping @Sendable () async throws(TransportError) -> Void,
+    reportPartner:
+      @escaping @Sendable (ReportPartnerRequest) async throws(TransportError) -> Void,
     uploadImage: @escaping @Sendable (Data) async throws(TransportError) -> UploadImageResponse,
     downloadImage: @escaping @Sendable (MediaKey) async throws(TransportError) -> Data,
     sendNote:
@@ -342,6 +349,8 @@ public struct APIClient: Sendable {
     self.createInvite = createInvite
     self.claimInvite = claimInvite
     self.unpair = unpair
+    self.blockPartner = blockPartner
+    self.reportPartner = reportPartner
     self.uploadImage = uploadImage
     self.downloadImage = downloadImage
     self.sendNote = sendNote
@@ -404,6 +413,8 @@ extension APIClient {
     createInvite: { () async throws(TransportError) in throw .network("offline") },
     claimInvite: { (_) async throws(TransportError) in throw .network("offline") },
     unpair: { () async throws(TransportError) in throw .network("offline") },
+    blockPartner: { () async throws(TransportError) in throw .network("offline") },
+    reportPartner: { (_) async throws(TransportError) in throw .network("offline") },
     uploadImage: { (_) async throws(TransportError) in throw .network("offline") },
     downloadImage: { (_) async throws(TransportError) in throw .network("offline") },
     sendNote: { (_) async throws(TransportError) in throw .network("offline") },

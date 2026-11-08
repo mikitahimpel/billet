@@ -26,6 +26,7 @@
     "./note": "./src/note.ts",
     "./purchase": "./src/purchase.ts",
     "./routes": "./src/routes.ts",
+    "./safety": "./src/safety.ts",
     "./status": "./src/status.ts",
     "./onboarding": "./src/onboarding.ts",
     "./activity": "./src/activity.ts",
