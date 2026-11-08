@@ -469,6 +469,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "SaveCat":
     case "RecordCatEvent":
     case "GrantInks":
+    case "GrantItems":
     case "Buy":
     case "Order":
     case "SetWish":
@@ -589,6 +590,14 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         ? accepted(room)
         : accepted({ ...room, inks: [...room.inks, ...added] }, [
             RoomOutput.cases.InksGranted.make({ inks: added }),
+          ]);
+    }
+    case "GrantItems": {
+      const added = [...new Set(command.items)].filter((item) => !ownsItem(room, item));
+      return added.length === 0
+        ? accepted(room)
+        : accepted({ ...room, items: [...room.items, ...added] }, [
+            RoomOutput.cases.ItemsGranted.make({ items: added }),
           ]);
     }
     case "Buy": {

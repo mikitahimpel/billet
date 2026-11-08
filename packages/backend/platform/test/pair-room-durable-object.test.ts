@@ -483,6 +483,27 @@ describe("PairRoom close handling", () => {
   });
 });
 
+describe("PairRoom destroy", () => {
+  it("closes the sockets and deletes the notes, and again harmlessly", async () => {
+    const room = await openRoom();
+    await room.sendNote(alice, photo());
+    const { webSocket } = await connect(room, upgrade(alice));
+    const closed = new Promise<string>((resolve) => {
+      webSocket?.addEventListener("close", (event) => {
+        resolve(`${event.code} ${event.reason}`);
+      });
+      webSocket?.accept();
+    });
+
+    await room.destroy();
+    await room.destroy();
+    expect(await closed).toBe("1000 pair ended");
+
+    expect(await room.notes(0, 10)).toEqual([]);
+    expect(await room.snapshot()).toEqual({ _tag: "Vacant" });
+  });
+});
+
 describe("PairRoom realtime across eviction", () => {
   const stroke = { color: "#2A1A1C", width: 3, points: [{ x: 1, y: 2 }] };
 

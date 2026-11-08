@@ -1,6 +1,7 @@
 import { Context, type Effect, type Option, Schema } from "effect";
 import { TokenHash } from "@billet/backend-auth/auth-repository";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
+import { ReportReason } from "@billet/contracts-http-api/safety";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
 
@@ -25,6 +26,50 @@ export interface InviteClaim {
   /** A new id. It becomes the pair's only if this claim wins. */
   readonly pairId: PairId;
   readonly now: EpochMillis;
+}
+
+/** Purchases a user keeps when their pair ends: their coins, inks and room pieces. */
+export interface KeptPurchases {
+  readonly coins: number;
+  readonly inks: ReadonlyArray<string>;
+  readonly items: ReadonlyArray<string>;
+}
+
+export const StoredKeptWallet = Schema.Struct({
+  userId: UserId,
+  coins: Schema.Int,
+});
+
+export const StoredKeptItem = Schema.Struct({
+  userId: UserId,
+  kind: Schema.Literals(["ink", "item"]),
+  itemId: Schema.String,
+});
+
+export const StoredBlock = Schema.Struct({
+  blockerId: UserId,
+  blockedId: UserId,
+  createdAt: EpochMillis,
+});
+
+export const StoredPartnerReport = Schema.Struct({
+  id: Schema.String,
+  reporterId: UserId,
+  reportedId: UserId,
+  pairId: PairId,
+  reason: ReportReason,
+  details: Schema.NullOr(Schema.String),
+  createdAt: EpochMillis,
+});
+
+export interface PartnerReport {
+  readonly id: string;
+  readonly reporter: UserId;
+  readonly reported: UserId;
+  readonly pairId: PairId;
+  readonly reason: ReportReason;
+  readonly details: string | undefined;
+  readonly at: EpochMillis;
 }
 
 /**
@@ -61,5 +106,26 @@ export class PairingRepository extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<UserId>, PairingUnavailable>;
     /** Removes the lookup of both partners. Does nothing for a user without a partner. */
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
+    /**
+     * In one atomic write: records that `blocker` blocked `blocked` and removes the pair of
+     * `blocker`. A claim of an invite between the two, either way round, is `InvalidInvite` from
+     * then on. Safe to repeat.
+     */
+    readonly block: (block: {
+      readonly blocker: UserId;
+      readonly blocked: UserId;
+      readonly at: EpochMillis;
+    }) => Effect.Effect<void, PairingUnavailable>;
+    /**
+     * Adds to what `userId` keeps from ended pairs: more coins, and the inks and pieces they did
+     * not have. Safe to repeat for the items, not for the coins.
+     */
+    readonly keep: (userId: UserId, kept: KeptPurchases) => Effect.Effect<void, PairingUnavailable>;
+    /** What `userId` keeps, empty when nothing. */
+    readonly kept: (userId: UserId) => Effect.Effect<KeptPurchases, PairingUnavailable>;
+    /** Forgets what `userId` keeps, once the new pair's room has it. */
+    readonly clearKept: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
+    /** Keeps a report for the team. The pair is untouched. */
+    readonly saveReport: (report: PartnerReport) => Effect.Effect<void, PairingUnavailable>;
   }
 >()("@billet/backend-pairing/PairingRepository") {}
