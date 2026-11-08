@@ -198,16 +198,16 @@ struct HomeView: View {
             // and the glass over them never redraw a moving backdrop every frame.
             WarmBackdrop(drifts: roomOnScreen)
 
-            // A new RealityView is clear until it draws its first frame, so the last one shows through it meanwhile.
-            // Under the room, not over it: a RealityView hidden under an opaque view waits about a second for each
-            // drawable, and a room coming back under the stand-in froze the screen and could stay at 1 fps.
-            if !switchingRoom { worldStandIn }
-
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
             RoomHost(input: roomInput, controller: room).equatable()
 
-            // A room switch swaps the scene inside the same view, which goes on drawing: the stand-in covers the swap.
-            if switchingRoom { worldStandIn }
+            // A new RealityView takes a moment to draw its first frame; the last one shows meanwhile.
+            if state.tab == .world, !roomLive || roomCovered, let worldSnapshot {
+                SnapshotView(view: worldSnapshot)
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                    .transition(.opacity)
+            }
 
             Group {
                 switch state.tab {
@@ -303,16 +303,6 @@ struct HomeView: View {
                     .allowsHitTesting(launching)
                     .accessibilityHidden(!launching)
             }
-        }
-    }
-
-    /// The World as it last showed, until the room draws again.
-    @ViewBuilder private var worldStandIn: some View {
-        if state.tab == .world, !roomLive || roomCovered, let worldSnapshot {
-            SnapshotView(view: worldSnapshot)
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-                .transition(.opacity)
         }
     }
 
