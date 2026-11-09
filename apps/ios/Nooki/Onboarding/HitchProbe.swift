@@ -52,13 +52,18 @@ final class HitchProbe {
     /// Without the UI test (measure.sh's plain launches): seconds after launch before late frames count.
     static let harnessSettle: TimeInterval = 0.5
 
+    /// Seconds after the restart before late frames count. The restart builds the script's first frame again (its
+    /// images and the clip's player), work a launch does before its first frame, which `firstFrameMs` budgets; on CI's
+    /// iPhone SE it is one 49 ms frame 0.17 s in.
+    static let restartSettle: TimeInterval = 0.25
+
     init(waitsForHarness: Bool = false) {
         guard waitsForHarness else { return }
         start = .infinity
         notify_register_dispatch(Self.harnessDone, &token, .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 guard let self, self.start == .infinity else { return }
-                self.start = CACurrentMediaTime() - self.created
+                self.start = CACurrentMediaTime() - self.created + Self.restartSettle
                 self.restart()
             }
         }
