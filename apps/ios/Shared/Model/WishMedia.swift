@@ -3,30 +3,35 @@ import UIKit
 import UniformTypeIdentifiers
 
 /// A wish's picture, a small JPEG next to the Us store in the app group, so the share extension can save one too.
-enum WishImage {
+public enum WishImage {
     private static func url(_ id: UUID) -> URL { SharedFile.url("Us/Wishes/\(id.uuidString).jpg") }
 
-    static func load(_ id: UUID) -> UIImage? { UIImage(contentsOfFile: url(id).path()) }
+    public static func load(_ id: UUID) -> UIImage? { UIImage(contentsOfFile: url(id).path()) }
 
-    static func save(_ data: Data, for id: UUID) {
+    public static func save(_ data: Data, for id: UUID) {
         let target = url(id)
         let folder = target.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try? data.write(to: target, options: .atomic)
     }
 
-    static func remove(_ id: UUID) { try? FileManager.default.removeItem(at: url(id)) }
+    public static func remove(_ id: UUID) { try? FileManager.default.removeItem(at: url(id)) }
 }
 
-enum LinkPreview {
-    struct Result {
-        var title: String?
+public enum LinkPreview {
+    public struct Result {
+        public var title: String?
         /// JPEG, at most 600 points on its longer side.
-        var image: Data?
+        public var image: Data?
+
+        public init(title: String? = nil, image: Data? = nil) {
+            self.title = title
+            self.image = image
+        }
     }
 
     /// Nil when the page can't be reached within 8 seconds.
-    static func fetch(_ url: URL) async -> Result? {
+    public static func fetch(_ url: URL) async -> Result? {
         let provider = LPMetadataProvider()
         provider.timeout = 8
         guard let metadata = try? await provider.startFetchingMetadata(for: url) else { return nil }

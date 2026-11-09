@@ -4,13 +4,19 @@ import Wire
 /// One list change made on this phone, kept until the pair's room answers it. `apply` does to this phone's copy what
 /// the room does to its own, so the change shows at once and again on top of each answer until the room has it.
 /// Like the room, it makes nothing twice, so a change the room already holds changes nothing.
-nonisolated struct PendingListChange: Codable, Hashable {
-    var change: ListCommand
+public nonisolated struct PendingListChange: Codable, Hashable, Sendable {
+    public var change: ListCommand
     /// Monogram of the partner who made it; nil when this phone does not know, as from a widget.
-    var by: String?
-    var at: Date
+    public var by: String?
+    public var at: Date
 
-    func apply(to lists: [UsList]) -> [UsList] {
+    public init(change: ListCommand, by: String? = nil, at: Date) {
+        self.change = change
+        self.by = by
+        self.at = at
+    }
+
+    public func apply(to lists: [UsList]) -> [UsList] {
         var lists = lists
         switch change {
         case .createList(_, let list, let kind, let title, let icon):
@@ -60,7 +66,7 @@ nonisolated struct PendingListChange: Codable, Hashable {
 
     /// The changes that put this phone's own lists in the room: each list the room lacks, its items oldest first,
     /// and their ticks. An empty starter list is left out when the room already has one of its kind.
-    static func upload(_ local: [UsList], missingFrom room: [UsList], by me: String) -> [PendingListChange] {
+    public static func upload(_ local: [UsList], missingFrom room: [UsList], by me: String) -> [PendingListChange] {
         let held = Set(room.map(\.id))
         let kinds = Set(room.map(\.kind))
         var changes: [PendingListChange] = []
@@ -89,7 +95,7 @@ nonisolated struct PendingListChange: Codable, Hashable {
     }
 
     /// Trimmed and cut to the room's limit; nil when nothing is left.
-    static func line(_ text: String, max: Int) -> String? {
+    public static func line(_ text: String, max: Int) -> String? {
         let text = String(text.trimmingCharacters(in: .whitespacesAndNewlines).prefix(max))
             .trimmingCharacters(in: .whitespacesAndNewlines)
         return text.isEmpty ? nil : text
@@ -110,12 +116,12 @@ nonisolated struct PendingListChange: Codable, Hashable {
 }
 
 extension UUID {
-    nonisolated init?(_ key: IdempotencyKey) { self.init(uuidString: key.rawValue) }
+    public nonisolated init?(_ key: IdempotencyKey) { self.init(uuidString: key.rawValue) }
 }
 
 extension ListItem {
     /// What the room keeps about the item apart from its text, tick and wants.
-    nonisolated var details: ListItemDetails {
+    public nonisolated var details: ListItemDetails {
         get {
             ListItemDetails(quantity: quantity, note: note, icon: icon, aisle: aisle,
                             media: media.map(ListMedia.init),
@@ -137,7 +143,7 @@ extension ListItem {
 }
 
 extension ItemMedia {
-    nonisolated init(_ wire: ListMedia) {
+    public nonisolated init(_ wire: ListMedia) {
         let kind: Kind = switch wire.kind {
         case .movie: .movie
         case .tv: .tv
@@ -145,7 +151,7 @@ extension ItemMedia {
         self.init(kind: kind, tmdb: wire.tmdb, year: wire.year, posterPath: wire.posterPath)
     }
 
-    nonisolated var wireKind: ListMediaKind {
+    public nonisolated var wireKind: ListMediaKind {
         switch kind {
         case .movie: .movie
         case .tv: .tv
@@ -154,13 +160,13 @@ extension ItemMedia {
 }
 
 extension ListMedia {
-    nonisolated init(_ media: ItemMedia) {
+    public nonisolated init(_ media: ItemMedia) {
         self.init(kind: media.wireKind, tmdb: media.tmdb, year: media.year, posterPath: media.posterPath)
     }
 }
 
 extension ListKind {
-    nonisolated init(_ wire: Wire.ListKind) {
+    public nonisolated init(_ wire: Wire.ListKind) {
         switch wire {
         case .watch: self = .watch
         case .groceries: self = .groceries
@@ -174,7 +180,7 @@ extension ListKind {
 }
 
 extension Wire.ListKind {
-    nonisolated init(_ kind: ListKind) {
+    public nonisolated init(_ kind: ListKind) {
         switch kind {
         case .watch: self = .watch
         case .groceries: self = .groceries
@@ -188,7 +194,7 @@ extension Wire.ListKind {
 }
 
 extension UsGlyph {
-    nonisolated init(_ icon: ListIcon) {
+    public nonisolated init(_ icon: ListIcon) {
         let tint: UsTint = switch icon.tint {
         case .honey: .honey
         case .blush: .blush
@@ -203,7 +209,7 @@ extension UsGlyph {
 }
 
 extension ListIcon {
-    nonisolated init(_ glyph: UsGlyph) {
+    public nonisolated init(_ glyph: UsGlyph) {
         let tint: ListTint = switch glyph.tint {
         case .honey: .honey
         case .blush: .blush

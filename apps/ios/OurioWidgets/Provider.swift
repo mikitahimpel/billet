@@ -1,4 +1,5 @@
 import MoodInterface
+import OurioShared
 import UIKit
 import WidgetKit
 

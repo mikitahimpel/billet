@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import Transport
 import WidgetBridge
 import Wire

@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import Testing
 import Wire
 @testable import Billet

@@ -3,9 +3,9 @@ import Foundation
 
 /// BlurHash (blurha.sh): a photo as a few dozen characters the partner's phone can paint as a soft blur while the
 /// photo itself loads. Safe off the main thread.
-nonisolated enum BlurHash {
+public nonisolated enum BlurHash {
     /// The hash of `image` with `x` by `y` components (1 to 9 each), from a 32 px copy of it.
-    static func encode(_ image: CGImage, x: Int = 4, y: Int = 3) -> String? {
+    public static func encode(_ image: CGImage, x: Int = 4, y: Int = 3) -> String? {
         guard (1...9).contains(x), (1...9).contains(y) else { return nil }
         let side = 32
         var pixels = [UInt8](repeating: 0, count: side * side * 4)
