@@ -102,6 +102,9 @@ final class ServerSession {
     var streakRemote: StreakRemote { backend.streak }
     var api: APIClient { backend.api }
     var baseURL: URL { backend.baseURL }
+    #if DEBUG || LABS_YES
+    var purchases: PurchasesClient { backend.purchases }
+    #endif
 
     /// Sign-in is the only place an account is saved, and nothing removes one, so this is read once instead of from
     /// the Keychain on every check.
