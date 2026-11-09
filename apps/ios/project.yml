@@ -82,7 +82,7 @@ targets:
       - package: BilletPet
         products: [Pet, PetScene]
       - package: BilletFeatures
-        products: [FeatureCanvas, FeatureGames, FeatureInbox, FeatureMoments, FeatureOnboarding, FeaturePairing, FeatureShop, GamesInterface, RoomInterface, ShopInterface, WidgetBridge]
+        products: [FeatureCanvas, FeatureGames, FeatureInbox, FeatureMood, FeatureMoments, FeatureOnboarding, FeaturePairing, FeatureShop, GamesInterface, MoodInterface, RoomInterface, ShopInterface, WidgetBridge]
       - package: BilletPayments
         products: [Payments, PaymentsLive]
     entitlements:
@@ -146,6 +146,8 @@ targets:
         products: [Ink]
       - package: BilletDesign
         products: [Design]
+      - package: BilletFeatures
+        products: [MoodInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
@@ -181,6 +183,8 @@ targets:
         products: [Ink]
       - package: BilletDesign
         products: [Design]
+      - package: BilletFeatures
+        products: [MoodInterface]
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
@@ -220,6 +224,8 @@ targets:
         products: [Ink]
       - package: BilletDesign
         products: [Design]
+      - package: BilletFeatures
+        products: [MoodInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.share
