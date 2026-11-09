@@ -26,9 +26,10 @@ struct OnboardingView: View {
     @State var tapTick = 0
     @State private var wavedTick = 0
     @State var welcomeStart = Date()
-    /// Only with `-uitestWelcomeProbe`: counts the welcome timeline's late frames.
+    /// Only with `-uitestWelcomeProbe`: counts the welcome timeline's late frames. The UI test adds
+    /// `-uitestWelcomeProbeHarness` and signals when its launch handling is done.
     @State private var probe: HitchProbe? = ProcessInfo.processInfo.arguments.contains("-uitestWelcomeProbe")
-        ? HitchProbe() : nil
+        ? HitchProbe(waitsForHarness: ProcessInfo.processInfo.arguments.contains("-uitestWelcomeProbeHarness")) : nil
 
     /// One persistent background and header; only the page between the header and the actions changes.
     var body: some View {
@@ -166,6 +167,7 @@ struct OnboardingView: View {
 
     private var welcome: some View {
         WelcomeView(start: welcomeStart, waved: { wavedTick += 1 }, probe: probe)
+            .onAppear { probe?.restart = { welcomeStart = .now } }
     }
 
     @ViewBuilder private func question(_ step: OnboardingStep) -> some View {
