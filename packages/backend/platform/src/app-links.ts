@@ -27,7 +27,7 @@ const invitePage = (code: string | undefined) => `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>Join me in Nooki</title>
+<title>Join me in Ourio</title>
 <style>
 :root { color-scheme: light dark; --ink: #2a1a1c; --paper: #fbf5ee; --muted: #7a6a64; }
 @media (prefers-color-scheme: dark) { :root { --ink: #f5ebe4; --paper: #1d1416; --muted: #b3a39d; } }
@@ -45,11 +45,11 @@ button { font: inherit; font-weight: 600; padding: 12px 28px; border: 0; border-
 </head>
 <body>
 <main>
-<h1>Join me in Nooki</h1>
+<h1>Join me in Ourio</h1>
 ${
   code === undefined
-    ? "<p>This invite link is broken. Ask your person for their code, and enter it in Nooki.</p>"
-    : `<p>Open this link on the iPhone that has Nooki, or enter this code in the app.</p>
+    ? "<p>This invite link is broken. Ask your person for their code, and enter it in Ourio.</p>"
+    : `<p>Open this link on the iPhone that has Ourio, or enter this code in the app.</p>
 <code>${code.slice(0, half)} ${code.slice(half)}</code>
 <button type="button" id="copy">Copy code</button>
 <script>

@@ -29,11 +29,11 @@ const fieldsOf = (note: Note) => ({
 const alertOf = (note: Note): { readonly title: string; readonly body: string } => {
   switch (note._tag) {
     case "Drawing":
-      return { title: "Nooki", body: "A new drawing on your lock screen" };
+      return { title: "Ourio", body: "A new drawing on your lock screen" };
     case "Photo":
-      return { title: "Nooki", body: "A new photo for you" };
+      return { title: "Ourio", body: "A new photo for you" };
     case "Text":
-      return { title: "Nooki", body: note.text };
+      return { title: "Ourio", body: note.text };
   }
 };
 
@@ -61,7 +61,7 @@ export const reactionAlertBody = (reaction: {
   readonly reaction: Reaction;
 }): unknown => ({
   aps: {
-    alert: { title: "Nooki", body: `${emoji[reaction.reaction]} on your photo` },
+    alert: { title: "Ourio", body: `${emoji[reaction.reaction]} on your photo` },
     sound: "default",
     "mutable-content": 1,
     "thread-id": "reactions",
@@ -115,7 +115,7 @@ export const ordinal = (n: number): string => {
 
 const riddleAlert = (body: string): unknown => ({
   aps: {
-    alert: { title: "Nooki", body },
+    alert: { title: "Ourio", body },
     sound: "default",
     "thread-id": "draw-guess",
   },

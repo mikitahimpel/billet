@@ -330,7 +330,7 @@ describe("a draw-guess riddle", () => {
     expect(await sendPushLane(entry, sent.dependencies)).toBe("Delivered");
     expect(sent.sent.map((push) => push.collapseId)).toEqual([`d-${id}`, `d-${id}`]);
     expect(alertOf(sent.sent[0])).toEqual({
-      alert: { title: "Nooki", body: "Your partner drew you a riddle. 9 letters." },
+      alert: { title: "Ourio", body: "Your partner drew you a riddle. 9 letters." },
       sound: "default",
       "thread-id": "draw-guess",
     });
@@ -352,7 +352,7 @@ describe("a draw-guess riddle", () => {
     const ended = { noteId: riddleEndDeliveryId(id), lane: "AlertPush" } as const;
     expect(await sendPushLane(ended, solved.dependencies)).toBe("Delivered");
     expect((alertOf(solved.sent[0]) as { alert: unknown }).alert).toEqual({
-      title: "Nooki",
+      title: "Ourio",
       body: "Your partner guessed “cat” on the 2nd try 🎉",
     });
     const gaveUp = deps({
@@ -366,7 +366,7 @@ describe("a draw-guess riddle", () => {
     });
     await sendPushLane(ended, gaveUp.dependencies);
     expect((alertOf(gaveUp.sent[0]) as { alert: unknown }).alert).toEqual({
-      title: "Nooki",
+      title: "Ourio",
       body: "Your partner gave up on “cat”",
     });
     const widget = deps();
