@@ -100,6 +100,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
 | `.ourioLargeTitle` `.ourioTitle` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
+| `Motion.*` | every animation, see Motion |
 
 Over the room use the glass roles; elsewhere solid surfaces. Nothing in the app is red for the cat or the couple.
 
@@ -149,6 +150,31 @@ relations, so a redesign changes a token, not the screens.
   The screen's hero differs only by `warm`.
 - Art (paper, pens, gift boxes, window views, widgets) may keep its own drawn corners; those files are in
   `packages/ios/scripts/radius-baseline.json` and may only shrink.
+
+## Motion
+
+One scale, in `Tokens/Motion.swift`: two durations and one spring. Screens never pick a raw curve or time.
+
+| Token | Value | Use |
+| --- | --- | --- |
+| `Motion.quick` | 0.2 s | a control's own change and a page swapped in place: the selection pill, a hover, a tab's page |
+| `Motion.standard` | 0.35 s | a larger move that brings in something new: a panel, a card opening |
+| `Motion.spring(_:)` | spring, bounce 0 | everything that moves; nothing overshoots |
+| `Motion.fade(_:)` | ease-in-out opacity | a page swapped in place, what leaves, and everything under Reduce Motion |
+
+- **A tab switch fades the page and nothing else.** The new page fades in over the old one on
+  `Motion.fade()`; the header and the tab bar stay put and never animate as a whole (no `withAnimation`
+  around `state.tab`).
+- **The selection pill follows the finger.** One pill for the bar, moved by an offset: it slides on
+  `Motion.spring(Motion.quick)` while the finger is on the bar and is already in place when the switch
+  lands, so the switch's frames redraw no glass. A switch from elsewhere (a link, VoiceOver) moves it at once.
+- **Opacity and drawn offsets only**, never a frame, a padding or a safe area: those lay the page out again
+  on every frame of the animation. Nothing is inserted or removed inside glass to animate it.
+- **Keep the switch's frame light.** It already builds the new page; state written in
+  `onChange(of: state.tab)` runs Home's body a second time, so write only what changes the screen.
+- **Reduce Motion fades.** The selection pill fades out of one tab and into the next instead of sliding.
+- **The room comes and goes at once.** Leaving the World, its last frame fades out under the new page; coming
+  back, the room mounts in the switch's frame under that last frame, which fades once the room has drawn.
 
 ## Previews
 
