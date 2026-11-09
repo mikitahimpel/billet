@@ -33,15 +33,18 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 9. Numbers that change get `.monospacedDigit()`; animate them with `.contentTransition(.numericText())` only
    while the value changes.
 10. Text on honey is `Ink.heroInk`; white on honey is unreadable.
-11. **Controls over the room or the city sit on `Ink.glassFill`** with `Ink.glassGlyph`, never white on clear
-    glass: both adapt to the theme and pass 4.5:1 over the dark room, a bright room and the city. The coin has a
-    dark ring so it never melts into honey.
+11. **One glass, three roles** (below): every floating surface is `glass(_:role:)` or `accentGlass()`, tinted
+    `Ink.glassFill` with `Ink.glassGlyph`, never white on clear glass: both adapt to the theme and pass 4.5:1 over
+    the dark room, a bright room and the city. The coin has a dark ring so it never melts into honey.
 12. **Icon tiles have one rule:** a full-tint glyph on the same tint at 16%, for every row. No tint is the
     accent (`Ink.accentText` glyph); destructive is `Ink.destructive` only.
 13. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
     content; `GlassSegmented` is only the Room | City prototype.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
-    `.softScrollEdges()` (iOS 26 scroll edge effect); `Page` and `BilletSheet` already apply it.
+    `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
+    `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
+    glass is tinted enough that nothing ghosts through it. `check-design.mjs` fails on a tab's scroll view
+    without it and on any `.hard` edge.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
@@ -62,6 +65,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | The main action | `PrimaryButton` (or `PrimaryButtonStyle` on a custom label) |
 | A quieter action | `SecondaryButton` |
 | A round control in a header | `GlassIconButton(symbol:label:badge:action:)` |
+| Any other surface that floats | `glass(_:role:)` inside the bar's `GlassGroup`; the main action `accentGlass()` |
+| A badge on glass | `glassBadge(_:)` |
 | Nothing here yet | `EmptyState`, sized to its content |
 | The title of a block | `SectionHeader` |
 | A tag: rarity, discount, count | `Chip(style: .tinted / .honey / .quiet)` |
@@ -89,14 +94,38 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | --- | --- |
 | `Ink.screen`, `Ink.surface`, `Ink.surfaceRaised`, `Ink.separator` | backgrounds and hairlines, adaptive |
 | `Ink.text`, `.textSecondary`, `.textTertiary`, `.accentText` | text, adaptive |
-| `Ink.glassFill`, `.glassGlyph`, `.glassGlyphSecondary` | controls over the room or city, adaptive |
+| `Ink.glassFill`, `.glassGlyph`, `.glassGlyphSecondary`, `.glassRim`, `.glassSelection` | the glass roles, adaptive |
 | `Ink.disabledFill`, `.disabledText`, `.destructive` | disabled buttons, destructive text and tiles |
-| `Ink.primary`, `.secondary`, `.glassTint` | white on dark scene glass only (labels on the room) |
+| `Ink.primary`, `.secondary`, `.glassTint` | white on the dark full-screen canvas's warm glass only |
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
 | `.nookiLargeTitle` `.nookiTitle` `.nookiHeadline` `.nookiBody` `.nookiCallout` `.nookiCaption` `.nookiMicro` | text styles |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 
-Over the room use `warmGlass`; elsewhere solid surfaces. Nothing in the app is red for the cat or the couple.
+Over the room use the glass roles; elsewhere solid surfaces. Nothing in the app is red for the cat or the couple.
+
+## Glass
+
+Every piece of glass in the app's chrome is one of these. `Tokens/Glass.swift` holds them.
+
+| Role | Where | Glass | Tint | Rim | Shadow | Ink |
+| --- | --- | --- | --- | --- | --- | --- |
+| `control` | header buttons, coin pill, the pet, a sheet's close over a canvas | regular, interactive | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `Ink.glassGlyph` |
+| `bar` | tab bar, Room \| City switch, a label over the scene | regular | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `glassGlyph`; unselected `glassGlyphSecondary`; selected on `Ink.glassSelection` |
+| accent | the "+" beside the tab bar | prominent, interactive | honey | the system's own | the system's own | `Ink.heroInk` |
+| badge | counts, Lv., heart and crown, the partner's mood | none, solid | honey, blush or `Ink.surface` | 1.5 pt `Ink.glassFill` | none | `Ink.heroInk` |
+
+- **One container per bar.** The header (with the World's room switch under it) is one `GlassGroup`, the tab
+  bar and the "+" another. Every group blends at `GlassMetrics.blend` and every row keeps `GlassMetrics.gap`,
+  so neighbours morph when they appear and never merge at rest.
+- **No shadows of our own on glass.** The system casts one; another is a blur pass over a backdrop that
+  changes every frame. The avatars beside the glass take the badge ring, `Ink.glassFill`, and no shadow.
+- **Reduce Transparency** draws a role solid on `Ink.surface` with the same rim; the system frosts the native
+  glass (sheet close and confirm, the accent) itself.
+- **Sheets' close and confirm** are the system's toolbar glass (`BilletSheet`), not a role.
+- **The perf arms** (`-perf.hud opaque|flat`) replace a role by an opaque or flat `Ink.surface`; they keep the
+  rim, so only the glass changes.
+- The two-argument `glass(_:tint:clear:interactive:)` and `warmGlass` are for art inside content and the dark
+  full-screen canvas only; chrome never uses them.
 
 ## Shape
 

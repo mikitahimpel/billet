@@ -40,7 +40,6 @@ struct ShopView: View {
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
-            .shopScrollEdges()
             .scrollPosition($position)
             .softScrollEdges()
             .onAppear {
@@ -193,19 +192,6 @@ struct ShopView: View {
                 ShopItemCard(item: item, state: state) { sheetItem = item }
                     .shopAppear()
             }
-        }
-    }
-}
-
-private extension View {
-    /// A solid fade under the header and the tab bar instead of the soft one: cards scrolling under clear glass
-    /// would otherwise show through it as a ghost.
-    @ViewBuilder
-    func shopScrollEdges() -> some View {
-        if #available(iOS 26, *) {
-            scrollEdgeEffectStyle(.hard, for: .vertical)
-        } else {
-            self
         }
     }
 }
