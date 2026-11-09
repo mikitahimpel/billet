@@ -126,7 +126,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func perfShown(_ kind: RoomKind) {
-        if let current { OurioPerf.shown(current, kind: kind) }
+        guard let current else { return }
+        OurioPerf.shown(current, kind: kind)
+        if kind == .home, game == nil, let game = OurioPerf.game() { play(game) }
     }
 
     /// Returns once the room has drawn a frame it had not, or after `timeout`.
