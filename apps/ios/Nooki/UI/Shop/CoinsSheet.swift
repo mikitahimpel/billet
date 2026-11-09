@@ -15,7 +15,7 @@ struct CoinsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var sellsPacks: Bool {
-        packs != nil && CoinPacksModel.sells(state.rooms.remote, mockStore: AppPayments.isMock)
+        packs != nil && CoinPacksModel.sells(state.rooms.remote)
     }
 
     var body: some View {

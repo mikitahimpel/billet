@@ -45,10 +45,10 @@ final class CoinPacksModel {
     /// The server's switch for selling coins (docs/payments.md).
     nonisolated static let flag = Experiment(key: "payments", variants: ["off", "on"])
 
-    /// Packs on sale in this build for this pair: always in a mock build (the dev server's mock route credits them),
-    /// otherwise only once the server turned `payments` on.
-    nonisolated static func sells(_ flags: RemoteFlags, mockStore: Bool) -> Bool {
-        mockStore || flags.variant(of: flag) == "on"
+    /// Packs on sale for this pair: only once the server turned `payments` on, whichever store the build carries, so a
+    /// mock build that reaches testers or App Review sells nothing while the flag is off. Dev turns it on in the admin.
+    nonisolated static func sells(_ flags: RemoteFlags) -> Bool {
+        flags.variant(of: flag) == "on"
     }
 
     /// The smallest pack that covers `missing`, or the biggest when none does; nil when nothing is missing.

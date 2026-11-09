@@ -359,9 +359,9 @@ struct OnboardingView: View {
         inviteBase?.appending(path: "i/\(code)").absoluteString ?? code
     }
 
-    /// What was typed or pasted, kept to the symbols a code has.
+    /// What was typed or pasted, kept to the symbols a code has, up to the App Review pair's longer code.
     static func code(from typed: String) -> String {
-        String(InviteCode.normalized(typed).filter { InviteCode.alphabet.contains($0) }.prefix(InviteCode.length))
+        String(InviteCode.normalized(typed).filter { InviteCode.alphabet.contains($0) }.prefix(InviteCode.reviewLength))
     }
 
     private var stopped: some View {

@@ -34,7 +34,8 @@ The dev stage ignores the flag: its purchase routes are on for every pair and de
 can be tried there before the flag is on anywhere. `stage` and `prod` follow the flag.
 
 The app reads the same flag from `GET /v1/flags` and never offers to buy coins while it is not
-`on` (see the client brief).
+`on`, whichever store it was built with: a mock build on dev shows packs only for a pair with the
+override `payments = on` (`CoinPacksModel.sells`).
 
 ## Coin packs
 
@@ -120,7 +121,7 @@ Which store the app carries is chosen when it is built, with one variable:
 | `BILLET_PAYMENTS` | Store | Server path | Use |
 | --- | --- | --- | --- |
 | `none` (the release default, to come) | none: no StoreKit, no mock, no "buy coins" anywhere | none | The first App Store release |
-| `mock` (default) | `MockPayments`: packs and prices from `coin-packs.json`, no StoreKit, no network to Apple | `POST /v1/purchases/mock` (dev only) | Simulator, TestFlight demos, UI work |
+| `mock` (default) | `MockPayments`: packs and prices from `coin-packs.json`, no StoreKit, no network to Apple | `POST /v1/purchases/mock` (dev only) | Simulator and UI work; never uploaded |
 | `storekit` | `StoreKitPayments`: StoreKit 2 | `POST /v1/purchases` with the signed transaction | Xcode/Simulator with `Billet.storekit`, TestFlight sandbox, the App Store |
 
 Set it in the **environment**, never as an `xcodebuild` argument: `Package.swift` reads it to link
@@ -147,17 +148,16 @@ BILLET_PAYMENTS=storekit xcodebuild test -project apps/ios/Billet.xcodeproj \
   -scheme BilletStoreKitTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2'
 
 # TestFlight
-gh workflow run testflight.yml --ref main                       # mock (the default)
-gh workflow run testflight.yml --ref main -f payments=storekit  # App Store sandbox
+gh workflow run testflight.yml --ref main   # always StoreKit, Labs compiled out
 ```
 
 After switching modes in Xcode, quit Xcode and reopen it from a shell with the variable set (or
 `launchctl setenv BILLET_PAYMENTS storekit`), and resolve packages again, since Xcode caches the
 package manifest.
 
-An App Store build sets `BILLET_DISTRIBUTION=appstore`; with `mock` it stops at compile time
-(`#error` in `AppPayments.swift`). TestFlight builds are `BILLET_DISTRIBUTION=testflight` (the
-default).
+The TestFlight workflow always builds with `BILLET_PAYMENTS=storekit`, because the binary it
+uploads is the one App Review and the App Store get, and `check-archive.sh` fails the upload when
+`BilletPayments` is not `storekit` or the binary carries `MockPaymentsBuild`.
 
 ## The app
 

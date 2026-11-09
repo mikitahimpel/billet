@@ -33,11 +33,12 @@ is still working on it, which can take up to half an hour after the run ends.
    `xcodebuild archive -allowProvisioningUpdates -authenticationKeyPath … -authenticationKeyID … -authenticationKeyIssuerID …`.
    The bundle IDs, team 2666YPBJTB and signing setup are the project's own, unchanged.
 5. Runs `apps/ios/scripts/testflight/check-archive.sh` on the archive. That script checks:
-   - the bundle IDs, version and build of the app, widget and notification service;
-   - `codesign --verify` and the team on all three;
-   - that nothing from Rive is in the app;
-   - that every cat file is in the bundle;
-   - that the demo host is the app's `BilletDemoHost` and appears nowhere in git history.
+   - the bundle IDs, version and build of the app and its widget;
+   - `codesign --verify` and the team on both;
+   - that the app was built with the StoreKit store (`BilletPayments` is `storekit` and the
+     binary has no `MockPaymentsBuild`) and without Labs (`BilletLabs` is `NO`): the workflow sets
+     `BILLET_PAYMENTS=storekit` and never `BILLET_LABS`, since this binary goes on to App Review;
+   - that the demo host is the app's `BilletAPIHost` and appears nowhere in git history.
 6. Exports with `apps/ios/ExportOptions-external.plist` (`method` app-store-connect,
    `destination` upload, `uploadSymbols` on), which signs with a cloud-managed Apple Distribution
    certificate and uploads the build to TestFlight.
