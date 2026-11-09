@@ -242,8 +242,11 @@ final class CityRoomScene: CatRoom {
         let window = glass.compactMap { project(pivot.convert(position: $0, to: nil)) }
         let home = glass.compactMap { project(root.convert(position: $0, to: nil)) }
         let hole = face.compactMap { project(pivot.convert(position: $0, to: nil)) }
-        street?.gate(front: wallFront, back: wallBack) { project(pivot.convert(position: $0, to: nil)) }
-        guard window.count == 4, hole.count == 4 else { return windowView.place(window: [], home: [], hole: []) }
+        guard window.count == 4, hole.count == 4 else {
+            street?.gate(front: wallFront, back: wallBack, window: []) { _ in nil }
+            return windowView.place(window: [], home: [], hole: [])
+        }
+        street?.gate(front: wallFront, back: wallBack, window: hole) { project(pivot.convert(position: $0, to: nil)) }
         windowView.place(window: window, home: home.count == 4 ? home : window, hole: hole)
     }
 

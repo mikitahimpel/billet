@@ -123,25 +123,37 @@ final class CityStreet {
     }
 
     /// After the camera has moved: shows each car only while every corner of it lands inside both faces of the back
-    /// wall on screen. `wall` is the faces' corners in pivot space; `project` takes pivot space to screen points.
-    func gate(front frontCorners: [SIMD3<Float>], back backCorners: [SIMD3<Float>],
+    /// wall on screen, and its box on screen meets the window's; behind the wall elsewhere it would cost a draw for
+    /// nothing. `front` and `back` are the wall's faces in pivot space, `window` the hole's corners on screen, and
+    /// `project` takes pivot space to screen points.
+    func gate(front frontCorners: [SIMD3<Float>], back backCorners: [SIMD3<Float>], window: [CGPoint],
               project: (SIMD3<Float>) -> CGPoint?) {
+        guard traffic.slots.contains(where: { $0 != nil }) else { return }
         Self.outline(frontCorners, into: &front, project)
         Self.outline(backCorners, into: &back, project)
+        let hole = Self.bounds(window)
         for index in cars.indices {
             guard let state = traffic.slots[index] else { continue }
             let lane = Self.plan.lanes[state.lane]
             let origin = SIMD3<Float>(state.x, Self.ground, lane.z)
-            var hidden = front.count == 4 && back.count == 4
-            for corner in Self.corners where hidden {
+            var shown = front.count == 4 && back.count == 4
+            var box = CGRect.null
+            for corner in Self.corners where shown {
                 guard let point = project(origin + corner) else {
-                    hidden = false
+                    shown = false
                     break
                 }
-                hidden = BehindWall.contains(front, point) && BehindWall.contains(back, point)
+                shown = BehindWall.contains(front, point) && BehindWall.contains(back, point)
+                box = box.union(CGRect(origin: point, size: .zero))
             }
-            cars[index].entity.isEnabled = hidden
+            cars[index].entity.isEnabled = shown && box.intersects(hole)
         }
+    }
+
+    private static func bounds(_ points: [CGPoint]) -> CGRect {
+        var box = CGRect.null
+        for point in points { box = box.union(CGRect(origin: point, size: .zero)) }
+        return box
     }
 
     private static func outline(_ corners: [SIMD3<Float>], into points: inout [CGPoint],
