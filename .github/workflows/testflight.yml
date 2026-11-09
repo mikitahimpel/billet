@@ -15,6 +15,10 @@ on:
         description: A commit on main to build instead of main's newest (empty builds the newest)
         required: false
         default: ""
+      labs:
+        description: Compile Settings > Labs in, for the owner's test builds; never submit such a build for review
+        type: boolean
+        default: false
 
 concurrency:
   group: testflight
@@ -70,6 +74,10 @@ jobs:
           fi
           git checkout -q --detach "$COMMIT"
           git log --oneline -1
+
+      - name: Say it is a Labs build
+        if: inputs.labs
+        run: echo "**Labs build: do not submit for review**" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
@@ -152,6 +160,7 @@ jobs:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
           BILLET_API_HOST: ${{ secrets.DEMO_HOST }}
           BILLET_PAYMENTS: storekit
+          BILLET_LABS: ${{ inputs.labs && 'YES' || '' }}
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           set +e
@@ -172,6 +181,7 @@ jobs:
       - name: Check the archive
         env:
           DEMO_HOST: ${{ secrets.DEMO_HOST }}
+          EXPECT_LABS: ${{ inputs.labs && 'YES' || 'NO' }}
         run: apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
 
       - name: Upload to TestFlight
@@ -196,6 +206,12 @@ jobs:
             --build "${{ steps.build.outputs.number }}" --wait 900)"
           echo "$line"
           echo "$line" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Mark the Labs build in TestFlight
+        if: inputs.labs
+        run: |
+          python3 -I apps/ios/scripts/testflight/asc.py what-to-test \
+            --build "${{ steps.build.outputs.number }}" --text "Labs build: do not submit for review"
 
       # Xcode makes a new Apple Development certificate through the key on every run, in this run's
       # keychain, and the team may hold only a few. Revoke the ones in this keychain, also when an

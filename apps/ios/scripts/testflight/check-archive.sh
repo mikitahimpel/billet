@@ -1,6 +1,7 @@
 #!/bin/bash
 # Checks a Release archive before TestFlight: bundle IDs, version 0.1.0, build number, team 2666YPBJTB signing;
-# DEMO_HOST is the app's BilletAPIHost and nowhere in git history; StoreKit store, no Labs, no mock store.
+# DEMO_HOST is the app's BilletAPIHost and nowhere in git history; StoreKit store, no mock store, and Labs as
+# EXPECT_LABS says (NO unless the run asked for a Labs build).
 #   check-archive.sh <path.xcarchive> <build-number>  (repository root, full history; never prints the host)
 set -euo pipefail
 
@@ -8,6 +9,7 @@ archive=${1:?usage: check-archive.sh <path.xcarchive> <build-number>}
 build=${2:?usage: check-archive.sh <path.xcarchive> <build-number>}
 version=0.1.0
 team=2666YPBJTB
+expect_labs=${EXPECT_LABS:-NO}
 app="$archive/Products/Applications/Billet.app"
 failed=0
 fail() {
@@ -30,7 +32,7 @@ check_bundle() {
   [ "$got_version" = "$version" ] || fail "$id: version is $got_version, not $version"
   [ "$got_build" = "$build" ] || fail "$id: build is $got_build, not $build"
   codesign --verify --strict "$path" || fail "$id: codesign --verify failed"
-  got_team=$(codesign -dv "$path" 2>&1 | sed -n 's/^TeamIdentifier=//p')
+  got_team=$(codesign -dv "$path" 2>&1 | sed -n 's/^TeamIdentifier=//p' || true)
   [ "$got_team" = "$team" ] || fail "$id: signed by team $got_team, not $team"
   echo "$id $got_version ($got_build), team $got_team, signature verified"
 }
@@ -41,7 +43,11 @@ check_bundle "$app/PlugIns/OurioWidgets.appex" com.mikitahimpel.billet.widget
 payments=$(plist "$app" BilletPayments)
 labs=$(plist "$app" BilletLabs)
 [ "$payments" = storekit ] || fail "the app's store is '$payments', not storekit: build with BILLET_PAYMENTS=storekit"
-[ "$labs" = NO ] || fail "Labs is '$labs' in the app, not NO: build without BILLET_LABS"
+case $expect_labs in
+  NO) [ "$labs" = NO ] || fail "Labs is '$labs' in the app, not NO: build without BILLET_LABS" ;;
+  YES) [ "$labs" = YES ] || fail "Labs is '$labs' in the app, not YES: build with BILLET_LABS=YES" ;;
+  *) fail "Labs: EXPECT_LABS is '$expect_labs', not YES or NO" ;;
+esac
 binary="$app/$(plist "$app" CFBundleExecutable)"
 if [ ! -f "$binary" ]; then
   fail "missing the app's binary"
