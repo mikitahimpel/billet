@@ -24,7 +24,7 @@ in a line are in AGENTS.md.
 ### 1.1 The graph
 
 ```
-apps/ios/Nooki                 the App target: composition root (NookiApp), the shell (tabs,
+apps/ios/Nooki                 the App target: composition root (OurioApp), the shell (tabs,
 │                              sheets, deep links), nothing else
 ├── Room/                      the sealed Room module (section 5): RoomHost, the scenes, the cat,
 │                              the mini-game stages, the cat's care. The only RealityKit code.
@@ -129,7 +129,7 @@ Rules:
 
 ## 3. Dependency injection
 
-- **One composition root.** `NookiApp` builds `AppDependencies.live(session:)` once: every store,
+- **One composition root.** `OurioApp` builds `AppDependencies.live(session:)` once: every store,
   every client, the `RoomController`. `HomeView` and the shell receive them; nothing below makes
   its own. Widgets and extensions have their own small root over the interface targets' file
   types (`Wallet`, `Us`, `Couple`), never the app's stores.
@@ -680,7 +680,7 @@ only.
 
 The Scene folder as it is (Ilya's files untouched, see 5.7), plus the code that reaches into it
 today: `Games/*` (stages, `GameSession`, `GameCamera`, `GameView`), `Model/CatCare.swift`,
-`UI/Home/PetSheet`, `NeedBars`, `BrainCard`, `HeartBubble`, `PetButton`, `Perf/NookiPerf.swift`
+`UI/Home/PetSheet`, `NeedBars`, `BrainCard`, `HeartBubble`, `PetButton`, `Perf/OurioPerf.swift`
 (the scene part), the room's part of `HomeView` (building the scenes, the room switch's scene
 side, `setPolaroids`, `setPins`, `purr`, `appOpened`, `stop`), and `ItemSheet`'s use of
 `CatRoom.gradientImage` (becomes a `Design` helper).
@@ -694,7 +694,7 @@ Leaks today, from the census: `CatRoom` is named in 11 files outside Scene, `Boa
   `updates` (RealityView update closures), plus `ShellProbe` counters the shell registers for the
   header, the tab bar and an open sheet. An atomic increment is free, so they stay in Release and
   the perf runs read them; the reset and read hooks are `public` for tests.
-- `NookiTests/RoomSealingTests`: hosts the shell with fakes and the stand-in room (`-uitestNoRoom`,
+- `OurioTests/RoomSealingTests`: hosts the shell with fakes and the stand-in room (`-uitestNoRoom`,
   CI's virtual Macs can't draw RealityKit). Changing coins, setting a mood, opening the Coins
   sheet and scrolling the Shop list leave `RoomProbe.bodies` unchanged. Then 10 s of stand-in
   ticks (the internal model mutated at 60 Hz) leave the header's, the tab bar's and the sheet's
@@ -725,7 +725,7 @@ possible one later: `BubbleSpot` in `DioramaView` is already private to the view
 
 ### 5.9 Later: a library target
 
-Once sealed, `Nooki/Room` can become a static library target `NookiRoom` in `project.yml`, like
+Once sealed, `Nooki/Room` can become a static library target `OurioRoom` in `project.yml`, like
 `WindowViews`: then `internal` means internal and the grep is redundant. That moves Ilya's files
 (a rename, no content change) and needs the owner's OK; it is not part of the sealing PR.
 
@@ -755,7 +755,7 @@ One route at a time is what the screen can show; the enum says so. Deep links an
 transitions are tested. `ShopOpening` is the shell's conformance: `openShop(at:)` sends
 `.link(.shop(focus))`.
 
-The composition root (`NookiApp`) builds `AppDependencies.live(session:)` and the shell store;
+The composition root (`OurioApp`) builds `AppDependencies.live(session:)` and the shell store;
 `HomeView` becomes the shell's view: the tab views, the sheets by route, `RoomHost` with the
 input derived from the shell state and the interfaces. `followPair`, `refresh`, `eraseAll`,
 `didEnterBackground` become events the root sends to the features that own them.
@@ -784,7 +784,7 @@ the 13 stores of `HomeStores`. 48 views take the whole object; 58 files name it.
 
 | Slice | HomeState members | Read by | Written by |
 | --- | --- | --- | --- |
-| Shell | `tab`, `room`, `game`, `showsProfile`, `showsInbox`, `invitedCode`, `showsPetSheet`, `openedShopItem`, `usRoute`, `composingNote`, `drawing`, `openedPin`, `momentsMode`, `open(DeepLink)`, `open(ActivityTarget)` | HomeView, TabBar, AppHeader, MomentsView, Us screens, NookiPerf | the same views: `tab` from 7 files, `composingNote` from 4, `usRoute` from 4 |
+| Shell | `tab`, `room`, `game`, `showsProfile`, `showsInbox`, `invitedCode`, `showsPetSheet`, `openedShopItem`, `usRoute`, `composingNote`, `drawing`, `openedPin`, `momentsMode`, `open(DeepLink)`, `open(ActivityTarget)` | HomeView, TabBar, AppHeader, MomentsView, Us screens, OurioPerf | the same views: `tab` from 7 files, `composingNote` from 4, `usRoute` from 4 |
 | Coins and Shop | `shop`, `wallet`, `shopFocus`, `openShop` | 19 files: Shop views, Draw (InkPalette, InkShelf, LockCanvasView), AppHeader, PetSheet, ItemSheet | ShopModel itself; `wallet` by CatCare |
 | Room and cat | `care`, `game`, `showsPetSheet` | HomeView, PetSheet | HomeView (petPulse into DioramaView) |
 | Moments | `moments`, `notes`, `journal`, `openedPin`, `momentsMode`, `composingNote` | 10 + 6 + 5 files: Moments views, BoardFaces, Us (dates, places add photos), Draw, TabBar | Moments views, Draw, Us, HomeView+Pair (board) |

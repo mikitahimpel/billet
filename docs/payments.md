@@ -1,6 +1,6 @@
 # Payments
 
-Nooki's **coins** are billet's one currency (owner decision, 2026-11-05). Stamps, the old app's
+Ourio's **coins** are billet's one currency (owner decision, 2026-11-05). Stamps, the old app's
 paid-only currency, are gone. Coins are earned in play (mini-games, feeding, notes) and, once
 payments are on, also sold in packs as consumable in-app purchases through StoreKit 2. The server
 keeps a ledger of the coins each pair has bought.
@@ -49,7 +49,7 @@ are **placeholders** until the owner sets them:
 | `com.mikitahimpel.billet.coins.1200` | 1200 | 9.99 |
 
 The app's copy (`packages/ios/payments/Sources/Payments/Resources/coin-packs.json`) and the Xcode StoreKit
-configuration (`archive/ios-v1/App/Billet.storekit` until the Nooki app has its own) must sell
+configuration (`archive/ios-v1/App/Billet.storekit` until the Ourio app has its own) must sell
 exactly these. A test in `contracts-fixtures` (`coin-packs-sync.test.ts`) fails if an id, a number
 of coins or a price differs, or if a StoreKit product is not a consumable.
 
@@ -162,7 +162,7 @@ uploads is the one App Review and the App Store get, and `check-archive.sh` fail
 ## The app
 
 The Swift package types below still carry the old `Stamp` names (`StampPack`, `StampShop`, …);
-they count coins, and the Nooki client renames them when it wires payments (decoding already maps
+they count coins, and the Ourio client renames them when it wires payments (decoding already maps
 `coins`).
 
 - `Payments` (no StoreKit): the `Payments` protocol (`products()`, `purchase(_:)`, `restore()`,

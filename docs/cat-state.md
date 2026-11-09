@@ -1,6 +1,6 @@
 # The cat's shared state
 
-Nooki's cat used to live only on each phone: `CatDirector` drew a random seed per device and kept
+Ourio's cat used to live only on each phone: `CatDirector` drew a random seed per device and kept
 the feeds, pets and games in the user defaults, so the two partners saw two different cats. Now the
 couple's `PairRoom` keeps the cat's **facts**, and each phone keeps its **dice**.
 

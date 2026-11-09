@@ -50,14 +50,14 @@ for the APNs sandbox in Debug and for production otherwise (`DrawingSync.swift`)
 
 ## App: reachable in a release build
 
-- **`-perf.script` launch argument** (`NookiPerf.swift`, `ScenePerf`): starts a frame recorder
+- **`-perf.script` launch argument** (`OurioPerf.swift`, `ScenePerf`): starts a frame recorder
   and a script that drives the room. It needs a launch argument, so users and reviewers never
   trigger it, but it is test code in the binary. **`-perf.script` must be compiled out of Release** (#515: it touches the app and `packages/ios/pet`, and the perf CI measures Release builds, so it is not a small change).
 - **Mock store.** `BILLET_PAYMENTS` defaults to `mock` for local builds: the mock store credits
   coins without money on dev, and like StoreKit it sells only while `payments` is `on`. The
   TestFlight workflow always builds with `BILLET_PAYMENTS=storekit`, and `check-archive.sh` fails
   any other store.
-- **`XCTestConfigurationFilePath`** in `NookiApp.swift` only detects a test host; no behaviour
+- **`XCTestConfigurationFilePath`** in `OurioApp.swift` only detects a test host; no behaviour
   for users.
 
 ## Server: test paths
@@ -81,7 +81,7 @@ test path (demo rooms) needs a migration and a deploy that this docs PR must not
 Fail the upload when any of these is true:
 
 1. The build was not made with `BILLET_PAYMENTS=storekit` (checked by `check-archive.sh`).
-2. The Labs section (checked by `check-archive.sh`) or `NookiPerf` (#515) is still compiled into
+2. The Labs section (checked by `check-archive.sh`) or `OurioPerf` (#515) is still compiled into
    Release.
 3. `registry` has a flag whose status is `running` or whose `default` differs from the table
    above.

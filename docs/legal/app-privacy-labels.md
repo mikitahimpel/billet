@@ -30,7 +30,7 @@ purchases (coins are earned in the app; buying them is off in the first release,
 `apps/ios/Nooki/PrivacyInfo.xcprivacy` declares the types above and these required-reason APIs:
 UserDefaults (`CA92.1` the app's own settings, `1C8F.1` the App Group it shares with its
 extensions) and system boot time (`35F9.1`, elapsed-time measurement in the drawing canvas).
-`NookiWidgets`, `NookiNotifications` and `NookiShare` collect nothing of their own and declare
+`OurioWidgets`, `OurioNotifications` and `OurioShare` collect nothing of their own and declare
 UserDefaults `1C8F.1` for the App Group. All four set `NSPrivacyTracking` to false with no tracking
 domains. Check the list when adding an SDK or an API Apple lists as required-reason.
 
