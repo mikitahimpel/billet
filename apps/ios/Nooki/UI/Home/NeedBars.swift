@@ -54,7 +54,8 @@ private struct NeedCell: View {
         VStack(alignment: .leading, spacing: Space.s) {
             HStack(spacing: Space.s) {
                 Image(systemName: need.symbol)
-                    .font(.system(size: 13, weight: .bold))
+                    .ourioScaledFont(size: 13, weight: .bold)
+                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                     .foregroundStyle(.white)
                     .frame(width: 28, height: 28)
                     .background(LinearGradient(colors: [need.hue.mix(with: .white, by: 0.2), need.hue],
@@ -105,7 +106,8 @@ struct PetActions: View {
                 Button(action: action.run) {
                     VStack(spacing: 6) {
                         Image(systemName: action.symbol)
-                            .font(.system(size: 18, weight: .bold))
+                            .ourioScaledFont(size: 18, weight: .bold)
+                            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                             .foregroundStyle(.white)
                             .frame(width: 38, height: 38)
                             .background(LinearGradient(colors: [action.hue.mix(with: .white, by: 0.2),

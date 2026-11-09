@@ -41,7 +41,8 @@ struct HintStyle: TipViewStyle {
                 hints.close(configuration.tip)
             } label: {
                 Image(systemName: "xmark")
-                    .font(.system(size: 13, weight: .bold))
+                    .ourioScaledFont(size: 13, weight: .bold)
+                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                     .foregroundStyle(Ink.secondary)
                     .frame(width: 28, height: 28)
                     .contentShape(.rect)

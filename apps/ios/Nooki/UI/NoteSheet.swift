@@ -31,6 +31,10 @@ struct NoteSheet: View {
                             .foregroundStyle(Ink.textSecondary)
                     }
 
+                    if UnsentMark.shows(note.unsent, paired: session?.isPaired == true) {
+                        UnsentLabel()
+                    }
+
                     SecondaryButton("Delete note", symbol: "trash") { confirmDelete = true }
                         .confirmationDialog("Delete this note?", isPresented: $confirmDelete, titleVisibility: .visible) {
                             Button("Delete", role: .destructive) {

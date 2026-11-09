@@ -80,7 +80,7 @@ private struct NoteCard: View {
                 }
             }
             .overlay(alignment: .topTrailing) {
-                if note.unsent == true, session?.isPaired == true {
+                if UnsentMark.shows(note.unsent, paired: session?.isPaired == true) {
                     UnsentMark(size: 11, tint: Color(hex: note.inkHex).opacity(0.6)).padding(8)
                 }
             }

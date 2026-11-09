@@ -62,6 +62,7 @@ struct HomeView: View {
 
     private func following(_ content: some View) -> some View {
         content
+        .modifier(StreakNudging(streak: state.streak))
         .task {
             OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
             await lift()
@@ -362,7 +363,7 @@ struct HomeView: View {
             session?.reactions?.refresh()
             session?.followInbox(
                 true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
-                moods: { [state] in state.moodSync?.received($0) },
+                moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
                 cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq })
             refreshRooms()
             if !launching { reportOpened(state.room) }
@@ -386,12 +387,8 @@ struct HomeView: View {
 
     /// Lifts the splash once the room is ready, never sooner than its own little intro and never later than 6 s.
     private func lift() async {
-        let start = Date()
-        while launching {
-            let elapsed = Date().timeIntervalSince(start)
-            if elapsed > 6 || elapsed > 1.6 && room.isReady { break }
-            try? await Task.sleep(for: .milliseconds(100))
-        }
+        try? await Task.sleep(for: .seconds(1.6))
+        await room.ready(timeout: .seconds(4.4))
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false } completion: { splashDrawn = false }
@@ -442,7 +439,8 @@ struct HomeView: View {
         let visibility: RoomVisibility =
             roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
-            scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility)
+            scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
+            catName: state.petName)
     }
 
     private func handle(_ event: RoomEvent) {
@@ -450,6 +448,7 @@ struct HomeView: View {
         case .catPetted: withAnimation(.spring(duration: 0.4)) { state.care.pet() }
         case .pinOpened(let id): state.openedPin = PinRoute(id: id)
         case .drawAsked: state.composingNote = .draw
+        case .careAsked: state.showsPetSheet = true
         case .partnerCared(let care):
             withAnimation(.snappy(duration: 0.3)) {
                 homecoming = HomecomingLine(care, partner: state.otherPartner, cat: CatProfile.name())
@@ -469,12 +468,14 @@ private struct ShowcaseLabel: View {
             Text(label)
                 .contentTransition(.opacity)
         }
-        .font(.system(size: 14, weight: .semibold, design: .rounded))
+        .ourioScaledFont(size: 14, weight: .semibold, design: .rounded, relativeTo: .subheadline)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
         .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, 14)
-        .frame(height: 40)
+        .padding(.vertical, Space.s)
+        .frame(minHeight: 40)
         .glass(.capsule, role: .bar)
-        .frame(height: 44)
+        .frame(minHeight: 44)
         .accessibilityLabel("Playing \(label)")
     }
 }

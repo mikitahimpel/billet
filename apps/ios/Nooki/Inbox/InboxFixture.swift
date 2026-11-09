@@ -1,4 +1,5 @@
 #if DEBUG
+import FeatureInbox
 import Foundation
 import Transport
 import Wire

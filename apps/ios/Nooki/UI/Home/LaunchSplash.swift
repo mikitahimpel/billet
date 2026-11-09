@@ -18,7 +18,8 @@ struct LaunchSplash: View {
                     .scaleEffect(y: breathing ? 1.015 : 0.995, anchor: .bottom)
 
                 Text("Ourio")
-                    .font(.system(size: 34, weight: .bold, design: .rounded))
+                    .font(.ourioLargeTitle)
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     .foregroundStyle(.white)
                     .tracking(0.5)
 

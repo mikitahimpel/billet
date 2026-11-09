@@ -32,6 +32,8 @@ whose day it was, and moves the other's unread count.
 - `at` is when it happened on the phone. A phone that was offline reports late, so the room counts the day `at`
   falls on in the caller's offset, with `at` held between a day before the room's clock and the room's clock. A
   claim further back counts as a day back; one ahead counts as now.
+- A socket that resumes with `streak: true` is sent `StreakChanged { streak }` at once, and again on every socket
+  of the pair after each day that changes the streak or a restore, whoever made it.
 - In the room's SQLite the `room` row keeps `streak_days`, `streak_best`, `streak_last_day` and
   `streak_restored_on`.
 
@@ -40,6 +42,13 @@ whose day it was, and moves the other's unread count.
 `StreakStore` (`apps/ios/Shared/Model/Streak.swift`) keeps `Us/streak.json` as the room's streak last read, with
 the days this phone grew it that the room hasn't stored yet (`Us/streak-unsent.json`) counted on top. Once paired it
 follows the room through `StreakRemote`: each day that grows the streak here is posted at once, a drop leaves it in
-the unsent list for the next refresh (the app coming to the front), and a day the room refuses is let go. A restore
+the unsent list for the next refresh (the app coming to the front), and a day the room refuses is let go. While the app is in
+front the room socket (`InboxLink`) follows the streak, so the partner's day shows here at once. A restore
 goes to the room; offline it does nothing. Before pairing the streak stays on the phone, as it did before the room
 counted it.
+
+On a day the streak would go out at midnight, the phone shows one local notification at 20:00 in the cat's voice
+(`StreakNudge`, `apps/ios/Nooki/Model/StreakNudge.swift`). It is planned again whenever the streak changes: the day
+counting takes it back and plans tomorrow's. It is never sent once the evening has passed, nor asks for permission;
+Settings → Reminders turns it off. A day the partner counts reaches this phone only when the app is in front, so
+until then the nudge may still fire on it.
