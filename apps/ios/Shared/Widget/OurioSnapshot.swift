@@ -7,7 +7,7 @@ enum WidgetModule: String, Codable, CaseIterable {
 
 /// Everything the widgets draw at one moment, read from the shared stores. Plain data, so it can be built for future
 /// timeline entries and tested without WidgetKit.
-struct NookiSnapshot: Hashable {
+struct OurioSnapshot: Hashable {
     struct NextEvent: Hashable {
         var title: String
         var icon: UsGlyph
@@ -92,7 +92,7 @@ struct NookiSnapshot: Hashable {
     }
 }
 
-extension NookiSnapshot {
+extension OurioSnapshot {
     /// - Parameter listID: the list the widget was set up with; falls back to the first checklist, then the first list.
     init(date: Date, couple: Couple, moods: [String: MoodCheckIn], activity: WidgetActivity, us: UsStore,
          listID: UUID?, moment: MomentPreview?) {
@@ -151,7 +151,7 @@ extension NookiSnapshot {
 /// Picks what the smart slot shows: the first rule that holds wins (docs/widget-concept.md, section 3).
 /// note: gifts, notes and today's question rank above the mood once those features exist; they have no data yet.
 enum SmartSlot {
-    static func pick(for s: NookiSnapshot) -> WidgetModule {
+    static func pick(for s: OurioSnapshot) -> WidgetModule {
         if s.planned?.isToday == true { return .date }
         if s.freshPartnerMood != nil { return .mood }
         if let next = s.next, next.daysLeft <= 3 { return .us }
@@ -169,7 +169,7 @@ enum WidgetTimeline {
         let end = now.addingTimeInterval(horizon)
         var dates: [Date] = [now]
         if let pet = activity.lastPet { dates.append(pet.addingTimeInterval(WidgetActivity.purrLength)) }
-        dates += moods.values.map { $0.date.addingTimeInterval(NookiSnapshot.moodNews) }
+        dates += moods.values.map { $0.date.addingTimeInterval(OurioSnapshot.moodNews) }
         for hour in [0, 7, 20] {
             if let next = cal.nextDate(after: now, matching: DateComponents(hour: hour, minute: 0), matchingPolicy: .nextTime) {
                 dates.append(next)

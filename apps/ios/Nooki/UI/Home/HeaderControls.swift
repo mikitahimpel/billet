@@ -57,7 +57,7 @@ struct CoinPill: View {
         HStack(spacing: Space.s) {
             CoinIcon(size: 28)
             Text(coins, format: .number)
-                .font(.nookiHeadline.monospacedDigit())
+                .font(.ourioHeadline.monospacedDigit())
                 .contentTransition(.numericText(value: Double(coins)))
                 .animation(.snappy(duration: 0.4), value: coins)
         }

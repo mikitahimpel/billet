@@ -7,7 +7,7 @@ import WidgetKit
 /// One module, padded and linked to its screen in the app.
 struct ModuleView: View {
     let module: WidgetModule
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
     var smart = false
     var momentImage: Data?
 
@@ -30,7 +30,7 @@ struct ModuleView: View {
 }
 
 extension WidgetModule {
-    func link(in snapshot: NookiSnapshot) -> DeepLink {
+    func link(in snapshot: OurioSnapshot) -> DeepLink {
         switch self {
         case .mochi, .mood: .room
         case .us: .calendar
@@ -48,7 +48,7 @@ private struct ModuleHeader: View {
     var body: some View {
         HStack(spacing: 4) {
             Text(title.uppercased())
-                .font(.nookiMicro)
+                .font(.ourioMicro)
                 .tracking(0.4)
                 .foregroundStyle(Ink.textSecondary)
                 .lineLimit(1)
@@ -68,7 +68,7 @@ private struct BigNumber: View {
 
     var body: some View {
         Text(text)
-            .font(.nookiLargeTitle)
+            .font(.ourioLargeTitle)
             .foregroundStyle(Ink.accentText)
             .minimumScaleFactor(0.6)
             .lineLimit(1)
@@ -83,7 +83,7 @@ private struct BigNumber: View {
 /// note: the portrait, not a render of the real diorama; a RealityKit snapshot can replace it once bought items
 /// actually appear in the room.
 struct MochiRoom: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
     var showsCaption = true
     @Environment(\.widgetRenderingMode) private var renderingMode
 
@@ -155,7 +155,7 @@ struct MochiRoom: View {
 
     private var caption: some View {
         Text("\(snapshot.catName) · \(pose)")
-            .font(.nookiMicro)
+            .font(.ourioMicro)
             .foregroundStyle(Ink.heroInk)
             .lineLimit(1)
             .padding(.horizontal, 8)
@@ -198,7 +198,7 @@ private struct PetButton: View {
 // MARK: - Together
 
 struct UsModule: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
     var smart = false
 
     var body: some View {
@@ -208,17 +208,17 @@ struct UsModule: View {
             if let next = snapshot.next, next.daysLeft <= 3 {
                 BigNumber(text: next.daysLeft == 0 ? "Today" : "\(next.daysLeft)")
                 Text(next.daysLeft == 0 ? next.title : "\(next.daysLeft == 1 ? "day" : "days") to \(next.title)")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.text)
                     .lineLimit(2)
             } else {
                 BigNumber(text: "\(snapshot.daysTogether)")
                 Text("days together")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.text)
                 if let next = snapshot.next {
                     Text("\(next.title) in \(next.daysLeft)d")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(Ink.textSecondary)
                         .lineLimit(1)
                 }
@@ -230,7 +230,7 @@ struct UsModule: View {
 // MARK: - Mood
 
 struct MoodModule: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
     var smart = false
 
     var body: some View {
@@ -241,18 +241,18 @@ struct MoodModule: View {
                     MoodArt(mood: check.mood, size: 22)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("\(snapshot.partner) · \(check.mood.title)")
-                            .font(.nookiCaption.weight(.semibold))
+                            .font(.ourioCaption.weight(.semibold))
                             .foregroundStyle(Ink.text)
                             .privacySensitive()
                         Text("\(Text(check.date, style: .relative)) ago")
-                            .font(.nookiMicro)
+                            .font(.ourioMicro)
                             .foregroundStyle(Ink.textSecondary)
                     }
                     .lineLimit(1)
                 }
             } else {
                 Text("How are you, \(snapshot.viewer)?")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
             Spacer(minLength: 0)
@@ -285,7 +285,7 @@ struct MoodModule: View {
 // MARK: - List
 
 struct ListModule: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
     var smart = false
 
     var body: some View {
@@ -302,33 +302,33 @@ struct ListModule: View {
                 let hidden = list.openCount - list.items.filter { !$0.done }.count
                 if hidden > 0 {
                     Text("+\(hidden) more")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(Ink.textSecondary)
                 }
             } else {
                 Spacer(minLength: 0)
                 Text("Nothing on the list")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                 Spacer(minLength: 0)
             }
         }
     }
 
-    private func row(_ item: NookiSnapshot.ListPreview.Item) -> some View {
+    private func row(_ item: OurioSnapshot.ListPreview.Item) -> some View {
         HStack(spacing: 7) {
             Image(systemName: item.done ? "checkmark.circle.fill" : "circle")
                 .font(.system(size: 15, weight: .semibold))
                 .foregroundStyle(Ink.accentText)
                 .widgetAccentable()
             Text(item.text)
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .strikethrough(item.done)
                 .foregroundStyle(item.done ? Ink.textSecondary : Ink.text)
                 .lineLimit(1)
             Spacer(minLength: 0)
             Text(item.author)
-                .font(.nookiMicro)
+                .font(.ourioMicro)
                 .foregroundStyle(Ink.textSecondary)
         }
         .contentShape(.rect)
@@ -338,11 +338,11 @@ struct ListModule: View {
 // MARK: - Date
 
 struct DateModule: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
     var smart = false
 
     /// A planned date takes the module from a week before; until then it deals ideas.
-    private var plan: NookiSnapshot.PlannedPreview? {
+    private var plan: OurioSnapshot.PlannedPreview? {
         snapshot.planned.flatMap { $0.date.timeIntervalSince(snapshot.date) < 7 * 86_400 ? $0 : nil }
     }
 
@@ -352,17 +352,17 @@ struct DateModule: View {
                 ModuleHeader(title: plan.isToday ? "Date night" : "Next date", smart: smart)
                 Spacer(minLength: 0)
                 Text(plan.title)
-                    .font(.nookiCallout.weight(.bold))
+                    .font(.ourioCallout.weight(.bold))
                     .foregroundStyle(Ink.text)
                     .lineLimit(2)
                 Text(plan.date, format: plan.isToday ? Date.FormatStyle.dateTime.hour().minute()
                                                      : Date.FormatStyle.dateTime.weekday(.abbreviated).day().month(.abbreviated))
-                    .font(plan.isToday ? .nookiTitle : .nookiCallout.weight(.bold))
+                    .font(plan.isToday ? .ourioTitle : .ourioCallout.weight(.bold))
                     .foregroundStyle(Ink.accentText)
                     .widgetAccentable()
                 if let hint = plan.hint {
                     Text("Hint: \(hint)")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(Ink.textSecondary)
                         .lineLimit(2)
                 }
@@ -370,24 +370,24 @@ struct DateModule: View {
                 ModuleHeader(title: "Date idea", smart: smart)
                 if let idea = snapshot.idea {
                     Text(idea.title)
-                        .font(.nookiCallout.weight(.bold))
+                        .font(.ourioCallout.weight(.bold))
                         .foregroundStyle(Ink.text)
                         .lineLimit(2)
                         .padding(.top, 2)
                     Text(idea.matched ? "You both liked it" : idea.pitch)
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(Ink.textSecondary)
                         .lineLimit(2)
                 } else {
                     Text("Can't decide what to do tonight?")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                         .padding(.top, 2)
                 }
                 Spacer(minLength: 0)
                 Button(intent: SurpriseIdeaIntent()) {
                     Label(snapshot.idea == nil ? "Surprise us" : "Another", systemImage: "dice.fill")
-                        .font(.nookiCaption.weight(.bold))
+                        .font(.ourioCaption.weight(.bold))
                         .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 5)
@@ -403,7 +403,7 @@ struct DateModule: View {
 // MARK: - Moment
 
 struct MomentModule: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
     let image: Data?
 
     var body: some View {
@@ -419,7 +419,7 @@ struct MomentModule: View {
                 .clipped()
                 if let caption = snapshot.moment?.caption, !caption.isEmpty {
                     Text(caption)
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .padding(.horizontal, 10)
@@ -437,7 +437,7 @@ struct MomentModule: View {
                     .foregroundStyle(Ink.accentText)
                     .widgetAccentable()
                 Text("Pin a photo to the garland")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
             .padding(Space.m)

@@ -65,7 +65,7 @@ struct WatchListBody: View {
                 let shown = list.open.filter(passes)
                 if shown.isEmpty {
                     Text("Nothing here for this filter.")
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, Space.xl)
@@ -156,14 +156,14 @@ struct WatchListBody: View {
                 HStack(spacing: Space.m) {
                     UsIcon(glyph: UsGlyph(symbol: "checkmark", tint: .coral), size: 34)
                     Text("Watched together")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                     Spacer(minLength: Space.s)
                     Text("\(watched.count)")
-                        .font(.nookiCallout.monospacedDigit())
+                        .font(.ourioCallout.monospacedDigit())
                         .foregroundStyle(Ink.textSecondary)
                     Image(systemName: "chevron.right")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textTertiary)
                         .rotationEffect(.degrees(showsWatched ? 90 : 0))
                 }
@@ -193,7 +193,7 @@ struct PosterTile: View {
                 Group {
                     if both {
                         Text("♥ both")
-                            .font(.nookiMicro)
+                            .font(.ourioMicro)
                             .foregroundStyle(Ink.heroInk)
                             .padding(.horizontal, 7)
                             .padding(.vertical, 3)
@@ -223,7 +223,7 @@ struct PosterImage: View {
             .overlay(alignment: .bottomLeading) {
                 if showsTitle {
                     Text(title)
-                        .font(.nookiCaption.weight(.semibold))
+                        .font(.ourioCaption.weight(.semibold))
                         .foregroundStyle(.white)
                         .lineLimit(3)
                         .padding(Space.s)

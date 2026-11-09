@@ -1,7 +1,8 @@
 import Foundation
 
-/// Where a tap on a widget lands in the app, as a nooki:// URL. An invite also comes as the server's
-/// `https://<host>/i/<code>` Universal Link.
+/// Where a tap on a widget lands in the app, as an ourio:// URL. An invite also comes as the server's
+/// `https://<host>/i/<code>` Universal Link, or as a nooki:// link from before the rename, which invites already sent
+/// and the server still carry.
 enum DeepLink: Hashable {
     case room, moments, us, calendar, dates, newNote, draw, inbox
     case list(UUID)
@@ -9,7 +10,8 @@ enum DeepLink: Hashable {
     /// The Shop at an ink, by its catalog id.
     case shopInk(String)
 
-    static let scheme = "nooki"
+    static let scheme = "ourio"
+    static let schemes: Set<String> = [scheme, "nooki"]
 
     var url: URL {
         let path = switch self {
@@ -34,7 +36,7 @@ enum DeepLink: Hashable {
             self = .invite(path[1])
             return
         }
-        guard url.scheme == Self.scheme, let host = url.host() else { return nil }
+        guard let scheme = url.scheme, Self.schemes.contains(scheme), let host = url.host() else { return nil }
         let parts = [host] + url.pathComponents.filter { $0 != "/" }
         switch parts {
         case ["room"]: self = .room

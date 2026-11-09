@@ -163,7 +163,7 @@ struct DateIdeaCard: View {
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(idea.pitch)
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -186,7 +186,7 @@ struct DateIdeaCard: View {
 
     private func tag(_ text: String, symbol: String) -> some View {
         Label(text, systemImage: symbol)
-            .font(.nookiMicro)
+            .font(.ourioMicro)
             .foregroundStyle(.white)
             .padding(.horizontal, 10)
             .padding(.vertical, 6)

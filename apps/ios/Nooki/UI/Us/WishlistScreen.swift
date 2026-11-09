@@ -72,7 +72,7 @@ struct WishlistScreen: View {
         return VStack(alignment: .leading, spacing: 12) {
             if us.surpriseComing(for: viewer) {
                 Label("\(otherName) is planning a surprise 🤫", systemImage: "gift.fill")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.accentText)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 8)
@@ -125,7 +125,7 @@ struct WishlistScreen: View {
                     WishCard(wish: wish, linked: true) { giverRow(wish) }
                 }
                 Text("Your picks stay secret. \(otherName) only sees that a surprise is coming.")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textTertiary)
                     .padding(.horizontal, 4)
             }
@@ -142,7 +142,7 @@ struct WishlistScreen: View {
         case nil:
             Button { animate { us.pick(wish.id, by: viewer) } } label: {
                 Label("I'll get this", systemImage: "gift.fill")
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.heroInk)
                     .padding(.horizontal, 16)
                     .frame(height: 36)
@@ -152,16 +152,16 @@ struct WishlistScreen: View {
         case .planning?:
             HStack(spacing: 10) {
                 Text("You're getting this 🤫")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.accentText)
                 Spacer(minLength: 0)
                 Button("Release") { animate { us.release(wish.id, by: viewer) } }
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .buttonStyle(.plain)
                 Button { animate { us.setStage(.bought, of: wish.id, by: viewer) } } label: {
                     Text("Bought it")
-                        .font(.nookiCaption.weight(.semibold))
+                        .font(.ourioCaption.weight(.semibold))
                         .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 12)
                         .frame(height: 30)
@@ -172,11 +172,11 @@ struct WishlistScreen: View {
         case .bought?:
             HStack(spacing: 10) {
                 Label("Bought. Hide it well!", systemImage: "checkmark.circle.fill")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.accentText)
                 Spacer(minLength: 0)
                 Button("Not yet") { animate { us.setStage(.planning, of: wish.id, by: viewer) } }
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .buttonStyle(.plain)
             }
@@ -191,7 +191,7 @@ struct WishlistScreen: View {
         if !items.isEmpty {
             VStack(alignment: .leading, spacing: 10) {
                 Text(mine ? "Got it ♥" : "Gifted to \(otherName)")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 ForEach(items) { wish in
                     giftedRow(wish)
@@ -204,19 +204,19 @@ struct WishlistScreen: View {
         HStack(spacing: 10) {
             UsIcon(glyph: .init(symbol: "gift.fill", tint: .coral), size: 24)
             Text(wish.title)
-                .font(.nookiCallout.weight(.semibold))
+                .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
             Spacer(minLength: 8)
             VStack(alignment: .trailing, spacing: 1) {
                 if let giver = wish.giftedBy {
                     Text(giver == viewer ? "from you" : "from \(state.profile.name(of: giver))")
-                        .font(.nookiMicro.weight(.semibold))
+                        .font(.ourioMicro.weight(.semibold))
                         .foregroundStyle(Ink.accentText)
                 }
                 if let date = wish.gifted {
                     Text(date, format: .dateTime.day().month())
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(Ink.textSecondary)
                 }
             }
@@ -243,19 +243,19 @@ struct WishlistScreen: View {
         return VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text(mine ? "What I love" : "\(otherName)'s cheat sheet")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
                 if mine {
                     Button("Edit") { editingLoves = true }
-                        .font(.nookiCallout.weight(.semibold))
+                        .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.accentText)
                         .buttonStyle(.plain)
                 }
             }
             if rows.isEmpty {
                 Text("\(otherName) hasn't filled this in yet.")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .padding(16)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -271,11 +271,11 @@ struct WishlistScreen: View {
                             UsIcon(glyph: row.icon, size: 26)
                                 .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
                             Text(row.label)
-                                .font(.nookiCallout.weight(.semibold))
+                                .font(.ourioCallout.weight(.semibold))
                                 .foregroundStyle(Ink.textSecondary)
                             Spacer(minLength: 12)
                             Text(value.isEmpty ? "—" : value)
-                                .font(.nookiCallout.weight(.semibold))
+                                .font(.ourioCallout.weight(.semibold))
                                 .foregroundStyle(value.isEmpty ? Ink.textTertiary : Ink.text)
                                 .multilineTextAlignment(.trailing)
                         }
@@ -315,11 +315,11 @@ private struct WishCard<Actions: View>: View {
                 VStack(alignment: .leading, spacing: 4) {
                     if wish.mostWanted {
                         Label("Most wanted", systemImage: "star.fill")
-                            .font(.nookiMicro.weight(.semibold))
+                            .font(.ourioMicro.weight(.semibold))
                             .foregroundStyle(Color.blushPink)
                     }
                     Text(wish.title)
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                         .multilineTextAlignment(.leading)
                     meta
@@ -328,7 +328,7 @@ private struct WishCard<Actions: View>: View {
                     }
                     if !wish.note.isEmpty {
                         Text(wish.note)
-                            .font(.nookiCaption)
+                            .font(.ourioCaption)
                             .foregroundStyle(Ink.textSecondary)
                             .lineLimit(3)
                     }
@@ -376,7 +376,7 @@ private struct WishCard<Actions: View>: View {
                     }
                 }
             }
-            .font(.nookiCaption.weight(.semibold))
+            .font(.ourioCaption.weight(.semibold))
             .lineLimit(1)
         }
     }
@@ -392,7 +392,7 @@ private struct OccasionLine: View {
         } icon: {
             Image(systemName: "calendar")
         }
-        .font(.nookiCaption.weight(.semibold))
+        .font(.ourioCaption.weight(.semibold))
         .foregroundStyle(Ink.accentText)
         .lineLimit(1)
     }
@@ -464,7 +464,7 @@ private struct LovesEditor: View {
                             } icon: {
                                 UsIcon(glyph: row.icon, size: 22)
                             }
-                            .font(.nookiCaption.weight(.semibold))
+                            .font(.ourioCaption.weight(.semibold))
                             .foregroundStyle(Ink.textSecondary)
                             UsField(placeholder: row.example, text: $loves[dynamicMember: row.keyPath])
                         }

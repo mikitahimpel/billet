@@ -62,7 +62,7 @@ struct ProfileHub: View {
             .overlay(alignment: .bottom) {
                 // The honey link between the two.
                 Image(systemName: "heart.fill")
-                    .font(.nookiMicro)
+                    .font(.ourioMicro)
                     .foregroundStyle(Ink.heroInk)
                     .frame(width: 30, height: 30)
                     .background(.honeyGradient, in: .circle)
@@ -72,11 +72,11 @@ struct ProfileHub: View {
             .padding(.bottom, Space.s)
             VStack(spacing: 4) {
                 Text("\(state.profile.name(of: state.partners.0)) & \(state.profile.name(of: state.partners.1))")
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .lineLimit(1)
                 Text("Day \(state.daysTogether) together")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
         }

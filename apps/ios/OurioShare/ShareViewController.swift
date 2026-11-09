@@ -3,7 +3,7 @@ import Design
 import UIKit
 import UniformTypeIdentifiers
 
-/// The share sheet's "Nooki" action: a page shared from Safari or another app becomes a wish on the holder's list.
+/// The share sheet's "Ourio" action: a page shared from Safari or another app becomes a wish on the holder's list.
 final class ShareViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()

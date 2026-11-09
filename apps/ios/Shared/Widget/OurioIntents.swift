@@ -95,7 +95,7 @@ nonisolated struct SurpriseIdeaIntent: AppIntent {
     }
 }
 
-/// Opens Nooki on a blank note, so a Lock Screen tap lands in the composer.
+/// Opens Ourio on a blank note, so a Lock Screen tap lands in the composer.
 nonisolated struct NewNoteIntent: AppIntent {
     static let title: LocalizedStringResource = "New Note"
     static let openAppWhenRun = true

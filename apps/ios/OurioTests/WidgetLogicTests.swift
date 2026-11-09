@@ -7,8 +7,8 @@ private let cal = Calendar.current
 private let noon = cal.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 12))!
 
 private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned: Date? = nil,
-                      partnerAddedToday: Bool = false, openCount: Int = 2) -> NookiSnapshot {
-    NookiSnapshot(
+                      partnerAddedToday: Bool = false, openCount: Int = 2) -> OurioSnapshot {
+    OurioSnapshot(
         date: noon, viewer: "L", partner: "M", daysTogether: 127,
         next: next.map { .init(title: "Anniversary", icon: .init(symbol: "heart.fill", tint: .blush),
                                date: cal.date(byAdding: .day, value: $0, to: noon)!, daysLeft: $0) },
@@ -71,13 +71,13 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
     @Test func entryWhenCheckInExpires() {
         let check = MoodCheckIn(mood: .happy, date: noon.addingTimeInterval(-600))
         let dates = WidgetTimeline.entryDates(from: noon, activity: WidgetActivity(), moods: ["M": check])
-        #expect(dates.contains(check.date.addingTimeInterval(NookiSnapshot.moodNews)))
+        #expect(dates.contains(check.date.addingTimeInterval(OurioSnapshot.moodNews)))
     }
 
     @Test func nightRunsFromEightToSeven() {
-        #expect(NookiSnapshot.isNight(cal.date(bySettingHour: 21, minute: 0, second: 0, of: noon)!))
-        #expect(NookiSnapshot.isNight(cal.date(bySettingHour: 6, minute: 59, second: 0, of: noon)!))
-        #expect(!NookiSnapshot.isNight(cal.date(bySettingHour: 7, minute: 0, second: 0, of: noon)!))
+        #expect(OurioSnapshot.isNight(cal.date(bySettingHour: 21, minute: 0, second: 0, of: noon)!))
+        #expect(OurioSnapshot.isNight(cal.date(bySettingHour: 6, minute: 59, second: 0, of: noon)!))
+        #expect(!OurioSnapshot.isNight(cal.date(bySettingHour: 7, minute: 0, second: 0, of: noon)!))
     }
 }
 
@@ -114,13 +114,13 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 
     @Test func rejectsForeignURLs() {
         #expect(DeepLink(url: URL(string: "https://room")!) == nil)
-        #expect(DeepLink(url: URL(string: "nooki://us/list/not-a-uuid")!) == nil)
-        #expect(DeepLink(url: URL(string: "nooki://shop")!) == nil)
-        #expect(DeepLink(url: URL(string: "nooki://shop/ink")!) == nil)
+        #expect(DeepLink(url: URL(string: "ourio://us/list/not-a-uuid")!) == nil)
+        #expect(DeepLink(url: URL(string: "ourio://shop")!) == nil)
+        #expect(DeepLink(url: URL(string: "ourio://shop/ink")!) == nil)
     }
 
     @Test func aShopInkLinkOpensTheShopAtThatInk() {
-        #expect(DeepLink.shopInk("ink-rose").url.absoluteString == "nooki://shop/ink/ink-rose")
+        #expect(DeepLink.shopInk("ink-rose").url.absoluteString == "ourio://shop/ink/ink-rose")
         let state = HomeState(stores: .live())
         state.open(.shopInk("ink-rose"))
         #expect(state.tab == .shop)

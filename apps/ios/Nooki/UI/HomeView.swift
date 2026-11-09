@@ -8,7 +8,7 @@ import WidgetBridge
 import Wire
 
 struct HomeView: View {
-    /// Owned by NookiApp: a `@State` default here would read every store again on each pass of the app's `body`.
+    /// Owned by OurioApp: a `@State` default here would read every store again on each pass of the app's `body`.
     @Binding var state: HomeState
     /// The room and the cat in it: the scenes, the games, her status. Nothing here reads them.
     @State var room = RoomController()
@@ -64,7 +64,7 @@ struct HomeView: View {
     private func following(_ content: some View) -> some View {
         content
         .task {
-            NookiPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
+            OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
             await lift()
         }
         .task {
@@ -119,7 +119,7 @@ struct HomeView: View {
             }
         }
         .onChange(of: state.tab) { _, tab in
-            NookiPerf.tabShown(tab)
+            OurioPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
@@ -291,7 +291,7 @@ struct HomeView: View {
             if splashDrawn {
                 LaunchSplash()
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Nooki is opening")
+                    .accessibilityLabel("Ourio is opening")
                     .accessibilityIdentifier("launch-splash")
                     .opacity(launching ? 1 : 0)
                     .scaleEffect(launching ? 1 : 1.08)

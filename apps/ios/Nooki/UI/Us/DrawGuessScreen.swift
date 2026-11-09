@@ -93,7 +93,7 @@ struct DrawGuessScreen: View {
                 RiddleReplay(riddle: riddle, animated: true, download: session?.api.downloadImage)
                 Text(riddle.tries == 0 ? "\(partner) drew you a riddle"
                                        : "\(riddle.tries) \(riddle.tries == 1 ? "try" : "tries") so far")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .contentTransition(.numericText())
                     .animation(.snappy, value: riddle.tries)
@@ -106,7 +106,7 @@ struct DrawGuessScreen: View {
                 .disabled(model.busy)
                 if model.unsent {
                     Text("That didn't reach \(partner)'s room. Try again.")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.accentText)
                         .multilineTextAlignment(.center)
                 }
@@ -125,7 +125,7 @@ struct DrawGuessScreen: View {
                         .buttonStyle(SecondaryButtonStyle())
                 }
                 Text("Each hint costs 2 of the 10 coins a solve pays.")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textTertiary)
                     .multilineTextAlignment(.center)
             }
@@ -146,16 +146,16 @@ struct DrawGuessScreen: View {
             VStack(spacing: Space.m) {
                 RiddleReplay(riddle: riddle, animated: false, download: session?.api.downloadImage)
                 Text("Waiting for \(partner) to guess")
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .multilineTextAlignment(.center)
                 if let word = riddle.word {
                     Text("You drew “\(word)”")
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Text(progress(riddle))
-                    .font(.nookiCaption.monospacedDigit())
+                    .font(.ourioCaption.monospacedDigit())
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
                     .contentTransition(.numericText())
@@ -181,12 +181,12 @@ struct DrawGuessScreen: View {
                 WhoKnowsArt(name: "DrawGuess-draw", size: 160)
                 if let last = model.lastEnded, model.isMine(last), let word = last.word {
                     Text(lastLine(last, word: word))
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.accentText)
                         .multilineTextAlignment(.center)
                 }
                 Text("Draw a riddle for \(partner)")
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .multilineTextAlignment(.center)
                     .accessibilityAddTraits(.isHeader)
@@ -199,14 +199,14 @@ struct DrawGuessScreen: View {
                     }
                     Button { model.shuffleOffers() } label: {
                         Label("Other words", systemImage: "shuffle")
-                            .font(.nookiCallout)
+                            .font(.ourioCallout)
                             .foregroundStyle(Ink.accentText)
                     }
                     .buttonStyle(.plain)
                 }
                 VStack(alignment: .leading, spacing: Space.s) {
                     Text("Your own word")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                     UsField(placeholder: "A place, a name, a joke", text: $ownWord)
                         .textInputAutocapitalization(.never)
@@ -214,7 +214,7 @@ struct DrawGuessScreen: View {
                         .submitLabel(.go)
                         .onSubmit { if let typed { drawing = Word(text: typed) } }
                     Text(ownWord.isEmpty || typed != nil ? "Letters a to z, up to 12" : "Use letters a to z and single spaces, up to 12 letters")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(ownWord.isEmpty || typed != nil ? Ink.textTertiary : Ink.accentText)
                     Button("Draw it") { if let typed { drawing = Word(text: typed) } }
                         .buttonStyle(SecondaryButtonStyle())
@@ -222,7 +222,7 @@ struct DrawGuessScreen: View {
                 }
                 if model.unsent {
                     Text("The riddle didn't send. Draw it again.")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.accentText)
                 }
             }
@@ -249,13 +249,13 @@ struct DrawGuessScreen: View {
                 VStack(spacing: Space.m) {
                     WhoKnowsArt(name: solved ? "DrawGuess-solved" : "DrawGuess-giveup", size: 140)
                     Text(DrawGuessModel.endedTitle(riddle))
-                        .font(.nookiTitle)
+                        .font(.ourioTitle)
                         .foregroundStyle(Ink.text)
                         .multilineTextAlignment(.center)
                         .accessibilityAddTraits(.isHeader)
                     if let word = riddle.word {
                         Text("The word was “\(word)”")
-                            .font(.nookiHeadline)
+                            .font(.ourioHeadline)
                             .foregroundStyle(Ink.textSecondary)
                             .multilineTextAlignment(.center)
                     }
@@ -264,12 +264,12 @@ struct DrawGuessScreen: View {
                         HStack(spacing: Space.m) {
                             CoinIcon(size: 22)
                             Text(coins)
-                                .font(.nookiHeadline.monospacedDigit())
+                                .font(.ourioHeadline.monospacedDigit())
                                 .foregroundStyle(Ink.text)
                             Spacer(minLength: 0)
                             if model.series > 0 {
                                 Text(DrawGuessModel.seriesLine(model.series))
-                                    .font(.nookiCaption)
+                                    .font(.ourioCaption)
                                     .foregroundStyle(Ink.textSecondary)
                             }
                         }
@@ -330,7 +330,7 @@ private struct RiddleReplay: View {
             if replays {
                 Button { started = .now } label: {
                     Image(systemName: "arrow.counterclockwise")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.heroInk)
                         .frame(width: 44, height: 44)
                         .background(Circle().fill(.white.opacity(0.7)))
@@ -383,7 +383,7 @@ private struct RiddleBlanks: View {
     @ViewBuilder
     private func blank(_ slot: DrawGuessModel.Slot) -> some View {
         let letter = Text((slot.letter ?? " ").uppercased())
-            .font(.nookiHeadline)
+            .font(.ourioHeadline)
             .frame(width: 26, height: 34)
         switch slot.kind {
         case .empty:
@@ -445,7 +445,7 @@ private struct RiddleTiles: View {
     private func button(_ tile: DrawGuessModel.Tile) -> some View {
         Button { place(tile) } label: {
             Text(tile.letter.uppercased())
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity, minHeight: 48)
                 .cardSurface(radius: Radius.inner)
@@ -465,19 +465,19 @@ private struct WordOption: View {
     var body: some View {
         HStack(spacing: Space.m) {
             Text(tier)
-                .font(.nookiMicro)
+                .font(.ourioMicro)
                 .foregroundStyle(Ink.accentText)
                 .padding(.horizontal, Space.s)
                 .padding(.vertical, Space.xs)
                 .background(Capsule().fill(Ink.surfaceRaised))
             Text(word)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer(minLength: 0)
             Image(systemName: "pencil.tip")
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.textTertiary)
                 .accessibilityHidden(true)
         }

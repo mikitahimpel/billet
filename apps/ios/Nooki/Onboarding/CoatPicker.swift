@@ -23,7 +23,7 @@ struct CoatPicker: View {
                     }
                 }
             Text(coat.title)
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
                 .contentTransition(.opacity)
                 .accessibilityHidden(true)
@@ -156,7 +156,7 @@ struct CoatChip: View {
                 .overlay(Circle().stroke(picked ? Color.honey : .clear, lineWidth: 2.5))
                 .scaleEffect(picked ? 1.06 : 1)
             Text(coat.title)
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(picked ? Ink.text : Ink.textSecondary)
                 .lineLimit(2)
                 .multilineTextAlignment(.center)

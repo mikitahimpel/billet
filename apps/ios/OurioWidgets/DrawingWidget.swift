@@ -81,7 +81,7 @@ struct DrawingWidgetView: View {
                 }
                 if family != .systemSmall && family != .accessoryRectangular {
                     Text("from \(entry.partner) · \(drawing.sentAt, style: .relative)")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         // The wallpapers are pastel in either appearance, so dark text on a soft chip, not white.
                         .foregroundStyle(Ink.heroInk.opacity(0.85))
                         .lineLimit(1)
@@ -96,10 +96,10 @@ struct DrawingWidgetView: View {
                 Image(systemName: "scribble.variable")
                     .font(.system(size: family == .accessoryRectangular ? 16 : 26, weight: .semibold))
                 Text(family == .accessoryRectangular ? "Draw for \(entry.partner)" : "Nothing from \(entry.partner) yet")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                 if family != .accessoryRectangular {
                     Text("Tap to draw on their lock screen")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .opacity(0.8)
                 }
             }

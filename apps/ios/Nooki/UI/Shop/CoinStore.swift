@@ -29,10 +29,10 @@ struct PlusHero: View {
                     mochi
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Billet Plus")
-                            .font(.nookiTitle)
+                            .font(.ourioTitle)
                             .foregroundStyle(Ink.text)
                         Text(on ? "On for the two of you (test)" : "For the two of you, every month")
-                            .font(.nookiCallout)
+                            .font(.ourioCallout)
                             .foregroundStyle(Ink.textSecondary)
                     }
                     Spacer(minLength: 0)
@@ -41,7 +41,7 @@ struct PlusHero: View {
                 VStack(alignment: .leading, spacing: Space.s) {
                     ForEach(PlusPass.perks, id: \.text) { perk in
                         Label(perk.text, systemImage: perk.symbol)
-                            .font(.nookiCallout)
+                            .font(.ourioCallout)
                             .foregroundStyle(Ink.text)
                             .symbolRenderingMode(.hierarchical)
                     }
@@ -82,7 +82,7 @@ struct PlusHero: View {
                 .accessibilityIdentifier("plusMock")
         } else {
             Text("\(PlusPass.price) / month · coming soon")
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
                 .frame(maxWidth: .infinity, minHeight: Size.button)
                 .background(Ink.surfaceRaised, in: .capsule)
@@ -103,7 +103,7 @@ struct PackStore: View {
             shelf
             if let line = statusLine {
                 Text(line)
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .accessibilityIdentifier("packStatus")
             }
@@ -120,7 +120,7 @@ struct PackStore: View {
                 HStack(spacing: Space.m) {
                     ProgressView().tint(Ink.accentText)
                     Text("Opening the store…")
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 .frame(maxWidth: .infinity, minHeight: Size.button)
@@ -196,10 +196,10 @@ private struct PackCard: View {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
                         Text(pack.stamps.formatted())
-                            .font(.nookiTitle.monospacedDigit())
+                            .font(.ourioTitle.monospacedDigit())
                             .foregroundStyle(Ink.text)
                         Text("coins")
-                            .font(.nookiCallout)
+                            .font(.ourioCallout)
                             .foregroundStyle(Ink.textSecondary)
                     }
                     if isFit {

@@ -7,7 +7,7 @@ struct SheetSubtitle: View {
 
     var body: some View {
         Text(text)
-            .font(.nookiCaption)
+            .font(.ourioCaption)
             .foregroundStyle(Ink.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -36,7 +36,7 @@ struct UsCheck: View {
             if done {
                 Circle().fill(Color.honey)
                 Image(systemName: "checkmark")
-                    .font(.nookiMicro)
+                    .font(.ourioMicro)
                     .foregroundStyle(Ink.heroInk)
             }
         }

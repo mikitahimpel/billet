@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Measures Nooki's rooms on a Release build in the Simulator, the same way every time.
+# Measures Ourio's rooms on a Release build in the Simulator, the same way every time.
 #
 # Onboarding is skipped (`-onboardingDone YES`) and Home opens on PERF_ROOM: `room` (the default, Ilya's
 # diorama) or `city`. A Simulator without an Apple7 GPU, such as a CI VM, draws Mochi as the mesh cat instead of
@@ -176,7 +176,7 @@ attempt() {
       break
     fi
     if ((SECONDS - started > run_limit)); then echo "PERF error timeout" >> $log; break; fi
-    # A build without `-perf.script` (one from before Nooki had it) never says anything: stop early.
+    # A build without `-perf.script` (one from before Ourio had it) never says anything: stop early.
     if ((SECONDS - started > 180)) && ! grep -q '^PERF' $log 2>/dev/null; then
       echo "PERF error no PERF lines: this build cannot run -perf.script" >> $log
       break

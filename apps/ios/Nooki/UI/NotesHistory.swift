@@ -27,12 +27,12 @@ struct NotesHistory: View {
         BilletSheet("All notes") {
             VStack(alignment: .leading, spacing: 18) {
                 Text("\(state.notes.notes.count) \(state.notes.notes.count == 1 ? "note" : "notes")")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
 
                 ForEach(months, id: \.title) { month in
                     Text(month.title)
-                        .font(.nookiCallout.weight(.semibold))
+                        .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.textSecondary)
                         .padding(.top, 4)
                     LazyVGrid(columns: columns, spacing: 18) {

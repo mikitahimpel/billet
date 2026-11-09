@@ -20,11 +20,11 @@ struct ShopItemCard: View {
                     art
                     VStack(alignment: .leading, spacing: 2) {
                         Text(item.name)
-                            .font(.nookiHeadline)
+                            .font(.ourioHeadline)
                             .foregroundStyle(Ink.text)
                             .lineLimit(1)
                         Text(item.blurb)
-                            .font(.nookiCaption)
+                            .font(.ourioCaption)
                             .foregroundStyle(Ink.textSecondary)
                             .lineLimit(1)
                     }

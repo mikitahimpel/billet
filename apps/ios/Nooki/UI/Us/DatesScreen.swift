@@ -85,7 +85,7 @@ struct DatesScreen: View {
                      : deck.first.map { us.isSecondLook($0.id, for: state.viewer) } == true
                      ? "Another look at the ones you skipped"
                      : "\(state.profile.name(of: state.viewer))'s turn, then \(partner)")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .contentTransition(.opacity)
             }
@@ -146,7 +146,7 @@ struct DatesScreen: View {
                             DateScenePicture(art: idea.art)
                                 .overlay(alignment: .bottomLeading) {
                                     Text(idea.title)
-                                        .font(.nookiMicro)
+                                        .font(.ourioMicro)
                                         .foregroundStyle(.white)
                                         .lineLimit(2)
                                         .padding(8)
@@ -202,7 +202,7 @@ struct DatesScreen: View {
                     UsIcon(glyph: .init(symbol: "wand.and.stars", tint: .lilac), size: 72)
                         .rotationEffect(.degrees(hatAngle), anchor: .bottom)
                     Text(surpriseCaption)
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                         .multilineTextAlignment(.center)
                         .padding(.horizontal, 24)
@@ -233,7 +233,7 @@ struct DatesScreen: View {
     private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Text(title)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity)
                 .frame(height: 52)
@@ -319,12 +319,12 @@ struct DatesScreen: View {
     private func sectionTitle(_ title: String, caption: String? = nil) -> some View {
         HStack(alignment: .firstTextBaseline) {
             Text(title)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
             Spacer(minLength: 0)
             if let caption {
                 Text(caption)
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
         }
@@ -373,17 +373,17 @@ struct DatesScreen: View {
         Button { filtersOpen = true } label: {
             HStack(spacing: 6) {
                 Image(systemName: "line.3.horizontal.decrease")
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                 Text("Filters")
                 if !filter.isEmpty {
                     Text("\(filter.tags.count)")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(Ink.heroInk)
                         .frame(minWidth: 20, minHeight: 20)
                         .background(Circle().fill(.honeyGradient))
                 }
             }
-            .font(.nookiCallout.weight(.semibold))
+            .font(.ourioCallout.weight(.semibold))
             .foregroundStyle(Ink.text)
             .padding(.leading, 14)
             .padding(.trailing, filter.isEmpty ? 14 : 7)
@@ -401,13 +401,13 @@ struct DatesScreen: View {
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: tag.symbol)
-                    .font(.nookiMicro)
+                    .font(.ourioMicro)
                 Text(tag.title)
                 Image(systemName: "xmark")
-                    .font(.nookiMicro)
+                    .font(.ourioMicro)
                     .foregroundStyle(Ink.textSecondary)
             }
-            .font(.nookiCallout.weight(.semibold))
+            .font(.ourioCallout.weight(.semibold))
             .foregroundStyle(Ink.text)
             .padding(.horizontal, 12)
             .frame(height: 34)

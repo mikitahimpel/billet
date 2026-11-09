@@ -19,7 +19,7 @@ struct MomentsView: View {
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
-    /// Where the feed is scrolled to; a perf run moves it (`NookiPerf.scrolls`).
+    /// Where the feed is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
     @State private var position = ScrollPosition(edge: .top)
     @Namespace private var zoom
 
@@ -59,9 +59,9 @@ struct MomentsView: View {
                 .softScrollEdges()
                 .onAppear {
                     guard ScenePerf.isOn else { return }
-                    NookiPerf.scrolls[.moments] = { position.scrollTo(y: $0) }
+                    OurioPerf.scrolls[.moments] = { position.scrollTo(y: $0) }
                 }
-                .onDisappear { NookiPerf.scrolls[.moments] = nil }
+                .onDisappear { OurioPerf.scrolls[.moments] = nil }
             }
         }
         .onChange(of: pick) { _, item in
@@ -154,7 +154,7 @@ struct MomentsView: View {
             Spacer(minLength: 0)
             if notes.isEmpty, store.pinned.isEmpty {
                 Text("Leave a note or doodle for the board")
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.glassGlyph)
                     .padding(.horizontal, 18)
                     .frame(height: 42)
@@ -178,7 +178,7 @@ struct MomentsView: View {
                 titleMenu
                 if let subtitle {
                     Text(subtitle)
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.secondary)
                 }
             }
@@ -218,10 +218,10 @@ struct MomentsView: View {
         } label: {
             HStack(spacing: Space.xs + 2) {
                 Text("Moments")
-                    .font(.nookiLargeTitle)
+                    .font(.ourioLargeTitle)
                     .foregroundStyle(Ink.primary)
                 Image(systemName: "chevron.down")
-                    .font(.nookiCallout.weight(.bold))
+                    .font(.ourioCallout.weight(.bold))
                     .foregroundStyle(Ink.secondary)
             }
             .contentShape(.rect)
@@ -263,10 +263,10 @@ private struct EmptyMoments: View {
 
             VStack(spacing: 8) {
                 Text("Your first moment")
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.primary)
                 Text("Add a photo of the two of you. It goes up on \(CatProfile.name())'s wall as a little polaroid.")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.secondary)
                     .multilineTextAlignment(.center)
             }
@@ -276,7 +276,7 @@ private struct EmptyMoments: View {
                     Image(systemName: "photo.badge.plus")
                     Text("Add a photo")
                     Text("+10")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .padding(.horizontal, 8)
                         .frame(height: 22)
                         .background(Ink.heroInk.opacity(0.12), in: .capsule)
@@ -373,7 +373,7 @@ private struct WallStrip: View {
     var body: some View {
         HStack(spacing: Space.s) {
             Label("On \(CatProfile.name())'s wall", systemImage: "house.fill")
-                .font(.nookiCallout)
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.text)
                 .labelStyle(.titleAndIcon)
                 .tint(.honey)

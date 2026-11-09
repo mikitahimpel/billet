@@ -21,7 +21,7 @@ struct PairingCopyTests {
         #expect(PairingCopy.expiry(expiresAt: 1_000_000, now: now) == "This code has expired")
     }
 
-    @Test func everyFailureSaysNookiNotBillet() {
+    @Test func everyFailureSaysOurioNotBillet() {
         for failure in [PairingFailure.invalidCode, .alreadyPaired, .signedOut, .unavailable] {
             #expect(!PairingCopy.message(for: failure).contains("Billet"))
         }

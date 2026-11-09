@@ -86,12 +86,12 @@ private struct NoteAccessoryView: View {
         VStack(alignment: .leading, spacing: 1) {
             if entry.doodle == nil {
                 Text(note.text)
-                    .font(.nookiCaption.weight(.semibold))
+                    .font(.ourioCaption.weight(.semibold))
                     .lineLimit(3)
                     .widgetAccentable()
             }
             Text("— \(note.author)")
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -100,9 +100,9 @@ private struct NoteAccessoryView: View {
     private var empty: some View {
         VStack(alignment: .leading, spacing: 1) {
             Label("Leave a note", systemImage: "pencil.and.scribble")
-                .font(.nookiCallout.weight(.bold))
+                .font(.ourioCallout.weight(.bold))
             Text("for \(CatProfile.name())'s board")
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(.secondary)
         }
         .widgetAccentable()
@@ -110,7 +110,7 @@ private struct NoteAccessoryView: View {
     }
 }
 
-/// Control Center and Lock Screen button: opens Nooki straight into a blank note.
+/// Control Center and Lock Screen button: opens Ourio straight into a blank note.
 struct NewNoteControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
         StaticControlConfiguration(kind: "com.mikitahimpel.billet.new-note") {

@@ -3,7 +3,7 @@ import Design
 import WidgetKit
 
 @main
-struct NookiWidgetBundle: WidgetBundle {
+struct OurioWidgetBundle: WidgetBundle {
     var body: some Widget {
         CornerWidget()
         MochiWidget()
@@ -21,7 +21,7 @@ struct NookiWidgetBundle: WidgetBundle {
 struct CornerWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: "com.mikitahimpel.billet.corner", intent: CornerConfiguration.self,
-                               provider: NookiProvider<CornerConfiguration>()) { entry in
+                               provider: OurioProvider<CornerConfiguration>()) { entry in
             VStack(spacing: 0) {
                 Link(destination: DeepLink.room.url) { MochiRoom(snapshot: entry.snapshot) }
                     .frame(maxHeight: .infinity)
@@ -46,7 +46,7 @@ struct CornerWidget: Widget {
 struct MochiWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: "com.mikitahimpel.billet.mochi", intent: MochiConfiguration.self,
-                               provider: NookiProvider<MochiConfiguration>()) { entry in
+                               provider: OurioProvider<MochiConfiguration>()) { entry in
             HStack(spacing: 0) {
                 Link(destination: DeepLink.room.url) { MochiRoom(snapshot: entry.snapshot, showsCaption: false) }
                 Hairline(vertical: true)
@@ -54,7 +54,7 @@ struct MochiWidget: Widget {
             }
             .containerBackground(Ink.screen, for: .widget)
         }
-        .configurationDisplayName("Nooki")
+        .configurationDisplayName("Ourio")
         .description("Your cat and what matters right now.")
         .supportedFamilies([.systemMedium])
         .contentMarginsDisabled()
@@ -65,7 +65,7 @@ struct MochiWidget: Widget {
 struct BlockWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: "com.mikitahimpel.billet.block", intent: ModuleConfiguration.self,
-                               provider: NookiProvider<ModuleConfiguration>()) { entry in
+                               provider: OurioProvider<ModuleConfiguration>()) { entry in
             BlockWidgetView(entry: entry)
                 .containerBackground(Ink.screen, for: .widget)
         }
@@ -77,7 +77,7 @@ struct BlockWidget: Widget {
 }
 
 private struct BlockWidgetView: View {
-    let entry: NookiEntry<ModuleConfiguration>
+    let entry: OurioEntry<ModuleConfiguration>
     @Environment(\.widgetFamily) private var family
 
     var body: some View {
@@ -97,9 +97,9 @@ private struct BlockWidgetView: View {
 }
 
 /// A configured slot inside a bigger widget, linked to its own screen.
-private struct Block<C: NookiConfiguration>: View {
+private struct Block<C: OurioConfiguration>: View {
     let slot: WidgetSlot
-    let entry: NookiEntry<C>
+    let entry: OurioEntry<C>
 
     var body: some View {
         let module = slot.module(in: entry.snapshot)

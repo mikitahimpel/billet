@@ -24,11 +24,11 @@ struct ShareWishView: View {
             ZStack {
                 VStack(spacing: 2) {
                     Text("Add to my wishlist")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                     if let host = url?.host().map({ $0.replacingOccurrences(of: "www.", with: "") }) {
                         Text(host)
-                            .font(.nookiCaption)
+                            .font(.ourioCaption)
                             .foregroundStyle(Ink.textSecondary)
                     }
                 }
@@ -64,7 +64,7 @@ struct ShareWishView: View {
                 Toggle(isOn: $mostWanted) {
                     Label {
                         Text("Most wanted")
-                            .font(.nookiCallout.weight(.semibold))
+                            .font(.ourioCallout.weight(.semibold))
                             .foregroundStyle(Ink.text)
                     } icon: {
                         Image(systemName: mostWanted ? "star.fill" : "star")
@@ -109,7 +109,7 @@ struct ShareWishView: View {
                 .font(.system(.largeTitle, weight: .semibold))
                 .foregroundStyle(Color.blushPink)
             Text("On your wishlist")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
         }
         .frame(maxWidth: .infinity)

@@ -18,11 +18,11 @@ struct StyleGallery: View {
                 swatch("Color.honey", .honey)
             }
             GroupedSection(header: "Type", inset: Space.l) {
-                Text("Large title").font(.nookiLargeTitle).rowCell()
-                Text("Title").font(.nookiTitle).rowCell()
-                Text("Headline").font(.nookiHeadline).rowCell()
-                Text("Body").font(.nookiBody).rowCell()
-                Text("Caption").font(.nookiCaption).foregroundStyle(Ink.textSecondary).rowCell()
+                Text("Large title").font(.ourioLargeTitle).rowCell()
+                Text("Title").font(.ourioTitle).rowCell()
+                Text("Headline").font(.ourioHeadline).rowCell()
+                Text("Body").font(.ourioBody).rowCell()
+                Text("Caption").font(.ourioCaption).foregroundStyle(Ink.textSecondary).rowCell()
             }
             VStack(spacing: Space.m) {
                 PrimaryButton("Primary", symbol: "heart.fill") {}
@@ -87,7 +87,7 @@ struct StyleGallery: View {
                 .fill(colour)
                 .overlay { RoundedRectangle(cornerRadius: Radius.inner).stroke(Ink.separator) }
                 .frame(width: 36, height: 28)
-            Text(name).font(.nookiCallout).foregroundStyle(Ink.text)
+            Text(name).font(.ourioCallout).foregroundStyle(Ink.text)
         }
         .rowCell()
     }

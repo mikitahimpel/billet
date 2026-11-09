@@ -48,10 +48,10 @@ struct GrocerySuggestions: View {
                 UsIcon(glyph: suggestion.aisle.icon, size: 32)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(suggestion.text)
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                     Text(onList ? "Already on the list" : suggestion.aisle.title)
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 8)

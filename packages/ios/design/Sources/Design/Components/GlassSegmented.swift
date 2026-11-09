@@ -31,7 +31,7 @@ public struct GlassSegmented<Value: Hashable>: View {
           withAnimation(.snappy(duration: 0.25)) { selection = segment.value }
         } label: {
           Text(segment.title)
-            .font(.nookiCallout.weight(isSelected ? .semibold : .medium))
+            .font(.ourioCallout.weight(isSelected ? .semibold : .medium))
             .foregroundStyle(isSelected ? Ink.glassGlyph : Ink.glassGlyphSecondary)
             .padding(.horizontal, Space.l)
             .frame(minWidth: 72, minHeight: Size.control - 2 * Self.inset)

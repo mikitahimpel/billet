@@ -58,7 +58,7 @@ public enum Experiments {
   /// How Home is laid out around the room (Labs > Home).
   public static let homeLayout = Experiment(key: "home-layout", choices: HomeVariant.self)
 
-  /// Which of Nooki's rooms a new pair gets: both, only the Room, or only the City.
+  /// Which of Ourio's rooms a new pair gets: both, only the Room, or only the City.
   public static let rooms = Experiment(key: "rooms", choices: RoomsVariant.self)
 
   /// How the rooms' static shell is made: built live, or loaded baked (Labs > Room shell). `live` is the

@@ -23,20 +23,20 @@ private struct Catalog: View {
             VStack(spacing: Space.xs) {
               RoundedRectangle(cornerRadius: Radius.inner).fill(color).frame(height: 36)
                 .overlay(RoundedRectangle(cornerRadius: Radius.inner).strokeBorder(Ink.separator))
-              Text(name).font(.nookiMicro).foregroundStyle(Ink.textSecondary)
+              Text(name).font(.ourioMicro).foregroundStyle(Ink.textSecondary)
             }
           }
         }
 
         SectionHeader("Type")
         VStack(alignment: .leading, spacing: Space.xs) {
-          Text("Large title").font(.nookiLargeTitle)
-          Text("Title").font(.nookiTitle)
-          Text("Headline").font(.nookiHeadline)
-          Text("Body").font(.nookiBody)
-          Text("Callout").font(.nookiCallout)
-          Text("Caption").font(.nookiCaption)
-          Text("Micro").font(.nookiMicro)
+          Text("Large title").font(.ourioLargeTitle)
+          Text("Title").font(.ourioTitle)
+          Text("Headline").font(.ourioHeadline)
+          Text("Body").font(.ourioBody)
+          Text("Callout").font(.ourioCallout)
+          Text("Caption").font(.ourioCaption)
+          Text("Micro").font(.ourioMicro)
         }
         .foregroundStyle(Ink.text)
 
@@ -112,7 +112,7 @@ private struct HeaderOverRoom: View {
         Spacer()
         HStack(spacing: Space.xs) {
           CoinIcon(size: 20)
-          Text("240").font(.nookiHeadline.monospacedDigit())
+          Text("240").font(.ourioHeadline.monospacedDigit())
         }
         .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, Space.m)

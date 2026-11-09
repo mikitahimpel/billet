@@ -212,7 +212,7 @@ struct ListScreen: View {
         if !list.finished.isEmpty {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Done together")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.textSecondary)
                     .padding(.top, 6)
                 VStack(spacing: 0) {
@@ -232,14 +232,14 @@ struct ListScreen: View {
             UsIcon(glyph: ItemIcon.glyph(for: item.text, list: list.icon), size: 30)
                 .opacity(doneStyle ? 0.55 : 1)
             Text(item.text)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .strikethrough(doneStyle)
                 .opacity(doneStyle ? 0.55 : 1)
             Spacer(minLength: 8)
             if showDate, let done = item.done {
                 Text(done.formatted(.dateTime.day().month()))
-                    .font(.nookiMicro)
+                    .font(.ourioMicro)
                     .foregroundStyle(Ink.textSecondary)
             }
             Monogram(partner: item.author, profile: state.profile, size: 20)
@@ -286,7 +286,7 @@ struct ListScreen: View {
 
     private var rewardBadge: some View {
         Label("+5", systemImage: "star.fill")
-            .font(.nookiMicro)
+            .font(.ourioMicro)
             .foregroundStyle(Color.honey)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -365,7 +365,7 @@ struct NewListSheet: View {
                         VStack(spacing: 6) {
                             UsIcon(glyph: kind.icon, size: 40)
                             Text(kind.defaultTitle)
-                                .font(.nookiMicro)
+                                .font(.ourioMicro)
                                 .foregroundStyle(Ink.text)
                                 .lineLimit(1)
                         }
@@ -378,7 +378,7 @@ struct NewListSheet: View {
             }
 
             Text("Or make your own")
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
                 .padding(.top, 4)
 

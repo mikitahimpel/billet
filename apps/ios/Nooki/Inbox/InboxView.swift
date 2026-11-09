@@ -74,7 +74,7 @@ struct InboxView: View {
                 HStack {
                     rowView
                     Image(systemName: "chevron.right")
-                        .font(.nookiCaption.weight(.semibold))
+                        .font(.ourioCaption.weight(.semibold))
                         .foregroundStyle(Ink.textTertiary)
                 }
             }
@@ -144,7 +144,7 @@ private struct InboxRow: View {
                             .offset(x: 5, y: 5)
                     } else {
                         Image(systemName: line.symbol)
-                            .font(.nookiMicro)
+                            .font(.ourioMicro)
                             .foregroundStyle(Ink.heroInk)
                             .frame(width: 20, height: 20)
                             .background(Color.honey, in: .circle)
@@ -154,11 +154,11 @@ private struct InboxRow: View {
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(line.text)
-                    .font(.nookiCallout.weight(isNew ? .semibold : .medium))
+                    .font(.ourioCallout.weight(isNew ? .semibold : .medium))
                     .foregroundStyle(Ink.text)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(date, format: .relative(presentation: .named))
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
             Spacer(minLength: 0)
@@ -199,7 +199,7 @@ private struct InboxRow: View {
             .overlay(Circle().stroke(.white.opacity(0.9), lineWidth: 2))
         case .store:
             Image(systemName: "applelogo")
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .frame(width: 40, height: 40)
                 .background(Ink.surfaceRaised, in: .circle)

@@ -168,10 +168,10 @@ public struct GlassGroup<Content: View>: View {
           GlassSymbol(name: "tray.fill")
             .frame(width: Size.control, height: Size.control)
             .glass(.circle, role: .control)
-          Text("Lv.3").font(.nookiMicro).padding(.horizontal, 7).frame(height: 17).glassBadge()
+          Text("Lv.3").font(.ourioMicro).padding(.horizontal, 7).frame(height: 17).glassBadge()
         }
         HStack(spacing: GlassMetrics.gap) {
-          Text("Room").font(.nookiCallout.weight(.semibold)).foregroundStyle(Ink.glassGlyph)
+          Text("Room").font(.ourioCallout.weight(.semibold)).foregroundStyle(Ink.glassGlyph)
             .padding(.horizontal, Space.l).frame(height: 36)
             .background(Ink.glassSelection, in: .capsule)
             .padding(Space.xs)

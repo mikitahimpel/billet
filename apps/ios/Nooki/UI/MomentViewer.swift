@@ -166,11 +166,11 @@ struct MomentViewer: View {
         Button(action: perform) {
             HStack(spacing: 7) {
                 Image(systemName: symbol)
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(tint)
                     .contentTransition(.symbolEffect(.replace))
                 Text(title)
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
             }
             .frame(maxWidth: .infinity)

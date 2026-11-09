@@ -32,7 +32,7 @@ struct SetSheet: View {
                 art
 
                 Text(pieces.blurb)
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
 
@@ -81,21 +81,21 @@ struct SetSheet: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.name)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Text(item.rarity.title)
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(item.rarity == .common ? Ink.textSecondary : item.rarity.tint)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if owned {
                 Label("Owned", systemImage: "checkmark.circle.fill")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
             } else {
                 CoinPrice(price: state.shop.price(of: item))
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
             }
         }
@@ -124,7 +124,7 @@ struct SetSheet: View {
                 .buttonStyle(PrimaryButtonStyle())
                 if !affordable {
                     Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
@@ -138,7 +138,7 @@ struct SetSheet: View {
                 }
                 .buttonStyle(PrimaryButtonStyle())
                 Label("The whole set is in your closet", systemImage: "checkmark.circle.fill")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
         }

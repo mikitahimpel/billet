@@ -18,8 +18,8 @@ struct WidgetGalleryTests {
     static let night = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: .now) ?? .now
 
     @Test func rendersTheGallery() throws {
-        let day = NookiSnapshot.sample(now: Self.afternoon)
-        let evening = NookiSnapshot.sample(now: Self.night)
+        let day = OurioSnapshot.sample(now: Self.afternoon)
+        let evening = OurioSnapshot.sample(now: Self.night)
         var ginger = day
         ginger.catAvatar = "MochiPortrait-ginger"
         let drawing = DrawingEntry(
@@ -78,7 +78,7 @@ struct WidgetGalleryTests {
 
 /// The large "Our Corner" widget: Mochi's room over two blocks.
 private struct Corner: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
 
     var body: some View {
         VStack(spacing: 0) {
@@ -94,9 +94,9 @@ private struct Corner: View {
     }
 }
 
-/// The medium "Nooki" widget: Mochi beside the smart slot.
+/// The medium "Ourio" widget: Mochi beside the smart slot.
 private struct MochiMedium: View {
-    let snapshot: NookiSnapshot
+    let snapshot: OurioSnapshot
 
     var body: some View {
         HStack(spacing: 0) {

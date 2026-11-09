@@ -10,6 +10,6 @@ struct PetMochiControl: ControlWidget {
             }
         }
         .displayName("Pet Your Cat")
-        .description("Your cat purrs, no need to open Nooki.")
+        .description("Your cat purrs, no need to open Ourio.")
     }
 }

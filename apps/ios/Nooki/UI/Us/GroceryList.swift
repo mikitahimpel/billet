@@ -21,7 +21,7 @@ struct GroceryList: View {
                 let items = open.filter { $0.1 == aisle }.map(\.0)
                 GrocerySectionLabel(title: aisle.title, icon: aisle.icon, top: aisle == aisles.first ? 4 : 18) {
                     Text("\(items.count)")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textTertiary)
                 }
                 card(items, done: false)
@@ -30,7 +30,7 @@ struct GroceryList: View {
             if !bought.isEmpty {
                 GrocerySectionLabel(title: "Bought", top: open.isEmpty ? 4 : 18) {
                     Button("Clear", action: onClear)
-                        .font(.nookiCallout.weight(.semibold))
+                        .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.accentText)
                         .buttonStyle(.plain)
                 }
@@ -65,7 +65,7 @@ struct GrocerySectionLabel<Trailing: View>: View {
         HStack(spacing: 8) {
             if let icon { UsIcon(glyph: icon, size: 26) }
             Text(title)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
             Spacer(minLength: 8)
             trailing
@@ -91,7 +91,7 @@ struct GroceryRow: View {
         HStack(spacing: 12) {
             UsCheck(done: done)
             Text(item.text)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .strikethrough(done)
                 .lineLimit(2)
@@ -100,7 +100,7 @@ struct GroceryRow: View {
             let detail = [quantity, item.note].compactMap(\.self).filter { !$0.isEmpty }.joined(separator: " · ")
             if !detail.isEmpty {
                 Text(detail)
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                     .lineLimit(1)
             }
