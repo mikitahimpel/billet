@@ -138,6 +138,13 @@ final class StreakStore {
         if case .streak(let shared) = await remote.load() { take(shared) }
     }
 
+    /// The room's streak as the socket pushed it after either partner changed it. Ignored before pairing, when the
+    /// streak is this phone's own.
+    func received(_ shared: LoveStreak) {
+        guard remote != nil else { return }
+        take(shared)
+    }
+
     func record(at date: Date = .now) {
         guard update({ $0.record(on: date) }), remote != nil else { return }
         unsent.append(date)
