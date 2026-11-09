@@ -78,12 +78,12 @@ struct OnboardingView: View {
     }
 
     @ViewBuilder private var probeLabel: some View {
-        if let probe {
-            Text(probe.summary)
+        if let summary = probe?.summary {
+            Text(summary)
                 .font(.nookiMicro)
                 .foregroundStyle(.clear)
                 .accessibilityIdentifier("welcome.probe")
-                .accessibilityLabel(probe.summary)
+                .accessibilityLabel(summary)
         }
     }
 
