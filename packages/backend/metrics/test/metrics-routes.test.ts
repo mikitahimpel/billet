@@ -159,7 +159,7 @@ describe("events route", () => {
       {
         events: [
           "AppOpened",
-          { name: "CatChosen", detail: "idolIlya" },
+          { name: "CatChosen", detail: "marmalade" },
           { name: "ShopItemBought", detail: "fairy-lights", value: 40 },
           { name: "CatPetted" },
           { name: "CatPetted", note: "ignored" },
@@ -177,7 +177,7 @@ describe("events route", () => {
     ]);
     expect([...metrics.details.values()]).toEqual(
       expect.arrayContaining([
-        expect.objectContaining({ name: "CatChosen", detail: "idolIlya", count: 1, total: 0 }),
+        expect.objectContaining({ name: "CatChosen", detail: "marmalade", count: 1, total: 0 }),
         expect.objectContaining({ name: "ShopItemBought", detail: "fairy-lights", total: 40 }),
       ]),
     );

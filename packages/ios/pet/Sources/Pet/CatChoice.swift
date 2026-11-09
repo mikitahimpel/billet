@@ -9,7 +9,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// A round ginger tabby in the room's style, by Idol from a FLUX.2-klein picture.
   case gingerChonk
   /// A grey tabby made by Idol from an illustration, used with its author's permission.
-  case idolIlya
+  case illustratedTabby
   /// A ginger tabby sculpted in detail: painted fur, eyelids, whiskers, toes and toe beans.
   case detailed
   /// The detailed tabby as a kitten: a bigger head, big blue eyes, stubby legs, fluffier fur.
@@ -76,7 +76,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .voidCat: "Void"
     case .siamese: "Siamese"
     case .gingerChonk: "Ginger chonk"
-    case .idolIlya: "Illustrated tabby"
+    case .illustratedTabby: "Illustrated tabby"
     case .idolCalico: "Idol calico"
     case .idolGreyTabby: "Idol grey tabby"
     }
@@ -104,7 +104,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     case .voidCat: "A black cat with amber eyes, curious about everything."
     case .siamese: "Blue eyes, dark points, always has something to say."
     case .gingerChonk: "A round ginger tabby who would rather loaf than walk."
-    case .idolIlya: "A grey tabby made by Idol from an illustration."
+    case .illustratedTabby: "A grey tabby made by Idol from an illustration."
     case .idolCalico: "Made by Idol from a picture of a calico."
     case .idolGreyTabby: "Made by Idol from a picture of the grey tabby."
     }
@@ -114,7 +114,8 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
   /// into its body (the grey tabby) dozes in its loaf instead, set in its clip table.
   public var isListed: Bool {
     switch self {
-    case .gingerChonk, .idolIlya, .detailed, .detailedKitten, .detailedFluffy, .hero, .idolGinger,
+    case .gingerChonk, .illustratedTabby, .detailed, .detailedKitten, .detailedFluffy, .hero,
+      .idolGinger,
       .marmalade,
       .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico,
       .ragdoll, .maineCoon, .voidCat, .siamese, .splatGinger, .idolCalico, .idolGreyTabby:
@@ -131,7 +132,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
       .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico, .ragdoll, .maineCoon,
       .voidCat,
       .siamese,
-      .gingerChonk, .idolIlya,
+      .gingerChonk, .illustratedTabby,
       .idolCalico,
       .idolGreyTabby:
       nil
@@ -150,7 +151,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
       .britishGrey, .greyTabby, .tuxedoTom, .tortie, .bengal, .calico, .ragdoll, .maineCoon,
       .voidCat,
       .siamese,
-      .gingerChonk, .idolIlya,
+      .gingerChonk, .illustratedTabby,
       .idolCalico,
       .idolGreyTabby:
       self
@@ -164,7 +165,7 @@ public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
     // Idol bakes the coat it saw into the texture; another coat is another Idol cat.
     case .idolGinger, .marmalade, .mooCat, .fluffyWhite, .britishGrey, .greyTabby, .tuxedoTom,
       .tortie, .bengal,
-      .calico, .ragdoll, .maineCoon, .voidCat, .siamese, .gingerChonk, .idolIlya,
+      .calico, .ragdoll, .maineCoon, .voidCat, .siamese, .gingerChonk, .illustratedTabby,
       .idolCalico,
       .idolGreyTabby,
       .splatGinger:
