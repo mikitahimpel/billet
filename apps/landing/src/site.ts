@@ -114,6 +114,13 @@ export const pages: SitePage[] = [
   },
   ...features,
   {
+    path: "/long-distance-relationship-app/",
+    label: "For long-distance couples",
+    summary:
+      "How Ourio keeps two people close apart: Lock Screen drawings, a shared cat, daily games and countdowns.",
+    group: "product",
+  },
+  {
     path: "/how-it-works/",
     label: "How pairing works",
     summary: "Install, share a 10-character code, and your two phones share one room.",
