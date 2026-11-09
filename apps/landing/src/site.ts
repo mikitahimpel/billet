@@ -1,3 +1,5 @@
+import { alternatives } from "./compare";
+
 // Every page of the site, once: the header, the footer, sitemap.xml and llms.txt all read this list.
 export type SitePage = {
   path: string;
@@ -134,24 +136,12 @@ export const pages: SitePage[] = [
       "Ourio, Paired, Between, Locket Widget, Widgetable, Agapé, Lovewick, Cupla and SumOne: prices and features.",
     group: "compare",
   },
-  {
-    path: "/compare/paired-alternative/",
-    label: "Paired alternative",
-    summary: "Ourio vs Paired: daily questions and games without a subscription.",
+  ...alternatives.map((page): SitePage => ({
+    path: `/compare/${page.slug}/`,
+    label: `${page.app} alternative`,
+    summary: page.summary,
     group: "compare",
-  },
-  {
-    path: "/compare/locket-widget-alternative/",
-    label: "Locket Widget alternative",
-    summary: "Ourio vs Locket Widget: drawings and notes on your partner's Lock Screen, for two.",
-    group: "compare",
-  },
-  {
-    path: "/compare/widgetable-alternative/",
-    label: "Widgetable alternative",
-    summary: "Ourio vs Widgetable: a shared pet and widgets with nothing for sale.",
-    group: "compare",
-  },
+  })),
   {
     path: "/how-it-works/",
     label: "How pairing works",

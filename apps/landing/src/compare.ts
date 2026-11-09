@@ -149,6 +149,8 @@ export type Alternative = {
   app: string;
   title: string;
   description: string;
+  // One sentence for llms.txt and the footer.
+  summary: string;
   h1: string;
   lead: string;
   // Where the other app is the better pick: said plainly, so the page is useful either way.
@@ -164,6 +166,7 @@ export const alternatives: Alternative[] = [
     title: "Paired alternative: a free couples app with no subscription · Ourio",
     description:
       "Looking for an app like Paired? Ourio is a free iPhone app for couples with daily questions, games, a shared cat and Lock Screen drawings, and no subscription. An honest comparison with Paired's features and prices.",
+    summary: "Ourio vs Paired: daily questions and games without a subscription.",
     h1: "A Paired alternative that's free and playful.",
     lead: "Paired is a daily questions app with quizzes and guided journeys; Paired Premium costs from $39.99 a year. Ourio is a free alternative for iPhone with no subscription: five daily questions in Who knows who, Draw & guess, a shared cat, drawings on your partner's Lock Screen and a planner for two.",
     theyFit: [
@@ -200,6 +203,7 @@ export const alternatives: Alternative[] = [
     title: "Locket Widget alternative for couples: drawings, notes and a shared cat · Ourio",
     description:
       "An alternative to Locket Widget made for couples: Ourio sends drawings and notes to your partner's Lock Screen and Home Screen widgets, with a shared cat, mood and days together. Free, no subscription.",
+    summary: "Ourio vs Locket Widget: drawings and notes on your partner's Lock Screen, for two.",
     h1: "A Locket alternative made for two.",
     lead: "Locket Widget puts live photos from your best friends on your Home Screen. Ourio is a widget app made for couples: your partner's drawings and notes arrive on your Lock Screen, and widgets show your shared cat, their mood, days together and your next date. Free, with no subscription.",
     theyFit: [
@@ -235,6 +239,7 @@ export const alternatives: Alternative[] = [
     title: "Widgetable alternative for couples: a free shared pet and widgets · Ourio",
     description:
       "An alternative to Widgetable for couples: Ourio has a shared cat you raise together, Lock Screen drawings, mood and countdown widgets, with no subscription and no paid pets or food. Honest comparison.",
+    summary: "Ourio vs Widgetable: a shared pet and widgets with nothing for sale.",
     h1: "A Widgetable alternative without the paywall.",
     lead: "Widgetable has shared widgets, doodles and pets for friends and couples; Widgetable Premium costs $19.99 a year, and pet eggs and food are sold too. Ourio is a free alternative for couples: one shared cat, Lock Screen drawings, mood, notes and countdown widgets, with no subscription and nothing for sale.",
     theyFit: [

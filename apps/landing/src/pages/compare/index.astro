@@ -18,7 +18,13 @@ const schema = [
   {
     "@type": "ItemList",
     name: "Couples apps for iPhone",
-    itemListElement: [ourio, ...apps].map((app, i) => ({ "@type": "ListItem", position: i + 1, name: app.name })),
+    itemListElement: [ourio, ...apps].map((app, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: app.name,
+      // The app's own site; Ourio's is this one.
+      url: app.sources.find((url) => !url.startsWith("https://apps.apple.com/")) ?? new URL("/", Astro.site).href,
+    })),
   },
 ];
 const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name, url })));
