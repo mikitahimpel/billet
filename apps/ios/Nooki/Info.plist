@@ -4,6 +4,10 @@
 <dict>
 	<key>BilletAPIHost</key>
 	<string>$(BILLET_API_HOST)</string>
+	<key>BilletLabs</key>
+	<string>$(BILLET_LABS_MODE)</string>
+	<key>BilletPayments</key>
+	<string>$(BILLET_PAYMENTS_MODE)</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleExecutable</key>

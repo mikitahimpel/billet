@@ -22,13 +22,17 @@ public struct RoomInput: Equatable, Sendable {
   public var visibility: RoomVisibility
   /// What VoiceOver calls her.
   public var catName: String
+  /// The partner has the app open on their phone.
+  public var partnerHere: Bool
 
   public init(
-    scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi"
+    scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
+    partnerHere: Bool = false
   ) {
     self.scene = scene
     self.coat = coat
     self.visibility = visibility
     self.catName = catName
+    self.partnerHere = partnerHere
   }
 }

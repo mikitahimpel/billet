@@ -1558,6 +1558,7 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("ServerMessage", ServerMessage, {
     stroke: ServerMessage.cases.Stroke.make({ seq: 8, stroke }),
     presence: ServerMessage.cases.Presence.make({ state: "idle" }),
+    "presence-away": ServerMessage.cases.Presence.make({ state: "away" }),
     "note-received": ServerMessage.cases.NoteReceived.make({ seq: 9, note: photo }),
     "text-note-received": ServerMessage.cases.NoteReceived.make({ seq: 10, note: text }),
     "photo-note-received": ServerMessage.cases.NoteReceived.make({

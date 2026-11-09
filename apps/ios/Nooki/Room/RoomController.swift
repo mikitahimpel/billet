@@ -36,6 +36,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private lazy var standIn = CatRoom()
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var pins: [BoardPin] = []
+    @ObservationIgnored private var partnerNotice = PartnerNoticeMachine.State.away
 
     /// `usesStandIn` leaves the real room out (UI tests, where RealityKit can't draw) and gives games a bare one.
     init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife) {
@@ -147,6 +148,17 @@ final class RoomController: RoomControlling, CatStatusProviding {
     func petted() { emit.yield(.catPetted) }
 
     func careAsked() { emit.yield(.careAsked) }
+
+    /// The partner's phone opened the app: the cat perks up and glances off toward the door.
+    func partnerSeen(here: Bool, visible: Bool) {
+        let (next, outputs) = PartnerNoticeMachine.transition(partnerNotice, .input(partnerHere: here, visible: visible))
+        partnerNotice = next
+        for output in outputs {
+            switch output {
+            case .notice: current?.director?.partnerArrived()
+            }
+        }
+    }
 
     // MARK: The pair's cat
 

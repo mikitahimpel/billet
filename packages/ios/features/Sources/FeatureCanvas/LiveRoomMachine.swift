@@ -14,7 +14,7 @@ public enum LiveRoomMachine: Machine {
   public struct State: Equatable, Sendable {
     public var isOnline: Bool
     /// `nil` until the server says, and again after a drop.
-    public var partner: PresenceState?
+    public var partner: PartnerPresence?
     /// The partner's finished strokes since their drawing began, oldest first.
     public var strokes: [Stroke]
     /// The partner's strokes still being drawn, by their live id.
@@ -22,7 +22,7 @@ public enum LiveRoomMachine: Machine {
     public var lastNoteSeq: Int?
 
     public init(
-      isOnline: Bool = false, partner: PresenceState? = nil, strokes: [Stroke] = [],
+      isOnline: Bool = false, partner: PartnerPresence? = nil, strokes: [Stroke] = [],
       openStrokes: [Int: Stroke] = [:], lastNoteSeq: Int? = nil
     ) {
       self.isOnline = isOnline
@@ -114,7 +114,7 @@ public enum LiveRoomMachine: Machine {
       guard state.isOnline else { return (state, []) }
       next.partner = presence
       // A drawing the partner left without sending is gone.
-      if presence == .idle { next.forgetDrawing() }
+      if presence != .drawing { next.forgetDrawing() }
       return (next, [])
 
     // The canvas has nothing to do with the cat's journal, the Inbox or the moods.

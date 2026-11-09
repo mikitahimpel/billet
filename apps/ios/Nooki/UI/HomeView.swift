@@ -35,6 +35,9 @@ struct HomeView: View {
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    @AppStorage(AppSettings.quietRoomKey) private var quietChrome = QuietChrome.dim
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
+    @State private var quiet = QuietRoom.store()
     var hasRoomChoice: Bool { state.rooms.variant.hasRoomChoice }
     @State private var height: CGFloat = 0
     /// The rooms already counted as opened since the app came to the front, so each is reported once.
@@ -52,6 +55,10 @@ struct HomeView: View {
     private var roomOnScreen: Bool { showsRoom && !roomCovered }
     /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
     private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
+    /// The World's chrome may step back while she is only watched.
+    private var quietAllowed: Bool {
+        quietChrome != .off && !QuietRoom.scripted && !voiceOver && !launching && worldOnScreen && room.game == nil
+    }
 
     /// In three parts: as one modifier chain, `body` takes the Release type-checker past its time limit on Xcode 26.
     var body: some View {
@@ -139,6 +146,7 @@ struct HomeView: View {
         .onChange(of: state.tab, initial: true) { visitHints() }
         .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in phaseChanged(from: old, to: phase) }
+        .onChange(of: quietAllowed, initial: true) { _, allowed in quiet.send(.allowed(allowed)) }
     }
 
     private func presenting(_ content: some View) -> some View {
@@ -261,6 +269,7 @@ struct HomeView: View {
                         .environment(\.glassRendering, hud.glass)
                 }
             }
+            .modifier(QuietFade(store: quiet, chrome: quietChrome))
             .opacity(room.game == nil ? 1 : 0)
 
             // Over the chrome: while a game is played nothing else of Home shows.
@@ -276,7 +285,9 @@ struct HomeView: View {
                 if state.tab == .world, room.game == nil { petControls }
             }
             .animation(Motion.fade(), value: state.tab)
+            .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
+        .background { TouchWatcher { [quiet] in quiet.send(.touched) } }
         .overlay(alignment: .topLeading) {
             if brainCard && state.tab == .world {
                 RoomBrainCard(controller: room)
@@ -429,7 +440,7 @@ struct HomeView: View {
             roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName)
+            catName: state.petName, partnerHere: session?.partnerHere == true)
     }
 
     private func handle(_ event: RoomEvent) {

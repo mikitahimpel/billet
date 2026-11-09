@@ -30,6 +30,10 @@ final class ServerSession {
     /// `unpaired` until this account has a partner.
     private(set) var drawGuess: DrawGuessModel
     @ObservationIgnored private var inboxLink: InboxLink?
+    /// What the room last said of the partner on this socket.
+    private var partnerPresence: PartnerPresence = .away
+    /// The partner has the app open; false while this phone's socket is down.
+    var partnerHere: Bool { partnerPresence != .away && inboxLink?.isConnected == true }
     @ObservationIgnored private let photoReceiving = PhotoReceiving()
     /// Set each time the socket is followed.
     @ObservationIgnored private var photos: PhotoSync?
@@ -155,11 +159,13 @@ final class ServerSession {
                         riddle: { [weak self] in self?.drawGuess.changed($0) },
                         streak: { [weak self] in self?.streak?.received(LoveStreak($0)) },
                         catEntry: { [weak self] in self?.catEntry?($0) },
-                        lastCatSeq: { [weak self] in self?.lastCatSeq?() }))
+                        lastCatSeq: { [weak self] in self?.lastCatSeq?() },
+                        presence: { [weak self] in self?.partnerPresence = $0 }))
             }
             inboxLink?.connect()
         } else {
             inboxLink?.disconnect()
+            partnerPresence = .away
         }
     }
 
@@ -278,6 +284,7 @@ final class ServerSession {
     private func pairEnded() {
         try? backend.accounts.setPaired(false, nil)
         isPaired = false
+        partnerPresence = .away
         reactions = nil
         whoKnows = Self.whoKnowsModel(backend, paired: false)
         drawGuess = Self.drawGuessModel(backend, paired: false)

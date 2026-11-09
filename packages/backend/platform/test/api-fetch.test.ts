@@ -1749,7 +1749,7 @@ describe("the couple's WebSocket", () => {
     expect(theirs.ofTag("Stroke")[0]).toMatchObject({ stroke, seq: 0 });
     mine.ws.send(JSON.stringify({ _tag: "Presence", state: "idle" }));
     await until(
-      () => theirs.ofTag("Presence").length >= 1,
+      () => theirs.ofTag("Presence").length >= 2,
       "a later frame, so the stroke echo would have arrived",
     );
     expect(mine.ofTag("Stroke")).toEqual([]);
@@ -1764,8 +1764,8 @@ describe("the couple's WebSocket", () => {
     expect(theirs.ofTag("Presence")[0]).toMatchObject({ state: "drawing" });
 
     mine.ws.close(1000);
-    await until(() => theirs.ofTag("Presence").length === 2, "idle after disconnect");
-    expect(theirs.ofTag("Presence")[1]).toMatchObject({ state: "idle" });
+    await until(() => theirs.ofTag("Presence").length === 2, "away after disconnect");
+    expect(theirs.ofTag("Presence")[1]).toMatchObject({ state: "away" });
   });
 
   it("ignores frames it cannot read and ends a connection that sends a huge one", async () => {

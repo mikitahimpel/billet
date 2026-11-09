@@ -37,6 +37,14 @@ import Wire
     #expect(state.partner == .idle)
   }
 
+  @Test func presenceAwayDropsTheDrawingAndSaysNothing() {
+    var (state, _) = M.transition(Self.online, .received(.stroke(seq: 1, stroke: Self.stroke)))
+    (state, _) = M.transition(state, .received(.presence(.away)))
+    #expect(state.strokes.isEmpty)
+    #expect(state.partner == .away)
+    #expect(state.presenceText == nil)
+  }
+
   @Test func aNoteArrivesOnceAndEndsTheLiveDrawing() {
     var (state, _) = M.transition(Self.online, .received(.stroke(seq: 1, stroke: Self.stroke)))
     var outputs: [M.Output]
