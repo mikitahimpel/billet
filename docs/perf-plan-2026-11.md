@@ -344,11 +344,14 @@ the new view is never hidden while it starts. Run 42529129271.
 
 Inside the noise, and the stall still shows, so the stand-in over the room is not the cause.
 
-**The stall after the covers is on main.** One `settled` run in three on base runs at 0.8 fps
-with 1–2 s frames and almost no CPU, after the Inbox closes and the room remounts. That is the
-user-visible bug the baseline section suspected. Neither arm explains it. Next: a local
-Simulator look (close the Inbox, does Mochi still breathe?), then Instruments on a quiet Mac or
-H6, to find what the main thread waits on.
+**The stall after the covers is the runner, not the app.** One `settled` run in three on base runs
+at 0.4–0.8 fps on CI: frames of about 1 s each with a few ms of CPU, from a cover's close until the
+app quits. That is the drawable wait timing out because the GPU never returns the drawables: the
+Simulator's Metal host stops running the app's GPU work on a busy runner (load 130–380 here). It
+does not happen locally: three runs of the same Release build at load 13–30 settled at 55–58 fps
+with no frame over 0.5 s. It is on main before #523 and #530. `report.py` now leaves such a phase,
+and the rest of its run, out of the medians as "gpu lost", and each perf job saves the host's
+`simmetalhost.log`. A phone settles it for good (close the Inbox: does Mochi still breathe?).
 
 ## Harness gaps
 

@@ -193,6 +193,11 @@ jobs:
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -279,6 +284,11 @@ jobs:
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -364,6 +374,11 @@ jobs:
           grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
+
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -468,6 +483,11 @@ jobs:
           grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
+
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
