@@ -60,6 +60,11 @@ final class CatDirector {
     static let greetAfter: TimeInterval = 3 * 3600
     private static let lastSeenKey = "cat.brain.lastSeen"
 
+    /// When a room last ran her, kept about once a minute; nil on a phone that never has.
+    static func lastSeen(in defaults: UserDefaults) -> Date? {
+        defaults.object(forKey: lastSeenKey) as? Date
+    }
+
     @ObservationIgnored private let walker: CatWalker
     @ObservationIgnored private let spots: [NookiSpot: CatWalker.Destination]
     @ObservationIgnored private let source: CatEventSource
@@ -115,7 +120,7 @@ final class CatDirector {
 
     /// The app came to the front; after a few hours away she comes to greet you.
     func appOpened(now: Date = .now) {
-        let last = defaults.object(forKey: Self.lastSeenKey) as? Date
+        let last = Self.lastSeen(in: defaults)
         defaults.set(now, forKey: Self.lastSeenKey)
         guard let last, now.timeIntervalSince(last) >= Self.greetAfter else { return }
         live(.greeting, for: 4)

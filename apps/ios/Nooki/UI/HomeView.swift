@@ -28,6 +28,8 @@ struct HomeView: View {
     /// Nil without a server to buy packs through.
     @State private var coinPacks: CoinPacksModel?
     @State private var coinsShown: CoinsAsk?
+    /// What the partner did while this phone was away, shown a few seconds after coming back.
+    @State private var homecoming: HomecomingLine?
     /// The header and the tab bar as a perf run wants them drawn; glass, as shipped, otherwise.
     @State private var hud = HUDArm.launch
     @State private var sheetGround = SheetGroundStyle.opaque
@@ -309,6 +311,10 @@ struct HomeView: View {
             // Above the portrait, with the arrow down at it, so the hint never covers her.
             TipView(PetHint(), arrowEdge: .bottom)
             TipView(TreatHint(), arrowEdge: .bottom)
+            if let homecoming {
+                HomecomingLabel(line: homecoming)
+                    .transition(.opacity)
+            }
             HStack(alignment: .bottom) {
                 PetButton(state: state, needs: { room }) { room.play($0) }
                 Spacer(minLength: 0)
@@ -319,6 +325,11 @@ struct HomeView: View {
         .padding(.horizontal, 12)
         .padding(.bottom, 94)
         .transition(.opacity)
+        .task(id: homecoming) {
+            guard homecoming != nil else { return }
+            guard (try? await Task.sleep(for: .seconds(6))) != nil else { return }
+            withAnimation(.easeOut(duration: 0.6)) { homecoming = nil }
+        }
     }
 
     /// Its own method: inline in `body`, the closure tips the type-checker over its time limit.
@@ -439,6 +450,10 @@ struct HomeView: View {
         case .catPetted: withAnimation(.spring(duration: 0.4)) { state.care.pet() }
         case .pinOpened(let id): state.openedPin = PinRoute(id: id)
         case .drawAsked: state.composingNote = .draw
+        case .partnerCared(let care):
+            withAnimation(.snappy(duration: 0.3)) {
+                homecoming = HomecomingLine(care, partner: state.otherPartner, cat: CatProfile.name())
+            }
         }
     }
 

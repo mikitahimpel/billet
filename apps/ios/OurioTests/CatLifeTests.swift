@@ -1,5 +1,6 @@
 import Foundation
 import Pet
+import RoomInterface
 import Synchronization
 import Testing
 import Transport
@@ -318,5 +319,90 @@ private let profile = Wire.CatProfile(
         await life.connect(room.client, pair: pair)
         #expect(room.state.withLock { $0.records } == waiting)
         #expect(life.unsent.isEmpty)
+    }
+}
+
+/// Coming back after hours away to what the partner did for her.
+@MainActor
+@Suite struct HomecomingTests {
+    private let defaults = UserDefaults(suiteName: "HomecomingTests-\(UUID().uuidString)")!
+    private let formerOutbox = URL.temporaryDirectory.appending(path: "outbox-\(UUID().uuidString)/cat-events.json")
+    /// The fake room's clock, in seconds.
+    private let roomNow = Date(timeIntervalSince1970: 1_800_000_000)
+
+    private func paired(_ room: FakeCatRoom) async -> CatLife {
+        let life = CatLife(defaults: defaults, formerOutbox: formerOutbox, catName: { "Pancake" },
+                           catCoat: { "ginger" })
+        await life.connect(room.client, pair: pair)
+        return life
+    }
+
+    /// Every event the room sent so far, read up to a pet sent as a marker. Once per test: the stream has one reader.
+    private func told(_ controller: RoomController) async -> [[LifeEvent.Kind]] {
+        controller.petted()
+        var told: [[LifeEvent.Kind]] = []
+        for await event in controller.events {
+            switch event {
+            case .catPetted: return told
+            case .partnerCared(let care): told.append(care.map(\.kind))
+            case .pinOpened, .drawAsked: continue
+            }
+        }
+        return told
+    }
+
+    private func lastSeen(hoursBefore hours: Double) {
+        defaults.set(roomNow.addingTimeInterval(-hours * 3600), forKey: "cat.brain.lastSeen")
+    }
+
+    @Test func thePartnersCareIsTheirsAloneOldestFirst() async {
+        let room = FakeCatRoom(profile: profile)
+        room.partner(.petted)
+        room.partner(.fed(grams: 40))
+        let life = await paired(room)
+        life.record(.play)
+
+        #expect(life.partnerCare(since: .distantPast).map(\.kind) == [.pet, .feed])
+        #expect(life.partnerCare(since: roomNow).isEmpty)
+    }
+
+    @Test func comingBackAfterHoursTellsThePartnersCareOnce() async {
+        let room = FakeCatRoom(profile: profile)
+        let life = await paired(room)
+        let controller = RoomController(usesStandIn: true, catLife: life, defaults: defaults)
+        lastSeen(hoursBefore: 4)
+
+        controller.cameHome(now: roomNow)
+        controller.tellHomecoming(now: roomNow)
+        // The journal brings the partner's meal a moment later.
+        controller.catEntryArrived(room.partner(.fed(grams: 40)))
+        controller.tellHomecoming(now: roomNow)
+        #expect(await told(controller) == [[.feed]])
+    }
+
+    @Test(arguments: [1.0, 2.9])
+    func aShortAbsenceIsNoHomecoming(hours: Double) async {
+        let room = FakeCatRoom(profile: profile)
+        room.partner(.fed(grams: 40))
+        let life = await paired(room)
+        let controller = RoomController(usesStandIn: true, catLife: life, defaults: defaults)
+        lastSeen(hoursBefore: hours)
+
+        controller.cameHome(now: roomNow)
+        controller.tellHomecoming(now: roomNow)
+        #expect(await told(controller).isEmpty)
+    }
+
+    @Test func careThatArrivesLateIsNotNewsAnyMore() async {
+        let room = FakeCatRoom(profile: profile)
+        room.partner(.fed(grams: 40))
+        let life = await paired(room)
+        let controller = RoomController(usesStandIn: true, catLife: life, defaults: defaults)
+        lastSeen(hoursBefore: 4)
+
+        controller.cameHome(now: roomNow)
+        controller.tellHomecoming(now: roomNow.addingTimeInterval(RoomController.homecomingWindow + 1))
+        controller.tellHomecoming(now: roomNow)
+        #expect(await told(controller).isEmpty)
     }
 }

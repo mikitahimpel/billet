@@ -9,6 +9,9 @@ public enum RoomEvent: Equatable, Sendable {
   case pinOpened(UUID)
   /// The board's pencil was tapped: the couple wants to doodle.
   case drawAsked
+  /// Back after hours away, and the partner cared for the cat meanwhile: what they did, oldest first. Sent once per
+  /// homecoming, when the pair's journal has caught up.
+  case partnerCared([LifeEvent])
 }
 
 /// The room's commands. Every way in, apart from the host's input value.
