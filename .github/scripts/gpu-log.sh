@@ -9,10 +9,10 @@ set -uo pipefail
 out=${1:?usage: gpu-log.sh <dir>}
 mkdir -p $out
 perl -e 'alarm 180; exec @ARGV' log show --last 4h --style compact --predicate \
-  'process == "SimMetalHost" OR eventMessage CONTAINS "SimMetalHost" OR eventMessage CONTAINS "excessive GPU errors"' \
+  '(process == "SimMetalHost" OR eventMessage CONTAINS "SimMetalHost" OR eventMessage CONTAINS "excessive GPU errors") AND process != "log"' \
   > $out/simmetalhost.log 2>&1
-status=$?
+code=$?
 # The upload goes on either way; a cut-off or failed capture says so instead of passing for a whole log.
-((status == 0)) || echo "::warning::log show exited $status (142 = cut off at 180 s): simmetalhost.log is incomplete"
+((code == 0)) || echo "::warning::log show exited $code (142 = cut off at 180 s): simmetalhost.log is incomplete"
 echo "$(wc -l < $out/simmetalhost.log) lines; GPU errors: $(grep -ci 'error' $out/simmetalhost.log)"
 grep -i 'ignored\|excessive' $out/simmetalhost.log | tail -5 || true
