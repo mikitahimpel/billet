@@ -1,3 +1,4 @@
+import OurioShared
 import Pet
 import SwiftUI
 import Design

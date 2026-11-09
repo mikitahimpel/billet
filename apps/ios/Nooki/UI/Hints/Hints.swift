@@ -1,4 +1,5 @@
 import Observation
+import OurioShared
 import SwiftUI
 import TipKit
 import Transport

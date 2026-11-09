@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import OurioShared
 import Persistence
 import PetScene
 import Transport

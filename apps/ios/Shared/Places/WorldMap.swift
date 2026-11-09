@@ -4,16 +4,16 @@ import UIKit
 
 /// Every country's outline from Natural Earth (public domain), simplified to half a degree, on an equirectangular
 /// map from 180°W, 84°N to 180°E, 56°S. `WorldMap.txt` is made by `scripts/places/world-map.py`.
-nonisolated struct WorldMap: Sendable {
-    static let size = CGSize(width: 720, height: 280)
+public nonisolated struct WorldMap: Sendable {
+    public static let size = CGSize(width: 720, height: 280)
 
     /// Rings by ISO 3166-1 alpha-2 code; `XX` is land without one.
-    let shapes: [String: [[CGPoint]]]
+    public let shapes: [String: [[CGPoint]]]
 
-    static let bundled = WorldMap(text: Bundle.main.url(forResource: "WorldMap", withExtension: "txt")
+    public static let bundled = WorldMap(text: Bundle.main.url(forResource: "WorldMap", withExtension: "txt")
         .flatMap { try? String(contentsOf: $0, encoding: .utf8) } ?? "")
 
-    init(text: String) {
+    public init(text: String) {
         var shapes: [String: [[CGPoint]]] = [:]
         for line in text.split(separator: "\n") {
             guard let space = line.firstIndex(of: " ") else { continue }
@@ -29,16 +29,16 @@ nonisolated struct WorldMap: Sendable {
         self.shapes = shapes
     }
 
-    func path(_ code: String, in rect: CGRect) -> Path {
+    public func path(_ code: String, in rect: CGRect) -> Path {
         path(shapes[code] ?? [], in: rect)
     }
 
-    func land(in rect: CGRect) -> Path {
+    public func land(in rect: CGRect) -> Path {
         path(shapes.values.flatMap(\.self), in: rect)
     }
 
     /// The country's middle in `rect` when it is too small to see at that size, so it can be drawn as a dot.
-    func dot(_ code: String, in rect: CGRect, below points: CGFloat = 5) -> CGPoint? {
+    public func dot(_ code: String, in rect: CGRect, below points: CGFloat = 5) -> CGPoint? {
         let bounds = path(code, in: rect).boundingRect
         guard !bounds.isNull, max(bounds.width, bounds.height) < points else { return nil }
         return CGPoint(x: bounds.midX, y: bounds.midY)
@@ -56,14 +56,20 @@ nonisolated struct WorldMap: Sendable {
 }
 
 /// The world with the countries been to filled in honey and the ones wanted outlined.
-struct WorldMapView: View {
-    let been: Set<String>
-    let wanted: Set<String>
-    var map = WorldMap.bundled
+public struct WorldMapView: View {
+    public let been: Set<String>
+    public let wanted: Set<String>
+    public var map = WorldMap.bundled
 
-    static let wantedColor = Color(light: Color.honeyDeep, dark: Color(hex: 0xFFE07A))
+    public init(been: Set<String>, wanted: Set<String>, map: WorldMap = WorldMap.bundled) {
+        self.been = been
+        self.wanted = wanted
+        self.map = map
+    }
 
-    var body: some View {
+    public static let wantedColor = Color(light: Color.honeyDeep, dark: Color(hex: 0xFFE07A))
+
+    public var body: some View {
         Canvas { context, size in
             let rect = CGRect(origin: .zero, size: size)
             context.fill(map.land(in: rect), with: .color(Ink.text.opacity(0.12)))
@@ -91,11 +97,16 @@ struct WorldMapView: View {
 }
 
 /// A country's round flag from circle-flags (MIT), or its emoji flag on a circle when the bundle has none.
-struct CountryFlag: View {
-    let code: String
-    var size: CGFloat = 34
+public struct CountryFlag: View {
+    public let code: String
+    public var size: CGFloat = 34
 
-    var body: some View {
+    public init(code: String, size: CGFloat = 34) {
+        self.code = code
+        self.size = size
+    }
+
+    public var body: some View {
         Group {
             if let image = UIImage(named: "flag-\(code.lowercased())") {
                 Image(uiImage: image)

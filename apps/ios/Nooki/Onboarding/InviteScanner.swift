@@ -1,4 +1,5 @@
 import CoreImage.CIFilterBuiltins
+import OurioShared
 import SwiftUI
 import VisionKit
 import Wire

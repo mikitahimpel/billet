@@ -2,25 +2,25 @@ import Foundation
 
 /// How grocery names compare: case, ё and е, and plural endings don't count, so "Lemons" is "lemon" and "лимоны" is
 /// "лимон". A stem keeps at least three letters, so short words stay whole.
-nonisolated enum GroceryWords {
+public nonisolated enum GroceryWords {
     /// Lowercase words with ё as е, split on anything that is not a letter or a digit.
-    static func words(_ text: String) -> [String] {
+    public static func words(_ text: String) -> [String] {
         text.lowercased()
             .replacingOccurrences(of: "ё", with: "е")
             .split { !$0.isLetter && !$0.isNumber }
             .map(String.init)
     }
 
-    static func stems(_ text: String) -> [String] { words(text).map(stem) }
+    public static func stems(_ text: String) -> [String] { words(text).map(stem) }
 
     /// The same for every spelling of one product: the key the pair's history is kept under.
-    static func key(_ text: String) -> String { stems(text).joined(separator: " ") }
+    public static func key(_ text: String) -> String { stems(text).joined(separator: " ") }
 
-    static func isCyrillic(_ text: String) -> Bool {
+    public static func isCyrillic(_ text: String) -> Bool {
         text.unicodeScalars.contains { (0x0400...0x04FF).contains($0.value) }
     }
 
-    static func stem(_ word: String) -> String {
+    public static func stem(_ word: String) -> String {
         isCyrillic(word) ? russianStem(word) : englishStem(word)
     }
 

@@ -1,3 +1,4 @@
+import OurioShared
 import SwiftUI
 
 enum ShopCategory: String, CaseIterable, Identifiable {

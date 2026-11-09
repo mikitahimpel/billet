@@ -1,3 +1,4 @@
+import OurioShared
 import Testing
 import UIKit
 @testable import Billet

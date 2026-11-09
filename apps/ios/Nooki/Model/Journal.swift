@@ -1,4 +1,5 @@
 import Observation
+import OurioShared
 import UIKit
 import Wire
 

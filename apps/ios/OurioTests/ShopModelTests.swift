@@ -1,5 +1,6 @@
 import FeatureShop
 import Foundation
+import OurioShared
 import ShopInterface
 import Synchronization
 import Testing
