@@ -264,7 +264,7 @@ struct HomeView: View {
             // Tab to tab, the page alone moves; the header and the tab bar are outside it and stay put. Read in the
             // pass that switches, `tabFrom` is still the tab left.
             .transition(.page(HomeTab.direction(from: tabFrom, to: state.tab), reduceMotion: reduceMotion))
-            .animation(Motion.spring(Motion.quick), value: state.tab)
+            .animation(Motion.move(), value: state.tab)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.

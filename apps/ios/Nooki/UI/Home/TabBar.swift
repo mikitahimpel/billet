@@ -29,7 +29,7 @@ struct TabBar: View {
                     }
                 }
                 // Only the selection moves on a switch; the page under the bar animates itself (HomeView).
-                .animation(reduceMotion ? Motion.fade() : Motion.spring(Motion.quick), value: state.tab)
+                .animation(reduceMotion ? Motion.fade() : Motion.move(), value: state.tab)
                 .padding(Self.inset)
                 .contentShape(.capsule)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { barWidth = $0 }

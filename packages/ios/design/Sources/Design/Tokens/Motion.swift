@@ -15,6 +15,12 @@ public enum Motion {
     .spring(duration: duration, bounce: 0)
   }
 
+  /// A move that ends exactly at `duration`, fast out and settling in like the spring. For what animates on
+  /// every switch (a tab's page, the selection pill): a spring keeps updating long after it looks still.
+  public static func move(_ duration: Double = quick) -> Animation {
+    .timingCurve(0.2, 0.9, 0.3, 1, duration: duration)
+  }
+
   /// Opacity alone, for what leaves and for everything under Reduce Motion.
   public static func fade(_ duration: Double = quick) -> Animation {
     .easeOut(duration: duration)
@@ -42,7 +48,7 @@ public enum Motion {
 }
 
 extension AnyTransition {
-  /// A page swapped for another in place: the new one fades in on the quick spring from `Motion.entryOffset`,
+  /// A page swapped for another in place: the new one fades in on `Motion.move` from `Motion.entryOffset`,
   /// the old one fades out quick. Opacity and a drawn offset only: neither page's frame moves, so nothing in it
   /// lays out again on the way.
   public static func page(_ direction: Motion.Direction, reduceMotion: Bool) -> AnyTransition {
@@ -50,7 +56,7 @@ extension AnyTransition {
       insertion: AnyTransition(
         PageEntry(offset: Motion.entryOffset(direction, reduceMotion: reduceMotion))
       )
-      .animation(Motion.spring(Motion.quick)),
+      .animation(Motion.move()),
       removal: .opacity.animation(Motion.fade()))
   }
 }
