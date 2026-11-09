@@ -77,7 +77,7 @@ Sand3D's default tessellation is a 0.05 mm chord with 24 to 64 pieces per turn, 
 parts. It gives 3.7× today's triangles. `billet_style.tessellate()` sets a 1 mm chord with 12 to 32 pieces,
 about half of today's count. Every render above uses that setting.
 
-**Frame time: not measured.** The app doesn't put bought furniture in the room yet. Shop models appear only on
+**Frame time: not measured in the spike** (since measured, see [In the room](#in-the-room)). The app doesn't put bought furniture in the room yet. Shop models appear only on
 the `ItemSheet` RealityKit stage and as card thumbnails. A local app build doesn't fit the 6-minute build lock
 at the Mac's current load (60–90), Simulator frame times aren't representative, and the CI scene A/B was out of
 scope.
@@ -151,7 +151,41 @@ Keep:
 - Idol for organic and painterly pieces.
 
 To get there:
-1. Pin Sand3D.
-2. Move `billet_style.py` and `build.py` next to `apps/ios/Tools`.
-3. Bake the scale and name the joint nodes in the export.
-4. Measure frame time on a device once pieces are placed in the room.
+1. Pin Sand3D (done: 1.6.3, [README](../tools/sand3d/README.md)).
+2. Keep the programs in `tools/sand3d` with their own README.
+3. Bake the scale and name the joint nodes in the export (done in `build.py`).
+4. Measure frame time with the pieces in the room (done below, in the Simulator; a phone is still to do).
+
+## In the room
+
+The app bundles eight Sand3D items as ordinary shop files, `Item_<id>.usdz` and a 1024 px `Item_<id>.png`:
+
+- six armchair colourways from `armchair-colourways.json`;
+- `chest`, the chest of drawers;
+- `monstera-potted`, the monstera with leaf seed 3, which has no edge-on leaf at card size.
+
+None is in the shop's catalog. Listing them is the owner's call, made in the admin
+([admin.md](admin.md#sand3d-items)).
+
+The app never puts bought furniture in the room, so a perf arm does: `-perf.pieces today|sand3d` stands three
+pieces on the Room's floor, and a `cost` run's `pieces` switch takes them away and puts them back
+(`NookiPerf.swift`). `today` is `Item_armchair`, `Item_bookcase` and `Item_monstera`. `sand3d` is
+`Item_armchair-meadow`, `Item_chest` and `Item_monstera-potted`. Each is fitted the way the shop fits it and lit
+like the room's own furniture.
+
+| Three pieces | Triangles | USDZ KB | Meshes | Materials |
+| --- | ---: | ---: | ---: | ---: |
+| today | 48,392 | 1,345 | 46 | 18 |
+| sand3d | 20,874 | 892 | 31 | 11 |
+
+Frame time, one local Release build in the Simulator (iPhone 17 Pro, iOS 27.2). Four `cost` runs per arm,
+alternating `today` and `sand3d`. Medians, with the range in brackets.
+
+| Arm | Still p95 with / without (ms) | Still fps with / without | Orbit p95 with / without (ms) |
+| --- | --- | --- | --- |
+| today | 38.2 (35.1–40.6) / 34.8 (33.9–36.1) | 45.4 / 49.1 | 36.5 / 36.6 |
+| sand3d | 35.4 (35.1–69.9) / 35.8 (34.5–40.0) | 48.1 / 46.8 | 36.4 / 37.7 |
+
+p50 was 16.7 ms in every case. The Mac's load average was 170 to 340 during the runs, so the ranges overlap and
+neither arm's cost can be told from noise. The Sand3D pieces cost no more than today's: they have 43% of the
+triangles and fewer meshes and materials. A phone measurement is still to do.
