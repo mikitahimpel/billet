@@ -16,7 +16,7 @@ export const GET: APIRoute = ({ site }) =>
 
 > ${siteDescription}
 
-Ourio is a free iPhone app (iOS 18 or later) for couples, in English on the US App Store. It has no chat, no ads and no in-app purchases. Two partners pair their phones with a 10-character code and share one room, one cat named Mochi, Lock Screen drawings and notes, photo Moments, a planner (countdown, love streak, date night, wishlists, calendar, shared lists, To watch with Pick tonight, Places to go), two games (Who knows who, Draw & guess), a coin shop and six widgets. It is not related to the Oura ring.
+Ourio is a free iPhone app (iOS 18 or later) for couples, in English on the US App Store. It has no chat, no ads and no in-app purchases. Two partners pair their phones with a 10-character code and share one room, one cat named Mochi, Lock Screen drawings and notes, photo Moments, a planner (countdown, love streak, date night, wishlists, calendar, shared lists, To watch with Pick tonight, Places to go), two games (Who knows who, Draw & guess), a coin shop and six widgets.
 
 - Website: ${new URL("/", site).href}
 ${appStoreId ? `- App Store: ${appStoreUrl}\n` : ""}
