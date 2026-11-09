@@ -61,6 +61,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A tag: rarity, discount, count | `Chip(style: .tinted / .honey / .quiet)` |
 | A filter or category | `FilterChip` |
 | A price in coins | `PriceButton(price, was:)`; a deal's old price sits inside it |
+| A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:)` on the note's face |
 
 ### Do and don't
 

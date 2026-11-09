@@ -95,5 +95,6 @@ private struct NoteFace: View {
                 .padding(10)
         }
         .frame(width: 240, height: 240)
+        .postage(of: note, width: 240)
     }
 }

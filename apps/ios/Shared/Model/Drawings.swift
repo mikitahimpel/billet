@@ -27,7 +27,7 @@ nonisolated struct LatestDrawing: Codable, Hashable, Sendable {
 
     /// The partner's drawing in `note`, or nil for any other note or one of this phone's own.
     init?(_ note: Wire.Note, seq: Int?, viewer: String?) {
-        guard case .drawing(let id, let author, let sentAt, let compact, _, let paper) = note,
+        guard case .drawing(let id, let author, let sentAt, let compact, _, let paper, _, _) = note,
               author.rawValue != viewer else { return nil }
         self.init(noteID: id.rawValue, seq: seq, sentAt: Date(timeIntervalSince1970: Double(sentAt) / 1000),
                   compact: compact, paper: paper)
