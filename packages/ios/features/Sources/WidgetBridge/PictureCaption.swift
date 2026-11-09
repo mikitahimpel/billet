@@ -33,7 +33,7 @@ public struct PictureCaption: Equatable, Sendable {
     case .partnerWindow:
       if current?.partnerHere == true {
         return PictureCaption(
-          headline: "They're here", detail: "The window is lit: your partner is in billet.",
+          headline: "They're here", detail: "The window is lit: your partner is in Ourio.",
           symbol: "lightbulb.fill")
       }
       return PictureCaption(
@@ -48,7 +48,7 @@ public struct PictureCaption: Equatable, Sendable {
     case .daysTogether:
       let days = current?.daysTogether(now: now, calendar: calendar) ?? 0
       return PictureCaption(
-        headline: "\(days) days", detail: "Together on billet.", symbol: "heart.fill",
+        headline: "\(days) days", detail: "Together on Ourio.", symbol: "heart.fill",
         number: days)
 
     case .timeOfDay:

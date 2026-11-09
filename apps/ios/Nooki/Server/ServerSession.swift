@@ -5,6 +5,7 @@ import FeatureMoments
 import FeatureOnboarding
 import FeaturePairing
 import Observation
+import OurioShared
 import Payments
 import Persistence
 import Transport

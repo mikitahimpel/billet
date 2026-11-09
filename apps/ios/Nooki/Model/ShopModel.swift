@@ -1,6 +1,7 @@
 import FeatureShop
 import Foundation
 import Observation
+import OurioShared
 import ShopInterface
 import Transport
 import Wire

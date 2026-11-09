@@ -1,4 +1,5 @@
 import Design
+import OurioShared
 import SwiftUI
 
 /// Settings → Labs → Style: the design package's tokens and components, drawn by the same code the screens use,

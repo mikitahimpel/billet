@@ -1,10 +1,11 @@
+import OurioShared
 import SwiftUI
 import WidgetKit
 
 /// Control Center and Lock Screen button: Mochi purrs without opening the app.
 struct PetMochiControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "com.mikitahimpel.billet.pet") {
+        StaticControlConfiguration(kind: "com.ourio.app.pet") {
             ControlWidgetButton(action: PetMochiIntent()) {
                 Label("Pet \(CatProfile.name())", systemImage: "pawprint.fill")
             }

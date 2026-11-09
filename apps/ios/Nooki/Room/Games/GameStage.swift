@@ -1,5 +1,6 @@
 import FeatureGames
 import GamesInterface
+import OurioShared
 import RealityKit
 import SwiftUI
 import UIKit

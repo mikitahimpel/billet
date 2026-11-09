@@ -1,4 +1,5 @@
 import Design
+import OurioShared
 import SwiftUI
 
 struct ListCard: View {

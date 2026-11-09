@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import Testing
 import Transport
 import Wire
@@ -15,7 +16,7 @@ private nonisolated final class FakeRoom: @unchecked Sendable {
         GiftsResponse(
             wishes: wishes,
             plans: plans.filter { $0.value.giver == user }
-                .map { GiftPlan(wish: IdempotencyKey($0.key), stage: $0.value.stage) },
+                .map { Wire.GiftPlan(wish: IdempotencyKey($0.key), stage: $0.value.stage) },
             surprise: plans.contains { plan in
                 plan.value.giver != user && wishes.contains { $0.id.rawValue == plan.key && $0.owner.rawValue == user }
             },

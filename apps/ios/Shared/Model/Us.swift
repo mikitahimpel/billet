@@ -4,10 +4,10 @@ import Wire
 
 // MARK: - Icons
 
-nonisolated enum UsTint: String, Codable, CaseIterable {
+public nonisolated enum UsTint: String, Codable, CaseIterable, Sendable {
     case honey, blush, sky, sage, lilac, sun, coral
 
-    var colors: (top: UInt32, bottom: UInt32) {
+    public var colors: (top: UInt32, bottom: UInt32) {
         switch self {
         case .honey: (0xFFC27D, 0xD9784A)
         case .blush: (0xFFB3C1, 0xE2789A)
@@ -20,11 +20,16 @@ nonisolated enum UsTint: String, Codable, CaseIterable {
     }
 }
 
-nonisolated struct UsGlyph: Codable, Hashable {
-    var symbol: String
-    var tint: UsTint
+public nonisolated struct UsGlyph: Codable, Hashable, Sendable {
+    public var symbol: String
+    public var tint: UsTint
 
-    static let palette: [UsGlyph] = [
+    public init(symbol: String, tint: UsTint) {
+        self.symbol = symbol
+        self.tint = tint
+    }
+
+    public static let palette: [UsGlyph] = [
         .init(symbol: "heart.fill", tint: .blush), .init(symbol: "gift.fill", tint: .coral),
         .init(symbol: "birthday.cake.fill", tint: .sun), .init(symbol: "airplane", tint: .sky),
         .init(symbol: "house.fill", tint: .honey), .init(symbol: "pawprint.fill", tint: .honey),
@@ -38,12 +43,12 @@ nonisolated struct UsGlyph: Codable, Hashable {
 
 // MARK: - Lists
 
-nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable {
+public nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable, Sendable {
     case watch, groceries, travel, food, books, bucket, custom
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var defaultTitle: String {
+    public var defaultTitle: String {
         switch self {
         case .watch: "To watch"
         case .groceries: "Groceries"
@@ -55,7 +60,7 @@ nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable {
         }
     }
 
-    var icon: UsGlyph {
+    public var icon: UsGlyph {
         switch self {
         case .watch: .init(symbol: "popcorn.fill", tint: .coral)
         case .groceries: .init(symbol: "basket.fill", tint: .sage)
@@ -68,49 +73,75 @@ nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable {
     }
 
     /// Groceries is a plain checklist; every other list is a "we want to" list whose done items become history.
-    var isChecklist: Bool { self == .groceries }
+    public var isChecklist: Bool { self == .groceries }
 }
 
 /// What the poster grid draws without asking TMDB.
-nonisolated struct ItemMedia: Codable, Hashable {
-    enum Kind: String, Codable { case movie, tv }
-    var kind: Kind
-    var tmdb: Int
-    var year: Int?
+public nonisolated struct ItemMedia: Codable, Hashable, Sendable {
+    public enum Kind: String, Codable, Sendable { case movie, tv }
+    public var kind: Kind
+    public var tmdb: Int
+    public var year: Int?
     /// A TMDB image file such as `/qJeU7KM4nT2C1WpOrwPcSDGFUWE.jpg`.
-    var posterPath: String?
+    public var posterPath: String?
+
+    public init(kind: Kind, tmdb: Int, year: Int? = nil, posterPath: String? = nil) {
+        self.kind = kind
+        self.tmdb = tmdb
+        self.year = year
+        self.posterPath = posterPath
+    }
 }
 
-nonisolated struct ListItem: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var text: String
+public nonisolated struct ListItem: Identifiable, Codable, Hashable, Sendable {
+    public var id = UUID()
+    public var text: String
     /// Monogram of the partner who added it.
-    var author: String
-    var added = Date.now
-    var done: Date?
+    public var author: String
+    public var added = Date.now
+    public var done: Date?
     /// Monogram of the partner who ticked it, when known.
-    var doneBy: String?
-    var quantity: String?
-    var note: String?
+    public var doneBy: String?
+    public var quantity: String?
+    public var note: String?
     /// Overrides the icon the phone picks from the text.
-    var icon: String?
+    public var icon: String?
     /// A store aisle such as `dairy`, for groceries.
-    var aisle: String?
-    var media: ItemMedia?
+    public var aisle: String?
+    public var media: ItemMedia?
     /// ISO 3166-1 alpha-2, for places.
-    var country: String?
+    public var country: String?
     /// A city or place in `country`, rather than the country itself.
-    var place = false
+    public var place = false
     /// The month the pair went, such as `2026-10`.
-    var visitedIn: String?
-    var moments: [UUID] = []
+    public var visitedIn: String?
+    public var moments: [UUID] = []
     /// Monograms of the partners who want it.
-    var wants: [String] = []
+    public var wants: [String] = []
+
+    public init(id: UUID = UUID(), text: String, author: String, added: Date = Date.now, done: Date? = nil, doneBy: String? = nil, quantity: String? = nil, note: String? = nil, icon: String? = nil, aisle: String? = nil, media: ItemMedia? = nil, country: String? = nil, place: Bool = false, visitedIn: String? = nil, moments: [UUID] = [], wants: [String] = []) {
+        self.id = id
+        self.text = text
+        self.author = author
+        self.added = added
+        self.done = done
+        self.doneBy = doneBy
+        self.quantity = quantity
+        self.note = note
+        self.icon = icon
+        self.aisle = aisle
+        self.media = media
+        self.country = country
+        self.place = place
+        self.visitedIn = visitedIn
+        self.moments = moments
+        self.wants = wants
+    }
 }
 
 extension ListItem {
     /// Files from builds before shared lists have no `wants`.
-    nonisolated init(from decoder: any Decoder) throws {
+    public nonisolated init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(UUID.self, forKey: .id)
         text = try container.decode(String.self, forKey: .text)
@@ -131,27 +162,40 @@ extension ListItem {
     }
 }
 
-nonisolated struct UsList: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var kind: ListKind
-    var title: String
-    var icon: UsGlyph
-    var items: [ListItem] = []
+public nonisolated struct UsList: Identifiable, Codable, Hashable, Sendable {
+    public var id = UUID()
+    public var kind: ListKind
+    public var title: String
+    public var icon: UsGlyph
+    public var items: [ListItem] = []
 
-    var open: [ListItem] { items.filter { $0.done == nil } }
+    public init(id: UUID = UUID(), kind: ListKind, title: String, icon: UsGlyph, items: [ListItem] = []) {
+        self.id = id
+        self.kind = kind
+        self.title = title
+        self.icon = icon
+        self.items = items
+    }
+
+    public var open: [ListItem] { items.filter { $0.done == nil } }
     /// Newest first.
-    var finished: [ListItem] { items.filter { $0.done != nil }.sorted { $0.done! > $1.done! } }
+    public var finished: [ListItem] { items.filter { $0.done != nil }.sorted { $0.done! > $1.done! } }
 }
 
 // MARK: - Wishlists
 
 /// A title and a day rather than a calendar entry, since each partner's phone keeps its own calendar.
-nonisolated struct WishOccasion: Codable, Hashable {
-    var title: String
-    var date: Date
+public nonisolated struct WishOccasion: Codable, Hashable, Sendable {
+    public var title: String
+    public var date: Date
+
+    public init(title: String, date: Date) {
+        self.title = title
+        self.date = date
+    }
 
     /// Negative once the day has passed.
-    func daysLeft(from now: Date = .now) -> Int {
+    public func daysLeft(from now: Date = .now) -> Int {
         let calendar = Calendar.current
         return calendar.dateComponents([.day], from: calendar.startOfDay(for: now),
                                        to: calendar.startOfDay(for: date)).day ?? 0
@@ -160,26 +204,26 @@ nonisolated struct WishOccasion: Codable, Hashable {
 
 /// What the owner wants. It carries nothing about who plans to gift it: that is the giver's `GiftPlan`, so the owner's
 /// copy can never spoil the surprise.
-nonisolated struct WishItem: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var owner: String
-    var title: String
-    var link = ""
-    var price = ""
+public nonisolated struct WishItem: Identifiable, Codable, Hashable, Sendable {
+    public var id = UUID()
+    public var owner: String
+    public var title: String
+    public var link = ""
+    public var price = ""
     /// Colour, size, model: whatever the giver needs to get the right one.
-    var note = ""
+    public var note = ""
     /// Pinned to the top of the list.
-    var mostWanted = false
-    var occasion: WishOccasion?
-    var added = Date.now
+    public var mostWanted = false
+    public var occasion: WishOccasion?
+    public var added = Date.now
     /// When the owner said it arrived.
-    var gifted: Date?
+    public var gifted: Date?
     /// Who gave it, filled in when it arrives; until then only the giver knows.
-    var giftedBy: String?
+    public var giftedBy: String?
     /// The 20 coins for receiving it were paid, so taking "Got it" back and again pays nothing.
-    var rewarded = false
+    public var rewarded = false
     /// `reservedBy` from builds before gift plans; `UsStore` moves it into a plan on load and it is never written.
-    var legacyGiver: String?
+    public var legacyGiver: String?
 
     private enum CodingKeys: String, CodingKey {
         case id, owner, title, link, price, note, mostWanted, occasion, added, gifted, giftedBy, rewarded
@@ -187,7 +231,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
 
     private enum LegacyKeys: String, CodingKey { case want, reservedBy }
 
-    init(id: UUID = UUID(), owner: String, title: String, link: String = "", price: String = "", note: String = "",
+    public init(id: UUID = UUID(), owner: String, title: String, link: String = "", price: String = "", note: String = "",
          mostWanted: Bool = false, added: Date = .now) {
         self.id = id
         self.owner = owner
@@ -199,7 +243,7 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
         self.added = added
     }
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let legacy = try decoder.container(keyedBy: LegacyKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
@@ -221,16 +265,22 @@ nonisolated struct WishItem: Identifiable, Codable, Hashable {
 }
 
 /// A partner's secret promise to gift one of the other's wishes. Only the giver ever reads it.
-nonisolated struct GiftPlan: Codable, Hashable {
-    enum Stage: String, Codable { case planning, bought }
+public nonisolated struct GiftPlan: Codable, Hashable, Sendable {
+    public enum Stage: String, Codable, Sendable { case planning, bought }
 
-    var wishID: UUID
-    var giver: String
-    var stage = Stage.planning
+    public var wishID: UUID
+    public var giver: String
+    public var stage = Stage.planning
+
+    public init(wishID: UUID, giver: String, stage: Stage = Stage.planning) {
+        self.wishID = wishID
+        self.giver = giver
+        self.stage = stage
+    }
 }
 
 /// A change to the gifts, for the pair's room to make too while the phone is paired.
-nonisolated enum GiftChange: Hashable {
+public nonisolated enum GiftChange: Hashable, Sendable {
     case save(WishItem)
     case delete(UUID)
     /// Nil lets the plan go.
@@ -240,18 +290,18 @@ nonisolated enum GiftChange: Hashable {
 }
 
 /// "Forget-me-nots": what a partner likes, filled in by that partner.
-nonisolated struct Loves: Codable, Hashable {
-    var sizes = ""
-    var flowers = ""
-    var coffee = ""
-    var sweets = ""
-    var allergies = ""
+public nonisolated struct Loves: Codable, Hashable, Sendable {
+    public var sizes = ""
+    public var flowers = ""
+    public var coffee = ""
+    public var sweets = ""
+    public var allergies = ""
     /// "Please don't": gifts to avoid.
-    var avoid = ""
+    public var avoid = ""
 
-    init() {}
+    public init() {}
 
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         sizes = try c.decodeIfPresent(String.self, forKey: .sizes) ?? ""
         flowers = try c.decodeIfPresent(String.self, forKey: .flowers) ?? ""
@@ -264,27 +314,44 @@ nonisolated struct Loves: Codable, Hashable {
 
 // MARK: - Calendar
 
-nonisolated struct UsEvent: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var title: String
-    var icon: UsGlyph
-    var date: Date
-    var yearly = false
+public nonisolated struct UsEvent: Identifiable, Codable, Hashable, Sendable {
+    public var id = UUID()
+    public var title: String
+    public var icon: UsGlyph
+    public var date: Date
+    public var yearly = false
     /// nil for shared events, otherwise the partner it belongs to.
-    var owner: String?
+    public var owner: String?
+
+    public init(id: UUID = UUID(), title: String, icon: UsGlyph, date: Date, yearly: Bool = false, owner: String? = nil) {
+        self.id = id
+        self.title = title
+        self.icon = icon
+        self.date = date
+        self.yearly = yearly
+        self.owner = owner
+    }
 }
 
 /// One row in the "Soon" feed: user events, planned dates and relationship milestones merged together.
-struct Upcoming: Identifiable, Hashable {
-    enum Source: Hashable { case event(UUID), date(UUID), milestone }
+public struct Upcoming: Identifiable, Hashable, Sendable {
+    public enum Source: Hashable, Sendable { case event(UUID), date(UUID), milestone }
 
-    let id: String
-    let title: String
-    let icon: UsGlyph
-    let date: Date
-    let source: Source
+    public let id: String
+    public let title: String
+    public let icon: UsGlyph
+    public let date: Date
+    public let source: Source
 
-    var daysLeft: Int {
+    public init(id: String, title: String, icon: UsGlyph, date: Date, source: Source) {
+        self.id = id
+        self.title = title
+        self.icon = icon
+        self.date = date
+        self.source = source
+    }
+
+    public var daysLeft: Int {
         Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: .now),
                                         to: Calendar.current.startOfDay(for: date)).day ?? 0
     }
@@ -292,11 +359,11 @@ struct Upcoming: Identifiable, Hashable {
 
 // MARK: - Dates
 
-nonisolated struct DateIdea: Identifiable, Codable, Hashable {
-    enum Place: String, Codable, CaseIterable {
+public nonisolated struct DateIdea: Identifiable, Codable, Hashable, Sendable {
+    public enum Place: String, Codable, CaseIterable, Sendable {
         case home, city, nature, apart
 
-        var icon: UsGlyph {
+        public var icon: UsGlyph {
             switch self {
             case .home: .init(symbol: "house.fill", tint: .honey)
             case .city: .init(symbol: "building.2.fill", tint: .sky)
@@ -305,26 +372,31 @@ nonisolated struct DateIdea: Identifiable, Codable, Hashable {
             }
         }
     }
-    enum Cost: String, Codable, CaseIterable { case free, cheap = "$", nice = "$$" }
-    enum Length: String, Codable, CaseIterable { case hour = "1h", evening, day }
-    enum Season: String, Codable { case any, spring, summer, autumn, winter }
+    public enum Cost: String, Codable, CaseIterable, Sendable { case free, cheap = "$", nice = "$$" }
+    public enum Length: String, Codable, CaseIterable, Sendable { case hour = "1h", evening, day }
+    public enum Season: String, Codable, Sendable { case any, spring, summer, autumn, winter }
     /// The card's picture on the API's host, and its average colour, `#RRGGBB`, shown while it loads.
-    struct Art: Codable, Hashable {
-        let path: String
-        let color: String
+    public struct Art: Codable, Hashable, Sendable {
+        public let path: String
+        public let color: String
+
+        public init(path: String, color: String) {
+            self.path = path
+            self.color = color
+        }
     }
 
-    let id: Int
+    public let id: Int
     private let rawTitle: String
     private let rawPitch: String
-    let place: Place
-    let cost: Cost
-    let time: Length
-    let season: Season
-    let art: Art
+    public let place: Place
+    public let cost: Cost
+    public let time: Length
+    public let season: Season
+    public let art: Art
 
-    var title: String { CatProfile.named(rawTitle) }
-    var pitch: String { CatProfile.named(rawPitch) }
+    public var title: String { CatProfile.named(rawTitle) }
+    public var pitch: String { CatProfile.named(rawPitch) }
 
     private enum CodingKeys: String, CodingKey {
         case id, rawTitle = "title", rawPitch = "pitch", place, cost, time, season, art
@@ -332,17 +404,17 @@ nonisolated struct DateIdea: Identifiable, Codable, Hashable {
 
     /// The last catalog the server sent, else the one the build ships with. Read once per launch, so a newer
     /// catalog shows from the next one.
-    static let all: [DateIdea] = DateCatalog.saved?.ideas ?? DateCatalog.bundled?.ideas ?? []
+    public static let all: [DateIdea] = DateCatalog.saved?.ideas ?? DateCatalog.bundled?.ideas ?? []
 
-    static func idea(_ id: Int) -> DateIdea? { all.first { $0.id == id } }
+    public static func idea(_ id: Int) -> DateIdea? { all.first { $0.id == id } }
 
-    func inSeason(_ current: Season) -> Bool {
+    public func inSeason(_ current: Season) -> Bool {
         season == .any || season == current
     }
 }
 
 extension DateIdea.Season {
-    static var current: Self {
+    public static var current: Self {
         switch Calendar.current.component(.month, from: .now) {
         case 3...5: .spring
         case 6...8: .summer
@@ -352,31 +424,50 @@ extension DateIdea.Season {
     }
 }
 
-struct DateFilter: Hashable {
-    var places: Set<DateIdea.Place> = []
-    var costs: Set<DateIdea.Cost> = []
-    var lengths: Set<DateIdea.Length> = []
+public struct DateFilter: Hashable, Sendable {
+    public var places: Set<DateIdea.Place> = []
+    public var costs: Set<DateIdea.Cost> = []
+    public var lengths: Set<DateIdea.Length> = []
 
-    func allows(_ idea: DateIdea) -> Bool {
+    public init(places: Set<DateIdea.Place> = [], costs: Set<DateIdea.Cost> = [], lengths: Set<DateIdea.Length> = []) {
+        self.places = places
+        self.costs = costs
+        self.lengths = lengths
+    }
+
+    public func allows(_ idea: DateIdea) -> Bool {
         (places.isEmpty || places.contains(idea.place))
             && (costs.isEmpty || costs.contains(idea.cost))
             && (lengths.isEmpty || lengths.contains(idea.time))
     }
 }
 
-nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
-    var id = UUID()
-    var ideaID: Int
-    var date: Date
-    var place = ""
-    var organizer: String
+public nonisolated struct PlannedDate: Identifiable, Codable, Hashable, Sendable {
+    public var id = UUID()
+    public var ideaID: Int
+    public var date: Date
+    public var place = ""
+    public var organizer: String
     /// In surprise mode the other partner sees only the date and the hint.
-    var surprise = false
-    var hint = ""
+    public var surprise = false
+    public var hint = ""
     /// 1...3 hearts after it happened; nil until rated.
-    var rating: Int?
+    public var rating: Int?
     /// Local reminders a day and an hour before; nil on dates saved before reminders existed.
-    var remind: Bool?
+    public var remind: Bool?
     /// Set when it was marked done with a photo.
-    var momentID: UUID?
+    public var momentID: UUID?
+
+    public init(id: UUID = UUID(), ideaID: Int, date: Date, place: String = "", organizer: String, surprise: Bool = false, hint: String = "", rating: Int? = nil, remind: Bool? = nil, momentID: UUID? = nil) {
+        self.id = id
+        self.ideaID = ideaID
+        self.date = date
+        self.place = place
+        self.organizer = organizer
+        self.surprise = surprise
+        self.hint = hint
+        self.rating = rating
+        self.remind = remind
+        self.momentID = momentID
+    }
 }

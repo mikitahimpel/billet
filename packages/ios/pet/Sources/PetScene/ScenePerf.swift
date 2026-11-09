@@ -328,7 +328,7 @@ public enum ScenePerf {
   private static func shot(_ name: String) async {
     emit("shot \(name)")
     let done = FileManager.default
-      .containerURL(forSecurityApplicationGroupIdentifier: "group.com.mikitahimpel.billet")?
+      .containerURL(forSecurityApplicationGroupIdentifier: "group.com.ourio.app")?
       .appending(path: "perf-shots/\(name)")
     // Generous: a busy CI runner can take most of a minute over one screenshot, and moving on
     // before it lands would photograph the next pose instead.

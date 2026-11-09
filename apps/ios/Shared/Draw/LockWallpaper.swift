@@ -4,15 +4,15 @@ import Wire
 
 /// The warm, deep wallpapers behind the drawing. Each is one of the note papers, so the partner's widget can show
 /// the drawing on the same wallpaper.
-enum LockWallpaper: String, CaseIterable, Identifiable {
+public enum LockWallpaper: String, CaseIterable, Identifiable, Sendable {
     case blush, butter, sage, sky, cream
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 
-    var title: String { rawValue.capitalized }
+    public var title: String { rawValue.capitalized }
 
     /// The wallpaper a drawing was sent on; blush when the sender chose none.
-    init(paper: PaperColor?) {
+    public init(paper: PaperColor?) {
         switch paper {
         case .blush, nil: self = .blush
         case .butter: self = .butter
@@ -22,7 +22,7 @@ enum LockWallpaper: String, CaseIterable, Identifiable {
         }
     }
 
-    var paper: PaperColor {
+    public var paper: PaperColor {
         switch self {
         case .blush: .blush
         case .butter: .butter
@@ -34,7 +34,7 @@ enum LockWallpaper: String, CaseIterable, Identifiable {
 
     /// Top-left to bottom-right. Deep warm dusks: inks are drawn in their light "on dark" colours and the clock is
     /// white, so every stop has to stay dark enough for both (WCAG 4.5:1 for white, checked in DrawingWidgetTests).
-    var stops: [UInt32] {
+    public var stops: [UInt32] {
         switch self {
         case .blush: [0x5C3426, 0x7A4530, 0x82474F]
         case .butter: [0x5E4018, 0x7D5420, 0x80452A]
@@ -44,15 +44,20 @@ enum LockWallpaper: String, CaseIterable, Identifiable {
         }
     }
 
-    var colors: [Color] { stops.map { Color(hex: $0) } }
+    public var colors: [Color] { stops.map { Color(hex: $0) } }
 }
 
 /// The wallpaper, or the couple's photo when they picked one, filling whatever it is laid behind.
-struct LockWallpaperView: View {
-    let wallpaper: LockWallpaper
-    var photo: UIImage?
+public struct LockWallpaperView: View {
+    public let wallpaper: LockWallpaper
+    public var photo: UIImage?
 
-    var body: some View {
+    public init(wallpaper: LockWallpaper, photo: UIImage? = nil) {
+        self.wallpaper = wallpaper
+        self.photo = photo
+    }
+
+    public var body: some View {
         ZStack {
             LinearGradient(colors: wallpaper.colors, startPoint: .topLeading, endPoint: .bottomTrailing)
             // A faint honey glow, so the wallpaper has depth like the system ones without lifting any stop.
