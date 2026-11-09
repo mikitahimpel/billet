@@ -35,7 +35,7 @@ const checks = [
   },
   {
     pattern:
-      /\b(?:Button|PrimaryButton|SecondaryButton|BilletButton)\(\s*"Try [Aa]gain|Label\(\s*"[^"]*[Tt]ry again"/g,
+      /\b(?:Button|PrimaryButton|SecondaryButton|BilletButton)\(\s*"Try [Aa]gain|(?:Label|Text)\(\s*"[^"]*[Tt]ry again"\s*[,)]/g,
     baseline: join(here, "retry-baseline.json"),
     what: "hand-made Try again buttons",
     fix: "A failed load or send is retried with RetryButton from the design package (docs/design-system.md).",
