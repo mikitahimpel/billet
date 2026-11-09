@@ -99,7 +99,7 @@ struct WishEditor: View {
                     }
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .foregroundStyle(.white)
                         .frame(width: 28, height: 28)
                         .background(.black.opacity(0.45), in: .circle)
@@ -115,7 +115,7 @@ struct WishEditor: View {
         Toggle(isOn: $mostWanted.animation(.snappy(duration: 0.2))) {
             Label {
                 Text("Most wanted")
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
             } icon: {
                 Image(systemName: mostWanted ? "star.fill" : "star")
@@ -150,7 +150,7 @@ struct WishEditor: View {
             HStack {
                 Label {
                     Text(occasion.map { String(localized: "For \($0.title)") } ?? String(localized: "For an occasion"))
-                        .font(.nookiCallout.weight(.semibold))
+                        .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.text)
                         .lineLimit(1)
                 } icon: {
@@ -159,7 +159,7 @@ struct WishEditor: View {
                 }
                 Spacer(minLength: 8)
                 Text(occasion?.date.formatted(.dateTime.day().month()) ?? String(localized: "None"))
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption.weight(.semibold))
@@ -190,7 +190,7 @@ struct WishEditor: View {
             }
             .foregroundStyle(Color.red.opacity(0.85))
         }
-        .font(.nookiCallout.weight(.semibold))
+        .font(.ourioCallout.weight(.semibold))
         .buttonStyle(.plain)
         .padding(.horizontal, 4)
         .padding(.top, 6)

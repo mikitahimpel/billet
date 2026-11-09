@@ -50,7 +50,7 @@ struct PostagePicker: View {
                     WaxSeal(seal.art, size: 26)
                 } else {
                     Image(systemName: "envelope")
-                        .font(.nookiCallout.weight(.semibold))
+                        .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.text)
                 }
             }
@@ -100,7 +100,7 @@ struct PostagePicker: View {
     private func none(selected: Bool, action: @escaping () -> Void) -> some View {
         choice("None", selected: selected, action: action) {
             Image(systemName: "circle.slash")
-                .font(.nookiCallout)
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
         }
     }

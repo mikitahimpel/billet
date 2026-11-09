@@ -110,7 +110,7 @@ struct BakedShellTests {
 
     private static let rooms = ["Room_shell", "City_shell"]
 
-    /// `TEST_RUNNER_BAKE_EXPORT_DIR=<dir> xcodebuild test -only-testing NookiTests/BakedShellTests/export` writes
+    /// `TEST_RUNNER_BAKE_EXPORT_DIR=<dir> xcodebuild test -only-testing OurioTests/BakedShellTests/export` writes
     /// each room's `<name>.json` and `<name>.sha`; without the variable it does nothing.
     @Test func export() throws {
         guard let directory = ProcessInfo.processInfo.environment["BAKE_EXPORT_DIR"] else { return }

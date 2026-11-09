@@ -39,14 +39,14 @@ struct BundleCard: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: Space.s) {
                 Text(bundle.name)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 if let quote, quote.sum > quote.price {
                     Chip("−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%", style: .honey)
                 }
             }
             Text(bundle.blurb)
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -58,7 +58,7 @@ struct BundleCard: View {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 if index > 0 {
                     Image(systemName: "plus")
-                        .font(.nookiCaption.weight(.bold))
+                        .font(.ourioCaption.weight(.bold))
                         .foregroundStyle(Ink.textTertiary)
                         .accessibilityHidden(true)
                 }
@@ -85,7 +85,7 @@ struct BundleCard: View {
 struct OwnedCheck: View {
     var body: some View {
         Image(systemName: "checkmark.circle.fill")
-            .font(.nookiCallout)
+            .font(.ourioCallout)
             .symbolRenderingMode(.palette)
             .foregroundStyle(Ink.heroInk, Color.honey)
             .background(Circle().fill(Ink.surface).padding(1))

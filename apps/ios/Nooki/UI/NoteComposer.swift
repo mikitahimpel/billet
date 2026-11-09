@@ -87,7 +87,7 @@ struct NoteComposer: View {
     private var toolToggle: some View {
         Button { model.drawing.toggle() } label: {
             Image(systemName: model.drawing ? "pencil.tip" : "character.cursor.ibeam")
-                .font(.nookiCallout.weight(.semibold))
+                .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(model.drawing ? Ink.heroInk : Ink.text)
                 .frame(width: Size.control, height: Size.control)
                 .background(model.drawing ? Color.honey : Ink.surface, in: .circle)
@@ -122,7 +122,7 @@ struct NoteComposer: View {
             pats += 1
         } label: {
             Image(systemName: model.kind.symbol)
-                .font(.nookiCallout.weight(.semibold))
+                .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .frame(width: Size.control, height: Size.control)
                 .background(Ink.surface, in: .circle)

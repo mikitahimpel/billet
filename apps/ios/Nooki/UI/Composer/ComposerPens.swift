@@ -39,7 +39,7 @@ struct Pen: View {
             if !owned {
                 HStack(spacing: 2) {
                     CoinIcon(size: 8)
-                    Text("\(ink.price)").font(.nookiMicro.monospacedDigit())
+                    Text("\(ink.price)").font(.ourioMicro.monospacedDigit())
                 }
                 .foregroundStyle(Ink.text)
                 .padding(.horizontal, 4)

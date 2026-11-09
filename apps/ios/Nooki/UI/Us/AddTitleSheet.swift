@@ -40,7 +40,7 @@ struct AddTitleSheet: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(Ink.textSecondary)
                 TextField("", text: $query, prompt: Text("Search movies and shows").foregroundStyle(Ink.textTertiary))
-                    .font(.nookiBody)
+                    .font(.ourioBody)
                     .foregroundStyle(Ink.text)
                     .focused($focused)
                     .submitLabel(.search)
@@ -114,11 +114,11 @@ struct AddTitleSheet: View {
                     .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title.title)
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                         .lineLimit(2)
                     Text(TitleCaption.of(title))
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: Space.s)
@@ -144,11 +144,11 @@ struct AddTitleSheet: View {
                 UsIcon(glyph: UsGlyph(symbol: "pencil", tint: .coral), size: 34)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Add “\(trimmed)” as text")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                         .lineLimit(2)
                     Text("No poster or details")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
@@ -163,7 +163,7 @@ struct AddTitleSheet: View {
 
     private func note(_ text: String) -> some View {
         Text(text)
-            .font(.nookiCallout)
+            .font(.ourioCallout)
             .foregroundStyle(Ink.textSecondary)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)

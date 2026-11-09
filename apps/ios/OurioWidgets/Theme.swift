@@ -17,7 +17,7 @@ extension View {
     func widgetTypeCap() -> some View { dynamicTypeSize(...DynamicTypeSize.xLarge) }
 }
 
-/// What the widgets are laid on, for the gallery (NookiWidgetsTests), which has no WidgetKit to draw the container
+/// What the widgets are laid on, for the gallery (OurioWidgetsTests), which has no WidgetKit to draw the container
 /// background.
 enum WidgetGallery {
     static var background: Color { Ink.screen }

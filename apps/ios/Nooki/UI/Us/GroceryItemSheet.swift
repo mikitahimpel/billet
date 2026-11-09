@@ -29,10 +29,10 @@ struct GroceryItemSheet: View {
                 UsIcon(glyph: current.icon, size: 50)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.text)
-                        .font(.nookiTitle)
+                        .font(.ourioTitle)
                         .foregroundStyle(Ink.text)
                     Text(added)
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
             }
@@ -54,7 +54,7 @@ struct GroceryItemSheet: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
-            .font(.nookiCallout.weight(.semibold))
+            .font(.ourioCallout.weight(.semibold))
             .foregroundStyle(Color.red.opacity(0.85))
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity)

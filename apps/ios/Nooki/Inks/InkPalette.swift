@@ -39,7 +39,7 @@ struct InkPalette: View {
                     .overlay {
                         if !owned {
                             Image(systemName: "lock.fill")
-                                .font(.nookiMicro)
+                                .font(.ourioMicro)
                                 .foregroundStyle(.white)
                                 .shadow(radius: 1)
                         }
@@ -50,7 +50,7 @@ struct InkPalette: View {
                     HStack(spacing: 2) {
                         CoinIcon(size: 9)
                         Text("\(ink.price)")
-                            .font(.nookiMicro.monospacedDigit())
+                            .font(.ourioMicro.monospacedDigit())
                     }
                     .foregroundStyle(label)
                 }

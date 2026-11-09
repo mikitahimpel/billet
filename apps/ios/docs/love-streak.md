@@ -1,6 +1,6 @@
 # Love Streak
 
-A flame on the Us tab that grows every day the couple does something together in Nooki. Modelled on TikTok's DM
+A flame on the Us tab that grows every day the couple does something together in Ourio. Modelled on TikTok's DM
 streaks, made gentler to fit engagement-concept.md (no fear-of-loss pushes).
 
 ## How TikTok streaks work

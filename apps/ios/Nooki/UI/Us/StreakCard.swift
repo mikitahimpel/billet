@@ -26,7 +26,7 @@ struct StreakCard: View {
                     Text(caption(status, now: now)).lineLimit(2)
                 } trailing: {
                     Text(days == 1 ? "1 day" : "\(days) days")
-                        .font(.nookiTitle.monospacedDigit())
+                        .font(.ourioTitle.monospacedDigit())
                         .foregroundStyle(Ink.text)
                         .contentTransition(.numericText())
                 }
@@ -46,7 +46,7 @@ struct StreakCard: View {
                     StatusPill(status: status, now: now)
                     Spacer(minLength: 0)
                     Label("Best \(streak.best)", systemImage: "trophy.fill")
-                        .font(.nookiCaption.monospacedDigit())
+                        .font(.ourioCaption.monospacedDigit())
                         .foregroundStyle(Ink.textSecondary)
                 }
 
@@ -54,7 +54,7 @@ struct StreakCard: View {
                     VStack(alignment: .leading, spacing: 6) {
                         ProgressCapsule(value: Double(days) / Double(next))
                         Text("\(next - days) to the \(next)-day badge")
-                            .font(.nookiCaption)
+                            .font(.ourioCaption)
                             .foregroundStyle(Ink.textSecondary)
                     }
                 }
@@ -123,7 +123,7 @@ private struct StatusPill: View {
 
     private func pill(_ title: String, symbol: String, tint: Color) -> some View {
         Label(title, systemImage: symbol)
-            .font(.nookiMicro)
+            .font(.ourioMicro)
             .foregroundStyle(tint)
             .padding(.horizontal, 10)
             .frame(minHeight: 28)
@@ -140,7 +140,7 @@ private struct Badge: View {
             Image(systemName: reached == nil ? "lock.fill" : "rosette")
             Text(reached.map { "\($0)-day badge" } ?? "First badge at \(LoveStreak.milestones[0]) days")
         }
-        .font(.nookiMicro)
+        .font(.ourioMicro)
         .foregroundStyle(reached == nil ? Ink.textSecondary : Ink.accentText)
         .padding(.horizontal, 10)
         .frame(minHeight: 28)

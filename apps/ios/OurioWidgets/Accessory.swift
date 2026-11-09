@@ -6,7 +6,7 @@ import WidgetKit
 struct UsAccessoryWidget: Widget {
     var body: some WidgetConfiguration {
         AppIntentConfiguration(kind: "com.mikitahimpel.billet.accessory", intent: AccessoryConfiguration.self,
-                               provider: NookiProvider<AccessoryConfiguration>()) { entry in
+                               provider: OurioProvider<AccessoryConfiguration>()) { entry in
             AccessoryView(entry: entry)
         }
         .configurationDisplayName("Us")
@@ -16,10 +16,10 @@ struct UsAccessoryWidget: Widget {
 }
 
 private struct AccessoryView: View {
-    let entry: NookiEntry<AccessoryConfiguration>
+    let entry: OurioEntry<AccessoryConfiguration>
     @Environment(\.widgetFamily) private var family
 
-    private var s: NookiSnapshot { entry.snapshot }
+    private var s: OurioSnapshot { entry.snapshot }
 
     var body: some View {
         switch family {
@@ -47,12 +47,12 @@ private struct AccessoryView: View {
         VStack(spacing: -1) {
             if entry.configuration.circular == .countdown, let next = s.next {
                 Image(systemName: next.icon.symbol).font(.system(size: 10, weight: .semibold))
-                Text("\(next.daysLeft)").font(.nookiTitle).minimumScaleFactor(0.6)
-                Text(next.daysLeft == 1 ? "day" : "days").font(.nookiMicro)
+                Text("\(next.daysLeft)").font(.ourioTitle).minimumScaleFactor(0.6)
+                Text(next.daysLeft == 1 ? "day" : "days").font(.ourioMicro)
             } else {
                 Image(systemName: "heart.fill").font(.system(size: 10, weight: .semibold))
-                Text("\(s.daysTogether)").font(.nookiTitle).minimumScaleFactor(0.6)
-                Text("days").font(.nookiMicro)
+                Text("\(s.daysTogether)").font(.ourioTitle).minimumScaleFactor(0.6)
+                Text("days").font(.ourioMicro)
             }
         }
         .widgetAccentable()
@@ -61,10 +61,10 @@ private struct AccessoryView: View {
     private var rectangular: some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(line.title)
-                .font(.nookiCallout.weight(.bold))
+                .font(.ourioCallout.weight(.bold))
                 .widgetAccentable()
             line.detail
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(.secondary)
         }
         .lineLimit(1)

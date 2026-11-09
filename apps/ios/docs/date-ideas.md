@@ -1,4 +1,4 @@
-# Nooki — base date ideas catalog
+# Ourio — base date ideas catalog
 
 150 ideas for the date deck and the randomizer (see [together-concept.md](together-concept.md), section 4.4). Card text is in English, the app's UI language. Aim: cute, cheap, doable this week for a couple aged 16–30. Nothing requires a car, alcohol or a big budget. Ideas with alcohol stay out of the base deck because part of the audience is under 18.
 

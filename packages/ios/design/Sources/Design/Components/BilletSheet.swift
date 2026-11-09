@@ -201,8 +201,8 @@ struct SheetSubtitle: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      Text(title).font(.nookiHeadline).foregroundStyle(Ink.text)
-      Text(subtitle).font(.nookiMicro).foregroundStyle(Ink.textSecondary).monospacedDigit()
+      Text(title).font(.ourioHeadline).foregroundStyle(Ink.text)
+      Text(subtitle).font(.ourioMicro).foregroundStyle(Ink.textSecondary).monospacedDigit()
     }
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isHeader)

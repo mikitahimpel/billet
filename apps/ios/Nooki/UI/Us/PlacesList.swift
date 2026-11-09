@@ -23,7 +23,7 @@ struct PlacesListBody: View {
             let shown = tab == .want ? rows.want : rows.been
             if shown.isEmpty {
                 Text(tab == .want ? "Add a country or a place with +." : "Tick a country once you've been together.")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
@@ -52,7 +52,7 @@ struct PlacesListBody: View {
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(Ink.text)
                 Text("of \(Country.count) countries together · \(summary.percent)%")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
             }
             .accessibilityElement(children: .combine)
@@ -72,7 +72,7 @@ struct PlacesListBody: View {
         HStack(spacing: 6) {
             mark().frame(width: 10, height: 10)
             Text(title)
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
     }
@@ -88,11 +88,11 @@ struct PlacesListBody: View {
             }
             VStack(alignment: .leading, spacing: 2) {
                 Text(row.title)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 if let caption = row.caption {
                     Text(caption)
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                         .lineLimit(1)
                 }

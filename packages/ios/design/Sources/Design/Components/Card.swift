@@ -56,11 +56,11 @@ public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
         .frame(width: Size.cardMark, height: Size.cardMark)
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
-          .font(.nookiHeadline)
+          .font(.ourioHeadline)
           .foregroundStyle(Ink.text)
           .lineLimit(2)
         detail
-          .font(.nookiCaption)
+          .font(.ourioCaption)
           .foregroundStyle(Ink.textSecondary)
       }
       Spacer(minLength: 0)
@@ -124,7 +124,7 @@ public struct GroupedSection<Content: View, Footer: View>: View {
     VStack(alignment: .leading, spacing: Space.s) {
       if let header {
         Text(header)
-          .font(.nookiCaption.weight(.semibold))
+          .font(.ourioCaption.weight(.semibold))
           .foregroundStyle(Ink.textSecondary)
           .padding(.horizontal, Space.l)
           .accessibilityAddTraits(.isHeader)
@@ -141,7 +141,7 @@ public struct GroupedSection<Content: View, Footer: View>: View {
       }
       .cardSurface()
       footer
-        .font(.nookiCaption)
+        .font(.ourioCaption)
         .foregroundStyle(Ink.textSecondary)
         .padding(.horizontal, Space.l)
         .fixedSize(horizontal: false, vertical: true)
@@ -192,11 +192,11 @@ public struct Row<Trailing: View>: View {
       }
       VStack(alignment: .leading, spacing: 2) {
         Text(title)
-          .font(.nookiBody)
+          .font(.ourioBody)
           .foregroundStyle(destructive ? Ink.destructive : Ink.text)
         if let detail {
           Text(detail)
-            .font(.nookiCaption)
+            .font(.ourioCaption)
             .foregroundStyle(Ink.textSecondary)
         }
       }
@@ -252,7 +252,7 @@ public struct RowChevron: View {
 
   public var body: some View {
     Image(systemName: "chevron.right")
-      .font(.nookiCaption.weight(.semibold))
+      .font(.ourioCaption.weight(.semibold))
       .foregroundStyle(Ink.textTertiary)
       .accessibilityHidden(true)
   }

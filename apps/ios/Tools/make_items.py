@@ -7,7 +7,7 @@ Writes Item_<id>.usdz and Item_<id>.png (1024², transparent, soft contact shado
 output folder. Pass item ids to rebuild only those.
 
 Style rules (see docs/shop-concept.md): rounded "clay" shapes from beveled primitives,
-one matte material per color from the Nooki palette, emission only for light sources.
+one matte material per color from the Ourio palette, emission only for light sources.
 
 Blender space: Z up, items face -Y, units are meters at real-world size.
 """

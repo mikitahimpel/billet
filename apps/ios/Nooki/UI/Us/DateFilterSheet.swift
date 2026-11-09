@@ -71,7 +71,7 @@ struct DateFilterSheet: View {
     private func group(_ title: String, @ViewBuilder content: () -> some View) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
             content()
         }
@@ -92,10 +92,10 @@ struct DateFilterSheet: View {
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: tag.symbol)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(selected ? Color.honey : Ink.textSecondary)
                 Text(tag.title)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)

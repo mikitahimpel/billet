@@ -21,11 +21,11 @@
   "apps/ios/Nooki/UI/Shop/DailyGiftCard.swift": 1,
   "apps/ios/Nooki/UI/Us/ListCard.swift": 1,
   "apps/ios/Nooki/UI/Us/PickTonightScreen.swift": 4,
-  "apps/ios/NookiWidgets/Accessory.swift": 2,
-  "apps/ios/NookiWidgets/DrawingLiveActivity.swift": 2,
-  "apps/ios/NookiWidgets/DrawingWidget.swift": 1,
-  "apps/ios/NookiWidgets/Modules.swift": 7,
-  "apps/ios/NookiWidgets/NoteWidget.swift": 1,
+  "apps/ios/OurioWidgets/Accessory.swift": 2,
+  "apps/ios/OurioWidgets/DrawingLiveActivity.swift": 2,
+  "apps/ios/OurioWidgets/DrawingWidget.swift": 1,
+  "apps/ios/OurioWidgets/Modules.swift": 7,
+  "apps/ios/OurioWidgets/NoteWidget.swift": 1,
   "apps/ios/Shared/Places/WorldMap.swift": 1,
   "apps/ios/WindowViews/FlatWindowView.swift": 1
 }

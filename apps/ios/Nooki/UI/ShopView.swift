@@ -15,7 +15,7 @@ struct ShopView: View {
     @State private var sheetSet: SetChoice?
     /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
     @State private var highlightedInk: String?
-    /// Where the page is scrolled to; a perf run moves it (`NookiPerf.scrolls`).
+    /// Where the page is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
     @State private var position = ScrollPosition(edge: .top)
 
     private let columns = [
@@ -44,9 +44,9 @@ struct ShopView: View {
             .softScrollEdges()
             .onAppear {
                 guard ScenePerf.isOn else { return }
-                NookiPerf.scrolls[.shop] = { position.scrollTo(y: $0) }
+                OurioPerf.scrolls[.shop] = { position.scrollTo(y: $0) }
             }
-            .onDisappear { NookiPerf.scrolls[.shop] = nil }
+            .onDisappear { OurioPerf.scrolls[.shop] = nil }
             .onChange(of: state.shopFocus, initial: true) { _, focus in
                 guard let focus else { return }
                 selected = .today
@@ -181,7 +181,7 @@ struct ShopView: View {
         .id("collections")
 
         Text("Earn coins by answering together, keeping your streak, opening the daily gift and completing collections.")
-            .font(.nookiCaption)
+            .font(.ourioCaption)
             .foregroundStyle(Ink.textSecondary)
             .padding(.horizontal, Space.l)
     }

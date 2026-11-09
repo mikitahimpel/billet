@@ -16,7 +16,7 @@ extension OnboardingView {
                     if let say { MochiSays(text: LocalizedStringKey(say), avatar: flow.coat.avatar) }
                     if let subtitle {
                         Text(subtitle)
-                            .font(.nookiCallout)
+                            .font(.ourioCallout)
                             .foregroundStyle(Ink.textSecondary)
                     }
                 }
@@ -38,7 +38,7 @@ extension OnboardingView {
             HStack(spacing: Space.m) {
                 if let emoji = option.emoji { Text(emoji) }
                 Text(option.label.text(for: language))
-                    .font(.nookiBody)
+                    .font(.ourioBody)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
                 if multi {
@@ -61,7 +61,7 @@ extension OnboardingView {
     func progressRow(_ title: LocalizedStringKey) -> some View {
         HStack {
             Text(title)
-                .font(.nookiBody)
+                .font(.ourioBody)
                 .foregroundStyle(Ink.text)
             Spacer()
             ProgressView().tint(Ink.accentText)

@@ -70,7 +70,7 @@ struct UsView: View {
     private var header: some View {
         HStack(alignment: .center, spacing: 12) {
             Text("Us")
-                .font(.nookiLargeTitle)
+                .font(.ourioLargeTitle)
                 .foregroundStyle(Ink.primary)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
@@ -103,7 +103,7 @@ struct UsView: View {
     private var games: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Games")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.primary)
                 .accessibilityAddTraits(.isHeader)
                 .padding(.top, 6)
@@ -125,13 +125,13 @@ struct UsView: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("Lists")
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.primary)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
                 Button { state.usRoute = .newList } label: {
                     Label("New list", systemImage: "plus")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.accentText)
                 }
                 .buttonStyle(.plain)

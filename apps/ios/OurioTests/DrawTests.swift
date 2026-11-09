@@ -6,7 +6,7 @@ import Wire
 @MainActor
 struct DrawTests {
     @Test func theDrawLinkRoundTrips() {
-        #expect(DeepLink.draw.url.absoluteString == "nooki://draw")
+        #expect(DeepLink.draw.url.absoluteString == "ourio://draw")
         #expect(DeepLink(url: DeepLink.draw.url) == .draw)
     }
 

@@ -49,12 +49,12 @@ struct CoinsSheet: View {
                 CoinIcon(size: 56)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(state.shop.coins)")
-                        .font(.nookiLargeTitle.monospacedDigit())
+                        .font(.ourioLargeTitle.monospacedDigit())
                         .foregroundStyle(Ink.text)
                         .contentTransition(.numericText())
                         .animation(.snappy, value: state.shop.coins)
                     Text("coins for the two of you")
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
@@ -103,7 +103,7 @@ private struct HistoryRow: View {
         Row(line.title, detail: line.date.formatted(.relative(presentation: .named)),
                       symbol: line.symbol, tint: line.isGain ? UsTint.honey.color : UsTint.sky.color) {
             Text(line.amount)
-                .font(.nookiHeadline.monospacedDigit())
+                .font(.ourioHeadline.monospacedDigit())
                 .foregroundStyle(line.isGain ? Ink.accentText : Ink.textSecondary)
         }
         .accessibilityElement(children: .combine)
@@ -216,7 +216,7 @@ private struct ShortBanner: View {
                     .contentTransition(.numericText())
                 } else {
                     Text("You have enough now")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                     Button {
                         if state.shop.finish(retry) { done() }

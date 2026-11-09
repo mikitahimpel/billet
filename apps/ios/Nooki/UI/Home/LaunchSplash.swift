@@ -19,7 +19,7 @@ struct LaunchSplash: View {
                 CatHero(size: 300)
                     .scaleEffect(y: breathing ? 1.015 : 0.995, anchor: .bottom)
 
-                Text("Nooki")
+                Text("Ourio")
                     .font(.system(size: 34, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .tracking(0.5)

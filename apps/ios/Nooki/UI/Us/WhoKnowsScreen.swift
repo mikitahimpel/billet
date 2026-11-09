@@ -87,7 +87,7 @@ struct WhoKnowsScreen: View {
                 if model.lacksQuestions {
                     Button { Task { await refresh() } } label: {
                         Label("Some questions didn't load. Try again", systemImage: "arrow.clockwise")
-                            .font(.nookiCallout)
+                            .font(.ourioCallout)
                             .foregroundStyle(Ink.accentText)
                     }
                     .buttonStyle(.plain)
@@ -105,13 +105,13 @@ struct WhoKnowsScreen: View {
             Spacer(minLength: 0)
             WhoKnowsArt(name: "WhoKnows-host", size: 200)
             Text(model.isSubject ? "Today's round is about you" : "Today's round is about \(partner)")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
                 .multilineTextAlignment(.center)
             Text(model.isSubject
                  ? "Answer \(model.total) questions about yourself. \(partner) guesses, and neither of you sees a thing until you're both done."
                  : "Guess how \(partner) answers \(model.total) questions. Nobody sees a thing until you're both done.")
-                .font(.nookiCallout)
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
             Spacer(minLength: 0)
@@ -136,11 +136,11 @@ struct WhoKnowsScreen: View {
                     Monogram(partner: subject, profile: state.profile, size: 28)
                         .accessibilityHidden(true)
                     Text(model.isSubject ? "About you" : "About \(partner)")
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Text(WhoKnowsModel.text(question, isSubject: model.isSubject, subjectName: partner))
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
@@ -154,7 +154,7 @@ struct WhoKnowsScreen: View {
                 }
                 if model.unsent {
                     Text("That answer didn't send. Pick it again.")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.accentText)
                 }
             }
@@ -179,10 +179,10 @@ struct WhoKnowsScreen: View {
             Spacer(minLength: 0)
             WhoKnowsArt(name: "WhoKnows-waiting", size: 200)
             Text("Waiting for \(partner)")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
             Text("You're done. The answers open for you both once \(partner) has answered all \(model.total).")
-                .font(.nookiCallout)
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
             WhoKnowsProgress(done: model.partnerAnswered, total: model.total)
@@ -190,7 +190,7 @@ struct WhoKnowsScreen: View {
                 .padding(.top, Space.s)
                 .accessibilityHidden(true)
             Text("\(partner) answered \(model.partnerAnswered) of \(model.total)")
-                .font(.nookiCaption.monospacedDigit())
+                .font(.ourioCaption.monospacedDigit())
                 .foregroundStyle(Ink.textSecondary)
                 .contentTransition(.numericText())
                 .animation(.snappy, value: model.partnerAnswered)
@@ -250,7 +250,7 @@ private struct WhoKnowsReveal: View {
         VStack(spacing: Space.l) {
             Text(model.isSubject ? "\(partner) got \(model.hits) of \(model.total) about you"
                                  : "You got \(model.hits) of \(model.total) about \(partner)")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
                 .multilineTextAlignment(.center)
                 .accessibilityAddTraits(.isHeader)
@@ -258,15 +258,15 @@ private struct WhoKnowsReveal: View {
             if let week = model.score?.week {
                 VStack(spacing: Space.s) {
                     Text("This week")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                     HStack(alignment: .center, spacing: Space.l) {
                         tally(me, week.mine, leads: week.mine > week.partner)
-                        Text("·").font(.nookiTitle).foregroundStyle(Ink.textTertiary)
+                        Text("·").font(.ourioTitle).foregroundStyle(Ink.textTertiary)
                         tally(partner, week.partner, leads: week.partner > week.mine)
                     }
                     Text(WhoKnowsModel.stake(week, partner: partner))
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                         .multilineTextAlignment(.center)
                     Button("Open Date night", action: openDates)
@@ -280,14 +280,14 @@ private struct WhoKnowsReveal: View {
 
             HStack(spacing: Space.m) {
                 Image(systemName: "sparkles")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.accentText)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("+\(model.coinsEarned) coins")
-                        .font(.nookiHeadline.monospacedDigit())
+                        .font(.ourioHeadline.monospacedDigit())
                         .foregroundStyle(Ink.text)
                     Text("\(WhoKnowsModel.roundCoins) for playing, \(WhoKnowsModel.hitCoins) for each right guess")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
@@ -305,10 +305,10 @@ private struct WhoKnowsReveal: View {
             }
             .frame(height: 56)
             Text("\(points)")
-                .font(.nookiLargeTitle.monospacedDigit())
+                .font(.ourioLargeTitle.monospacedDigit())
                 .foregroundStyle(Ink.text)
             Text(name)
-                .font(.nookiCallout)
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
         }
         .frame(minWidth: 88)
@@ -335,11 +335,11 @@ private struct WhoKnowsRevealStep: View {
         let options = question?.options ?? []
         VStack(spacing: Space.l) {
             Text("Question \(index + 1) of \(total)")
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
             if let question {
                 Text(WhoKnowsModel.text(question, isSubject: model.isSubject, subjectName: partner))
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -348,7 +348,7 @@ private struct WhoKnowsRevealStep: View {
                 WhoKnowsArt(name: item.hit ? "WhoKnows-hit" : "WhoKnows-miss", size: 160)
                 if item.hit {
                     Text("+\(WhoKnowsModel.hitCoins)")
-                        .font(.nookiHeadline.monospacedDigit())
+                        .font(.ourioHeadline.monospacedDigit())
                         .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, Space.m)
                         .padding(.vertical, Space.xs)
@@ -359,7 +359,7 @@ private struct WhoKnowsRevealStep: View {
             .scaleEffect(popped || reduceMotion ? 1 : 0.6)
             .opacity(popped ? 1 : 0)
             Text(item.hit ? "Right!" : "Not quite")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
             VStack(spacing: Space.m) {
                 if item.hit {
@@ -403,10 +403,10 @@ private struct WhoKnowsRevealStep: View {
                 .foregroundStyle(tint)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.nookiMicro)
+                    .font(.ourioMicro)
                     .foregroundStyle(Ink.textSecondary)
                 Text(text)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                     .strikethrough(mark == .miss, color: .blushPink)
                     .fixedSize(horizontal: false, vertical: true)
@@ -457,13 +457,13 @@ private struct WhoKnowsOption: View {
     var body: some View {
         HStack(spacing: Space.m) {
             Text(String(UnicodeScalar(UInt8(65 + letter))))
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.accentText)
                 .frame(width: 32, height: 32)
                 .background(Circle().fill(Ink.surfaceRaised))
                 .accessibilityHidden(true)
             Text(text)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .multilineTextAlignment(.leading)
                 .fixedSize(horizontal: false, vertical: true)

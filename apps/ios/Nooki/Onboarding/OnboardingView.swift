@@ -80,7 +80,7 @@ struct OnboardingView: View {
     @ViewBuilder private var probeLabel: some View {
         if let summary = probe?.summary {
             Text(summary)
-                .font(.nookiMicro)
+                .font(.ourioMicro)
                 .foregroundStyle(.clear)
                 .accessibilityIdentifier("welcome.probe")
                 .accessibilityLabel(summary)
@@ -137,7 +137,7 @@ struct OnboardingView: View {
                     .accessibilityLabel("Step \(flow.index) of \(flow.pages.count - 1)")
                 if flow.canSkip {
                     Button("Skip") { flow.skip() }
-                        .font(.nookiBody)
+                        .font(.ourioBody)
                         .frame(minWidth: Size.control, minHeight: Size.control)
                 } else {
                     Color.clear.frame(width: Size.control, height: Size.control)
@@ -229,7 +229,7 @@ struct OnboardingView: View {
 
     private var catName: some View {
         form(say: "What should we call me?", subtitle: String(localized: "You can change it later. Skip and she stays Mochi.")) {
-            Field(CatProfile.defaultName, text: $flow.catName, font: .nookiHeadline)
+            Field(CatProfile.defaultName, text: $flow.catName, font: .ourioHeadline)
                 .submitLabel(.done)
                 .onChange(of: flow.catName) { _, new in
                     if new.count > CatProfile.nameLimit { flow.catName = String(new.prefix(CatProfile.nameLimit)) }
@@ -246,7 +246,7 @@ struct OnboardingView: View {
 
     private var invite: some View {
         form(say: "I'm happier with two of you!",
-             subtitle: String(localized: "Send them your code. They type it in Nooki to join you and \(CatProfile.name()).")) {
+             subtitle: String(localized: "Send them your code. They type it in Ourio to join you and \(CatProfile.name()).")) {
             if let pairing {
                 switch pairing.state {
                 case .waiting(let code, let expiresAt, _):
@@ -292,7 +292,7 @@ struct OnboardingView: View {
             if let demoPartner, !isPaired, !alreadyPaired {
                 Button("Try with a demo partner", action: demoPartner)
                     .buttonStyle(SecondaryButtonStyle(fullWidth: false))
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .frame(maxWidth: .infinity)
             }
         }
@@ -323,7 +323,7 @@ struct OnboardingView: View {
                     }
                 }
                 Text("10 letters and digits. There's no 0, O, 1 or I.")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -365,7 +365,7 @@ struct OnboardingView: View {
     }
 
     private var stopped: some View {
-        form(subtitle: String(localized: "Nooki is for 13 and up. Your cat will be waiting when you're older.")) {
+        form(subtitle: String(localized: "Ourio is for 13 and up. Your cat will be waiting when you're older.")) {
             EmptyView()
         }
     }
@@ -405,7 +405,7 @@ struct OnboardingView: View {
                 Row(String(localized: "Touch and hold the Home Screen"), symbol: "1.circle.fill",
                               tint: UsTint.honey.color)
                 Row(String(localized: "Tap Edit, then Add Widget"), symbol: "2.circle.fill", tint: UsTint.honey.color)
-                Row(String(localized: "Find Nooki and pick a size"), symbol: "3.circle.fill",
+                Row(String(localized: "Find Ourio and pick a size"), symbol: "3.circle.fill",
                               tint: UsTint.honey.color)
             }
         }
@@ -413,9 +413,9 @@ struct OnboardingView: View {
 
     func inviteMessage(_ code: String) -> String {
         guard let link = inviteBase?.appending(path: "i/\(code)") else {
-            return String(localized: "Join me in Nooki! Open the app and enter my code: \(code)")
+            return String(localized: "Join me in Ourio! Open the app and enter my code: \(code)")
         }
-        return String(localized: "Join me in Nooki! \(link.absoluteString) or enter my code: \(code)")
+        return String(localized: "Join me in Ourio! \(link.absoluteString) or enter my code: \(code)")
     }
 }
 
@@ -427,7 +427,7 @@ struct PageTitle: View {
 
     var body: some View {
         Text(text)
-            .font(.nookiLargeTitle)
+            .font(.ourioLargeTitle)
             .foregroundStyle(Ink.text)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
@@ -475,7 +475,7 @@ struct MochiSays: View {
         layout {
             Portrait(name: avatar, size: 52)
             Text(text)
-                .font(.nookiCallout.weight(.semibold))
+                .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)

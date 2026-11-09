@@ -24,13 +24,13 @@ enum HUDArm: String {
     }
 }
 
-/// Nooki's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh): the room on screen
+/// Ourio's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh): the room on screen
 /// is the scene a run drives, and the tabs are the ones it switches. Silent without the launch argument.
 ///
 /// A run orbits by turning the room the way a drag does. It has no zoom: the pinch lives inside `DioramaView`.
-/// Nooki has one lighting and one cat, so those steps are skipped.
+/// Ourio has one lighting and one cat, so those steps are skipped.
 @MainActor
-enum NookiPerf {
+enum OurioPerf {
     /// Starts the frame recorder and the script, and says how to switch tabs. Once, at launch.
     static func start(state: HomeState, hud: @escaping (HUDArm) -> Void,
                       sheetGround: @escaping (SheetGroundStyle) -> Void) {

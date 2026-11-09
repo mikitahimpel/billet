@@ -3,7 +3,7 @@ import SwiftUI
 import Design
 
 @main
-struct NookiApp: App {
+struct OurioApp: App {
     @UIApplicationDelegateAdaptor(PushAppDelegate.self) private var pushDelegate
     /// Nil when the build has no server; the app then keeps everything on the phone.
     @State private var session: ServerSession?
@@ -121,6 +121,6 @@ struct NookiApp: App {
         #endif
     }
 
-    /// The app was launched to host NookiTests.
+    /// The app was launched to host OurioTests.
     private static let isHostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 }
