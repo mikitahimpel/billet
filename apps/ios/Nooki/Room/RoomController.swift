@@ -37,11 +37,20 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var pins: [BoardPin] = []
     @ObservationIgnored private var partnerNotice = PartnerNoticeMachine.State.away
+    @ObservationIgnored private let defaults: UserDefaults
+    /// A homecoming not told yet: since when this phone was away, and until when the partner's care still counts as
+    /// news, as the journal may arrive a little after the app opens.
+    @ObservationIgnored private var homecoming: (since: Date, until: Date)?
+
+    /// How long after opening the partner's care, once it arrives, is still told.
+    static let homecomingWindow: TimeInterval = 30
 
     /// `usesStandIn` leaves the real room out (UI tests, where RealityKit can't draw) and gives games a bare one.
-    init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife) {
+    init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife,
+         defaults: UserDefaults = .standard) {
         self.usesStandIn = usesStandIn
         self.catLife = catLife
+        self.defaults = defaults
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
     }
 
@@ -165,14 +174,41 @@ final class RoomController: RoomControlling, CatStatusProviding {
     /// Raises the pair's cat from its room through `client`, or this phone's own with nil.
     func connectCat(_ client: CatEventsClient?, pair: CatPair?) async {
         await catLife.connect(client, pair: pair)
+        tellHomecoming()
     }
 
-    func syncCat() async { await catLife.sync() }
+    func syncCat() async {
+        await catLife.sync()
+        tellHomecoming()
+    }
 
     /// True while something still waits on the network.
     func flushCat() async -> Bool { await catLife.flush() }
 
-    func catEntryArrived(_ entry: CatEntry) { catLife.received(entry) }
+    func catEntryArrived(_ entry: CatEntry) {
+        catLife.received(entry)
+        tellHomecoming()
+    }
+
+    /// Opening after `CatDirector.greetAfter` away is a homecoming, read before her greeting moves the mark.
+    func cameHome(now: Date = .now) {
+        guard let last = CatDirector.lastSeen(in: defaults), now.timeIntervalSince(last) >= CatDirector.greetAfter
+        else { return }
+        homecoming = (last, now.addingTimeInterval(Self.homecomingWindow))
+    }
+
+    /// Tells what the partner did while this phone was away, once, if it has arrived in time.
+    func tellHomecoming(now: Date = .now) {
+        guard let homecoming else { return }
+        guard now <= homecoming.until else {
+            self.homecoming = nil
+            return
+        }
+        let care = catLife.partnerCare(since: homecoming.since)
+        guard !care.isEmpty else { return }
+        self.homecoming = nil
+        emit.yield(.partnerCared(care))
+    }
 
     /// The journal entry a room socket resumes after; nil follows none.
     var lastCatSeq: Int? { catLife.lastSeq }
@@ -188,7 +224,11 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     func feed() { current?.director?.feed() }
 
-    func appOpened() { current?.appOpened() }
+    func appOpened() {
+        cameHome()
+        tellHomecoming()
+        current?.appOpened()
+    }
 
     func playAll() { current?.playAll() }
 
