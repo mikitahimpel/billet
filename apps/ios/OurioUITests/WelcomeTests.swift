@@ -40,6 +40,11 @@ final class WelcomeTests: XCTestCase {
 
     @MainActor
     func testTimelinePlaysWithoutHitchesAndFirstFrameIsQuick() throws {
+        // A first launch on a fresh Simulator waits seconds on system services (a 3 s main-thread stall on CI), which
+        // says nothing about the welcome; the measured launch is the second.
+        let warm = launch()
+        XCTAssertTrue(warm.buttons["Let's go"].waitForExistence(timeout: 60))
+        warm.terminate()
         let app = launch()
         // The script is under 3.5 s; let it play out and a little more. Nothing is queried meanwhile: each query
         // snapshots the app's accessibility tree on its main thread, which is itself a late frame.
