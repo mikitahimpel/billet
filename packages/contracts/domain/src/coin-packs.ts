@@ -2,7 +2,7 @@ import { Schema } from "effect";
 
 /**
  * The coin packs the App Store will sell, as consumable in-app purchases, once payments are on
- * (the `payments` flag; docs/payments.md). Coins are Nooki's one currency: earned in play, and
+ * (the `payments` flag; docs/payments.md). Coins are Ourio's one currency: earned in play, and
  * bought here. This list is canonical. The app's copy
  * (`packages/ios/payments/Sources/Payments/Resources/coin-packs.json`) and the Xcode StoreKit configuration
  * must match it, which a test in `contracts-fixtures` checks. Prices are the US price tier in USD,
