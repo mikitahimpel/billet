@@ -104,9 +104,11 @@ jobs:
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh
 
+      # A fresh runner's first Simulator boot takes minutes; it runs in the background while the app builds.
+      # Started after the Metal Toolchain install, which it slows down.
       # Only plain iOS runtimes (iOS-27-2): a device-specific one (iOS-27-2-iPhone19-4) holds a single
       # resizable-scene iPhone whose window is wider than the app's layout, so taps and frames miss.
-      - name: Pick the test Simulator
+      - name: Boot the test Simulator
         run: |
           udid=$(xcrun simctl list -j devices available | python3 -c '
           import json, re, sys
@@ -121,32 +123,21 @@ jobs:
             exit 1
           fi
           echo "TEST_SIMULATOR=$udid" >> "$GITHUB_ENV"
+          nohup xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
 
       - name: Install XcodeGen
         run: .github/scripts/install-xcodegen.sh
-
-      # The build runs alone: a first Simulator boot beside it takes the runner's cores and disk for minutes.
-      - name: Build the app and its tests
-        run: |
-          (cd apps/ios && xcodegen generate --quiet)
-          set -o pipefail
-          if ! xcodebuild build-for-testing -project apps/ios/Billet.xcodeproj -scheme Billet \
-            -destination "id=$TEST_SIMULATOR" -derivedDataPath "$RUNNER_TEMP/app-tests" \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO > "$RUNNER_TEMP/app-build.log" 2>&1; then
-            grep -E 'error:' "$RUNNER_TEMP/app-build.log" || tail -n 120 "$RUNNER_TEMP/app-build.log"
-            exit 1
-          fi
-
-      - name: Boot the test Simulator
-        timeout-minutes: 10
-        run: xcrun simctl bootstatus "$TEST_SIMULATOR" -b
 
       - name: App tests (Simulator)
         # A hung UI test must not hold a runner for an hour; each test is also capped below.
         timeout-minutes: 30
         run: |
+          (cd apps/ios && xcodegen generate --quiet)
           udid="$TEST_SIMULATOR"
           echo "Testing on $udid"
+          echo "::group::Simulator boot"
+          cat "$RUNNER_TEMP/simulator-boot.log" || true
+          echo "::endgroup::"
           set -o pipefail
           status=0
           # TEST_RUNNER_ variables reach the tests without the prefix.
@@ -156,11 +147,12 @@ jobs:
           skip=()
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:NookiUITests); fi
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
-          if ! xcodebuild test-without-building -project apps/ios/Billet.xcodeproj -scheme Billet \
+          if ! xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 CODE_SIGNING_ALLOWED=NO 2>&1 \
+            -maximum-test-execution-time-allowance 300 \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" \
             | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
             status=1
@@ -191,7 +183,6 @@ jobs:
           name: app-tests-log
           # The result bundle holds the UI tests' screenshots and the app's crash reports.
           path: |
-            ${{ runner.temp }}/app-build.log
             ${{ runner.temp }}/app-tests.log
             ${{ runner.temp }}/app-tests.xcresult
           retention-days: 7
