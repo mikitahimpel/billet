@@ -30,6 +30,15 @@ final class MomentStore {
     static let storedPixels = 2048
     /// Shared by the room's polaroids and the strip that mirrors them, so both hit the same cache entry.
     static let wallPixels = 384
+    /// A print in the Moments feed.
+    static let feedPixels = 512
+
+    /// The sizes a print of `maxPixels` may already be cached at, the size itself first, then the smaller ones the
+    /// feed and the wall draw. One of them stands in while `maxPixels` is decoded, so the viewer's print shows the
+    /// photo at once instead of a blank that fills in a moment later.
+    static func standIns(for maxPixels: Int) -> [Int] {
+        [maxPixels] + [feedPixels, wallPixels].filter { $0 < maxPixels }.sorted(by: >)
+    }
 
     private(set) var moments: [Moment] = []
     private let cache: NSCache<NSString, UIImage> = {
@@ -80,6 +89,11 @@ final class MomentStore {
 
     func cachedFilmPrint(for moment: Moment, maxPixels: Int) -> UIImage? {
         cache.object(forKey: Self.key(moment, maxPixels, film: true))
+    }
+
+    /// The sharpest print of `moment` already decoded at `maxPixels` or below.
+    func standInFilmPrint(for moment: Moment, maxPixels: Int) -> UIImage? {
+        Self.standIns(for: maxPixels).lazy.compactMap { self.cachedFilmPrint(for: moment, maxPixels: $0) }.first
     }
 
     /// The photo with the instant-film grade, as polaroids show it; graded off the main thread, then cached.

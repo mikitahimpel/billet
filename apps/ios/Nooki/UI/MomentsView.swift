@@ -19,7 +19,6 @@ struct MomentsView: View {
     @State private var feedWidth: CGFloat = 0
     /// Where the feed is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
     @State private var position = ScrollPosition(edge: .top)
-    @Namespace private var zoom
 
     private let hMargin: CGFloat = 16
     private let columnGap: CGFloat = 14
@@ -87,8 +86,9 @@ struct MomentsView: View {
             NoteSheet(state: state, id: route.id)
         }
         .fullScreenCover(item: openedPhoto) { route in
+            // No zoom from the print: dismissing one shrinks the whole viewer, upright and with the screen's corners,
+            // into the print's frame, which then snaps to the tilted print.
             MomentViewer(state: state, id: route.id)
-                .navigationTransition(.zoom(sourceID: route.id, in: zoom))
         }
     }
 
@@ -138,7 +138,6 @@ struct MomentsView: View {
                         .padding(.vertical, width * 0.04)
                 }
                 .buttonStyle(PressScaleStyle())
-                .matchedTransitionSource(id: moment.id, in: zoom)
             }
         }
     }
@@ -311,7 +310,7 @@ struct MomentPrint: View {
     let profile: CoupleStore
     let width: CGFloat
     var undeveloped = false
-    var maxPixels = 512
+    var maxPixels = MomentStore.feedPixels
     var captionEditor: Binding<String>?
     var captionFocus: FocusState<Bool>.Binding?
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -395,7 +394,8 @@ private struct WallStrip: View {
     }
 }
 
-/// A moment's photo at `maxPixels`, decoded off the main thread; blank until it arrives.
+/// A moment's photo at `maxPixels`, decoded off the main thread. Until it arrives a print shows the one already decoded
+/// smaller, and is blank only when there is none.
 private struct MomentPhoto: View {
     let store: MomentStore
     let moment: Moment
@@ -408,10 +408,12 @@ private struct MomentPhoto: View {
         film ? store.cachedFilmPrint(for: moment, maxPixels: maxPixels) : store.cachedThumbnail(for: moment, maxPixels: maxPixels)
     }
 
+    private var standIn: UIImage? { film ? store.standInFilmPrint(for: moment, maxPixels: maxPixels) : nil }
+
     var body: some View {
         Color.clear
             .overlay {
-                if let image = cached ?? loaded {
+                if let image = cached ?? loaded ?? standIn {
                     Image(uiImage: image).resizable().scaledToFill()
                 }
             }
