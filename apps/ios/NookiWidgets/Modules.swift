@@ -238,7 +238,7 @@ struct MoodModule: View {
             ModuleHeader(title: "Mood", smart: smart)
             if let check = snapshot.partnerMood {
                 HStack(spacing: 5) {
-                    Text(check.mood.emoji).font(.system(size: 18))
+                    MoodArt(mood: check.mood, size: 22)
                     VStack(alignment: .leading, spacing: 0) {
                         Text("\(snapshot.partner) · \(check.mood.title)")
                             .font(.nookiCaption.weight(.semibold))
@@ -271,8 +271,7 @@ struct MoodModule: View {
 
     private func moodButton(_ mood: PartnerMood) -> some View {
         Button(intent: SetMoodIntent(mood)) {
-            Text(mood.emoji)
-                .font(.system(size: 15))
+            MoodArt(mood: mood, size: 20)
                 .frame(maxWidth: .infinity, minHeight: 26)
                 .background(isMine(mood) ? Color.honey : Ink.surfaceRaised,
                             in: .rect(cornerRadius: Radius.inner, style: .continuous))

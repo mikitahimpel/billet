@@ -80,6 +80,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't write a radius as a number, or pick one by eye; see [Shape](#shape).
 - Don't draw a field with `TextField` + `.background(...)`; use `Field` or `.fieldSurface()`.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
+- Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
+  `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
 
 ## Tokens
 

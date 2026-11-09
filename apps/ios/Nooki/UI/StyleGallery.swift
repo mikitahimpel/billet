@@ -60,7 +60,7 @@ struct StyleGallery: View {
             }
             Card {
                 HStack {
-                    GlassIconButton(symbol: "face.smiling", label: "Mood") {}
+                    GlassIconButton(label: "Mood", action: {}) { MoodArt(mood: nil, size: 30) }
                     GlassIconButton(symbol: "tray", label: "Inbox", badge: .dot) {}
                     Spacer()
                     Design.PriceButton(120) {}
