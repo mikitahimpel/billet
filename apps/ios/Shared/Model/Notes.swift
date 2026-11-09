@@ -1,5 +1,6 @@
 import Observation
 import UIKit
+import Wire
 
 /// A little note for the couple: a line of text or a doodle on a colored piece of paper.
 nonisolated struct Note: Identifiable, Codable, Hashable {
@@ -27,6 +28,8 @@ nonisolated struct Note: Identifiable, Codable, Hashable {
     /// PNG file name inside the app group's Notes folder; nil for a text note.
     let doodle: String?
     var paper: Paper
+    var stamp: NoteStamp? = nil
+    var seal: NoteSeal? = nil
     /// The text's ink, 0xRRGGBB; nil on notes written before inks, which keep the old brown.
     var ink: UInt32? = nil
     /// The server's id once the note is on it; nil for notes kept on this phone only.
@@ -64,18 +67,23 @@ final class NoteStore {
 
     /// Empty notes are not worth saving, and long ones are cut to `maxLength`.
     @discardableResult
-    func add(text: String, paper: Note.Paper, author: String, ink: UInt32? = nil) -> Note? {
+    func add(
+        text: String, paper: Note.Paper, author: String, ink: UInt32? = nil, stamp: NoteStamp? = nil,
+        seal: NoteSeal? = nil
+    ) -> Note? {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         let note = Note(id: UUID(), author: author, date: .now, text: String(trimmed.prefix(Self.maxLength)),
-                        doodle: nil, paper: paper, ink: ink, unsent: true)
+                        doodle: nil, paper: paper, stamp: stamp, seal: seal, ink: ink, unsent: true)
         notes.insert(note, at: 0)
         save()
         return note
     }
 
     @discardableResult
-    func add(doodle: UIImage, paper: Note.Paper, author: String) -> Note? {
+    func add(
+        doodle: UIImage, paper: Note.Paper, author: String, stamp: NoteStamp? = nil, seal: NoteSeal? = nil
+    ) -> Note? {
         guard let data = doodle.pngData() else { return nil }
         let file = "\(UUID().uuidString).png"
         do {
@@ -84,7 +92,8 @@ final class NoteStore {
         } catch {
             return nil
         }
-        let note = Note(id: UUID(), author: author, date: .now, text: "", doodle: file, paper: paper)
+        let note = Note(id: UUID(), author: author, date: .now, text: "", doodle: file, paper: paper, stamp: stamp,
+                        seal: seal)
         notes.insert(note, at: 0)
         save()
         return note
@@ -111,10 +120,13 @@ final class NoteStore {
     }
 
     /// The partner's text note from the server, in date order with the rest.
-    func addReceived(text: String, paper: Note.Paper, ink: UInt32?, author: String, date: Date, noteID: String) {
+    func addReceived(
+        text: String, paper: Note.Paper, stamp: NoteStamp? = nil, seal: NoteSeal? = nil, ink: UInt32?,
+        author: String, date: Date, noteID: String
+    ) {
         guard !contains(noteID: noteID) else { return }
-        let note = Note(id: UUID(), author: author, date: date, text: text, doodle: nil, paper: paper, ink: ink,
-                        noteID: noteID)
+        let note = Note(id: UUID(), author: author, date: date, text: text, doodle: nil, paper: paper, stamp: stamp,
+                        seal: seal, ink: ink, noteID: noteID)
         notes.insert(note, at: notes.firstIndex { $0.date < date } ?? notes.endIndex)
         save()
     }

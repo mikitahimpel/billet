@@ -48,6 +48,16 @@ struct StyleGallery: View {
                 }
                 .rowCell()
             }
+            GroupedSection(header: "Stamps and seals", inset: Space.l) {
+                HStack {
+                    ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, width: 32) }
+                }
+                .rowCell()
+                HStack {
+                    ForEach(SealArt.allCases, id: \.self) { WaxSeal($0, size: 36) }
+                }
+                .rowCell()
+            }
             Card {
                 HStack {
                     GlassIconButton(label: "Mood", action: {}) { MoodArt(mood: nil, size: 30) }

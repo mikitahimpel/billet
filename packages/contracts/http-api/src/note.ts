@@ -2,7 +2,15 @@ import { Schema } from "effect";
 import { IdempotencyKey, MediaKey } from "@billet/contracts-domain/ids";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
 import { NoteInk } from "@billet/contracts-domain/inks";
-import { Note, NoteText, PaperColor, PhotoPreview, PhotoSide } from "@billet/contracts-domain/note";
+import {
+  Note,
+  NoteSeal,
+  NoteStamp,
+  NoteText,
+  PaperColor,
+  PhotoPreview,
+  PhotoSide,
+} from "@billet/contracts-domain/note";
 
 /** Where `POST /v1/media` stored a PNG, JPEG or HEIC. A note sends this key back as its `image`. */
 export const UploadImageResponse = Schema.Struct({ image: MediaKey });
@@ -22,6 +30,8 @@ export const SendNoteRequest = Schema.TaggedUnion({
     compact: CompactStrokes,
     image: MediaKey,
     paper: Schema.optionalKey(PaperColor),
+    stamp: Schema.optionalKey(NoteStamp),
+    seal: Schema.optionalKey(NoteSeal),
   },
   Photo: {
     key: IdempotencyKey,
@@ -36,6 +46,8 @@ export const SendNoteRequest = Schema.TaggedUnion({
     key: IdempotencyKey,
     text: NoteText,
     paper: Schema.optionalKey(PaperColor),
+    stamp: Schema.optionalKey(NoteStamp),
+    seal: Schema.optionalKey(NoteSeal),
     ink: NoteInk,
   },
 });

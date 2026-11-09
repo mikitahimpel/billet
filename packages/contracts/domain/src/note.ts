@@ -7,6 +7,17 @@ import { NoteInk } from "./inks.ts";
 export const PaperColor = Schema.Literals(["butter", "blush", "sage", "sky", "cream"]);
 export type PaperColor = typeof PaperColor.Type;
 
+/**
+ * The postage stamp in a note's corner, and the wax seal that closes it. Free, never sold. The app
+ * owns the art; the wire carries the id. A client that doesn't know an id shows the note without
+ * it, so an id may be added here but never removed or renamed.
+ */
+export const NoteStamp = Schema.Literals(["heart", "moon", "bloom", "paw", "sun"]);
+export type NoteStamp = typeof NoteStamp.Type;
+
+export const NoteSeal = Schema.Literals(["rose", "night", "meadow", "honey", "plum"]);
+export type NoteSeal = typeof NoteSeal.Type;
+
 /** The most characters a text note holds, counted as the user sees them (grapheme clusters). */
 export const noteTextMaxCharacters = 120;
 
@@ -83,8 +94,8 @@ export type PhotoPreview = typeof PhotoPreview.Type;
 
 /**
  * A drawing has two renditions: compact strokes for pushes, and a full PNG in R2. A photo has only
- * the image, a PNG, JPEG or HEIC. A text note carries its words and no image. `paper` is absent
- * when the sender chose none.
+ * the image, a PNG, JPEG or HEIC. A text note carries its words and no image. `paper`, `stamp`
+ * and `seal` are absent when the sender chose none.
  *
  * A photo's `width`, `height` and `preview` are optional here only because photos stored before
  * they existed have none; every photo sent now carries them (see `SendNoteRequest`). `caption` is
@@ -98,6 +109,8 @@ export const Note = Schema.TaggedUnion({
     compact: CompactStrokes,
     image: MediaKey,
     paper: Schema.optionalKey(PaperColor),
+    stamp: Schema.optionalKey(NoteStamp),
+    seal: Schema.optionalKey(NoteSeal),
   },
   Photo: {
     id: NoteId,
@@ -115,6 +128,8 @@ export const Note = Schema.TaggedUnion({
     sentAt: EpochMillis,
     text: NoteText,
     paper: Schema.optionalKey(PaperColor),
+    stamp: Schema.optionalKey(NoteStamp),
+    seal: Schema.optionalKey(NoteSeal),
     /** The ink colour, owned by the pair. A note from before inks reads as the free ink. */
     ink: NoteInk,
   },
