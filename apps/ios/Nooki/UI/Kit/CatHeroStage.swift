@@ -89,6 +89,7 @@ private struct HeroCat: View, Equatable {
     }
 
     var body: some View {
+        let images = images, blink = blink, ear = ear
         Canvas { context, size in
             let full = CGRect(origin: .zero, size: size)
             func scaled(_ rect: CGRect) -> CGRect {
@@ -137,21 +138,33 @@ struct DustField: View {
     var reach: CGFloat = 4
     var seed: UInt64 = 7
 
+    private nonisolated struct Speck: Sendable {
+        let x, y, pace, phase: Double
+        let radius: CGFloat
+    }
+
+    private var specks: [Speck] {
+        var random = SeededRandom(seed: seed)
+        func unit() -> Double { Double(random.next() >> 11) / Double(1 << 53) }
+        return (0..<count).map { _ in
+            Speck(x: unit(), y: unit(), pace: 0.015 + 0.03 * unit(), phase: 2 * .pi * unit(),
+                  radius: reach * (0.35 + 0.65 * unit()))
+        }
+    }
+
     var body: some View {
+        let specks = specks, time = time
         Canvas { context, size in
-            var random = SeededRandom(seed: seed)
-            func unit() -> Double { Double(random.next() >> 11) / Double(1 << 53) }
-            for _ in 0..<count {
-                let x = unit(), y = unit(), pace = 0.015 + 0.03 * unit()
-                let phase = 2 * .pi * unit(), radius = reach * (0.35 + 0.65 * unit())
-                let rise = (y - pace * time).truncatingRemainder(dividingBy: 1)
-                let point = CGPoint(x: (x + 0.025 * sin(time * 0.6 + phase)) * size.width,
+            for speck in specks {
+                let rise = (speck.y - speck.pace * time).truncatingRemainder(dividingBy: 1)
+                let point = CGPoint(x: (speck.x + 0.025 * sin(time * 0.6 + speck.phase)) * size.width,
                                     y: (rise < 0 ? rise + 1 : rise) * size.height)
-                let twinkle = 0.2 + 0.45 * (0.5 + 0.5 * sin(time * 1.3 + phase))
-                let glow = CGRect(x: point.x, y: point.y, width: 0, height: 0).insetBy(dx: -radius * 3, dy: -radius * 3)
+                let twinkle = 0.2 + 0.45 * (0.5 + 0.5 * sin(time * 1.3 + speck.phase))
+                let reach = speck.radius * 3
+                let glow = CGRect(x: point.x - reach, y: point.y - reach, width: reach * 2, height: reach * 2)
                 context.fill(Path(ellipseIn: glow), with: .radialGradient(
                     Gradient(colors: [Color.honey.opacity(twinkle), Color.honey.opacity(0)]),
-                    center: point, startRadius: 0, endRadius: radius * 3))
+                    center: point, startRadius: 0, endRadius: reach))
             }
         }
         .allowsHitTesting(false)
