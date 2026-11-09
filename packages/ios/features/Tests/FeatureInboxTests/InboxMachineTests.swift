@@ -221,6 +221,23 @@ private func item(
     #expect(model.sheet == .failed)
   }
 
+  @Test func aRequestThatIgnoresCancellationStillTimesOut() async {
+    let answered = Mutex(false)
+    let model = InboxModel(
+      list: { (_) async throws(TransportError) in
+        // Blocks past the timeout whatever the task's cancellation says.
+        let until = ContinuousClock.now + .milliseconds(400)
+        while ContinuousClock.now < until { try? await Task.sleep(for: .milliseconds(20)) }
+        answered.withLock { $0 = true }
+        return ActivityResponse(items: [item(id: "late")], unread: 0)
+      },
+      markRead: { (_) async throws(TransportError) in ActivityUnreadResponse(unread: 0) },
+      timeout: .milliseconds(50))
+    await model.open()
+    #expect(model.sheet == .failed)
+    #expect(!answered.withLock { $0 }, "the sheet did not wait for the request")
+  }
+
   @Test func aRefreshThatNeverComesKeepsTheList() async {
     let calls = Mutex(0)
     let shown = item(id: "cat:1", at: 1)

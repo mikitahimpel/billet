@@ -1,5 +1,6 @@
 import BilletKit
 import Observation
+import Synchronization
 import Transport
 import Wire
 
@@ -57,21 +58,22 @@ extension InboxMachine {
   ) async -> Event? {
     switch output {
     case .loadFirst(let request):
-      return await withTaskGroup(of: Event.self) { group in
-        group.addTask {
+      // Two unstructured tasks, not a group: a group waits for a request that ignores cancellation.
+      let first = FirstEvent()
+      return await withCheckedContinuation { continuation in
+        first.set(continuation)
+        let load = Task {
           do throws(TransportError) {
-            return .loaded(try await list(nil), request: request)
+            first.resume(.loaded(try await list(nil), request: request))
           } catch {
-            return .loadFailed(Failure(error), request: request)
+            first.resume(.loadFailed(Failure(error), request: request))
           }
         }
-        group.addTask {
+        Task {
           try? await Task.sleep(for: timeout)
-          return .loadFailed(.unavailable, request: request)
+          load.cancel()
+          first.resume(.loadFailed(.unavailable, request: request))
         }
-        let first = await group.next() ?? .loadFailed(.unavailable, request: request)
-        group.cancelAll()
-        return first
       }
     case .loadMore(let after):
       do {
@@ -84,5 +86,22 @@ extension InboxMachine {
     case .markRead(let head):
       return (try? await markRead(MarkActivityReadRequest(upTo: head))).map { .counted($0.unread) }
     }
+  }
+}
+
+/// Resumes its continuation with the first event it is given; later ones are dropped.
+private final class FirstEvent: Sendable {
+  private let continuation = Mutex<CheckedContinuation<InboxMachine.Event?, Never>?>(nil)
+
+  func set(_ continuation: CheckedContinuation<InboxMachine.Event?, Never>) {
+    self.continuation.withLock { $0 = continuation }
+  }
+
+  func resume(_ event: InboxMachine.Event) {
+    let waiting = continuation.withLock { value in
+      defer { value = nil }
+      return value
+    }
+    waiting?.resume(returning: event)
   }
 }
