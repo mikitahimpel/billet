@@ -1,10 +1,6 @@
 import type { InviteCode } from "@billet/contracts-domain/ids";
 
-/**
- * Every HTTP route of the API: method and path. The Worker registers its handlers from this table
- * and a test sends a request to each entry, so a route changed here is served at the new path or
- * fails a test. Clients build their requests from it too.
- */
+/** The Worker registers a handler per entry and a test calls each; clients build from it too. */
 export interface Route {
   readonly method: "GET" | "POST" | "PUT" | "DELETE";
   readonly path: `/${string}`;
@@ -39,11 +35,9 @@ export const routes = {
   reportPartner: route("POST", "/v1/pair/report"),
   /** The caller's pair and both members. 404 while the caller has no partner. */
   getPair: route("GET", "/v1/pair"),
-  /** Replaces the caller's check-in with how they feel now. */
   setMood: route("PUT", "/v1/mood"),
   /** The pair's love streak. 404 while the caller has no partner. */
   getStreak: route("GET", "/v1/streak"),
-  /** Counts the caller's day in the pair's streak. */
   recordStreakDay: route("POST", "/v1/streak/days"),
   /** Brings back the pair's streak after one missed day. 409 when it can't be. */
   restoreStreak: route("POST", "/v1/streak/restore"),
@@ -52,7 +46,6 @@ export const routes = {
   downloadImage: route("GET", "/v1/media/*"),
   /** The app reports a few named events about itself: see `ClientEventName`. */
   reportEvents: route("POST", "/v1/events"),
-  /** The experiment variants the caller's pair has been given. */
   getFlags: route("GET", "/v1/flags"),
   /** Maintenance, the minimum build and a notice. No session; answered without the database. */
   getStatus: route("GET", "/v1/status"),
@@ -86,15 +79,12 @@ export const routes = {
   markActivityRead: route("POST", "/v1/activity/read"),
   /** Every ink colour the shop sells, and the ones the pair owns. */
   listInks: route("GET", "/v1/inks"),
-  /** The pair's coin balance and wallet entries. */
   getCoins: route("GET", "/v1/coins"),
-  /** Buys one item with the pair's coins. */
   buyItem: route("POST", "/v1/shop/buy"),
   /** The pair's balance, inks, room pieces and wishlist. */
   getShop: route("GET", "/v1/shop"),
   /** Buys one offer (an ink, a piece, a set or a treat) with the pair's coins. */
   placeOrder: route("POST", "/v1/shop/orders"),
-  /** Adds a piece to the pair's wishlist or takes it off. */
   setWish: route("PUT", "/v1/shop/wishlist"),
   /** Opens the pair's free gift of the local day, once a day for the pair. */
   openGift: route("POST", "/v1/shop/gift"),
@@ -104,7 +94,6 @@ export const routes = {
   earnCoins: route("POST", "/v1/coins/earn"),
   /** The pair's gift wishes, the caller's own gift plans and both partners' "What I love". */
   getGifts: route("GET", "/v1/gifts"),
-  /** Makes or changes one of the caller's gift wishes. */
   saveGiftWish: route("PUT", "/v1/gifts/wishes"),
   deleteGiftWish: route("DELETE", "/v1/gifts/wishes"),
   /** Plans, moves on or lets go the caller's secret plan for one of the partner's wishes. */
@@ -112,7 +101,6 @@ export const routes = {
   /** The owner says a wish arrived, or takes that back. */
   markGiftReceived: route("PUT", "/v1/gifts/received"),
   saveLoves: route("PUT", "/v1/gifts/loves"),
-  /** The pair's shared lists. */
   getLists: route("GET", "/v1/lists"),
   /** One change to the pair's lists; answers the lists after it. */
   changeList: route("POST", "/v1/lists"),
@@ -132,9 +120,7 @@ export const routes = {
   answerGuess: route("POST", "/v1/guess/answers"),
   /** Every Who knows who question. No session; cached like the date catalog. */
   getGuessCatalog: route("GET", "/v1/guess/catalog"),
-  /** The pair's draw-guess riddles as the caller sees them: see `RiddlesResponse`. */
   getRiddles: route("GET", "/v1/riddles"),
-  /** Sends a riddle to the partner; answers with it. See `SendRiddleRequest`. */
   sendRiddle: route("POST", "/v1/riddles"),
   /** One try at the partner's riddle: see `riddlePath` and `GuessRiddleResponse`. */
   guessRiddle: route("POST", "/v1/riddles/:id/guess"),
@@ -146,15 +132,9 @@ export const routes = {
   purchase: route("POST", "/v1/purchases"),
   /** The dev stage only: credits or takes back a pack with no App Store. Elsewhere a 404. */
   mockPurchase: route("POST", "/v1/purchases/mock"),
-  /**
-   * The dev stage only: pairs the caller, who has no partner, with a new bot, and answers the pair
-   * as `getPair` does. Elsewhere a 404.
-   */
+  /** Dev stage only, else 404: pairs a partnerless caller with a new bot; answers as `getPair`. */
   createDemoPartner: route("POST", "/v1/dev/demo-partner"),
-  /**
-   * The dev stage only: whether the caller is paired with their bot. Elsewhere a 404, which is how
-   * the app knows there are no dev tools.
-   */
+  /** Dev stage only: whether the caller is paired with their bot. A 404 means no dev tools. */
   getDemoPartner: route("GET", "/v1/dev/demo-partner"),
   /** The dev stage only: unpairs the caller from their bot and deletes it. Elsewhere a 404. */
   removeDemoPartner: route("DELETE", "/v1/dev/demo-partner"),
@@ -164,21 +144,15 @@ export const routes = {
   appStoreNotifications: route("POST", "/v1/appstore/notifications"),
 } as const satisfies Record<string, Route>;
 
-/**
- * Where an invite link points, on the API's host: a universal link into the app, or a page with
- * the code where the app isn't installed. Outside `/v1/`, as iOS opens it from a browser.
- */
+/** Outside `/v1/`, as iOS opens it from a browser: a universal link, or a page with the code. */
 export const inviteLinkPrefix = "/i/";
 export const inviteLinkPath = (code: InviteCode): `/i/${string}` => `${inviteLinkPrefix}${code}`;
 
-/** The concrete path of `downloadImage` for a media key. */
 export const mediaPath = (key: string): string => routes.downloadImage.path.replace("*", key);
 
-/** The concrete path of `getTitle`. */
 export const titlePath = (kind: "movie" | "tv", tmdb: number): string =>
   routes.getTitle.path.replace(":kind", kind).replace(":tmdb", String(tmdb));
 
-/** The concrete path of `guessRiddle`, `hintRiddle` or `giveUpRiddle` for one riddle. */
 export const riddlePath = (route: Route, id: string): string => route.path.replace(":id", id);
 
 /** How a caller proves who it is, on every route except the sign-in ones. */
@@ -186,10 +160,7 @@ export const authorizationHeader = "authorization";
 export const bearerPrefix = "Bearer ";
 
 /**
- * What the app says about its own build, on every request. Both are optional: an older build sends
- * neither, and the server reads a missing or malformed value as `unknown`. Nothing in them names a
- * person or a device. `appVersion` is `<marketing version>+<build>`, such as `1.2.0+14`; `os` is the
- * platform and its version, such as `iOS 26.1`.
+ * Optional and never personal; bad values read as `unknown`. E.g. `1.2.0+14`, `iOS 26.1`.
  */
 export const clientHeaders = {
   appVersion: "x-billet-app-version",
@@ -197,9 +168,6 @@ export const clientHeaders = {
 } as const;
 
 /**
- * The demo room a caller is in, for the app's demo mode, which has no session and no pair. Only the
- * dev stage reads it, and only on the purchase and coin routes, where it names the ledger
- * (`demo:<code>`) when there is no bearer token. A code is 1 to 64 of `A-Z a-z 0-9 _ -`. Every
- * other stage ignores it.
+ * Dev only, purchase/coin routes, no bearer: ledger `demo:<code>`, code `[A-Za-z0-9_-]{1,64}`.
  */
 export const demoRoomHeader = "x-billet-demo-room";

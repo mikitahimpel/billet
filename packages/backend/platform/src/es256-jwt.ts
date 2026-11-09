@@ -1,7 +1,3 @@
-// ES256 JSON Web Tokens signed with an Apple `.p8` key (PKCS #8 PEM), for APNs and Sign in with
-// Apple. Web Crypto only, so it runs in the Worker.
-
-/** The team that owns the app and its keys. */
 export const appleTeamId = "2666YPBJTB";
 
 const encoder = new TextEncoder();
@@ -21,7 +17,7 @@ const importKey = (pem: string): Promise<CryptoKey> => {
   ]);
 };
 
-/** Signs `claims` with the key `keyId` names. Rejects if the PEM is not a P-256 key. */
+/** Rejects if the PEM is not a P-256 key. */
 export const signEs256 = async (
   key: { readonly pem: string; readonly keyId: string },
   claims: Readonly<Record<string, string | number>>,

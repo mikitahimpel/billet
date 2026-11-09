@@ -50,7 +50,7 @@ const callRoom = <A, E>(
     Effect.mapError(unavailable),
   );
 
-/** `PairRooms` on the Durable Object namespace: a couple's object is named after its pair id. */
+/** A couple's object is named after its pair id. */
 export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.Layer<PairRooms> =>
   Layer.succeed(
     PairRooms,

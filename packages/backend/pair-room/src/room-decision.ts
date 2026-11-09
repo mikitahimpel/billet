@@ -20,11 +20,7 @@ import { RiddleWrite } from "./riddle-rules.ts";
 import { RoomJoin } from "./room-command.ts";
 import { RoomState, SequencedNote } from "./room-state.ts";
 
-/**
- * What an accepted command asks the outside world to do, like an `Output` on the Swift side.
- * `NoteAppended` is stored today. The relay (#17) and push fan-out (#19) read the same outputs.
- * `NoteRepeated` answers a send whose key the room already holds: nothing is stored or fanned out.
- */
+/** What an accepted command asks the outside world to do, like an `Output` on the Swift side. */
 export const RoomOutput = Schema.TaggedUnion({
   /** `joined` is who claimed the invite, and when, if pairing opened the room. */
   RoomOpened: {
@@ -50,14 +46,10 @@ export const RoomOutput = Schema.TaggedUnion({
   CoinsEntered: { entry: CoinEntry },
   /** A buy whose `id` the room already holds: nothing is stored or charged again. */
   CoinsRepeated: { entry: CoinEntry },
-  /** A reaction change to store and fan out. */
   ReactionSet: { reaction: NoteReaction },
   /** A reaction the room already holds: nothing is stored or fanned out. */
   ReactionRepeated: { reaction: NoteReaction },
-  /**
-   * A buy for the Inbox: what it was for and what it cost. `items` names the ink, the pieces
-   * granted or the treat; `offer` is set for a deal or a set.
-   */
+  /** A buy for the Inbox: `items` names the ink, pieces or treat; `offer` a deal or a set. */
   Purchased: {
     id: IdempotencyKey,
     by: UserId,
@@ -75,8 +67,7 @@ export const RoomOutput = Schema.TaggedUnion({
   /** A list and its items to delete, by the change under `key` at `at`. */
   ListDeleted: { list: ListId, key: IdempotencyKey, at: EpochMillis },
   /**
-   * An add for the Inbox: `count` items `by` added to the list in the window `at` falls in. `slot`
-   * is `by`'s place among the members, so the item's id names no user.
+   * An Inbox add: `count` items in `at`'s window. `slot` is `by`'s place, so the id names no user.
    */
   ListItemAdded: {
     list: ListId,
@@ -88,10 +79,7 @@ export const RoomOutput = Schema.TaggedUnion({
     count: Schema.Int,
     text: ListItemText,
   },
-  /**
-   * The pair's love streak after `by`'s day grew it, or their restore. `reached` is the milestone
-   * that day made, for the Inbox.
-   */
+  /** The streak after `by`'s day grew it, or a restore; `reached` is that day's milestone. */
   StreakChanged: {
     streak: LoveStreak,
     by: UserId,
@@ -118,7 +106,6 @@ export const RoomRejection = Schema.TaggedUnion({
   CatEntryIdTaken: {},
   /** A text note in an ink colour the pair has not bought. */
   InkNotOwned: { ink: InkId },
-  /** A buy that costs more than the balance. */
   NotEnoughCoins: { needed: Schema.Int, have: Schema.Int },
   /** A buy of an ink the pair already owns. */
   AlreadyOwned: { ink: InkId },
@@ -138,15 +125,11 @@ export const RoomRejection = Schema.TaggedUnion({
   NotReactable: {},
   /** Taking back a reaction the room never had. */
   NoReaction: {},
-  /** The day's gift is already open. */
   GiftTaken: { day: LocalDay },
   /** A bonus for a collection with a piece still missing. */
   CollectionIncomplete: { collection: CollectionId },
-  /** A bonus already paid. */
   BonusTaken: { collection: CollectionId },
-  /** A change to a list the pair no longer has. */
   ListNotFound: {},
-  /** A change to an item its list no longer has. */
   ListItemNotFound: {},
   /** A check-in whose note is longer than `moodNoteMaxLength` once trimmed. */
   MoodNoteTooLong: {},

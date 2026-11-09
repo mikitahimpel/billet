@@ -31,10 +31,7 @@ const respondReviewFailures = <R>(
     respondFailures,
   );
 
-/**
- * The review code's claim, answered as an invite claim is, so the app treats both alike. Needs
- * `AuthService` and `ReviewService`. The code itself is never logged.
- */
+/** Answered as an invite claim is, so the app treats both alike. The code is never logged. */
 export const ReviewRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const review = yield* ReviewService;

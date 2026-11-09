@@ -40,20 +40,14 @@ export const roomOffsetOf = (room: ActiveRoom): number => room.cat?.profile.utcO
 export const closesAtOf = (day: LocalDay, utcOffsetSeconds: number): EpochMillis =>
   (dayNumber(day) + 1) * dayMillis - utcOffsetSeconds * 1000;
 
-/**
- * Whom the round of `day` is about. It alternates by calendar day, so a missed day still hands the
- * next one to the other member; the pair id picks who starts.
- */
+/** Whom `day`'s round is about: alternates by calendar day; the pair id picks who starts. */
 export const subjectOf = (room: ActiveRoom, day: LocalDay): UserId => {
   const [first, second] = room.members;
   return (dayNumber(day) + (hash(room.pairId) & 1)) % 2 === 0 ? first.user : second.user;
 };
 
 /**
- * The questions of the pair's next round. Each cycle walks its own seeded order of `deck`, and a
- * cycle ends once every question of the deck was asked in it, so none comes back before then.
- * `history` is the questions of every earlier round, oldest first; ids no longer in the deck count
- * for nothing. A round can finish one cycle and start the next.
+ * Each cycle asks every `deck` question once, in its own seeded order. `history` is oldest first.
  */
 export const questionsFor = (
   deck: ReadonlyArray<GuessQuestionId>,
@@ -144,9 +138,7 @@ export const revealOf = (
 };
 
 /**
- * What `by` answering `request` at `at` does, on the room day `today`. Pure. Only today's round
- * takes answers, so a round left half done closes, unscored, when its day ends. The answer that
- * completes the round scores it: a point to the guesser for each hit, in the round's week.
+ * Pure. Only today's round takes answers; the answer that completes it scores a point per hit.
  */
 export const decideAnswer = (
   members: readonly [UserId, UserId],
@@ -181,7 +173,6 @@ export const decideAnswer = (
   return { _tag: "Stored", write, score };
 };
 
-/** `weeks` after `score` was added to them. */
 export const withScore = (
   weeks: ReadonlyArray<GuessWeekRow>,
   score: GuessWeekRow,
@@ -216,10 +207,7 @@ export const scoreOf = (
   };
 };
 
-/**
- * The round as `caller` sees it. The partner's options never leave the room before the reveal:
- * only how many questions they answered.
- */
+/** The round as `caller` sees it: before the reveal, only how many the partner answered. */
 export const guessView = (
   members: readonly [UserId, UserId],
   round: GuessRoundRow,
@@ -287,10 +275,7 @@ export type GuessResult = typeof GuessResult.Type;
 /** What a command did, for the room to tell the sockets, the push lanes and the shop. */
 export interface GuessOutcome {
   readonly result: GuessResult;
-  /**
-   * After an answer stored or repeated: how many questions of the round `member` has answered, of
-   * how many, and whether this call stored one.
-   */
+  /** After a stored or repeated answer: `member`'s progress, and whether this call stored. */
   readonly progress?: {
     readonly round: LocalDay;
     readonly member: UserId;
@@ -298,7 +283,6 @@ export interface GuessOutcome {
     readonly of: number;
     readonly stored: boolean;
   };
-  /** Whether the round is revealed after this answer. */
   readonly revealed: boolean;
   /** The coins the reveal paid. A repeated answer pays what a failed first try left unpaid. */
   readonly coins: ReadonlyArray<RoomDecision>;
@@ -409,10 +393,7 @@ export class GuessRoom extends Context.Service<GuessRoom>()("@billet/backend-pai
         };
       }).pipe(lock.withPermits(1));
 
-    /**
-     * Whom to tell that `member` finished their part of the round of `day`, while that round is
-     * still today's and the partner has not finished theirs. A reveal is not pushed.
-     */
+    /** Whom to tell that `member` finished today's part first; a reveal is not pushed. */
     const notice = (day: LocalDay, member: UserId): Effect.Effect<GuessNotice | undefined> =>
       Effect.gen(function* () {
         const state = yield* room.load;

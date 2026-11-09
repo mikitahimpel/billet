@@ -14,10 +14,7 @@ const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-una
 const isNotOpen = (decision: RoomDecision) =>
   decision._tag === "Rejected" && decision.rejection._tag === "RoomNotOpen";
 
-/**
- * Each partner's "How are you", for the caller's own pair. Like notes, every method starts from
- * the pair D1 says the caller belongs to, never one the client names.
- */
+/** Every method starts from the caller's pair in D1, never from one the client names. */
 export class MoodService extends Context.Service<
   MoodService,
   {

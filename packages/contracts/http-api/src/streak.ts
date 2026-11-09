@@ -7,12 +7,7 @@ import { LoveStreak } from "@billet/contracts-domain/streak";
 export const StreakResponse = Schema.Struct({ streak: LoveStreak });
 export type StreakResponse = typeof StreakResponse.Type;
 
-/**
- * `POST /v1/streak/days`: the caller did something together today. `at` is when it happened on
- * the phone, which may be earlier than the request after a time offline; the room counts it no
- * more than a day back, and never after its own clock. The day is counted `utcOffsetSeconds` from
- * UTC, the caller's clock.
- */
+/** `at` is phone time: counted at most a day back, never past the room's clock. */
 export const RecordStreakDayRequest = Schema.Struct({
   at: EpochMillis,
   utcOffsetSeconds: UtcOffsetSeconds,

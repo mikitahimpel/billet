@@ -92,10 +92,8 @@ t0 = time.time()
 bpy.ops.wm.read_factory_settings(use_empty=True)
 scene = bpy.context.scene
 
-# ---- the shell's parts, merged ---------------------------------------------------------------------------------
-# RealityKit tessellates a rounded box into thousands of triangles. The app sends each part's shape and transform
-# instead, and the shapes are rebuilt here with a few: the same silhouette, and the same analytic normals, so the
-# shading reads alike.
+# RealityKit tessellates a rounded box into thousands of triangles, so the app sends each part's
+# shape and transform and it is rebuilt here with a few, keeping silhouette and analytic normals.
 import numpy as np  # noqa: E402
 
 BEVEL_STEPS = 3
@@ -290,7 +288,6 @@ bm.to_mesh(shell.data)
 bm.free()
 log("kept", len(shell.data.polygons), "triangles after removing hidden faces")
 
-# ---- the furniture, as a shadow caster only ---------------------------------------------------------------------
 occluders = []
 if FURNITURE:
     before = set(bpy.data.objects)
@@ -302,7 +299,6 @@ if FURNITURE:
     # RealityKit's USD is Y up; Blender's importer turns it into Z up.
     log("furniture:", len(occluders), "objects")
 
-# ---- the atlas ---------------------------------------------------------------------------------------------------
 bpy.ops.object.select_all(action="DESELECT")
 shell.select_set(True)
 bpy.context.view_layer.objects.active = shell
@@ -327,9 +323,6 @@ for slot in shell.data.materials:
     node.image = image
     slot.node_tree.nodes.active = node
     node.select = True
-
-# ---- the lights ------------------------------------------------------------------------------------------------
-
 
 def sun(spec, name):
     light = bpy.data.lights.new(name, "SUN")
@@ -369,7 +362,6 @@ background.inputs["Color"].default_value = (*mean, 1)
 background.inputs["Strength"].default_value = scale * AMBIENT
 scene.world = world
 
-# ---- the bake ----------------------------------------------------------------------------------------------------
 scene.render.engine = "CYCLES"
 cycles = scene.cycles
 cycles.samples = SAMPLES
@@ -405,7 +397,6 @@ log("baking", SIZE, "px,", SAMPLES, "samples", f"{time.time() - t0:.0f}s")
 bpy.ops.object.bake(type="COMBINED")
 log("baked", f"{time.time() - t0:.0f}s")
 
-# ---- the model ---------------------------------------------------------------------------------------------------
 workdir = os.path.dirname(os.path.abspath(out))
 png = os.path.join(workdir, f"{room}_lightmap.jpg")
 image.filepath_raw = png

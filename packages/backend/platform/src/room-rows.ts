@@ -36,7 +36,6 @@ export const StoredMood = Schema.Struct({
   at: Schema.Int,
 });
 
-/** What a `note` row holds. */
 export const StoredNote = Schema.Struct({
   seq: Schema.Int,
   body: Schema.String,
@@ -47,7 +46,6 @@ export const StoredNote = Schema.Struct({
 /** A row with every column shape a table can have, for tests that check the check. */
 export const SampleRow = Schema.Struct({ id: Schema.String, createdAt: EpochMillis });
 
-/** What a `delivery` row holds. */
 /** An `owned_ink` row: one ink colour the pair bought, and its place in the order. */
 export const StoredOwnedInk = Schema.Struct({
   inkId: Schema.String,
@@ -112,7 +110,6 @@ export const StoredActivity = Schema.Struct({
   body: Schema.String,
 });
 
-/** What an `activity_read` row holds. */
 export const StoredActivityRead = Schema.Struct({ user: Schema.String, upTo: Schema.String });
 
 /** The one `wallet` row: the balance, and what care earned on `day` against each daily cap. */
@@ -198,7 +195,6 @@ export const StoredListItem = Schema.Struct({
 
 export const StoredListKey = Schema.Struct({ key: Schema.String, at: Schema.Int });
 
-/** What a `movie_swipes` row holds. */
 export const StoredMovieSwipe = Schema.Struct({
   member: Schema.String,
   title: Schema.String,
@@ -208,14 +204,12 @@ export const StoredMovieSwipe = Schema.Struct({
   at: Schema.Int,
 });
 
-/** What a `guess_rounds` row holds. */
 export const StoredGuessRound = Schema.Struct({
   day: Schema.String,
   subject: Schema.String,
   questions: Schema.String,
 });
 
-/** What a `guess_answers` row holds. */
 export const StoredGuessAnswer = Schema.Struct({
   day: Schema.String,
   member: Schema.String,
@@ -224,14 +218,12 @@ export const StoredGuessAnswer = Schema.Struct({
   at: Schema.Int,
 });
 
-/** What a `guess_weeks` row holds. */
 export const StoredGuessWeek = Schema.Struct({
   week: Schema.String,
   member: Schema.String,
   points: Schema.Int,
 });
 
-/** What a `riddles` row holds. */
 export const StoredRiddle = Schema.Struct({
   id: Schema.String,
   drawer: Schema.String,
@@ -239,7 +231,6 @@ export const StoredRiddle = Schema.Struct({
   body: Schema.String,
 });
 
-/** What a `riddle_guesses` row holds. */
 export const StoredRiddleGuess = Schema.Struct({
   riddle: Schema.String,
   key: Schema.String,
@@ -247,7 +238,6 @@ export const StoredRiddleGuess = Schema.Struct({
   at: Schema.Int,
 });
 
-/** What the `riddle_series` row holds. */
 export const StoredRiddleSeries = Schema.Struct({
   id: Schema.Int,
   series: Schema.Int,

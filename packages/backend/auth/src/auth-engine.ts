@@ -29,15 +29,11 @@ export interface VerifiedApple {
 export type LinkOutcome = "linked" | "in-use";
 
 /**
- * Users, sessions and linked identities (Better Auth in the platform package). Each session has its
- * own device, which push tokens hang off. Sessions slide: each lookup may push the expiry out.
- * Every storage failure is `AuthUnavailable`. It never verifies an identity itself: `AuthService`
- * hands it only tokens it has verified.
+ * Sessions slide on lookup. Never verifies an identity: `AuthService` hands it verified tokens.
  */
 export class AuthEngine extends Context.Service<
   AuthEngine,
   {
-    /** Opens a new anonymous user and a session for it. */
     readonly signInAnonymous: Effect.Effect<IssuedSession, AuthUnavailable>;
     /** A new session for an existing user. Fails `AuthRejected` if the user is gone. */
     readonly startSession: (
@@ -47,10 +43,7 @@ export class AuthEngine extends Context.Service<
     readonly signInWithApple: (
       apple: VerifiedApple,
     ) => Effect.Effect<IssuedSession, AuthUnavailable>;
-    /**
-     * Links the session's user to this Apple ID, keeping the user and everything it owns. Linking an
-     * Apple ID the user already has is `linked`; one that belongs to another user is `in-use`.
-     */
+    /** Keeps the user and all it owns. Another user's Apple ID is `in-use`. */
     readonly linkApple: (
       sessionToken: Redacted.Redacted<string>,
       apple: VerifiedApple,

@@ -102,8 +102,7 @@ const ownedItems = (room: ActiveRoom): ReadonlySet<string> =>
   new Set<string>([...starterItems, ...room.items]);
 
 /**
- * What an order costs and gives, and the `ref` its wallet entry names. `offer` names a deal or a
- * set for the Inbox; a `treat` feeds the cat instead of granting anything.
+ * What an order costs and gives, and its wallet `ref`; a `treat` feeds the cat, granting nothing.
  */
 type Quote = {
   readonly price: number;
@@ -193,8 +192,7 @@ const checked = (bought: Quote | RoomRejection, terms: PriceTerms | undefined) =
     : bought;
 
 /**
- * Takes the price and gives what was bought. A piece bought leaves the wishlist. A treat feeds the
- * cat on the spot, under the order's id; it was paid for, so the meal earns nothing back.
+ * Charges and grants; a bought piece leaves the wishlist. A paid treat's meal earns nothing back.
  */
 const charge = (
   room: ActiveRoom,
@@ -328,8 +326,7 @@ const openGift = (room: ActiveRoom, by: UserId, at: EpochMillis, day: LocalDay):
 };
 
 /**
- * What a journal entry earns the pair: its reward, cut to what is left of the day's cap. The day is
- * the cat's local day, so the caps reset at the couple's midnight. Nothing when the cap is met.
+ * A journal entry's reward, cut to what is left of the day's cap, on the cat's local day.
  */
 export const earnFor = (
   wallet: RoomWallet,
@@ -371,8 +368,7 @@ const cared = (room: ActiveRoom, cat: RoomCat, entry: CatEntry) => {
 };
 
 /**
- * What something the couple did in the app pays: its reward, cut to what is left of its day's cap.
- * Nothing when the cap is met. The caller makes sure it is paid once per ref.
+ * An app action's reward, cut to what is left of its day's cap. The caller pays once per ref.
  */
 const appEarn = (
   room: ActiveRoom,
@@ -401,8 +397,7 @@ const decodeEarnRef = Schema.decodeSync(EarnRef);
 type ChangeListCommand = typeof RoomCommand.cases.ChangeList.Type;
 
 /**
- * One change to a list. A tick earns, in the same decision, when its kind earns and the item has
- * not earned before; an add is an Inbox item, counted with `by`'s other adds of its window.
+ * A tick earns once per item when its kind earns; an add is an Inbox item, grouped by window.
  */
 const decideList = (room: ActiveRoom, command: ChangeListCommand): RoomDecision => {
   const { by, at, utcOffsetSeconds, change, list, paid } = command;

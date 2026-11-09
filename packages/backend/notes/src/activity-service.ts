@@ -9,10 +9,7 @@ import { PairRooms } from "./pair-rooms.ts";
 
 const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-unavailable" });
 
-/**
- * The pair's activity Inbox, for the caller's own pair: the pair comes from D1, never from the
- * client. See docs/activity.md.
- */
+/** The pair comes from D1, never from the client. See docs/activity.md. */
 export class ActivityService extends Context.Service<
   ActivityService,
   {

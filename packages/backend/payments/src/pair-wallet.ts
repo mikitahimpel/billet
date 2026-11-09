@@ -10,11 +10,8 @@ export interface WalletChange {
   readonly coins: number;
 }
 
-/**
- * The pair's coin wallet, the one the app shows and spends from, in the pair's room. Bought coins
- * are entered here as well as in the payments ledger. A pair whose room can't be opened (it ended)
- * is `PaymentsNotFound`.
- */
+/** The wallet the app shows and spends from, in the pair's room; bought coins enter here and in
+ * the payments ledger. A pair whose room can't be opened (it ended) is `PaymentsNotFound`. */
 export class PairWallet extends Context.Service<
   PairWallet,
   {

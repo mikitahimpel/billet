@@ -4,9 +4,7 @@ import type { MetricEventName } from "@billet/contracts-domain/metrics";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 
 /**
- * One accepted event as it goes to Workers Analytics Engine. This is the whole of it: no user id,
- * no Apple subject, no email, no address, no place and nothing a note says or shows. The pair is a
- * one-way hash (see `pairHashOf`). The layout of the stored row is in docs/experiments.md.
+ * Nothing else is stored: no user id, Apple subject, email, place or note. See docs/experiments.md.
  */
 export interface AnalyticsPoint {
   readonly name: MetricEventName;
@@ -24,11 +22,7 @@ export interface AnalyticsPoint {
 
 const encoder = new TextEncoder();
 
-/**
- * The pair id as Analytics Engine sees it: the first 16 hex digits of SHA-256 over a fixed prefix
- * and the id. Pair ids are random, so the hash cannot be turned back into one; the admin, who has
- * the id, can compute it to find a pair's rows.
- */
+/** First 16 hex digits of SHA-256 over a fixed prefix and the id; the admin can compute it. */
 export const pairHashOf = (pairId: PairId): Effect.Effect<string, never, Digest.Digest> =>
   Effect.gen(function* () {
     const digest = yield* Digest.Digest;
@@ -47,10 +41,7 @@ export const variantsLabel = (
     .toSorted()
     .join(",");
 
-/**
- * Where accepted events are written besides the D1 counts. Writing never fails and never blocks the
- * response: Analytics Engine takes a point without waiting, and a broken one is dropped.
- */
+/** Writing never fails and never blocks the response; a broken point is dropped. */
 export class EventSink extends Context.Service<
   EventSink,
   { readonly write: (point: AnalyticsPoint) => Effect.Effect<void> }
@@ -59,10 +50,7 @@ export class EventSink extends Context.Service<
   static readonly silent = Layer.succeed(EventSink, { write: () => Effect.void });
 }
 
-/**
- * The variants a pair has been given, for labelling its events. Provided by the platform from the
- * flags table, so this package does not depend on the flags one. A failure means no label.
- */
+/** Provided by the platform from the flags table, so this package doesn't depend on flags. */
 export class PairVariants extends Context.Service<
   PairVariants,
   {

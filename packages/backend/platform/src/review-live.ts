@@ -20,8 +20,7 @@ import { ReviewRepositoryLive } from "./review-repository-live.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
 /**
- * `ReviewService` on the Worker's bindings, for the admin panel, which has none of the API's
- * services. Pairing runs with its real observer, so a wipe deletes the pair's room and pictures.
+ * Pairing runs with its real observer, so a wipe deletes the pair's room and pictures.
  */
 export const ReviewServiceLive = (
   env: WorkerEnv,

@@ -1,20 +1,6 @@
-// Measures the PairRoom live-stroke relay end to end (#326).
-//
-// Two fresh anonymous accounts on the host are paired by invite. One streams a stroke's points
-// every `intervalMs`; the other, in the same process, records when each arrives. Both accounts
-// are deleted afterwards.
-//
-// Each relayed frame carries `relayedAt`, the room's clock when it arrived there, so a frame's
-// delay splits into the way in (sender → room) and the way out (room → partner). The two clocks
-// are not in step, so each leg is reported as its excess over that leg's fastest frame. A clump
-// that is late on the way in points at the uplink or the routing to the Durable Object; one late
-// on the way out points at the room holding its sends (the output gate) or the downlink.
-//
+// Measures the PairRoom live-stroke relay end to end, each leg as excess over its fastest frame
+// (the clocks are not in step). Creates real accounts, so dev Worker only unless `--host-ok`.
 //   BILLET_HOST=<host> node scripts/live-latency.mjs [frames=150] [intervalMs=40] [--host-ok]
-//
-// Keep the host out of committed logs and PRs: pass it in the environment. The probe creates real
-// accounts and a pair, so it runs only against the dev Worker (a host with `billet-api-dev` in
-// it); `--host-ok` is for another host someone has agreed to.
 import { randomBytes } from "node:crypto";
 
 const host = (process.env.BILLET_HOST ?? "").replace(/^https?:\/\//, "").replace(/\/$/, "");
@@ -79,7 +65,7 @@ try {
 
   const out = await open(sender);
   const into = await open(receiver);
-  // Index → when it was sent (this machine's clock, ms since 1970).
+  // Index → send time, this machine's clock in ms.
   const sentAt = new Map();
   const arrivals = [];
   into.onmessage = (event) => {

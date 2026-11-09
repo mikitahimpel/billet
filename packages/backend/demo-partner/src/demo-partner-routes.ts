@@ -32,10 +32,7 @@ const respondDemoFailures = <R>(
     respondFailures,
   );
 
-/**
- * The demo partner routes. Needs `AuthService` and `DemoPartnerService`. Only the dev stage mounts
- * them: anywhere else a bot is a user no one can delete.
- */
+/** Mounted on the dev stage only: anywhere else a bot is a user no one can delete. */
 export const DemoPartnerRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const demo = yield* DemoPartnerService;

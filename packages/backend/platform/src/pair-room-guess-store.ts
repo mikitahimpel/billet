@@ -25,7 +25,6 @@ const parsed = (json: string): unknown => {
 const roundFrom = (row: typeof guessRounds.$inferSelect) =>
   decodeRound({ day: row.day, subject: row.subject, questions: parsed(row.questions) });
 
-/** `GuessStore` on the room's own SQLite. */
 export const SqliteGuessStore = Layer.effect(
   GuessStore,
   Effect.gen(function* () {

@@ -1,6 +1,5 @@
 import type { MetricEventName } from "@billet/contracts-domain/metrics";
 
-/** A `pair_events` row, as the report reads it. */
 export interface EventRow {
   readonly pairId: string;
   readonly userId: string;
@@ -10,7 +9,6 @@ export interface EventRow {
   readonly firstAt: number;
 }
 
-/** A `pair_flags` row. */
 export interface FlagRow {
   readonly pairId: string;
   readonly experimentKey: string;
@@ -222,11 +220,7 @@ const cautionFor = (variants: ReadonlyArray<VariantReport>): string => {
 };
 
 /**
- * Turns the stored counts into the funnel, the north-star metric and the experiment comparison.
- * Pure: the same rows and day give the same report, and it never sees a note.
- * Every figure counts pairs or people. A day is a UTC day, so a partner far from UTC can be counted
- * a day early or late; at the sizes this app will have for a long time that is smaller than the
- * noise.
+ * Pure. A day is a UTC day, so a partner far from UTC can be counted a day off: under the noise.
  */
 export const buildReport = (
   events: ReadonlyArray<EventRow>,

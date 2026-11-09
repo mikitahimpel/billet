@@ -19,7 +19,7 @@ import { atomically, type DirectoryDatabase, openDirectoryDatabase } from "./dir
 import { flagChanges, flagConfigs, pairFlagOverrides } from "./directory-schema.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
-/** A `flag_configs` row as stored: the configuration is JSON text. */
+/** The configuration is JSON text. */
 export const FlagConfigRow = Schema.Struct({
   key: ExperimentKey,
   config: Schema.fromJsonString(FlagConfig),
@@ -28,7 +28,6 @@ export const FlagConfigRow = Schema.Struct({
   updatedBy: Schema.String,
 });
 
-/** A `flag_changes` row as stored. */
 export const FlagChangeRow = Schema.Struct({
   id: Schema.Int,
   key: ExperimentKey,
@@ -40,16 +39,12 @@ export const FlagChangeRow = Schema.Struct({
   after: Schema.NullOr(Schema.fromJsonString(Schema.Unknown)),
 });
 
-/** A `pair_flag_overrides` row. */
 export const PairOverrideRow = PairOverride;
 
-/**
- * The Cache API key the configurations are kept under at the edge. It is never fetched: the
- * Cache API needs a URL, and `.invalid` can never resolve.
- */
+/** Never fetched: the Cache API needs a URL, and `.invalid` can never resolve. */
 export const flagConfigCacheUrl = "https://flag-configs.billet.invalid/v1";
 
-/** How long a colo may serve the configurations without asking D1. A kill reaches every colo within it. */
+/** A kill reaches every colo within this. */
 export const flagConfigCacheSeconds = 30;
 
 // A storage error can quote bound values, so nothing from it survives this label.
@@ -75,7 +70,7 @@ const decodeBatchRow = Schema.decodeUnknownEffect(
   ),
 );
 
-/** A raw statement for `atomically`, for the two that Drizzle's builder cannot express. */
+/** For the two statements Drizzle's builder cannot express. */
 const statement = (sql: string, params: ReadonlyArray<unknown>) => ({
   toSQL: () => ({ sql, params }),
 });
@@ -159,8 +154,8 @@ const makeRepository = (
           if (current !== expectedVersion) return yield* new FlagConfigConflict({ current });
           const text = encodeConfig(config);
           const next = expectedVersion + 1;
-          // The update and the history line succeed together or not at all. The version check is
-          // repeated inside the batch, so of two saves from one version only one lands.
+          // Atomic batch with the version check repeated inside, so of two saves from one version
+          // only one lands.
           const results = yield* guarded(
             atomically(db, [
               statement(
@@ -295,10 +290,7 @@ const makeRepository = (
   );
 };
 
-/**
- * `FlagConfigRepository` on the D1 directory, with `all` cached in `cache` (the colo's Cache API)
- * for `flagConfigCacheSeconds`. Build it once per request, as `openDirectoryDatabase` asks.
- */
+/** `all` is cached in the colo's Cache API. Build once per request (`openDirectoryDatabase`). */
 export const FlagConfigRepositoryLive = (
   binding: D1Database,
   cache: Cache | undefined,

@@ -4,27 +4,19 @@ import { DeviceId, EpochMillis, UserId } from "@billet/contracts-domain/ids";
 /** 32 random bytes, base64url without padding. */
 const opaqueValue = /^[A-Za-z0-9_-]{43}$/;
 
-/**
- * One-time sign-in nonce issued by the server. The client passes it unchanged as
- * `ASAuthorizationAppleIDRequest.nonce`, so Apple signs it into the identity token.
- */
+/** One-time; the client passes it as `ASAuthorizationAppleIDRequest.nonce` for Apple to sign. */
 export const AuthNonce = Schema.String.check(Schema.isPattern(opaqueValue)).pipe(
   Schema.brand("AuthNonce"),
 );
 export type AuthNonce = typeof AuthNonce.Type;
 
-/**
- * The opaque bearer credential. The server keeps only its hash, and it is never logged. Sessions
- * issued before Better Auth are 43 characters, later ones 32.
- */
+/** Only its hash is stored, never logged. Pre-Better Auth tokens are 43 chars, later ones 32. */
 export const SessionToken = Schema.String.check(
   Schema.isPattern(/^[A-Za-z0-9_-]{32}(?:[A-Za-z0-9_-]{11})?$/),
 ).pipe(Schema.brand("SessionToken"));
 
 /**
- * The secret that is the anonymous account: 32 random bytes, base64url without padding. The app
- * makes it once and keeps it in the iCloud Keychain, so the user's other phones sign in to the same
- * account with no prompt. The server keeps only its hash, and it is never logged.
+ * The anonymous account. In the iCloud Keychain so other phones share it; the server stores a hash.
  */
 export const AccountKey = Schema.String.check(Schema.isPattern(opaqueValue)).pipe(
   Schema.brand("AccountKey"),

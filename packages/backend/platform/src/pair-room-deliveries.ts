@@ -12,7 +12,7 @@ const entryFrom = (row: typeof delivery.$inferSelect): DeliveryEntry => ({
   nextAttemptAt: row.nextAttemptAt,
 });
 
-/** The delivery rows of one room. A storage failure is a defect, like the rest of the room. */
+/** A storage failure is a defect, like the rest of the room. */
 export const deliveriesOf = (db: RoomDatabase) => ({
   find: (noteId: string, lane: string) =>
     db

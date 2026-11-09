@@ -42,14 +42,11 @@ export const GiftCommand = Schema.TaggedUnion({
 export type GiftCommand = typeof GiftCommand.Type;
 
 /**
- * Why a change was refused. `NotFound`: no such wish. `NotAllowed`: a wish that is not the
- * caller's to change, or their own to plan. `Taken`: the partner's other plan holds it, which can
- * only happen with more than two people. `NotOpen`: the room has no members yet.
+ * `NotAllowed`: not theirs to change, or their own to plan. `Taken`: another plan holds it.
  */
 export const GiftRefusal = Schema.Literals(["NotFound", "NotAllowed", "Taken", "NotOpen"]);
 export type GiftRefusal = typeof GiftRefusal.Type;
 
-/** Decided changes, or a refusal. */
 export type GiftDecision =
   | { readonly _tag: "Done"; readonly writes: ReadonlyArray<GiftWrite> }
   | { readonly _tag: "Refused"; readonly reason: GiftRefusal };

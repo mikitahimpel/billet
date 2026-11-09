@@ -6,10 +6,7 @@ import { ListCommand, SharedList } from "@billet/contracts-domain/list";
 export const ListsResponse = Schema.Struct({ lists: Schema.Array(SharedList) });
 export type ListsResponse = typeof ListsResponse.Type;
 
-/**
- * `POST /v1/lists`: one change to the pair's lists. A tick that earns counts against the day's cap
- * on the local day `utcOffsetSeconds` from UTC: the caller's clock, else the cat's, else UTC.
- */
+/** A tick that earns counts against the cap on the local day: caller's, else cat's, else UTC. */
 export const ChangeListRequest = Schema.Struct({
   change: ListCommand,
   utcOffsetSeconds: Schema.optionalKey(UtcOffsetSeconds),

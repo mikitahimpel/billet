@@ -54,14 +54,10 @@ export interface ShopItemSave {
   readonly at: number;
 }
 
-/**
- * The shop's catalog in D1. Items are never deleted: an id stays once it has been sold, and an
- * inactive item stays owned by every pair that bought it.
- */
+/** Items are never deleted: an inactive item stays owned by every pair that bought it. */
 export class ShopStore extends Context.Service<
   ShopStore,
   {
-    /** The active items, in shelf order. */
     readonly active: Effect.Effect<ReadonlyArray<ShopCatalogItem>, ShopStoreUnavailable>;
     /** Every item, in shelf order, with its state. */
     readonly all: Effect.Effect<ReadonlyArray<AdminShopItem>, ShopStoreUnavailable>;
@@ -77,7 +73,6 @@ export class ShopStore extends Context.Service<
       by: string,
       at: number,
     ) => Effect.Effect<ReadonlyArray<AdminShopItem>, ShopStoreUnavailable>;
-    /** The audit log, newest first. */
     readonly history: (
       limit: number,
     ) => Effect.Effect<ReadonlyArray<ShopChange>, ShopStoreUnavailable>;

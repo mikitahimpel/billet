@@ -1,9 +1,6 @@
 import { Cause, Exit } from "effect";
 
-/**
- * The exit without the annotations that `Effect.fn` spans add to a failure (the span's stack
- * trace), so a test can compare it with `Exit.fail(error)`.
- */
+/** Without the stack annotations `Effect.fn` spans add, to compare with `Exit.fail(error)`. */
 export const plainExit = <A, E>(exit: Exit.Exit<A, E>): Exit.Exit<A, E> =>
   Exit.isSuccess(exit)
     ? exit

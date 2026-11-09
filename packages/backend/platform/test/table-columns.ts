@@ -15,9 +15,7 @@ export const tablesOf = (schemaModule: Record<string, unknown>): ReadonlyArray<S
   Object.values(schemaModule).filter((value): value is SQLiteTable => is(value, SQLiteTable));
 
 /**
- * The columns a Drizzle table declares. drizzle-kit writes a single-column primary key without
- * `NOT NULL`, and `PRAGMA table_info` reports it as nullable, so that key is compared by
- * `primaryKey` alone. Columns of a composite key keep their `NOT NULL`.
+ * drizzle-kit writes a lone primary key as nullable, so it is compared by `primaryKey` alone.
  */
 export const declaredColumns = (table: SQLiteTable): ReadonlyArray<ColumnInfo> => {
   const composite = getTableConfig(table).primaryKeys.flatMap((key) => key.columns);

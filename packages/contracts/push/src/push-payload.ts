@@ -7,26 +7,22 @@ import { Reaction } from "@billet/contracts-domain/reaction";
 const fields = {
   noteId: NoteId,
   author: UserId,
-  /** Present for drawings only: photos and text notes have no vector rendition. */
+  /** Drawings only. */
   compact: Schema.optionalKey(CompactStrokes),
-  /** Present for text notes only, so a widget can show the words without a fetch. */
+  /** Text notes only, so a widget can show the words without a fetch. */
   text: Schema.optionalKey(NoteText),
-  /** The note's paper, when the sender chose one. */
   paper: Schema.optionalKey(PaperColor),
 };
 
-/** The key in an alert or widget push's JSON that holds its `PushPayload`, beside `aps`. */
+/** The key beside `aps` in an alert or widget push's JSON. */
 export const pushPayloadKey = "billet";
 
-/**
- * Custom data carried by a push, not the whole APNs envelope. `LiveActivity` is the
- * `content-state` of a drawing's Live Activity: the compact strokes always, since the activity
- * cannot use the network, and the whole push stays under APNs' 4 KB.
- */
+/** Not the whole APNs envelope. `LiveActivity` is a `content-state` with the strokes always,
+ * since the activity cannot use the network; the whole push stays under APNs' 4 KB. */
 export const PushPayload = Schema.TaggedUnion({
   Widget: fields,
   Alert: fields,
-  /** An alert to a photo's author: `by` reacted to their note `noteId`. */
+  /** To the photo's author. */
   Reaction: { noteId: NoteId, by: UserId, reaction: Reaction },
   LiveActivity: {
     noteId: NoteId,

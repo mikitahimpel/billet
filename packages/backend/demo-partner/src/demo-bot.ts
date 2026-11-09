@@ -20,10 +20,7 @@ const maxPendingReactions = 3;
 
 const decodeKey = Schema.decodeSync(IdempotencyKey);
 
-/**
- * What a demo bot has in mind. Every time is epoch milliseconds by the room's clock. `draws`
- * counts the random numbers taken from `seed`, so the same history always plans the same.
- */
+/** A demo bot's plan, in epoch ms; `draws` counts numbers taken from `seed`, so replays match. */
 export const DemoBotState = Schema.Struct({
   bot: UserId,
   owner: UserId,
@@ -107,9 +104,7 @@ export const startDemoBot = (bot: UserId, owner: UserId, now: number): DemoBotSt
 };
 
 /**
- * What a note just stored makes the bot plan: an answer 5 to 30 seconds after an owner's text, a
- * reaction 10 to 60 seconds after an owner's photo. A text while an answer is pending changes
- * nothing, so a burst gets one answer.
+ * Plans a reply 5-30 s after an owner's text (one per burst) and a reaction 10-60 s after a photo.
  */
 export const noteSeen = (state: DemoBotState, note: Note, now: number): DemoBotState => {
   if (note.author !== state.owner) return state;
@@ -134,10 +129,7 @@ export const noteSeen = (state: DemoBotState, note: Note, now: number): DemoBotS
   }
 };
 
-/**
- * What an owner's Who knows who answer makes the bot plan: its own part 10 to 40 seconds later.
- * More answers while that is pending change nothing.
- */
+/** An owner's Who knows who answer makes the bot play its part 10 to 40 seconds later, once. */
 export const guessSeen = (state: DemoBotState, by: UserId, now: number): DemoBotState => {
   if (by !== state.owner || state.guessAt !== undefined) return state;
   const draw = drawer(state.seed, state.draws);
@@ -173,9 +165,7 @@ export const nextWakeAt = (state: DemoBotState): number => {
 };
 
 /**
- * The one action due at `now`, the earliest planned first, and the state after it; nothing within
- * a minute of the last action. The action leaves the plan whether or not the room accepts it, so
- * a refused one (no cat yet, the day's gift already opened) is not retried in a loop.
+ * The earliest due action. It leaves the plan even when the room refuses it, so it never loops.
  */
 export const demoBotStep = (
   state: DemoBotState,

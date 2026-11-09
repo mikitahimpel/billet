@@ -39,8 +39,7 @@ export const teamKeys: Layer.Layer<Jwks.Jwks> = Jwks.layerLocal({ keys: [teamKey
 const seconds = (ms: number) => Math.floor(ms / 1000);
 
 /**
- * When the tests say it is: month end, late evening UTC. `access.test.ts` runs the check at this
- * instant on a fixed clock; the Worker tests run on the real one, so a token's window spans both.
+ * Month end, late evening UTC. The Worker tests use the real clock, so a token spans both.
  */
 export const accessNow = Date.UTC(2026, 9, 31, 22, 42);
 /** Before every clock these tests run on. A token that expired then is expired now. */

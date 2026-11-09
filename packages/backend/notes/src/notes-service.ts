@@ -70,18 +70,11 @@ const isNotOpen = (decision: RoomDecision) =>
 
 const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-unavailable" });
 
-/**
- * Notes and their images, for the caller's own pair. Every method starts from the pair that D1 says
- * the caller belongs to, never from one the client names, so one couple can't reach another's room
- * or prefix.
- */
+/** Every method starts from the caller's pair in D1, never from one the client names. */
 export class NotesService extends Context.Service<
   NotesService,
   {
-    /**
-     * Stores a PNG, JPEG or HEIC under the couple's prefix and returns its new key, which ends in
-     * the extension of the format its signature declares.
-     */
+    /** The new key ends in the extension of the format the bytes' signature declares. */
     readonly uploadImage: (
       userId: UserId,
       bytes: Uint8Array,
@@ -113,7 +106,6 @@ export class NotesService extends Context.Service<
       BuyResponse,
       NotesNotFound | NotEnoughCoins | PriceChanged | AlreadyOwned | NotesUnavailable
     >;
-    /** What the caller's pair has: balance, inks, room pieces and wishlist. */
     readonly shop: (
       userId: UserId,
     ) => Effect.Effect<ShopResponse, NotesNotFound | NotesUnavailable>;
@@ -156,10 +148,7 @@ export class NotesService extends Context.Service<
     readonly walletBalance: (
       pairId: PairId,
     ) => Effect.Effect<number, NotesNotFound | NotesUnavailable>;
-    /**
-     * Enters coins bought with money in a pair's wallet, once per entry id, and answers the
-     * balance after it and the coins the entry moved, as a positive number.
-     */
+    /** Once per entry id; answers the new balance and the coins moved, as a positive number. */
     readonly creditPurchase: (
       pairId: PairId,
       credit: PurchaseCredit,
@@ -167,7 +156,6 @@ export class NotesService extends Context.Service<
       { readonly balance: number; readonly coins: number },
       NotesNotFound | NotesUnavailable
     >;
-    /** The couple's notes with `seq` above `afterSeq`, oldest first. */
     readonly history: (
       userId: UserId,
       afterSeq: number,
@@ -323,7 +311,6 @@ export class NotesService extends Context.Service<
           };
         });
 
-      // A refused spend: what the client can act on, or the room's fault.
       const refusedSpend = (rejection: RoomRejection) => {
         switch (rejection._tag) {
           case "NotEnoughCoins":
@@ -362,7 +349,7 @@ export class NotesService extends Context.Service<
         }
       };
 
-      // Reading a pair's shop or wallet opens its room, so its welcome coins show on the first read.
+      // Reading a pair's shop or wallet opens its room, so welcome coins show on the first read.
       const openedRead = <A>(
         pairId: PairId,
         read: () => Effect.Effect<A | null, NotesUnavailable>,
@@ -401,7 +388,6 @@ export class NotesService extends Context.Service<
       const spendOf = (decision: RoomDecision & { readonly _tag: "Accepted" }) =>
         entryOf(decision, "spend");
 
-      // The room prices the buy from the catalog; the client's idea of the price never reaches it.
       const buy = Effect.fn("NotesService.buy")(function* (
         userId: UserId,
         request: BuyRequest,

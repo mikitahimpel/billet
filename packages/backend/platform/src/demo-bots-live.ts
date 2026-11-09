@@ -7,7 +7,7 @@ import type { PairRoom } from "./pair-room-durable-object.ts";
 const unavailable = (cause: unknown) =>
   new DemoPartnerUnavailable({ reason: "room-unavailable", cause });
 
-/** `DemoBots` on the pairs' rooms: the bot lives in its pair's `PairRoom`, on its alarm. */
+/** The bot lives in its pair's `PairRoom`, on its alarm. */
 export const DemoBotsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.Layer<DemoBots> =>
   Layer.succeed(
     DemoBots,

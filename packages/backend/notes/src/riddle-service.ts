@@ -18,10 +18,7 @@ export type RiddleAnswer =
   | { readonly _tag: "Listed"; readonly view: RiddlesResponse }
   | { readonly _tag: "Changed"; readonly riddle: Riddle; readonly right?: boolean };
 
-/**
- * The pair's draw-guess, for the caller's own pair: like notes, every call starts from the pair D1
- * says the caller belongs to. No partner is `NotesNotFound`.
- */
+/** Every call starts from the caller's pair in D1. No partner is `NotesNotFound`. */
 export class RiddleService extends Context.Service<
   RiddleService,
   {

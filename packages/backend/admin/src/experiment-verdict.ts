@@ -2,8 +2,7 @@ import { minimumPairsPerVariant, type VariantReport } from "@billet/backend-metr
 
 export interface Verdict {
   /**
-   * `no-data`: fewer than two variants have a pair at day 7. `overlap`: every 95% interval touches
-   * another, so there is no result. `ahead`: one variant's interval sits above all the others'.
+   * `no-data`: under two variants at day 7; `overlap`: intervals touch; `ahead`: one sits above.
    */
   readonly kind: "no-data" | "overlap" | "ahead";
   /** The variant that is ahead, for `ahead`. */
@@ -14,11 +13,7 @@ export interface Verdict {
   readonly text: string;
 }
 
-/**
- * What the north star says about an experiment, in words. A variant is only called ahead when its
- * 95% interval does not overlap any other's; with small groups it says so, as the gap can still
- * move.
- */
+/** A variant is only called ahead when its 95% interval overlaps no other's. */
 export const verdictOf = (variants: ReadonlyArray<VariantReport>): Verdict => {
   const measured = variants.filter(({ northStar }) => northStar.interval !== undefined);
   const smallest = Math.min(...variants.map(({ northStar }) => northStar.of));

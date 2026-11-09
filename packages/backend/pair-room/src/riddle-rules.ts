@@ -85,10 +85,7 @@ const decodeWord = Schema.decodeOption(RiddleWord);
 const lettersOf = (word: string): ReadonlyArray<RiddleLetter> =>
   [...word.replaceAll(" ", "")].map((letter) => decodeLetter(letter));
 
-/**
- * The tiles of a riddle: the word's letters and random decoys, 12 in all but never fewer than two
- * decoys, shuffled. The same for the same word and seed.
- */
+/** The word's letters plus decoys, 12 tiles with two decoys at least, shuffled; seed-stable. */
 export const tilesFor = (word: RiddleWord, seed: string): ReadonlyArray<RiddleLetter> => {
   const letters = lettersOf(word);
   const next = generator(hash(`${seed}:decoys`));
@@ -127,7 +124,6 @@ export const riddleView = (row: RiddleRow, caller: UserId): Riddle => ({
   at: row.at,
 });
 
-/** When the round of `row` ended, if it did. */
 export const endedAt = (row: RiddleRow): EpochMillis | undefined =>
   row.state._tag === "Open" ? undefined : row.state.at;
 
@@ -150,8 +146,7 @@ export const RiddleRefusal = Schema.Literals([
 export type RiddleRefusal = typeof RiddleRefusal.Type;
 
 /**
- * What a command does to a riddle: refused; a retry, answered as the first time was; or a write,
- * with the reward when it ended the round. `right` answers a try.
+ * Refused; a retry, answered as the first was; or a write, with the reward if the round ended.
  */
 export type RiddleDecision =
   | { readonly _tag: "Refused"; readonly reason: RiddleRefusal }
@@ -166,8 +161,7 @@ export type RiddleDecision =
 const refused = (reason: RiddleRefusal): RiddleDecision => ({ _tag: "Refused", reason });
 
 /**
- * `by` sends a riddle. `existing` is the riddle stored under the request's id, if any; `open` every
- * riddle not ended yet. A member has one open riddle at a time, so the guesser's queue stays short.
+ * `existing` is the riddle under the request's id; a member has one open riddle at a time.
  */
 export const decideSend = (
   existing: RiddleRow | undefined,
@@ -207,9 +201,7 @@ const playable = (row: RiddleRow, by: UserId): RiddleRefusal | undefined => {
 };
 
 /**
- * One try by `by`. `earlier` is the try already stored under its key: a retry answers with it and
- * counts nothing, even once the round has ended. A right try solves the round and adds to the
- * series.
+ * A retry under the same key answers with the stored try and counts nothing, even after the end.
  */
 export const decideGuess = (
   row: RiddleRow,
@@ -241,9 +233,7 @@ export const decideGuess = (
 };
 
 /**
- * Mochi's next hint. The first takes away half the decoys; each later one shows one letter not
- * shown yet, in its place, until all but one are. Which ones follows the riddle's id and the hint's
- * number, so a hint is the same however it is reached.
+ * The first hint halves the decoys; each later one places a letter until one is left. Seeded.
  */
 export const decideHint = (row: RiddleRow, by: UserId): RiddleDecision => {
   const closed = playable(row, by);

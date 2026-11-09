@@ -57,9 +57,7 @@ const tooManyRequests = (retryAfterSeconds: number): Response =>
   });
 
 /**
- * Counts this request against its route group and returns a 429 once the group's limit is spent.
- * Storage trouble lets the request through: a broken counter must not take the API down. The log
- * line is a fixed label.
+ * Storage trouble lets the request through: a broken counter must not take the API down.
  */
 export const limitRequest = async (
   request: Request,

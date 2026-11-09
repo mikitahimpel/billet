@@ -12,7 +12,6 @@ import { sql } from "drizzle-orm";
 
 // Durable Object SQLite tables, one set per `PairRoom`. `pnpm db:generate` writes the migrations.
 
-// The one row of the room: the pair, its two members with their presence, and the counters.
 export const room = sqliteTable(
   "room",
   {
@@ -50,8 +49,7 @@ export const note = sqliteTable(
   (table) => [uniqueIndex("note_author_key").on(table.author, table.idempotencyKey)],
 );
 
-// One row per note and delivery lane: how far that delivery got. The alarm works through the
-// pending ones. See `delivery-ledger.ts` in the pair-room package for the rules.
+// One row per note and lane; the rules are in the pair-room package's `delivery-ledger.ts`.
 export const delivery = sqliteTable(
   "delivery",
   {
@@ -81,8 +79,7 @@ export const reaction = sqliteTable(
   ],
 );
 
-// The couple's cat, once adopted: its profile and temper, and the last journal entry's `seq` and
-// time. The row exists only after adoption.
+// One row, only after adoption.
 export const cat = sqliteTable(
   "cat",
   {
@@ -116,9 +113,8 @@ export const catEntry = sqliteTable(
   (table) => [uniqueIndex("cat_entry_id").on(table.id), index("cat_entry_at").on(table.at)],
 );
 
-// The Inbox: one row per item, keyed by its source's id. `sortKey` is the item's cursor, so a
-// page is a range on one index. `doerUser` is null for the cat and the store; `body` holds the
-// event and the target as JSON.
+// `sortKey` is the item's cursor, so a page is a range on one index. `doerUser` is null for the
+// cat and the store.
 export const activity = sqliteTable(
   "activity",
   {
@@ -138,29 +134,25 @@ export const activityRead = sqliteTable("activity_read", {
   upTo: text("up_to").notNull(),
 });
 
-// The ink colours the pair has bought, in the order it got them (`position`). The free ink is
-// every pair's and has no row. Pairing again opens a new room, which starts with the free ink only.
+// The free ink is every pair's and has no row.
 export const ownedInk = sqliteTable("owned_ink", {
   inkId: text("ink_id").primaryKey(),
   position: integer("position").notNull(),
 });
 
-// The room's pieces the pair has bought, in the order it got them (`position`). The starter
-// pieces are every pair's and have no row.
+// The starter pieces are every pair's and have no row.
 export const ownedItem = sqliteTable("owned_item", {
   itemId: text("item_id").primaryKey(),
   position: integer("position").notNull(),
 });
 
-// The pieces the pair wishes for, in the order they were wished (`position`). Written whole on
-// every commit, so a piece taken off leaves no row.
+// Written whole on every commit, so a piece taken off leaves no row.
 export const wish = sqliteTable("wish", {
   itemId: text("item_id").primaryKey(),
   position: integer("position").notNull(),
 });
 
-// The pair's coins: the balance, and what care has earned on `day` (the cat's local day) against
-// each daily cap. No row means no coin yet.
+// `day` is the cat's local day the daily caps count against. No row means no coin yet.
 export const wallet = sqliteTable(
   "wallet",
   {
@@ -175,13 +167,12 @@ export const wallet = sqliteTable(
   (table) => [check("wallet_single_row", sql`${table.id} = 1`)],
 );
 
-// The collections whose bonus the pair was paid, in the order it was paid (`position`).
 export const claimedBonus = sqliteTable("claimed_bonus", {
   collectionId: text("collection_id").primaryKey(),
   position: integer("position").notNull(),
 });
 
-// Each member's latest check-in, one row each: a new one writes over it. `note` is null without one.
+// One row per member: a new check-in writes over it.
 export const mood = sqliteTable("mood", {
   user: text("user").primaryKey(),
   mood: text("mood").notNull(),
@@ -189,8 +180,7 @@ export const mood = sqliteTable("mood", {
   at: integer("at").notNull(),
 });
 
-// The wallet's entries, in the order they were stored (`seq`). `id` is `<kind>:<source>`, one
-// entry each, so a repeated earn or buy cannot pay or charge twice.
+// `id` is `<kind>:<source>`, unique, so a repeated earn or buy cannot pay or charge twice.
 export const coinEntry = sqliteTable(
   "coin_entry",
   {
@@ -231,14 +221,13 @@ export const giftPlan = sqliteTable(
   (table) => [primaryKey({ columns: [table.wishId, table.giver] })],
 );
 
-// Each partner's "What I love", as the JSON of `Loves`.
+// `body` is the JSON of `Loves`.
 export const giftLoves = sqliteTable("gift_loves", {
   user: text("user").primaryKey(),
   body: text("body").notNull(),
 });
 
-// The pair's lists, in the order they were made (`position`). Both partners read and change every
-// row; `icon_symbol` and `icon_tint` are the list's tile.
+// Both partners read and change every row; `icon_symbol` and `icon_tint` are the list's tile.
 export const lists = sqliteTable("lists", {
   id: text("id").primaryKey(),
   position: integer("position").notNull(),
@@ -248,10 +237,9 @@ export const lists = sqliteTable("lists", {
   iconTint: text("icon_tint").notNull(),
 });
 
-// The items of each list, in the order they were added (`position`). `done_by` and `done_at` are
-// both set once ticked. `media_kind` and `media_tmdb` name a film or show on TMDB, with its year
-// and poster file when known; `wants` is the JSON array of the members who want it. `place`,
-// `visited_in` (a month, `2026-10`) and `moments` (a JSON array of moment ids) are for travel.
+// `done_by` and `done_at` are set once ticked. `media_*` name a TMDB film or show; `wants` is a
+// JSON array of members. `place`, `visited_in` (a month, `2026-10`) and `moments` (JSON moment
+// ids) are for travel.
 export const listItems = sqliteTable(
   "list_items",
   {
@@ -310,9 +298,8 @@ export const movieSwipes = sqliteTable(
   ],
 );
 
-// Who knows who: the round of each room day (`day`, the cat's local day as for coins), with its
-// subject and its question ids as a JSON array. Kept for good: a pair's next questions follow
-// every round it had.
+// `day` is the cat's local day, as for coins. Kept for good: a pair's next questions follow every
+// round it had.
 export const guessRounds = sqliteTable("guess_rounds", {
   day: text("day").primaryKey(),
   subject: text("subject").notNull(),

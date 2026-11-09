@@ -18,9 +18,7 @@ const adminData = () =>
   );
 
 /**
- * The hand-checked query: per variant of `home-layout`, the pairs at least 7 days old, how many
- * had both partners active on day 7, how many had both add the widget on days 0 to 6, and the mean
- * notes and app opens per pair per day over days 0 to 6.
+ * Hand-checked per-variant metrics for pairs at least 7 days old, over days 0 to 6 and day 7.
  */
 const metricsSql = `
   WITH pairs AS (

@@ -1,7 +1,6 @@
 import { Effect } from "effect";
 import type { FunnelStore, SavedFunnel } from "../src/funnel-store.ts";
 
-/** The test double for `FunnelStore`. */
 export const makeInMemoryFunnelStore = () => {
   const funnels = new Map<string, SavedFunnel>();
   const store: FunnelStore["Service"] = {

@@ -10,10 +10,7 @@ export const contractOwners = ["owner-a", "owner-b"] as const;
 const [ana, ben] = contractOwners.map((id) => user(id)) as [UserId, UserId];
 const bot = (name: string) => user(`bot-${name}`);
 
-/**
- * The behaviour every `DemoPartnerRepository` must have. `make` must return an empty repository in
- * which `contractOwners` exist.
- */
+/** `make` must return an empty repository in which `contractOwners` exist. */
 export const describeDemoPartnerRepositoryContract = (
   name: string,
   make: () => Promise<DemoPartnerRepository["Service"]>,

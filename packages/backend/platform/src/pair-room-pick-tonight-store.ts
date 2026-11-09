@@ -29,7 +29,6 @@ const rowFrom = (row: typeof movieSwipes.$inferSelect) =>
     }),
   );
 
-/** `PickTonightStore` on the room's own SQLite. */
 export const SqlitePickTonightStore = Layer.effect(
   PickTonightStore,
   Effect.gen(function* () {

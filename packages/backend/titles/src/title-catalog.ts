@@ -24,10 +24,9 @@ export const searchTtlSeconds = day;
 export const detailsTtlSeconds = 7 * day;
 export const recommendationsTtlSeconds = 7 * day;
 
-/** The most titles one ask for recommendations answers. */
 const maxRecommendations = 20;
 
-/** Holds the instant, in epoch milliseconds, before which TMDB is not asked anything. */
+/** Holds the epoch-millisecond instant before which TMDB is not asked anything. */
 export const pauseKey = "tmdb:pause";
 
 /** The first results of a search are shown with a runtime or a season count, from their details. */
@@ -37,11 +36,7 @@ const detailedResults = 8;
 export const defaultCountry = "US";
 export const defaultLanguage = "en";
 
-/**
- * Films and shows from TMDB, as the app shows them. Every TMDB answer goes through `TitleCache`;
- * once TMDB answers 429, nothing is asked of it until its `Retry-After` has passed, while answers
- * already cached are still served.
- */
+/** After a TMDB 429 nothing is asked until `Retry-After`; cached answers are still served. */
 export class TitleCatalog extends Context.Service<
   TitleCatalog,
   {
@@ -55,10 +50,7 @@ export class TitleCatalog extends Context.Service<
       country: CountryCode,
       language: string,
     ) => Effect.Effect<TitleDetails, Failure>;
-    /**
-     * Titles TMDB recommends for those who liked `seeds`, taken in turn from each seed's list,
-     * without repeats or the seeds themselves. A seed TMDB lacks adds nothing.
-     */
+    /** Round-robin over each seed's list, without repeats or the seeds themselves. */
     readonly recommendations: (
       seeds: ReadonlyArray<{ readonly kind: MediaKind; readonly tmdb: number }>,
       language: string,

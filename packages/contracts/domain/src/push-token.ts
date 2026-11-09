@@ -1,17 +1,14 @@
 import { Schema } from "effect";
 
-/**
- * Which push lane a token serves. `liveactivity` is the device's push-to-start token for the
- * drawing Live Activity (iOS 17.2+). A device holds at most one token of each kind.
- */
+/** `liveactivity` is the push-to-start token (iOS 17.2+). At most one token of each per device. */
 export const PushTokenKind = Schema.Literals(["alert", "widget", "liveactivity"]);
 export type PushTokenKind = typeof PushTokenKind.Type;
 
-/** The APNs host a token belongs to: debug builds get sandbox tokens. */
+/** Debug builds get sandbox tokens. */
 export const ApnsEnvironment = Schema.Literals(["sandbox", "production"]);
 export type ApnsEnvironment = typeof ApnsEnvironment.Type;
 
-/** Hex, as APNs issues it. Apple warns the length can change, so only a generous cap is enforced. */
+/** Hex, as APNs issues it. Apple warns the length can change, so only a generous cap applies. */
 export const PushToken = Schema.String.check(Schema.isPattern(/^(?:[0-9A-Fa-f]{2}){1,256}$/)).pipe(
   Schema.brand("PushToken"),
 );

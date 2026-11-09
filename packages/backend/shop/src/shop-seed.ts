@@ -13,7 +13,7 @@ interface Shown {
   readonly isNew?: true;
 }
 
-// What the app shows for each piece today (apps/ios/Nooki/Model/Shop.swift). `{cat}` is the cat's name.
+// Mirrors apps/ios/Nooki/Model/Shop.swift. `{cat}` is the cat's name.
 const shown: Record<string, Shown> = {
   armchair: {
     name: "Cloud Armchair",
@@ -99,7 +99,7 @@ const shown: Record<string, Shown> = {
   },
 };
 
-// The daily-deals draw today: this pool in this order, each at its discount.
+// The daily-deals pool, in draw order.
 const dealPool = [
   ["teatable", 0.25],
   ["yarn", 0.3],
@@ -115,9 +115,7 @@ const dealPool = [
 const decode = Schema.decodeUnknownSync(ShopCatalogItem);
 
 /**
- * The shop as the app sold it before the catalog moved to D1: the same pieces, inks and prices.
- * The migration that creates the catalog inserts exactly these rows, and a test keeps the two
- * equal. Only the free ink is left out: it is never sold.
+ * Must equal the rows the catalog migration inserts (a test checks). The free ink is never sold.
  */
 export const seedItems: ReadonlyArray<ShopCatalogItem> = [
   ...roomItems.map((room, index) => {
@@ -156,6 +154,6 @@ export const seedItems: ReadonlyArray<ShopCatalogItem> = [
     ),
 ];
 
-/** When the migration wrote the seed, as `created_at` and `updated_at`. */
+/** `created_at` and `updated_at` of the migration's seed rows. */
 export const seedAt = 1_794_009_600_000;
 export const seedBy = "migration";
