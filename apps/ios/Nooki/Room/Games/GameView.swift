@@ -179,46 +179,35 @@ private struct CueHand: View {
             }
     }
 
+    /// One loop of the hand: a press (held for `hold`), a slide along the drag's path, a rub to and fro.
+    @KeyframesBuilder<HandMotion>
     private var motion: some Keyframes<HandMotion> {
-        KeyframeTrack(\.press) {
-            switch pointer.gesture {
-            case .tap:
-                CubicKeyframe(1, duration: 0.5)
-                SpringKeyframe(0.82, duration: 0.15)
-                SpringKeyframe(1, duration: 0.45)
-            case .hold:
-                CubicKeyframe(1, duration: 0.4)
-                SpringKeyframe(0.82, duration: 0.2)
-                LinearKeyframe(0.82, duration: 1.2)
-                SpringKeyframe(1, duration: 0.4)
-            case .rub, .drag:
-                SpringKeyframe(0.86, duration: 0.3)
-                LinearKeyframe(0.86, duration: 1.2)
-                SpringKeyframe(1, duration: 0.5)
-            }
+        let gesture = pointer.gesture
+        let press: (wait: Double, depth: CGFloat, hold: Double, lift: Double) = switch gesture {
+        case .tap: (0.5, 0.82, 0.01, 0.45)
+        case .hold: (0.4, 0.82, 1.2, 0.4)
+        case .rub, .drag: (0.01, 0.86, 1.5, 0.5)
         }
-        KeyframeTrack(\.along) {
-            switch pointer.gesture {
-            case .drag:
-                LinearKeyframe(0, duration: 0.3)
-                CubicKeyframe(1, duration: 1.2)
-                LinearKeyframe(1, duration: 0.5)
-            case .tap, .hold, .rub:
-                LinearKeyframe(0, duration: 1)
-            }
+        let along: CGFloat = gesture == .drag ? 1 : 0
+        let rub: CGFloat = gesture == .rub ? 14 : 0
+        KeyframeTrack(\HandMotion.press) {
+            CubicKeyframe(1, duration: press.wait)
+            SpringKeyframe(press.depth, duration: 0.2)
+            LinearKeyframe(press.depth, duration: press.hold)
+            SpringKeyframe(1, duration: press.lift)
         }
-        KeyframeTrack(\.rub) {
-            switch pointer.gesture {
-            case .rub:
-                LinearKeyframe(0, duration: 0.3)
-                CubicKeyframe(-14, duration: 0.3)
-                CubicKeyframe(14, duration: 0.3)
-                CubicKeyframe(-14, duration: 0.3)
-                CubicKeyframe(0, duration: 0.3)
-                LinearKeyframe(0, duration: 0.5)
-            case .tap, .hold, .drag:
-                LinearKeyframe(0, duration: 1)
-            }
+        KeyframeTrack(\HandMotion.along) {
+            LinearKeyframe(0, duration: 0.3)
+            CubicKeyframe(along, duration: 1.2)
+            LinearKeyframe(along, duration: 0.5)
+        }
+        KeyframeTrack(\HandMotion.rub) {
+            LinearKeyframe(0, duration: 0.3)
+            CubicKeyframe(-rub, duration: 0.3)
+            CubicKeyframe(rub, duration: 0.3)
+            CubicKeyframe(-rub, duration: 0.3)
+            CubicKeyframe(0, duration: 0.3)
+            LinearKeyframe(0, duration: 0.5)
         }
     }
 }
