@@ -20,7 +20,7 @@ struct DateDoneSheet: View {
     }
 
     var body: some View {
-        BilletSheet("How was it?") {
+        BilletSheet("How was it?", size: .fit) {
                 VStack(spacing: 14) {
                     if let title = DateIdea.idea(plan.ideaID)?.title { SheetSubtitle(text: title) }
                     HStack(spacing: 18) {

@@ -380,10 +380,9 @@ private struct MomentsPicker: View {
     private static let limit = 10
 
     var body: some View {
-        BilletSheet("Photos from Moments", scrolls: false, onConfirm: { dismiss() }) {
+        BilletSheet("Photos from Moments", subtitle: "\(selection.count) of \(Self.limit)", scrolls: false,
+                    onConfirm: { dismiss() }) {
         VStack(spacing: 0) {
-            SheetSubtitle(text: "\(selection.count) of \(Self.limit)")
-                .padding(.horizontal, Space.gutter)
             if moments.moments.isEmpty {
                 EmptyState(icon: UsGlyph(symbol: "photo.fill", tint: .lilac), title: "No moments yet",
                            text: "Photos you share in Moments can go with a trip.")

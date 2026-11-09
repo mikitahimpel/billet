@@ -369,6 +369,25 @@ const text = Note.cases.Text.make({
   paper: "butter",
   ink: rose,
 });
+const stampedText = Note.cases.Text.make({
+  id: noteId,
+  author: bob,
+  sentAt: 1_700_000_004_000,
+  text: "sealed with love",
+  paper: "cream",
+  stamp: "moon",
+  seal: "rose",
+  ink: rose,
+});
+const sealedDrawing = Note.cases.Drawing.make({
+  id: noteId,
+  author: alice,
+  sentAt: 1_700_000_005_000,
+  compact,
+  image,
+  paper: "sky",
+  seal: "night",
+});
 const plainText = Note.cases.Text.make({
   id: noteId,
   author: alice,
@@ -829,6 +848,8 @@ export const catalog: ReadonlyArray<Fixture> = [
     "photo-without-caption": photoWithoutCaption,
     text,
     "text-without-paper": plainText,
+    "text-stamped-and-sealed": stampedText,
+    "drawing-sealed": sealedDrawing,
   }),
   fixture("DeliveryLane", DeliveryLane, {
     "web-socket": DeliveryLane.cases.WebSocket.make({}),
@@ -868,6 +889,20 @@ export const catalog: ReadonlyArray<Fixture> = [
       key: idempotencyKey,
       text: "home soon",
       ink: freeInk,
+    }),
+    "text-stamped-and-sealed": SendNoteRequest.cases.Text.make({
+      key: idempotencyKey,
+      text: "sealed with love",
+      paper: "cream",
+      stamp: "moon",
+      seal: "rose",
+      ink: rose,
+    }),
+    "drawing-stamped": SendNoteRequest.cases.Drawing.make({
+      key: idempotencyKey,
+      compact,
+      image,
+      stamp: "paw",
     }),
   }),
   fixture("SendNoteResponse", SendNoteResponse, { default: { note: drawing } }),

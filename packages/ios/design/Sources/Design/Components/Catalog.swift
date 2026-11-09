@@ -76,6 +76,14 @@ private struct Catalog: View {
           CoinIcon(size: 28)
         }
 
+        SectionHeader("Stamps and seals")
+        HStack {
+          ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, width: 32) }
+        }
+        HStack {
+          ForEach(SealArt.allCases, id: \.self) { WaxSeal($0, size: 36) }
+        }
+
         SectionHeader("Rows")
         GroupedSection(header: "Settings", footer: "Haptics are only on this phone.") {
           Row("Profile", detail: "Mikita", symbol: "person.fill") { RowChevron() }

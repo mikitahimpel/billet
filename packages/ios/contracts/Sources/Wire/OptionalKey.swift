@@ -10,3 +10,12 @@ extension KeyedDecodingContainer {
     return try decode(T.self, forKey: key)
   }
 }
+
+extension KeyedDecodingContainer {
+  /// Decodes a schema `optionalKey` of literals that may grow: an id this build doesn't know is
+  /// `nil`, so a note decorated by a newer app still arrives, only without the decoration.
+  func decodeKnownKey<T: RawRepresentable & Decodable>(_ type: T.Type, forKey key: Key) throws -> T?
+  where T.RawValue == String {
+    try decodeOptionalKey(String.self, forKey: key).flatMap(T.init(rawValue:))
+  }
+}

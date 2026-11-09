@@ -1,3 +1,4 @@
+import Design
 import Foundation
 import Synchronization
 import Testing
@@ -133,5 +134,33 @@ private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .
 @Suite struct InboxLinkTests {
     @Test func theInboxHasADeepLink() {
         #expect(DeepLink(url: DeepLink.inbox.url) == .inbox)
+    }
+}
+
+@Suite struct InboxLayoutTests {
+    @Test func shortStatesFitTheirContent() {
+        let short: [(InboxModel.Phase, Bool)] = [
+            (.idle, false), (.loading, false), (.unpaired, false), (.failed, false), (.loaded, false),
+        ]
+        for (phase, hasItems) in short {
+            let layout = InboxLayout(phase: phase, hasItems: hasItems)
+            #expect(layout == .short)
+            #expect(layout.size == .fit)
+            #expect(layout.scrolls, "a fitted sheet measures its content through its own scroll view")
+        }
+    }
+
+    @Test func itemsTakeTheWholeSheet() {
+        for phase: InboxModel.Phase in [.loaded, .failed] {
+            let layout = InboxLayout(phase: phase, hasItems: true)
+            #expect(layout == .list)
+            #expect(layout.size == .large)
+            #expect(!layout.scrolls)
+        }
+    }
+
+    @Test func loadingKeepsTheShortSheet() {
+        #expect(InboxLayout(phase: .loading, hasItems: true) == .short)
+        #expect(InboxLayout(phase: .idle, hasItems: true) == .short)
     }
 }
