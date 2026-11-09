@@ -75,6 +75,11 @@ private struct NoteCard: View {
                         .padding(14)
                 }
             }
+            .overlay {
+                GeometryReader { proxy in
+                    Color.clear.postage(of: note, width: proxy.size.width)
+                }
+            }
             .overlay(alignment: .topTrailing) {
                 if note.unsent == true, session?.isPaired == true {
                     UnsentMark(size: 11, tint: Color(hex: note.inkHex).opacity(0.6)).padding(8)

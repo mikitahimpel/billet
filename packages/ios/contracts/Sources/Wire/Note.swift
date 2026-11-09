@@ -1,18 +1,19 @@
 /// A drawing has two renditions: compact strokes for pushes, and a full PNG in R2. A photo has
 /// its image (PNG, JPEG or HEIC) with its pixel size, a BlurHash `preview` and an optional
 /// `caption`; photos stored before those existed carry only the image, so each is `nil` there. A
-/// text note carries its words and no image. `paper` is `nil` when the sender chose none. A text
-/// note's `ink` is the colour it is written in; one stored before inks reads as `InkId.free`.
+/// text note carries its words and no image. `paper`, `stamp` and `seal` are `nil` when the sender
+/// chose none, and a stamp or seal this build doesn't know reads as `nil`. A text note's `ink` is
+/// the colour it is written in; one stored before inks reads as `InkId.free`.
 public enum Note: Codable, Hashable, Sendable {
   case drawing(
     id: NoteId, author: UserId, sentAt: Int, compact: CompactStrokes, image: MediaKey,
-    paper: PaperColor? = nil)
+    paper: PaperColor? = nil, stamp: NoteStamp? = nil, seal: NoteSeal? = nil)
   case photo(
     id: NoteId, author: UserId, sentAt: Int, image: MediaKey, width: Int? = nil,
     height: Int? = nil, preview: String? = nil, caption: NoteText? = nil)
   case text(
     id: NoteId, author: UserId, sentAt: Int, text: NoteText, paper: PaperColor? = nil,
-    ink: InkId = .free)
+    stamp: NoteStamp? = nil, seal: NoteSeal? = nil, ink: InkId = .free)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -23,6 +24,8 @@ public enum Note: Codable, Hashable, Sendable {
     case image
     case text
     case paper
+    case stamp
+    case seal
     case width
     case height
     case preview
@@ -53,7 +56,9 @@ public enum Note: Codable, Hashable, Sendable {
         sentAt: try Self.sentAt(container),
         compact: try container.decode(CompactStrokes.self, forKey: .compact),
         image: try container.decode(MediaKey.self, forKey: .image),
-        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper))
+        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper),
+        stamp: try container.decodeKnownKey(NoteStamp.self, forKey: .stamp),
+        seal: try container.decodeKnownKey(NoteSeal.self, forKey: .seal))
     case "Photo":
       self = .photo(
         id: try container.decode(NoteId.self, forKey: .id),
@@ -71,6 +76,8 @@ public enum Note: Codable, Hashable, Sendable {
         sentAt: try Self.sentAt(container),
         text: try container.decode(NoteText.self, forKey: .text),
         paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper),
+        stamp: try container.decodeKnownKey(NoteStamp.self, forKey: .stamp),
+        seal: try container.decodeKnownKey(NoteSeal.self, forKey: .seal),
         ink: try container.decodeOptionalKey(InkId.self, forKey: .ink) ?? .free)
     default:
       throw DecodingError.dataCorruptedError(
@@ -81,7 +88,8 @@ public enum Note: Codable, Hashable, Sendable {
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     switch self {
-    case .drawing(let id, let author, let sentAt, let compact, let image, let paper):
+    case .drawing(
+      let id, let author, let sentAt, let compact, let image, let paper, let stamp, let seal):
       try container.encode("Drawing", forKey: .tag)
       try container.encode(id, forKey: .id)
       try container.encode(author, forKey: .author)
@@ -89,6 +97,8 @@ public enum Note: Codable, Hashable, Sendable {
       try container.encode(compact, forKey: .compact)
       try container.encode(image, forKey: .image)
       try container.encodeIfPresent(paper, forKey: .paper)
+      try container.encodeIfPresent(stamp, forKey: .stamp)
+      try container.encodeIfPresent(seal, forKey: .seal)
     case .photo(
       let id, let author, let sentAt, let image, let width, let height, let preview, let caption):
       try container.encode("Photo", forKey: .tag)
@@ -100,13 +110,16 @@ public enum Note: Codable, Hashable, Sendable {
       try container.encodeIfPresent(height, forKey: .height)
       try container.encodeIfPresent(preview, forKey: .preview)
       try container.encodeIfPresent(caption, forKey: .caption)
-    case .text(let id, let author, let sentAt, let text, let paper, let ink):
+    case .text(
+      let id, let author, let sentAt, let text, let paper, let stamp, let seal, let ink):
       try container.encode("Text", forKey: .tag)
       try container.encode(id, forKey: .id)
       try container.encode(author, forKey: .author)
       try container.encode(sentAt, forKey: .sentAt)
       try container.encode(text, forKey: .text)
       try container.encodeIfPresent(paper, forKey: .paper)
+      try container.encodeIfPresent(stamp, forKey: .stamp)
+      try container.encodeIfPresent(seal, forKey: .seal)
       try container.encode(ink, forKey: .ink)
     }
   }

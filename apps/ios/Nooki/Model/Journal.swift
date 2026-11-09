@@ -37,16 +37,20 @@ final class Journal {
 
     /// A text note always goes to the partner (`TextNoteSync`), so the server pays for it when it arrives.
     @discardableResult
-    func addNote(text: String, paper: Note.Paper, ink: UInt32? = nil) -> Bool {
-        guard notes.add(text: text, paper: paper, author: viewer, ink: ink) != nil else { return false }
+    func addNote(
+        text: String, paper: Note.Paper, ink: UInt32? = nil, stamp: NoteStamp? = nil, seal: NoteSeal? = nil
+    ) -> Bool {
+        guard notes.add(text: text, paper: paper, author: viewer, ink: ink, stamp: stamp, seal: seal) != nil
+        else { return false }
         streak.record()
         return true
     }
 
     /// A doodle stays on this phone, so it earns as a note.
     @discardableResult
-    func addNote(doodle: UIImage, paper: Note.Paper) -> Bool {
-        guard let note = notes.add(doodle: doodle, paper: paper, author: viewer) else { return false }
+    func addNote(doodle: UIImage, paper: Note.Paper, stamp: NoteStamp? = nil, seal: NoteSeal? = nil) -> Bool {
+        guard let note = notes.add(doodle: doodle, paper: paper, author: viewer, stamp: stamp, seal: seal)
+        else { return false }
         earn(.noteAdded(note: note.id.uuidString))
         streak.record()
         return true
