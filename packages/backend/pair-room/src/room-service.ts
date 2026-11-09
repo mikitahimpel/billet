@@ -18,7 +18,7 @@ import type {
   RecordCatEventRequest,
   SaveCatRequest,
 } from "@billet/contracts-http-api/cat";
-import type { Note, PaperColor } from "@billet/contracts-domain/note";
+import type { Note, NoteSeal, NoteStamp, PaperColor } from "@billet/contracts-domain/note";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
@@ -118,9 +118,17 @@ export type PurchaseCredit =
 const catEntriesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<CatEntry> =>
   outputs.flatMap((output) => (output._tag === "CatEntryAppended" ? [output.entry] : []));
 
-// `paper` is an optional key: a note without one carries no `paper` at all, never `undefined`.
-const paperOf = (request: { readonly paper?: PaperColor }) =>
-  request.paper === undefined ? {} : { paper: request.paper };
+// `paper`, `stamp` and `seal` are optional keys: a note without one carries no key at all, never
+// `undefined`.
+const paperOf = (request: {
+  readonly paper?: PaperColor;
+  readonly stamp?: NoteStamp;
+  readonly seal?: NoteSeal;
+}) => ({
+  ...(request.paper === undefined ? {} : { paper: request.paper }),
+  ...(request.stamp === undefined ? {} : { stamp: request.stamp }),
+  ...(request.seal === undefined ? {} : { seal: request.seal }),
+});
 
 const stamped = (
   request: SendNoteRequest,

@@ -29,18 +29,20 @@ struct TextNoteSync {
             let ink = note.ink.flatMap { hex in PaletteInk.bundled.first { $0.light == hex } }?.wireID ?? .free
             let sent: SendNoteResponse
             do {
-                sent = try await api.sendNote(.text(key: key, text: text, paper: paper, ink: ink))
+                sent = try await api.sendNote(
+                    .text(key: key, text: text, paper: paper, stamp: note.stamp, seal: note.seal, ink: ink))
             } catch {
                 if error.isWorthRetrying { return true }
                 guard ink != .free else { continue }
                 do {
-                    sent = try await api.sendNote(.text(key: key, text: text, paper: paper, ink: .free))
+                    sent = try await api.sendNote(
+                        .text(key: key, text: text, paper: paper, stamp: note.stamp, seal: note.seal, ink: .free))
                 } catch {
                     if error.isWorthRetrying { return true }
                     continue
                 }
             }
-            guard case .text(let id, _, _, _, _, _) = sent.note else { continue }
+            guard case .text(let id, _, _, _, _, _, _, _) = sent.note else { continue }
             notes.setSent(note.id, noteID: id.rawValue)
         }
         return false
@@ -52,10 +54,12 @@ struct TextNoteSync {
         var after = defaults.object(forKey: Self.cursorKey) as? Int
         while let page = try? await api.listNotes(after), let last = page.lastSeq {
             for entry in page.notes {
-                guard case .text(let id, let author, let sentAt, let text, let paper, let ink) = entry.note,
+                guard case .text(let id, let author, let sentAt, let text, let paper, let stamp, let seal, let ink)
+                        = entry.note,
                       author.rawValue != viewer else { continue }
                 notes.addReceived(
                     text: text.rawValue, paper: paper.flatMap { Note.Paper(rawValue: $0.rawValue) } ?? .butter,
+                    stamp: stamp, seal: seal,
                     ink: PaletteInk.bundled.first { $0.wireID == ink }?.light, author: partner,
                     date: Date(timeIntervalSince1970: Double(sentAt) / 1000), noteID: id.rawValue)
             }
