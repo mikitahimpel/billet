@@ -92,6 +92,9 @@ macOS runners are few and shared by every agent.
 ## Git
 
 - Branch `<type>/<name>` off `main`, PR, squash-merge. Never push to `main`.
+- Merge with `scripts/merge-pr.sh <number>`: it waits for green checks and squash-merges. A branch
+  behind `main` merges as it is when `main`'s new commits are in areas it doesn't depend on;
+  otherwise the script merges `main` into it and waits again.
 - Conventional Commits with scope: `feat(ios): ...`, `fix(activity): ...`.
 
 ## Secrets and admin data
