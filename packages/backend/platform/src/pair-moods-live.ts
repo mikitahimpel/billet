@@ -2,7 +2,7 @@ import { Effect, Layer } from "effect";
 import { MoodService } from "@billet/backend-notes/mood-service";
 import { PairMoods } from "@billet/backend-pairing/pair-moods";
 
-/** The pair snapshot's check-ins, read from the pair's room. A room it cannot reach reads as none. */
+/** A room it cannot reach reads as no check-ins. */
 export const PairMoodsLive: Layer.Layer<PairMoods, never, MoodService> = Layer.effect(
   PairMoods,
   Effect.gen(function* () {

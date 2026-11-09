@@ -1,6 +1,4 @@
-// Mochi on her skeleton: sitting she looks around, twitches her ears and waves her tail, and lies down in a loaf to
-// doze when tired; given a route she gets up from one resting spot, walks and jumps along its waypoints, and sits down
-// at the other.
+// Mochi on her skeleton: rests at one of two spots and walks or jumps a route between them.
 import * as THREE from "three";
 import { CatRig, CatBehavior, Pose, noise } from "./cat-rig.js";
 import { CatSeat } from "./cat-seat.js";
@@ -24,10 +22,8 @@ const rampTime = 0.6;
 // Seconds the head takes to follow the body's bob, pitch and roll while walking.
 const headLag = 0.3;
 
-/**
- * Body postures as rig values; feet are offsets [up, back] from the rest paws in model units, `tail` lifts each tail
- * joint (negative lowers it).
- */
+/** Postures as rig values; feet are [up, back] offsets from the rest paws in model units,
+ * `tail` lifts each tail joint (negative lowers it). */
 const still = [0, 0, 0];
 const postures = {
   stand: {
@@ -41,8 +37,8 @@ const postures = {
     hind: [0, 0],
     tail: still,
   },
-  // Rump down on folded hind legs, chest up on straight fore legs, tail lying behind her: the seated splat's
-  // silhouette, with the head exactly where cat-sit.ply has it, for the swap between the two (see CatSeat).
+  // The seated splat's silhouette, with the head exactly where cat-sit.ply has it, for the swap
+  // between the two (see CatSeat).
   sit: {
     lift: -0.005,
     back: -0.005,
@@ -65,7 +61,6 @@ const postures = {
     hind: [0, 0],
     tail: still,
   },
-  // Lying with her paws tucked under her and the tail along her side.
   loaf: {
     lift: -0.065,
     back: 0,
@@ -83,10 +78,8 @@ const blendKeys = ["lift", "back", "pitch", "bend", "headPitch", "seat"];
 const breathChest = new THREE.Vector3(0, 0.0014, -0.0005);
 const breathHips = new THREE.Vector3(0, 0.0003, 0);
 
-/**
- * Her breathing, one breath at a time, each a little longer or deeper than the last: about 0.4 a second, slower and
- * deeper when drowsy, quicker and deeper after exertion. `value` is how far in she has breathed, about 0 to 1.
- */
+/** About 0.4 breaths a second, slower when drowsy, quicker after exertion; `value` is how far in
+ * she has breathed, about 0 to 1. */
 class Breath {
   constructor() {
     this.phase = Math.random();
@@ -114,13 +107,9 @@ class Breath {
 }
 
 export class CatWalker {
-  /**
-   * `group` is what she moves and turns, `splat` the standing cat, `seat` the seated one (see CatSeat), `scale` turns
-   * their model units into room units.
-   * Without a route she sits where `group` is, facing `rests[0]`. A route runs from the first resting spot to the
-   * second: [{ at: [x, y, z], move: 'walk' | 'jump' }], where `move` is how she gets to that point; `rests` are the
-   * two spots' resting yaws.
-   */
+  /** `scale` turns model units into room units. Without a route she sits facing `rests[0]`; a
+   * route [{ at: [x, y, z], move: 'walk' | 'jump' }] runs between two spots with resting yaws
+   * `rests`, `move` being how she reaches that point. */
   constructor({ group, splat, seat, scale }, rests, route = null, startAtEnd = true) {
     this.group = group;
     this.scale = scale;
@@ -193,7 +182,6 @@ export class CatWalker {
       this.wait -= dt;
       if (this.wait <= 0) this.plan();
     }
-    // Tired she lies down to doze, and gets up again once rested.
     const drowse = this.behavior.drowse;
     if (!this.moving && !this.lying && drowse > 0.7 && this.behavior.mood.energy < 0.3)
       this.lieDown();
@@ -213,7 +201,7 @@ export class CatWalker {
         this.wait = (10 + Math.random() * 12) * lerp(1.6, 0.6, this.behavior.mood.energy);
       }
     }
-    // Walking winds her a little, jumping more; resting she gets her breath back over half a minute or so.
+    // Resting, she gets her breath back over half a minute or so.
     const winding = this.free ? 0.6 : this.stepping ? 0.1 : 0;
     this.effort = winding
       ? Math.min(1, this.effort + winding * dt)
@@ -274,8 +262,7 @@ export class CatWalker {
         y + (name === "leftHind" ? this.tread[0] : name === "rightHind" ? this.tread[1] : 0);
       p.feet[name].z += z;
     }
-    // The tail rides high on the move and waves slowly, each joint a little later than the one before; on top of
-    // that it swings with the body's turns, starts and landings.
+    // On the move the tail rides high and waves; the spring adds the body's turns and landings.
     this.tail.update(dt, this.tailPush);
     p.tail.forEach((joint, i) => {
       const spring = this.tail.joints[i];
@@ -314,10 +301,8 @@ export class CatWalker {
     return force.length() > 80 ? force.set(0, 0, 0) : force;
   }
 
-  /**
-   * Breath, weight shifts and the chest turning after the head, laid over the body in model space about the seated
-   * spine; the seated skeleton takes the same moves, so the two heads stay on each other (see CatSeat).
-   */
+  /** Laid over the body in model space about the seated spine; the seated skeleton takes the
+   * same moves, so the two heads stay on each other (see CatSeat). */
   settle(dt, r) {
     const p = this.rig.pose;
     const b = this.behavior.state;
@@ -332,10 +317,8 @@ export class CatWalker {
     p.hipsMove.t.addScaledVector(breathHips, this.breath.value);
   }
 
-  /**
-   * The head rides the gait's bob, pitch and roll only as a slow average: it turns and shifts against them on the
-   * neck, so it holds its height and stays level, a little behind the body.
-   */
+  /** The head rides the gait's bob, pitch and roll only as a slow average, countering them on
+   * the neck so it stays level, a little behind the body. */
   steadyHead(dt, g) {
     const p = this.rig.pose;
     const k = 1 - Math.exp(-dt / headLag);
@@ -393,10 +376,7 @@ export class CatWalker {
     this.add(0.7, (u) => this.blend(postures.sit, postures.stand, ease(u)));
   }
 
-  /**
-   * A front stretch before setting off: fore paws reach forward, chest goes down and rump up with the tail raised,
-   * held with a little shiver, then back up.
-   */
+  /** A front stretch before setting off, held with a little shiver. */
   stretch() {
     const bow = {
       ...postures.stand,
@@ -485,11 +465,8 @@ export class CatWalker {
     this.blend(from, to, ease(THREE.MathUtils.clamp((t - t0) / (t1 - t0), 0, 1)));
   }
 
-  /**
-   * A cat's jump: she sizes it up and gathers her weight back over her hind legs, wiggles her rump treading with her
-   * hind paws, goes still, springs off her hind legs with the fore paws already up, reaches forward in the air, lands
-   * on her fore paws first, lets the hind paws follow, and lets both sets of legs take the weight before standing up.
-   */
+  /** She gathers, wiggles her rump, goes still, springs off her hind legs, lands fore paws first
+   * and lets both sets of legs take the weight before standing up. */
   jump(from, to) {
     const rise = (to.y - from.y) / this.scale;
     const up = rise > 0 ? 1 : 0;

@@ -125,6 +125,6 @@ const makeReviewRepository = (db: DirectoryDatabase): ReviewRepository["Service"
     }),
   );
 
-/** `ReviewRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const ReviewRepositoryLive = (binding: D1Database): Layer.Layer<ReviewRepository> =>
   Layer.effect(ReviewRepository, Effect.map(openDirectoryDatabase(binding), makeReviewRepository));

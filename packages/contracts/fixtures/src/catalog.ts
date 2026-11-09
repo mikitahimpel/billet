@@ -165,7 +165,6 @@ export interface Fixture {
   /** Swift type name and golden directory name. */
   readonly name: string;
   readonly schema: Schema.Codec<unknown, unknown>;
-  /** Sample values by file name. */
   readonly samples: Readonly<Record<string, unknown>>;
   /** For tagged unions: the `_tag`s that must each have a sample. */
   readonly tags?: ReadonlyArray<string>;

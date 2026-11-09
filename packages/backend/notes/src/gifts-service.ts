@@ -13,11 +13,7 @@ export class GiftNotAllowed extends Data.TaggedError("GiftNotAllowed") {}
 
 const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-unavailable" });
 
-/**
- * The pair's gift wishes, for the caller's own pair. Like notes, every method starts from the pair
- * D1 says the caller belongs to, never one the client names. No partner, or no such wish, is
- * `NotesNotFound`.
- */
+/** Every call starts from the caller's pair in D1. No partner or no such wish: `NotesNotFound`. */
 export class GiftsService extends Context.Service<
   GiftsService,
   {

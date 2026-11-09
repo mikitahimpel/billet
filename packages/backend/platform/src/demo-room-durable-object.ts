@@ -44,7 +44,7 @@ import { systemNow } from "./wall-clock.ts";
 export const MAX_FRAME_BYTES = 512 * 1024;
 export const MAX_QUEUED_NOTES = 50;
 export const DEVICE_HEADER = "x-demo-device";
-/** How many recent days of the drawing of the day a connecting phone is sent again. */
+/** Recent days of the drawing of the day a connecting phone is sent again. */
 export const DAILY_REPLAY_DAYS = 7;
 export const CODE_HEADER = "x-demo-code";
 
@@ -55,18 +55,15 @@ export interface DemoRoomEnv {
   readonly APNS_KEY_ID?: string;
 }
 
-/** Where each room's arrangement is kept, under the room's name. */
 const ARRANGEMENT_PREFIX = "arrangement:";
-/** The most rooms whose arrangement is kept: every furniture set, plain and with Idol props. */
+/** Every furniture set, plain and with Idol props. */
 export const MAX_ARRANGED_ROOMS = 24;
 
 const NOTE_PATH = /^\/demo\/rooms\/[^/]+\/notes\/([^/]+)$/;
 const PLAYS_PATH = /^\/demo\/rooms\/[^/]+\/plays$/;
-/** The most plays one `POST .../plays` may carry: a widget's treat is a treat and a feed. */
+/** A widget's treat is a treat and a feed. */
 export const MAX_POSTED_PLAYS = 2;
-/** The largest body `POST .../plays` reads: two small play frames. */
 export const MAX_POSTED_BYTES = 2048;
-/** What a widget may post without a socket: small things done for the cat. */
 const POSTABLE_KINDS: ReadonlySet<unknown> = new Set(["pet", "treat", "feed"]);
 const TOKEN = /^[0-9a-fA-F]{32,200}$/;
 
@@ -90,20 +87,15 @@ const petFrame = (pet: QueuedPet) => ({
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null;
 
-/**
- * Temporary demo room: two anonymous devices exchange notes. Undelivered notes live in the
- * object's key-value storage; sockets are hibernatable and tagged with their device id.
- */
+/** Undelivered notes live in key-value storage; hibernatable sockets are tagged by device id. */
 export class DemoRoom extends DurableObject<DemoRoomEnv> {
-  /** APNs transport; tests replace it with a stub. */
   protected apnsFetch: ApnsFetch = (url, init) => fetch(url, init);
 
-  /** The room's clock; tests replace it. */
   protected clock(): number {
     return systemNow();
   }
 
-  /** Names the room in spans by the start of its object id, never by its code. */
+  /** By the start of the object id, never by the room's code. */
   private readonly spanAttributes = { "room.ref": this.ctx.id.toString().slice(0, 16) };
 
   protected apnsCredentials(): Promise<ApnsCredentials | undefined> {
@@ -186,7 +178,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     );
   }
 
-  /** A note: stored once, queued for the partner, and acked; a repeat is only acked. */
+  /** A repeated note is only acked. */
   private async handleNote(
     socket: WebSocket,
     sender: string,
@@ -234,17 +226,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     this.announcePresence(socket);
   }
 
-  /**
-   * A pet is relayed to the partner, or kept (newest few) until they connect, and joins the cat's
-   * life with feeding, play and bedtime, which go to both sockets. A treat is recorded
-   * once per device per day, and the whole ledger goes to both sockets so phones agree. The cat's
-   * name is the first one given, unless renamed, when the last one wins. A move in choosing the
-   * cat is relayed to the partner live; the latest pick of each phone and the adoption are kept
-   * and replayed when the partner connects. The room's light switch is the last press from either
-   * phone, sent to both and replayed on connect, and so are the room's style and where each room's
-   * furniture stands, room by room, for a few rooms. A reaction is accepted only from the receiver of that note, and
-   * the whole table goes to both sockets.
-   */
+  /** Adopt picks, light, style and arrangements are replayed on connect; only a receiver reacts. */
   private async handlePlay(
     sender: string,
     frame: Readonly<Record<string, unknown>>,
@@ -328,11 +310,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     return play.id;
   }
 
-  /**
-   * A pet, a treat or a feed sent without a socket, as a home-screen widget does. It goes the way
-   * the same play from a socket goes, but the sender's queued notes and pets stay queued and no
-   * presence is announced: a widget is not the app. `204` once every play was taken.
-   */
+  /** A widget's plays: queued notes and pets stay queued and no presence is announced. */
   private async postPlays(device: string, request: Request): Promise<Response> {
     const devices = (await this.ctx.storage.get<string[]>("devices")) ?? [];
     if (!devices.includes(device)) return new Response(null, { status: 404 });
@@ -358,7 +336,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     return new Response(null, { status: 204 });
   }
 
-  /** The pair's prompts are its own: seeded by the room's code, or its id before it has one. */
+  /** Seeded by the room's code, or its id before it has one. */
   private async pairKey(): Promise<string> {
     return (await this.ctx.storage.get<string>("code")) ?? this.ctx.id.toString();
   }
@@ -375,11 +353,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     );
   }
 
-  /**
-   * Keeps the sender's drawing of the day `at` was written on, once: a second drawing of the same
-   * day changes nothing, so nobody can look at the partner's and draw again. Each phone is then
-   * sent its own view, which holds the partner's drawing only once that phone has drawn too.
-   */
+  /** A second drawing of a day changes nothing, so nobody can peek at the partner's and redraw. */
   private async recordDailyDrawing(sender: string, play: DailyFrame): Promise<void> {
     if (Math.abs(Date.parse(play.at) - this.clock()) > MAX_CLOCK_SKEW_MS) return;
     const day = dayOf(play.at);
@@ -401,7 +375,6 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     await this.scheduleReminder();
   }
 
-  /** Sends each connected phone what it may see of `day`. */
   private async sendDailyViews(day: string): Promise<void> {
     const pair = await this.pairKey();
     const drawings = await this.dailyDrawings(day);
@@ -412,7 +385,6 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     }
   }
 
-  /** The prompts for the days a phone may be living, then its view of each recent drawn day. */
   private async replayDaily(socket: WebSocket, device: string): Promise<void> {
     const pair = await this.pairKey();
     const now = this.clock();
@@ -425,7 +397,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     }
   }
 
-  /** Keeps the UTC offset a phone last wrote its time in, which says when its evening is. */
+  /** The offset says when the phone's evening is. */
   private async recordOffset(device: string, at: string): Promise<void> {
     const offset = offsetOf(at);
     if (offset === undefined) return;
@@ -444,7 +416,6 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     };
   }
 
-  /** Sets the alarm for the next evening reminder, or clears it when none can fall due. */
   private async scheduleReminder(): Promise<void> {
     const at = nextReminderAt(this.clock(), await this.reminderInputs());
     if (at === undefined) {
@@ -455,11 +426,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     if (current !== at) await this.ctx.storage.setAlarm(at);
   }
 
-  /**
-   * The evening reminder for the drawing of the day: once a day at most, to a phone that has not
-   * drawn its day, in its evening and never in quiet hours. A phone with no push token is still
-   * counted as reminded, so a token that arrives later does not bring a late-night push.
-   */
+  /** Never in quiet hours; a tokenless phone counts as reminded, so no late push follows. */
   override alarm(): Promise<void> {
     return traced("DemoRoom.alarm", this.spanAttributes, () => this.remind());
   }
@@ -492,7 +459,6 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     await this.scheduleReminder();
   }
 
-  /** Keeps `event` in the cat's life and sends it to both sockets, so both phones fold it. */
   private async recordLife(event: LifeEvent): Promise<void> {
     const log = (await this.ctx.storage.get<readonly LifeEvent[]>("life")) ?? [];
     const next = recordLife(log, event);
@@ -515,7 +481,6 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     target?.send(JSON.stringify(adoptFrame(play)));
   }
 
-  /** Hands a gift to the partner now, or keeps it until they connect. */
   private async relayGift(gift: QueuedGift): Promise<void> {
     const [target] = this.ctx.getWebSockets(gift.to);
     if (target !== undefined) {
@@ -598,7 +563,7 @@ export class DemoRoom extends DurableObject<DemoRoomEnv> {
     for (const socket of this.ctx.getWebSockets()) socket.send(message);
   }
 
-  /** Resolves to the note when it was queued because the partner has no open socket. */
+  /** Resolves to the note only when it was queued because the partner has no open socket. */
   private async deliverOrQueue(note: QueuedNote): Promise<QueuedNote | undefined> {
     const [target] = this.ctx.getWebSockets(note.to);
     if (target !== undefined) {

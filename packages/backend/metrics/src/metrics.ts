@@ -14,17 +14,12 @@ export interface MetricEvent {
   readonly name: MetricEventName;
   readonly detail?: string | undefined;
   readonly value?: number | undefined;
-  /**
-   * The build and system the app said it was (`clientInfoOf`), for what the app reports. Absent for
-   * what the server records itself.
-   */
+  /** `clientInfoOf`, for what the app reports; absent for what the server records. */
   readonly client?: { readonly appVersion: string; readonly os: string } | undefined;
 }
 
 /**
- * First-party counts, with no third-party service. `record` never fails and never waits on
- * anything but one write: a broken counter is logged with a fixed label and the request that
- * caused it carries on.
+ * `record` never fails: a broken counter is logged with a fixed label and the request carries on.
  */
 export class Metrics extends Context.Service<
   Metrics,

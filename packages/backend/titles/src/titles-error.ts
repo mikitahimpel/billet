@@ -1,6 +1,5 @@
 import { Data } from "effect";
 
-/** TMDB has no such film or show. */
 export class TitleNotFound extends Data.TaggedError("TitleNotFound") {}
 
 /** TMDB asked us to slow down; nothing is asked of it again for `retryAfterSeconds`. */

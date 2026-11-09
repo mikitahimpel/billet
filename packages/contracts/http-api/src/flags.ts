@@ -7,12 +7,7 @@ export const FlagAssignment = Schema.Struct({ key: ExperimentKey, variant: Varia
 export type FlagAssignment = typeof FlagAssignment.Type;
 
 /**
- * Every running experiment and the variant the pair is in. An experiment that is not listed is off
- * (not started, or switched off), and a client uses its built-in default. A client replaces its
- * stored copy with this list, never merges into it, so switching an experiment off takes effect.
- *
- * `status` is the service status (`GET /v1/status`), next to the flags so one launch read gets
- * both. Optional: an older server leaves it out, and an older app ignores it.
+ * Unlisted experiments are off. Replace the stored copy, never merge. `status` may be absent.
  */
 export const FlagsResponse = Schema.Struct({
   flags: Schema.Array(FlagAssignment),

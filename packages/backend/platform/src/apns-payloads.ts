@@ -1,6 +1,5 @@
-// The APNs bodies for one note on each push lane. The app's NotificationService extension reads
-// the `PushPayload` beside `aps` (apps/ios/Shared/Model/Drawings.swift), and the drawing Live
-// Activity decodes `content-state` as the `LiveActivity` case.
+// The NotificationService extension reads `PushPayload` beside `aps`
+// (apps/ios/Shared/Model/Drawings.swift); the Live Activity decodes `content-state`.
 import { Schema } from "effect";
 import type { Note } from "@billet/contracts-domain/note";
 import type { Reaction } from "@billet/contracts-domain/reaction";
@@ -8,10 +7,10 @@ import { PushPayload, pushPayloadKey } from "@billet/contracts-push/push-payload
 
 const encodePayload = Schema.encodeSync(PushPayload);
 
-/** APNs refuses a Live Activity push over 4 KB; alert and widget pushes may be 4 KB too. */
+/** APNs refuses a Live Activity push over 4 KB. */
 export const maxPushBytes = 4096;
 
-/** The ActivityKit attributes type the app registers for a drawing's Live Activity. */
+/** The ActivityKit attributes type the app registers. */
 export const drawingActivityType = "DrawingAttributes";
 
 const fieldsOf = (note: Note) => ({
@@ -22,10 +21,7 @@ const fieldsOf = (note: Note) => ({
   ...(note._tag !== "Photo" && note.paper !== undefined ? { paper: note.paper } : {}),
 });
 
-/**
- * The words on the alert. The server knows neither partner's name (they live on the phones), so
- * the title is the app's and the extension may rewrite it with the name it has.
- */
+/** The server knows no names (they live on the phones); the extension may rewrite the title. */
 const alertOf = (note: Note): { readonly title: string; readonly body: string } => {
   switch (note._tag) {
     case "Drawing":
@@ -37,7 +33,7 @@ const alertOf = (note: Note): { readonly title: string; readonly body: string } 
   }
 };
 
-/** An alert the NotificationService extension opens first (`mutable-content`), to save the drawing. */
+/** `mutable-content` makes the NotificationService extension open it first, to save the drawing. */
 export const alertBody = (note: Note): unknown => ({
   aps: { alert: alertOf(note), sound: "default", "mutable-content": 1, "thread-id": "notes" },
   [pushPayloadKey]: encodePayload(PushPayload.cases.Alert.make(fieldsOf(note))),
@@ -51,10 +47,7 @@ const emoji = {
   fire: "🔥",
 } as const satisfies Record<Reaction, string>;
 
-/**
- * An alert to a photo's author that the partner reacted. The extension writes the partner's name
- * into the title, as for a note.
- */
+/** The extension writes the partner's name into the title, as for a note. */
 export const reactionAlertBody = (reaction: {
   readonly note: Note["id"];
   readonly by: Note["author"];
@@ -75,10 +68,7 @@ export const reactionAlertBody = (reaction: {
   ),
 });
 
-/**
- * An alert to the partner who swiped ♥ first that the other one did too. It carries no payload,
- * so the notification extension leaves it as it is.
- */
+/** No payload, so the notification extension leaves it as it is. */
 export const matchAlertBody = (name: string): unknown => ({
   aps: {
     alert: { title: "It's a match!", body: `You both want to watch ${name}` },
@@ -87,11 +77,7 @@ export const matchAlertBody = (name: string): unknown => ({
   },
 });
 
-/**
- * An alert to the partner that the other member finished their part of today's Who knows who
- * round: as the subject, who answered `count` questions about themselves, or as the guesser. The
- * server knows no names, and the extension leaves an alert without a payload as it is.
- */
+/** The server knows no names, and the extension leaves an alert without a payload as it is. */
 export const guessAlertBody = (role: "subject" | "guesser", count: number): unknown => ({
   aps: {
     alert: {
@@ -121,16 +107,12 @@ const riddleAlert = (body: string): unknown => ({
   },
 });
 
-/**
- * An alert to the guesser that the partner drew them a riddle of `letters` letters. The server
- * knows no names, and the extension leaves an alert without a payload as it is.
- */
+/** The server knows no names, and the extension leaves an alert without a payload as it is. */
 export const riddleAlertBody = (letters: number): unknown =>
   riddleAlert(
     `Your partner drew you a riddle. ${letters} ${letters === 1 ? "letter" : "letters"}.`,
   );
 
-/** An alert to the drawer that the partner solved their riddle on try `tries`, or gave up. */
 export const riddleEndedAlertBody = (word: string, solved: boolean, tries: number): unknown =>
   riddleAlert(
     solved
@@ -138,13 +120,13 @@ export const riddleEndedAlertBody = (word: string, solved: boolean, tries: numbe
       : `Your partner gave up on “${word}”`,
   );
 
-/** A WidgetKit push only asks the widgets to reload; the payload rides along for a future reader. */
+/** It only asks the widgets to reload; the payload rides along for a future reader. */
 export const widgetBody = (note: Note): unknown => ({
   aps: { "content-changed": true },
   [pushPayloadKey]: encodePayload(PushPayload.cases.Widget.make(fieldsOf(note))),
 });
 
-/** Push-to-start for a drawing's Live Activity, or undefined for a note that is not a drawing. */
+/** Undefined for a note that is not a drawing. */
 export const liveActivityBody = (note: Note, nowSeconds: number): unknown => {
   if (note._tag !== "Drawing") return undefined;
   return {

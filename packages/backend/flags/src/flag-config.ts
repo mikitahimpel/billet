@@ -4,10 +4,8 @@ import { EpochMillis } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { defineExperiment, type Experiment, ExperimentStatus, Targeting } from "./experiments.ts";
 
-/**
- * The part of an experiment the admin may change without a deploy. The key, kind and variant ids
- * are not here: they are fixed by the registry, because the app must contain every variant.
- */
+/** Key, kind and variant ids are fixed by the registry, because the app must contain every
+ * variant. */
 export const FlagConfig = Schema.Struct({
   description: Schema.String.check(Schema.isMaxLength(500)),
   /** Every variant id of the registry entry, each with a whole-number weight of 0 or more. */
@@ -78,10 +76,8 @@ export const configOf = (experiment: Experiment): FlagConfig => ({
   targeting: experiment.targeting,
 });
 
-/**
- * The registry entry with `config` applied, or why it can't be. The config must weigh exactly the
- * entry's variants, so it can neither add a variant the app lacks nor drop one.
- */
+/** The config must weigh exactly the entry's variants, so it can neither add a variant the app
+ * lacks nor drop one. */
 export const applyConfig = (
   entry: Experiment,
   config: FlagConfig,
@@ -112,11 +108,8 @@ export const applyConfig = (
   }
 };
 
-/**
- * The registry with each stored configuration applied. A stored row for a key the registry does
- * not have is ignored, and so is one that no longer fits its entry (a variant removed in code):
- * that entry keeps its registry configuration.
- */
+/** A stored row for an unknown key, or one that no longer fits its entry (a variant removed in
+ * code), is ignored: that entry keeps its registry configuration. */
 export const effectiveExperiments = (
   registry: ReadonlyArray<Experiment>,
   stored: ReadonlyArray<StoredFlagConfig>,

@@ -24,7 +24,7 @@ const hashWhere = (where: ReadonlyArray<Where> | undefined) =>
         ),
       );
 
-/** The raw token the caller looked a session up by, if it named exactly one. */
+/** Only if the caller named exactly one. */
 const lookedUpToken = (where: ReadonlyArray<Where> | undefined): string | undefined => {
   const clause = where?.find(({ field }) => field === "token");
   return clause !== undefined &&
@@ -37,13 +37,7 @@ const lookedUpToken = (where: ReadonlyArray<Where> | undefined): string | undefi
 const withToken = <T>(row: T, token: string | undefined): T =>
   row !== null && typeof row === "object" && token !== undefined ? { ...row, token } : row;
 
-/**
- * Better Auth keeps session tokens as they are. This keeps their SHA-256 instead, as the API always
- * has: anyone who reads the table can't use what they read. Every lookup by token hashes the value
- * first, and a session found by its token comes back carrying that token, so Better Auth can still
- * hand it to the client. A session listed any other way carries only the hash. Plain SHA-256 is
- * enough: a token is at least 190 random bits, so there is nothing to guess.
- */
+/** Stores SHA-256 of session tokens; plain hashing is enough for ≥190 random bits. */
 export const hashSessionTokens = (adapter: DBAdapter): DBAdapter => ({
   ...hashInside(adapter),
   // Better Auth runs some writes through the adapter it is handed here, so that one hashes too.

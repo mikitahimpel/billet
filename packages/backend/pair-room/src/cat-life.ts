@@ -2,15 +2,7 @@ import type { CatEntry, CatEvent, CatNeeds } from "@billet/contracts-domain/cat"
 import type { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 
 /**
- * The cat's needs as a pure function of its journal and the time: a port of Swift's `PetLife`
- * (`packages/ios/Sources/Pet/Life/PetLife.swift`) with `LifeConfig.standard`, so the widget and a
- * future push read what both phones show. Change the two together; `cat-life.test.ts` pins golden
- * values the Swift side can check.
- *
- * Between events each need decays toward the floor, `n(t) = f + (n₀ − f)·e^(−Δt/τ)`, and each
- * event adds a diminishing gain, `n ← n + g·(1 − n)^k`. Sleep follows the pair's day rhythm and how
- * long the cat has been up. The fold starts a week back, or at the cat's birth if that is later,
- * and walks a fixed grid of absolute times, so the result does not depend on when it is asked.
+ * A port of Swift's `PetLife` with `LifeConfig.standard`: change both together; tests pin them.
  */
 export const lifeConfig = {
   floor: 0.2,

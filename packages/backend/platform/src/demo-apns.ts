@@ -2,7 +2,7 @@ import { appleTeamId, signEs256 } from "./es256-jwt.ts";
 import { logLine } from "./demo-trace.ts";
 import { type Now, systemNow } from "./wall-clock.ts";
 
-// Minimal APNs alert sender for the demo: one HTTP/2 request, no retries, no token cleanup.
+// One HTTP/2 request, no retries, no token cleanup.
 export const APNS_TOPIC = "com.mikitahimpel.billet";
 export const APNS_TEAM_ID = appleTeamId;
 const APNS_ORIGIN = "https://api.push.apple.com";
@@ -17,7 +17,7 @@ export type ApnsFetch = (url: string, init: RequestInit) => Promise<Response>;
 const providerToken = ({ key, keyId }: ApnsCredentials, now: Now): Promise<string> =>
   signEs256({ pem: key, keyId }, { iss: APNS_TEAM_ID, iat: Math.floor(now() / 1000) });
 
-/** Sends one "New note" alert. Resolves to whether APNs accepted it; never throws, never logs the token. */
+/** Never throws, never logs the token. */
 export const sendNoteAlert = (
   credentials: ApnsCredentials,
   deviceToken: string,
@@ -33,7 +33,7 @@ export const sendNoteAlert = (
     now,
   );
 
-/** Sends one alert with `payload` as its body. Resolves to whether APNs accepted it; never throws. */
+/** Never throws. */
 export const sendAlert = async (
   credentials: ApnsCredentials,
   deviceToken: string,

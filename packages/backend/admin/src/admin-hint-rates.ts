@@ -30,8 +30,7 @@ const arm = (shown: number, dismissed: number, acted: number): HintArm => ({
 });
 
 /**
- * Per hint, the shown to acted rate of the pairs that saw hints against the `hints` experiment's holdout, over
- * the `days` ending `today`, from `event_details`. The holdout reports `<id>-hold`. Pure; rows hold no pair.
+ * Shown-to-acted rates against the `hints` holdout, which reports `<id>-hold`. Rows hold no pair.
  */
 export const buildHintRates = (
   details: ReadonlyArray<DetailRow>,

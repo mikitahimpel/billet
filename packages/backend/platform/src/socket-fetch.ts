@@ -46,9 +46,7 @@ const whoIsAsking = (env: WorkerEnv, token: Redacted.Redacted<string>) =>
   );
 
 /**
- * `GET /v1/socket`: authenticates the bearer token, finds the caller's pair and hands the upgrade
- * to that pair's `PairRoom`. The room opens on the first connection, because pairing commits in D1
- * and never reaches the room. The user header is set here and nowhere else.
+ * Sets the user header (nowhere else does) and opens the room, which pairing never reaches.
  */
 export const respondSocket = async (
   request: Request,

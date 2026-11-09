@@ -56,7 +56,7 @@ class D1Driver implements Driver {
   destroy = () => Promise.resolve();
 }
 
-/** Kysely on a D1 binding, for Better Auth. Each query is its own statement: D1 has no sessions. */
+/** Each query is its own statement: D1 has no sessions. */
 export class D1Dialect implements Dialect {
   constructor(private readonly db: D1Database) {}
 

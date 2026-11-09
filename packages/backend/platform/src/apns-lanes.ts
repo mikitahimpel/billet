@@ -1,5 +1,4 @@
-// The push lanes of the PairRoom's delivery ledger: which lanes a room hands notes to, and how one
-// try of one lane goes. Pure over its dependencies, so the room and the tests supply them.
+// Pure over its dependencies, so the room and the tests supply them.
 import type { DeliveryEntry, DeliveryOutcome } from "@billet/backend-pair-room/delivery-ledger";
 import type { Note } from "@billet/contracts-domain/note";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
@@ -17,7 +16,6 @@ import {
   widgetBody,
 } from "./apns-payloads.ts";
 
-/** The token kind and APNs push type behind each push lane. */
 export const pushLanes = {
   WidgetPush: { kind: "widget", pushType: "widgets" },
   AlertPush: { kind: "alert", pushType: "alert" },
@@ -29,14 +27,11 @@ export type PushLane = keyof typeof pushLanes;
 export interface PushLaneSettings {
   readonly APNS_KEY?: string;
   readonly APNS_KEY_ID?: string;
-  /** `on` adds the Live Activity lane. Anything else, or absent, leaves it off. */
+  /** Only `on` adds the Live Activity lane. */
   readonly LIVE_ACTIVITY_PUSH?: string;
 }
 
-/**
- * The lanes a room uses: none without an APNs key, the widget and alert lanes with one, and the
- * Live Activity lane only when `LIVE_ACTIVITY_PUSH` is `on`.
- */
+/** No lanes without an APNs key; Live Activity only when `LIVE_ACTIVITY_PUSH` is `on`. */
 export const enabledPushLanes = (settings: PushLaneSettings): ReadonlyArray<PushLane> => {
   if (!settings.APNS_KEY || !settings.APNS_KEY_ID) return [];
   return settings.LIVE_ACTIVITY_PUSH === "on"
@@ -50,24 +45,17 @@ export interface DeviceToken {
 }
 
 export interface PushLaneDependencies {
-  /** The stored note the entry is for, if the room still has it. */
   readonly note: (noteId: string) => Promise<Note | undefined>;
-  /** The reaction change under its `rev` and the note it is on, while it is the latest. */
+  /** Only while the change under `rev` is still the latest. */
   readonly reaction: (
     rev: number,
   ) => Promise<{ readonly reaction: NoteReaction; readonly note: Note } | undefined>;
-  /**
-   * The Pick tonight match the card `key` made at `at`, while both still want it: whom to tell and
-   * the card's name.
-   */
+  /** Only while both members still want the Pick tonight match. */
   readonly match: (
     key: string,
     at: number,
   ) => Promise<{ readonly recipient: string; readonly name: string } | undefined>;
-  /**
-   * Whom to tell that `member` finished their part of the Who knows who round of `day`, while the
-   * round still waits for the partner, with the part they played and the round's length.
-   */
+  /** Only while the round still waits for the partner. */
   readonly guess: (
     day: string,
     member: string,
@@ -79,10 +67,6 @@ export interface PushLaneDependencies {
       }
     | undefined
   >;
-  /**
-   * The draw-guess riddle `id`, if the room still holds it: who drew it, who guesses, its word,
-   * how many tries it took and how its round stands.
-   */
   readonly riddle: (id: string) => Promise<
     | {
         readonly drawer: string;
@@ -93,7 +77,7 @@ export interface PushLaneDependencies {
       }
     | undefined
   >;
-  /** Who receives it: the member who did not write it. */
+  /** The member who did not write the note. */
   readonly recipient: (note: Note) => Promise<string | undefined>;
   readonly tokens: (user: string, kind: string) => Promise<ReadonlyArray<DeviceToken>>;
   readonly dropToken: (token: string, kind: string) => Promise<void>;
@@ -116,7 +100,7 @@ const isPushLane = (lane: string): lane is PushLane => Object.hasOwn(pushLanes, 
 
 const reactionPrefix = "reaction:";
 
-/** The ledger key of a reaction change's delivery, beside the note ids of note deliveries. */
+/** Shares the ledger key space with note ids. */
 export const reactionDeliveryId = (rev: number): string => `${reactionPrefix}${rev}`;
 
 const reactionRevOf = (deliveryId: string): number | undefined => {
@@ -127,7 +111,6 @@ const reactionRevOf = (deliveryId: string): number | undefined => {
 
 const matchPrefix = "match:";
 
-/** The ledger key of a Pick tonight match's delivery: the card and when the match was made. */
 export const matchDeliveryId = (key: string, at: number): string => `${matchPrefix}${at}:${key}`;
 
 const matchOfDelivery = (
@@ -142,7 +125,6 @@ const matchOfDelivery = (
 
 const guessPrefix = "guess:";
 
-/** The ledger key of the push that `member` finished their part of the round of `day`. */
 export const guessDeliveryId = (day: string, member: string): string =>
   `${guessPrefix}${day}:${member}`;
 
@@ -158,10 +140,8 @@ const guessOfDelivery = (
 const riddlePrefix = "riddle:";
 const riddleEndPrefix = "riddle-end:";
 
-/** The ledger key of the push that tells the guesser a riddle is waiting. */
 export const riddleDeliveryId = (id: string): string => `${riddlePrefix}${id}`;
 
-/** The ledger key of the push that tells the drawer how the round of a riddle ended. */
 export const riddleEndDeliveryId = (id: string): string => `${riddleEndPrefix}${id}`;
 
 const riddleOfDelivery = (
@@ -201,10 +181,7 @@ const sendToAll = async (
   return "Abandon";
 };
 
-/**
- * A reaction is an alert to the photo's author, and nothing on the other lanes. One that was
- * changed or taken back since is not sent: the change after it has its own delivery.
- */
+/** Alert lane only; a reaction changed since is skipped, as the change has its own delivery. */
 const sendReactionLane = async (
   lane: PushLane,
   rev: number,
@@ -223,7 +200,7 @@ const sendReactionLane = async (
   return sendToAll(note.author, lane, body, `r-${note.id}`, deps);
 };
 
-/** A match is an alert to the partner who swiped first, and nothing on the other lanes. */
+/** Alert lane only, to the partner who swiped first. */
 const sendMatchLane = async (
   lane: PushLane,
   match: { readonly key: string; readonly at: number },
@@ -235,10 +212,7 @@ const sendMatchLane = async (
   return sendToAll(found.recipient, lane, matchAlertBody(found.name), `m-${match.key}`, deps);
 };
 
-/**
- * A finished part is an alert to the partner, and nothing on the other lanes. One whose round
- * revealed or closed since is not sent.
- */
+/** Alert lane only; not sent once the round revealed or closed. */
 const sendGuessLane = async (
   lane: PushLane,
   part: { readonly day: string; readonly member: string },
@@ -251,10 +225,7 @@ const sendGuessLane = async (
   return sendToAll(found.recipient, lane, body, `g-${part.day}`, deps);
 };
 
-/**
- * A riddle is an alert, and nothing on the other lanes: a new one to its guesser while it is still
- * open, an ended one to its drawer.
- */
+/** Alert lane only: a new riddle to its guesser while open, an ended one to its drawer. */
 const sendRiddleLane = async (
   lane: PushLane,
   delivery: { readonly id: string; readonly ended: boolean },
@@ -276,12 +247,7 @@ const sendRiddleLane = async (
   }
 };
 
-/**
- * One try of one lane: sends the note to every device of the partner that has a token for it.
- * Delivered once any device took it; Retry while any failure may pass; Abandon when there is no
- * one to send to or nothing will ever be accepted. A dead token is dropped as it is found. A lane
- * that does not apply to the note (a Live Activity for a photo) counts as done.
- */
+/** Abandon when there is no one to send to or nothing will be accepted; n/a lanes count as done. */
 export const sendPushLane = async (
   entry: Pick<DeliveryEntry, "noteId" | "lane">,
   deps: PushLaneDependencies,

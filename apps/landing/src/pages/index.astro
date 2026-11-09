@@ -13,6 +13,10 @@ import { featureList, hubArt } from "../features";
 
 import appIcon from "../assets/app-icon.png";
 import mochi from "../assets/mochi-portrait.webp";
+// Stills of the 3D room at scroll 0 (phone 390×844, tablet 820×1180, desktop 1440×900), shown until the scene is up.
+import roomDesktop from "../assets/hero/room-desktop.webp";
+import roomPhone from "../assets/hero/room-phone.webp";
+import roomTablet from "../assets/hero/room-tablet.webp";
 import armchair from "../assets/Item_armchair.png";
 import lamp from "../assets/Item_lamp.png";
 import donutbed from "../assets/Item_donutbed.png";
@@ -125,10 +129,22 @@ const schema = [
       <section id="story" class="relative h-[420svh]">
         <div class="sticky top-0 h-svh overflow-hidden">
           <div class="absolute inset-0">
-            <HeroStage client:only="react" portrait={portrait.src} storyId="story" />
+            <picture id="story-poster" class="pointer-events-none absolute inset-0 transition-opacity duration-700">
+              <source media="(max-width: 767px)" srcset={roomPhone.src} />
+              <source media="(max-width: 1023px)" srcset={roomTablet.src} />
+              <img
+                src={roomDesktop.src}
+                alt=""
+                width={roomDesktop.width}
+                height={roomDesktop.height}
+                fetchpriority="high"
+                class="h-full w-full object-cover object-[center_top] lg:object-[right_center]"
+              />
+            </picture>
+            <HeroStage client:only="react" portrait={portrait.src} storyId="story" posterId="story-poster" />
           </div>
 
-          <div class="container-page pointer-events-none relative flex h-full flex-col justify-end pt-24 pb-10 md:justify-center md:pb-0">
+          <div class="container-page pointer-events-none relative flex h-full flex-col justify-end pt-24 pb-10 [text-shadow:0_2px_28px_rgb(26_10_20/0.55)] lg:justify-center lg:pb-0">
             <div data-beat="0" data-on class="max-w-[22rem] sm:max-w-[34rem] lg:max-w-[40rem]">
               <p class="eyebrow">Free on iPhone · made for two</p>
               <h1 class="mt-5 text-display">Your love has a cat now.</h1>
@@ -139,7 +155,7 @@ const schema = [
             </div>
           </div>
 
-          <div class="container-page pointer-events-none absolute inset-0 flex flex-col justify-end pb-12 md:justify-center md:pb-0">
+          <div class="container-page pointer-events-none absolute inset-0 flex flex-col justify-end pb-12 [text-shadow:0_2px_28px_rgb(26_10_20/0.55)] lg:justify-center lg:pb-0">
             <div data-beat="1" class="max-w-[22rem] sm:max-w-[32rem]">
               <p class="eyebrow">Late. Miles apart.</p>
               <h2 class="mt-4 text-h2">Leave a light on for each other.</h2>

@@ -275,7 +275,7 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
     }),
   );
 
-/** `PairingRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const PairingRepositoryLive = (binding: D1Database): Layer.Layer<PairingRepository> =>
   Layer.effect(
     PairingRepository,

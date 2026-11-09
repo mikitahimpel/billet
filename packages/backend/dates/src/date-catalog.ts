@@ -3,8 +3,6 @@ import { DateCatalogResponse } from "@billet/contracts-http-api/dates";
 import raw from "./date-catalog.json" with { type: "json" };
 
 /**
- * Every date idea, decoded once when the Worker loads, so a malformed `date-catalog.json` fails
- * the tests and the first request instead of reaching a client. Its `version` is kept current by
- * `scripts/date-catalog-version.mjs`.
+ * Decoded at Worker load, so bad JSON fails tests; `scripts/date-catalog-version.mjs` sets version.
  */
 export const dateCatalog: DateCatalogResponse = Schema.decodeUnknownSync(DateCatalogResponse)(raw);

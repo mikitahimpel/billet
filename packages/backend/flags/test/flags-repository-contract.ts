@@ -23,10 +23,8 @@ const row = (
 const sorted = (rows: ReadonlyArray<StoredAssignment>) =>
   rows.toSorted((a, b) => a.experimentKey.localeCompare(b.experimentKey));
 
-/**
- * The behaviour every `FlagsRepository` must have. Run it against each implementation, so the
- * in-memory fake can't drift from the real one. `make` must return an empty repository.
- */
+/** Run against each implementation so the in-memory fake can't drift from the real one. `make`
+ * must return an empty repository. */
 export const describeFlagsRepositoryContract = (
   name: string,
   make: () => Promise<FlagsRepository["Service"]>,

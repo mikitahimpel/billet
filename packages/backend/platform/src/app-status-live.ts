@@ -9,19 +9,12 @@ import {
 import { AppStatus, normalStatus } from "@billet/contracts-http-api/status";
 import { logLine } from "./observability.ts";
 
-/**
- * The service status lives in Workers KV, not D1: maintenance has to be switched on, and served,
- * while the database or the rest of the API is down. Two keys: the current status with its version,
- * and the last changes, newest first.
- */
+/** In KV, not D1: maintenance must be switchable and served while the database is down. */
 export const statusKey = "app-status";
 export const statusHistoryKey = "app-status-history";
 const historyLength = 200;
 
-/**
- * How long a Worker location keeps a read before asking KV again: the shortest KV allows. A change
- * reaches every app within about this plus KV's own propagation (up to a minute).
- */
+/** The shortest KV allows; a change also waits on KV's own propagation (up to a minute). */
 export const statusCacheSeconds = 30;
 
 const Stored = Schema.Struct({
@@ -43,11 +36,7 @@ const never: StoredAppStatus = {
   updatedBy: null,
 };
 
-/**
- * The status every request is answered under. Read before anything touches D1 and cached at the
- * location for `statusCacheSeconds`. No binding, an unreadable value or a KV failure all read as
- * the normal status, so a KV problem never takes the API down.
- */
+/** Read before anything touches D1; a KV failure reads as normal, so KV can't take the API down. */
 export const readServedStatus = async (kv: KVNamespace | undefined): Promise<AppStatus> => {
   if (kv === undefined) return normalStatus;
   try {
@@ -66,10 +55,7 @@ export const readServedStatus = async (kv: KVNamespace | undefined): Promise<App
 const attempt = <A>(reason: string, run: () => Promise<A>) =>
   Effect.tryPromise({ try: run, catch: (cause) => new AppStatusUnavailable({ reason, cause }) });
 
-/**
- * The admin panel's view: read without the location cache, so a save shows at once. KV has no
- * transactions; the version check stops a stale tab, which is all one owner needs.
- */
+/** Uncached so a save shows at once; a version check stops a stale tab (no KV transactions). */
 export const AppStatusStoreLive = (kv: KVNamespace | undefined) =>
   Layer.succeed(
     AppStatusStore,
@@ -103,7 +89,7 @@ export const AppStatusStoreLive = (kv: KVNamespace | undefined) =>
             }
             const saved = { status, version: before.version + 1, updatedAt: at, updatedBy: by };
             yield* attempt("write", () => kv.put(statusKey, JSON.stringify(saved)));
-            // The status is what matters; a history that can't be written doesn't undo it.
+            // A history that can't be written doesn't undo the status.
             const past = yield* history(historyLength).pipe(Effect.orElseSucceed(() => []));
             const change: AppStatusChange = { version: saved.version, at, by, status };
             yield* attempt("write-history", () =>

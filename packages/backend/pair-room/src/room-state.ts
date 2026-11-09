@@ -26,10 +26,7 @@ const Couple = Schema.Tuple([Member, Member]).check(
   ),
 );
 
-/**
- * The couple's cat, without its journal: the journal is unbounded, so it stays in the store, and
- * `lastSeq` and `lastAt` are the only parts of it a decision needs.
- */
+/** The couple's cat without its unbounded journal, which stays in the store. */
 export const RoomCat = Schema.Struct({
   profile: CatProfile,
   temper: CatTemper,
@@ -39,10 +36,7 @@ export const RoomCat = Schema.Struct({
 });
 export type RoomCat = typeof RoomCat.Type;
 
-/**
- * The pair's coins: the balance, and what care has earned on `day` against each daily cap. The
- * entries are unbounded, so they stay in the store.
- */
+/** The pair's coins: the balance, and what was earned on `day` against each daily cap. */
 export const RoomWallet = Schema.Struct({
   balance: Count,
   /** The local day the earned counts are for, absent before the first coin is earned. */
@@ -57,14 +51,7 @@ export type RoomWallet = typeof RoomWallet.Type;
 export const emptyWallet: RoomWallet = { balance: 0, care: 0, notes: 0, games: 0, lists: 0 };
 
 /**
- * What one couple's room knows, except the notes themselves: those are unbounded, so they stay
- * in the store and `lastSeq` is the only part of them that a decision needs.
- *
- * `streak` is the couple's love streak, counted from the days either partner reports.
- *
- * `inks` are the ink colours the pair has bought, in the order it got them. The free ink is
- * everyone's and never listed. `items` are the room's pieces the same way, without the starters.
- * `bonuses` are the collections whose bonus the pair was paid; a room stored before them has none.
+ * The room without its unbounded notes. `inks` and `items` leave out the free ink and starters.
  */
 export const RoomState = Schema.TaggedUnion({
   /** A new object, not given to a couple yet. */
@@ -83,10 +70,7 @@ export const RoomState = Schema.TaggedUnion({
     bonuses: Schema.Array(CollectionId).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
     /** The pair's local day it last opened the daily gift on. */
     giftDay: Schema.optionalKey(LocalDay),
-    /**
-     * Whether the pair got its welcome coins. A room opened before they existed reads false and
-     * gets them on its next command or read.
-     */
+    /** A room opened before welcome coins existed reads false and gets them on its next call. */
     welcomed: Schema.Boolean.pipe(Schema.withDecodingDefaultKey(Effect.succeed(false))),
     wallet: RoomWallet,
     /** The `rev` of the last reaction change; absent before the first. */

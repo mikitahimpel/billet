@@ -17,10 +17,7 @@ export interface AuthRepositoryFixture {
   readonly seedDevice: (deviceId: DeviceId, userId: UserId) => Promise<void>;
 }
 
-/**
- * The behaviour every `AuthRepository` must have. Run it against each implementation, so the
- * in-memory fake can't drift from the real one. `make` must return an empty repository.
- */
+/** Runs against every implementation so the fake can't drift. `make` returns an empty one. */
 export const describeAuthRepositoryContract = (
   name: string,
   make: () => Promise<AuthRepositoryFixture>,

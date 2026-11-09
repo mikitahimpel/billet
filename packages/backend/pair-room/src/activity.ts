@@ -120,8 +120,7 @@ const purchaseRow = ({ id, by, at, items, offer, coins }: PurchasedOutput): Acti
 };
 
 /**
- * The items an accepted decision adds, in the order of its outputs. `at` is the room's time for
- * outputs that carry none of their own (a save of the cat).
+ * An accepted decision's items, in output order; `at` is the room's time for outputs with none.
  */
 export const activityOf = (
   outputs: ReadonlyArray<RoomOutput>,
@@ -261,7 +260,6 @@ export const activityOf = (
     }
   });
 
-/** The row as `caller` sees it. */
 export const itemFor = (row: ActivityRow, caller: UserId): ActivityItem => {
   const actor: ActivityActor =
     row.doer._tag === "Member" ? (row.doer.user === caller ? "Me" : "Partner") : row.doer._tag;

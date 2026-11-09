@@ -39,16 +39,11 @@ const notificationOf = (outcome: string): StoredNotification => ({
   receivedAt: 1_700_000_100_000,
 });
 
-/**
- * The behaviour every `PaymentsRepository` must have. `make` returns a fresh repository, or one
- * whose owners don't collide between tests.
- */
+/** `make` returns a fresh repository, or one whose owners don't collide between tests. */
 export interface ContractSubject {
   readonly repository: PaymentsRepository["Service"];
-  /**
-   * Takes coins from an owner outside the repository's methods. Coins are spent in the app
-   * today, so only a test can make the server's balance smaller than a purchase it refunds.
-   */
+  /** Coins are spent in the app, so only a test can make the server's balance smaller than a
+   * purchase it refunds. */
   readonly spend: (owner: CoinOwner, coins: number) => Promise<void>;
 }
 

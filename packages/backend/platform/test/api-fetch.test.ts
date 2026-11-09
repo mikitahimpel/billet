@@ -534,7 +534,6 @@ describe("the Api Worker", () => {
     }
     expect((await env.MEDIA.list({ prefix: `pairs/${pairId}/` })).objects).toEqual([]);
     expect(await room.notes(0, 10)).toEqual([]);
-    // Both partners now answer as unpaired.
     for (const token of [owner, claimer]) {
       const notes = await call("/v1/notes", { method: "GET", headers: bearer(token) });
       expect(notes.status).toBe(404);
@@ -577,7 +576,7 @@ describe("the Api Worker", () => {
     const kept = await env.DB.prepare("SELECT user_id, kind, item_id FROM kept_items").all();
     expect(kept.results).toHaveLength(4);
 
-    // The owner pairs again: the new room has their share, the pieces and the ink, and their rows go.
+    // The owner pairs again: the new room gets their share, the pieces and the ink; their rows go.
     const third = await signedInAs("subject-third");
     expect((await claimWith(third, await inviteFrom(owner))).status).toBe(200);
     const after = await shopOf(owner);
@@ -686,7 +685,6 @@ describe("deleting an account", () => {
     const response = await remove(ana.sessionToken);
     expect(response.status).toBe(204);
 
-    // Gone: every row that names her, her session, and her images.
     for (const [table, column] of [
       ["users", "id"],
       ["auth_user", "id"],
@@ -1557,8 +1555,8 @@ describe("rate limits in the Worker", () => {
 
   it("answers 429 past the limit on a limited route, and not on others", async () => {
     // The counting is rate-limit.test.ts's; this pins down that the Worker applies it. All but the
-    // last allowed request are counted straight into D1, at the Worker's instant (TEST_NOW):
-    // thirty challenges through the Worker took close to the 5 s timeout on CI.
+    // last allowed request are counted straight into D1 at TEST_NOW: through the Worker they near
+    // the CI test timeout.
     for (let i = 1; i < limits.auth; i++) {
       expect(await limitRequest(challenge(), env.DB, testNowOf(env))).toBeUndefined();
     }

@@ -1,8 +1,3 @@
-// Play frames for the demo room: petting the cat, giving the day's treat, feeding, playing with,
-// shooing and putting the cat to bed, naming the cat, reacting to a note, choosing the cat
-// together, the room's light switch, how the room is done up, where its furniture stands, and
-// the drawing of the day.
-
 import { MAX_DAILY_INK } from "./daily-drawing.ts";
 
 export const MAX_QUEUED_PETS = 10;
@@ -10,14 +5,10 @@ export const MAX_TREAT_DAYS = 90;
 export const MAX_REACTIONS = 200;
 export const MAX_NAME_LENGTH = 24;
 export const MAX_LIFE_EVENTS = 400;
-/** The most gifts kept for a partner who is away, and the longest note one carries. */
 export const MAX_QUEUED_GIFTS = 20;
 export const MAX_GIFT_MESSAGE = 80;
 
-/**
- * Plays that only the cat's life counts, with nothing but who did it and when. A shoo sends the
- * cat off where it sat, so it learns to stay off.
- */
+/** A shoo sends the cat off where it sat, so it learns to stay off. */
 export type LifePlayKind = "feed" | "play" | "sleep" | "shoo";
 export type PlayKind =
   | "pet"
@@ -35,14 +26,13 @@ export type PlayKind =
   | "gift-opened";
 export type Reaction = "heart" | "stamp";
 
-/** A pet, a treat or a life play: nothing but who did it and when. */
 export interface PlayFrame {
   readonly id: string;
   readonly kind: "pet" | "treat" | LifePlayKind;
   readonly at: string;
 }
 
-/** One event of the cat's life, as both phones fold it. The ID is the frame's that carried it. */
+/** The ID is that of the frame that carried the event. */
 export interface LifeEvent {
   readonly id: string;
   readonly kind: "feed" | "pet" | "play" | "note" | "sleep" | "shoo";
@@ -61,12 +51,11 @@ export interface ReactFrame {
   readonly id: string;
   readonly kind: "react";
   readonly at: string;
-  /** The note being reacted to. */
   readonly note: string;
   readonly reaction: Reaction;
 }
 
-/** A name over the old one: the last one given wins. */
+/** The last name given wins. */
 export interface RenameFrame {
   readonly id: string;
   readonly kind: "rename";
@@ -74,11 +63,10 @@ export interface RenameFrame {
   readonly name: string;
 }
 
-/** Where the light switch on the room's wall stands, as the phones name it. */
 export const ROOM_LIGHTS = ["on", "cosy", "off"] as const;
 export type RoomLight = (typeof ROOM_LIGHTS)[number];
 
-/** A press of the room's light switch: the last one from either phone wins. */
+/** The last press from either phone wins. */
 export interface LightFrame {
   readonly id: string;
   readonly kind: "light";
@@ -86,16 +74,12 @@ export interface LightFrame {
   readonly light: RoomLight;
 }
 
-/**
- * How the room is done up, part by part, as the phones name each choice. The room keeps whatever
- * names it is sent, so a phone with newer choices needs no new room; a phone reads a name it
- * doesn't know as that part's standard look.
- */
+/** The room keeps any name it is sent; a phone reads an unknown one as the standard look. */
 export const ROOM_STYLE_PARTS = ["wall", "floor", "curtains", "drape", "view", "fairy"] as const;
 export type RoomStylePart = (typeof ROOM_STYLE_PARTS)[number];
 export type RoomStyle = Readonly<Partial<Record<RoomStylePart, string>>>;
 
-/** A change of the room's style: the last one from either phone wins, whole. */
+/** The last style from either phone wins, whole. */
 export interface StyleFrame {
   readonly id: string;
   readonly kind: "style";
@@ -105,7 +89,6 @@ export interface StyleFrame {
 
 const STYLE_NAME = /^[A-Za-z]{1,32}$/;
 
-/** `value` as a room style, or undefined unless it is an object of known parts given by name. */
 export const parseStyle = (value: unknown): RoomStyle | undefined => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
   const style: Partial<Record<RoomStylePart, string>> = {};
@@ -117,18 +100,14 @@ export const parseStyle = (value: unknown): RoomStyle | undefined => {
   return style;
 };
 
-/** The cats a pair chooses between, as the phones name them. */
 export const MAX_ARRANGED_PIECES = 80;
-/** How far from the room's middle, in room units, a moved piece can stand. */
+/** Room units from the room's middle. */
 export const MAX_ARRANGED_REACH = 20;
 
-/** Where a moved piece stands: across, into the room, and the way it faces, in radians. */
+/** Yaw in radians. */
 export type PieceSpot = readonly [x: number, z: number, yaw: number];
 
-/**
- * Where the furniture of one room stands, by piece; a piece missing from `spots` stands where the
- * room first put it. The last arrangement from either phone wins, room by room.
- */
+/** A piece missing from `spots` stands where the room first put it. Last arrangement wins. */
 export interface ArrangeFrame {
   readonly id: string;
   readonly kind: "arrange";
@@ -140,7 +119,6 @@ export interface ArrangeFrame {
 export const ADOPTION_CATS = ["ginger", "greyWhite", "black", "kitten", "fluffy"] as const;
 export type AdoptionCat = (typeof ADOPTION_CATS)[number];
 
-/** One phone's move while the pair chooses its cat: its pick, a finger on the cat, or adopting. */
 export type AdoptMove =
   | { readonly move: "pick"; readonly cat: AdoptionCat | null }
   | { readonly move: "hold"; readonly holding: boolean }
@@ -152,7 +130,7 @@ export type AdoptFrame = {
   readonly at: string;
 } & AdoptMove;
 
-/** This device's drawing of the day's prompt. The day is the one `at` was written on. */
+/** The day is the one `at` was written on. */
 export interface DailyFrame {
   readonly id: string;
   readonly kind: "daily";
@@ -160,10 +138,7 @@ export interface DailyFrame {
   readonly ink: string;
 }
 
-/**
- * An item bought or taken from the closet for the partner, with a short note. The room only
- * passes it on: the item is a shop id, and the note is the sender's own words.
- */
+/** The room only passes it on: the item is a shop id, the note the sender's own words. */
 export interface GiftFrame {
   readonly id: string;
   readonly kind: "gift";
@@ -172,7 +147,6 @@ export interface GiftFrame {
   readonly message?: string;
 }
 
-/** The partner unwrapped the gift `gift`. */
 export interface GiftOpenedFrame {
   readonly id: string;
   readonly kind: "gift-opened";
@@ -201,7 +175,6 @@ const ARRANGE_NAME = /^[A-Za-z0-9._-]{1,64}$/;
 const isReach = (value: unknown): value is number =>
   typeof value === "number" && Number.isFinite(value) && Math.abs(value) <= MAX_ARRANGED_REACH;
 
-/** A room's arrangement as a phone sent it, or undefined if any part of it is not a spot. */
 export const parseArrangement = (
   room: unknown,
   spots: unknown,
@@ -220,19 +193,16 @@ export const parseArrangement = (
   return { room, spots: parsed };
 };
 
-/** Note id mapped to the reaction its receiver gave it. */
 export type Reactions = Readonly<Record<string, Reaction>>;
 
-/** Calendar day (`YYYY-MM-DD`) mapped to the devices that gave a treat that day. */
+/** Calendar day (`YYYY-MM-DD`) to the devices that gave a treat that day. */
 export type TreatDays = Readonly<Record<string, readonly string[]>>;
 
-/** A gift, or word of one opened, waiting for the partner it is for. */
 export type QueuedGift = (GiftFrame | GiftOpenedFrame) & {
   readonly from: string;
   readonly to: string;
 };
 
-/** What the partner's phone receives for a gift or its opening. */
 export const giftFrame = (gift: QueuedGift): Readonly<Record<string, unknown>> =>
   gift.kind === "gift"
     ? {
@@ -245,7 +215,7 @@ export const giftFrame = (gift: QueuedGift): Readonly<Record<string, unknown>> =
 
 const SHOP_ID = /^[A-Za-z0-9._-]{1,64}$/;
 
-/** A gift's note: trimmed, one to `MAX_GIFT_MESSAGE` characters, no control characters. */
+/** Trimmed, one to `MAX_GIFT_MESSAGE` characters, no control characters; null when invalid. */
 export const parseGiftMessage = (value: unknown): string | undefined | null => {
   if (value === undefined || value === null) return undefined;
   if (typeof value !== "string") return null;
@@ -264,11 +234,10 @@ export interface QueuedPet extends PlayFrame {
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const ISO_TIME = /^(\d{4}-\d{2}-\d{2})T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?(?:Z|[+-]\d{2}:\d{2})$/;
 
-/** True for an ISO time with an offset that parses, as play frames carry it. */
 export const isTime = (at: unknown): at is string =>
   typeof at === "string" && ISO_TIME.test(at) && !Number.isNaN(Date.parse(at));
 
-/** A name as shown: trimmed, one to `MAX_NAME_LENGTH` characters, no control characters. */
+/** Trimmed, one to `MAX_NAME_LENGTH` characters, no control characters. */
 export const parseName = (value: unknown): string | undefined => {
   if (typeof value !== "string") return undefined;
   const name = value.trim();
@@ -277,7 +246,6 @@ export const parseName = (value: unknown): string | undefined => {
   return name;
 };
 
-/** Reads a `play` frame, or returns undefined when any field is missing or malformed. */
 export const parsePlay = (frame: Readonly<Record<string, unknown>>): AnyPlayFrame | undefined => {
   const { id, kind, at } = frame;
   if (typeof id !== "string" || !UUID.test(id)) return undefined;
@@ -363,7 +331,6 @@ const parseAdopt = (
   }
 };
 
-/** What the partner's phone receives for an adoption move. */
 export const adoptFrame = (play: AdoptFrame): Readonly<Record<string, unknown>> => {
   switch (play.move) {
     case "pick":
@@ -379,11 +346,11 @@ export const adoptFrame = (play: AdoptFrame): Readonly<Record<string, unknown>> 
   }
 };
 
-/** The cat keeps the first name it was given; a later one changes nothing. */
+/** The cat keeps the first name it was given. */
 export const keepFirstName = (current: string | undefined, proposed: string): string =>
   current ?? proposed;
 
-/** Sets the reaction to `note`, replacing an earlier one; the newest `MAX_REACTIONS` notes stay. */
+/** Replaces an earlier reaction to `note`; the newest `MAX_REACTIONS` notes stay. */
 export const recordReaction = (
   reactions: Reactions,
   note: string,
@@ -394,10 +361,10 @@ export const recordReaction = (
   return Object.fromEntries(keep);
 };
 
-/** The sender's local calendar day, taken from the offset-carrying timestamp as written. */
+/** The sender's local calendar day, from the offset-carrying timestamp as written. */
 export const dayOf = (at: string): string => at.slice(0, 10);
 
-/** Records `device`'s treat for the day of `at`; one treat per device per day, newest days kept. */
+/** One treat per device per day; the newest `MAX_TREAT_DAYS` days are kept. */
 export const recordTreat = (days: TreatDays, device: string, at: string): TreatDays => {
   const day = dayOf(at);
   const given = days[day] ?? [];
@@ -407,10 +374,7 @@ export const recordTreat = (days: TreatDays, device: string, at: string): TreatD
   return Object.fromEntries(keep.map((d) => [d, next[d] ?? []]));
 };
 
-/**
- * Adds `event` to the log unless its ID is there already; the newest `MAX_LIFE_EVENTS` stay.
- * Returns the log unchanged for a repeat, so the caller can tell whether to broadcast.
- */
+/** Returns `log` itself for a repeat ID, so the caller can tell whether to broadcast. */
 export const recordLife = (log: readonly LifeEvent[], event: LifeEvent): readonly LifeEvent[] => {
   if (log.some((e) => e.id === event.id)) return log;
   const next = [...log, event].sort((a, b) => Date.parse(a.at) - Date.parse(b.at));

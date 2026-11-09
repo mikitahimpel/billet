@@ -12,8 +12,7 @@ import { PairRoom as LivePairRoom } from "../src/pair-room-durable-object.ts";
 import { testNowOf } from "./test-now.ts";
 
 /**
- * PairRoom at the test instant: notes are stamped with it and alarms set from it. A test can move
- * the clock on with `advanceClock`, in memory, so an eviction takes it back to the instant.
+ * `advanceClock` moves the test instant on in memory, so an eviction takes it back.
  */
 export class PairRoom extends LivePairRoom {
   private advancedMs = 0;
@@ -41,8 +40,7 @@ export class ActivatedRoom extends DurableObject {
 }
 
 /**
- * A room that hands every note to one lane, whose sender is a script kept in storage: each call
- * takes the next outcome ("throw" fails the way a network error would) and is recorded.
+ * Each send takes the next scripted outcome from storage; "throw" fails like a network error.
  */
 export class LaneRoom extends PairRoom {
   protected override deliveryLanes = ["AlertPush"];

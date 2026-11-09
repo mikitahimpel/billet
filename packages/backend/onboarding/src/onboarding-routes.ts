@@ -35,10 +35,7 @@ const respondOnboardingFailures = <R>(
     respondFailures,
   );
 
-/**
- * The onboarding routes of the API. Any session will do, the anonymous one from first launch
- * included. Needs `AuthService` and `OnboardingService`.
- */
+/** Any session will do, the anonymous one from first launch included. */
 export const OnboardingRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const onboarding = yield* OnboardingService;

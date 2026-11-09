@@ -32,7 +32,7 @@ interface Peer {
   readonly waitFor: (check: (frames: Frame[]) => boolean, what: string) => Promise<void>;
 }
 
-/** Opens a socket and returns once the server's `room` frame arrived: replays are sent before it. */
+/** Returns once the server's `room` frame arrived: replays are sent before it. */
 const connect = async (code: string, device: string, rooms: Rooms = DEMO_ROOM): Promise<Peer> => {
   const response = await routeDemo(request(code, device), rooms)!;
   const socket = response.webSocket!;

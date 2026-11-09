@@ -15,31 +15,21 @@ export const ApiError = Schema.TaggedUnion({
   AlreadyPaired: {},
   /** This Apple ID is already linked to another account, so it can't be linked to the caller's. */
   AppleIdInUse: {},
-  /**
-   * An App Store transaction or notification that can't be honoured: a bad signature or
-   * certificate chain, another app's bundle, an environment this stage doesn't accept, or a
-   * product that isn't a coin pack. Retrying the same one fails the same way.
-   */
+  /** Bad signature/chain, foreign bundle, refused environment or non-coin product. Final. */
   InvalidPurchase: {},
   /** A text note in an ink colour the pair has not bought. Buy it in the shop, or use another. */
   InkNotOwned: { ink: InkId },
-  /** A buy that costs more than the pair's balance. */
   NotEnoughCoins: {
     needed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
     have: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   },
-  /** A buy of an item the pair already owns. */
   AlreadyOwned: { itemId: Schema.String },
-  /** A bonus for a collection with a piece still missing. */
   CollectionIncomplete: { collection: CollectionId },
   /** The day's gift is already open. Come back tomorrow. */
   GiftTaken: { day: LocalDay },
   /** A collection's bonus already paid. */
   BonusTaken: { collection: CollectionId },
-  /**
-   * An order whose server price is above the `expectedPrice` the client sent: nothing was charged.
-   * `price` is the price now; show it and ask again.
-   */
+  /** Server price is above `expectedPrice`, nothing charged. Show `price` (now) and ask again. */
   PriceChanged: { price: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
   /** A buy for the cat, such as a treat, before the couple adopted one. */
   CatNotAdopted: {},

@@ -96,10 +96,7 @@ const decodeEntryId = Schema.decodeSync(CoinEntryId);
 const decodeEarnRef = Schema.decodeSync(EarnRef);
 
 /**
- * A change to the coins a pair bought, under the payments ledger's entry id. A credit names its
- * coins. A reversal (a refund, or a refund Apple reversed) takes back or gives back what the entry
- * it `reverses` moved, so a restore returns only what its refund took; nothing when the room lacks
- * that entry.
+ * Bought coins by ledger entry id. A reversal undoes what its `reverses` entry moved, if held.
  */
 export type PurchaseCredit =
   | {
@@ -240,9 +237,8 @@ export class RoomService extends Context.Service<RoomService>()(
 
       const dispatch = (command: RoomCommand) => decideAndCommit(command).pipe(lock.withPermits(1));
 
-      // The id and the time are taken inside the lock, so `sentAt` follows the order of `seq`. A key
-      // the author already used answers with that note, also inside the lock, so two sends of one
-      // key at once store one note.
+      // Id and time are taken inside the lock, so `sentAt` follows `seq` and two sends of one key
+      // at once store one note.
       const sendNote = (author: UserId, request: SendNoteRequest) =>
         Effect.gen(function* () {
           const state = yield* store.load;
@@ -481,8 +477,7 @@ export class RoomService extends Context.Service<RoomService>()(
       const forgetLists = store.forgetLists.pipe(lock.withPermits(1));
 
       /**
-       * The pair's lists for `by`, after `change` when there is one, and the decision that change
-       * made, for what the caller pushes.
+       * The pair's lists for `by` after `change`, and the decision it made, for the caller to push.
        */
       const listsFor = (
         by: UserId,
@@ -550,8 +545,7 @@ export class RoomService extends Context.Service<RoomService>()(
       );
 
       /**
-       * The cat at the room's clock now, or null while the room is not open. Before adoption, a
-       * cat born now, so the answer has one shape.
+       * The cat at the room's clock, or null while not open; before adoption, a cat born now.
        */
       const catView: Effect.Effect<CatResponse | null> = Effect.gen(function* () {
         const now = yield* Clock.currentTimeMillis;

@@ -59,7 +59,6 @@ const respondTitleFailures = <R>(
     respondFailures,
   );
 
-/** Search and details of films and shows, for any signed-in caller. Needs `TitleCatalog`. */
 export const TitlesRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const catalog = yield* TitleCatalog;

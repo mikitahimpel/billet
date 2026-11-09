@@ -13,7 +13,7 @@ const guarded = <A, E>(effect: Effect.Effect<A, E>) =>
     (cause) => new FunnelStoreUnavailable({ reason: "directory-unavailable", cause }),
   );
 
-/** An `admin_funnels` row as stored: the definition is JSON text. */
+/** The definition is JSON text. */
 export const FunnelRow = Schema.Struct({
   id: Schema.String,
   name: Schema.String,
@@ -56,6 +56,6 @@ const makeFunnelStore = (db: DirectoryDatabase): FunnelStore["Service"] =>
     }),
   );
 
-/** `FunnelStore` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const FunnelStoreLive = (binding: D1Database): Layer.Layer<FunnelStore> =>
   Layer.effect(FunnelStore, Effect.map(openDirectoryDatabase(binding), makeFunnelStore));

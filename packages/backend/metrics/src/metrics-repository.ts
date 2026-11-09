@@ -4,9 +4,7 @@ import { MetricEventName } from "@billet/contracts-domain/metrics";
 import type { MetricsUnavailable } from "./metrics-error.ts";
 
 /**
- * What a `pair_events` row holds: how many times one person did one named thing on one UTC day.
- * There is nothing else in it: no note, image, text, device, address or place. `pairId` is empty
- * for what happens before pairing. A test in `platform` fails if the table's columns differ.
+ * No note, image, text, device or place; `pairId` is empty before pairing. Checked in `platform`.
  */
 export const StoredMetric = Schema.Struct({
   pairId: Schema.String,
@@ -24,10 +22,7 @@ export const StoredMetric = Schema.Struct({
 });
 export type StoredMetric = typeof StoredMetric.Type;
 
-/**
- * An `event_details` row: how many times one name came with one detail on one UTC day, and the sum
- * of their values. No user and no pair.
- */
+/** Per UTC day, name and detail: a count and the sum of values. No user and no pair. */
 export const StoredDetail = Schema.Struct({
   name: MetricEventName,
   detail: Schema.String,
@@ -55,10 +50,7 @@ export interface MetricOccurrence {
 export class MetricsRepository extends Context.Service<
   MetricsRepository,
   {
-    /**
-     * Adds one to the day's count, or starts it, and the same for its detail when it has one. Two
-     * at once both count.
-     */
+    /** Adds one to the day's count (and its detail's); concurrent calls both count. */
     readonly record: (occurrence: MetricOccurrence) => Effect.Effect<void, MetricsUnavailable>;
     /** Every row, oldest day first, for tests. */
     readonly all: Effect.Effect<ReadonlyArray<StoredMetric>, MetricsUnavailable>;

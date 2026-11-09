@@ -52,10 +52,7 @@ export interface Overview {
     readonly previousTo: string;
   };
   /**
-   * The stat cards, each over the range and the range before it. DAU is the mean per day, WAU is
-   * on the range's last day, new pairs are summed, notes per pair per day divide the notes by the
-   * days each pair existed. Pair completion and D1/D7 are cohorts: inviters whose first invite, and
-   * pairs that formed, fell in the range.
+   * Pair completion and D1/D7 are cohorts: inviters whose first invite, and pairs formed, in range.
    */
   readonly stats: {
     readonly dau: Stat;
@@ -92,9 +89,7 @@ const mean = (values: ReadonlyArray<number>): number | null =>
 const sum = (values: ReadonlyArray<number>) => values.reduce((a, b) => a + b, 0);
 
 /**
- * The Overview page, from the D1 counts. Pure, like `buildReport`, which it reuses for the pair
- * figures. DAU and WAU count people; a day is a UTC day. `days` is the range the stat cards and
- * charts cover (7, 30 or 90); the funnel and the totals are all time.
+ * DAU and WAU count people; a day is a UTC day. The funnel and the totals are all time.
  */
 export const buildOverview = (
   events: ReadonlyArray<EventRow>,

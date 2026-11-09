@@ -146,9 +146,8 @@ import {
 import { domainShape, tableShape } from "./schema-drift.ts";
 import { getTableName, tablesOf } from "./table-columns.ts";
 
-// `drizzle-orm/effect-schema` derives from tables, while the domain is hand-written with brands and
-// tagged unions, so neither can generate the other. Every exported table needs its domain type here: the test below
-// fails on one that is missing.
+// drizzle-orm/effect-schema derives from tables, the domain is hand-written: neither generates
+// the other. Every exported table needs its domain type here, or the test below fails.
 const checked = [
   ["account_keys", accountKeys, StoredAccountKey],
   ["admin_funnels", adminFunnels, FunnelRow],

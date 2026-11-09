@@ -43,7 +43,7 @@ const decodeEvents = Schema.decodeUnknownEffect(
 const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
   AdminData.of(
     spanMethods("AdminData", {
-      // Only the columns the funnel needs; `pair_events` holds no content in any case.
+      // Only the columns the funnel needs.
       events: guarded(
         db
           .select({
@@ -61,7 +61,6 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
           .orderBy(asc(pairEvents.day))
           .pipe(Effect.flatMap(decodeEvents)),
       ),
-      // Counts per thing and day; the table has no person or pair in it.
       details: guarded(
         db
           .select({
@@ -165,6 +164,6 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
     }),
   );
 
-/** `AdminData` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const AdminDataLive = (binding: D1Database): Layer.Layer<AdminData> =>
   Layer.effect(AdminData, Effect.map(openDirectoryDatabase(binding), makeAdminData));

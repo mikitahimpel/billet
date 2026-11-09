@@ -16,14 +16,7 @@ import {
 export const UploadImageResponse = Schema.Struct({ image: MediaKey });
 export type UploadImageResponse = typeof UploadImageResponse.Type;
 
-/**
- * The server assigns id, author and time. Sending the same `key` again returns the first note
- * instead of storing another.
- *
- * A photo names its uploaded image and carries its size in pixels and a BlurHash `preview`, so the
- * partner can lay it out and show a blur before the bytes arrive. `caption` follows the rules of a
- * text note's words and is optional.
- */
+/** The server sets id, author and time; a repeated `key` answers the first note. */
 export const SendNoteRequest = Schema.TaggedUnion({
   Drawing: {
     key: IdempotencyKey,

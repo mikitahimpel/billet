@@ -17,7 +17,6 @@ const request = (fields: Record<string, unknown>) =>
     ...fields,
   });
 
-/** The `reason` of the `InvalidAnswer` an exit failed with, or undefined. */
 const reasonOf = (exit: Exit.Exit<unknown, unknown>) =>
   Exit.isFailure(exit)
     ? Option.match(Exit.findErrorOption(exit), {

@@ -11,10 +11,7 @@ export function fmtDay(day) {
   return `${MONTHS[Number(m) - 1]} ${Number(d)}`;
 }
 
-/**
- * How long ago `ms` was, the way GitHub says it: "just now", "5 minutes ago", "yesterday",
- * "3 days ago", then a date once it is a month old. A future time reads "in 5 minutes".
- */
+/** GitHub-style: "just now", "5 minutes ago", "yesterday", then a date after a month. */
 export function relativeTime(ms, now) {
   if (ms == null) return "never";
   const diff = now - ms;
@@ -71,8 +68,7 @@ export function matchesQuery(text, query) {
 }
 
 /**
- * The change from the previous period. Counts change in percent; shares (`unit: "pp"`) in
- * percentage points. `none` when either side is missing, or a count rises from zero.
+ * Counts change in percent, shares (`unit: "pp"`) in points; `none` if a side is missing or 0.
  */
 export function deltaOf(current, previous, unit = "pct") {
   if (current == null || previous == null) return { kind: "none", text: "no earlier data" };
@@ -97,8 +93,7 @@ export function deltaOf(current, previous, unit = "pct") {
 }
 
 /**
- * The funnel with each step's conversion from the step before it and from the first counted step.
- * A step with no count (installs) gets no rates, and the next step compares with the last count.
+ * A step with no count (installs) gets no rates; the next step compares with the last count.
  */
 export function funnelSteps(steps) {
   const first = steps.find((step) => step.count != null);
@@ -190,8 +185,7 @@ export function statePill(config) {
 }
 
 /**
- * Flag changes and service-status changes as one log, newest first. Each row says where it
- * happened (`area`), on what (`subject`) and the action; the source change stays in `change`.
+ * Flag and status changes as one log, newest first; the source change stays in `change`.
  */
 export function mergeAudit(flagChanges, statusChanges) {
   const flags = flagChanges.map((change) => ({

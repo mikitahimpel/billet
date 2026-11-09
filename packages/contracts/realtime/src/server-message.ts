@@ -19,10 +19,8 @@ import { LivePoints, LiveStrokeId } from "./client-message.ts";
 export const PartnerPresence = Schema.Literals(["idle", "drawing", "away"]);
 export type PartnerPresence = typeof PartnerPresence.Type;
 
-/**
- * What the room sends a device. `seq` supports reconnect. The live stroke frames are the
- * partner's, relayed as they arrive and never stored or replayed.
- */
+/** `seq` supports reconnect. Live stroke frames are relayed as they arrive, never stored or
+ * replayed. */
 export const ServerMessage = Schema.TaggedUnion({
   Stroke: { seq: Schema.Int, stroke: Stroke },
   /**
@@ -32,12 +30,8 @@ export const ServerMessage = Schema.TaggedUnion({
   Presence: { state: PartnerPresence },
   NoteReceived: { seq: Schema.Int, note: Note },
   StrokeBegin: { id: LiveStrokeId, color: Color, width: Schema.Finite },
-  /**
-   * `relayedAt`: the room's clock (ms since 1970) when the frame reached it. Gaps between
-   * frames' `relayedAt` are how the sender's frames arrived at the room. A receiver compares
-   * them with its own arrival gaps to tell a delay on the way in from one on the way out, and
-   * can replay a clump at the pace the room saw (#326). Older rooms leave it out.
-   */
+  /** `relayedAt`: epoch ms when the frame reached the room, absent from older rooms. Lets a
+   * receiver tell an inbound delay from an outbound one and replay a clump at the room's pace. */
   StrokePoints: {
     id: LiveStrokeId,
     points: LivePoints,
@@ -47,53 +41,32 @@ export const ServerMessage = Schema.TaggedUnion({
   /** The partner's device left with this stroke still open: discard it, it will not end. */
   StrokeDropped: { id: LiveStrokeId },
   Clear: {},
-  /** One cat journal entry, either partner's, sent once to each socket that resumed the journal. */
+  /** Sent once to each socket that resumed the journal. */
   CatEntryAdded: { entry: CatEntry },
-  /** The cat was adopted, renamed or given a new look. */
   CatSaved: { cat: CatProfile },
-  /** The user's Inbox count changed, sent to sockets that resumed with `activity: true`. */
+  /** Sent to sockets that resumed with `activity: true`. */
   ActivityUnread: { unread: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
-  /** A reaction was set or taken back, sent to sockets that resumed with `lastReactionRev`. */
+  /** Set or taken back. Sent to sockets that resumed with `lastReactionRev`. */
   ReactionChanged: { reaction: NoteReaction },
-  /**
-   * The pair's coins, inks, room pieces or wishlist changed, sent to sockets that resumed with
-   * `shop: true`, and once on that resume.
-   */
+  /** Sent to sockets that resumed with `shop: true`, and once on that resume. */
   ShopChanged: { shop: PairShop },
-  /**
-   * The pair's lists, every one of them, sent to sockets that resumed with `lists: true`: once on
-   * that resume and after each change either partner makes.
-   */
+  /** Every list, to sockets that resumed with `lists: true`: on that resume and each change. */
   ListsChanged: { lists: Schema.Array(SharedList) },
-  /**
-   * A member's latest check-in, sent to sockets that resumed with `moods: true`: each one the room
-   * holds on the resume, then every new one.
-   */
+  /** To sockets that resumed with `moods: true`: each held check-in on resume, then each new. */
   MoodChanged: { checkIn: MoodCheckIn },
-  /**
-   * Both partners swiped ♥ on one Pick tonight card, sent to every socket that resumed with
-   * `lists: true`, the swiper's own included.
-   */
+  /** Sent to every socket that resumed with `lists: true`, the swiper's own included. */
   MatchFound: { match: PickMatch },
-  /**
-   * The partner answered another question of the Who knows who round of `round`: `answered` is how
-   * many they have now. Never which option. Sent to the other member's sockets that resumed with
-   * `guess: true`.
-   */
+  /** `answered`: how many the partner has answered, never which option. Sent to the other
+   * member's sockets that resumed with `guess: true`. */
   GuessProgress: {
     round: LocalDay,
     answered: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   },
-  /**
-   * Both members answered the whole round of `round`: every question opened, in round order, and
-   * the score after it as the socket's own user sees it. Sent to every socket that resumed with
-   * `guess: true`, the answerer's own included.
-   */
+  /** In round order, with the score as the socket's own user sees it. Sent to every socket that
+   * resumed with `guess: true`, the answerer's own included. */
   GuessRevealed: { round: LocalDay, reveal: Schema.Array(GuessReveal), score: GuessScore },
-  /**
-   * A draw-guess riddle was sent, tried, hinted or ended, as the socket's own user sees it: the
-   * guesser gets no `word` while it is open. Sent to every socket that resumed with `riddle: true`.
-   */
+  /** As the socket's user sees it: the guesser gets no `word` while it is open. Sent to every
+   * socket that resumed with `riddle: true`. */
   RiddleChanged: { riddle: Riddle },
 });
 export type ServerMessage = typeof ServerMessage.Type;

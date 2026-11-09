@@ -1,10 +1,7 @@
 import { Effect } from "effect";
 
 /**
- * The same service with a span named `<name>.<member>` around each call: every method that
- * returns an Effect, and every member that is an Effect. Other members pass through. Use it on a
- * repository or adapter built as an object literal, where `Effect.fn` would mean rewriting each
- * method.
+ * Spans each call `<name>.<member>`, for object literals where `Effect.fn` means a rewrite.
  */
 export const spanMethods = <Service extends object>(name: string, service: Service): Service => {
   const traced: Record<string, unknown> = {};

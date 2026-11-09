@@ -22,10 +22,7 @@ const decodeItem = Schema.decodeSync(RoomItemId);
 const decodeEntryId = Schema.decodeSync(CoinEntryId);
 
 /**
- * What the Worker does when pairing succeeds: gives the new pair its experiment variants (if that
- * fails, the first read of the flags does it) and counts the funnel steps, and opens the pair's room with who joined. When a pair ends, each
- * partner keeps their share of the purchases, then the room's sockets close and the room and the
- * pair's images are deleted. A pair that forms gives its room what its members keep.
+ * A pair's room opens with who joined; when it ends, partners keep their purchase shares first.
  */
 export const PairingObserverLive: Layer.Layer<
   PairingObserver,
@@ -47,9 +44,8 @@ export const PairingObserverLive: Layer.Layer<
     const demos = yield* DemoPartnerRepository;
     const review = yield* ReviewRepository;
     const pairing = yield* PairingRepository;
-    // A demo partner or the App Review partner is a fixture, not a person: its invite isn't
-    // counted, and its pair is kept under its own name, out of the funnel. If the lookup fails, it
-    // counts as a person.
+    // A demo or App Review partner is a fixture: its invite isn't counted and its pair stays out of
+    // the funnel. If the lookup fails, it counts as a person.
     const withBot = (users: ReadonlyArray<UserId>) =>
       Effect.forEach(users, (userId) =>
         Effect.zipWith(

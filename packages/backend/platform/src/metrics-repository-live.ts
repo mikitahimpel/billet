@@ -23,7 +23,7 @@ const decodeDetails = Schema.decodeUnknownEffect(Schema.Array(StoredDetail));
 const makeMetricsRepository = (db: DirectoryDatabase): MetricsRepository["Service"] =>
   MetricsRepository.of(
     spanMethods("MetricsRepository", {
-      // One statement per table: the add happens in the database, so two at once both count.
+      // The add happens in the database, so two concurrent records both count.
       record: ({ pairId, userId, name, at, detail, value, client }) => {
         const day = utcDay(at);
         const appVersion = client?.appVersion ?? null;
@@ -36,7 +36,7 @@ const makeMetricsRepository = (db: DirectoryDatabase): MetricsRepository["Servic
             set: {
               count: sql`${pairEvents.count} + 1`,
               lastAt: sql`max(${pairEvents.lastAt}, ${at})`,
-              // The day's latest report wins; a report without them keeps what is there.
+              // A report without client info keeps what is there.
               appVersion: sql`coalesce(excluded.app_version, ${pairEvents.appVersion})`,
               os: sql`coalesce(excluded.os, ${pairEvents.os})`,
             },
@@ -72,7 +72,7 @@ const makeMetricsRepository = (db: DirectoryDatabase): MetricsRepository["Servic
     }),
   );
 
-/** `MetricsRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const MetricsRepositoryLive = (binding: D1Database): Layer.Layer<MetricsRepository> =>
   Layer.effect(
     MetricsRepository,
