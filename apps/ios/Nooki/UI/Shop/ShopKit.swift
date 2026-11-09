@@ -140,7 +140,7 @@ struct CoinPrice: View {
                 .monospacedDigit()
             if let was, was > price {
                 Text("\(was)")
-                    .font(.nookiCaption.monospacedDigit())
+                    .font(.ourioCaption.monospacedDigit())
                     .strikethrough()
                     .opacity(0.6)
             }

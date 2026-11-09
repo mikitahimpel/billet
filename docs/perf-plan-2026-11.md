@@ -1,4 +1,4 @@
-# Nooki performance plan, November 2026
+# Ourio performance plan, November 2026
 
 What makes the app feel slow today, ranked by what the user feels against what a fix costs, with
 the numbers behind each claim and how each fix will be proved. Written before any fix; the rules it
@@ -169,7 +169,7 @@ CityRoomScene, DioramaView, CatWalker, CatRig, Kit, Props, SplatLoader, Resource
 | 7 | The City room: ~220 model entities with ~220 separate materials, 2 directional (1 shadowed) + 4 point lights + IBL, 30 bulb materials rewritten at dusk, `Calendar` and 12 point projections every frame | CityRoomScene.swift (whole), Props.swift, Kit.swift:16–30 (one material instance per call), Daylight.swift:77–80 | needs Ilya | high on the City (the owner's room switch and City fps), medium elsewhere | M | Share one material instance per tone (Kit); merge the static boxes of a room into one `MeshResource` with one part per material at build time (`MeshResource.Contents`, still Swift, still code-driven) so ~220 draw calls become ~15 in each of the colour and shadow passes; bulbs as one `MeshInstancesComponent`; the clock sampled once a second; `placeWindow` only when the camera or yaw moved. | render-thread and main-thread CPU per frame down by 3–8 ms on a phone (estimate from ~20–40 µs per entity per pass); `cpuMsPerS` on the City down 20–30 %; no look change | `room=city`: `steady: cpuMsPerS`, `orbit: p95, mainCPU`, `cost` once switches exist | low–medium: a merged mesh is culled as one (it is always on screen anyway) |
 | 8 | The Room: 26 bulb scales and the flame written every frame; furniture is one 286k-triangle mesh (≈568k GPU vertices) with 59 subsets and duplicate materials, drawn in the colour pass, the sun's shadow pass and the grounding-shadow pass; every subset and every fur shell casts a grounding shadow | DioramaScene.swift:82–89, :289–292; Resources/Room/Room_furniture.usdz (9.9 MB); CatRoom.swift:303–306 | needs Ilya | medium–high: Home's resting cost and energy | M (make_room.py already builds the furniture) | Bulb pulse at 20 Hz and as one instanced mesh; decimate and weld in make_room.py (target ≤ 60k triangles) and merge duplicate materials (59 → ~8 subsets); one shadow technique for static furniture (the sun's shadow map, no grounding shadow); no shadow from the fur shells. | ~1 M triangles a frame down to ~0.2 M; draw calls per frame from ~300 to ~120; main-thread commits per frame from ~28 to ~2; expect 1–3 ms of GPU and 0.5–1 ms of main thread on a phone | `cost` with new switches `fairy pulse`, `furniture shadow`; `memory peakMB`; `steady: cpuMsPerS` | low–medium: the furniture gets slightly softer at the closest zoom |
 | 9 | Bake the static shell of each room into one merged USDZ with lightmaps and AO (the manager's hypothesis) | DioramaScene, CityRoomScene, Kit, Props, Tools/ | needs Ilya and a pipeline | high per frame on phones, after 7 and 8 | L | See "Baking the static shell" below. | draw calls per pass ≈ 1–3 for the shell; lights from 4–6 to 1–2; fragment lighting cost of the room roughly halved | `cost` with a `baked shell` switch; `steady`; a phone run for GPU time | medium: a bake pipeline to keep, the loss of live tweaks, the time-of-day tint needs a design |
-| 10 | Launch: `Tips.configure` and every store read synchronously in `App.init`; the splash decodes a 1200×1600 portrait on main; the room's assets load in series on the mesh path and the four 7.3 MB splat files one after another; the furniture is 9.9 MB | NookiApp.swift:13–37, CatHero.swift:23, CatRoom.swift:320–360, SplatLoader | ours (app, splash); needs Ilya (loads) | medium: once per launch; 3.4–4 s to first frame on CI, 8.5 s to the room | S (app) + M (loads) | Stores read off the main thread behind a placeholder state; `Tips.configure` after the first frame (measured first, B24); the splash portrait shipped at its drawn size; splat poses loaded in a `TaskGroup` and parsed from a mapped file into the buffers; furniture decimated (8). | first frame −100–300 ms (phone, estimate), room drawing −20–30 %, cat placed −30 % | `ab` launches: `first frame`, `room drawing`, `cat placed`, `memory peak` | low |
+| 10 | Launch: `Tips.configure` and every store read synchronously in `App.init`; the splash decodes a 1200×1600 portrait on main; the room's assets load in series on the mesh path and the four 7.3 MB splat files one after another; the furniture is 9.9 MB | OurioApp.swift:13–37, CatHero.swift:23, CatRoom.swift:320–360, SplatLoader | ours (app, splash); needs Ilya (loads) | medium: once per launch; 3.4–4 s to first frame on CI, 8.5 s to the room | S (app) + M (loads) | Stores read off the main thread behind a placeholder state; `Tips.configure` after the first frame (measured first, B24); the splash portrait shipped at its drawn size; splat poses loaded in a `TaskGroup` and parsed from a mapped file into the buffers; furniture decimated (8). | first frame −100–300 ms (phone, estimate), room drawing −20–30 %, cat placed −30 % | `ab` launches: `first frame`, `room drawing`, `cat placed`, `memory peak` | low |
 
 Not in the ten, worth their own line:
 
@@ -344,11 +344,14 @@ the new view is never hidden while it starts. Run 42529129271.
 
 Inside the noise, and the stall still shows, so the stand-in over the room is not the cause.
 
-**The stall after the covers is on main.** One `settled` run in three on base runs at 0.8 fps
-with 1–2 s frames and almost no CPU, after the Inbox closes and the room remounts. That is the
-user-visible bug the baseline section suspected. Neither arm explains it. Next: a local
-Simulator look (close the Inbox, does Mochi still breathe?), then Instruments on a quiet Mac or
-H6, to find what the main thread waits on.
+**The stall after the covers is the runner, not the app.** One `settled` run in three on base runs
+at 0.4–0.8 fps on CI: frames of about 1 s each with a few ms of CPU, from a cover's close until the
+app quits. That is the drawable wait timing out because the GPU never returns the drawables: the
+Simulator's Metal host stops running the app's GPU work on a busy runner (load 130–380 here). It
+does not happen locally: three runs of the same Release build at load 13–30 settled at 55–58 fps
+with no frame over 0.5 s. It is on main before #523 and #530. `report.py` now leaves such a phase,
+and the rest of its run, out of the medians as "gpu lost", and each perf job saves the host's
+`simmetalhost.log`. A phone settles it for good (close the Inbox: does Mochi still breathe?).
 
 ## Harness gaps
 

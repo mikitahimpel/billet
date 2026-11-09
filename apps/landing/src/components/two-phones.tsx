@@ -81,7 +81,7 @@ export function TwoPhones({ mochi }: { mochi: string }) {
           <div className="lit-panel relative mt-8 w-full p-3" aria-live="polite">
             <div className="mb-2 flex items-center justify-between">
               <span className="text-[12px] font-semibold tracking-[0.06em] text-soft uppercase">
-                Nooki
+                Ourio
               </span>
               <span className="rounded-[8px] bg-plate px-2 py-1 font-mono text-[12px] text-honey">
                 Day 127

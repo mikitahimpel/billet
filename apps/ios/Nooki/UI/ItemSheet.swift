@@ -43,7 +43,7 @@ struct ItemSheet: View {
                         MochiReaction(name: state.petName, mood: mood)
                     }
                     Text(item.blurb)
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -145,11 +145,11 @@ struct ItemSheet: View {
             }
             if owned {
                 Label("In your closet", systemImage: "checkmark.circle.fill")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             } else if !affordable {
                 Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
@@ -207,10 +207,10 @@ private struct MochiReaction: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(name) feels \(mood.lowercased())")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Text(line)
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

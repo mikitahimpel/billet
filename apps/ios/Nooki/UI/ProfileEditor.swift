@@ -59,7 +59,7 @@ struct ProfileEditor: View {
                 Monogram(partner: partner, profile: profile, size: 64)
                     .overlay(alignment: .bottomTrailing) {
                         Image(systemName: "camera.fill")
-                            .font(.nookiMicro)
+                            .font(.ourioMicro)
                             .foregroundStyle(Ink.heroInk)
                             .frame(width: 24, height: 24)
                             .background(.honeyGradient, in: .circle)
@@ -69,17 +69,17 @@ struct ProfileEditor: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Field("Name", text: Binding(get: { names[partner] ?? "" }, set: { names[partner] = $0 }),
-                      font: .nookiHeadline)
+                      font: .ourioHeadline)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.done)
 
                 if profile.couple.viewer == partner {
                     Label("This phone", systemImage: "iphone")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.accentText)
                 } else if profile.couple.pair == nil {
                     Button("This is me") { profile.setViewer(partner) }
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
             }
@@ -91,10 +91,10 @@ struct ProfileEditor: View {
     private var togetherCard: some View {
         VStack(alignment: .leading, spacing: 6) {
             DatePicker("Together since", selection: $since, in: ...Date.now, displayedComponents: .date)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
             Text("Day \(Couple(partners: profile.couple.partners, togetherSince: since, viewer: profile.couple.viewer).daysTogether()) together")
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
         .padding(CardMetrics.padding)

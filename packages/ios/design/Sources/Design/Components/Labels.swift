@@ -25,12 +25,12 @@ public struct EmptyState<Actions: View>: View {
       RowIcon(symbol: symbol, tint: tint, size: 64)
         .padding(.bottom, Space.xs)
       Text(title)
-        .font(.nookiTitle)
+        .font(.ourioTitle)
         .foregroundStyle(Ink.text)
         .multilineTextAlignment(.center)
       if let text {
         Text(text)
-          .font(.nookiCallout)
+          .font(.ourioCallout)
           .foregroundStyle(Ink.textSecondary)
           .multilineTextAlignment(.center)
       }
@@ -70,17 +70,17 @@ public struct SectionHeader<Trailing: View>: View {
     HStack(alignment: .firstTextBaseline, spacing: Space.s) {
       if let symbol {
         Image(systemName: symbol)
-          .font(.nookiCallout.weight(.semibold))
+          .font(.ourioCallout.weight(.semibold))
           .foregroundStyle(tint ?? Ink.accentText)
           .accessibilityHidden(true)
       }
       Text(title)
-        .font(.nookiHeadline)
+        .font(.ourioHeadline)
         .foregroundStyle(Ink.text)
         .accessibilityAddTraits(.isHeader)
       Spacer(minLength: Space.s)
       trailing
-        .font(.nookiCaption)
+        .font(.ourioCaption)
         .foregroundStyle(Ink.textSecondary)
     }
   }
@@ -119,7 +119,7 @@ public struct Chip: View {
       if let symbol { Image(systemName: symbol).foregroundStyle(accent) }
       Text(title)
     }
-    .font(.nookiMicro)
+    .font(.ourioMicro)
     .foregroundStyle(style.isHoney ? Ink.heroInk : Ink.text)
     .padding(.horizontal, Space.s)
     .frame(minHeight: 22)
@@ -165,7 +165,7 @@ public struct FilterChip: View {
   public var body: some View {
     Button(action: action) {
       Text(title)
-        .font(.nookiCallout)
+        .font(.ourioCallout)
         .foregroundStyle(isSelected ? Ink.heroInk : Ink.textSecondary)
         .padding(.horizontal, 14)
         .frame(minHeight: 34)

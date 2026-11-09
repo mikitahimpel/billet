@@ -51,6 +51,20 @@ public final class Store<M: Machine> {
     }
   }
 
+  /// Returns once `done` holds, looking again at each change of what it read. Unlike `settled`, it
+  /// waits only for the work `done` is about, so a caller isn't held by an unrelated output.
+  public func until(_ done: @escaping () -> Bool) async {
+    while !done() {
+      await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
+        withObservationTracking {
+          _ = done()
+        } onChange: {
+          continuation.resume()
+        }
+      }
+    }
+  }
+
   private func start(_ output: M.Output) {
     let id = nextRunID
     nextRunID += 1

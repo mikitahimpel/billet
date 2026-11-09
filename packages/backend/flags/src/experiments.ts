@@ -238,7 +238,7 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     key: "rooms",
     kind: "experiment",
     description:
-      "Which rooms a new pair gets in Nooki: both (Room and City), only the Room, or only the City. " +
+      "Which rooms a new pair gets in Ourio: both (Room and City), only the Room, or only the City. " +
       "Primary metric: both partners active on day 7. Set Paired since to the start, so only new pairs enter.",
     variants: { both: 1, "room-only": 1, "city-only": 1 },
     default: "both",

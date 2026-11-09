@@ -1,5 +1,5 @@
 // Fails when feature code gains a raw `Color(red:` or `.font(.system(size:`, or a corner radius written as a
-// number, outside the design package: colours, type and corners come from `Ink`, the `.nooki*` fonts and `Radius`
+// number, outside the design package: colours, type and corners come from `Ink`, the `.ourio*` fonts and `Radius`
 // (docs/design-system.md). Run from anywhere in the repository.
 //
 // Files that already had raw values when a guard was added are listed in its baseline with their counts, and may
@@ -18,7 +18,7 @@ const checks = [
     pattern: /Color\(\s*red:|\.font\(\s*\.system\(\s*size:/g,
     baseline: join(here, "design-baseline.json"),
     what: "raw Color(red:) / .font(.system(size:)",
-    fix: "Use Ink colours and the .nooki* text styles from the design package (docs/design-system.md).",
+    fix: "Use Ink colours and the .ourio* text styles from the design package (docs/design-system.md).",
   },
   {
     pattern:

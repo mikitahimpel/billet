@@ -226,7 +226,7 @@ struct WaxBlob: Shape {
       Color(hex: 0xFFE7A0)
         .frame(width: 220, height: 220)
         .overlay {
-          Text("miss you already").font(.nookiTitle).foregroundStyle(Color(hex: 0x2B2B2E))
+          Text("miss you already").font(.ourioTitle).foregroundStyle(Color(hex: 0x2B2B2E))
         }
         .postage(stamp: .moon, seal: .rose, width: 220)
     }

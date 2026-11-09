@@ -75,7 +75,7 @@ struct DateDoneSheet: View {
                 .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
                 .overlay(alignment: .bottomTrailing) {
                     Label("Change", systemImage: "photo")
-                        .font(.nookiCaption.weight(.semibold))
+                        .font(.ourioCaption.weight(.semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
@@ -89,10 +89,10 @@ struct DateDoneSheet: View {
                     .font(.system(.title, weight: .semibold))
                     .foregroundStyle(Color.honey)
                 Text("Add a photo from the date")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Text("It goes into your Moments")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
             .frame(maxWidth: .infinity)
@@ -150,7 +150,7 @@ struct DatePlannerSheet: View {
                     DatePicker("When", selection: $date, displayedComponents: [.date, .hourAndMinute])
                         .datePickerStyle(.compact)
                         .tint(.honey)
-                        .font(.nookiBody)
+                        .font(.ourioBody)
                         .foregroundStyle(Ink.text)
                         .fieldSurface()
 
@@ -158,7 +158,7 @@ struct DatePlannerSheet: View {
 
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Who plans it")
-                            .font(.nookiCaption.weight(.semibold))
+                            .font(.ourioCaption.weight(.semibold))
                             .foregroundStyle(Ink.textSecondary)
                         HStack(spacing: 8) {
                             ForEach([state.partners.0, state.partners.1], id: \.self) { initial in
@@ -170,7 +170,7 @@ struct DatePlannerSheet: View {
                     }
 
                     Toggle("Surprise mode", isOn: $surprise)
-                        .font(.nookiBody)
+                        .font(.ourioBody)
                         .foregroundStyle(Ink.text)
                         .tint(.honey)
                         .fieldSurface()
@@ -180,7 +180,7 @@ struct DatePlannerSheet: View {
                     }
 
                     Toggle("Remind us a day and an hour before", isOn: $remind)
-                        .font(.nookiBody)
+                        .font(.ourioBody)
                         .foregroundStyle(Ink.text)
                         .tint(.honey)
                         .fieldSurface()

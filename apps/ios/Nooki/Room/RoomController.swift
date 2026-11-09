@@ -117,7 +117,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func perfShown(_ kind: RoomKind) {
-        if let current { NookiPerf.shown(current, kind: kind) }
+        if let current { OurioPerf.shown(current, kind: kind) }
     }
 
     /// Returns once the room has drawn a frame it had not, or after `timeout`.

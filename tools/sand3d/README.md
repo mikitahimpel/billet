@@ -6,7 +6,7 @@ Shop furniture written as short Python programs over [Sand3D](https://github.com
 
 | File | What |
 | --- | --- |
-| `billet_style.py` | The room's look: Nooki palette, `clay` / `cloth` / `wood` materials, bevel radii, tessellation |
+| `billet_style.py` | The room's look: Ourio palette, `clay` / `cloth` / `wood` materials, bevel radii, tessellation |
 | `armchair.py` | `armchair(fabric, cushion, legs)` |
 | `drawers.py` | `chest_of_drawers(..., open=)`; the bottom drawer slides on a joint |
 | `plant.py` | `potted_plant(kind, pot, ...)`: monstera, snake plant, bush |

@@ -99,7 +99,7 @@ struct PickTonightScreen: View {
                     round("heart.fill", label: "Want to", honey: true) { swipe(top, .want, model) }
                 }
                 Text(model.unsent ? "That swipe didn't send. Try it again." : "Not tonight · Seen it · Want to")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(model.unsent ? Ink.accentText : Ink.textSecondary)
             }
         }
@@ -120,7 +120,7 @@ struct PickTonightScreen: View {
                         .foregroundStyle(.white)
                         .lineLimit(3)
                     Text(caption(card))
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
                 }
@@ -274,10 +274,10 @@ private struct PickMatchScreen: View {
                 }
                 .accessibilityHidden(true)
                 Text("It's a match!")
-                    .font(.nookiLargeTitle)
+                    .font(.ourioLargeTitle)
                     .foregroundStyle(Ink.primary)
                 Text("You both want to watch")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.secondary)
                 PosterImage(path: match.posterPath, title: match.name, size: .card)
                     .frame(width: 150, height: 225)
@@ -285,11 +285,11 @@ private struct PickMatchScreen: View {
                     .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
                     .padding(.vertical, Space.s)
                 Text(match.name)
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.primary)
                     .multilineTextAlignment(.center)
                 Text(note)
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.secondary)
                 Spacer(minLength: 0)
                 VStack(spacing: Space.s) {

@@ -16,7 +16,7 @@ and cheap variants. Its weak spots are organic shapes and a few export rough edg
 
 | File | What |
 | --- | --- |
-| `billet_style.py` | Our look as a module: Nooki palette, `clay` / `cloth` / `wood` materials, bevel radii, tessellation |
+| `billet_style.py` | Our look as a module: Ourio palette, `clay` / `cloth` / `wood` materials, bevel radii, tessellation |
 | `armchair.py` | `armchair(fabric, cushion, legs)`: 7 colourways × plump/tufted/flat × peg/tapered/bun |
 | `drawers.py` | `chest_of_drawers(..., open=)`: bottom drawer is a real tray on a prismatic joint, 0–300 mm |
 | `plant.py` | `potted_plant(kind, pot, ...)`: monstera (slit leaves on stems), snake, bush; tapered or belly pot |
@@ -169,7 +169,7 @@ None is in the shop's catalog. Listing them is the owner's call, made in the adm
 
 The app never puts bought furniture in the room, so a perf arm does: `-perf.pieces today|sand3d` stands three
 pieces on the Room's floor, and a `cost` run's `pieces` switch takes them away and puts them back
-(`NookiPerf.swift`). `today` is `Item_armchair`, `Item_bookcase` and `Item_monstera`. `sand3d` is
+(`OurioPerf.swift`). `today` is `Item_armchair`, `Item_bookcase` and `Item_monstera`. `sand3d` is
 `Item_armchair-meadow`, `Item_chest` and `Item_monstera-potted`. Each is fitted the way the shop fits it and lit
 like the room's own furniture.
 

@@ -246,7 +246,7 @@ class CatRoom {
             director?.appOpened()
             catHeadTop = 0.3 * scale
             if subscription != nil { adoptCat() }
-            NookiPerf.catPlaced()
+            OurioPerf.catPlaced()
         }
     }
 

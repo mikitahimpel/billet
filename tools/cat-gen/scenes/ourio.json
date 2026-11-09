@@ -1,0 +1,6 @@
+{
+  "out": "../out/ourio",
+  "assets": {
+    "Cat": { "image": "../refs/cat-sitting.png", "height": 0.30 }
+  }
+}

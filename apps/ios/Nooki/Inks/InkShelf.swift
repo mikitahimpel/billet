@@ -32,7 +32,7 @@ struct InkShelf: View {
                 .frame(width: 56, height: 56)
                 .accessibilityHidden(true)
             Text(ink.name)
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
             if owned {
                 Chip("Yours", symbol: "checkmark")

@@ -43,7 +43,7 @@ D1 has no interactive transactions. An operation that spans statements runs as o
 
 ### Coins and payments
 
-Nooki's coins are the one currency. Coins bought for money live in D1 (`purchases` and
+Ourio's coins are the one currency. Coins bought for money live in D1 (`purchases` and
 `coin_ledger`), because a transaction id is unique across every pair and Apple's refund
 notifications name no pair. Coins earned in play and spent in the shop live in the pair's
 `PairRoom` (`wallet` and `coin_entry`), next to the cat's journal, so a coin is credited in the

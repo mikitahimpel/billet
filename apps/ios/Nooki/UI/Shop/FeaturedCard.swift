@@ -21,7 +21,7 @@ struct FeaturedCard: View {
                 } icon: {
                     Image(systemName: "clock")
                 }
-                .font(.nookiMicro)
+                .font(.ourioMicro)
                 .foregroundStyle(.white)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -45,10 +45,10 @@ struct FeaturedCard: View {
             HStack(alignment: .center, spacing: Space.m) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(offer.name)
-                        .font(.nookiTitle)
+                        .font(.ourioTitle)
                         .foregroundStyle(.white)
                     Text(offer.blurb)
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(.white.opacity(0.85))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -114,9 +114,9 @@ private struct ValueBadge: View {
     var body: some View {
         VStack(spacing: 0) {
             Text("×\(multiple)")
-                .font(.nookiTitle.monospacedDigit())
+                .font(.ourioTitle.monospacedDigit())
             Text("value · save \(saves)")
-                .font(.nookiMicro.monospacedDigit())
+                .font(.ourioMicro.monospacedDigit())
         }
         .foregroundStyle(Ink.heroInk)
         .padding(.horizontal, Space.m)

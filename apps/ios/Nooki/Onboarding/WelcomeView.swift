@@ -25,7 +25,9 @@ struct WelcomeView: View {
                 let time = reduceMotion ? script.duration : context.date.timeIntervalSince(start)
                 content(proxy.size, time: time)
                     // Only while the script plays: the frames after it are the UI test's, reading the probe.
-                    .onChange(of: context.date) { if time <= script.duration { probe?.frame(context.date) } }
+                    .onChange(of: context.date) {
+                        if time <= script.duration { probe?.frame(context.date) } else { probe?.finish() }
+                    }
             }
         }
         .background { WelcomeBackdrop() }
@@ -40,7 +42,7 @@ struct WelcomeView: View {
                 .modifier(Reveal(script.progress(.cat, at: time), rise: 12))
                 .padding(.bottom, Space.l)
             Text("A cat for the two of you")
-                .font(.nookiLargeTitle)
+                .font(.ourioLargeTitle)
                 .foregroundStyle(Ink.text)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.7)
@@ -48,7 +50,7 @@ struct WelcomeView: View {
                 .modifier(Reveal(script.progress(.title, at: time), rise: 10))
                 .accessibilityAddTraits(.isHeader)
             Text("Feed it, play with it and keep each other close.")
-                .font(.nookiBody)
+                .font(.ourioBody)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -69,7 +71,7 @@ struct WelcomeView: View {
                 By continuing you agree to the terms of use: no abusive or objectionable content, and every \
                 report is acted on.
                 """)
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
@@ -113,7 +115,7 @@ private struct Vignette: View {
                 .frame(width: Size.control, height: Size.control)
                 .background(Color.honey.opacity(0.18), in: .circle)
             Text(text)
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.text)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.8)

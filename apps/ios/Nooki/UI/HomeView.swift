@@ -8,7 +8,7 @@ import WidgetBridge
 import Wire
 
 struct HomeView: View {
-    /// Owned by NookiApp: a `@State` default here would read every store again on each pass of the app's `body`.
+    /// Owned by OurioApp: a `@State` default here would read every store again on each pass of the app's `body`.
     @Binding var state: HomeState
     /// The room and the cat in it: the scenes, the games, her status. Nothing here reads them.
     @State var room = RoomController()
@@ -20,6 +20,10 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
+    /// Counts the World coming on screen; a return's task acts only while it is still the latest one.
+    @State private var worldShows = 0
+    /// The World as it was when a tab switch left it, fading out under the page coming in.
+    @State private var worldLeaving: UIView?
     /// A room switch is under way; another waits for it.
     @State private var switchingRoom = false
     /// The Coins sheet's packs, once there is a server to buy them through.
@@ -64,7 +68,7 @@ struct HomeView: View {
     private func following(_ content: some View) -> some View {
         content
         .task {
-            NookiPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
+            OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
             await lift()
         }
         .task {
@@ -107,20 +111,30 @@ struct HomeView: View {
             if old, !new, !(showsBoard && !roomCovered) {
                 worldSnapshot =
                     Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                // A second copy: one view can't be on screen twice, and a quick return shows the first again.
+                if state.tab != .world, worldSnapshot != nil {
+                    worldLeaving = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
+                }
             }
+            if new { worldShows += 1 }
             if new, room.hasHome, worldSnapshot != nil {
                 roomLive = false
+                let show = worldShows
+                let current = { show == worldShows && worldOnScreen }
                 Task {
                     await room.nextFrame()
-                    withAnimation(.easeOut(duration: 0.2)) { roomLive = true }
+                    guard current() else { return }
+                    withAnimation(Motion.fade()) { roomLive = true }
                     try? await Task.sleep(for: .milliseconds(250))
-                    if roomLive { worldSnapshot = nil }
+                    if current(), roomLive { worldSnapshot = nil }
                 }
             }
         }
         .onChange(of: state.tab) { _, tab in
-            NookiPerf.tabShown(tab)
+            OurioPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
+            // A fade cut short by a quick return never comes back over a later switch.
+            if tab == .world { worldLeaving = nil }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
         .onChange(of: state.care.petPulse) {
@@ -203,6 +217,15 @@ struct HomeView: View {
                     .transition(.opacity)
             }
 
+            // The room goes at once when the World is left; its last frame fades with the rest of the World.
+            if state.tab != .world, let worldLeaving {
+                LeavingSnapshot(view: worldLeaving) {
+                    if self.worldLeaving === worldLeaving { self.worldLeaving = nil }
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
+            }
+
             Group {
                 switch state.tab {
                 case .shop:
@@ -216,9 +239,9 @@ struct HomeView: View {
                     Color.clear
                 }
             }
-            // A short crossfade between tabs; the header and the tab bar are outside it and stay put.
+            // Tab to tab, the page alone fades; the header and the tab bar are outside it and stay put.
             .transition(.opacity)
-            .animation(.easeInOut(duration: 0.2), value: state.tab)
+            .animation(Motion.fade(), value: state.tab)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
@@ -256,22 +279,10 @@ struct HomeView: View {
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
-            if state.tab == .world, room.game == nil {
-                VStack(alignment: .leading, spacing: 12) {
-                    // Above the portrait, with the arrow down at it, so the hint never covers her.
-                    TipView(PetHint(), arrowEdge: .bottom)
-                    TipView(TreatHint(), arrowEdge: .bottom)
-                    HStack(alignment: .bottom) {
-                        PetButton(state: state, needs: { room }) { room.play($0) }
-                        Spacer(minLength: 0)
-                        if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
-                    }
-                    .padding(.horizontal, 4)
-                }
-                .padding(.horizontal, 12)
-                .padding(.bottom, 94)
-                .transition(.opacity)
+            ZStack {
+                if state.tab == .world, room.game == nil { petControls }
             }
+            .animation(Motion.fade(), value: state.tab)
         }
         .overlay(alignment: .topLeading) {
             if brainCard && state.tab == .world {
@@ -291,7 +302,7 @@ struct HomeView: View {
             if splashDrawn {
                 LaunchSplash()
                     .accessibilityElement(children: .ignore)
-                    .accessibilityLabel("Nooki is opening")
+                    .accessibilityLabel("Ourio is opening")
                     .accessibilityIdentifier("launch-splash")
                     .opacity(launching ? 1 : 0)
                     .scaleEffect(launching ? 1 : 1.08)
@@ -299,6 +310,24 @@ struct HomeView: View {
                     .accessibilityHidden(!launching)
             }
         }
+    }
+
+    /// The pet button and the hints over it.
+    private var petControls: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Above the portrait, with the arrow down at it, so the hint never covers her.
+            TipView(PetHint(), arrowEdge: .bottom)
+            TipView(TreatHint(), arrowEdge: .bottom)
+            HStack(alignment: .bottom) {
+                PetButton(state: state, needs: { room }) { room.play($0) }
+                Spacer(minLength: 0)
+                if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
+            }
+            .padding(.horizontal, 4)
+        }
+        .padding(.horizontal, 12)
+        .padding(.bottom, 94)
+        .transition(.opacity)
     }
 
     /// Its own method: inline in `body`, the closure tips the type-checker over its time limit.
@@ -444,5 +473,19 @@ private struct ShowcaseLabel: View {
         .glass(.capsule, role: .bar)
         .frame(height: 44)
         .accessibilityLabel("Playing \(label)")
+    }
+}
+
+/// A snapshot that starts fading out the moment it shows, and says when it is gone.
+private struct LeavingSnapshot: View {
+    let view: UIView
+    let gone: () -> Void
+    @State private var shown = true
+
+    var body: some View {
+        SnapshotView(view: view)
+            .opacity(shown ? 1 : 0)
+            .onAppear { withAnimation(Motion.fade()) { shown = false } completion: { gone() } }
+            .id(ObjectIdentifier(view))
     }
 }

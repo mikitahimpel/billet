@@ -105,11 +105,11 @@ private struct HintCard: View {
         let parts = text.components(separatedBy: ". ")
         VStack(alignment: .leading, spacing: 2) {
             Text(parts[0])
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
             if parts.count > 1 {
                 Text(parts.dropFirst().joined(separator: ". "))
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
             }
         }
@@ -130,7 +130,7 @@ private struct GameBar: View {
     var body: some View {
         HStack(spacing: Space.m) {
             Text(label)
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
             Capsule()
                 .fill(Ink.surface.opacity(0.6))
@@ -163,12 +163,12 @@ private struct Toast: View {
             HStack(spacing: Space.s) {
                 CoinIcon(size: 18)
                 Text(result.line)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
             }
             HStack(spacing: Space.m) {
                 Button("Again", action: again)
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
                     .frame(maxWidth: .infinity, minHeight: 44)
                     .glass(.capsule, interactive: true)

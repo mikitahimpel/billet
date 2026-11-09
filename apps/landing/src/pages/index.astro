@@ -36,8 +36,8 @@ const items = [
 ];
 
 const steps = [
-  { title: "Get Nooki", body: "Free on iPhone. Mochi is already curled up in her bed." },
-  { title: "Send your code", body: "Your partner types it into Nooki on their phone. That's all the setup there is." },
+  { title: "Get Ourio", body: "Free on iPhone. Mochi is already curled up in her bed." },
+  { title: "Send your code", body: "Your partner types it into Ourio on their phone. That's all the setup there is." },
   { title: "Share one cat", body: "Whatever one of you does, the other sees on their lock screen." },
 ];
 
@@ -78,14 +78,14 @@ const structuredData = {
       "@type": "WebSite",
       "@id": `${canonical}#website`,
       url: canonical,
-      name: "Nooki",
+      name: "Ourio",
       description: siteDescription,
       inLanguage: "en",
     },
     {
       "@type": "MobileApplication",
       "@id": `${canonical}#app`,
-      name: "Nooki",
+      name: "Ourio",
       description: siteDescription,
       url: canonical,
       downloadUrl: appStoreUrl,
@@ -121,21 +121,21 @@ const structuredData = {
 
     <link rel="icon" href="/favicon.png" type="image/png" sizes="48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="alternate" type="text/plain" href="/llms.txt" title="Nooki for language models" />
+    <link rel="alternate" type="text/plain" href="/llms.txt" title="Ourio for language models" />
     {appStoreId && <meta name="apple-itunes-app" content={`app-id=${appStoreId}`} />}
 
     <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Nooki" />
+    <meta property="og:site_name" content="Ourio" />
     <meta property="og:locale" content="en_US" />
     <meta property="og:url" content={canonical} />
-    <meta property="og:title" content="Nooki: a cat you raise together" />
+    <meta property="og:title" content="Ourio: a cat you raise together" />
     <meta property="og:description" content="One room. Two phones. One cat. Free on iPhone." />
     <meta property="og:image" content={ogImage} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Mochi, a grey tabby kitten, beside the words: Your love has a cat now." />
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Nooki: a cat you raise together" />
+    <meta name="twitter:title" content="Ourio: a cat you raise together" />
     <meta name="twitter:description" content="One room. Two phones. One cat. Free on iPhone." />
     <meta name="twitter:image" content={ogImage} />
 
@@ -144,7 +144,7 @@ const structuredData = {
   <body>
     <header class="fixed inset-x-0 top-0 z-30 bg-linear-to-b from-page-deep/80 to-transparent">
       <div class="container-page flex items-center justify-between py-5">
-        <a href="#" class="text-[1.375rem] font-black tracking-[-0.03em]">Nooki</a>
+        <a href="#" class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</a>
         <a
           href={appStoreUrl}
           class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md transition-colors hover:bg-gold hover:text-ink"
@@ -366,14 +366,14 @@ const structuredData = {
               <p class="eyebrow">Setup</p>
               <h2 class="mt-5 max-w-[34rem] text-h2">Two minutes to move in.</h2>
             </div>
-            <p class="max-w-[26rem] text-lead text-soft">One of you installs Nooki, the other types a code. Then it's your room.</p>
+            <p class="max-w-[26rem] text-lead text-soft">One of you installs Ourio, the other types a code. Then it's your room.</p>
           </div>
           <ol class="mt-14 grid gap-4 md:mt-20 md:grid-cols-3 md:gap-5">
             <li class="lit-panel flex flex-col p-6 md:p-8">
               <div class="grid h-44 place-items-center" aria-hidden="true">
                 <div class="flex flex-col items-center gap-2.5">
                   <Image src={appIcon} alt="" widths={[96, 192]} sizes="96px" class="size-24 rounded-[22px] shadow-[0_18px_40px_-14px_var(--color-plate)]" />
-                  <span class="text-small font-semibold">Nooki</span>
+                  <span class="text-small font-semibold">Ourio</span>
                 </div>
               </div>
               <Step n={1} {...steps[0]!} />
@@ -397,7 +397,7 @@ const structuredData = {
                   <img src={portrait.src} alt="" width="44" height="44" class="size-11 rounded-[11px] bg-raised" />
                   <span class="min-w-0 flex-1 text-left">
                     <span class="flex justify-between text-label text-muted">
-                      <span class="font-bold tracking-[0.08em] uppercase">Nooki</span><span>now</span>
+                      <span class="font-bold tracking-[0.08em] uppercase">Ourio</span><span>now</span>
                     </span>
                     <span class="mt-0.5 block text-small leading-snug">Your partner petted Mochi.</span>
                   </span>
@@ -464,7 +464,7 @@ const structuredData = {
           <div class="lit-panel mt-12 flex w-full max-w-[36rem] items-center gap-4 p-4 text-left md:gap-5 md:p-5">
             <Image src={appIcon} alt="" widths={[80, 160]} sizes="80px" class="size-16 shrink-0 rounded-[16px] md:size-20 md:rounded-[19px]" />
             <div class="min-w-0 flex-1">
-              <p class="text-body leading-tight font-extrabold">Nooki</p>
+              <p class="text-body leading-tight font-extrabold">Ourio</p>
               <p class="mt-0.5 text-small text-muted">A cat you raise together</p>
               <p class="mt-1.5 text-label font-bold tracking-[0.08em] text-honey uppercase">Free · iPhone</p>
             </div>
@@ -485,13 +485,13 @@ const structuredData = {
     <footer class="border-t border-paper/10">
       <div class="container-page flex flex-col gap-6 pt-10 pb-28 md:flex-row md:items-end md:justify-between md:pb-10">
         <div>
-          <p class="text-[1.375rem] font-black tracking-[-0.03em]">Nooki</p>
+          <p class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</p>
           <p class="mt-1 max-w-[28rem] text-small text-muted">A free iPhone app for couples: one shared room, one cat, and everything you do for her on your partner's Lock Screen.</p>
         </div>
         <nav class="flex flex-wrap gap-x-6 gap-y-2 text-small text-muted" aria-label="Footer">
           <a href={appStoreUrl} class="underline-offset-4 hover:text-paper hover:underline">App Store</a>
           <a href="#" class="underline-offset-4 hover:text-paper hover:underline">Privacy</a>
-          <span>© 2026 Nooki</span>
+          <span>© 2026 Ourio</span>
         </nav>
       </div>
     </footer>
@@ -502,7 +502,7 @@ const structuredData = {
       class="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 flex translate-y-[150%] items-center gap-3 rounded-[22px] border border-paper/10 bg-plate/85 p-2 pl-3 shadow-2xl backdrop-blur-xl transition-transform duration-500 md:hidden"
     >
       <img src={portrait.src} alt="" width="40" height="40" class="size-10 rounded-[10px] bg-raised" />
-      <p class="flex-1 text-small leading-tight"><b>Nooki</b><br /><span class="text-muted">Free · iPhone</span></p>
+      <p class="flex-1 text-small leading-tight"><b>Ourio</b><br /><span class="text-muted">Free · iPhone</span></p>
       <a href={appStoreUrl} class="rounded-full bg-gold px-5 py-3 text-small font-bold text-ink">Get</a>
     </div>
 

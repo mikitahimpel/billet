@@ -38,14 +38,14 @@ struct SettingsView: View {
         Page {
             GroupedSection(header: "General",
                          footer: hintsReset
-                             ? "The hints start over the next time you open Nooki."
+                             ? "The hints start over the next time you open Ourio."
                              : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
                 ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
                 Button { hintsReset = true } label: {
                     Row("Show hints again", symbol: "lightbulb.fill", tint: UsTint.sun.color) {
                         if hintsReset {
                             Image(systemName: "checkmark")
-                                .font(.nookiCallout.weight(.semibold))
+                                .font(.ourioCallout.weight(.semibold))
                                 .foregroundStyle(Ink.accentText)
                         }
                     }
@@ -78,16 +78,16 @@ struct SettingsView: View {
 
             GroupedSection(header: "Support") {
                 Button { requestReview() } label: {
-                    Row("Rate Nooki", symbol: "star.fill", tint: UsTint.sun.color) { RowChevron() }
+                    Row("Rate Ourio", symbol: "star.fill", tint: UsTint.sun.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
             }
 
             GroupedSection(header: "Privacy",
                          footer: session == nil
-                             ? "Nooki has no account and sends nothing anywhere: your profile, moments, lists and dates "
+                             ? "Ourio has no account and sends nothing anywhere: your profile, moments, lists and dates "
                                + "are saved only on this phone."
-                             : "Your profile, moments, lists and dates are saved only on this phone. Nooki signs in "
+                             : "Your profile, moments, lists and dates are saved only on this phone. Ourio signs in "
                                + "with an anonymous key kept in your iCloud Keychain, without your name or email.") {
                 Row("Stays on this iPhone", symbol: "lock.fill", tint: UsTint.sage.color)
                 Button(role: .destructive) { confirmingErase = true } label: {
@@ -156,14 +156,14 @@ struct SettingsView: View {
                 .buttonStyle(PressScaleStyle())
                 Row("Version", symbol: "info.circle.fill", tint: UsTint.honey.color) {
                     Text(version)
-                        .font(.nookiCallout.monospacedDigit())
+                        .font(.ourioCallout.monospacedDigit())
                         .foregroundStyle(Ink.textSecondary)
                 }
                 .accessibilityElement(children: .combine)
             }
 
             Text("Made with love by Jutsu Studio")
-                .font(.nookiCaption)
+                .font(.ourioCaption)
                 .foregroundStyle(Ink.textTertiary)
                 .frame(maxWidth: .infinity)
         }
@@ -195,7 +195,7 @@ struct SettingsView: View {
     private func demoFooter(paired: Bool, hasPartner: Bool) -> String {
         if demoFailed { return "The dev server didn't answer. Try again in a moment." }
         if !paired, hasPartner { return "Only without a partner: this account already has one." }
-        return "The dev server plays a partner, so you can try Nooki alone: it answers your notes, reacts to "
+        return "The dev server plays a partner, so you can try Ourio alone: it answers your notes, reacts to "
             + "your photos, cares for \(CatProfile.name()) and opens the daily gift."
     }
 
@@ -221,7 +221,7 @@ private struct AccountRow: View {
         Row(title, detail: detail, symbol: symbol, tint: tint.color) {
             if case .failed = state {
                 Button("Try Again", action: retry)
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.accentText)
             } else if case .signingIn = state {
                 ProgressView()

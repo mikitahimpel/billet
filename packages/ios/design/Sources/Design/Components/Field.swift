@@ -13,7 +13,7 @@ public struct Field: View {
 
   public init(
     _ placeholder: String, text: Binding<String>, axis: Axis = .horizontal,
-    lines: ClosedRange<Int> = 1...1, font: Font = .nookiBody, failed: Bool = false
+    lines: ClosedRange<Int> = 1...1, font: Font = .ourioBody, failed: Bool = false
   ) {
     self.placeholder = placeholder
     _text = text

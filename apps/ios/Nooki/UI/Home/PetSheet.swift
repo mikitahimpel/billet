@@ -31,7 +31,7 @@ struct PetButton: View {
                 .glass(.circle, role: .control)
                 .overlay(alignment: .bottom) {
                     Text("Lv.\(state.care.level)")
-                        .font(.nookiMicro)
+                        .font(.ourioMicro)
                         .padding(.horizontal, 7)
                         .frame(height: 17)
                         .glassBadge()
@@ -89,7 +89,7 @@ private struct PetSheet: View {
                         play: onPlay
                     )
                     Text(short ? "Not enough coins for a treat" : "With you two for \(state.daysTogether) days")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(short ? Ink.accentText : Ink.textSecondary)
                         .contentTransition(.opacity)
                 }
@@ -112,7 +112,7 @@ private struct PetSheet: View {
                 }
             if let mood {
                 Text(mood)
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .contentTransition(.opacity)
             }
@@ -121,7 +121,7 @@ private struct PetSheet: View {
                     .contentTransition(.numericText())
                 LevelTrack(value: state.care.progress)
                 Text("\(Int((state.care.progress * 100).rounded()))%")
-                    .font(.nookiMicro)
+                    .font(.ourioMicro)
                     .foregroundStyle(Ink.textSecondary)
                     .monospacedDigit()
                     .contentTransition(.numericText())

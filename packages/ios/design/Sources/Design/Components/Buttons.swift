@@ -10,7 +10,7 @@ public struct PrimaryButtonStyle: ButtonStyle {
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.nookiHeadline)
+      .font(.ourioHeadline)
       .foregroundStyle(isEnabled ? Ink.heroInk : Ink.disabledText)
       .padding(.horizontal, Space.xl)
       .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Size.button)
@@ -29,7 +29,7 @@ public struct SecondaryButtonStyle: ButtonStyle {
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.nookiHeadline)
+      .font(.ourioHeadline)
       .foregroundStyle(isEnabled ? Ink.accentText : Ink.disabledText)
       .padding(.horizontal, Space.xl)
       .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Size.button)
@@ -146,7 +146,7 @@ public struct GlassIconButton<Content: View>: View {
         .accessibilityHidden(true)
     case .count(let count):
       Text(count > 9 ? "9+" : "\(count)")
-        .font(.nookiMicro.monospacedDigit())
+        .font(.ourioMicro.monospacedDigit())
         .padding(.horizontal, 5)
         .frame(minWidth: 18, minHeight: 18)
         .glassBadge(.blushPink)
@@ -213,13 +213,13 @@ public struct PriceButton: View {
           .monospacedDigit()
         if let was {
           Text(was, format: .number)
-            .font(.nookiCaption.monospacedDigit())
+            .font(.ourioCaption.monospacedDigit())
             .strikethrough()
             .opacity(0.7)
         }
       }
       .fixedSize()
-      .font(.nookiCallout.weight(.bold))
+      .font(.ourioCallout.weight(.bold))
       .foregroundStyle(Ink.heroInk)
       .padding(.horizontal, Space.m)
       .frame(minHeight: 36)

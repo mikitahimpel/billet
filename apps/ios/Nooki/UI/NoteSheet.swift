@@ -29,7 +29,7 @@ struct NoteSheet: View {
                     HStack(spacing: 6) {
                         Monogram(partner: note.author, profile: state.profile, size: 20)
                         Text(note.date.formatted(date: .long, time: .omitted))
-                            .font(.nookiCaption)
+                            .font(.ourioCaption)
                             .foregroundStyle(Ink.textSecondary)
                     }
 
@@ -48,7 +48,7 @@ struct NoteSheet: View {
                             }
                         } label: {
                             Label("Report and hide", systemImage: "flag")
-                                .font(.nookiCallout)
+                                .font(.ourioCallout)
                                 .foregroundStyle(Ink.textSecondary)
                         }
                     }

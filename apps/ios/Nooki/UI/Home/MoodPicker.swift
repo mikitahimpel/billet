@@ -56,7 +56,7 @@ private struct MoodChip: View {
             VStack(spacing: Space.s) {
                 MoodArt(mood: mood, size: 48)
                 Text(mood.title.capitalized)
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
             }
             .frame(maxWidth: .infinity)
@@ -84,15 +84,15 @@ private struct PartnerLine: View {
             MoodArt(mood: check.mood, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(name) feels \(check.mood.title)")
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
                 if let note = check.note {
                     Text(note)
-                        .font(.nookiCallout)
+                        .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Text(check.date, format: .relative(presentation: .named))
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
             Spacer(minLength: 0)

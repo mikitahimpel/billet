@@ -304,13 +304,8 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
         await until { self.open.map { $0.fetch == .idle && $0.inkLoad == .idle } ?? true }
     }
 
-    /// Returns once `done` holds, looking again at each change of what it read.
     private func until(_ done: @escaping () -> Bool) async {
-        while !done() {
-            await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in
-                withObservationTracking { _ = done() } onChange: { continuation.resume() }
-            }
-        }
+        await store.until(done)
     }
 
     nonisolated static func utcOffset(at date: Date) -> Int { ShopMachine.utcOffset(at: date) }

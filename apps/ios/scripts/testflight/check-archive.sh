@@ -43,7 +43,7 @@ check_bundle() {
 }
 
 check_bundle "$app" com.mikitahimpel.billet
-check_bundle "$app/PlugIns/NookiWidgets.appex" com.mikitahimpel.billet.widget
+check_bundle "$app/PlugIns/OurioWidgets.appex" com.mikitahimpel.billet.widget
 
 payments=$(plist "$app" BilletPayments)
 labs=$(plist "$app" BilletLabs)
