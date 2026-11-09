@@ -188,7 +188,7 @@ struct PosterTile: View {
     var body: some View {
         PosterImage(path: item.media?.posterPath, title: item.text, size: .grid)
             .aspectRatio(2 / 3, contentMode: .fit)
-            .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
+            .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
             .overlay(alignment: .topLeading) {
                 Group {
                     if both {

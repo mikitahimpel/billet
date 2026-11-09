@@ -82,9 +82,9 @@ struct MovieCard: View {
                 .overlay(alignment: .bottomLeading) {
                     PosterImage(path: path, title: item.text, size: .card)
                         .frame(width: 96, height: 142)
-                        .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
+                        .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+                            RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
                                 .strokeBorder(Ink.screen, lineWidth: 3)
                         }
                         .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
@@ -201,7 +201,7 @@ struct MovieCard: View {
                 .buttonStyle(.plain)
             }
         }
-        .padding(14)
+        .padding(CardMetrics.padding)
         .cardSurface()
     }
 

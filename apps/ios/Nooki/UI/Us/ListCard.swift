@@ -11,30 +11,18 @@ struct ListCard: View {
     private var empty: Bool { list.items.isEmpty }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 12) {
-                UsIcon(glyph: list.icon, size: 34)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(list.title)
-                        .font(.nookiHeadline)
-                        .foregroundStyle(Ink.text)
-                    caption
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(2)
+        Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                CardHeader(list.title) {
+                    UsIcon(glyph: list.icon, size: Size.cardMark)
+                } detail: {
+                    caption.lineLimit(2)
+                } trailing: {
+                    if !empty { RowChevron() }
                 }
-                Spacer(minLength: 0)
-                if !empty {
-                    Image(systemName: "chevron.right")
-                        .font(.nookiCaption.weight(.semibold))
-                        .foregroundStyle(Ink.textTertiary)
-                }
+                preview
             }
-            preview
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSurface()
         .contentShape(.rect)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
@@ -171,7 +159,7 @@ private struct PosterPeek: View {
     private func poster(path: String?, title: String, both: Bool) -> some View {
         PosterImage(path: path, title: title, size: .grid, showsTitle: false)
             .frame(width: 46, height: 69)
-            .clipShape(.rect(cornerRadius: 9, style: .continuous))
+            .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
             .overlay(alignment: .topLeading) {
                 if both {
                     Text("♥")
@@ -247,32 +235,15 @@ struct ListRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            UsIcon(glyph: list.icon, size: 34)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(list.title)
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                if list.items.isEmpty {
-                    Text(Self.purpose(of: list.kind))
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(1)
-                }
-            }
-            Spacer(minLength: 0)
+        Row(list.title, detail: list.items.isEmpty ? Self.purpose(of: list.kind) : nil,
+            symbol: list.icon.symbol, tint: list.icon.tint.color) {
             if !list.items.isEmpty {
                 Text(counts)
                     .font(.nookiCaption.monospacedDigit())
                     .foregroundStyle(Ink.textSecondary)
             }
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.textTertiary)
+            RowChevron()
         }
-        .padding(.horizontal, Space.m)
-        .frame(minHeight: 54)
-        .contentShape(.rect)
     }
 
     private var counts: String {
@@ -285,24 +256,18 @@ struct ListRow: View {
 /// The invitation at the end of the lists to make one of the pair's own.
 struct StartListCard: View {
     var body: some View {
-        HStack(spacing: 12) {
-            UsIcon(glyph: .init(symbol: "pawprint.fill", tint: .honey), size: 40)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Start a list together")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                Text("Gifts, recipes, a trip packing list…")
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
-            }
-            Spacer(minLength: 0)
+        CardHeader("Start a list together") {
+            UsIcon(glyph: .init(symbol: "pawprint.fill", tint: .honey), size: Size.cardMark)
+        } detail: {
+            Text("Gifts, recipes, a trip packing list…")
+        } trailing: {
             Image(systemName: "plus")
                 .font(.body.weight(.bold))
                 .foregroundStyle(Ink.heroInk)
                 .frame(width: 30, height: 30)
                 .background(Circle().fill(.honeyGradient))
         }
-        .padding(14)
+        .padding(CardMetrics.padding)
         .overlay(
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(Ink.text.opacity(0.14), style: StrokeStyle(lineWidth: 1.5, dash: [5, 4]))

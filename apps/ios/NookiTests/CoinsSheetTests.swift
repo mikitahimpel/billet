@@ -36,6 +36,22 @@ import Wire
         #expect(reads.count == 0)
     }
 
+    @Test @MainActor func aStoreThatCantBeReachedShowsAnEmptyShelfAndCanTryAgain() async {
+        let down = CoinPacksModel(payments: FakePayments(result: .succeed, shelf: .fail(.unavailable))) {}
+        #expect(down.shelf == .loading)
+        await down.load()
+        #expect(down.shelf == .unavailable)
+        #expect(down.packs.isEmpty)
+
+        let empty = CoinPacksModel(payments: FakePayments(result: .succeed, shelf: .empty)) {}
+        await empty.load()
+        #expect(empty.shelf == .unavailable)
+
+        let none = CoinPacksModel(payments: nil) {}
+        await none.load()
+        #expect(none.shelf == .unavailable)
+    }
+
     @Test func theSmallestPackThatCoversTheGapIsTheOneShown() {
         let packs = StampPackCatalog.standard.packs.map(StampPackCatalog.standard.pack)
         #expect(CoinPacksModel.fit(for: 0, in: packs) == nil)
@@ -77,10 +93,21 @@ nonisolated private struct FakePayments: Payments {
         case fail(PaymentsError)
     }
 
+    enum Shelf: Sendable {
+        case standard
+        case empty
+        case fail(PaymentsError)
+    }
+
     let result: Outcome
+    var shelf = Shelf.standard
 
     func products() async throws(PaymentsError) -> [StampPack] {
-        StampPackCatalog.standard.packs.map(StampPackCatalog.standard.pack)
+        switch shelf {
+        case .standard: StampPackCatalog.standard.packs.map(StampPackCatalog.standard.pack)
+        case .empty: []
+        case .fail(let error): throw error
+        }
     }
 
     func purchase(_ pack: StampPack) async throws(PaymentsError) -> PurchaseResult {

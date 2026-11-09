@@ -1,3 +1,4 @@
+import CoreGraphics
 import Testing
 
 @testable import Design
@@ -15,8 +16,16 @@ import Testing
     #expect(Size.row >= Size.control)
   }
 
-  @Test func radiiGrowFromTagToHero() {
-    #expect(
-      Radius.tag < Radius.control && Radius.control < Radius.card && Radius.card < Radius.hero)
+  @Test func cornersAreConcentric() {
+    let atTheGutter = Radius.sheet - Space.gutter
+    let inACard = Radius.card - CardMetrics.padding
+    #expect(atTheGutter == Radius.card)
+    #expect(inACard == Radius.inner)
+    #expect(Radius.inner > 0)
+  }
+
+  @Test func aOneLineFieldIsTheButtonCapsule() {
+    let fieldHeight = Radius.control * 2
+    #expect(fieldHeight == Size.button)
   }
 }

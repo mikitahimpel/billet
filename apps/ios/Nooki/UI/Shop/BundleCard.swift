@@ -30,7 +30,7 @@ struct BundleCard: View {
                     .fixedSize()
             }
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
     }
