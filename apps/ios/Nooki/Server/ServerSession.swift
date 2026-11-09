@@ -37,6 +37,8 @@ final class ServerSession {
     @ObservationIgnored private weak var lists: ListsModel?
     /// Set each time the socket is followed.
     @ObservationIgnored private var moods: (@MainActor (PartnerCheckIn) -> Void)?
+    /// Set each time the socket is followed.
+    @ObservationIgnored private weak var streak: StreakStore?
     /// Set each time the socket is followed; holds the last entry.
     @ObservationIgnored private var catEntry: (@MainActor (CatEntry) -> Void)?
     @ObservationIgnored private var lastCatSeq: (@MainActor () -> Int?)?
@@ -119,7 +121,7 @@ final class ServerSession {
     /// Live over the room socket while the app is in front; nothing without a partner.
     func followInbox(
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
-        lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil,
+        lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil, streak: StreakStore? = nil,
         cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil
     ) {
         if follows, isPaired {
@@ -130,6 +132,7 @@ final class ServerSession {
             self.shop = shop
             self.lists = lists
             self.moods = moods
+            self.streak = streak
             if inboxLink == nil {
                 let accounts = backend.accounts
                 let inbox = inbox
@@ -149,6 +152,7 @@ final class ServerSession {
                         guessProgress: { [weak self] in self?.whoKnows.progressed(round: $0, answered: $1) },
                         guessRevealed: { [weak self] in self?.whoKnows.revealed(round: $0, reveal: $1, score: $2) },
                         riddle: { [weak self] in self?.drawGuess.changed($0) },
+                        streak: { [weak self] in self?.streak?.received(LoveStreak($0)) },
                         catEntry: { [weak self] in self?.catEntry?($0) },
                         lastCatSeq: { [weak self] in self?.lastCatSeq?() }))
             }

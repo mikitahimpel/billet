@@ -150,6 +150,8 @@ interface SocketAttachment {
   readonly guess?: boolean;
   /** Whether this socket resumed with `riddle: true` and is sent each draw-guess change. */
   readonly riddle?: boolean;
+  /** Whether this socket resumed with `streak: true` and is sent the pair's streak when it changes. */
+  readonly streak?: boolean;
 }
 
 /** Outputs that change what `shopOf` shows. */
@@ -613,12 +615,16 @@ export class PairRoom extends DurableObject {
     return this.run((room) => room.moods, "PairRoom.moods");
   }
 
-  /** Counts `by`'s day in the streak; a milestone moves the partner's Inbox count. */
+  /**
+   * Counts `by`'s day in the streak and tells every socket that follows it; a milestone moves the
+   * partner's Inbox count.
+   */
   async recordStreakDay(by: UserId, request: RecordStreakDayRequest): Promise<RoomDecision> {
     const decision = await this.run(
       (room) => room.recordStreakDay(by, request),
       "PairRoom.recordStreakDay",
     );
+    this.pushStreak(decision);
     if (
       decision._tag === "Accepted" &&
       decision.outputs.some(
@@ -630,8 +636,27 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  restoreStreak(by: UserId, request: RestoreStreakRequest): Promise<RoomDecision> {
-    return this.run((room) => room.restoreStreak(by, request), "PairRoom.restoreStreak");
+  /** Restores the streak for the pair and tells every socket that follows it. */
+  async restoreStreak(by: UserId, request: RestoreStreakRequest): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.restoreStreak(by, request),
+      "PairRoom.restoreStreak",
+    );
+    this.pushStreak(decision);
+    return decision;
+  }
+
+  private pushStreak(decision: RoomDecision): void {
+    if (decision._tag !== "Accepted") return;
+    for (const output of decision.outputs) {
+      if (output._tag === "StreakChanged") {
+        for (const socket of this.ctx.getWebSockets()) {
+          if (attachmentOf(socket)?.streak === true) {
+            send(socket, { _tag: "StreakChanged", streak: output.streak });
+          }
+        }
+      }
+    }
   }
 
   /** The pair's streak; null while the room is not open. */
@@ -1180,6 +1205,7 @@ export class PairRoom extends DurableObject {
           moods,
           guess,
           riddle,
+          streak,
         } = message.value;
         socket.serializeAttachment({
           ...attachment,
@@ -1192,6 +1218,7 @@ export class PairRoom extends DurableObject {
           moods: moods === true,
           guess: guess === true,
           riddle: riddle === true,
+          streak: streak === true,
         } satisfies SocketAttachment);
         await this.catchUp(socket);
         await this.catchUpCat(socket);
@@ -1211,6 +1238,8 @@ export class PairRoom extends DurableObject {
         // The game state now, so what the partner did while this socket was away still arrives.
         if (guess === true) await this.catchUpGuess(socket, attachment.user as UserId);
         if (riddle === true) await this.catchUpRiddles(socket, attachment.user as UserId);
+        const pairStreak = streak === true ? await this.streak() : null;
+        if (pairStreak !== null) send(socket, { _tag: "StreakChanged", streak: pairStreak });
         return;
       }
       case "Stroke": {

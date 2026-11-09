@@ -43,6 +43,8 @@ export const ClientMessage = Schema.TaggedUnion({
     guess: Schema.optionalKey(Schema.Boolean),
     /** Asks for `RiddleChanged` each time a draw-guess riddle is sent, tried, hinted or ended. */
     riddle: Schema.optionalKey(Schema.Boolean),
+    /** Asks for `StreakChanged` with the pair's love streak now, and after each change to it. */
+    streak: Schema.optionalKey(Schema.Boolean),
   },
   /** A whole stroke at once, from a client that does not stream. */
   Stroke: { stroke: Stroke },

@@ -34,6 +34,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   case guessRevealed(round: String, reveal: [GuessReveal], score: GuessScore)
   /// Sent to a socket that resumed with `riddle: true`: each open riddle, then every change.
   case riddleChanged(Riddle)
+  /// Sent to a socket that resumed with `streak: true`: the pair's streak now, then each change.
+  case streakChanged(PairStreak)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -57,6 +59,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case reveal
     case score
     case riddle
+    case streak
   }
 
   public init(from decoder: any Decoder) throws {
@@ -108,6 +111,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
         answered: try container.decode(Int.self, forKey: .answered))
     case "RiddleChanged":
       self = .riddleChanged(try container.decode(Riddle.self, forKey: .riddle))
+    case "StreakChanged":
+      self = .streakChanged(try container.decode(PairStreak.self, forKey: .streak))
     case "GuessRevealed":
       self = .guessRevealed(
         round: try container.decode(String.self, forKey: .round),
@@ -185,6 +190,9 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case .riddleChanged(let riddle):
       try container.encode("RiddleChanged", forKey: .tag)
       try container.encode(riddle, forKey: .riddle)
+    case .streakChanged(let streak):
+      try container.encode("StreakChanged", forKey: .tag)
+      try container.encode(streak, forKey: .streak)
     }
   }
 }

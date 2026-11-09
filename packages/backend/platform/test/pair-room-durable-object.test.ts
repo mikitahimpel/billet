@@ -1003,6 +1003,49 @@ describe("PairRoom realtime across eviction", () => {
     expect(await room.moods()).toEqual([]);
   });
 
+  it("sends the pair's streak to sockets that follow it, on the resume and after each counted day", async () => {
+    const room = await openRoom();
+    const partner = await open(room, alice);
+    const ownOther = await open(room, bob);
+    const older = await open(room, alice);
+    partner.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, streak: true }));
+    ownOther.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0, streak: true }));
+    older.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 0 }));
+    const streaksOf = (frames: ReadonlyArray<{ _tag: string; [key: string]: unknown }>) =>
+      frames.filter((f) => f._tag === "StreakChanged").map((f) => f["streak"]);
+    await until(() => streaksOf(partner.frames).length === 1);
+    await until(() => streaksOf(ownOther.frames).length === 1);
+    expect(streaksOf(partner.frames)).toEqual([{ days: 0, best: 0 }]);
+    // A socket that has seen the note has had its Resume read.
+    await room.sendNote(alice, photo());
+    await until(() => older.frames.some((f) => f._tag === "NoteReceived"));
+
+    const today = { at: 1_700_000_000_000, utcOffsetSeconds: 0 };
+    expect(await room.recordStreakDay(bob, today)).toMatchObject({ _tag: "Accepted" });
+    // The same day again, and a restore the room refuses, change nothing and send nothing.
+    expect(await room.recordStreakDay(alice, today)).toMatchObject({
+      _tag: "Accepted",
+      outputs: [],
+    });
+    expect(await room.restoreStreak(alice, { utcOffsetSeconds: 0 })).toMatchObject({
+      _tag: "Rejected",
+      rejection: { _tag: "StreakNotRestorable" },
+    });
+    await until(() => streaksOf(partner.frames).length === 2);
+    await until(() => streaksOf(ownOther.frames).length === 2);
+    expect(streaksOf(partner.frames)[1]).toEqual(expect.objectContaining({ days: 1, best: 1 }));
+    await room.sendNote(alice, photo());
+    await until(() => partner.frames.filter((f) => f._tag === "NoteReceived").length === 2);
+    expect(streaksOf(partner.frames)).toHaveLength(2);
+    expect(streaksOf(older.frames)).toEqual([]);
+
+    await evictDurableObject(room);
+    const late = await open(room, alice);
+    late.socket.send(JSON.stringify({ _tag: "Resume", lastSeq: 2, streak: true }));
+    await until(() => streaksOf(late.frames).length === 1);
+    expect(streaksOf(late.frames)).toEqual([expect.objectContaining({ days: 1 })]);
+  });
+
   it("keeps the Inbox in SQLite, pushes the unread count to sockets that follow it, and forgets it with the pair", async () => {
     const room = await openRoom();
     const bobInbox = await open(room, bob);

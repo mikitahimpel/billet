@@ -1548,6 +1548,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     }),
     "resume-with-guess": ClientMessage.cases.Resume.make({ lastSeq: 7, lists: true, guess: true }),
     "resume-with-riddle": ClientMessage.cases.Resume.make({ lastSeq: 7, riddle: true }),
+    "resume-with-streak": ClientMessage.cases.Resume.make({ lastSeq: 7, streak: true }),
     stroke: ClientMessage.cases.Stroke.make({ stroke }),
     presence: ClientMessage.cases.Presence.make({ state: "drawing" }),
     "stroke-begin": ClientMessage.cases.StrokeBegin.make({ id: 3, color: "#7B4FE0", width: 14 }),
@@ -1599,6 +1600,9 @@ export const catalog: ReadonlyArray<Fixture> = [
       score: guessScore,
     }),
     "riddle-changed": ServerMessage.cases.RiddleChanged.make({ riddle: openRiddle }),
+    "streak-changed": ServerMessage.cases.StreakChanged.make({
+      streak: { days: 12, best: 30, lastDay: giftDay, restoredOn: giftDay },
+    }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),

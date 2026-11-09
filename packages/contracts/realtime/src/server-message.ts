@@ -10,6 +10,7 @@ import { LocalDay } from "@billet/contracts-domain/coins";
 import { GuessReveal, GuessScore } from "@billet/contracts-domain/guess";
 import { Riddle } from "@billet/contracts-domain/riddle";
 import { PairShop } from "@billet/contracts-domain/shop";
+import { LoveStreak } from "@billet/contracts-domain/streak";
 import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
 
 /**
@@ -84,5 +85,10 @@ export const ServerMessage = Schema.TaggedUnion({
    * guesser gets no `word` while it is open. Sent to every socket that resumed with `riddle: true`.
    */
   RiddleChanged: { riddle: Riddle },
+  /**
+   * The pair's love streak, sent to every socket that resumed with `streak: true`: once on that
+   * resume and after each day counted or restore, by either partner.
+   */
+  StreakChanged: { streak: LoveStreak },
 });
 export type ServerMessage = typeof ServerMessage.Type;

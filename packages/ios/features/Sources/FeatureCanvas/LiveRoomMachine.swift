@@ -121,7 +121,7 @@ public enum LiveRoomMachine: Machine {
     case .received(.catEntryAdded), .received(.catSaved), .received(.activityUnread),
       .received(.reactionChanged), .received(.shopChanged), .received(.listsChanged),
       .received(.moodChanged), .received(.matchFound), .received(.guessProgress),
-      .received(.guessRevealed), .received(.riddleChanged):
+      .received(.guessRevealed), .received(.riddleChanged), .received(.streakChanged):
       return (state, [])
 
     case .received(.noteReceived(let seq, let note)):
