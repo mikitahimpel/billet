@@ -35,6 +35,15 @@ nonisolated struct WelcomeScript: Equatable, Sendable {
         return raw * raw * (3 - 2 * raw)
     }
 
+    /// A beat on a critically damped spring, from 0 to 1 and never past it: quick at first, settling over its length
+    /// (98% of the way at its end).
+    func spring(_ beat: Beat, at time: TimeInterval) -> Double {
+        guard let cue = cues.first(where: { $0.beat == beat }) else { return 1 }
+        let elapsed = max(time - cue.start, 0)
+        let omega = 6 / cue.length
+        return 1 - (1 + omega * elapsed) * exp(-omega * elapsed)
+    }
+
     /// The beats that have started by `time`, in the order they play.
     func started(at time: TimeInterval) -> [Beat] {
         cues.filter { $0.start <= time }.map(\.beat)

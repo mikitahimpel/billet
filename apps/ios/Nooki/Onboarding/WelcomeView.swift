@@ -1,16 +1,19 @@
 import Design
 import SwiftUI
 
-/// The first screen: Mochi alive over a warm room, one line, three small vignettes, then the actions below. Every part
-/// has a fixed box sized from the screen, and the timeline in `WelcomeScript` only changes opacity and offset inside
-/// those boxes, so nothing moves the layout while it plays.
+/// The first screen: Mochi alive on a warm stage, one line, three small vignettes, then the actions below. Every part
+/// has a fixed box sized from the screen, and the timeline in `WelcomeScript` only changes opacity, scale and offset
+/// inside those boxes, so nothing moves the layout while it plays.
 struct WelcomeView: View {
     let start: Date
+    var coat = CatCoat.grey
     var script = WelcomeScript.standard
     var waved: () -> Void = {}
     var probe: HitchProbe?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Seconds after `start` of the last tap on her.
+    @State private var pokedAt: TimeInterval?
 
     private static let points: [(symbol: String, text: LocalizedStringKey)] = [
         ("pawprint.fill", "Feed it, pet it and play with it together"),
@@ -29,15 +32,19 @@ struct WelcomeView: View {
                     }
             }
         }
-        .background { WelcomeBackdrop() }
         .accessibilityElement(children: .contain)
     }
 
     private func content(_ size: CGSize, time: TimeInterval) -> some View {
         let catHeight = min(size.height * 0.42, 360)
         return VStack(spacing: 0) {
-            WelcomeCat(playing: !reduceMotion, waved: waved)
+            CatHeroStage(coat: coat, time: time, pokedAt: pokedAt, moving: !reduceMotion)
                 .frame(height: catHeight)
+                .contentShape(.rect)
+                .onTapGesture {
+                    pokedAt = Date.now.timeIntervalSince(start)
+                    waved()
+                }
                 .modifier(Reveal(script.progress(.cat, at: time), rise: 12))
                 .padding(.bottom, Space.l)
             Text("A cat for the two of you")
@@ -46,7 +53,7 @@ struct WelcomeView: View {
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.7)
                 .frame(maxWidth: .infinity)
-                .modifier(Reveal(script.progress(.title, at: time), rise: 10))
+                .modifier(SpringIn(script.spring(.title, at: time)))
                 .accessibilityAddTraits(.isHeader)
             Text("Feed it, play with it and keep each other close.")
                 .font(.ourioBody)
@@ -99,6 +106,20 @@ private struct Reveal: ViewModifier {
     }
 }
 
+/// Comes in on a spring with no overshoot: it fades in quickly, rises and grows to its size as the spring settles.
+private struct SpringIn: ViewModifier {
+    let progress: Double
+
+    init(_ progress: Double) { self.progress = progress }
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(min(progress * 1.6, 1))
+            .scaleEffect(0.9 + 0.1 * progress)
+            .offset(y: 18 * (1 - progress))
+    }
+}
+
 /// A benefit as a small animated tile: its symbol breathes, driven by the same clock as the script.
 private struct Vignette: View {
     let symbol: String
@@ -124,17 +145,5 @@ private struct Vignette: View {
         .padding(.vertical, Space.m)
         .padding(.horizontal, Space.s)
         .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
-    }
-}
-
-struct WelcomeBackdrop: View {
-    var body: some View {
-        ZStack {
-            Ink.screen
-            RadialGradient(colors: [Color.honey.opacity(0.32), Color.honey.opacity(0.08), .clear],
-                           center: UnitPoint(x: 0.2, y: 0.12), startRadius: 0, endRadius: 420)
-            LinearGradient(colors: [.clear, Ink.surfaceRaised.opacity(0.9)], startPoint: .center, endPoint: .bottom)
-        }
-        .ignoresSafeArea()
     }
 }

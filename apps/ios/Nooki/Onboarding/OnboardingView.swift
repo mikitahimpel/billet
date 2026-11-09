@@ -34,7 +34,7 @@ struct OnboardingView: View {
     /// One persistent background and header; only the page between the header and the actions changes.
     var body: some View {
         ZStack {
-            Ink.screen.ignoresSafeArea()
+            HeroBackdrop()
             VStack(spacing: 0) {
                 header
                 page
@@ -166,7 +166,7 @@ struct OnboardingView: View {
     }
 
     private var welcome: some View {
-        WelcomeView(start: welcomeStart, waved: { wavedTick += 1 }, probe: probe)
+        WelcomeView(start: welcomeStart, coat: flow.coat, waved: { wavedTick += 1 }, probe: probe)
             .onAppear { probe?.restart = { welcomeStart = .now } }
     }
 
