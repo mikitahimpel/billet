@@ -1,0 +1,144 @@
+---
+import SiteFooter from "../components/site-footer.astro";
+import SiteHeader from "../components/site-header.astro";
+import { appStoreId } from "../config";
+import { pages } from "../site";
+import "../styles/global.css";
+
+interface Props {
+  title: string;
+  description: string;
+  // Shorter title and line for link previews; the page title and description otherwise.
+  shareTitle?: string;
+  shareDescription?: string;
+  // Extra schema.org nodes for this page; WebPage and its breadcrumb are added here.
+  schema?: Record<string, unknown>[];
+  overlayHeader?: boolean;
+  mainClass?: string;
+  // Kept out of search, the sitemap and the Markdown twins.
+  noindex?: boolean;
+}
+
+const {
+  title,
+  description,
+  shareTitle = title,
+  shareDescription = description,
+  schema = [],
+  overlayHeader,
+  mainClass,
+  noindex = false,
+} = Astro.props;
+const path = Astro.url.pathname;
+const canonical = new URL(path, Astro.site).href;
+const ogImage = new URL("/og.png", Astro.site).href;
+const home = new URL("/", Astro.site).href;
+
+// The trail from home to this page, from the site's own page list: /features/games/ → Home › All features › Games.
+const trail = path
+  .split("/")
+  .filter(Boolean)
+  .map((_, i, parts) => `/${parts.slice(0, i + 1).join("/")}/`)
+  .map((p) => pages.find((page) => page.path === p))
+  .filter((page) => page !== undefined);
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${canonical}#page`,
+      url: canonical,
+      name: title,
+      description,
+      inLanguage: "en-US",
+      isPartOf: { "@id": `${home}#website` },
+      about: { "@id": `${home}#app` },
+    },
+    ...(trail.length > 0
+      ? [
+          {
+            "@type": "BreadcrumbList",
+            itemListElement: [{ path: "/", label: "Home" }, ...trail].map((page, i) => ({
+              "@type": "ListItem",
+              position: i + 1,
+              name: page.label,
+              item: new URL(page.path, Astro.site).href,
+            })),
+          },
+        ]
+      : []),
+    ...schema,
+  ],
+};
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2e1838" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
+    {!noindex && <meta name="robots" content="index, follow, max-image-preview:large" />}
+
+    <link rel="icon" href="/favicon.png" type="image/png" sizes="48x48" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    {!noindex && <link rel="alternate" type="text/markdown" href={`${path}index.md`} />}
+    {appStoreId && <meta name="apple-itunes-app" content={`app-id=${appStoreId}`} />}
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Ourio" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:title" content={shareTitle} />
+    <meta property="og:description" content={shareDescription} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Mochi, a grey tabby kitten, beside the words: Your love has a cat now." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={shareTitle} />
+    <meta name="twitter:description" content={shareDescription} />
+    <meta name="twitter:image" content={ogImage} />
+
+    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+  </head>
+  <body>
+    <SiteHeader overlay={overlayHeader} />
+    <main class={mainClass ?? "overflow-x-clip"}>
+      {
+        trail.length > 0 && (
+          <nav aria-label="Breadcrumb" class="container-page pt-6 md:pt-8">
+            <ol class="flex flex-wrap items-center gap-x-2 text-label font-semibold text-muted">
+              <li>
+                <a href="/" class="hover:text-paper">
+                  Home
+                </a>
+              </li>
+              {trail.map((page) => (
+                <li class="flex items-center gap-2">
+                  <span aria-hidden="true">›</span>
+                  {page.path === path ? (
+                    <span aria-current="page" class="text-soft">
+                      {page.label}
+                    </span>
+                  ) : (
+                    <a href={page.path} class="hover:text-paper">
+                      {page.label}
+                    </a>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
+        )
+      }
+      <slot />
+    </main>
+    <SiteFooter />
+    <slot name="after" />
+  </body>
+</html>

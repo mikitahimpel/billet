@@ -1,0 +1,93 @@
+---
+import { Image } from "astro:assets";
+import oops from "../assets/art/whoknows-miss.webp";
+import Page from "../layouts/page.astro";
+import { supportEmail } from "../site";
+
+const fixes = [
+  {
+    problem: "My partner's code doesn't work",
+    fix: "Codes are 10 characters and expire after 24 hours. Ask your partner to open the invite screen again and send a fresh one, or scan the QR code instead of typing.",
+  },
+  {
+    problem: "Drawings don't show on my Lock Screen",
+    fix: "Add Ourio's Drawing widget to your Lock Screen or Home Screen and allow notifications. iOS doesn't let apps change the wallpaper itself.",
+    link: { href: "/help/#widgets", label: "How to add widgets" },
+  },
+  {
+    problem: "I'm not getting notifications",
+    fix: "iPhone Settings › Notifications › Ourio › Allow Notifications. Check that a Focus mode isn't holding them.",
+  },
+  {
+    problem: "Something didn't sync",
+    fix: "Ourio needs a connection to reach your partner. If the app says the server didn't answer, nothing changed: try again in a moment.",
+  },
+  {
+    problem: "I have a new iPhone",
+    fix: "Sign in to the same Apple Account with iCloud Keychain on, then open Ourio. If you linked Sign in with Apple, you can sign in that way.",
+    link: { href: "/help/#new-phone", label: "Moving to a new iPhone" },
+  },
+  {
+    problem: "I want to leave or delete everything",
+    fix: "Settings › Partner › Unpair, or Settings › Delete account to remove your account and what you sent from our server.",
+    link: { href: "/help/#delete", label: "Deleting your account" },
+  },
+];
+
+const schema = [
+  {
+    "@type": "ContactPage",
+    mainEntity: { "@type": "Organization", name: "Ourio", email: supportEmail, url: new URL("/", Astro.site).href },
+  },
+];
+---
+
+<Page
+  title="Ourio support: contact us and fix common problems"
+  description="Get help with Ourio, the iPhone app for couples: email support, and quick fixes for invite codes, Lock Screen drawings, notifications, syncing and new phones."
+  schema={schema}
+>
+  <section class="container-page grid items-center gap-10 pt-10 pb-12 md:pt-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+    <div>
+      <p class="eyebrow">Support</p>
+      <h1 class="mt-5 max-w-[16ch] text-h2">Something not right? Tell us.</h1>
+      <p class="mt-6 max-w-[38rem] text-lead text-soft">
+        Email <a href={`mailto:${supportEmail}`} class="text-honey underline underline-offset-4">{supportEmail}</a> and a
+        person will answer. Say which iPhone and iOS version you use and what you tapped; a screenshot helps. Never send
+        your invite code to anyone but your partner.
+      </p>
+      <a
+        href={`mailto:${supportEmail}?subject=Ourio%20support`}
+        class="mt-8 inline-block rounded-full bg-gold px-6 py-3 font-extrabold text-ink transition-transform hover:-translate-y-0.5"
+        >Email support</a
+      >
+    </div>
+    <figure class="relative grid place-items-center">
+      <div class="lamp-glow absolute inset-0" aria-hidden="true"></div>
+      <Image src={oops} alt="Mochi lying on her back with her tongue out" widths={[320, 640]} sizes="(min-width: 1024px) 380px, 60vw" class="relative max-h-[18rem] w-auto md:max-h-[22rem]" loading="eager" />
+    </figure>
+  </section>
+
+  <section class="container-page pb-24" aria-labelledby="fixes">
+    <h2 id="fixes" class="text-h3">Quick fixes</h2>
+    <div class="mt-8 grid gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3">
+      {
+        fixes.map((item) => (
+          <article class="lit-panel flex flex-col p-6 md:p-7">
+            <h3 class="text-[1.25rem] leading-tight font-extrabold">{item.problem}</h3>
+            <p class="mt-3 flex-1 text-body text-soft">{item.fix}</p>
+            {item.link && (
+              <a href={item.link.href} class="mt-4 text-small font-bold text-honey underline underline-offset-4">
+                {item.link.label}
+              </a>
+            )}
+          </article>
+        ))
+      }
+    </div>
+    <p class="mt-10 text-body text-soft">
+      More in <a href="/help/" class="text-honey underline underline-offset-4">Help</a> and the{" "}
+      <a href="/faq/" class="text-honey underline underline-offset-4">FAQ</a>.
+    </p>
+  </section>
+</Page>

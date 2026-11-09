@@ -1,0 +1,84 @@
+---
+import AppStoreBadge from "../../components/app-store-badge.astro";
+import GetApp from "../../components/get-app.astro";
+import PictureView from "../../components/picture.astro";
+import { featureList, hubArt } from "../../features";
+import Page from "../../layouts/page.astro";
+
+const schema = [
+  {
+    "@type": "ItemList",
+    name: "Ourio features",
+    itemListElement: featureList.map((feature, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      name: feature.eyebrow,
+      url: new URL(`/features/${feature.slug}/`, Astro.site).href,
+    })),
+  },
+];
+---
+
+<Page
+  title="Ourio features: everything in the couples app with a shared cat"
+  description="Every Ourio feature: a shared room and cat, Lock Screen drawings and notes, photo Moments, a couples planner with countdowns, date night, wishlists and shared lists, a love streak, two games, a coin shop and iPhone widgets."
+  schema={schema}
+>
+  <section class="container-page pt-10 pb-12 md:pt-14 md:pb-20">
+    <p class="eyebrow">Features</p>
+    <h1 class="mt-5 max-w-[18ch] text-h2">Everything in Ourio.</h1>
+    <p class="mt-6 max-w-[44rem] text-lead text-soft">
+      Ourio is a free iPhone app for couples built around one shared room and one cat, Mochi. Around her: drawings and
+      notes that land on your partner's Lock Screen, photo Moments, a planner for two with date night, wishlists and
+      shared lists, a love streak, two games and six widgets. Here is all of it.
+    </p>
+  </section>
+
+  <div class="container-page grid gap-4 pb-8 md:grid-cols-2 md:gap-5">
+    {
+      featureList.map((feature, i) => (
+        <a
+          href={`/features/${feature.slug}/`}
+          class:list={[
+            "lit-panel group grid gap-6 overflow-hidden p-6 transition-transform hover:-translate-y-1 md:p-8",
+            i === 0 && "md:col-span-2 md:grid-cols-[minmax(0,6fr)_minmax(0,5fr)] md:items-center",
+          ]}
+        >
+          <div>
+            <p class="eyebrow">{feature.eyebrow}</p>
+            <h2 class="mt-3 text-h3">{feature.h1}</h2>
+            <p class="mt-3 max-w-[34rem] text-body text-soft">{feature.description}</p>
+            <span class="mt-5 inline-flex items-center gap-2 text-small font-bold text-honey">
+              Read more <span aria-hidden="true" class="transition-transform group-hover:translate-x-1">→</span>
+            </span>
+          </div>
+          <PictureView
+            picture={hubArt[feature.slug]!}
+            class:list={[
+              hubArt[feature.slug]!.kind === "scene" && "aspect-[16/10] w-full",
+              hubArt[feature.slug]!.kind === "shot" && "max-w-[13rem]",
+              i === 0 && "md:aspect-[4/3]",
+            ]}
+          />
+        </a>
+      ))
+    }
+  </div>
+
+  <section class="container-page py-16 md:py-24">
+    <div class="lit-panel grid gap-6 p-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-center md:p-10">
+      <div>
+        <h2 class="text-h3">What Ourio doesn't do</h2>
+        <ul class="mt-4 space-y-2 text-body text-soft">
+          <li>No chat and no feed: things arrive quietly, with no thread to keep up with.</li>
+          <li>No ads, no tracking, no AI training on your photos or drawings.</li>
+          <li>No in-app purchases: every coin is earned together.</li>
+          <li>No Android or iPad version yet: Ourio needs two iPhones on iOS 18 or later.</li>
+        </ul>
+      </div>
+      <AppStoreBadge qr class="md:justify-self-end" />
+    </div>
+  </section>
+
+  <GetApp />
+</Page>

@@ -1,0 +1,74 @@
+---
+import GetApp from "../components/get-app.astro";
+import { questions, type Question } from "../faq";
+import Page from "../layouts/page.astro";
+
+const topics = [...new Set(questions.map((item) => item.topic))] satisfies Question["topic"][];
+const schema = [
+  {
+    "@type": "FAQPage",
+    mainEntity: questions.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
+---
+
+<Page
+  title="Ourio FAQ: price, pairing, privacy and features of the couples app"
+  description="Answers about Ourio, the free iPhone app for couples: what it costs, what you need, how pairing works, widgets, games, coins, privacy and deleting your account."
+  schema={schema}
+>
+  <section class="container-page pt-10 pb-24 md:pt-14">
+    <div class="grid gap-12 lg:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] lg:gap-20">
+      <div class="lg:sticky lg:top-28 lg:self-start">
+        <p class="eyebrow">FAQ</p>
+        <h1 class="mt-5 max-w-[14ch] text-h2">Questions about Ourio</h1>
+        <p class="mt-5 max-w-[26rem] text-body text-soft">
+          Ourio is a free iPhone app for couples with a shared room and a cat. Can't find your answer? See{" "}
+          <a href="/help/" class="text-honey underline underline-offset-4">Help</a> or{" "}
+          <a href="/support/" class="text-honey underline underline-offset-4">contact support</a>.
+        </p>
+        <nav aria-label="Topics" class="mt-8 hidden flex-wrap gap-2 lg:flex">
+          {
+            topics.map((topic) => (
+              <a href={`#${topic.toLowerCase()}`} class="rounded-full bg-raised px-4 py-2 text-small font-semibold hover:bg-raised-top">
+                {topic}
+              </a>
+            ))
+          }
+        </nav>
+      </div>
+      <div>
+        {
+          topics.map((topic) => (
+            <section id={topic.toLowerCase()} class="scroll-mt-28 [&+&]:mt-14">
+              <h2 class="eyebrow">{topic}</h2>
+              <div class="mt-4 border-b border-paper/15">
+                {questions
+                  .filter((item) => item.topic === topic)
+                  .map((item) => (
+                    <details class="faq group border-t border-paper/15">
+                      <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-[1.125rem] leading-snug font-extrabold md:text-[1.25rem]">
+                        <h3>{item.question}</h3>
+                        <span
+                          aria-hidden="true"
+                          class="grid size-8 shrink-0 place-items-center rounded-full bg-raised text-honey transition-transform group-open:rotate-45"
+                        >
+                          +
+                        </span>
+                      </summary>
+                      <p class="max-w-[40rem] pb-6 text-body text-soft">{item.answer}</p>
+                    </details>
+                  ))}
+              </div>
+            </section>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+  <GetApp />
+</Page>

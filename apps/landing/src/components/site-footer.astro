@@ -1,0 +1,47 @@
+---
+import { appStoreUrl } from "../config";
+import { features, pages } from "../site";
+
+const groups = [
+  { title: "Features", links: [{ path: "/features/", label: "All features" }, ...features] },
+  { title: "Help", links: pages.filter((page) => page.group === "help") },
+  {
+    title: "Ourio",
+    links: [...pages.filter((page) => page.group === "legal"), { path: "/llms.txt", label: "llms.txt" }],
+  },
+];
+---
+
+<footer class="border-t border-paper/10">
+  <div class="container-page grid gap-10 pt-14 pb-28 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] md:pb-14">
+    <div>
+      <a href="/" class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</a>
+      <p class="mt-2 max-w-[24rem] text-small text-muted">
+        A free iPhone app for couples: one shared room, one cat, and everything you do for her on your partner's Lock
+        Screen.
+      </p>
+      <a href={appStoreUrl} class="mt-5 inline-block rounded-full bg-gold px-5 py-2.5 text-small font-extrabold text-ink" data-cta
+        >Get Ourio for iPhone</a
+      >
+    </div>
+    <nav class="grid grid-cols-2 gap-8 sm:grid-cols-3" aria-label="Footer">
+      {
+        groups.map((group) => (
+          <div>
+            <p class="eyebrow">{group.title}</p>
+            <ul class="mt-4 space-y-2.5 text-small text-muted">
+              {group.links.map((link) => (
+                <li>
+                  <a href={link.path} class="underline-offset-4 hover:text-paper hover:underline">
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))
+      }
+    </nav>
+  </div>
+  <div class="container-page border-t border-paper/10 py-6 text-label text-muted">© 2026 Ourio. iPhone only, US English.</div>
+</footer>

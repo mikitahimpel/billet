@@ -1,0 +1,124 @@
+---
+import type { GetStaticPaths } from "astro";
+import AppStoreBadge from "../../components/app-store-badge.astro";
+import GetApp from "../../components/get-app.astro";
+import PictureView from "../../components/picture.astro";
+import { featureList, type Feature, type FeatureSection } from "../../features";
+import SectionText from "../../components/section-text.astro";
+import Page from "../../layouts/page.astro";
+import { features } from "../../site";
+
+export const getStaticPaths = (() =>
+  featureList.map((feature) => ({ params: { slug: feature.slug }, props: { feature } }))) satisfies GetStaticPaths;
+
+const { feature } = Astro.props as { feature: Feature };
+// Sections with a picture get a row of their own; runs of text-only sections sit side by side as cards.
+type Block = { kind: "row"; section: FeatureSection; flip: boolean } | { kind: "cards"; sections: FeatureSection[] };
+const blocks: Block[] = [];
+let rows = 0;
+for (const section of feature.sections) {
+  const last = blocks.at(-1);
+  if (section.picture) blocks.push({ kind: "row", section, flip: rows++ % 2 === 1 });
+  else if (last?.kind === "cards") last.sections.push(section);
+  else blocks.push({ kind: "cards", sections: [section] });
+}
+const others = features.filter((page) => page.path !== Astro.url.pathname);
+const schema = [
+  {
+    "@type": "FAQPage",
+    mainEntity: feature.questions.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
+---
+
+<Page title={feature.title} description={feature.description} schema={schema}>
+  <section class="container-page grid items-center gap-12 pt-10 pb-16 md:pt-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-20 lg:pb-24">
+    <div>
+      <p class="eyebrow">{feature.eyebrow}</p>
+      <h1 class="mt-5 max-w-[16ch] text-h2">{feature.h1}</h1>
+      <p class="mt-6 max-w-[38rem] text-lead text-soft">{feature.lead}</p>
+      <AppStoreBadge qr class="mt-9" />
+    </div>
+    <PictureView picture={feature.hero} eager class:list={feature.hero.kind === "scene" && "aspect-[4/5] max-h-[34rem] w-full"} />
+  </section>
+
+  {
+    blocks.map((block) =>
+      block.kind === "row" ? (
+        <section id={block.section.id} class="border-t border-paper/10 py-16 md:py-24">
+          <div class="container-page grid gap-10 md:grid-cols-2 md:items-center md:gap-16">
+            <div class:list={["min-w-0", block.flip && "md:order-2"]}>
+              <SectionText section={block.section} />
+            </div>
+            <PictureView
+              picture={block.section.picture!}
+              class:list={[
+                block.flip && "md:order-1",
+                block.section.picture!.kind === "scene" && "aspect-square w-full max-w-[30rem] justify-self-center",
+              ]}
+            />
+          </div>
+        </section>
+      ) : (
+        <div class="border-t border-paper/10 py-16 md:py-24">
+          <div class:list={["container-page grid gap-4 md:gap-5", block.sections.length > 1 && "md:grid-cols-2"]}>
+            {block.sections.map((section) => (
+              <section id={section.id} class:list={["lit-panel min-w-0 p-6 md:p-9", block.sections.length % 2 === 1 && block.sections.length > 1 && section === block.sections.at(-1) && "md:col-span-2"]}>
+                <SectionText section={section} />
+              </section>
+            ))}
+          </div>
+        </div>
+      ),
+    )
+  }
+
+  <section class="border-t border-paper/10 py-16 md:py-24" aria-labelledby="questions">
+    <div class="container-page grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
+      <h2 id="questions" class="text-h3">Questions</h2>
+      <div class="border-b border-paper/15">
+        {
+          feature.questions.map((item) => (
+            <details class="faq group border-t border-paper/15" open>
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-[1.125rem] font-extrabold md:text-[1.25rem]">
+                <h3>{item.question}</h3>
+                <span aria-hidden="true" class="grid size-8 shrink-0 place-items-center rounded-full bg-raised text-honey transition-transform group-open:rotate-45">
+                  +
+                </span>
+              </summary>
+              <p class="max-w-[38rem] pb-6 text-body text-soft">{item.answer}</p>
+            </details>
+          ))
+        }
+        <p class="border-t border-paper/15 py-5 text-small text-muted">
+          More answers in the <a href="/faq/" class="text-honey underline underline-offset-4">FAQ</a> and the{" "}
+          <a href="/help/" class="text-honey underline underline-offset-4">help pages</a>.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="border-t border-paper/10 py-16 md:py-24" aria-labelledby="more">
+    <div class="container-page">
+      <h2 id="more" class="text-h3">More of Ourio</h2>
+      <ul class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {
+          others.map((page) => (
+            <li>
+              <a href={page.path} class="lit-panel block h-full p-5 transition-transform hover:-translate-y-0.5">
+                <span class="block font-extrabold">{page.label}</span>
+                <span class="mt-1.5 block text-small text-muted">{page.summary}</span>
+              </a>
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </section>
+
+  <GetApp />
+</Page>

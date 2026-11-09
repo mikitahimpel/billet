@@ -1,0 +1,127 @@
+---
+import Page from "../layouts/page.astro";
+import { supportEmail } from "../site";
+
+const topics = [
+  { id: "start", label: "Getting started" },
+  { id: "pair", label: "Pairing with your partner" },
+  { id: "widgets", label: "Adding widgets" },
+  { id: "drawings", label: "Drawings on the Lock Screen" },
+  { id: "notifications", label: "Notifications" },
+  { id: "share", label: "Sharing to your wishlist" },
+  { id: "new-phone", label: "Moving to a new iPhone" },
+  { id: "unpair", label: "Unpair, block or report" },
+  { id: "delete", label: "Deleting your account" },
+];
+const updated = "November 9, 2026";
+---
+
+<Page
+  title="Ourio help: setup, pairing, widgets, notifications and your account"
+  description="How to use Ourio on iPhone: set it up, pair with your partner, add the Lock Screen and Home Screen widgets, turn on notifications, share links to your wishlist, move to a new phone, unpair and delete your account."
+>
+  <section class="container-page pt-10 pb-24 md:pt-14">
+    <p class="eyebrow">Help</p>
+    <h1 class="mt-4 max-w-[16ch] text-h2">Ourio help</h1>
+    <p class="mt-5 max-w-[42rem] text-lead text-soft">
+      Short how-tos for Ourio, the iPhone app for couples. Ourio needs two iPhones on iOS 18 or later, one for each of you.
+      Setup takes about two minutes.
+    </p>
+    <p class="mt-4 text-small text-muted">Last updated: <time datetime="2026-11-09">{updated}</time></p>
+
+    <div class="mt-12 grid gap-12 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)] lg:gap-16">
+      <nav aria-label="On this page" class="lg:sticky lg:top-28 lg:self-start">
+        <p class="eyebrow">On this page</p>
+        <ol class="mt-4 space-y-2 text-small text-muted">
+          {topics.map((topic) => <li><a href={`#${topic.id}`} class="hover:text-paper">{topic.label}</a></li>)}
+        </ol>
+      </nav>
+
+      <div class="doc [&>h2:first-child]:mt-0">
+        <h2 id="start">Getting started</h2>
+        <ol>
+          <li>Install Ourio from the App Store. There's no sign-up form: the app creates an anonymous account for you.</li>
+          <li>Answer a few short questions, or skip any of them. If you're under 13, Ourio stops here.</li>
+          <li>Tell Ourio when your story started (the Us tab counts your days together from it).</li>
+          <li>Choose your cat's coat and name. Skip the name and she stays Mochi.</li>
+          <li>Invite your partner (next section), turn on notifications and add a widget.</li>
+        </ol>
+        <p>The app has four tabs: <strong>World</strong> (the room and Mochi), <strong>Moments</strong>, <strong>Shop</strong> and <strong>Us</strong>. The <strong>+</strong> button adds a Moment, a drawing, a note, a list item, a wish, an event or a date.</p>
+
+        <h2 id="pair">Pairing with your partner</h2>
+        <ol>
+          <li>On the invite screen, Ourio shows your 10-character code.</li>
+          <li>Tap <strong>Share invite</strong> to send it as a message or link, or show the QR code for your partner to scan.</li>
+          <li>Your partner installs Ourio, taps <strong>I have an invite code</strong> and pastes or types it.</li>
+        </ol>
+        <p>
+          A code works for 24 hours; after that, open the invite screen again for a new one. A room holds exactly two people. More in <a href="/how-it-works/">how pairing works</a>.
+        </p>
+
+        <h2 id="widgets">Adding widgets</h2>
+        <h3>Home Screen</h3>
+        <ol>
+          <li>Touch and hold an empty spot on the Home Screen until the apps jiggle, then tap <strong>Edit</strong> › <strong>Add Widget</strong>.</li>
+          <li>Search for <strong>Ourio</strong>, choose a widget (Our Corner, Ourio, Block or Drawing) and a size, and tap <strong>Add Widget</strong>.</li>
+        </ol>
+        <h3>Lock Screen</h3>
+        <ol>
+          <li>Touch and hold the Lock Screen, tap <strong>Customize</strong>, then <strong>Lock Screen</strong>.</li>
+          <li>Tap the widget area under the clock and add <strong>Us</strong>, <strong>Note</strong> or <strong>Drawing</strong> from Ourio.</li>
+        </ol>
+        <p>
+          Some widgets have buttons: set your mood or tick a list item without opening the app. In Control Center you can add
+          <strong>Pet Your Cat</strong> and <strong>New Note</strong>. See <a href="/features/widgets-and-notifications/">every widget and size</a>.
+        </p>
+
+        <h2 id="drawings">Drawings on the Lock Screen</h2>
+        <p>
+          Tap <strong>+</strong> › <strong>Draw</strong>. The canvas shows your partner's Lock Screen so you see where the
+          drawing will sit. When you send it, your partner gets a notification and the <strong>Drawing</strong> widget shows it.
+          Without the widget, they open it from the notification. iOS doesn't let apps change the wallpaper, so the
+          widget is how drawings reach the Lock Screen.
+        </p>
+
+        <h2 id="notifications">Notifications</h2>
+        <p>
+          Ourio only notifies you about your partner: a new drawing, photo or note, a heart on your photo, a Pick tonight match,
+          their turn in a game, and reminders before a date you planned. If they stopped arriving, open iPhone
+          <strong>Settings</strong> › <strong>Notifications</strong> › <strong>Ourio</strong> and turn on
+          <strong>Allow Notifications</strong>. Focus modes can hold them back too.
+        </p>
+
+        <h2 id="share">Sharing to your wishlist</h2>
+        <p>
+          In Safari or another app, tap <strong>Share</strong> and choose <strong>Ourio</strong>. If you don't see it, scroll
+          the row of apps and tap <strong>More</strong>. <strong>Add to my wishlist</strong> opens with the link filled in;
+          add a price or details and tap <strong>Add wish</strong>. Links and text can be shared, not images.
+        </p>
+
+        <h2 id="new-phone">Moving to a new iPhone</h2>
+        <p>
+          Your account key lives in your iCloud Keychain, so on a new iPhone signed in to the same Apple Account, opening Ourio
+          brings your account back. If you linked <strong>Save your cat and notes</strong> (Sign in with Apple), you can also
+          sign in that way.
+        </p>
+
+        <h2 id="unpair">Unpair, block or report</h2>
+        <p>Open <strong>Settings</strong> in Ourio and find the <strong>Partner</strong> section.</p>
+        <ul>
+          <li><strong>Unpair</strong>: you stop sharing with each other. The shared room, notes, photos, cat and activity are deleted for both of you; each keeps what they bought and half the coins. You can pair again with a new code.</li>
+          <li><strong>Block partner</strong>: you are unpaired, and neither of you can pair with the other again.</li>
+          <li><strong>Report partner</strong>: tell us about harassment, inappropriate content, spam or not feeling safe. We read every report.</li>
+        </ul>
+
+        <h2 id="delete">Deleting your account</h2>
+        <p>
+          <strong>Settings</strong> › <strong>Delete account</strong>. Your account and what you sent are deleted from the
+          server, your partner is unpaired, and everything on this phone is erased. This can't be undone. Deleting the app alone
+          doesn't remove your data from our server. See the <a href="/privacy/">privacy policy</a>.
+        </p>
+
+        <h2 id="contact">Still stuck?</h2>
+        <p>Email <a href={`mailto:${supportEmail}`}>{supportEmail}</a> or see <a href="/support/">Support</a>.</p>
+      </div>
+    </div>
+  </section>
+</Page>
