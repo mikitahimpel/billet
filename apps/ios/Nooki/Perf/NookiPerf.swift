@@ -105,6 +105,7 @@ enum NookiPerf {
         ScenePerf.host.shotPrefix = kind == .city ? "city" : "world"
         let start = room.frame
         Task { @MainActor in
+            if kind == .home { await PerfPieces.stand(in: room) }
             let deadline = ContinuousClock.now + .seconds(5)
             while room.frame == start, ContinuousClock.now < deadline { try? await Task.sleep(for: .milliseconds(2)) }
             register(room, kind: kind)
@@ -122,16 +123,18 @@ enum NookiPerf {
                 census: {
                     let skin = SplatSkinner.stats.withLock { $0 }
                     return "kind=\(kind == .city ? "city" : "room") skin_passes=\(skin.passes) skin_skipped=\(skin.skipped)"
-                        + " skin_ms=\(String(format: "%.2f", skin.milliseconds))"
+                        + " skin_ms=\(String(format: "%.2f", skin.milliseconds)) pieces=\(PerfPieces.arm ?? "none")"
                 },
                 // The arms of the glass-over-the-room comparison, each off against the run's launch arm: "glass hud"
                 // off is the opaque header and tab bar, "hud shadow" off the flat one, "hud" off none, and "room
-                // paused" off stops the room drawing under them.
+                // paused" off stops the room drawing under them. "pieces" off takes away the shop pieces a
+                // `-perf.pieces` run stood in the room.
                 switches: ["cat shadow", "room shadows", "sun shadow", "point lights", "particles", "bloom",
-                           "glass hud", "hud shadow", "hud", "room paused"],
+                           "glass hud", "hud shadow", "hud", "room paused", "pieces"],
                 setSwitch: { name, isOn in
                     switch name {
                     case "cat shadow": room.setCatShadow(isOn)
+                    case "pieces": PerfPieces.set(isOn, in: room)
                     case "glass hud": setHUD(isOn ? .launch : .opaque)
                     case "hud shadow": setHUD(isOn ? .launch : .flat)
                     case "hud": setHUD(isOn ? .launch : .hidden)
@@ -202,5 +205,84 @@ private enum RoomSwitches {
     private static func visit(_ entity: Entity, _ body: (Entity) -> Void) {
         body(entity)
         for child in entity.children { visit(child, body) }
+    }
+}
+
+/// `-perf.pieces today|sand3d`: three shop pieces stood on the Room's floor for a run, so a `cost` run's "pieces"
+/// switch measures what bought furniture costs to draw. `today` is the bundle's Blender-made armchair, bookcase and
+/// monstera, `sand3d` the Sand3D armchair, chest of drawers and monstera (tools/sand3d). Each is scaled the way the
+/// shop fits it and lit like `DioramaScene`'s own furniture. The app never places shop pieces otherwise.
+@MainActor
+enum PerfPieces {
+    static let arm = UserDefaults.standard.string(forKey: "perf.pieces")
+
+    private enum Measure { case width, height }
+
+    private struct Piece {
+        let model: String
+        let measure: Measure
+        /// Room units, as `ShopItem.Fit` sizes.
+        let size: Float
+        /// On the pivot's floor, which is 0.014 above its origin.
+        let at: SIMD3<Float>
+        let yaw: Float
+    }
+
+    private static let floor: Float = 0.014
+    private static let spots: [(SIMD3<Float>, Float)] = [
+        ([-0.27, floor, 0.12], .pi / 2), ([0.12, floor, -0.39], 0), ([-0.39, floor, -0.39], 0.6),
+    ]
+
+    private static func pieces(_ arm: String) -> [Piece]? {
+        let models: [(String, Measure, Float)]
+        switch arm {
+        case "today": models = [("Item_armchair", .width, 0.4), ("Item_bookcase", .height, 0.6),
+                                ("Item_monstera", .height, 0.55)]
+        case "sand3d": models = [("Item_armchair-meadow", .width, 0.4), ("Item_chest", .height, 0.34),
+                                 ("Item_monstera-potted", .height, 0.55)]
+        default: return nil
+        }
+        return zip(models, spots).map { model, spot in
+            Piece(model: model.0, measure: model.1, size: model.2, at: spot.0, yaw: spot.1)
+        }
+    }
+
+    private static var stood: [ObjectIdentifier: Entity] = [:]
+
+    static func stand(in room: CatRoom) async {
+        guard let arm, let pieces = pieces(arm), stood[ObjectIdentifier(room)] == nil else { return }
+        let group = Entity()
+        group.name = "perf pieces"
+        stood[ObjectIdentifier(room)] = group
+        for piece in pieces {
+            let model: Entity
+            do {
+                model = try await Entity(named: piece.model, in: .main)
+            } catch {
+                ScenePerf.trace("pieces: \(piece.model) failed to load: \(error)")
+                continue
+            }
+            let bounds = model.visualBounds(relativeTo: nil)
+            let extent = piece.measure == .width ? bounds.extents.x : bounds.extents.y
+            guard extent > 0 else { continue }
+            let scale = piece.size / extent
+            let holder = Entity()
+            holder.addChild(model)
+            model.scale = .init(repeating: scale)
+            model.position = [-bounds.center.x * scale, -bounds.min.y * scale, -bounds.center.z * scale]
+            holder.position = piece.at
+            holder.orientation = simd_quatf(angle: piece.yaw, axis: [0, 1, 0])
+            model.forEachDescendant { entity in
+                if let receiver = room.iblReceiver { entity.components.set(receiver) }
+                entity.components.set(GroundingShadowComponent(castsShadow: true))
+            }
+            group.addChild(holder)
+        }
+        room.pivot.addChild(group)
+        ScenePerf.trace("pieces \(arm) stood: \(group.children.count)")
+    }
+
+    static func set(_ isOn: Bool, in room: CatRoom) {
+        stood[ObjectIdentifier(room)]?.isEnabled = isOn
     }
 }
