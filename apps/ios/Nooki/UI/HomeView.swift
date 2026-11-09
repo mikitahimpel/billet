@@ -55,8 +55,14 @@ struct HomeView: View {
     /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
     private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
+    /// In three parts: as one chain of modifiers, `body` takes the Release type-checker past its time limit on Xcode 26.
     var body: some View {
-        layout
+        presenting(following(layout))
+    }
+
+    /// The room's tasks and what it follows in the state.
+    private func following(_ content: some View) -> some View {
+        content
         .task {
             NookiPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
             await lift()
@@ -125,6 +131,11 @@ struct HomeView: View {
         .onChange(of: state.tab, initial: true) { visitHints() }
         .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in phaseChanged(from: old, to: phase) }
+    }
+
+    /// The sheets and the canvas over Home, and what the app hears from outside.
+    private func presenting(_ content: some View) -> some View {
+        content
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
         }
