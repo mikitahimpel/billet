@@ -5,9 +5,10 @@ import { features, pages } from "../site";
 const groups = [
   {
     title: "Features",
-    links: [{ path: "/features/", label: "All features" }, ...features, ...pages.filter((page) => page.path === "/long-distance-relationship-app/")],
+    links: [{ path: "/features/", label: "All features" }, ...features, ...pages.filter((page) => page.group === "product" && page.path !== "/" && page.path !== "/features/")],
   },
   { title: "Help", links: pages.filter((page) => page.group === "help") },
+  { title: "Compare", links: pages.filter((page) => page.group === "compare") },
   {
     title: "Ourio",
     links: [...pages.filter((page) => page.group === "legal"), { path: "/llms.txt", label: "llms.txt" }],
@@ -27,7 +28,7 @@ const groups = [
         >Get Ourio for iPhone</a
       >
     </div>
-    <nav class="grid grid-cols-2 gap-8 sm:grid-cols-3" aria-label="Footer">
+    <nav class="grid grid-cols-2 gap-8 lg:grid-cols-4" aria-label="Footer">
       {
         groups.map((group) => (
           <div>

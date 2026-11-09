@@ -5,7 +5,7 @@ export type SitePage = {
   label: string;
   // One sentence for llms.txt and the footer's hub cards.
   summary: string;
-  group: "product" | "features" | "help" | "legal";
+  group: "product" | "features" | "compare" | "help" | "legal";
 };
 
 export const features: SitePage[] = [
@@ -119,6 +119,38 @@ export const pages: SitePage[] = [
     summary:
       "How Ourio keeps two people close apart: Lock Screen drawings, a shared cat, daily games and countdowns.",
     group: "product",
+  },
+  {
+    path: "/free-couples-app/",
+    label: "Free, no subscription",
+    summary:
+      "Every Ourio feature is free for both partners: no subscription, no in-app purchases, no ads.",
+    group: "product",
+  },
+  {
+    path: "/compare/",
+    label: "Couples apps compared",
+    summary:
+      "Ourio, Paired, Between, Locket Widget, Widgetable, Agapé, Lovewick, Cupla and SumOne: prices and features.",
+    group: "compare",
+  },
+  {
+    path: "/compare/paired-alternative/",
+    label: "Paired alternative",
+    summary: "Ourio vs Paired: daily questions and games without a subscription.",
+    group: "compare",
+  },
+  {
+    path: "/compare/locket-widget-alternative/",
+    label: "Locket Widget alternative",
+    summary: "Ourio vs Locket Widget: drawings and notes on your partner's Lock Screen, for two.",
+    group: "compare",
+  },
+  {
+    path: "/compare/widgetable-alternative/",
+    label: "Widgetable alternative",
+    summary: "Ourio vs Widgetable: a shared pet and widgets with nothing for sale.",
+    group: "compare",
   },
   {
     path: "/how-it-works/",

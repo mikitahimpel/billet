@@ -29,6 +29,10 @@ ${links("product", site)}
 
 ${links("features", site)}
 
+## Compare
+
+${links("compare", site)}
+
 ## Help
 
 ${links("help", site)}

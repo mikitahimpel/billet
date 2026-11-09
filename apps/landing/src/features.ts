@@ -799,11 +799,11 @@ export const featureList: Feature[] = [
   },
   {
     slug: "games",
-    title: "Couples games app for iPhone: quiz and draw & guess for two · Ourio",
+    title: "Couples games and daily questions app for iPhone · Ourio",
     description:
       "Two free couples games in Ourio: Who knows who, a daily 5-question quiz about how well you know your partner, and Draw & guess, where one draws a word and the other spells it from letter tiles.",
     eyebrow: "Games for two",
-    h1: "Couples games you play across two phones.",
+    h1: "Couples games and daily questions, across two phones.",
     lead: "Ourio has two free games for couples. Who knows who is a daily round of five questions about one of you, from 150 questions; the other guesses, and the answers open together. Draw & guess has one of you draw a word and the other spell it from 12 letter tiles. Both are turn-based and earn coins.",
     hero: { src: whoKnowsHost, alt: "Mochi holding a microphone like a quiz host", kind: "cutout" },
     sections: [
@@ -1117,6 +1117,84 @@ export const longDistance: Feature = {
     "date-night",
     "calendar-and-countdown",
   ],
+};
+
+// For "free couples app" and "couples app with no subscription": a use case, at the site root.
+export const freeApp: Feature = {
+  slug: "free-couples-app",
+  title: "Free couples app with no subscription and no in-app purchases · Ourio",
+  description:
+    "Ourio is a free couples app for iPhone with no subscription, no in-app purchases and no ads. Every feature is free for both partners: the shared cat, Lock Screen drawings, games, date night, wishlists, lists and widgets.",
+  eyebrow: "Free, no subscription",
+  h1: "A couples app that's free. All of it.",
+  lead: "Ourio is a free couples app for iPhone: no subscription, no in-app purchases, no ads and no premium tier. Both partners get every feature, from the shared cat and Lock Screen drawings to daily questions, 150 date ideas and six widgets. Coins for the shop are earned together and can't be bought.",
+  hero: {
+    src: whoKnowsTrophy,
+    alt: "Mochi holding a golden trophy above her head",
+    kind: "cutout",
+  },
+  sections: [
+    {
+      id: "whats-free",
+      heading: "What you get for free",
+      body: ["Everything in the app. Nothing below is locked behind a trial or a paywall:"],
+      table: {
+        caption: "Ourio features and what they cost",
+        head: ["Feature", "Price"],
+        rows: [
+          ["Shared virtual pet, Mochi, and her room", "Free"],
+          [
+            "Lock Screen drawings and notes",
+            "Free (one ink free, six more bought with earned coins)",
+          ],
+          ["Moments, the shared photo wall", "Free"],
+          ["Who knows who, five daily questions", "Free"],
+          ["Draw & guess", "Free"],
+          ["Date night: 150 ideas you swipe together", "Free"],
+          ["Wishlists, shared lists, Pick tonight", "Free"],
+          ["Shared calendar, countdowns, days together", "Free"],
+          ["Love streak, with a restore once a month", "Free"],
+          ["Six widgets and two Control Center buttons", "Free"],
+        ],
+      },
+    },
+    {
+      id: "coins",
+      heading: "How the shop works without money",
+      body: [
+        "The shop sells furniture, decor, toys and inks for coins, and coins only come from doing things together: caring for Mochi, notes, photos, lists, dates and games. A new pair starts with 560 coins. Coins have no cash value and there is no way to buy them.",
+      ],
+    },
+    {
+      id: "no-ads",
+      heading: "No ads, no data selling",
+      body: [
+        "Ourio shows no ads, has no third-party analytics or tracking, and never sells your data or uses your photos and drawings to train AI. The privacy policy lists exactly what is stored.",
+      ],
+    },
+    {
+      id: "both",
+      heading: "Free for both of you",
+      body: [
+        "Many couples apps charge one partner for a plan that unlocks features for both. Ourio has nothing to unlock, so neither of you pays. You need two iPhones on iOS 18 or later.",
+      ],
+    },
+  ],
+  questions: [
+    {
+      question: "Is there a free couples app with no subscription?",
+      answer: "Yes. Ourio is free on iPhone with no subscription, no in-app purchases and no ads.",
+    },
+    {
+      question: "Does one of us have to pay for the other?",
+      answer: "No. There is nothing to pay for: both partners get every feature for free.",
+    },
+    {
+      question: "Are there ads in Ourio?",
+      answer: "No. Ourio has no ads and no third-party tracking.",
+    },
+  ],
+  related: ["shop-and-coins", "room-and-mochi", "games", "date-night", "widgets-and-notifications"],
 };
 
 // Pictures the hub shows beside each feature; the feature pages use their own hero.
