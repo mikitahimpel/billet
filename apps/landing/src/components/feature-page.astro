@@ -3,7 +3,7 @@ import { Image } from "astro:assets";
 import { dateIdeas } from "../dates";
 import type { Feature, FeatureSection } from "../features";
 import Page from "../layouts/page.astro";
-import { features } from "../site";
+import { features, pages } from "../site";
 import AppStoreBadge from "./app-store-badge.astro";
 import GetApp from "./get-app.astro";
 import PictureView from "./picture.astro";
@@ -24,8 +24,11 @@ for (const section of feature.sections) {
   else if (last?.kind === "cards") last.sections.push(section);
   else blocks.push({ kind: "cards", sections: [section] });
 }
+// A related slug is a feature page or a use-case page at the site root.
 const others = feature.related
-  ? feature.related.map((slug) => features.find((page) => page.path === `/features/${slug}/`)!)
+  ? feature.related.map(
+      (slug) => pages.find((page) => page.path === `/features/${slug}/` || page.path === `/${slug}/`)!,
+    )
   : features.filter((page) => page.path !== Astro.url.pathname);
 const schema: Record<string, unknown>[] = [
   {

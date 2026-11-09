@@ -5,7 +5,7 @@ import { HeroStage } from "../components/hero-stage";
 import QrCode from "../components/qr-code.astro";
 import Step from "../components/setup-step.astro";
 import { TwoPhones } from "../components/two-phones";
-import { appStoreLive, appStoreUrl, siteDescription, siteTitle } from "../config";
+import { appStoreId, appStoreLive, appStoreUrl, siteDescription, siteTitle } from "../config";
 import { faq } from "../faq";
 import Page from "../layouts/page.astro";
 import PictureView from "../components/picture.astro";
@@ -93,7 +93,8 @@ const schema = [
       name: "Ourio",
       description: siteDescription,
       url: canonical,
-      downloadUrl: appStoreUrl,
+      // Only once the listing is live: until then the URL is a placeholder.
+      ...(appStoreId && { downloadUrl: appStoreUrl }),
       image: ogImage,
       applicationCategory: "LifestyleApplication",
       operatingSystem: "iOS 18.0 or later",

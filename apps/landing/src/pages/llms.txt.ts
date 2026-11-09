@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { appStoreUrl, siteDescription } from "../config";
+import { appStoreId, appStoreUrl, siteDescription } from "../config";
 import { pages, type SitePage } from "../site";
 
 // The llms.txt convention (llmstxt.org): a title, a one-line summary, then links to each page's Markdown twin.
@@ -19,8 +19,7 @@ export const GET: APIRoute = ({ site }) =>
 Ourio is a free iPhone app (iOS 18 or later) for couples, in English on the US App Store. It has no chat, no ads and no in-app purchases. Two partners pair their phones with a 10-character code and share one room, one cat named Mochi, Lock Screen drawings and notes, photo Moments, a planner (countdown, love streak, date night, wishlists, calendar, shared lists, To watch with Pick tonight, Places to go), two games (Who knows who, Draw & guess), a coin shop and six widgets.
 
 - Website: ${new URL("/", site).href}
-- App Store: ${appStoreUrl}
-
+${appStoreId ? `- App Store: ${appStoreUrl}\n` : ""}
 ## Product
 
 ${links("product", site)}
