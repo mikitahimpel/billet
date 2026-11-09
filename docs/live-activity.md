@@ -37,15 +37,18 @@ APNs key (`APNS_KEY`, `APNS_KEY_ID`; dev only so far):
 
 | Lane | Token kind | `apns-push-type` | Topic | Priority |
 |---|---|---|---|---|
-| `WidgetPush` | `widget` | `widgets` | `com.mikitahimpel.billet.push-type.widgets` | 5 |
-| `AlertPush` | `alert` | `alert` | `com.mikitahimpel.billet` | 10 |
-| `LiveActivityPush` | `liveactivity` (push-to-start) | `liveactivity` | `com.mikitahimpel.billet.push-type.liveactivity` | 10 |
+| `WidgetPush` | `widget` | `widgets` | `com.ourio.app.push-type.widgets` | 5 |
+| `AlertPush` | `alert` | `alert` | `com.ourio.app` | 10 |
+| `LiveActivityPush` | `liveactivity` (push-to-start) | `liveactivity` | `com.ourio.app.push-type.liveactivity` | 10 |
 
 - The Live Activity lane is off unless the deploy sets `LIVE_ACTIVITY_PUSH=on`. That switch
   stands in for the go/no-go #13 never recorded.
 - Each try goes to every device of the partner that has a token of the lane's kind.
-- A token that APNs calls dead (410, `BadDeviceToken`, `Unregistered`, a wrong environment or
-  topic) is deleted from `push_tokens`.
+- A token refused with `DeviceTokenNotForTopic` is sent once more under the first App Store app's
+  bundle, `com.mikitahimpel.billet` (same suffixes), so builds installed from it keep getting
+  pushes. Removing `legacyBundleId` in `apns-client.ts` ends that once the owner retires the app.
+- A token that APNs calls dead (410, `BadDeviceToken`, `Unregistered`, a wrong environment, or a
+  topic neither bundle matches) is deleted from `push_tokens`.
 - The ledger outcome is:
   - `Delivered` once any device took the push.
   - `Retry` for throttling, APNs errors, the network, or an expired provider token. The provider

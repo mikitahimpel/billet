@@ -143,12 +143,12 @@ describe("purchases on prod", () => {
     );
 
   it("credits a verified pack to the caller's pair, once", async () => {
-    const signed = await appleTransaction({ productId: "com.mikitahimpel.billet.coins.550" });
+    const signed = await appleTransaction({ productId: "com.ourio.app.coins.550" });
     const first = await buy("paired-ana", signed);
     expect(first.status).toBe(200);
     const credited = decodePurchase(await first.json());
     expect(credited).toMatchObject({
-      productId: "com.mikitahimpel.billet.coins.550",
+      productId: "com.ourio.app.coins.550",
       coins: 550,
       balance: 550,
       duplicate: false,
@@ -164,10 +164,26 @@ describe("purchases on prod", () => {
         id: `purchase:${credited.transactionId}`,
         kind: "purchase",
         amount: 550,
-        productId: "com.mikitahimpel.billet.coins.550",
+        productId: "com.ourio.app.coins.550",
         at: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/),
       },
     ]);
+  });
+
+  it("credits a pack bought in the first app, under its canonical id", async () => {
+    const signed = await appleTransaction({
+      transactionId: "2000000900000077",
+      originalTransactionId: "2000000900000077",
+      bundleId: "com.mikitahimpel.billet",
+      productId: "com.mikitahimpel.billet.coins.100",
+    });
+    const response = await buy("paired-legacy", signed);
+    expect(response.status).toBe(200);
+    expect(decodePurchase(await response.json())).toMatchObject({
+      productId: "com.ourio.app.coins.100",
+      coins: 100,
+      duplicate: false,
+    });
   });
 
   it("accepts Production and Sandbox (TestFlight)", async () => {
@@ -186,7 +202,7 @@ describe("purchases on prod", () => {
     ["another app's bundle", () => appleTransaction({ bundleId: "com.example.other" })],
     [
       "a product that is not a pack",
-      () => appleTransaction({ productId: "com.mikitahimpel.billet.coins.5" }),
+      () => appleTransaction({ productId: "com.ourio.app.coins.5" }),
     ],
     ["a non-consumable", () => appleTransaction({ type: "Non-Consumable" })],
     ["a revoked transaction", () => appleTransaction({ revocationDate: Date.UTC(2026, 10, 5) })],
@@ -231,7 +247,7 @@ describe("purchases on prod", () => {
       post(
         "/v1/purchases/mock",
         {
-          productId: "com.mikitahimpel.billet.coins.100",
+          productId: "com.ourio.app.coins.100",
           transactionId: "mock-1",
           kind: "purchase",
         },
@@ -322,7 +338,7 @@ describe("purchases on dev", () => {
       body: Record<string, unknown>,
       headers: Record<string, string> = bearer("paired-mock"),
     ) => handler(post("/v1/purchases/mock", body, headers));
-    const productId = "com.mikitahimpel.billet.coins.1200";
+    const productId = "com.ourio.app.coins.1200";
 
     it("credits, dedups and refunds a mock transaction", async () => {
       const transactionId = `mock-${crypto.randomUUID()}`;
@@ -461,7 +477,7 @@ describe("with the payments flag off", () => {
   );
   afterAll(() => app.dispose());
   const { handler } = app;
-  const productId = "com.mikitahimpel.billet.coins.100";
+  const productId = "com.ourio.app.coins.100";
 
   it("answers 404 on every purchase route and changes nothing", async () => {
     const responses = [
@@ -585,7 +601,7 @@ describe("App Store server notifications", () => {
 
   it("never takes the balance below 0, and flags the purchase", async () => {
     const { signed, transactionId } = await bought("paired-spent", {
-      productId: "com.mikitahimpel.billet.coins.550",
+      productId: "com.ourio.app.coins.550",
     });
     await memory.spend(owner("pair-paired-spent"), 500);
     expect((await notify(await notification("REFUND", signed))).status).toBe(200);
@@ -601,7 +617,7 @@ describe("App Store server notifications", () => {
 
   it("takes the pack out of the pair's wallet, at most its balance, once", async () => {
     const { signed, transactionId, balance } = await bought("paired-wallet-refund", {
-      productId: "com.mikitahimpel.billet.coins.550",
+      productId: "com.ourio.app.coins.550",
     });
     expect(balance).toBe(550);
     app.rooms.adjust("pair-paired-wallet-refund", -500);

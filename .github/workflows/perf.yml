@@ -189,7 +189,7 @@ jobs:
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/perf/crashes"
-          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+          grep -l -s com.ourio.app ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 
@@ -280,7 +280,7 @@ jobs:
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/perf/crashes"
-          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+          grep -l -s com.ourio.app ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 
@@ -371,7 +371,7 @@ jobs:
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/perf/crashes"
-          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+          grep -l -s com.ourio.app ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 
@@ -480,7 +480,7 @@ jobs:
         if: always()
         run: |
           mkdir -p "$RUNNER_TEMP/perf/crashes"
-          grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
+          grep -l -s com.ourio.app ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 

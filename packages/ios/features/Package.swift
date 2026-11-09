@@ -9,6 +9,7 @@ let packageOf = [
   "BilletKit": "core", "DesignSystem": "core", "Ink": "core", "Transport": "core",
   "Persistence": "core", "Delivery": "core",
   "Pet": "pet",
+  "Design": "design",
 ]
 
 func dependencies(_ names: [String]) -> [Target.Dependency] {
@@ -35,7 +36,8 @@ let tests: [(name: String, dependencies: [String])] = [
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
   ("FeatureGamesTests", ["FeatureGames", "GamesInterface", "Transport", "Wire"]),
   ("RoomInterfaceTests", ["RoomInterface", "Pet"]),
-  ("FeatureInboxTests", ["FeatureInbox", "Transport", "Wire"]),
+  ("FeatureInboxTests", ["Design", "FeatureInbox", "Transport", "Wire"]),
+  ("FeatureMoodTests", ["FeatureMood", "MoodInterface", "Transport", "Wire"]),
 ]
 
 let games: Target = .target(
@@ -44,7 +46,10 @@ let games: Target = .target(
 
 let shopInterface: Target = .target(name: "ShopInterface", dependencies: dependencies(["Wire"]))
 let inbox: Target = .target(
-  name: "FeatureInbox", dependencies: dependencies(["BilletKit", "Transport", "Wire"]))
+  name: "FeatureInbox", dependencies: dependencies(["BilletKit", "Design", "Transport", "Wire"]))
+let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
+let mood: Target = .target(
+  name: "FeatureMood", dependencies: dependencies(["MoodInterface", "Transport", "Wire"]))
 let shop: Target = .target(
   name: "FeatureShop",
   dependencies: dependencies(["ShopInterface", "BilletKit", "Transport", "Wire"])
@@ -58,7 +63,7 @@ let roomInterface: Target = .target(
 let products =
   features + [
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
-    "FeatureShop", "FeatureInbox",
+    "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood",
   ]
 
 let package = Package(
@@ -68,10 +73,14 @@ let package = Package(
   dependencies: [
     .package(path: "../contracts"),
     .package(path: "../core"),
+    .package(path: "../design"),
     .package(path: "../pet"),
   ],
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
-    + [widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox]
+    + [
+      widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
+      mood,
+    ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]
 )
