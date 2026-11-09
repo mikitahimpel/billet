@@ -1,5 +1,5 @@
 import type { ImageMetadata } from "astro";
-import mochi from "./assets/MochiPortrait.png";
+import mochi from "./assets/mochi-portrait.webp";
 import datePlans from "./assets/art/datescene-plans.webp";
 import drawGuessCard from "./assets/art/drawguess-card.webp";
 import drawGuessDraw from "./assets/art/drawguess-draw.webp";

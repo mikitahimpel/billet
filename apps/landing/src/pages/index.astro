@@ -12,7 +12,7 @@ import PictureView from "../components/picture.astro";
 import { featureList, hubArt } from "../features";
 
 import appIcon from "../assets/app-icon.png";
-import mochi from "../assets/MochiPortrait.png";
+import mochi from "../assets/mochi-portrait.webp";
 import armchair from "../assets/Item_armchair.png";
 import lamp from "../assets/Item_lamp.png";
 import donutbed from "../assets/Item_donutbed.png";
@@ -271,7 +271,7 @@ const schema = [
               <div class="grid h-48 place-items-center" aria-hidden="true">
                 <figure class="w-36 -rotate-3 rounded-[4px] bg-paper p-2.5 pb-3 shadow-[0_20px_40px_-16px_var(--color-plate)]">
                   <div class="lamp-glow aspect-square bg-raised">
-                    <Image src={mochi} alt="" widths={[160, 320]} sizes="160px" class="h-full w-full object-contain" />
+                    <Image src={mochi} alt="" widths={[160, 320, 480]} sizes="160px" class="h-full w-full object-contain" />
                   </div>
                   <figcaption class="mt-2 text-center text-small font-semibold text-ink">sunday nap</figcaption>
                 </figure>
@@ -455,7 +455,7 @@ const schema = [
           <Image
             src={mochi}
             alt="Mochi, a grey tabby kitten with a red collar and a gold bell"
-            widths={[256, 512]}
+            widths={[256, 512, 768]}
             sizes="256px"
             class="w-52 [mask-image:linear-gradient(#000_70%,transparent)] md:w-64"
           />
