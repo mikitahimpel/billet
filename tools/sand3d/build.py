@@ -5,7 +5,7 @@ Run (Python 3.13 with sand3d and bpy 5.2 installed, see README.md):
   python tools/sand3d/build.py <out_dir> [--thumbs] [--samples N] [--size PX] [--fine] [--glb] [id ...]
 
 Writes Item_<id>.usdz and with --thumbs Item_<id>.png into out_dir, the names the app's bundle uses
-(apps/ios/Ourio/Resources/Shop), and with --glb the GLB beside them. Ids are the keys of ITEMS: the shipped ones,
+(apps/ios/Nooki/Resources/Shop), and with --glb the GLB beside them. Ids are the keys of ITEMS: the shipped ones,
 the armchair colourways of armchair-colourways.json, and a few spike pieces; none builds the shipped ones.
 """
 

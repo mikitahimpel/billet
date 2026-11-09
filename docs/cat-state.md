@@ -127,7 +127,7 @@ comes later; for now a phone in the background catches up from `GET /v1/cat/jour
 
 ## On the phone
 
-`CatLife` (`apps/ios/Ourio/Model/CatLife.swift`) is the brain's `CatEventSource` in every room. Once the phone is
+`CatLife` (`apps/ios/Nooki/Model/CatLife.swift`) is the brain's `CatEventSource` in every room. Once the phone is
 paired, `RoomController.connectCat` points it at the pair's room:
 
 - `GET /v1/cat` gives the nature seed, `bornAt` and the pair's offset, so both phones fold the same cat. The phone

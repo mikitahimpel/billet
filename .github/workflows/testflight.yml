@@ -144,7 +144,7 @@ jobs:
           echo "number=$number" >> "$GITHUB_OUTPUT"
           echo "Build number: $number"
 
-      # BILLET_API_HOST is read by the build into Info.plist's BilletAPIHost (apps/ios/Ourio/Server/Backend.swift).
+      # BILLET_API_HOST is read by the build into Info.plist's BilletAPIHost (apps/ios/Nooki/Server/Backend.swift).
       # BILLET_PAYMENTS picks the store for coin packs (docs/payments.md): always StoreKit, because the binary
       # uploaded here is the one App Review and the App Store get. BILLET_LABS stays unset, so Labs is compiled out.
       - name: Archive

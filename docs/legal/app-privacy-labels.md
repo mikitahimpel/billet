@@ -27,7 +27,7 @@ purchases (coins are earned in the app; buying them is off in the first release,
 
 ## Manifests
 
-`apps/ios/Ourio/PrivacyInfo.xcprivacy` declares the types above and these required-reason APIs:
+`apps/ios/Nooki/PrivacyInfo.xcprivacy` declares the types above and these required-reason APIs:
 UserDefaults (`CA92.1` the app's own settings, `1C8F.1` the App Group it shares with its
 extensions) and system boot time (`35F9.1`, elapsed-time measurement in the drawing canvas).
 `OurioWidgets`, `OurioNotifications` and `OurioShare` collect nothing of their own and declare

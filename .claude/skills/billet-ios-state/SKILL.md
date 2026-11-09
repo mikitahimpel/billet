@@ -11,7 +11,7 @@ Before adding or changing state, a store, a feature module or anything that touc
    (Coins and Shop), 5 is the Room, 8 is where each feature is in the migration.
 2. Find the feature's module. Feature code lives in `packages/ios/features` as `Feature<X>`
    (store, machine, views, tests) and `<X>Interface` (value types, protocols). What is not moved
-   yet is in `apps/ios/Ourio` (see the table in 8.2); don't add to `HomeState`, add to the
+   yet is in `apps/ios/Nooki` (see the table in 8.2); don't add to `HomeState`, add to the
    feature's store, and if the feature has none yet, say so to the manager before building on
    `HomeState`.
 
@@ -56,7 +56,7 @@ Before adding or changing state, a store, a feature module or anything that touc
 - Ticks, the cat's position, the brain and timers live in the module's internal `RoomModel`.
   The UI reads only `CatStatus`, coarse and throttled, from `RoomController`.
 - `visibility`: `.visible` full rate, `.covered` paused, `.hidden` not rendering.
-- Outside `apps/ios/Ourio/Room` nothing names `CatRoom`, `DioramaScene`, `CityRoomScene`,
+- Outside `apps/ios/Nooki/Room` nothing names `CatRoom`, `DioramaScene`, `CityRoomScene`,
   `BoardRoomScene`, `DioramaView`, `CatDirector`, `CatWalker` or imports RealityKit
   (`check-room-boundary.sh`).
 - `RoomProbe` counts body and update evaluations; a change that makes the room re-render from

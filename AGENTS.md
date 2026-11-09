@@ -77,7 +77,7 @@ macOS runners are few and shared by every agent.
   table is tested, rejected events included.
 - Stores take every dependency in `init`; views get other features as protocols. No
   `UserDefaults.standard`, `NotificationCenter`, `SharedFile` or `CatProfile` in a feature.
-- The Room (`apps/ios/Ourio/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
+- The Room (`apps/ios/Nooki/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
   through `RoomControlling`, events out through `RoomEvent`. No scene type is named outside it,
   and no scene tick reaches state outside it.
 - A horizontal drag on Home never switches rooms; only the explicit control does (`RoomSwipeTests`).

@@ -378,7 +378,7 @@ package they link in `project.yml`.
 
 ### Graphics engines
 
-RealityKit lives in the app (`apps/ios/Ourio/Scene`); `ios:test` fails if any package in
+RealityKit lives in the app (`apps/ios/Nooki/Scene`); `ios:test` fails if any package in
 `packages/ios` imports RealityKit or Rive, so the widget never links an engine.
 
 The SwiftPM dependency graph enforces the other boundaries at compile time.

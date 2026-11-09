@@ -4,7 +4,7 @@ Status: built. The owner chose all three, as Settings › Labs › Composer styl
 
 ## Today
 
-`apps/ios/Ourio/UI/NoteComposer.swift`: a flat 280 pt square, a `Write | Draw` segmented control, a row of ink
+`apps/ios/Nooki/UI/NoteComposer.swift`: a flat 280 pt square, a `Write | Draw` segmented control, a row of ink
 circles with prices, a row of five paper dots, and a `Pin it · +5` button. With the keyboard up the paper
 colours fall under it. The lock-screen canvas (`UI/Draw/LockCanvasView.swift`) is a second, unrelated UI.
 
