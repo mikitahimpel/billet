@@ -39,11 +39,8 @@ struct ListScreen: View {
     }
 
     private func content(_ list: UsList) -> some View {
-        BilletSheet(list.title, scrolls: false) {
+        BilletSheet(list.title, subtitle: subtitle(of: list), scrolls: false) {
         VStack(spacing: 0) {
-            SheetSubtitle(text: subtitle(of: list))
-                .padding(.horizontal, Space.gutter)
-
             if !usesSheetToAdd(list) {
                 UsField(placeholder: placeholder(for: list.kind), text: $draft)
                     .focused($focused)
@@ -321,7 +318,7 @@ private struct RenameListSheet: View {
     }
 
     var body: some View {
-        BilletSheet("Rename list", size: .mediumLarge, onConfirm: save) {
+        BilletSheet("Rename list", size: .fit, onConfirm: save) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
                     UsIcon(glyph: icon, size: 50)

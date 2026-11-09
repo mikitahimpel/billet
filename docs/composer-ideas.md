@@ -1,6 +1,6 @@
 # Note composer: directions
 
-Status: built. The owner chose all three, as Settings › Labs › Composer style (default B). Not built yet: handwriting font (the font would have to travel with the note), stickers and stamps (the canvas has a `Decoration` layer for them), and sharing the pens with the lock-screen canvas. Owner: "the draw-and-write thing needs a more interesting look."
+Status: built. The owner chose all three, as Settings › Labs › Composer style (default B). Not built yet: handwriting font (the font would have to travel with the note), stickers (the canvas has a `Decoration` layer for them), and sharing the pens with the lock-screen canvas. Stamps and seals are built: free, picked from the envelope button in the composer, carried on the note as `stamp` and `seal` ids (contracts `NoteStamp`, `NoteSeal`), drawn by `Design`'s `PostageStamp` and `WaxSeal`. Owner: "the draw-and-write thing needs a more interesting look."
 
 ## Today
 
