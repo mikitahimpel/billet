@@ -19,6 +19,8 @@ final class BrushStage: GameStage {
     private var tufts: [(entity: ModelEntity, velocity: SIMD3<Float>, life: Float)] = []
     private let seat: SIMD3<Float>
     private let furTone: UInt32
+    /// Radians her body turns from the player.
+    private static let turn: Float = 0.85
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -33,10 +35,12 @@ final class BrushStage: GameStage {
         brush.box(0.046, 0.008, 0.018, r: 0.003, Clay.matte(0xF3E6D2, roughness: 1), at: [0, 0.005, 0])
         brush.box(0.04, 0.005, 0.008, r: 0.0025, Clay.matte(0xB46C3C), at: [0.042, 0.014, 0])
         brush.isEnabled = false
-        // Side-on: her head to the left of the screen, so a stroke left to right goes with the fur.
+        // Three-quarters on: her face to the player, turned far enough to the left that her back shows, so a stroke
+        // from her neck out to the right goes with the fur. Her neck turns the rest of the way to look at us.
         seat = spots.at(0, -0.02)
-        room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat - spots.right), id: "brush")
-        deck.say("Brush along her fur, head to tail", for: 4)
+        let facing = spots.toward * cos(Self.turn) - spots.right * sin(Self.turn)
+        room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + facing), id: "brush")
+        deck.say("Stroke her back, head to tail", for: 4)
         deck.bar = (0, "Groom")
     }
 
@@ -51,6 +55,11 @@ final class BrushStage: GameStage {
         let l = spots.length
         let forward = SIMD3<Float>(-sin(walker.heading), 0, -cos(walker.heading))
         return (walker.at + forward * (0.12 * l) + [0, 0.62 * l, 0], walker.at - forward * (0.38 * l) + [0, 0.3 * l, 0])
+    }
+
+    var cue: GameCue? {
+        guard deck.result == nil, let spine, room.walker?.moving == false else { return nil }
+        return GameCue(step: 0, gesture: .drag(to: spine.hips), at: spine.neck)
     }
 
     func began(_ touch: GameTouch) {
@@ -79,7 +88,10 @@ final class BrushStage: GameStage {
         let tuftsBefore = strokes.tufts
         switch strokes.stroke(distance: Double(length / perMeter), fit: fit) {
         case .enjoys(let purrs):
-            if purrs { room.walker?.pet() }
+            if purrs {
+                room.walker?.pet()
+                deck.cheer()
+            }
             if sinceTap > 0.12 {
                 sinceTap = 0
                 deck.stroke()
@@ -113,8 +125,7 @@ final class BrushStage: GameStage {
         }
         if strokes.isDone, deck.result == nil {
             brush.isEnabled = false
-            room.walker?.pet()
-            room.walker?.behavior.perform(.slowBlink)
+            deck.cheer(big: true)
             deck.result = GameResult(game: .brush, score: 100)
         }
     }
