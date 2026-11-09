@@ -132,6 +132,8 @@ struct HomeView: View {
             NookiPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
             tabFrom = tab
+            // A fade cut short by a quick return never comes back over a later switch.
+            if tab == .world { worldLeaving = nil }
             if tab != .world {
                 roomInWorld = false
             } else if worldSnapshot == nil || !room.hasHome || roomCovered {
@@ -217,9 +219,11 @@ struct HomeView: View {
 
             // The room goes at once when the World is left; its last frame fades with the rest of the World.
             if state.tab != .world, let worldLeaving {
-                LeavingSnapshot(view: worldLeaving) { self.worldLeaving = nil }
-                    .ignoresSafeArea()
-                    .allowsHitTesting(false)
+                LeavingSnapshot(view: worldLeaving) {
+                    if self.worldLeaving === worldLeaving { self.worldLeaving = nil }
+                }
+                .ignoresSafeArea()
+                .allowsHitTesting(false)
             }
 
             Group {
