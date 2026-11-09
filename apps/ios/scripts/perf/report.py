@@ -64,7 +64,8 @@ def collect(run_dir):
     fulls = sorted(run_dir.glob("full-*.log"))
     costs = sorted(run_dir.glob("cost-*.log"))
     steadies = sorted(run_dir.glob("steady-*.log"))
-    for log in launches + fulls + costs + steadies:
+    welcomes = sorted(run_dir.glob("welcome-*.log"))
+    for log in launches + fulls + costs + steadies + welcomes:
         run = parse(log)
         if not run["done"]:
             add("failed runs", 1)
@@ -89,7 +90,7 @@ def collect(run_dir):
             if kind == "launch" and phase != "idle":
                 continue
             for key in ("p50", "p95", "p99", "max", "hitches", "mainCPU", "procCPU", "fps", "slow",
-                        "slowMs", "slowBusyMs", "cpuMsPerS", "steps", "renders"):
+                        "slowMs", "slowBusyMs", "cpuMsPerS", "steps", "renders", "frames", "firstFrameMs"):
                 add(f"{kind}.{phase}: {key}", number(values.get(key)))
         for timing, samples in run["timings"].items():
             for values in samples:
