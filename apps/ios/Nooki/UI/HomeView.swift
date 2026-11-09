@@ -362,7 +362,7 @@ struct HomeView: View {
             session?.reactions?.refresh()
             session?.followInbox(
                 true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
-                moods: { [state] in state.moodSync?.received($0) },
+                moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
                 cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq })
             refreshRooms()
             if !launching { reportOpened(state.room) }

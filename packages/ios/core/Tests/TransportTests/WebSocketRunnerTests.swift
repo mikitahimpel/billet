@@ -172,6 +172,18 @@ import Wire
     #expect(await iterator.next() == .resume(lastSeq: 3, riddle: true))
   }
 
+  @Test func aSocketThatFollowsTheStreakAsksForItInEachResume() async {
+    let socket = makeFakeSocket()
+    var dependencies = Self.dependencies(pool: ConnectionPool([socket.connection]))
+    dependencies.followsStreak = true
+    let runner = WebSocketRunner(dependencies: dependencies)
+
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 3))
+
+    var iterator = socket.sent.makeAsyncIterator()
+    #expect(await iterator.next() == .resume(lastSeq: 3, streak: true))
+  }
+
   @Test func openingSendsTheResumeFirst() async {
     let socket = makeFakeSocket()
     let runner = WebSocketRunner(

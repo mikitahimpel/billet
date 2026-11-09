@@ -3,7 +3,7 @@ import Transport
 import Wire
 
 /// The room socket kept while the app is in front: Inbox unread count, partner photos, reactions, shop and lists,
-/// check-ins, Who knows who, Draw & guess riddles. Resumes after the last note the photos saw and the cat's last
+/// check-ins, the love streak, Who knows who, Draw & guess riddles. Resumes after the last note the photos saw and the cat's last
 /// journal entry this phone holds, so both partners' care reaches her here.
 @MainActor
 final class InboxLink {
@@ -26,6 +26,8 @@ final class InboxLink {
         var guessRevealed: @MainActor @Sendable (_ round: String, [GuessReveal], GuessScore) -> Void
         /// A Draw & guess riddle as this user sees it after a send, try, hint or give-up.
         var riddle: @MainActor @Sendable (Riddle) -> Void
+        /// The pair's streak after either partner counted a day or restored it, and once on each resume.
+        var streak: @MainActor @Sendable (PairStreak) -> Void
         /// One entry of the cat's journal, either partner's.
         var catEntry: @MainActor @Sendable (CatEntry) -> Void
         /// The last journal entry held, read as each socket opens; nil follows no cat frames.
@@ -56,6 +58,7 @@ final class InboxLink {
                 case .guessProgress(let round, let answered): await handlers.guessProgress(round, answered)
                 case .guessRevealed(let round, let reveal, let score): await handlers.guessRevealed(round, reveal, score)
                 case .riddleChanged(let riddle): await handlers.riddle(riddle)
+                case .streakChanged(let streak): await handlers.streak(streak)
                 case .catEntryAdded(let entry): await handlers.catEntry(entry)
                 case .presence(let presence): await handlers.presence(presence)
                 case .noteReceived, .stroke, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
@@ -70,7 +73,8 @@ final class InboxLink {
             followsLists: true,
             followsMoods: true,
             followsGuess: true,
-            followsRiddle: true)
+            followsRiddle: true,
+            followsStreak: true)
         client = WebSocketClient(dependencies: dependencies, lastSeq: lastSeq)
     }
 
