@@ -22,7 +22,6 @@ struct InkShelf: View {
     private func card(_ ink: PaletteInk) -> some View {
         let owned = ink.isOwned(state.shop.owned)
         return VStack(spacing: Space.s) {
-            // A glossy drop of the ink, lit from the top left like the room's clay.
             Circle()
                 .fill(ink.color(onDark: false))
                 .overlay(Circle().fill(RadialGradient(colors: [.white.opacity(0.55), .clear],

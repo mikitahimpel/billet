@@ -7,8 +7,6 @@ import Wire
 
 // MARK: - Viewer
 
-/// One photo full screen, zoomed out of its print: the polaroid straightened, its caption editable on the strip, and
-/// love, pin, share and delete around it.
 struct MomentViewer: View {
     let state: HomeState
     let id: UUID

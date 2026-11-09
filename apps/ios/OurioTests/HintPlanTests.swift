@@ -117,8 +117,6 @@ import Wire
         #expect(hints.plan(HintContext(screen: .moments)) == nil)
     }
 
-    /// Every hint, in order: it shows once, is seen from then on, and neither another visit nor a relaunch shows it
-    /// again.
     @Test func everyHintShowsOnceAndNeverAgain() {
         func due(_ id: String) -> HintContext {
             switch id {

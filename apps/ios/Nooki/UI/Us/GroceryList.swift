@@ -1,8 +1,6 @@
 import SwiftUI
 import Design
 
-/// The grocery list in aisles, each a card of rows; an aisle with nothing to buy is left out. A tap marks an item
-/// bought and moves it to "Bought" at the end; a long press opens it.
 struct GroceryList: View {
     let list: UsList
     let state: HomeState
@@ -54,7 +52,6 @@ struct GroceryList: View {
     }
 }
 
-/// An aisle's name over its card, with a count or an action at the end.
 struct GrocerySectionLabel<Trailing: View>: View {
     let title: String
     var icon: UsGlyph?

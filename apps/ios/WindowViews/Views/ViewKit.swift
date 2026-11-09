@@ -33,7 +33,6 @@ enum ViewKit {
       with: .color(colour.color(alpha)))
   }
 
-  /// A soft round glow that fades out to nothing at `radius`.
   static func glow(
     _ context: GraphicsContext, _ centre: CGPoint, _ radius: CGFloat, _ colour: ViewColour,
     _ alpha: Double
@@ -51,16 +50,13 @@ enum ViewKit {
         ]), center: centre, startRadius: 0, endRadius: radius))
   }
 
-  /// A gable house: walls from `base` up `wall`, a roof `roof` higher, and a lighter lit side on
-  /// the right slope. Snow caps the roof when it snows.
+  /// Walls from `base` up `wall`, the roof `roof` higher; snow caps it when it snows.
   static func house(
     _ context: GraphicsContext, x: CGFloat, base: CGFloat, width: CGFloat, wall: CGFloat,
     roof: CGFloat, colour: ViewColour, look: ViewLook, overhang: CGFloat = 1.2
   ) {
     let eave = base - wall
     rect(context, CGRect(x: x, y: eave, width: width, height: wall), colour)
-    // Clapboard siding: fine shadow lines across the wall, a shadow under the eave and a
-    // foundation strip.
     var board = eave + 1.4
     while board < base - 1 {
       rect(context, CGRect(x: x, y: board, width: width, height: 0.1), colour.lit(-0.07), 0.9)
@@ -82,7 +78,6 @@ enum ViewKit {
     lit.addLine(to: CGPoint(x: x + width / 2 + 1, y: eave + 0.4))
     lit.closeSubpath()
     context.fill(lit, with: .color(colour.lit(look.isDark ? 0.06 : 0.12).color()))
-    // Rows of shingles, and the fascia along the eave.
     var shingles = context
     shingles.clip(to: gable)
     var row = eave + 0.4 - 0.9
@@ -108,16 +103,14 @@ enum ViewKit {
     }
   }
 
-  /// The snow on roofs and lawns: blue-white at night, white by day.
   static func snow(_ look: ViewLook) -> ViewColour {
     ViewPalette.snow.mixed(with: look.palette.skyMiddle, by: look.isDark ? 0.55 : 0.15)
   }
 
-  /// The dark frame a window sits in. The glass itself is drawn by the life, lit or not.
+  /// The glass itself is drawn by the life, lit or not.
   static func windowFrame(_ context: GraphicsContext, _ window: CGRect, _ colour: ViewColour) {
     rect(context, window.insetBy(dx: -0.35, dy: -0.35), colour.lit(-0.25))
     rect(context, window, colour.lit(-0.35))
-    // The sky caught in dark glass: a pale diagonal sheen.
     var glass = context
     glass.clip(to: Path(window))
     var sheen = Path()
@@ -127,14 +120,12 @@ enum ViewKit {
     sheen.addLine(to: CGPoint(x: window.minX + window.width * 0.4, y: window.maxY))
     sheen.closeSubpath()
     glass.fill(sheen, with: .color(colour.lit(0.25).color(0.18)))
-    // Sill.
     rect(
       context,
       CGRect(x: window.minX - 0.4, y: window.maxY, width: window.width + 0.8, height: 0.35),
       colour.lit(0.06))
   }
 
-  /// A round tree of overlapping circles on a short trunk.
   static func tree(
     _ context: GraphicsContext, x: CGFloat, base: CGFloat, size: CGFloat, colour: ViewColour,
     seed: Int, look: ViewLook
@@ -154,7 +145,6 @@ enum ViewKit {
     circle(
       context, CGPoint(x: x + size * 0.15, y: base - size * 1.05), size * 0.22,
       colour.lit(look.isDark ? 0.05 : 0.1))
-    // Leaf clusters: small lighter and darker clumps over the crown, lit from above right.
     for index in 0..<14 {
       let a = ViewRhythm.hash(seed * 47 + index, seed: 13)
       let b = ViewRhythm.hash(seed * 47 + index, seed: 14)
@@ -170,7 +160,6 @@ enum ViewKit {
       CGRect(x: x - size * 0.4, y: base - size * 0.72, width: size * 0.8, height: size * 0.06),
       colour.lit(-0.12), 0.5)
     if look.weather == .snow {
-      // Snow lies on the tops of the puffs as flat caps.
       for index in 0..<3 {
         let cx = x + size * (CGFloat(index) - 1) * 0.28
         let top = base - size * (1.28 - 0.08 * abs(CGFloat(index) - 1))
@@ -182,7 +171,6 @@ enum ViewKit {
     }
   }
 
-  /// A pointed evergreen, three tiers.
   static func pine(
     _ context: GraphicsContext, x: CGFloat, base: CGFloat, height: CGFloat, colour: ViewColour,
     look: ViewLook
@@ -211,7 +199,7 @@ enum ViewKit {
       colour)
   }
 
-  /// A wooden power pole with a cross-arm, returning where its wires hang from.
+  /// Returns where its wires hang from.
   @discardableResult
   static func pole(
     _ context: GraphicsContext, x: CGFloat, top: CGFloat, base: CGFloat, colour: ViewColour
@@ -230,7 +218,7 @@ enum ViewKit {
     ]
   }
 
-  /// A wire hanging between two points, sagging by `sag` in the middle.
+  /// Sags by `sag` in the middle.
   static func wire(
     _ context: GraphicsContext, from: CGPoint, to: CGPoint, sag: CGFloat, colour: ViewColour,
     width: CGFloat = 0.22
@@ -242,7 +230,6 @@ enum ViewKit {
     context.stroke(path, with: .color(colour.color()), lineWidth: width)
   }
 
-  /// A point on a wire, `share` of the way along, for things that sit on it.
   static func onWire(from: CGPoint, to: CGPoint, sag: CGFloat, share: CGFloat) -> CGPoint {
     let control = CGPoint(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2 + 2 * sag)
     let u = 1 - share
@@ -251,7 +238,6 @@ enum ViewKit {
       y: u * u * from.y + 2 * u * share * control.y + share * share * to.y)
   }
 
-  /// The town's water tower: a round tank with a cone lid on four splayed legs and a catwalk.
   static func waterTower(
     _ context: GraphicsContext, x: CGFloat, top: CGFloat, base: CGFloat, size: CGFloat,
     colour: ViewColour, look: ViewLook
@@ -306,7 +292,7 @@ enum ViewKit {
     }
   }
 
-  /// A street lamp's post and arm. Its head and light are drawn by the life, so it can stutter.
+  /// Its head and light are drawn by the life, so it can stutter.
   static func streetLampPost(
     _ context: GraphicsContext, x: CGFloat, top: CGFloat, base: CGFloat, colour: ViewColour
   ) {
@@ -318,7 +304,6 @@ enum ViewKit {
     context.stroke(arm, with: .color(colour.color()), lineWidth: 0.6)
   }
 
-  /// A parked car seen side on, nose to the right unless `facingLeft`.
   static func car(
     _ context: GraphicsContext, x: CGFloat, base: CGFloat, length: CGFloat, body: ViewColour,
     facingLeft: Bool = false
@@ -345,7 +330,6 @@ enum ViewKit {
     }
   }
 
-  /// A picket fence along `base`, from `from` to `to`.
   static func fence(
     _ context: GraphicsContext, from: CGFloat, to: CGFloat, base: CGFloat, height: CGFloat,
     colour: ViewColour, look: ViewLook
@@ -374,7 +358,6 @@ enum ViewKit {
     }
   }
 
-  /// A long low hill line across the plate: from `base`, each wave rises its own height.
   static func hills(
     _ context: GraphicsContext, base: CGFloat, waves: [CGFloat], colour: ViewColour
   ) {
@@ -394,14 +377,13 @@ enum ViewKit {
     context.fill(path, with: .color(colour.color()))
   }
 
-  /// Ground from `top` down past the plate's bottom.
   static func ground(_ context: GraphicsContext, top: CGFloat, colour: ViewColour) {
     let plate = ViewStage.plate
     rect(
       context, CGRect(x: plate.minX, y: top, width: plate.width, height: plate.maxY - top), colour)
   }
 
-  /// A lit window's glow at `level` from 0 to 1, amber or TV blue.
+  /// `level` from 0 to 1.
   static func litWindow(
     _ context: GraphicsContext, _ window: ViewLitWindow, level: Double, flicker: Double = 1
   ) {
@@ -420,7 +402,6 @@ enum ViewKit {
         ]), startPoint: CGPoint(x: rect.midX, y: rect.minY),
         endPoint: CGPoint(x: rect.midX, y: rect.maxY)))
     if !window.isTV, rect.width > 1.5 {
-      // Curtains drawn to the sides, a lamp's brighter spot low in the room, and the mullions.
       let curtain = ViewColour(
         window.id % 3 == 0 ? 0xC0603A : window.id % 3 == 1 ? 0xD8B070 : 0x8A6A9A)
       for side in [rect.minX, rect.maxX - rect.width * 0.22] {

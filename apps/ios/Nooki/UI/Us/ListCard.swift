@@ -1,8 +1,6 @@
 import Design
 import SwiftUI
 
-/// A list on the Us tab with a peek at what's in it: grocery names, posters or flags. An empty list says what it's
-/// for over a faded preview of how it will look.
 struct ListCard: View {
     let list: UsList
     let state: HomeState
@@ -86,7 +84,6 @@ struct ListCard: View {
     }
 }
 
-/// The newest five things to buy, each with its aisle's icon, and how many more.
 private struct GroceryPeek: View {
     let list: UsList
     let history: GroceryHistory
@@ -134,8 +131,7 @@ private struct GroceryPeek: View {
     }
 }
 
-/// Up to six posters, ♥ on the ones both partners want. Each loads the same TMDB size as the list's grid, so the
-/// image cache serves both.
+/// Each loads the same TMDB size as the list's grid, so the image cache serves both.
 private struct PosterPeek: View {
     let list: UsList
     let partners: [String]
@@ -175,7 +171,6 @@ private struct PosterPeek: View {
     }
 }
 
-/// Up to five flags, the countries been to first, and the share of the world's 195 seen together.
 private struct FlagPeek: View {
     let list: UsList
 
@@ -217,11 +212,9 @@ private struct FlagPeek: View {
     }
 }
 
-/// Lists without a card of their own, as rows.
 struct ListRow: View {
     let list: UsList
 
-    /// What a list is for, shown while it is empty.
     static func purpose(of kind: ListKind) -> String {
         switch kind {
         case .food: "Restaurants and cafés to try together"
@@ -253,7 +246,6 @@ struct ListRow: View {
     }
 }
 
-/// The invitation at the end of the lists to make one of the pair's own.
 struct StartListCard: View {
     var body: some View {
         CardHeader("Start a list together") {

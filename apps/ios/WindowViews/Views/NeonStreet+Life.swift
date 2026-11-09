@@ -23,12 +23,10 @@ extension NeonStreet {
     }
   }
 
-  /// How bright the neon is: off-white tubes by day, full glow after dark.
   private static func neonLevel(_ moment: ViewMoment) -> Double {
     0.15 + 0.85 * moment.lamps
   }
 
-  /// A sign's brightness now: steady with a hum, now and then buzzing on and off.
   private static func signLevel(_ index: Int, moment: ViewMoment) -> Double {
     var level = neonLevel(moment) * (0.93 + 0.07 * sin(moment.now * 5 + Double(index)))
     if moment.lamps > 0, Self.buzz[index % Self.buzz.count].pass(at: moment.now) != nil,
@@ -39,7 +37,6 @@ extension NeonStreet {
     return level
   }
 
-  /// The glyphs: made-up characters of strokes, three or four to a cell.
   private func neon(_ context: GraphicsContext, moment: ViewMoment) {
     for (index, sign) in Self.signs.enumerated() {
       let level = Self.signLevel(index, moment: moment)
@@ -57,7 +54,6 @@ extension NeonStreet {
         }
       }
     }
-    // The ramen bowl: a bowl, chopsticks and steam.
     let ramenLevel = Self.signLevel(3, moment: moment)
     let ramen = Self.ramen
     let warm = ViewColour(Self.amber).mixed(with: ViewColour(0xFFFFFF), by: 0.3)
@@ -83,7 +79,6 @@ extension NeonStreet {
         ViewKit.rect(context, stroke, warm, ramenLevel)
       }
     }
-    // The cat: a head with two ears and two eyes.
     let catLevel = Self.signLevel(5, moment: moment)
     let cat = Self.cat
     let pink = ViewColour(Self.pink).mixed(with: ViewColour(0xFFFFFF), by: 0.3)
@@ -96,7 +91,6 @@ extension NeonStreet {
     head.addLine(to: CGPoint(x: cat.x + 1.1, y: cat.y - 1.9))
     head.addLine(to: CGPoint(x: cat.x + 0.4, y: cat.y - 1.05))
     context.stroke(head, with: .color(pink.color(catLevel)), style: style)
-    // It winks now and then.
     let wink = sin(moment.now * 0.7) > 0.93
     ViewKit.circle(context, CGPoint(x: cat.x - 0.6, y: cat.y), 0.22, pink, catLevel)
     if !wink { ViewKit.circle(context, CGPoint(x: cat.x + 0.6, y: cat.y), 0.22, pink, catLevel) }
@@ -109,7 +103,7 @@ extension NeonStreet {
     }
   }
 
-  /// The strokes of one made-up glyph inside `box`, picked by `seed`: never a real character.
+  /// Picked by `seed`; never a real character.
   static func strokes(_ seed: Int, in box: CGRect) -> [CGRect] {
     let t: CGFloat = 0.32
     let all: [CGRect] = [
@@ -132,7 +126,6 @@ extension NeonStreet {
     return Array(picked.prefix(4))
   }
 
-  /// The neon run down the wet road in broken, wobbling streaks.
   private func reflections(_ context: GraphicsContext, moment: ViewMoment) {
     let wet: Double =
       switch moment.look.weather {
@@ -162,13 +155,10 @@ extension NeonStreet {
     }
   }
 
-  /// The counters' light under their curtains, the corner shop's bright glass, the vending
-  /// machines and the izakaya's lanterns.
   private func shopLights(_ context: GraphicsContext, moment: ViewMoment) {
     let lamps = moment.lamps
     let base = Self.streetBase
     let warm = ViewPalette.lamp
-    // Warm light behind split curtains at the ramen counter and the izakaya.
     for (shop, curtain) in [(1, 0xF2EEE6), (2, 0x2A3A6A)] as [(Int, UInt32)] {
       let s = Self.shops[shop]
       let front = CGRect(x: s.x + 1.2, y: 38.6, width: s.width - 2.4, height: base - 38.6)
@@ -187,7 +177,6 @@ extension NeonStreet {
       ViewKit.glow(
         context, CGPoint(x: front.midX, y: base), front.width * 0.6, warm, 0.25 * lamps)
     }
-    // The corner shop: cool white glass and shelves.
     let shop = Self.cornerShop
     let cool = ViewColour(0xE8F6FF)
     ViewKit.rect(context, shop, cool, 0.25 + 0.6 * lamps)
@@ -199,7 +188,6 @@ extension NeonStreet {
           height: 0.4), moment.palette.street.lit(-0.1), 0.6)
     }
     ViewKit.glow(context, CGPoint(x: shop.midX, y: shop.midY), 14, cool, 0.2 * lamps)
-    // The vending machines: lit panels with rows of drinks.
     let drinks = [0xFF4D5E, 0x3DDC84, 0xFFD166, 0x5BA8FF, 0xFF8A3D].map(ViewColour.init)
     for (index, machine) in Self.vending.enumerated() {
       let panel = CGRect(
@@ -224,7 +212,6 @@ extension NeonStreet {
         context, CGPoint(x: machine.midX, y: machine.minY + 2.4), 6, cool, 0.3 * (0.3 + 0.7 * lamps)
       )
     }
-    // Red paper lanterns at the izakaya, swaying a little.
     let red = ViewColour(0xE5503A)
     for (index, point) in Self.lanterns.enumerated() {
       let sway = CGFloat(sin(moment.now * 1.1 + Double(index) * 2)) * 0.25
@@ -233,7 +220,6 @@ extension NeonStreet {
     }
   }
 
-  /// A round paper lantern: ribs across it, dark caps, glowing from inside.
   private func paperLantern(
     _ context: GraphicsContext, centre: CGPoint, size: CGFloat, colour: ViewColour, lit: Double
   ) {
@@ -264,7 +250,6 @@ extension NeonStreet {
       ), cap)
   }
 
-  /// Someone crossing, under an umbrella when it rains.
   private func umbrellaWalker(_ walker: ViewWalker, _ context: GraphicsContext, moment: ViewMoment)
   {
     guard let pass = walker.rhythm.pass(at: moment.now) else { return }
@@ -292,7 +277,6 @@ extension NeonStreet {
       control: CGPoint(x: centre.x, y: centre.y - radius * 0.3))
     dome.closeSubpath()
     context.fill(dome, with: .color(colour.color(isClear ? 0.4 : 1)))
-    // The neon caught on its top.
     var shine = context
     shine.clip(to: dome)
     shine.fill(
@@ -303,7 +287,6 @@ extension NeonStreet {
       with: .color(ViewColour(0xFFFFFF).color(0.2 + 0.15 * moment.lamps)))
   }
 
-  /// Where the train's front is, and which way it is going.
   static let trainLength: CGFloat = 86
 
   static func trainHead(_ pass: ViewRhythm.Pass) -> (x: CGFloat, leftToRight: Bool) {
@@ -313,8 +296,6 @@ extension NeonStreet {
     return (x, leftToRight)
   }
 
-  /// A commuter train sliding along the line: four silver cars with a pink stripe and a strip of
-  /// lit windows, a spark from the wire now and then.
   private func train(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.train.pass(at: moment.now) else { return }
     let (head, leftToRight) = Self.trainHead(pass)
@@ -359,7 +340,6 @@ extension NeonStreet {
     }
   }
 
-  /// The lantern under the eave, swinging in the wet wind, and drips off the eave's edge.
   private func lantern(_ context: GraphicsContext, moment: ViewMoment) {
     let wind = moment.look.weather == .rain ? 1.6 : 1
     let swing = (0.6 * sin(moment.now * 0.9) + 0.3 * sin(moment.now * 2.1 + 1)) * wind

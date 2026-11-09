@@ -17,7 +17,7 @@ nonisolated struct Couple: Codable, Hashable {
     var togetherSince: Date
     /// Which partner is holding the phone: the signed-in account once paired, switched on the Us tab before that.
     var viewer: String
-    /// Names the partners gave themselves, by monogram. The monograms stay their ids everywhere else.
+    /// By monogram; the monograms stay their ids everywhere else.
     var names: [String: String]? = nil
     /// Nil until this phone is paired on a server.
     var pair: PairMembers? = nil
@@ -68,10 +68,8 @@ final class CoupleStore {
         loadPhotos()
     }
 
-    /// The partner's own name, or their monogram until they set one.
     func name(of partner: String) -> String { couple.name(of: partner) }
 
-    /// The first letter of their name, shown on their avatar.
     func initial(of partner: String) -> String {
         String(name(of: partner).prefix(1)).uppercased()
     }
@@ -84,7 +82,7 @@ final class CoupleStore {
 
     // MARK: - Photos
 
-    /// Avatar photos by partner, kept as small square JPEGs beside couple.json.
+    /// Small square JPEGs beside couple.json.
     private(set) var photos: [String: UIImage] = [:]
 
     private static func photoFile(_ partner: String) -> String { "Couple/photo-\(partner).jpg" }
@@ -98,8 +96,7 @@ final class CoupleStore {
         }
     }
 
-    /// Crops `image` to a square around the face, or its upper middle when there is none, and stores it at 400 px; nil
-    /// removes the photo.
+    /// Square around the face, or the upper middle without one, stored at 400 px; nil removes the photo.
     func setPhoto(_ image: UIImage?, for partner: String) {
         let url = SharedFile.url(Self.photoFile(partner))
         guard let image else {

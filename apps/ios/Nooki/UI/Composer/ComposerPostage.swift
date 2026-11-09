@@ -33,8 +33,7 @@ extension View {
     }
 }
 
-/// The composer's one control for postage: shows the chosen stamp, and opens a small tray to pick a stamp and a
-/// seal, each optional. Both are free.
+/// Stamp and seal are each optional, and both are free.
 struct PostagePicker: View {
     @Binding var stamp: NoteStamp?
     @Binding var seal: NoteSeal?

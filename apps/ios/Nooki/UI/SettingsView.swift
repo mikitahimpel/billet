@@ -5,12 +5,10 @@ import SwiftUI
 import Design
 import WidgetBridge
 
-/// Settings, pushed from the profile, in clay-card sections: how the app feels, the account and its delivery health,
-/// the partner, the window, then support, privacy and what's installed. The account is anonymous and needs no sign-in
-/// (see `AccountRow`). Labs and Testing show only in a debug or TestFlight build.
+/// The account is anonymous and needs no sign-in (see `AccountRow`). Labs and Testing show only in a debug or
+/// TestFlight build.
 struct SettingsView: View {
     let state: HomeState
-    /// Wipes everything saved on this phone and starts the app over.
     var erase: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -212,7 +210,6 @@ struct SettingsView: View {
     }
 }
 
-/// Where the anonymous sign-in stands, with a retry when the server could not be reached.
 private struct AccountRow: View {
     let state: AnonymousSignInMachine.State
     let retry: () -> Void

@@ -3,8 +3,6 @@ import SwiftUI
 import Transport
 import Wire
 
-/// Pick tonight: the pair swipe the To watch titles and TMDB's suggestions apart, and a title both want is a match
-/// to watch tonight.
 struct PickTonightScreen: View {
     let state: HomeState
     let list: UsList
@@ -242,7 +240,6 @@ struct PickTonightScreen: View {
     }
 }
 
-/// "It's a match!": Mochi with popcorn, the title both want, and the way to tonight.
 private struct PickMatchScreen: View {
     let match: PickMatch
     /// Who else knows: the partner got a push, or the partner's swipe made the match.

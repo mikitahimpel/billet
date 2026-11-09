@@ -7,14 +7,12 @@ import Wire
 
 // MARK: - Moments
 
-/// The couple's photo diary, and their notes and doodles pinned on the board in Mochi's desk room.
 struct MomentsView: View {
     @Bindable var state: HomeState
 
     @State private var pick: PhotosPickerItem?
     @State private var draft: Draft?
     @State private var showsHistory = false
-    /// The open photo, from the feed or the board.
     @State private var viewing: PinRoute?
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
@@ -307,8 +305,6 @@ private struct BlankPolaroid: View {
 
 // MARK: - Cards
 
-/// A moment as a print: the graded photo in its polaroid, the partner's reaction to it (or a heart on one kept only
-/// here), and washi tape on the ones hanging in Mochi's room.
 struct MomentPrint: View {
     let moment: Moment
     let store: MomentStore
@@ -404,7 +400,6 @@ private struct MomentPhoto: View {
     let store: MomentStore
     let moment: Moment
     let maxPixels: Int
-    /// With the instant-film grade, as on a polaroid.
     var film = false
 
     @State private var loaded: UIImage?

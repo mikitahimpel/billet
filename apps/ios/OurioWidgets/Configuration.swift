@@ -48,7 +48,6 @@ struct ListQuery: EntityQuery {
     }
 }
 
-/// What every Ourio widget's configuration tells the provider.
 protocol OurioConfiguration: WidgetConfigurationIntent {
     /// The list the List module shows; nil picks the groceries list.
     var listID: UUID? { get }

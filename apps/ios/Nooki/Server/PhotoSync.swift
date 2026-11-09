@@ -16,8 +16,7 @@ struct PhotoSync {
     let receiving: PhotoReceiving
     var defaults: UserDefaults = .standard
 
-    /// The last note `seq` this phone has looked at for photos. Separate from the drawings' cursor, so each reads
-    /// the history at its own pace.
+    /// Separate from the drawings' cursor, so each reads the history at its own pace.
     static let cursorKey = "photos.lastSeq"
 
     /// Sends every photo still waiting, oldest first. One that fails stays waiting for the next try; the note's key

@@ -1,8 +1,7 @@
 import Foundation
 
-/// Where a tap on a widget lands in the app, as an ourio:// URL. An invite also comes as the server's
-/// `https://<host>/i/<code>` Universal Link, or as a nooki:// link from before the rename, which invites already sent
-/// and the server still carry.
+/// An ourio:// URL. Invites also come as the server's `https://<host>/i/<code>` Universal Link, or as a nooki://
+/// link from before the rename, which invites already sent and the server still carry.
 enum DeepLink: Hashable {
     case room, moments, us, calendar, dates, newNote, draw, inbox
     case list(UUID)

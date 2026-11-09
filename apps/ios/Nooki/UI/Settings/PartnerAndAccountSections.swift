@@ -3,8 +3,7 @@ import SwiftUI
 import Transport
 import Wire
 
-/// The partner (unpair, report, block) and the account (delete), in Settings. Each asks first; a failure says so and
-/// leaves everything as it was.
+/// Each action asks first; a failure says so and leaves everything as it was.
 struct PartnerAndAccountSections: View {
     let session: ServerSession
     /// Wipes what is saved on this phone, closes Settings and starts the app over.

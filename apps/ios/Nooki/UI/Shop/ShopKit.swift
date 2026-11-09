@@ -1,13 +1,11 @@
 import SwiftUI
 import Design
 
-/// The Shop's own accents on the warm room palette, saturated so offers stand out against the brown.
 enum ShopInk {
     static let coral = Color(hex: 0xFF7A59)
     static let plum = Color(hex: 0xA466E8)
     static let teal = Color(hex: 0x3CC8E0)
     static let gold = Color(hex: 0xFFB52E)
-    /// Lamplight on a warm room, for the hero offer and the set sheet: honey into coral into a plum dusk.
     static var lamplight: RadialGradient {
         RadialGradient(colors: [Color(hex: 0xFFD08A), Color(hex: 0xF08A4E), Color(hex: 0x8A3A4E), Color(hex: 0x3A1C2A)],
                        center: UnitPoint(x: 0.55, y: 0.32), startRadius: 8, endRadius: 360)
@@ -15,7 +13,6 @@ enum ShopInk {
 }
 
 extension ShopRarity {
-    /// The frame's glow and the label's fill.
     var tint: Color {
         switch self {
         case .common: Color(hex: 0xE3BD8F)
@@ -25,7 +22,6 @@ extension ShopRarity {
         }
     }
 
-    /// The frame's fill behind the art, lit from above: the centre of the light, then its edge.
     var fill: (light: Color, edge: Color) {
         switch self {
         // Always the light pair, in either appearance: the art sits on a bright tint, never on dark.
@@ -36,17 +32,13 @@ extension ShopRarity {
         }
     }
 
-    /// The rarity's label: its tint under `Ink.text`.
     var chip: Chip {
         Chip(title, style: self == .common ? .quiet : .tinted(tint))
     }
 
-    /// Epic and legendary pieces glow and catch the light now and then.
     var shines: Bool { self == .epic || self == .legendary }
 }
 
-/// The item's art in its rarity frame: a fill lit from above in the rarity's colour, a rim, a glow for the top two
-/// and a shine sweep across them.
 struct RarityFrame<Content: View>: View {
     let rarity: ShopRarity
     @ViewBuilder let content: Content
@@ -75,11 +67,8 @@ struct RarityFrame<Content: View>: View {
     }
 }
 
-/// A soft band of light that crosses the frame once per period, only while the frame is on screen. Still under
-/// Reduce Motion.
-///
-/// The band moves by an animated effect, not a timeline: SwiftUI moves it each frame without building the view again,
-/// and a card scrolled out of sight stops it.
+/// Crosses once per period, only while on screen; still under Reduce Motion. An animated effect, not a timeline:
+/// SwiftUI moves it each frame without building the view again, and a card scrolled out of sight stops it.
 private struct ShineSweep: View {
     let period: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -128,7 +117,6 @@ private struct SweepEffect: GeometryEffect {
     }
 }
 
-/// A price in coins, with the old price struck through when there's a deal.
 struct CoinPrice: View {
     let price: Int
     var was: Int? = nil
@@ -171,7 +159,6 @@ private struct ShopAppear: ViewModifier {
     }
 }
 
-/// Lays its views out in rows, left to right, starting a new row when the next one wouldn't fit.
 struct WrapLayout: Layout {
     var spacing: CGFloat
 

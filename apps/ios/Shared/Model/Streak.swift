@@ -1,9 +1,8 @@
 import Foundation
 import Observation
 
-/// The couple's love streak, after TikTok's DM streaks (docs/love-streak.md): every day the couple does something
-/// together in the app — pets or treats Mochi, adds a moment, pins a note, swipes a date idea or checks in a mood —
-/// the flame grows by one. Miss a whole day and it goes out; one missed day can be restored once a month.
+/// Grows by one each day the couple does something together (docs/love-streak.md); a whole missed day puts it out,
+/// and one missed day can be restored once a month.
 nonisolated struct LoveStreak: Codable, Hashable {
     /// Days in a row up to `lastDay`; kept after the streak breaks so a restore can bring it back.
     var count = 0
@@ -14,7 +13,7 @@ nonisolated struct LoveStreak: Codable, Hashable {
     var lastRestore: Date?
 
     static let milestones = [3, 7, 14, 30, 50, 100, 200, 365]
-    /// Days between restores.
+    /// In days.
     static let restoreCooldown = 30
     /// Shorter streaks aren't worth a restore.
     static let restoreMinimum = 3
@@ -48,7 +47,6 @@ nonisolated struct LoveStreak: Codable, Hashable {
         }
     }
 
-    /// The highest milestone reached, and the next one to reach.
     func milestone(on date: Date = .now) -> (reached: Int?, next: Int?) {
         let days = current(on: date)
         return (Self.milestones.last { $0 <= days }, Self.milestones.first { $0 > days })
@@ -82,8 +80,7 @@ nonisolated struct LoveStreak: Codable, Hashable {
     }
 }
 
-/// The pair's streak in its room. Each call answers with the room's streak; the room counts one streak for the couple
-/// and keeps the restore's cooldown for both.
+/// The room counts one streak for the couple and keeps the restore cooldown for both; each call answers it.
 nonisolated struct StreakRemote: Sendable {
     enum Answer: Sendable, Equatable {
         case streak(LoveStreak)
@@ -94,7 +91,6 @@ nonisolated struct StreakRemote: Sendable {
     }
 
     var load: @Sendable () async -> Answer
-    /// Something the couple did at this time on this phone.
     var record: @Sendable (_ at: Date) async -> Answer
     var restore: @Sendable () async -> Answer
 }

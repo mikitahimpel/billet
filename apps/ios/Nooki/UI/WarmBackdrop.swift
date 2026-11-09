@@ -6,7 +6,6 @@ import Transport
 import WidgetBridge
 import Wire
 
-/// Dark amber vignette with drifting bokeh, standing in for the depth-of-field blur of the reference.
 struct WarmBackdrop: View {
     /// Whether the bokeh moves; when it doesn't, it stays where it was.
     var drifts = true

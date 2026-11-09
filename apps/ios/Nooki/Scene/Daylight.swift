@@ -2,9 +2,8 @@ import Foundation
 import UIKit
 import simd
 
-/// Time of day, ported from nooki-scene/src/three/daylight.js: a palette keyed by hour, and the sun's and moon's
-/// directions. The window faces -Z (south, say): the sun rises on the left (-X), stands high in front at noon and sets
-/// on the right.
+/// Time of day: a palette keyed by hour, and the sun's and moon's directions. The window faces -Z (south, say):
+/// the sun rises on the left (-X), stands high in front at noon and sets on the right.
 nonisolated enum Daylight {
     /// Colors are sRGB components in 0...1.
     nonisolated struct Sample {
@@ -73,7 +72,7 @@ nonisolated enum Daylight {
         return s
     }
 
-    /// The real local hour, with minutes.
+    /// With minutes.
     static func localHour(_ date: Date = .now) -> Float {
         let c = Calendar.current.dateComponents([.hour, .minute, .second], from: date)
         return Float(c.hour ?? 12) + Float(c.minute ?? 0) / 60 + Float(c.second ?? 0) / 3600

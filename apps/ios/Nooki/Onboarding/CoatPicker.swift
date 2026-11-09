@@ -1,8 +1,7 @@
 import SwiftUI
 import Design
 
-/// The coat step's picker: the chosen cat large on a soft light, its name, and one round clay chip per coat. A tap on
-/// a chip, or a swipe across the cat, changes the coat; the cat cross-fades into the new one.
+/// A tap on a chip or a swipe across the cat changes the coat; the cat cross-fades.
 struct CoatPicker: View {
     @Binding var coat: CatCoat
     /// The cat's height; nil to fill the height the rest leaves, between 170 and 440.
@@ -73,9 +72,7 @@ struct CoatPicker: View {
     }
 }
 
-/// The cat in her coat on a warm pool of light, breathing slowly: the coat step's pick and the welcome's hero. She is
-/// billet-gpu's render of the seated splat Mochi (the same pose, light and framing for every coat), lit from the left by
-/// the room's lamp, and stands in a soft contact shadow: a tight one under the paws inside a wide, faint one.
+/// billet-gpu's render of the seated splat Mochi: same pose, light and framing for every coat.
 struct CatStage: View {
     let coat: CatCoat
     let height: CGFloat
@@ -86,7 +83,6 @@ struct CatStage: View {
 
     var body: some View {
         ZStack(alignment: .bottom) {
-            // The light behind her, warmer and higher on the left, where the lamp is.
             Circle()
                 .fill(RadialGradient(colors: [Color.honey.opacity(0.36), Color.honey.opacity(0.1), .clear],
                                      center: UnitPoint(x: 0.42, y: 0.45), startRadius: 0, endRadius: height * 0.55))
@@ -125,7 +121,6 @@ struct CatStage: View {
         let tall = cat / (Self.pawsAt - Self.earsAt)
         return image
             .scaledToFit()
-            // Warm side light on her fur, brightest at the upper left, and a little shade at the lower right.
             .overlay {
                 LinearGradient(colors: [Color(hex: 0xFFD7A6).opacity(0.55), .clear, Color(hex: 0x5A3420).opacity(0.3)],
                                startPoint: .topLeading, endPoint: .bottomTrailing)
@@ -142,7 +137,6 @@ struct CatStage: View {
     }
 }
 
-/// A coat as a round clay chip in its colours, with its name under it; the picked one sits in a honey ring.
 struct CoatChip: View {
     let coat: CatCoat
     let picked: Bool
@@ -166,7 +160,6 @@ struct CoatChip: View {
     }
 }
 
-/// The clay disc: the coat's base, its markings, then a soft highlight top-left and shade bottom-right.
 struct CoatSwatchShape: View {
     let swatch: CatCoat.Swatch
 
@@ -198,7 +191,7 @@ struct CoatSwatchShape: View {
 }
 
 extension CatCoat {
-    /// The coat's colours for its chip, picked from billet-gpu's renders.
+    /// Picked from billet-gpu's renders.
     struct Swatch {
         struct Mark {
             /// In the unit square of the chip.
@@ -212,7 +205,6 @@ extension CatCoat {
     }
 
     var swatch: Swatch {
-        // Three soft stripes across a tabby's chip.
         func stripes(_ color: Color) -> [Swatch.Mark] {
             [0.18, 0.44, 0.7].map { Swatch.Mark(rect: CGRect(x: -0.1, y: $0, width: 1.2, height: 0.12), angle: -0.35, color: color) }
         }

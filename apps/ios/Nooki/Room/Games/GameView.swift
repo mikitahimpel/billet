@@ -122,7 +122,6 @@ private struct HintCard: View {
     }
 }
 
-/// The bar the game fills, with its label.
 private struct GameBar: View {
     let value: Double
     let label: String

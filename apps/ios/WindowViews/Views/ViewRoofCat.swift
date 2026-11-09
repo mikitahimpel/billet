@@ -3,7 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// Now and then a cat climbs a roof, sits a while at the ridge, and goes down the far side.
 struct ViewRoofCat: Sendable {
   var rhythm: ViewRhythm
   var left: CGPoint
@@ -65,7 +64,6 @@ struct ViewRoofCat: Sendable {
       tail.move(to: CGPoint(x: -1.2, y: -0.4))
       tail.addQuadCurve(to: CGPoint(x: -3.6, y: -2.2 + swish), control: CGPoint(x: -3.8, y: 0.2))
       shape.stroke(tail, with: .color(colour), lineWidth: 0.7)
-      // Eyes: a slow blink, and a green-gold shine when light catches them.
       let blink = (moment.now / 5.3).truncatingRemainder(dividingBy: 1) > 0.97
       if eyeShine > 0.05, !blink {
         for side in [-0.55, 0.55] as [CGFloat] {

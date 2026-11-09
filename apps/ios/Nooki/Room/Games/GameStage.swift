@@ -17,7 +17,6 @@ struct GameTouch {
         return t > 0 ? origin + direction * t : nil
     }
 
-    /// How far the ray passes from `p`.
     func distance(to p: SIMD3<Float>) -> Float {
         let v = p - origin
         return simd_length(v - direction * max(simd_dot(v, direction), 0))
@@ -28,7 +27,7 @@ struct GameTouch {
 /// the controller what to show through `deck`.
 @MainActor
 protocol GameStage: AnyObject {
-    /// What the camera frames, in the pivot's space.
+    /// In the pivot's space.
     var focus: [SIMD3<Float>] { get }
     func began(_ touch: GameTouch)
     func moved(_ touch: GameTouch)
@@ -51,9 +50,8 @@ extension GameStage {
 @Observable
 final class GameDeck {
     var hint: String?
-    /// The game's bar and its label, hidden with nil.
+    /// Hidden with nil.
     var bar: (value: Double, label: String)?
-    /// Set once the game is done.
     var result: GameResult?
 
     /// Sets `bar` when it has moved by a percent, reached an end or changed its label: a stage reports it every
@@ -95,7 +93,7 @@ struct GameSpots {
     let floor: Float
     /// Open floor for the laser dot.
     let area: FloorArea
-    /// The cat's length, meters.
+    /// Meters.
     let length: Float
     /// Across the screen from left to right, and toward the camera, along the floor at the room's home view.
     let right: SIMD3<Float>

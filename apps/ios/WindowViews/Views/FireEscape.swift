@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 6: out over a New York walk-up's fire escape. Far: the skyline, its towers speckled with
-/// lit floors and a spire with a blinking red light. Middle: brick tenements across the street,
-/// fire escapes zigzagging down them and wooden water tanks on the roofs. Street: a bodega with
-/// a green awning and a neon sign, an orange-and-white steam stack, yellow cabs. Near: the fire
-/// escape's own railing with fairy lights tied along it, a basil pot, and pigeons that land,
-/// bob and leave.
 struct FireEscape: ViewRecipe {
   static let streetBase: CGFloat = 46
   static let roadway = ViewRoad(
@@ -60,7 +54,6 @@ struct FireEscape: ViewRecipe {
             x: tower.x + tower.width * 0.3, y: tower.top - 2, width: tower.width * 0.4, height: 2),
           tone)
       }
-      // Lit floors: specks in rows, more of them after dark.
       var y = tower.top + 1.4
       var row = 0
       while y < base - 1 {
@@ -81,7 +74,6 @@ struct FireEscape: ViewRecipe {
         row += 1
       }
     }
-    // The spire: a stepped tower with a mast.
     let spire = Self.spire
     let shade = colour.lit(0.05)
     for (step, width) in [(0, 12.0), (1, 9), (2, 6.4), (3, 4)] as [(Int, CGFloat)] {
@@ -133,7 +125,6 @@ struct FireEscape: ViewRecipe {
           x: building.x, y: building.top, width: building.width,
           height: Self.middleBase - building.top),
         brick)
-      // The cornice.
       ViewKit.rect(
         context,
         CGRect(x: building.x - 0.4, y: building.top - 1, width: building.width + 0.8, height: 1.2),
@@ -146,7 +137,6 @@ struct FireEscape: ViewRecipe {
             x: window.rect.minX - 0.3, y: window.rect.minY - 0.5, width: window.rect.width + 0.6,
             height: 0.5), brick.lit(0.12))
       }
-      // Every other building has a fire escape down its face: landings and stairs.
       if index % 2 == 0 {
         let iron = colour.lit(-0.3)
         let left = building.x + 1.6
@@ -169,7 +159,6 @@ struct FireEscape: ViewRecipe {
           }
         }
       }
-      // Wooden water tanks on some roofs.
       if index % 3 == 1 {
         let tank = colour.lit(-0.05).mixed(with: ViewColour(0x6A4A30), by: look.isDark ? 0.15 : 0.3)
         let x = building.x + building.width * 0.6
@@ -192,7 +181,6 @@ struct FireEscape: ViewRecipe {
         context.fill(cap, with: .color(tank.lit(-0.08).color()))
       }
     }
-    // Air conditioners in a few windows.
     for (index, window) in Self.middleWindows.enumerated() where index % 7 == 3 {
       ViewKit.rect(
         context,
@@ -207,14 +195,12 @@ struct FireEscape: ViewRecipe {
 
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let base = Self.streetBase
-    // The ground floor across the street: shopfronts under the tenements.
     ViewKit.rect(context, CGRect(x: -45, y: base - 9, width: 190, height: 9), colour.lit(0.02))
     for x in stride(from: -40.0, to: 140, by: 13) where x < 48 || x > 80 {
       ViewKit.rect(context, CGRect(x: x, y: base - 6.4, width: 7, height: 5), colour.lit(-0.12))
       ViewKit.rect(
         context, CGRect(x: x + 8.6, y: base - 7, width: 2.6, height: 7), colour.lit(-0.25))
     }
-    // The bodega: its window, door and a green awning with a scalloped edge.
     let bodega = Self.bodega
     ViewKit.rect(context, bodega.insetBy(dx: -1, dy: 0), colour.lit(-0.05))
     ViewKit.rect(
@@ -236,7 +222,6 @@ struct FireEscape: ViewRecipe {
       ViewKit.circle(context, CGPoint(x: x + 0.8, y: bodega.minY + 1.8), 0.8, awning)
       x += 1.6
     }
-    // The steam stack in the road: a striped cone.
     let stack = Self.stack
     for band in 0..<4 {
       let y = stack.y - CGFloat(band + 1) * 1.4
@@ -246,7 +231,6 @@ struct FireEscape: ViewRecipe {
         (band % 2 == 0 ? ViewColour(0xFF7A2E) : ViewColour(0xF4F1EA)).mixed(
           with: colour, by: look.isDark ? 0.55 : 0.2))
     }
-    // Sidewalk and road.
     ViewKit.rect(
       context, CGRect(x: -45, y: base, width: 190, height: 1.2),
       colour.lit(look.isDark ? 0.05 : 0.14))
@@ -267,9 +251,7 @@ struct FireEscape: ViewRecipe {
     let rail = Self.rail
     // Painted iron, a shade lighter than the dark beyond it, so the railing reads in front.
     let iron = colour.lit(look.isDark ? 0.1 : -0.05)
-    // The landing's slats, seen over the sill.
     ViewKit.ground(context, top: 55, colour: iron)
-    // The top rail, a middle rail, and balusters.
     ViewKit.rect(context, CGRect(x: -50, y: rail, width: 200, height: 0.9), iron)
     ViewKit.rect(context, CGRect(x: -50, y: rail + 4.4, width: 200, height: 0.4), iron)
     var x: CGFloat = -50
@@ -277,7 +259,6 @@ struct FireEscape: ViewRecipe {
       ViewKit.rect(context, CGRect(x: x, y: rail, width: 0.35, height: 9), iron)
       x += 2.2
     }
-    // The stair up to the next landing, going out of the top left.
     var stringer = Path()
     stringer.move(to: CGPoint(x: -8, y: rail + 2))
     stringer.addLine(to: CGPoint(x: -30, y: -20))
@@ -292,7 +273,6 @@ struct FireEscape: ViewRecipe {
       ViewKit.rect(context, CGRect(x: left - 1, y: y, width: 6, height: 0.5), iron)
       step += 0.08
     }
-    // A basil pot and a little cactus on the landing.
     let pot = ViewColour(0xC0603A).mixed(with: colour, by: look.isDark ? 0.6 : 0.3)
     var basil = Path()
     basil.move(to: CGPoint(x: 70, y: 55))
@@ -319,7 +299,6 @@ struct FireEscape: ViewRecipe {
   func life(_ plane: ViewPlane, _ context: GraphicsContext, moment: ViewMoment) {
     switch plane {
     case .far:
-      // The spire's red light, a slow blink.
       let on = sin(moment.now * 1.6) > 0.3
       if on {
         ViewKit.circle(context, Self.spire, 0.5, ViewColour(0xFF3B3B))
@@ -344,8 +323,6 @@ struct FireEscape: ViewRecipe {
     }
   }
 
-  /// A neighbour out on their fire escape across the street: watering the plants by day, on
-  /// their phone after dark.
   static let neighbourOut = ViewRhythm(seed: 651, slot: 100, chance: 0.6, length: 50...85)
 
   private func neighbour(_ context: GraphicsContext, moment: ViewMoment) {
@@ -358,7 +335,6 @@ struct FireEscape: ViewRecipe {
     ViewWalker.figure(
       context, at: landing, height: 4.2, facing: 1, kind: dark ? .phone : .walker, coat: 0xC8A050,
       plane: .middle, moment: moment, walking: false)
-    // Pots along the landing.
     let pot = ViewColour(0xC0603A).mixed(with: moment.palette.middle, by: dark ? 0.6 : 0.3)
     for dx in [3.0, 4.6, 6.2] as [CGFloat] {
       ViewKit.rect(context, CGRect(x: landing.x + dx, y: landing.y - 1, width: 1, height: 1), pot)
@@ -367,7 +343,6 @@ struct FireEscape: ViewRecipe {
         ViewColour(0x3F8A4E).mixed(with: moment.palette.middle, by: dark ? 0.6 : 0.3))
     }
     guard !dark else { return }
-    // The watering can and its stream.
     let spout = CGPoint(x: landing.x + 2, y: landing.y - 2.6)
     ViewKit.rect(
       context, CGRect(x: landing.x + 0.6, y: landing.y - 3, width: 1.2, height: 0.9),
@@ -380,7 +355,6 @@ struct FireEscape: ViewRecipe {
     }
   }
 
-  /// The bodega's lit window and its neon sign, which hums and now and then stutters.
   private func bodegaLights(_ context: GraphicsContext, moment: ViewMoment) {
     let bodega = Self.bodega
     let window = CGRect(x: bodega.minX + 1, y: bodega.minY + 2.6, width: 16, height: 4.6)
@@ -402,7 +376,6 @@ struct FireEscape: ViewRecipe {
       context, CGPoint(x: sign.midX, y: sign.midY), 5, neon, 0.35 * hum * (dark ? 1 : 0.3))
   }
 
-  /// Steam pouring out of the stack and drifting off, thicker in the cold and wet.
   private func steam(_ context: GraphicsContext, moment: ViewMoment) {
     let stack = Self.stack
     let top = CGPoint(x: stack.x, y: stack.y - 5.6)
@@ -418,7 +391,6 @@ struct FireEscape: ViewRecipe {
     }
   }
 
-  /// A pigeon landing on the rail, bobbing and strutting along it, then flying off.
   private func pigeon(
     _ context: GraphicsContext, moment: ViewMoment, rhythm: ViewRhythm, index: Int
   ) {
@@ -467,7 +439,6 @@ struct FireEscape: ViewRecipe {
       let t = CGFloat((p - 0.92) / 0.08)
       return CGPoint(x: perch + 3 + 24 * t, y: y - 26 * t * t)
     }
-    // A strut or two along the rail.
     let strut = CGFloat(sin((p - 0.08) * 6)) * 3
     return CGPoint(x: perch + strut, y: y)
   }

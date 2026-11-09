@@ -17,7 +17,6 @@ enum PlusPass {
     ]
 }
 
-/// The subscription's card under the packs: Mochi in a crown, the perks and one action.
 struct PlusHero: View {
     let mockStore: Bool
     @AppStorage(PlusPass.key) private var on = false
@@ -90,11 +89,8 @@ struct PlusHero: View {
     }
 }
 
-/// The packs on sale, one card each: a pile that grows with the pack, the amount large, the price in the one honey
-/// capsule. While the store loads the cards wait; when it can't be reached the shelf says so and can try again.
 struct PackStore: View {
     let model: CoinPacksModel
-    /// The pack that covers a waiting buy.
     let fit: StampPack?
 
     var body: some View {

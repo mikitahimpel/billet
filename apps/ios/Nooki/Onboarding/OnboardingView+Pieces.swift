@@ -6,7 +6,6 @@ import Wire
 extension OnboardingView {
     // MARK: Pieces
 
-    /// Mochi with what she says, the subtitle, then the page's clay-card sections on the warm screen.
     func form<Content: View>(say: String? = nil, subtitle: String?,
                                      @ViewBuilder content: () -> Content) -> some View {
         ScrollView {
@@ -69,8 +68,8 @@ extension OnboardingView {
         .rowCell()
     }
 
-    /// The actions, pinned under every page in one order: the primary, then a quiet secondary in a slot of its own, so the
-    /// primary stays put from page to page.
+    /// Pinned under every page: the primary, then a quiet secondary in a slot of its own, so the primary stays put
+    /// from page to page.
     @ViewBuilder var actions: some View {
         if flow.page != .stopped {
             VStack(spacing: Space.xs) {

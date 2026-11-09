@@ -2,11 +2,8 @@ import Pet
 import RealityKit
 import SwiftUI
 
-/// What every room shares, ported from nooki-scene/src/three/catRoom.js: the turning pivot, Mochi on her two
-/// skeletons with a pet bounce, and a showcase that plays each of her animations in turn.
 class CatRoom {
-    /// One step of the showcase: `label` shows while it runs, `start` kicks it off; with no `seconds` it lasts until
-    /// she stops moving.
+    /// With no `seconds` a step lasts until she stops moving.
     struct ShowcaseStep {
         let label: String
         let seconds: Float?
@@ -17,7 +14,6 @@ class CatRoom {
     let root = Entity()
     /// Rotated by the user's drag; everything visible hangs off it.
     let pivot = Entity()
-    /// Called with the showcase step's label as it changes, nil once it is over.
     var onShowcase: ((String?) -> Void)?
     /// While set the room neither animates nor draws, though it stays attached to its view.
     var paused = false {
@@ -29,9 +25,8 @@ class CatRoom {
     private var catBody = Entity()
     private var catModel = Entity()
     private(set) var walker: CatWalker?
-    /// Mochi's brain in this room, once she has loaded.
     private(set) var director: CatDirector?
-    /// The cat's life every room runs on: the pair's journal once paired. `RoomController` connects it.
+    /// The pair's journal once paired; `RoomController` connects it.
     static let catLife = CatLife()
     static let catAnalytics: CatAnalytics = NoCatAnalytics()
     /// Height above the cat's origin where the speech bubble anchors.
@@ -55,13 +50,11 @@ class CatRoom {
     // MARK: - Interaction
 
     var currentYaw: Float { targetYaw }
-    /// Eased rotation actually applied to the pivot this frame.
     var settledYaw: Float { yaw }
-    /// Mochi's head in pivot space, for the camera's close-up.
+    /// Mochi's head in pivot space.
     var catFocus: SIMD3<Float> { catGroup.position + [0, catHeadTop * 0.55, 0] }
     var isShowcasing: Bool { !showcase.isEmpty }
 
-    /// How the camera frames the room: what it looks at, from which direction, and how far away at zoom 0 and 1.
     struct Framing {
         var target: SIMD3<Float> = [-0.02, 0.2, 0.02]
         var direction: SIMD3<Float> = simd_normalize(SIMD3<Float>(1, 0.82, 1))
@@ -69,9 +62,7 @@ class CatRoom {
         var near: Float = 2.6
     }
     var framing: Framing { Framing() }
-    /// How far a drag may turn the room either way.
     var yawLimit: Float { 0.75 }
-    /// How far in front of a focused photo the camera stops.
     var focusDistance: Float { 0.8 }
 
     func setYaw(_ value: Float) {
@@ -87,37 +78,34 @@ class CatRoom {
         return false
     }
 
-    /// The photo the camera is looking at up close, nil for the whole room; `onFocusChange` hears every change.
+    /// Nil for the whole room; `onFocusChange` hears every change.
     private(set) var focusedPhoto: Entity?
     var onFocusChange: ((Bool) -> Void)?
     private var focusedAt: Float = 0
 
-    /// Brings the camera up to `photo`, a plane facing +z with its center at its origin.
+    /// `photo` is a plane facing +z, centred on its origin.
     func focus(on photo: Entity) {
         focusedPhoto = photo
         focusedAt = time
         onFocusChange?(true)
     }
 
-    /// Back to the whole room. Ignored right after focusing, so the double tap that focused doesn't also undo it.
+    /// Ignored right after focusing, so the double tap that focused doesn't also undo it.
     func unfocusPhoto() {
         guard focusedPhoto != nil, time - focusedAt > 0.4 else { return }
         focusedPhoto = nil
         onFocusChange?(false)
     }
 
-    /// The focused photo's center and facing in world space, for the camera.
+    /// In world space.
     var photoPose: (center: SIMD3<Float>, normal: SIMD3<Float>)? {
         guard let photo = focusedPhoto else { return nil }
         return (photo.position(relativeTo: nil), simd_normalize(photo.convert(direction: [0, 0, 1], to: nil)))
     }
 
-    /// A tap on something in the room other than Mochi; rooms send her to their toys and furniture.
     func tapped(_ entity: Entity) {}
-    /// A double tap on something in the room.
     func doubleTapped(_ entity: Entity) {}
 
-    /// Makes `entity` and everything under it answer taps.
     static func tappable(_ entity: Entity, size: SIMD3<Float>, at center: SIMD3<Float>) {
         entity.components.set(CollisionComponent(shapes: [.generateBox(size: size).offsetBy(translation: center)]))
         entity.components.set(InputTargetComponent())
@@ -129,34 +117,32 @@ class CatRoom {
         director?.petted()
     }
 
-    /// The app came to the front.
     func appOpened() {
         director?.appOpened()
     }
 
-    /// The places in this room the brain may send Mochi to, besides her bed; a room with a route offers its far end.
+    /// Besides her bed; a room with a route offers its far end.
     var catSpots: [NookiSpot: CatWalker.Destination] {
         walker?.main.map { [.tree: $0] } ?? [:]
     }
 
-    /// A round obstacle on the floor her walks go around, in the pivot's floor plane.
+    /// A round obstacle her walks go around, in the pivot's floor plane.
     var catKeepOut: (center: SIMD2<Float>, radius: Float)? { nil }
 
-    /// Where the camera is from the room's middle, in the pivot's space, along the floor.
+    /// In the pivot's space, along the floor.
     private var cameraDirection: SIMD3<Float> {
         var d = simd_quatf.y(-yaw).act(framing.direction)
         d.y = 0
         return simd_normalize(d)
     }
 
-    /// Makes Mochi follow a finger dragged `offset` points from her head on screen, or stop with nil.
+    /// `offset` is points from her head on screen; nil stops her.
     func follow(_ offset: CGSize?) {
         walker?.follow(offset.map { SIMD2<Float>(Float($0.width), Float($0.height)) / 400 })
     }
 
-    /// Drives animation every frame, hands the frame time on to `beforeProjecting` first (the camera follows
-    /// `settledYaw`), and reports where the spot above Mochi's head lands on screen.
-    /// `viewer` is the camera, which Mochi checks on now and then.
+    /// Hands the frame time to `beforeProjecting` first (the camera follows `settledYaw`), then reports where the
+    /// spot above Mochi's head lands on screen. `viewer` is the camera.
     func start(updatesFrom content: RealityViewCameraContent, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
         Self.shown = self
@@ -172,7 +158,7 @@ class CatRoom {
         }
     }
 
-    /// Stops driving the room while another one is shown, ending any showcase.
+    /// Also ends any showcase.
     func stop() {
         if Self.shown === self { Self.shown = nil }
         subscription?.cancel()
@@ -184,13 +170,12 @@ class CatRoom {
         onShowcase?(nil)
     }
 
-    /// Advances the clock, the room's idle sway and Mochi; rooms add their own motion after calling this.
+    /// Rooms add their own motion after calling this.
     func tick(_ dt: Float) {
         time += dt
         frame += 1
         let t = time
 
-        // Drag follows with easing, plus a slow idle sway.
         yaw += (targetYaw - yaw) * min(1, dt * 8)
         pivot.orientation = .y(yaw + 0.035 * sin(t * 0.35))
 
@@ -209,10 +194,9 @@ class CatRoom {
 
     // MARK: - Mochi
 
-    /// Mochi sitting at `at` (where her seated splat stands) facing `rests.last`; with a route she can walk between
-    /// its two ends (see CatWalker), `rests` being her yaws at its start and end. Where the GPU can draw splats she is
-    /// the two Gaussian splats on their skeletons, otherwise meshes of the same two splats on the same skeletons
-    /// (Cat.usdz, CatStanding.usdz). Both are loaded once in the background and shared by the rooms (see `adoptCat`).
+    /// Mochi sitting at `at` facing `rests.last`; with a route she walks between its ends, `rests` her yaws at each.
+    /// Splats where the GPU draws them, else meshes of the same splats (Cat.usdz, CatStanding.usdz); loaded once in
+    /// the background and shared by the rooms (see `adoptCat`).
     func buildCat(at: SIMD3<Float>, rests: [Float], route: [CatWalker.Waypoint] = [], scale: Float, wandering: Bool) {
         Task {
             let mochi: Mochi
@@ -250,7 +234,7 @@ class CatRoom {
         }
     }
 
-    /// Loads Mochi again the next time a room is built, after her coat changed.
+    /// Reloads her for the next room built, after her coat changed.
     static func forgetMochi() {
         mochi = nil
         for load in bodyLoads.values { load.cancel() }
@@ -259,7 +243,6 @@ class CatRoom {
         rooms.removeAllObjects()
     }
 
-    /// Mochi's standing and sitting rigs.
     private struct Mochi {
         let standing: CatRig
         let seated: CatRig
@@ -305,7 +288,7 @@ class CatRoom {
         entity.forEachDescendant { $0.components.set(GroundingShadowComponent(castsShadow: isOn)) }
     }
 
-    /// Turns her grounding shadow off or back on, for a perf run's `cost` step.
+    /// For a perf run's `cost` step.
     func setCatShadow(_ isOn: Bool) {
         Self.catShadows = isOn
         guard let walker else { return }
@@ -314,7 +297,6 @@ class CatRoom {
         }
     }
 
-    /// Mochi's standing and sitting rigs, shared by every room.
     private static var mochi: Task<Mochi, any Error>?
 
     private static func loadMochi() async throws -> Mochi {
@@ -364,7 +346,7 @@ class CatRoom {
         return try await task.value
     }
 
-    /// Moves Mochi into this room, lit by its ambient light and posed as this room's walker last left her.
+    /// Lit by this room's ambient light and posed as this room's walker last left her.
     func adoptCat() {
         guard let walker else { return }
         for rig in [walker.standing, walker.seated] + walker.bodies.values {
@@ -414,9 +396,8 @@ class CatRoom {
         sun.components.set(shadow)
     }
 
-    /// Bloom is iOS 27 only; earlier systems get the room without the glow. The threshold sits above the lit walls
-    /// so only the emissive bulbs, flame and window halo glow, not the whole room. The compiler check lets Xcode 26
-    /// (the perf runs' image) build the app: its SDK has no bloom.
+    /// Bloom is iOS 27 only. The threshold sits above the lit walls so only emissive bulbs, flame and window halo
+    /// glow. The compiler check lets Xcode 26 (the perf runs' image), whose SDK has no bloom, build the app.
     func addBloom() {
         #if compiler(>=6.4)
         guard #available(iOS 27, *) else { return }
@@ -440,10 +421,10 @@ class CatRoom {
 
     // MARK: - Showcase
 
-    /// Extra steps a room adds to the showcase, played before Mochi's trip.
+    /// Played before Mochi's trip.
     var roomShowcase: [ShowcaseStep] { [] }
 
-    /// Plays each of Mochi's animations once, one after another, then her walk and jumps there and back.
+    /// Each animation once, then her walk and jumps there and back.
     func playAll() {
         guard let walker, !isShowcasing else { return }
         let b = walker.behavior

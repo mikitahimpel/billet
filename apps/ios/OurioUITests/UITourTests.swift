@@ -1,8 +1,7 @@
 import XCTest
 
-/// Walks every screen it can reach and saves a screenshot of each, for the UI audit and before/after shots. A step
-/// whose control is missing is skipped, so one moved button never loses the rest of the tour.
-/// It runs only from the ios.yml shots job, which sets UISHOTS.
+/// Screenshots every reachable screen for the UI audit; a step whose control is missing is skipped, so one moved
+/// button never loses the rest. Runs only from the ios.yml shots job, which sets UISHOTS.
 final class UITourTests: XCTestCase {
     override func setUpWithError() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["UISHOTS"] == "1", "the tour runs only for shots")

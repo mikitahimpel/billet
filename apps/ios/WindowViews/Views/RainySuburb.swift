@@ -3,10 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 2: a suburb street in the rain. Far: hills with a highway on a ridge, its lights
-/// streaming. Middle: low ranch houses under the power lines. Street: a corner store's
-/// fluorescent window and a bus shelter, puddles on the road. Near: a downspout and a chain-link
-/// fence. Now and then lightning, and someone walking past under an umbrella.
 struct RainySuburb: ViewRecipe {
   static let streetBase: CGFloat = 48
   static let lampHead = CGPoint(x: 8, y: 13)
@@ -37,7 +33,6 @@ struct RainySuburb: ViewRecipe {
   private func paintFar(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     ViewKit.hills(context, base: 34, waves: [4, 6, 3, 5, 7, 3, 4, 5], colour: colour.lit(0.04))
     ViewKit.ground(context, top: 34, colour: colour)
-    // The highway on its ridge: a long deck on thin piers.
     ViewKit.rect(context, CGRect(x: -45, y: Self.highway, width: 190, height: 1), colour.lit(-0.12))
     var x: CGFloat = -40
     while x < 145 {
@@ -45,7 +40,6 @@ struct RainySuburb: ViewRecipe {
         context, CGRect(x: x, y: Self.highway + 1, width: 0.7, height: 4), colour.lit(-0.12))
       x += 11
     }
-    // A cell tower on the hill to the right.
     ViewKit.rect(context, CGRect(x: 88, y: 12, width: 0.8, height: 22), colour.lit(-0.1))
     for y in [13.0, 15.5] as [CGFloat] {
       ViewKit.rect(context, CGRect(x: 86.4, y: y, width: 4, height: 1.2), colour.lit(-0.1))
@@ -75,7 +69,6 @@ struct RainySuburb: ViewRecipe {
         seed: 20 + index, look: look)
     }
     for (index, house) in Self.middleHouses.enumerated() {
-      // Ranch houses: long and low, with a shallow roof.
       ViewKit.house(
         context, x: house.x, base: Self.middleBase, width: house.width, wall: house.wall,
         roof: house.roof, colour: colour.lit(index % 2 == 0 ? 0.03 : -0.02), look: look,
@@ -83,7 +76,6 @@ struct RainySuburb: ViewRecipe {
     }
     for window in Self.middleWindows { ViewKit.windowFrame(context, window.rect, colour) }
     ViewKit.ground(context, top: Self.middleBase, colour: colour.lit(-0.05))
-    // A basketball hoop over one garage.
     ViewKit.rect(context, CGRect(x: 60, y: 28.6, width: 4, height: 2.6), colour.lit(0.08))
     ViewKit.rect(
       context, CGRect(x: 61.2, y: 31.2, width: 1.6, height: 0.3), ViewPalette.porchRed, 0.6)
@@ -101,8 +93,6 @@ struct RainySuburb: ViewRecipe {
 
   static let storeWindow = CGRect(x: 66, y: 39, width: 18, height: 6)
   static let shelter = CGRect(x: 38, y: 39, width: 14, height: 9)
-  /// A cat keeping dry under the shelter's bench: in most of the time, now and then trotting
-  /// off along the kerb. Its eyes catch the cars' lights.
   static let shelterCat = ViewRoofCat(
     rhythm: ViewRhythm(seed: 251, slot: 150, chance: 0.9, length: 110...140),
     left: CGPoint(x: 30, y: streetBase - 0.2), ridge: CGPoint(x: 42, y: streetBase - 0.2),
@@ -116,14 +106,12 @@ struct RainySuburb: ViewRecipe {
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let base = Self.streetBase
     ViewKit.ground(context, top: base - 1, colour: colour.lit(-0.04))
-    // The corner store: a flat-roofed block with a deep fascia and a long window.
     let store = CGRect(x: 62, y: base - 15, width: 34, height: 15)
     ViewKit.rect(context, store, colour.lit(0.03))
     ViewKit.rect(context, CGRect(x: 61, y: base - 16, width: 36, height: 1.6), colour.lit(-0.1))
     ViewKit.rect(context, CGRect(x: 62, y: base - 13.4, width: 34, height: 2.4), colour.lit(-0.06))
     ViewKit.windowFrame(context, Self.storeWindow, colour)
     ViewKit.rect(context, CGRect(x: 88, y: base - 8, width: 4.5, height: 8), colour.lit(-0.3))
-    // The house on the left with its garage, and a pine between.
     ViewKit.pine(
       context, x: 30, base: base - 0.5, height: 18, colour: colour.lit(-0.08), look: look)
     ViewKit.house(
@@ -134,7 +122,6 @@ struct RainySuburb: ViewRecipe {
     ViewKit.rect(
       context, CGRect(x: 7, y: base - 7.6, width: 10, height: 7.6),
       colour.lit(look.isDark ? 0.06 : 0.12))
-    // The bus shelter: a thin roof on posts, a glass back with a lit ad panel drawn by the life.
     let shelter = Self.shelter
     ViewKit.rect(
       context,
@@ -153,7 +140,6 @@ struct RainySuburb: ViewRecipe {
     ViewKit.rect(
       context, CGRect(x: shelter.minX + 2, y: shelter.maxY - 2.6, width: 8, height: 0.6),
       colour.lit(-0.2))
-    // Sidewalk and the road, darker and glossier in the wet.
     ViewKit.rect(
       context, CGRect(x: -45, y: base, width: 190, height: 1.4),
       colour.lit(look.isDark ? 0.05 : 0.15))
@@ -176,7 +162,6 @@ struct RainySuburb: ViewRecipe {
   ]
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // A chain-link fence along the bottom: posts, a top rail and a fine diamond mesh.
     let top: CGFloat = 50
     ViewKit.rect(context, CGRect(x: -45, y: top, width: 190, height: 0.6), colour)
     var x: CGFloat = -44
@@ -194,7 +179,6 @@ struct RainySuburb: ViewRecipe {
       d += 2.2
     }
     context.stroke(mesh, with: .color(colour.color(0.55)), lineWidth: 0.12)
-    // A downspout down the right edge of the house wall outside the window.
     ViewKit.rect(context, CGRect(x: 103, y: -50, width: 1.8, height: 112), colour.lit(0.02))
     ViewKit.rect(context, CGRect(x: 102.4, y: 49, width: 3, height: 1.2), colour.lit(0.02))
   }
@@ -211,7 +195,6 @@ struct RainySuburb: ViewRecipe {
   }
 
   private func farLife(_ context: GraphicsContext, moment: ViewMoment) {
-    // Traffic on the highway: two streams of tiny lights, white one way and red the other.
     let lit = moment.palette.lampsOn
     for index in 0..<14 {
       let speed = 6 + 3 * ViewRhythm.hash(index, seed: 251)
@@ -236,12 +219,10 @@ struct RainySuburb: ViewRecipe {
     lightningFlash(context, moment: moment)
   }
 
-  /// A flash over the far plane and a bolt over the hills, only in rain.
   private func lightningFlash(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.weather == .rain, let pass = Self.lightning.pass(at: moment.now) else {
       return
     }
-    // Two flickers in one flash.
     let p = pass.progress
     let level = p < 0.15 ? 1 : p < 0.3 ? 0.2 : p < 0.45 ? 0.8 : max(0, 1 - (p - 0.45) / 0.55) * 0.5
     let plate = ViewStage.plate
@@ -263,7 +244,6 @@ struct RainySuburb: ViewRecipe {
     ViewWindows.draw(Self.streetWindows, context, moment: moment)
     ViewKit.circle(context, Self.porch, 0.4, ViewPalette.lampCore, lamps)
     ViewKit.glow(context, Self.porch, 3.6, ViewPalette.lamp, 0.45 * lamps)
-    // The store's window, fluorescent and a little green, on day and night; a neon cup by the door.
     let window = Self.storeWindow
     let hum = 0.92 + 0.08 * sin(moment.now * 37) * sin(moment.now * 3.3)
     let tube = ViewColour(0xFFF2D8)
@@ -271,7 +251,6 @@ struct RainySuburb: ViewRecipe {
     ViewKit.glow(
       context, CGPoint(x: window.midX, y: window.maxY), 14, ViewPalette.lamp,
       0.3 * hum * (moment.look.isDark ? 1 : 0.3))
-    // Shelves of snacks in small bright packs.
     let packs = [0xE5503A, 0xFFD166, 0x3DDC84, 0x5BA8FF, 0xFF8A3D].map(ViewColour.init)
     for shelf in 0..<2 {
       let y = window.minY + 1.4 + CGFloat(shelf) * 2.4
@@ -298,7 +277,6 @@ struct RainySuburb: ViewRecipe {
         ViewKit.glow(context, cup, 4, ViewColour(0xFF5FA2), 0.35)
       }
     }
-    // The shelter's ad panel, lit blue-white.
     let panel = CGRect(
       x: Self.shelter.maxX - 5, y: Self.shelter.minY + 1.6, width: 3.8, height: 5.4)
     context.fill(
@@ -312,7 +290,6 @@ struct RainySuburb: ViewRecipe {
     Self.roadway.draw(context, moment: moment)
   }
 
-  /// Rings spreading on the puddles by the kerb while it rains.
   private func puddles(_ context: GraphicsContext, moment: ViewMoment) {
     let spots: [CGRect] = [
       CGRect(x: 20, y: 50.6, width: 12, height: 1.4), CGRect(x: 54, y: 50.2, width: 9, height: 1.2),
@@ -337,7 +314,6 @@ struct RainySuburb: ViewRecipe {
     }
   }
 
-  /// Someone walking along the far pavement under an umbrella, now and then.
   private func walker(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.walker.pass(at: moment.now) else { return }
     let point = Self.walkerPoint(pass)
@@ -356,7 +332,6 @@ struct RainySuburb: ViewRecipe {
         Path(CGRect(x: x + phase * 0.6, y: -2.1, width: 0.45, height: 2.1)),
         with: .color(colour.color()))
     }
-    // The umbrella, tilted into the walk, a colour from the pass.
     let canopy = ViewColour([0xE5503A, 0xFFD166, 0x3DDC84, 0x5BA8FF][Int(pass.variant * 11) % 4])
     var umbrella = person
     umbrella.rotate(by: .degrees(pass.variant < 0.5 ? 8 : -8))
@@ -377,7 +352,6 @@ struct RainySuburb: ViewRecipe {
     return CGPoint(x: pass.variant < 0.5 ? -40 + 180 * p : 140 - 180 * p, y: streetBase + 0.9)
   }
 
-  /// Water running out of the downspout in drops, in rain.
   private func drip(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.weather == .rain else { return }
     let colour = moment.palette.skyMiddle.lit(0.5)

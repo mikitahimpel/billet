@@ -2,11 +2,9 @@ import Foundation
 import Persistence
 import Transport
 
-/// The billet server this build talks to, and what signing in to it needs: the API client, the saved session and
-/// the anonymous account key in the iCloud Keychain.
-///
-/// The host comes from the build (`BILLET_API_HOST`, read into Info.plist as `BilletAPIHost`) and never from the
-/// repository. A build without one has no backend and keeps everything on the phone, as Ourio did before.
+/// The billet server this build talks to: the API client, the saved session and the anonymous account key in the
+/// iCloud Keychain. The host comes from the build (`BILLET_API_HOST`, Info.plist `BilletAPIHost`), never the
+/// repository; a build without one has no backend and keeps everything on the phone.
 struct Backend {
     let baseURL: URL
     let api: APIClient

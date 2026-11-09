@@ -18,7 +18,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
     private(set) var status = CatStatus()
     /// The label of the animation Play all is showing, while it plays.
     private(set) var showcase: String?
-    /// The mini-game being played, if any.
     private(set) var game: MiniGame?
     /// Where feed, water and brush are played, while one is.
     private(set) var corner: TabletopRoom?
@@ -71,7 +70,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
     var isReady: Bool { home?.isReady == true }
     var cityWindowView: FlatWindowView? { city?.windowView }
 
-    /// The room the screen shows now.
     var current: CatRoom? {
         guard home != nil else { return nil }
         return scene(for: shown)
@@ -162,10 +160,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
         await catLife.connect(client, pair: pair)
     }
 
-    /// Catches up on the journal and sends what waited offline.
     func syncCat() async { await catLife.sync() }
 
-    /// Sends what waited offline; true while something still waits on the network.
+    /// True while something still waits on the network.
     func flushCat() async -> Bool { await catLife.flush() }
 
     func catEntryArrived(_ entry: CatEntry) { catLife.received(entry) }

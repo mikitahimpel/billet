@@ -131,7 +131,7 @@ final class TabBarTouchTests: XCTestCase {
             let frames = [inbox.frame, coins.frame, couple.frame].map(\.integral)
             XCTAssertLessThan(inbox.frame.maxX, coins.frame.minX, "the Inbox should be left of the coins on \(tab)")
             XCTAssertLessThanOrEqual(coins.frame.maxX, couple.frame.minX + 1, "the avatars should be right of the coins on \(tab)")
-            // The "+" keeps the screen's right margin; on some CI Simulators `app.frame` is wider than the app's content.
+            // The "+" keeps the right margin; some CI Simulators report `app.frame` wider than the app's content.
             XCTAssertEqual(couple.frame.maxX, app.buttons["Add"].frame.maxX, accuracy: 12,
                            "the avatars should sit in the top-right corner on \(tab)")
             if let first {

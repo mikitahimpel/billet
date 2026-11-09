@@ -29,7 +29,6 @@ struct Monogram: View {
         }
         .frame(width: size, height: size)
         .clipShape(.circle)
-        // A soft clay ring: lit from above, warm below.
         .overlay {
             if onGlass {
                 Circle().strokeBorder(Ink.glassFill, lineWidth: 2)

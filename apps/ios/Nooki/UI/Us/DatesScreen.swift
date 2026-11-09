@@ -346,7 +346,6 @@ struct DatesScreen: View {
         .padding(.top, 14)
     }
 
-    /// The Filters button, then the active filters to remove one by one, or quick picks while none is set.
     private var filterBar: some View {
         ScrollView(.horizontal) {
             HStack(spacing: 8) {

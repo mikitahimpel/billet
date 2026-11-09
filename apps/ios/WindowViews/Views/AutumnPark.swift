@@ -3,11 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// An autumn park. Far: a hazy city and a line of small trees. Middle: big round trees in orange,
-/// red and gold round a pond with ducks gliding on it, and a bandstand. Street: a gravel path with
-/// benches, an old lamp, leaf piles and two big trees, a squirrel running up one of them now and
-/// then, people walking dogs and joggers. Near: a branch of orange leaves. Leaves fall all the
-/// while, on every plane.
 struct AutumnPark: ViewRecipe {
   static let pathTop: CGFloat = 46
   static let pathBase: CGFloat = 49
@@ -40,14 +35,12 @@ struct AutumnPark: ViewRecipe {
       colours = [0x7A90C4, 0xC8C4D8, 0xFFD8B0, 0xC0B0A0, 0xA08468, 0x76604A, 0x4E4034]
     }
     palette.grade(colours, share: share)
-    // Golden autumn air over the far trees while it is light.
     if palette.haze == 0, hour == .day || hour == .morning {
       palette.hazeColour = palette.horizon
       palette.haze = 0.18
     }
   }
 
-  /// Autumn foliage: oranges, reds and golds, muted after dark.
   static let foliage: [UInt32] = [0xE07A2E, 0xC8452E, 0xE8B03A, 0xB86A2A, 0xD8602A]
 
   static func leafColour(_ index: Int, plane: ViewColour, look: ViewLook) -> ViewColour {
@@ -111,7 +104,6 @@ struct AutumnPark: ViewRecipe {
         colour: Self.leafColour(index + 1, plane: colour, look: look), seed: 120 + index,
         look: look)
     }
-    // The pond: the sky caught in it, darker at the near edge, a lighter rim.
     let pond = Self.pond
     let water = look.palette.skyMiddle.mixed(with: look.palette.horizon, by: 0.4)
       .mixed(with: colour, by: look.isDark ? 0.5 : 0.25)
@@ -133,7 +125,6 @@ struct AutumnPark: ViewRecipe {
       context.fill(
         Path(ellipseIn: pond.insetBy(dx: 3, dy: 0.8)), with: .color(ViewKit.snow(look).color(0.35)))
     }
-    // The bandstand: a round stone base, slim posts, a pointed roof with a finial.
     let stand = CGPoint(x: 76, y: 42.6)
     let roofColour = colour.mixed(with: ViewColour(0x4A6A5A), by: look.isDark ? 0.15 : 0.4)
     let white = colour.mixed(with: ViewColour(0xF0E8DC), by: look.isDark ? 0.2 : 0.5)
@@ -189,7 +180,6 @@ struct AutumnPark: ViewRecipe {
       gravel)
     ViewKit.rect(
       context, CGRect(x: -45, y: Self.pathTop, width: 190, height: 0.3), gravel.lit(-0.1))
-    // Leaves lying on the grass and the path.
     for index in 0..<46 {
       let x = -44 + 188 * CGFloat(ViewRhythm.hash(index, seed: 951))
       let y = Self.pathTop - 1 + 4 * CGFloat(ViewRhythm.hash(index, seed: 952))
@@ -210,14 +200,12 @@ struct AutumnPark: ViewRecipe {
         context, x: tree.x, base: Self.pathTop - 0.4, size: tree.size,
         colour: Self.leafColour(Int(tree.size), plane: colour, look: look), seed: 160 + Int(tree.x),
         look: look)
-      // The trunk drawn again in bark brown, over the crown's shadow.
       ViewKit.rect(
         context,
         CGRect(
           x: tree.x - tree.size * 0.06, y: Self.pathTop - 0.4 - tree.size * 0.62,
           width: tree.size * 0.12, height: tree.size * 0.62), colour.lit(-0.2))
     }
-    // Benches: two slats of seat, a backrest and iron legs.
     let wood = colour.mixed(with: ViewColour(0x8A5A3A), by: look.isDark ? 0.2 : 0.45)
     for x in Self.benches {
       let seat = Self.pathTop - 2
@@ -305,7 +293,6 @@ struct AutumnPark: ViewRecipe {
     for duck in 0..<3 {
       let point = Self.duckPoint(pass, duck: duck)
       let bob = CGFloat(sin(moment.now * 2 + Double(duck))) * 0.08
-      // A V of ripples behind.
       var wake = Path()
       wake.move(to: CGPoint(x: point.x - facing * 3, y: point.y + 0.5))
       wake.addLine(to: CGPoint(x: point.x - facing * 0.6, y: point.y + 0.15))
@@ -326,8 +313,6 @@ struct AutumnPark: ViewRecipe {
     }
   }
 
-  /// Where the squirrel is: dashing across the grass to the trunk, up it, a pause with its tail
-  /// flicking, and back down.
   static func squirrelPoint(_ pass: ViewRhythm.Pass) -> (CGPoint, climbing: Bool) {
     let tree = climbTree
     let p = CGFloat(pass.progress)
@@ -356,7 +341,6 @@ struct AutumnPark: ViewRecipe {
     body.fill(
       Path(ellipseIn: CGRect(x: -0.9, y: -0.5, width: 1.8, height: 0.9)), with: .color(fur.color()))
     ViewKit.circle(body, CGPoint(x: -1, y: -0.5), 0.42, fur)
-    // The big bushy tail curled up over the back.
     var tail = Path()
     tail.move(to: CGPoint(x: 0.8, y: -0.2))
     tail.addQuadCurve(to: CGPoint(x: 0.9 + flick, y: -2.2), control: CGPoint(x: 2.2, y: -0.8))

@@ -69,7 +69,6 @@ struct TabBar: View {
         HomeTab.at(x - Self.inset, across: barWidth - Self.inset * 2) ?? state.tab
     }
 
-    /// How the selection follows the finger.
     private var follow: Animation { reduceMotion ? Motion.fade() : Motion.spring(Motion.quick) }
 
     /// One pill for the whole row, moved to the selected slot by an offset, so no view comes or goes inside the glass.
@@ -120,7 +119,6 @@ private struct SlidingPill: ViewModifier {
 
 // MARK: - Add button
 
-/// The "+" beside the tab bar: everything the couple adds themselves, from any tab, through the same sheets their tabs use.
 struct AddButton: View {
     let state: HomeState
 

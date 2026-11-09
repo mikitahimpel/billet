@@ -3,7 +3,6 @@ import Observation
 import UIKit
 import UniformTypeIdentifiers
 
-/// One shared photo with a caption, visible only to the couple.
 nonisolated struct Moment: Identifiable, Codable, Hashable {
     let id: UUID
     /// Monogram of the partner who added it, "L" or "M".
@@ -25,7 +24,6 @@ nonisolated struct Moment: Identifiable, Codable, Hashable {
 /// them. Photos taken here go to the partner and theirs come back through `PhotoSync`; this folder is the cache.
 @Observable
 final class MomentStore {
-    /// Polaroids that fit on the room wall.
     static let wallSlots = 6
 
     /// Long side of the stored JPEGs; also what the viewer shows.
@@ -133,9 +131,7 @@ final class MomentStore {
         return insert(file: file, caption: caption, author: author, date: date, noteID: noteID, unsent: false)
     }
 
-    /// `data` as a stored photo in `folder`: as it came when it is a JPEG within `maxPixels`, otherwise fitted and
-    /// encoded. Returns the file's name. Its own function: Xcode 26's isolation checker rejects this body inline in a
-    /// detached closure in Release builds.
+    /// Its own function: Xcode 26's isolation checker rejects this body inline in a detached closure in Release.
     nonisolated private static func store(received data: Data, maxPixels: Int, in folder: URL) -> String? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return nil }
         let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any]
@@ -149,7 +145,6 @@ final class MomentStore {
         return write(jpeg, in: folder)
     }
 
-    /// Writes a photo's JPEG into the Moments folder under a new name, and returns the name.
     nonisolated private static func write(_ jpeg: Data, in folder: URL) -> String? {
         let file = "\(UUID().uuidString).jpg"
         do {
@@ -174,7 +169,6 @@ final class MomentStore {
     /// Photos taken here that have not reached the partner yet, oldest first.
     var unsent: [Moment] { moments.filter { $0.unsent == true }.reversed() }
 
-    /// Whether the partner's photo note is already here.
     func contains(noteID: String) -> Bool { moments.contains { $0.noteID == noteID } }
 
     /// Marks a photo taken here as waiting to reach the partner, or as delivered as the server's note `noteID`.

@@ -4,8 +4,6 @@ import Design
 import Transport
 import Wire
 
-/// Draw & guess: guess the partner's riddle from its replay and letter tiles, wait for them to guess yours, or pick a
-/// word and draw it.
 struct DrawGuessScreen: View {
     let state: HomeState
     let model: DrawGuessModel
@@ -18,7 +16,6 @@ struct DrawGuessScreen: View {
 
     private var partner: String { state.profile.name(of: state.otherPartner) }
 
-    /// The word on the canvas while it is open.
     private struct Word: Identifiable {
         let text: String
         var id: String { text }
@@ -457,7 +454,6 @@ private struct RiddleTiles: View {
     }
 }
 
-/// One of the three words to draw, with its tier.
 private struct WordOption: View {
     let tier: String
     let word: String

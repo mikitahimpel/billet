@@ -2,11 +2,9 @@ import Foundation
 import Transport
 import Wire
 
-/// The room socket the app keeps while it is in front, outside the canvas: the Inbox's unread count, the partner's
-/// photos as they are sent, reactions to photos, the pair's shop and lists, each partner's check-in, how Who knows
-/// who goes, and the Draw & guess riddles. It resumes after
-/// the last note the photos
-/// looked at, and after the cat's last journal entry this phone holds, so both partners' care reaches her here.
+/// The room socket kept while the app is in front: Inbox unread count, partner photos, reactions, shop and lists,
+/// check-ins, Who knows who, Draw & guess riddles. Resumes after the last note the photos saw and the cat's last
+/// journal entry this phone holds, so both partners' care reaches her here.
 @MainActor
 final class InboxLink {
     private var client: WebSocketClient?

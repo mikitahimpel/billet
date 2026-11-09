@@ -29,12 +29,10 @@ nonisolated struct WorldMap: Sendable {
         self.shapes = shapes
     }
 
-    /// The country's outline drawn into `rect`.
     func path(_ code: String, in rect: CGRect) -> Path {
         path(shapes[code] ?? [], in: rect)
     }
 
-    /// All the land, every country together.
     func land(in rect: CGRect) -> Path {
         path(shapes.values.flatMap(\.self), in: rect)
     }

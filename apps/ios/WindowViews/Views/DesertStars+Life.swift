@@ -25,7 +25,6 @@ extension DesertStars {
     return pass.variant < 0.5 ? -40 + 180 * p : 140 - 180 * p
   }
 
-  /// A car far off on the road: its lights after dark, a speck and its dust by day.
   private func farCar(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.farCar.pass(at: moment.now) else { return }
     let x = Self.carX(pass)
@@ -53,15 +52,12 @@ extension DesertStars {
 
   static func coyotePoint(_ pass: ViewRhythm.Pass) -> CGPoint {
     let p = pass.progress
-    // Trots in, stops a while in the middle to look up, trots on.
     let share: Double =
       p < 0.4 ? p / 0.4 * 0.45 : p < 0.6 ? 0.45 : 0.45 + (p - 0.6) / 0.4 * 0.55
     let x = pass.variant < 0.5 ? -15 + 130 * share : 115 - 130 * share
     return CGPoint(x: CGFloat(x), y: Self.road + 2.8)
   }
 
-  /// A coyote trotting along the sand past the road; halfway it stops and lifts its nose to the
-  /// sky.
   private func coyote(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.coyote.pass(at: moment.now) else { return }
     let feet = Self.coyotePoint(pass)
@@ -70,7 +66,6 @@ extension DesertStars {
     let colour = moment.palette.middle.lit(-0.22).mixed(
       with: ViewColour(0x8A6A4A), by: moment.look.isDark ? 0.1 : 0.4)
     let gait = stopped ? 0 : CGFloat(sin(moment.now * 9))
-    // Legs, then body, tail and head.
     for (dx, phase) in [(-1.1, 1.0), (1.0, -1.0)] as [(CGFloat, CGFloat)] {
       var leg = Path()
       leg.move(to: CGPoint(x: feet.x + dx * facing, y: feet.y - 1.4))
@@ -109,8 +104,6 @@ extension DesertStars {
     context.fill(ear, with: .color(colour.color()))
   }
 
-  /// The fire: tongues of flame that never hold still, a warm glow on the sand and sparks rising.
-  /// In rain it is down to embers.
   private func campfire(_ context: GraphicsContext, moment: ViewMoment) {
     let fire = Self.fire
     let t = moment.now
@@ -160,7 +153,6 @@ extension DesertStars {
     return CGPoint(x: x, y: 55.4 - bounce)
   }
 
-  /// A tumbleweed bowling past now and then, bouncing and turning, when it is dry.
   private func tumbleweed(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.weather == .clear || moment.look.weather == .fog,
       let pass = Self.tumbleweed.pass(at: moment.now)
@@ -182,7 +174,6 @@ extension DesertStars {
     weed.stroke(
       Path(ellipseIn: CGRect(x: -1.9, y: -1.9, width: 3.8, height: 3.8)),
       with: .color(colour.color(0.7)), lineWidth: 0.16)
-    // Its shadow on the sand.
     context.fill(
       Path(ellipseIn: CGRect(x: point.x - 1.8, y: 57.4, width: 3.6, height: 0.6)),
       with: .color(moment.palette.near.lit(-0.3).color(0.35)))

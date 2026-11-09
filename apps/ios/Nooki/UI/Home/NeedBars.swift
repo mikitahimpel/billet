@@ -74,7 +74,6 @@ private struct NeedCell: View {
     }
 }
 
-/// What the couple can do for her, as big clay tiles: the games start in the room once the sheet is down.
 struct PetActions: View {
     var treat: () -> Void
     var pet: () -> Void
@@ -84,7 +83,6 @@ struct PetActions: View {
         let title: String
         let symbol: String
         let hue: Color
-        /// A price in coins, if it costs any.
         var price: Int?
         let run: () -> Void
         var id: String { title }
@@ -136,7 +134,6 @@ struct PetActions: View {
     }
 }
 
-/// A thick rounded track with a glossy fill in the need's own hue.
 private struct NeedTrack: View {
     let value: Double
     let hue: Color
@@ -162,7 +159,6 @@ private struct NeedTrack: View {
 }
 
 extension PetNeed {
-    /// Full, Rested, Playful, Loved: the order the sheet lists them.
     static let displayOrder: [PetNeed] = [.full, .rested, .playful, .loved]
 
     var title: String {
@@ -183,7 +179,6 @@ extension PetNeed {
         }
     }
 
-    /// One warm family: honey, sand, coral, blush.
     var hue: Color {
         switch self {
         case .full: Color(hex: 0xF2A65E)

@@ -1,12 +1,10 @@
 import SwiftUI
 import Design
 
-/// A bundle: its pieces joined by "+", the name with what it saves, and its price beside the struck-through sum.
 struct BundleCard: View {
     let state: HomeState
     let bundle: ShopBundle
     var open: (ShopItem) -> Void
-    /// Opens the bundle's own sheet.
     var openSet: () -> Void = {}
 
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
@@ -52,7 +50,6 @@ struct BundleCard: View {
         }
     }
 
-    /// Each piece opens its own sheet; one already owned shows a check.
     private var pieces: some View {
         HStack(spacing: Space.xs) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
@@ -81,7 +78,6 @@ struct BundleCard: View {
     }
 }
 
-/// The small honey check on a piece the couple owns.
 struct OwnedCheck: View {
     var body: some View {
         Image(systemName: "checkmark.circle.fill")

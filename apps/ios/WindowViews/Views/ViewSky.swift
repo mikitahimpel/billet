@@ -3,8 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// The sky every view shares, filling the whole scene: its gradient, stars, the moon in its
-/// phase, slow clouds, and now and then a plane blinking across.
 enum ViewSky {
   /// How much of the window's movement the sky follows.
   static let follow: CGFloat = 0.08
@@ -123,7 +121,6 @@ enum ViewSky {
     }
   }
 
-  /// A plane's lights crossing high up: red and green at the wingtips, a white strobe.
   private static func airplane(
     _ context: GraphicsContext, frame: ViewStage.Frame, moment: ViewMoment
   ) {
@@ -169,8 +166,7 @@ enum ViewSky {
   }
 }
 
-/// The weather in the air outside, over every plane: rain streaks or falling snow. Fog is laid
-/// between the planes by the view itself.
+/// Fog is laid between the planes by the view itself.
 enum ViewAir {
   static func draw(_ context: GraphicsContext, frame: ViewStage.Frame, moment: ViewMoment) {
     switch moment.look.weather {
@@ -219,10 +215,8 @@ enum ViewAir {
   }
 }
 
-/// The glass: a faint sheen, the room's lamp reflected in its corner, and the weather on it,
-/// drops that cling and then run in rain, frost at the edges in snow.
 enum ViewGlass {
-  /// A big drop beside the cat now and then, for it to paw at.
+  /// For the cat to paw at.
   static let bigDrop = ViewRhythm(seed: 77, slot: 16, chance: 0.75, length: 3.5...5.5)
 
   static func draw(
@@ -277,7 +271,6 @@ enum ViewGlass {
     }
   }
 
-  /// A fine mist of tiny beads all over the glass, a different scatter every half minute.
   private static func mist(_ context: GraphicsContext, frame: ViewStage.Frame, moment: ViewMoment) {
     let tint = moment.palette.skyMiddle.lit(0.5)
     let scatter = Int((moment.now / 30).rounded(.down)) % 10_000
@@ -292,8 +285,6 @@ enum ViewGlass {
     }
   }
 
-  /// Rivulets: water finding its way down the glass in wavering lines, each running for a while
-  /// and then drying off as another starts somewhere else.
   private static func rivulets(
     _ context: GraphicsContext, frame: ViewStage.Frame, moment: ViewMoment
   ) {
@@ -324,7 +315,6 @@ enum ViewGlass {
     }
   }
 
-  /// One drop: it gathers for most of its pass, then runs down the glass leaving a thin trail.
   private static func drop(
     _ context: GraphicsContext, frame: ViewStage.Frame, x: Double, y0: Double, size: Double,
     progress: Double, tint: ViewColour

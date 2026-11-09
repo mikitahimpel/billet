@@ -25,7 +25,6 @@ extension HomeView {
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     var boardKey: [String] { BoardFaces.key(state: state) }
 
-    /// Photos to and from the partner; nil until this phone is paired with them.
     /// Once paired, the monograms belong to the pair's two accounts and the shop, the gifts and the lists follow the
     /// pair's room.
     func followPair() async {

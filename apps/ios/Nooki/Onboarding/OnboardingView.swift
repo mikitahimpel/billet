@@ -3,10 +3,7 @@ import SwiftUI
 import Design
 import Wire
 
-/// The first launch as a native flow on the app's warm screen: a welcome, then one step per page with a large title,
-/// a progress bar, Back and Skip in the bar, the choices as inset-grouped rows and one primary button at the bottom.
-/// Server questions are drawn by their kind, so a new question needs no app update. Built on the adaptive tokens;
-/// the app is dark for now, and light comes app-wide in one step.
+/// Server questions are drawn by their kind, so a new question needs no app update.
 struct OnboardingView: View {
     @Bindable var flow: OnboardingFlow
     /// The invite comes from the pairing on the server; nil in a build without one.
@@ -419,7 +416,6 @@ struct OnboardingView: View {
     }
 }
 
-/// A step's title: large, rounded, wrapping, and a header for VoiceOver.
 struct PageTitle: View {
     let text: String
 
@@ -434,7 +430,6 @@ struct PageTitle: View {
     }
 }
 
-/// Mochi's round face, in her coat.
 private struct Portrait: View {
     let name: String
     let size: CGFloat
@@ -456,7 +451,6 @@ private struct Portrait: View {
     }
 }
 
-/// Mochi's face with what she says, the friendly anchor at the top of each step.
 struct MochiSays: View {
     let text: LocalizedStringKey
     let avatar: String

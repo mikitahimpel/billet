@@ -3,8 +3,7 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// A road across a view with cars passing both ways now and then, their beams reaching ahead and
-/// washing the house fronts. The room's own headlight sweep follows the same cars.
+/// The room's own headlight sweep follows the same cars.
 struct ViewRoad: Sendable {
   /// The line the cars' wheels run on, in stage units.
   var line: CGFloat
@@ -12,7 +11,6 @@ struct ViewRoad: Sendable {
   var kerb: CGFloat
   var cars: ViewRhythm
   var length: CGFloat = 13
-  /// Body colours, picked per car.
   var bodies: [UInt32] = [0x5A2430, 0x23324A, 0x3A3A40, 0x6A6A70]
 
   func carX(_ pass: ViewRhythm.Pass) -> CGFloat {
@@ -71,8 +69,6 @@ struct ViewRoad: Sendable {
   }
 }
 
-/// A street lamp's head, its cone and pool of light, its shine on a wet road, and a moth around
-/// it that never flies the same loop twice.
 struct ViewStreetLamp: Sendable {
   var head: CGPoint
   /// Where the light lands.
@@ -133,15 +129,12 @@ struct ViewStreetLamp: Sendable {
   }
 }
 
-/// A string of bulbs hung between two points: warm fairy lights that breathe, or Christmas
-/// lights in colours that chase along the string now and then.
 struct ViewLightString: Sendable {
   var from: CGPoint
   var to: CGPoint
   var sag: CGFloat = 0.9
   var count = 12
   var colours: [ViewColour] = [ViewPalette.lampCore, ViewColour(0xFFB27A)]
-  /// Whether the bulbs chase along the string in waves rather than breathe.
   var chases = false
   var seed = 0
 
@@ -157,7 +150,6 @@ struct ViewLightString: Sendable {
         from: from, to: to, sag: sag, share: (CGFloat(index) + 0.5) / CGFloat(count))
       let level: Double
       if chases {
-        // A wave runs along the string every so often; between waves the bulbs glow steady.
         let wave = (moment.now * 0.35 + Double(seed)).truncatingRemainder(dividingBy: 1)
         let head = wave * Double(count + 6) - 3
         let near = abs(Double(index) - head)
@@ -175,7 +167,6 @@ struct ViewLightString: Sendable {
   }
 }
 
-/// A leafy branch reaching in from a corner, swaying in the wind, with snow on some leaves.
 struct ViewBranch: Sendable {
   var anchor = CGPoint(x: 116, y: -10)
   var scale: CGFloat = 1.3
@@ -236,8 +227,7 @@ struct ViewBranch: Sendable {
 }
 
 extension ViewKit {
-  /// A palm: a tall thin trunk that leans and bows, and a crown of drooping fronds. `sway` from
-  /// -1 to 1 bends the crown in the wind.
+  /// `sway` from -1 to 1 bends the crown in the wind.
   static func palm(
     _ context: GraphicsContext, x: CGFloat, base: CGFloat, height: CGFloat, lean: CGFloat,
     colour: ViewColour, sway: Double = 0
@@ -265,7 +255,6 @@ extension ViewKit {
     circle(context, top, width * 1.8, colour.lit(-0.05))
   }
 
-  /// One frond: a curved blade that droops at its tip, widest a third of the way out.
   static func palmFrond(
     _ context: GraphicsContext, from: CGPoint, angle: Double, length: CGFloat, colour: ViewColour
   ) {
@@ -293,8 +282,7 @@ extension ViewKit {
   }
 }
 
-/// A fine grain tile laid over every painted plate: a little light and a little dark, seeded so
-/// it is the same every run. Made once, in code; nothing is loaded.
+/// Seeded, so it is the same every run.
 enum ViewGrain {
   static let size = 64
 
@@ -320,8 +308,7 @@ enum ViewGrain {
   }()
 }
 
-/// Leaves let go by the trees, twirling down through a plane now and then: each leaf on its own
-/// clock, so they never fall together or the same way twice. None in snow.
+/// Each leaf on its own clock, so they never fall together. None in snow.
 struct ViewLeaves: Sendable {
   var count = 5
   /// Where leaves start and how far they fall, in stage units.
@@ -359,8 +346,6 @@ struct ViewLeaves: Sendable {
   }
 }
 
-/// Fireflies from dusk on, in clear or foggy air: each drifts its own slow path and blinks on its
-/// own clock.
 struct ViewFireflies: Sendable {
   var count: Int
   var area: CGRect

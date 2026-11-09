@@ -17,38 +17,33 @@ final class ServerSession {
     let signIn: AnonymousSignInModel
     /// Replaced after a finished pairing, so the next one starts from the choice again.
     private(set) var pairing: PairingModel
-    /// Whether the saved account has a partner. A phone learns it by pairing; the record keeps it across launches.
+    /// Learned by pairing; the saved record keeps it across launches.
     private(set) var isPaired: Bool
-    /// Dev server only: whether this account is paired with its bot partner. Nil on a server without dev tools, and
-    /// until `checkDemoPartner()` has asked.
+    /// Dev server only; nil without dev tools and until `checkDemoPartner()` has asked.
     private(set) var demoPartner: Bool?
-    /// The pair's activity for the Inbox, and its unread count.
     let inbox: InboxModel
-    /// The couple's reactions to each other's photos; nil until this account has a partner.
+    /// Nil until this account has a partner.
     private(set) var reactions: ReactionsModel?
-    /// Today's Who knows who round; `unpaired` until this account has a partner.
+    /// `unpaired` until this account has a partner.
     private(set) var whoKnows: WhoKnowsModel
-    /// The pair's Draw & guess riddles; `unpaired` until this account has a partner.
+    /// `unpaired` until this account has a partner.
     private(set) var drawGuess: DrawGuessModel
     @ObservationIgnored private var inboxLink: InboxLink?
     @ObservationIgnored private let photoReceiving = PhotoReceiving()
-    /// What the room socket pages when a photo arrives; set each time the socket is followed.
+    /// Set each time the socket is followed.
     @ObservationIgnored private var photos: PhotoSync?
     @ObservationIgnored private var texts: TextNoteSync?
-    /// Takes the room's shop as the socket pushes it.
     @ObservationIgnored private weak var shop: ShopModel?
-    /// Takes the room's lists as the socket pushes them.
     @ObservationIgnored private weak var lists: ListsModel?
-    /// Where the room's check-ins go; set each time the socket is followed.
+    /// Set each time the socket is followed.
     @ObservationIgnored private var moods: (@MainActor (PartnerCheckIn) -> Void)?
-    /// Where the cat's journal entries go, and the last one held; set each time the socket is followed.
+    /// Set each time the socket is followed; holds the last entry.
     @ObservationIgnored private var catEntry: (@MainActor (CatEntry) -> Void)?
     @ObservationIgnored private var lastCatSeq: (@MainActor () -> Int?)?
-    /// The open Pick tonight screen's, for a match the partner's swipe made; nil while it is closed.
+    /// Set by the open Pick tonight screen; nil while it is closed.
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
     @ObservationIgnored private let backend: Backend
-    /// The build's store for coin packs, over the pair's purchase routes.
     @ObservationIgnored let payments: any Payments
 
     init(backend: Backend) {
@@ -84,7 +79,7 @@ final class ServerSession {
 
     nonisolated private static let reactionsKey = "moments.reactions"
 
-    /// Reactions for the saved account, starting from what this phone last saved of them.
+    /// Starts from what this phone last saved.
     private static func reactionsModel(_ backend: Backend) -> ReactionsModel? {
         guard let userID = (try? backend.accounts.load())?.record.userID else { return nil }
         let saved = UserDefaults.standard.data(forKey: reactionsKey)
@@ -96,7 +91,6 @@ final class ServerSession {
 
     var onboarding: OnboardingClient { backend.onboarding }
     var catEvents: CatEventsClient { backend.catEvents }
-    /// The pair's love streak in its room.
     var streakRemote: StreakRemote { backend.streak }
     var api: APIClient { backend.api }
     var baseURL: URL { backend.baseURL }
@@ -106,10 +100,8 @@ final class ServerSession {
     @ObservationIgnored private let hadSavedAccount: Bool
     var isSignedIn: Bool { signIn.state == .signedIn || hadSavedAccount }
 
-    /// The pair's room socket for the shared canvas; nil until this account has a partner.
-    ///
-    /// The socket resumes after the last note `seq` it saw, kept on this phone, so opening the canvas does not replay
-    /// the couple's whole history every time.
+    /// Nil until this account has a partner. Resumes after the last note `seq` kept on this phone, so opening the
+    /// canvas does not replay the couple's whole history.
     func liveRoom(defaults: UserDefaults = .standard) -> LiveRoom? {
         guard isPaired else { return nil }
         let accounts = backend.accounts
@@ -124,8 +116,7 @@ final class ServerSession {
             })
     }
 
-    /// Keeps the Inbox's count, the partner's photos into `photos` and reactions live over the room socket while the
-    /// app is in front; nothing without a partner.
+    /// Live over the room socket while the app is in front; nothing without a partner.
     func followInbox(
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
         lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil,
@@ -167,13 +158,12 @@ final class ServerSession {
         }
     }
 
-    /// Fills the drawing widgets and registers push tokens; nil until this account has a partner.
+    /// Nil until this account has a partner.
     var drawingSync: DrawingSync? {
         isPaired ? DrawingSync(api: backend.api, accounts: backend.accounts) : nil
     }
 
-    /// Sends the photos taken here to the partner and keeps theirs in `moments` as from `partner`; nil until this
-    /// account has a partner.
+    /// Nil until this account has a partner.
     func photoSync(moments: MomentStore, partner: String) -> PhotoSync? {
         guard isPaired else { return nil }
         return PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner,
@@ -185,16 +175,14 @@ final class ServerSession {
         try await backend.api.pair()
     }
 
-    /// Keeps the server's date ideas for the next launch when they differ from the ones this launch has. Offline,
-    /// the cards stay as they are.
+    /// Keeps a changed catalog for the next launch; offline, the cards stay as they are.
     func refreshDateCatalog() async {
         guard let catalog = try? await backend.api.dateCatalog(),
               catalog.version != (DateCatalog.saved ?? DateCatalog.bundled)?.version else { return }
         SharedFile.write(catalog, to: DateCatalog.file)
     }
 
-    /// Gives the round the server's questions and keeps them for the next launch when they differ from the ones this
-    /// launch has. Offline, the round asks from the saved or bundled ones.
+    /// Keeps changed questions for the next launch; offline, the round uses the saved or bundled ones.
     func refreshGuessCatalog() async {
         guard let catalog = try? await backend.api.guessCatalog() else { return }
         whoKnows.use(catalog.questions)
@@ -202,33 +190,32 @@ final class ServerSession {
         SharedFile.write(catalog, to: GuessCatalog.file)
     }
 
-    /// The pair's shop in its room; nil until this account has a partner.
+    /// Nil until this account has a partner.
     var shopSync: ShopSync? {
         isPaired ? .live(backend.api) : nil
     }
 
-    /// The pair's gift wishes in its room; nil until this account has a partner.
+    /// Nil until this account has a partner.
     var giftSync: GiftSync? {
         isPaired ? .live(backend.api) : nil
     }
 
-    /// The pair's shared lists in its room; nil until this account has a partner.
+    /// Nil until this account has a partner.
     var listSync: ListSync? {
         isPaired ? .live(backend.api) : nil
     }
 
-    /// The pair's Pick tonight session in its room; nil until this account has a partner.
+    /// Nil until this account has a partner.
     var pickTonight: PickTonightSync? {
         isPaired ? .live(backend.api) : nil
     }
 
-    /// Films and shows from TMDB for the To watch list; nil until this phone has signed in.
+    /// Nil until this phone has signed in.
     var titles: TitleSource? {
         isSignedIn ? .live(backend.api) : nil
     }
 
-    /// Sends the text notes written here to the partner and keeps theirs in `notes` as from `partner`; nil until this
-    /// account has a partner.
+    /// Nil until this account has a partner.
     func textSync(notes: NoteStore, partner: String) -> TextNoteSync? {
         guard isPaired else { return nil }
         return TextNoteSync(api: backend.api, accounts: backend.accounts, notes: notes, partner: partner)
@@ -240,27 +227,27 @@ final class ServerSession {
         demoPartner = try? await backend.api.demoPartner().paired
     }
 
-    /// Dev server only: pairs this account with a bot partner, which the server pairs like a real one.
+    /// Dev server only; the server pairs the bot like a real partner.
     func pairWithDemoPartner() async throws(TransportError) {
         let pair = try await backend.api.createDemoPartner()
         paired(pair.pairId.rawValue)
         demoPartner = true
     }
 
-    /// Dev server only: ends the pair with the bot partner and deletes it.
+    /// Dev server only; also deletes the bot.
     func removeDemoPartner() async throws(TransportError) {
         try await backend.api.removeDemoPartner()
         pairEnded()
         demoPartner = false
     }
 
-    /// Ends the pair on the server. What each phone saved of the couple stays on that phone.
+    /// What each phone saved of the couple stays on it.
     func unpair() async throws(TransportError) {
         try await backend.api.unpair()
         pairEnded()
     }
 
-    /// Ends the pair on the server for good: the two can't pair again.
+    /// For good: the two can't pair again.
     func blockPartner() async throws(TransportError) {
         try await backend.api.blockPartner()
         pairEnded()
@@ -291,7 +278,7 @@ final class ServerSession {
         drawGuess = Self.drawGuessModel(backend, paired: false)
     }
 
-    /// Saves a finished pairing on this phone. Does nothing while the pairing is still under way.
+    /// Does nothing while the pairing is still under way.
     func pairingFinished() {
         guard case .paired(let pairID) = pairing.state else { return }
         paired(pairID)

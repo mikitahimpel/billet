@@ -1,5 +1,4 @@
-/// The street lamps' stutter as they come on with the room, from the old app's opening
-/// (PetSceneReality's GenzOpening), which the window views read for their lamps.
+/// The street lamps' stutter as they come on with the room; the window views read it for their lamps.
 enum GenzOpening {
   static func streetLamp(_ time: Double) -> Double {
     let local = (time - 0.3) / 1.1

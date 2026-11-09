@@ -1,10 +1,8 @@
 import Foundation
 
-/// JSON files inside the app group, written atomically because the app and the widget extension share them.
-///
-/// Writes are coalesced: the latest value per path is encoded and written on a background queue a moment later.
-/// Call `flush()` before anything outside this process reads the files: intents before they return, the app before
-/// it reloads the widgets.
+/// JSON files in the app group, written atomically because the app and the widget extension share them. Writes are
+/// coalesced onto a background queue; call `flush()` before anything outside this process reads the files (intents
+/// before they return, the app before it reloads the widgets).
 nonisolated enum SharedFile {
     static let delay: DispatchTimeInterval = .milliseconds(400)
 
@@ -38,7 +36,6 @@ nonisolated enum SharedFile {
         }
     }
 
-    /// Writes everything still pending before returning.
     static func flush() {
         queue.sync {
             for path in Array(pending.keys) { writePending(path) }

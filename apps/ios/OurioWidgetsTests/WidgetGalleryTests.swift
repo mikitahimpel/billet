@@ -3,10 +3,9 @@ import Testing
 import WidgetKit
 import Wire
 
-/// Renders the widgets' views into `BILLET_SAMPLES` when it is set (CI keeps the PNGs as the `samples` artifact), so
-/// their look can be reviewed without a Simulator or a Home Screen: light and dark, and the accented rendering of
-/// tinted and clear Home Screens. WidgetKit is not running here, so the container background is drawn by this test
-/// and the system's tint is not applied; the accented shots show what each view leaves out or keeps.
+/// Renders the widgets' views into `BILLET_SAMPLES` when set (CI keeps the PNGs as the `samples` artifact): light,
+/// dark and accented. Without WidgetKit the container background is drawn here and the system tint is not applied,
+/// so the accented shots show only what each view leaves out or keeps.
 @MainActor
 struct WidgetGalleryTests {
     static let small = CGSize(width: 170, height: 170)

@@ -40,7 +40,6 @@ extension RooftopsDusk {
     moment.look.hour != .night && (moment.look.weather == .clear || moment.look.weather == .fog)
   }
 
-  /// A swift of the screaming party: each bird circles its own loop round a moving centre.
   static func swiftPoint(_ pass: ViewRhythm.Pass, bird: Int, now: Double) -> CGPoint {
     let p = CGFloat(pass.progress)
     let leftToRight = pass.variant < 0.5
@@ -70,14 +69,12 @@ extension RooftopsDusk {
     }
   }
 
-  /// The neighbour across stepping out to water the geraniums: out, tip the can, back in.
   private func watering(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.hour != .night, moment.look.weather != .rain,
       let pass = Self.waterer.pass(at: moment.now)
     else { return }
     let window = Self.watererWindow
     let p = pass.progress
-    // Steps forward for the first tenth, waters, steps back for the last tenth.
     let out = CGFloat(min(min(p / 0.1, (1 - p) / 0.1), 1))
     let feet = CGPoint(x: window.midX, y: window.maxY + 0.6)
     var person = context
@@ -86,7 +83,6 @@ extension RooftopsDusk {
       person, at: feet, height: 5.8, facing: -1, kind: .walker, coat: 0xE8C8A0, plane: .street,
       moment: moment, walking: false)
     guard out > 0.9 else { return }
-    // The can, held out over the box, and its drops.
     let can = CGPoint(x: feet.x - 2.6, y: feet.y - 3.6)
     let tin = ViewColour(0x6A9AA0).mixed(with: moment.palette.street, by: 0.35)
     ViewKit.rect(person, CGRect(x: can.x - 0.7, y: can.y - 0.5, width: 1.4, height: 1.1), tin)

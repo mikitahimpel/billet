@@ -1,6 +1,5 @@
 import Foundation
 
-/// The blocks a widget is built from.
 enum WidgetModule: String, Codable, CaseIterable {
     case mochi, us, mood, list, date, moment
 }
@@ -69,7 +68,7 @@ struct OurioSnapshot: Hashable {
     var isPurring: Bool
     var isNight: Bool
     var catName = CatProfile.defaultName
-    /// Her portrait in the coat picked in onboarding.
+    /// In the coat picked in onboarding.
     var catAvatar = "MochiPortrait"
 
     /// Rows a list shows at most, sized for the smallest widget.
@@ -79,7 +78,6 @@ struct OurioSnapshot: Hashable {
 
     var smartModule: WidgetModule { SmartSlot.pick(for: self) }
 
-    /// The partner's check-in while it is still news.
     var freshPartnerMood: MoodCheckIn? {
         guard let partnerMood, date >= partnerMood.date, date.timeIntervalSince(partnerMood.date) < Self.moodNews else { return nil }
         return partnerMood

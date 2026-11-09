@@ -1,7 +1,6 @@
 import Foundation
 
-/// What the cat is called: the name given in onboarding, Mochi until then. Kept in the app group so the widgets use
-/// it too; the server gets it as the `cat_name` answer.
+/// Mochi until named in onboarding. In the app group so the widgets use it too; the server gets it as `cat_name`.
 nonisolated enum CatProfile {
     static let nameKey = "catName"
     static let defaultName = "Mochi"
@@ -29,7 +28,6 @@ nonisolated enum CatProfile {
         return "MochiPortrait-\(coat)"
     }
 
-    /// `text` with every `placeholder` replaced by the cat's name.
     static func named(_ text: String) -> String {
         text.replacingOccurrences(of: placeholder, with: name())
     }

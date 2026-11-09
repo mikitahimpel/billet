@@ -41,7 +41,6 @@ struct CoatPickerTests {
     func everyChipHasItsOwnColours() {
         let bases = CatCoat.allCases.map { UIColor($0.swatch.base).cgColor.components ?? [] }
         #expect(Set(bases.map { $0.map { Int(($0 * 255).rounded()) } }).count == CatCoat.allCases.count)
-        // The patterned coats show their markings.
         for coat in [CatCoat.grey, .ginger, .cream, .tuxedo, .calico] { #expect(!coat.swatch.marks.isEmpty) }
     }
 }

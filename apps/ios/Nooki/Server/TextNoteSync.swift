@@ -14,7 +14,7 @@ struct TextNoteSync {
     let partner: String
     var defaults: UserDefaults = .standard
 
-    /// The last note `seq` this phone has looked at for text notes, apart from the photos' and drawings' cursors.
+    /// Separate from the photos' and drawings' cursors.
     static let cursorKey = "texts.lastSeq"
 
     /// Sends every text note still waiting, oldest first. One the server refuses, such as one in an ink the pair

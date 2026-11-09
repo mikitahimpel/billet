@@ -3,7 +3,6 @@ import Design
 import Transport
 import Wire
 
-/// One title's card: backdrop and poster, what it is, where to watch it, and whether both partners want it.
 struct MovieCard: View {
     let state: HomeState
     let listID: UUID

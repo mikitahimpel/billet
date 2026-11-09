@@ -115,10 +115,9 @@ extension CatRoom {
         }
     }
 
-    /// Whether the baked shell is in this room.
     var isBaked: Bool { pivot.components[ShellMode.self]?.kind == .baked }
 
-    /// Multiplies the baked shell by `tint`, for the time of day.
+    /// For the time of day.
     func tintShell(_ tint: UIColor) {
         pivot.components.set(ShellTint(color: tint))
         guard let shell = pivot.findEntity(named: Self.shellName) else { return }

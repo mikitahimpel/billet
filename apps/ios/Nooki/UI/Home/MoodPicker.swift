@@ -1,7 +1,6 @@
 import SwiftUI
 import Design
 
-/// The check-in: four moods to tap and a few words if they like. Sharing sends it to the partner.
 struct MoodPicker: View {
     let state: HomeState
     @Environment(\.dismiss) private var dismiss
@@ -74,7 +73,6 @@ private struct MoodChip: View {
     }
 }
 
-/// What the partner last shared, under the picker.
 private struct PartnerLine: View {
     let name: String
     let check: MoodCheckIn

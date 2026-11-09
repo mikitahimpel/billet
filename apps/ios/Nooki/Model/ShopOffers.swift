@@ -15,7 +15,6 @@ enum ShopRarity: String, CaseIterable, Codable {
     }
 }
 
-/// One of the day's discounted items.
 struct DailyDeal: Hashable {
     let itemID: String
     /// 0.2 is 20% off.
@@ -136,7 +135,7 @@ struct ShopOffers {
                              share: Self.featuredShare, endsAt: nextWeek(after: date))
     }
 
-    /// The gift for the day. An item already owned turns into coins.
+    /// An item already owned turns into coins.
     func gift(on date: Date, owned: Set<String>) -> GiftReward {
         var rng = SeededRandom(seed: Self.hash("\(pairSeed)|gift|\(dayKey(date))"))
         let roll = rng.next()

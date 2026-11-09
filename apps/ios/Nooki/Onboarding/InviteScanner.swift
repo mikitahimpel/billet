@@ -17,7 +17,6 @@ enum InviteInput {
     }
 }
 
-/// A QR image of the invite link, drawn crisp with no smoothing.
 enum QRCode {
     static func image(for text: String) -> UIImage? {
         let filter = CIFilter.qrCodeGenerator()
@@ -29,7 +28,6 @@ enum QRCode {
     }
 }
 
-/// The camera, looking for a QR code of an invite.
 struct InviteScanner: UIViewControllerRepresentable {
     static var isAvailable: Bool { DataScannerViewController.isSupported && DataScannerViewController.isAvailable }
 

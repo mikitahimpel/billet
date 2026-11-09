@@ -1,7 +1,6 @@
 import SwiftUI
 import Design
 
-/// Under the field while adding groceries: what the typed name may be, then "You often buy", each added in one tap.
 struct GrocerySuggestions: View {
     let draft: String
     let list: UsList
@@ -10,7 +9,6 @@ struct GrocerySuggestions: View {
 
     private let catalog = GroceryCatalog.bundled
 
-    /// Staples for a pair that has bought little yet.
     private static let staples = ["Milk", "Bread", "Eggs", "Bananas", "Coffee", "Pasta", "Tomatoes", "Cheese"]
 
     var body: some View {

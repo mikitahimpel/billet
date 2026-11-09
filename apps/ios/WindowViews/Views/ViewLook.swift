@@ -3,7 +3,7 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// A colour of the view art, as plain sRGB numbers that can be mixed.
+/// Plain sRGB numbers, so colours can be mixed.
 struct ViewColour: Hashable, Sendable {
   var red: Double
   var green: Double
@@ -21,7 +21,7 @@ struct ViewColour: Hashable, Sendable {
     self.blue = blue
   }
 
-  /// A bright saturated colour round the wheel, `hue` from 0 to 1: for LED strips and neon.
+  /// Saturated, `hue` from 0 to 1: for LED strips and neon.
   init(hue: Double, saturation: Double = 0.75) {
     let h = (hue - hue.rounded(.down)) * 6
     let x = 1 - abs(h.truncatingRemainder(dividingBy: 2) - 1)
@@ -60,8 +60,7 @@ struct ViewColour: Hashable, Sendable {
   var shading: GraphicsContext.Shading { .color(color()) }
 }
 
-/// The planes of a view behind the glass, from the back. The sky behind them and the glass in
-/// front are drawn by the view system for every view.
+/// From the back. The sky behind and the glass in front are drawn for every view by the view system.
 enum ViewPlane: Int, CaseIterable, Hashable, Sendable {
   /// Hills, a skyline, a water tower: the furthest silhouettes.
   case far
@@ -72,8 +71,7 @@ enum ViewPlane: Int, CaseIterable, Hashable, Sendable {
   /// A branch, a fence, a railing: what is just outside the glass.
   case near
 
-  /// How much of the window's movement on screen the plane follows: near things move almost with
-  /// the window, far ones hardly at all. That difference is the parallax.
+  /// Share of the window's on-screen movement the plane follows: near ones almost all, far ones hardly any.
   var follow: CGFloat {
     switch self {
     case .far: 0.2
@@ -101,7 +99,6 @@ struct ViewPalette: Hashable, Sendable {
   var stars: Double
   /// Fog or haze over the far planes, from 0 to 1.
   var haze: Double
-  /// The colour fog and haze fade towards.
   var hazeColour: ViewColour
 
   static let lamp = ViewColour(0xFFC36B)
@@ -245,7 +242,6 @@ struct ViewPalette: Hashable, Sendable {
     }
   }
 
-  /// A plane's silhouette colour.
   func colour(_ plane: ViewPlane) -> ViewColour {
     switch plane {
     case .far: far
@@ -266,10 +262,8 @@ struct ViewLook: Hashable, Sendable {
   var isDark: Bool { hour == .night || hour == .dusk }
 }
 
-/// The view's own units. The window's opening is 100 wide and `windowHeight` tall, its top left
-/// corner at the origin, so art is laid out against the glass rather than the screen. Planes are
-/// drawn a margin wider and taller than the window, for parallax to slide them. Seen from the
-/// room's camera, the sill hides the glass below about `sillLine`: keep a street above it.
+/// The window's opening is 100 wide and `windowHeight` tall, top left at the origin. Planes are drawn wider
+/// for parallax. From the room's camera the sill hides the glass below about `sillLine`: keep a street above it.
 enum ViewStage {
   static let windowHeight: CGFloat = 58
   static let sillLine: CGFloat = 52

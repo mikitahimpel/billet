@@ -411,7 +411,6 @@ def join_solid():
     solid = [o for o in bpy.context.scene.objects if o.type == "MESH" and not o.name.startswith("Glow_")]
     for o in solid:
         o.select_set(True)
-        # Bake the bevels into the mesh before joining.
         bpy.context.view_layer.objects.active = o
         for mod in list(o.modifiers):
             bpy.ops.object.modifier_apply(modifier=mod.name)

@@ -109,7 +109,6 @@ extension UsList {
         Set(items.compactMap { $0.done != nil && $0.isCountry ? $0.country : nil })
     }
 
-    /// The countries the pair still wants to go to.
     nonisolated var wantedCountries: Set<String> {
         Set(items.compactMap { $0.done == nil && $0.isCountry ? $0.country : nil }).subtracting(beenCountries)
     }

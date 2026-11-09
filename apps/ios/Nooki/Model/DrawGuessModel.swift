@@ -5,11 +5,8 @@ import Observation
 import Transport
 import Wire
 
-/// Draw & guess as this user plays it. One partner draws a word, the other builds it from letter tiles while the
-/// drawing replays; each has at most one open riddle at a time. The room sends each change over its socket too.
-///
-/// The rules live in `DrawGuessMachine` (FeatureGames); this is its store with the drawer's word offers and the
-/// screen's words around it.
+/// Draw & guess: one partner draws a word, the other builds it from letter tiles while the drawing replays;
+/// each has at most one open riddle. The store around `DrawGuessMachine` (FeatureGames) with the word offers.
 @Observable
 final class DrawGuessModel {
     enum Phase: Equatable {
@@ -63,11 +60,10 @@ final class DrawGuessModel {
         }
     }
 
-    /// The partner's open riddle, for this user to guess.
+    /// For this user to guess.
     var theirs: Riddle? { game?.theirs }
-    /// This user's own open riddle, waiting for the partner.
     var mine: Riddle? { game?.mine }
-    /// The newest riddle that ended, of either partner.
+    /// Of either partner.
     var lastEnded: Riddle? { game?.board.ended.first }
     var series: Int { game?.board.series ?? 0 }
     var best: Int { game?.board.best ?? 0 }
@@ -110,14 +106,13 @@ final class DrawGuessModel {
         }
     }
 
-    /// A riddle as the room's socket sent it.
     func changed(_ riddle: Riddle) {
         store.send(.changed(riddle))
     }
 
     // MARK: Guessing
 
-    /// The letter slots of the open riddle, revealed ones filled in.
+    /// Revealed ones filled in.
     var slots: [Slot] {
         theirs.map { DrawGuessMachine.slots($0, placed: placed) } ?? []
     }
@@ -131,17 +126,16 @@ final class DrawGuessModel {
     /// Whether Mochi has a hint left: the first takes away decoys, each later one shows a letter, up to all but one.
     var canHint: Bool { theirs.map(DrawGuessMachine.canHint) ?? false }
 
-    /// The word in the slots, with the riddle's spaces.
+    /// With the riddle's spaces.
     var attempt: String {
         theirs.map { DrawGuessMachine.attempt($0, slots: slots) } ?? ""
     }
 
-    /// Puts tile `index` in the first empty slot. Once every slot is filled, sends the word as a try.
+    /// Once every slot is filled, sends the word as a try.
     func place(_ index: Int) async {
         await act(.tilePlaced(index, key: .make()))
     }
 
-    /// Takes the tile in `slot` back to the tiles.
     func takeBack(_ slot: Int) {
         store.send(.tileTakenBack(slot: slot))
     }
@@ -288,7 +282,7 @@ struct RiddleWords: Codable, Equatable {
         return words
     }
 
-    /// One random word of each tier, easy first.
+    /// Easy first.
     func offers() -> [String] {
         [easy, medium, hard].compactMap { $0.randomElement() }
     }

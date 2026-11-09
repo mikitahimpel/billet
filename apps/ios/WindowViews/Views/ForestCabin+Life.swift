@@ -28,7 +28,6 @@ extension ForestCabin {
     }
   }
 
-  /// The cabin's own lights: on after dark, and a little in the grey of morning.
   static func homeLight(_ moment: ViewMoment) -> Double {
     switch moment.look.hour {
     case .night, .dusk: moment.lamps
@@ -37,7 +36,7 @@ extension ForestCabin {
     }
   }
 
-  /// A fire's restless brightness, from 0 to 1.
+  /// From 0 to 1.
   static func fireFlicker(_ now: Double) -> Double {
     let a = sin(now * 9.1)
     let b = sin(now * 14.7 + 1.3)
@@ -45,7 +44,6 @@ extension ForestCabin {
     return 0.6 + 0.2 * a + 0.12 * b * b + 0.08 * c
   }
 
-  /// Wood smoke curling up from the chimney, puff after puff, leaning with the wind.
   private func smoke(_ context: GraphicsContext, moment: ViewMoment) {
     let top = CGPoint(x: Self.chimney.midX, y: Self.chimney.minY - 0.2)
     let colour = moment.palette.middle.lit(moment.look.isDark ? 0.3 : 0.5)
@@ -62,7 +60,6 @@ extension ForestCabin {
     }
   }
 
-  /// The porch lantern, its flame breathing.
   private func lantern(_ context: GraphicsContext, moment: ViewMoment) {
     let point = Self.lantern
     let level = Self.homeLight(moment)
@@ -78,7 +75,6 @@ extension ForestCabin {
       0.45 * level)
   }
 
-  /// The campfire after dark and in the morning: tongues of flame, sparks rising, and its glow.
   private func campfire(_ context: GraphicsContext, moment: ViewMoment) {
     let look = moment.look
     guard look.hour != .day, look.weather != .rain else { return }
@@ -114,7 +110,6 @@ extension ForestCabin {
   }
 
   static func deerX(_ pass: ViewRhythm.Pass) -> CGFloat {
-    // It walks in, stops to graze in the middle of the clearing, then walks on.
     let p = pass.progress
     let share: Double
     switch p {
@@ -125,7 +120,6 @@ extension ForestCabin {
     return pass.variant < 0.5 ? -15 + 130 * CGFloat(share) : 115 - 130 * CGFloat(share)
   }
 
-  /// A deer crossing the clearing, stopping halfway to graze.
   private func deer(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.deer.pass(at: moment.now) else { return }
     let x = Self.deerX(pass)
@@ -163,7 +157,6 @@ extension ForestCabin {
     body.stroke(ear, with: .color(colour.color()), lineWidth: 0.3)
   }
 
-  /// The owl on its snag after dusk: it blinks now and then and turns its head to look about.
   private func owl(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.isDark || moment.look.hour == .morning else { return }
     let point = Self.owl
@@ -198,7 +191,6 @@ extension ForestCabin {
     }
   }
 
-  /// A pine bough reaching in from the top left, its needles moving with the wind.
   private func bough(_ context: GraphicsContext, moment: ViewMoment) {
     let wind = moment.look.weather == .rain ? 1.8 : 1
     let t = moment.now

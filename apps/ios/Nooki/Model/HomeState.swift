@@ -14,11 +14,9 @@ enum HomeTab: CaseIterable {
 enum ShopFocus: Hashable {
     /// The Inks block in Today, at that ink.
     case ink(String)
-    /// That item's sheet.
     case item(String)
 }
 
-/// Which of Mochi's rooms the World tab shows.
 enum RoomKind: CaseIterable {
     case home, city
 
@@ -27,12 +25,10 @@ enum RoomKind: CaseIterable {
     var scene: RoomScene { self == .home ? .home : .city }
 }
 
-/// The Moments tab as a feed of photos and notes, or as the board in Mochi's desk room.
 enum MomentsMode {
     case photos, board
 }
 
-/// The card on the corkboard the couple tapped; it opens as a sheet.
 struct PinRoute: Identifiable {
     let id: UUID
 }
@@ -44,8 +40,8 @@ struct Mood: Identifiable {
     let tint: Color
 }
 
-/// The stores and feature models one launch of Home runs on. `HomeView` builds them; nothing below it makes its
-/// own. The couple, the wallet, the Us tab, moments and moods live in the app group so the widgets read the same data.
+/// `HomeView` builds them; nothing below it makes its own. The couple, wallet, Us tab, moments and moods live
+/// in the app group so the widgets read the same data.
 struct HomeStores {
     let profile: CoupleStore
     let wallet: WalletStore
@@ -61,7 +57,6 @@ struct HomeStores {
     let lists: ListsModel
     let journal: Journal
 
-    /// The stores over the app group's files.
     static func live() -> HomeStores {
         let profile = CoupleStore()
         let wallet = WalletStore()
@@ -80,8 +75,7 @@ struct HomeStores {
     }
 }
 
-/// Where Home is: the tab, the room, the sheets that are open. The data and its rules are in the stores and models it
-/// is given.
+/// The tab, the room and the open sheets; data and rules live in the stores it is given.
 @Observable
 final class HomeState {
     /// Named in onboarding; Mochi until then.
@@ -90,7 +84,6 @@ final class HomeState {
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
 
-    /// Opens the Shop at an ink or an item.
     func openShop(_ focus: ShopFocus) {
         shopFocus = focus
         tab = .shop
@@ -113,7 +106,6 @@ final class HomeState {
     var composingNote: NoteComposer.Mode?
     /// The lock-screen drawing is open; the Add menu's Draw and a drawing widget's tap set it.
     var drawing = false
-    /// The card the couple tapped on the board, opened as a sheet.
     var openedPin: PinRoute?
     var momentsMode: MomentsMode = .photos
 
@@ -125,23 +117,19 @@ final class HomeState {
     ]
 
     let profile: CoupleStore
-    /// Lists, wishlists, calendar and dates on the Us tab.
     let us: UsStore
-    /// Each partner's latest check-in, mostly left from the widget.
+    /// Mostly left from the widget.
     let partnerMoods: MoodStore
-    /// Days in a row the couple did something together; see docs/love-streak.md.
+    /// See docs/love-streak.md.
     let streak: StreakStore
-    /// Shared photo diary; its pinned moments hang as polaroids on the room wall.
+    /// Pinned moments hang as polaroids on the room wall.
     let moments: MomentStore
-    /// Notes and doodles pinned on the board.
     let notes: NoteStore
-    /// Which rooms this pair has: both, or one (the `rooms` experiment, see docs/experiments.md).
+    /// The `rooms` experiment, see docs/experiments.md.
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
-    /// The Us tab's gifts in step with the pair's room once paired.
     let gifts: GiftsModel
-    /// The Us tab's lists in step with the pair's room once paired.
     let lists: ListsModel
     let journal: Journal
     @ObservationIgnored private let wallet: WalletStore

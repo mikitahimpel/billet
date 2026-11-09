@@ -1,9 +1,8 @@
 import Foundation
 import Observation
 
-/// What both partners share in the shop, as this phone last heard it from the server: the coins and the items they own,
-/// wish for or gifted, and Mochi's level. Only the server changes the coins; the phone keeps its last answer for the
-/// widgets and for offline.
+/// As this phone last heard it from the server. Only the server changes the coins; the phone keeps its last answer
+/// for the widgets and for offline.
 nonisolated struct Wallet: Codable, Hashable {
     var coins = 0
     var level = 1
@@ -13,14 +12,13 @@ nonisolated struct Wallet: Codable, Hashable {
     var wishlist: Set<String> = []
     var gifted: Set<String> = []
 
-    /// True once the coins, owned pieces and wishlist come from the pair's room on the server. Optional, so a file
-    /// saved before it existed still decodes.
+    /// True once synced from the pair's room. Optional so files saved before it still decode.
     var synced: Bool?
 
     var isSynced: Bool { synced == true }
 }
 
-/// The shared wallet in the app group, so the widgets read the same one.
+/// In the app group, so the widgets read the same one.
 @Observable
 final class WalletStore {
     private(set) var wallet: Wallet

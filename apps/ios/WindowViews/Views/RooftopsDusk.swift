@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// Old city rooftops at dusk, seen from a top-floor window. Far: a hazy skyline with a dome and a
-/// church spire. Middle: grey-blue zinc mansard roofs with dormers, rows of terracotta chimney
-/// pots and TV aerials, smoke from one chimney and a cat walking a roof. Street: the building
-/// across, its tall windows behind wrought-iron balconies with geranium boxes and a string of
-/// lights, a neighbour watering the flowers now and then. Near: the window's own iron rail and a
-/// pot of geraniums. Swifts wheel over the roofs while it is light.
 struct RooftopsDusk: ViewRecipe {
   /// The building across the street: its left edge and the top of its cornice.
   static let facadeLeft: CGFloat = 56
@@ -51,7 +45,6 @@ struct RooftopsDusk: ViewRecipe {
     }
   }
 
-  /// Stone walls warmed towards cream by day, cooler after dark.
   private static func stone(_ colour: ViewColour, look: ViewLook) -> ViewColour {
     colour.mixed(with: ViewColour(0xE8D8C0), by: look.isDark ? 0.12 : 0.32)
   }
@@ -64,7 +57,6 @@ struct RooftopsDusk: ViewRecipe {
 
   private func paintFar(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let haze = colour.mixed(with: look.palette.horizon, by: 0.25)
-    // Low blocks of roofs, uneven.
     for index in 0..<26 {
       let x = -44 + CGFloat(index) * 7.4
       let top = 29 + 4 * CGFloat(ViewRhythm.hash(index, seed: 831))
@@ -72,7 +64,6 @@ struct RooftopsDusk: ViewRecipe {
         context, CGRect(x: x, y: top, width: 7.6, height: 38 - top),
         haze.lit(Double(index % 3) * 0.02))
     }
-    // A dome on a drum, with a lantern on top.
     let dome = CGPoint(x: 74, y: 22)
     ViewKit.rect(context, CGRect(x: dome.x - 5, y: dome.y, width: 10, height: 9), haze)
     context.fill(
@@ -82,7 +73,6 @@ struct RooftopsDusk: ViewRecipe {
     ViewKit.rect(context, CGRect(x: dome.x + 3.0, y: dome.y, width: 0.4, height: 6), haze.lit(0.06))
     ViewKit.rect(context, CGRect(x: dome.x - 0.8, y: dome.y - 8, width: 1.6, height: 3), haze)
     ViewKit.rect(context, CGRect(x: dome.x - 0.2, y: dome.y - 10, width: 0.4, height: 2), haze)
-    // A church spire.
     let spire = CGPoint(x: 18, y: 12)
     ViewKit.rect(context, CGRect(x: spire.x - 2, y: spire.y + 8, width: 4, height: 12), haze)
     var cone = Path()
@@ -92,7 +82,6 @@ struct RooftopsDusk: ViewRecipe {
     cone.closeSubpath()
     context.fill(cone, with: .color(haze.lit(-0.03).color()))
     ViewKit.rect(context, CGRect(x: spire.x - 0.1, y: spire.y - 1.6, width: 0.2, height: 1.6), haze)
-    // A few far windows lit after dark.
     if look.isDark {
       for index in 0..<40 {
         let x = -40 + 180 * CGFloat(ViewRhythm.hash(index, seed: 832))
@@ -118,7 +107,6 @@ struct RooftopsDusk: ViewRecipe {
       let count = Int(block.width / 8)
       for slot in 0..<count {
         let x = block.x + 3 + CGFloat(slot) * (block.width - 6) / CGFloat(max(count - 1, 1)) - 0.8
-        // A dormer in the slope, and a window in the wall below the eave.
         windows.append(
           ViewLitWindow(
             id: 1000 + index * 10 + slot,
@@ -138,14 +126,12 @@ struct RooftopsDusk: ViewRecipe {
     let zinc = Self.zinc(colour, look: look)
     for (index, block) in Self.blocks.enumerated() {
       let eave = block.top + 7
-      // Stone wall below the roof.
       ViewKit.rect(
         context, CGRect(x: block.x, y: eave, width: block.width, height: 50 - eave),
         stone.lit(Double(index % 2) * 0.03))
       ViewKit.rect(
         context, CGRect(x: block.x - 0.3, y: eave - 0.2, width: block.width + 0.6, height: 0.6),
         stone.lit(0.08))
-      // The mansard: a steep slope of zinc, its standing seams, a lighter lit right side.
       var roof = Path()
       roof.move(to: CGPoint(x: block.x, y: eave))
       roof.addLine(to: CGPoint(x: block.x + 2, y: block.top))
@@ -169,7 +155,7 @@ struct RooftopsDusk: ViewRecipe {
         context,
         CGRect(x: block.x + 1.6, y: block.top - 0.4, width: block.width - 3.2, height: 0.4),
         zinc.lit(0.1))
-      // A chimney stack with its pots, not on the roof the cat walks.
+      // Not on the roof the cat walks.
       if index != 3 {
         let stackX = block.x + block.width * (index % 2 == 0 ? 0.3 : 0.62)
         ViewKit.rect(
@@ -186,7 +172,6 @@ struct RooftopsDusk: ViewRecipe {
             pot.lit(slot == 1 ? 0.06 : 0))
         }
       }
-      // A TV aerial now and then.
       if index % 3 == 1 {
         let ax = block.x + block.width * 0.8
         var mast = Path()
@@ -206,7 +191,6 @@ struct RooftopsDusk: ViewRecipe {
       }
     }
     for window in Self.middleWindows {
-      // A dormer's little rounded hood over the top windows.
       if window.rect.width < 1.8 {
         ViewKit.rect(
           context, window.rect.insetBy(dx: -0.6, dy: -0.6).offsetBy(dx: 0, dy: -0.2),
@@ -223,7 +207,6 @@ struct RooftopsDusk: ViewRecipe {
 
   // MARK: - Street: the building across
 
-  /// Its tall windows, two floors of them behind balconies.
   static let streetWindows: [ViewLitWindow] = {
     var windows: [ViewLitWindow] = []
     for floor in 0..<2 {
@@ -240,7 +223,6 @@ struct RooftopsDusk: ViewRecipe {
     return windows
   }()
 
-  /// The window whose neighbour comes out to water the geraniums.
   static var watererWindow: CGRect { streetWindows[2].rect }
 
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
@@ -248,7 +230,6 @@ struct RooftopsDusk: ViewRecipe {
     let zinc = Self.zinc(colour, look: look)
     let left = Self.facadeLeft
     let top = Self.facadeTop
-    // The mansard on top, then the stone front, its cornice and string courses.
     var roof = Path()
     roof.move(to: CGPoint(x: left, y: top))
     roof.addLine(to: CGPoint(x: left + 2.4, y: top - 6))
@@ -276,11 +257,9 @@ struct RooftopsDusk: ViewRecipe {
         CGRect(x: left, y: top + 12.4 + CGFloat(floor) * 10, width: 150 - left, height: 0.5),
         stone.lit(-0.06))
     }
-    // The lit side of the corner.
     ViewKit.rect(context, CGRect(x: left, y: top, width: 1.4, height: 60 - top), stone.lit(0.06))
     for window in Self.streetWindows {
       ViewKit.windowFrame(context, window.rect, stone)
-      // Tall shutters folded back either side.
       let shutter = colour.mixed(with: ViewColour(0x5A7A8A), by: look.isDark ? 0.2 : 0.45)
       for x in [window.rect.minX - 1.6, window.rect.maxX + 0.5] {
         ViewKit.rect(
@@ -291,7 +270,7 @@ struct RooftopsDusk: ViewRecipe {
     ViewKit.ground(context, top: 50, colour: colour.lit(-0.25))
   }
 
-  /// The iron balconies and their geranium boxes, drawn over the lit windows.
+  /// Drawn over the lit windows.
   func balconies(_ context: GraphicsContext, moment: ViewMoment) {
     let iron = moment.palette.street.lit(-0.45)
     let bloom = ViewColour(0xE0303A).mixed(
@@ -313,7 +292,6 @@ struct RooftopsDusk: ViewRecipe {
         x += 1.1
       }
       context.stroke(rail, with: .color(iron.color()), lineWidth: 0.16)
-      // A box of geraniums under each window.
       for column in 0..<10 {
         let bx = Self.facadeLeft + 2.6 + CGFloat(column) * 9
         ViewKit.rect(context, CGRect(x: bx, y: y - 1.6, width: 5, height: 1.2), iron.lit(0.25))
@@ -326,7 +304,6 @@ struct RooftopsDusk: ViewRecipe {
         }
       }
     }
-    // Fairy lights along the upper balcony.
     ViewLightString(
       from: CGPoint(x: Self.facadeLeft + 1.4, y: Self.facadeTop + 7.6),
       to: CGPoint(x: Self.facadeLeft + 44, y: Self.facadeTop + 7.6), sag: 0.8, count: 14, seed: 3
@@ -351,7 +328,6 @@ struct RooftopsDusk: ViewRecipe {
     }
     context.stroke(rail, with: .color(iron.color()), lineWidth: 0.3)
     ViewKit.rect(context, CGRect(x: -45, y: 49.8, width: 190, height: 0.7), iron)
-    // A pot of geraniums on the sill, on the left.
     let pot = ViewColour(0xB8583A).mixed(with: colour, by: look.isDark ? 0.6 : 0.3)
     var body = Path()
     body.move(to: CGPoint(x: 4, y: 45))

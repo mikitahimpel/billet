@@ -1,7 +1,6 @@
 import SwiftUI
 import Design
 
-/// A line under a sheet's title, for what the title alone doesn't say.
 struct SheetSubtitle: View {
     let text: String
 
@@ -14,7 +13,6 @@ struct SheetSubtitle: View {
 }
 
 extension View {
-    /// The "+" of a sheet's header, in the navigation bar's leading glass.
     func addToolbarButton(_ label: String = "Add", action: @escaping () -> Void) -> some View {
         toolbar {
             ToolbarItem(placement: .topBarLeading) {
@@ -25,7 +23,6 @@ extension View {
     }
 }
 
-/// The round tick of a list row: an empty ring, honey with a checkmark once done.
 struct UsCheck: View {
     let done: Bool
 
@@ -54,7 +51,6 @@ struct UsField: View {
     }
 }
 
-/// The app's one row icon: an SF Symbol in its tint on a circle of the same tint.
 struct UsIcon: View {
     let glyph: UsGlyph
     var size: CGFloat = 44
@@ -64,7 +60,6 @@ struct UsIcon: View {
     }
 }
 
-/// Grid of palette icons to pick one from.
 struct UsGlyphPicker: View {
     @Binding var selection: UsGlyph
 

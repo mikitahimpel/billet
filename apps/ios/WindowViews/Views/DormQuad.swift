@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 5: a college quad from a dorm room. Far: other halls and the clock tower, whose hands
-/// keep the real time. Middle: the brick dorm across the quad, its windows lit every way students
-/// light them: lamps, a TV, LED strips slowly changing colour, fairy lights. Street: the lawn
-/// with paths cutting across it, globe lamps, benches and a bike rack. Near: a clipped hedge.
-/// People cross the paths with backpacks and phones; by day a frisbee goes back and forth and a
-/// squirrel dashes over the grass.
 struct DormQuad: ViewRecipe {
   static let lawn: CGFloat = 42
   static let tower = CGPoint(x: 76, y: 15)
@@ -71,7 +65,6 @@ struct DormQuad: ViewRecipe {
         context, x: x, base: base, size: 7 + CGFloat(index % 3), colour: colour.lit(-0.04),
         seed: 500 + index, look: look)
     }
-    // The clock tower: a square shaft, a belfry with arches, a spire.
     let tower = Self.tower
     let shaft = colour.lit(look.isDark ? 0.04 : 0.06)
     ViewKit.rect(
@@ -140,7 +133,6 @@ struct DormQuad: ViewRecipe {
     let brick = colour.mixed(with: ViewColour(0x9A4A38), by: look.isDark ? 0.22 : 0.4)
     let dorm = Self.dorm
     ViewKit.rect(context, dorm, brick)
-    // A stone band between floors and a parapet with a cornice.
     for floor in 1..<Self.floors {
       ViewKit.rect(
         context,
@@ -162,11 +154,9 @@ struct DormQuad: ViewRecipe {
           brick.lit(0.12))
       }
     }
-    // The entrance with its steps, at the dorm's right end.
     let door = CGRect(x: dorm.maxX - 9, y: dorm.maxY - 5, width: 4, height: 5)
     ViewKit.rect(context, door.insetBy(dx: -1, dy: -1).offsetBy(dx: 0, dy: 0.5), brick.lit(0.1))
     ViewKit.rect(context, door, brick.lit(-0.35))
-    // A low hall to the right, under the tower.
     ViewKit.rect(context, CGRect(x: 96, y: 30, width: 50, height: 10), colour.lit(-0.02))
     for x in stride(from: 99.0, to: 146, by: 5) {
       ViewKit.windowFrame(context, CGRect(x: x, y: 32.6, width: 2.4, height: 3), colour.lit(-0.02))
@@ -179,7 +169,6 @@ struct DormQuad: ViewRecipe {
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let grass = colour.mixed(with: ViewColour(0x2E5A3A), by: look.isDark ? 0.18 : 0.4)
     ViewKit.ground(context, top: Self.lawn, colour: grass)
-    // Paths: a walk along the dorm and two that cut across, worn where people really go.
     let stone = colour.lit(look.isDark ? 0.06 : 0.16)
     ViewKit.rect(context, CGRect(x: -45, y: Self.lawn, width: 190, height: 1.2), stone)
     for walker in Self.walkers {
@@ -193,10 +182,8 @@ struct DormQuad: ViewRecipe {
       path.closeSubpath()
       context.fill(path, with: .color(stone.color()))
     }
-    // A big tree on the lawn.
     ViewKit.tree(
       context, x: 84, base: 45, size: 17, colour: colour.lit(-0.06), seed: 541, look: look)
-    // Globe lamp posts.
     for globe in Self.globes {
       ViewKit.rect(
         context, CGRect(x: globe.x - 0.35, y: globe.y + 1, width: 0.7, height: 46 - globe.y),
@@ -207,7 +194,6 @@ struct DormQuad: ViewRecipe {
         context, globe, 1.3,
         look.isDark ? colour.lit(0.1) : ViewColour(0xEEF2F7).mixed(with: colour, by: 0.35))
     }
-    // Benches, and a rack of bikes.
     for x in [30.0, 66] as [CGFloat] {
       ViewKit.rect(context, CGRect(x: x, y: 44.2, width: 6, height: 0.6), colour.lit(-0.2))
       ViewKit.rect(context, CGRect(x: x, y: 42.4, width: 6, height: 0.5), colour.lit(-0.2))
@@ -231,7 +217,6 @@ struct DormQuad: ViewRecipe {
   }
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // A clipped hedge, flat on top, along the bottom of the window.
     context.fill(
       Path(roundedRect: CGRect(x: -50, y: 52.4, width: 200, height: 20), cornerRadius: 2.4),
       with: .color(colour.color()))
@@ -271,7 +256,7 @@ struct DormQuad: ViewRecipe {
     }
   }
 
-  /// The tower clock's hands at the real time here, and its face lit after dark.
+  /// The hands keep the real local time.
   private func clock(_ context: GraphicsContext, moment: ViewMoment) {
     let centre = Self.tower
     ViewKit.glow(context, centre, 6, ViewPalette.lampCore, 0.35 * moment.lamps)
@@ -294,7 +279,6 @@ struct DormQuad: ViewRecipe {
     }
   }
 
-  /// LED strips that drift slowly through colours, and fairy lights pinned round a window.
   private func studentLights(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.lamps > 0 else { return }
     for (index, light) in Self.ledWindows.enumerated() {
@@ -325,7 +309,6 @@ struct DormQuad: ViewRecipe {
     }
   }
 
-  /// Someone on the left bench with a laptop open, its screen lighting their face after dark.
   static let sitter = ViewRhythm(seed: 531, slot: 120, chance: 0.7, length: 70...110)
 
   private func benchSitter(_ context: GraphicsContext, moment: ViewMoment) {
@@ -335,7 +318,6 @@ struct DormQuad: ViewRecipe {
     let seat = CGPoint(x: 33, y: 44.2)
     let shade = moment.palette.street.lit(-0.38)
     let coat = shade.mixed(with: ViewColour(0x5A6AA8), by: moment.look.isDark ? 0.25 : 0.5)
-    // Seated: body on the bench, legs down, head bent over the screen.
     ViewKit.rect(context, CGRect(x: seat.x - 0.9, y: seat.y - 3.4, width: 1.8, height: 3.4), coat)
     ViewKit.rect(context, CGRect(x: seat.x - 0.2, y: seat.y, width: 1.8, height: 0.5), shade)
     ViewKit.rect(context, CGRect(x: seat.x + 1.2, y: seat.y, width: 0.45, height: 1.6), shade)
@@ -352,7 +334,6 @@ struct DormQuad: ViewRecipe {
     }
   }
 
-  /// A frisbee thrown back and forth across the lawn by day, between two people.
   private func frisbee(_ context: GraphicsContext, moment: ViewMoment) {
     guard !moment.look.isDark, moment.look.weather == .clear else { return }
     let throwers = [CGPoint(x: 26, y: 49), CGPoint(x: 70, y: 48)]
@@ -374,7 +355,6 @@ struct DormQuad: ViewRecipe {
     return CGPoint(x: 27 + 42 * share, y: 44 - 1 * share - 7 * sin(.pi * p))
   }
 
-  /// A squirrel dashing over the grass in short bursts, by day.
   private func squirrel(_ context: GraphicsContext, moment: ViewMoment) {
     guard !moment.look.isDark, let pass = Self.squirrel.pass(at: moment.now) else { return }
     let point = Self.squirrelPoint(pass)
@@ -387,7 +367,6 @@ struct DormQuad: ViewRecipe {
   }
 
   static func squirrelPoint(_ pass: ViewRhythm.Pass) -> CGPoint {
-    // Dashes, stops, dashes: eased in three bursts.
     let p = pass.progress
     let bursts = (p * 3).rounded(.down) + pow((p * 3).truncatingRemainder(dividingBy: 1), 0.4)
     let share = CGFloat(min(bursts / 3, 1))

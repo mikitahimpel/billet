@@ -132,7 +132,6 @@ final class DioramaScene: CatRoom {
         return spots
     }
 
-    /// Walks between two places go around the bed.
     override var catKeepOut: (center: SIMD2<Float>, radius: Float)? { (SIMD2(bedCenter.x, bedCenter.z), 0.22) }
 
     private func bounce(_ toy: Entity, spins: Bool) {
@@ -198,7 +197,7 @@ final class DioramaScene: CatRoom {
 
     private static let photoName = "photo"
 
-    /// Rebuilds the garland: one polaroid per image, the rest of the slots as blank frames waiting for a photo.
+    /// One polaroid per image, the rest of the slots as blank frames.
     func setPolaroids(_ images: [UIImage]) {
         garland.children.removeAll()
         if garland.parent == nil { pivot.addChild(garland) }

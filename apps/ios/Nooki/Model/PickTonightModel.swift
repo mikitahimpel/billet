@@ -8,7 +8,7 @@ nonisolated struct PickCard: Identifiable, Hashable {
     let title: PickTitle
     let name: String
     let media: ItemMedia?
-    /// The list item it is, nil for a suggestion.
+    /// Nil for a suggestion.
     let itemID: UUID?
 
     var id: String { PickTonightModel.key(title) }
@@ -86,7 +86,6 @@ final class PickTonightModel {
         deck += Self.deck(list, swiped: swiped, suggestions: suggested).filter { !dealt.contains($0.id) }
     }
 
-    /// Takes `card` off the deck, for the swipe on it.
     func take(_ card: PickCard) {
         deck.removeAll { $0.id == card.id }
         taken.insert(card.id)

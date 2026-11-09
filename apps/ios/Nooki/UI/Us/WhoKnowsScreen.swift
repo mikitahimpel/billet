@@ -2,7 +2,6 @@ import SwiftUI
 import Design
 import Wire
 
-/// Who knows who: today's five questions, about this user or about the partner, and the reveal once both are done.
 struct WhoKnowsScreen: View {
     let state: HomeState
     let model: WhoKnowsModel
@@ -208,7 +207,6 @@ struct WhoKnowsScreen: View {
 
 // MARK: - Reveal
 
-/// The answers, one question per step, then the round and the week.
 private struct WhoKnowsReveal: View {
     let state: HomeState
     let model: WhoKnowsModel
@@ -317,7 +315,6 @@ private struct WhoKnowsReveal: View {
     }
 }
 
-/// One revealed question: what the subject answered, the guess, and the cat's reaction to it.
 private struct WhoKnowsRevealStep: View {
     let state: HomeState
     let model: WhoKnowsModel
@@ -432,7 +429,6 @@ private struct WhoKnowsRevealStep: View {
 
 // MARK: - Pieces
 
-/// Five segments that fill in honey as answers lock.
 private struct WhoKnowsProgress: View {
     let done: Int
     let total: Int
@@ -449,7 +445,6 @@ private struct WhoKnowsProgress: View {
     }
 }
 
-/// One of four answers: a letter disc and the option, big enough to tap at any text size.
 private struct WhoKnowsOption: View {
     let letter: Int
     let text: String
@@ -477,7 +472,6 @@ private struct WhoKnowsOption: View {
     }
 }
 
-/// One of the game's cat pictures, decorative.
 struct WhoKnowsArt: View {
     let name: String
     let size: CGFloat

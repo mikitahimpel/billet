@@ -8,7 +8,6 @@ struct WelcomeView: View {
     let start: Date
     var script = WelcomeScript.standard
     var waved: () -> Void = {}
-    /// Reports each frame's start, for the hitch probe.
     var probe: HitchProbe?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -128,7 +127,6 @@ private struct Vignette: View {
     }
 }
 
-/// A warm room: the screen colour with the lamp's light pooled at the upper left and a floor under the cat.
 struct WelcomeBackdrop: View {
     var body: some View {
         ZStack {

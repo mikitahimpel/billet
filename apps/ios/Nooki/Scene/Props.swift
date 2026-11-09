@@ -2,15 +2,15 @@ import RealityKit
 import UIKit
 import simd
 
-/// Clay props for the rooms, ported from idol-scenes/src/three/props.js. Each is built around its own origin with its
-/// base on y = 0 (wall pieces: back on x = 0, facing +X).
+/// Clay props for the rooms. Each is built around its own origin with its base on y = 0 (wall pieces: back on
+/// x = 0, facing +X).
 enum Props {
     private enum Leaf {
         static let light: UInt32 = 0x93A86A
         static let dark: UInt32 = 0x6F8A4E
     }
 
-    /// props.js's local cone helper: a frustum of two radii, or a real cone when the top is a point.
+    /// A frustum of two radii, or a real cone when the top is a point.
     @discardableResult
     private static func cone(_ parent: Entity, _ height: Float, _ top: Float, _ bottom: Float,
                              _ material: some Material, at position: SIMD3<Float>,
@@ -162,7 +162,6 @@ enum Props {
         }
     }
 
-    /// Mochi's food and water bowls on a little mat.
     static func catBowls(_ parent: Entity, at position: SIMD3<Float>, rotation: simd_quatf) {
         let g = parent.group(at: position, rotation: rotation)
         g.box(0.13, 0.004, 0.07, r: 0.002, Clay.matte(0x9DB08A, roughness: 1), at: [0, 0.002, 0])
@@ -190,7 +189,6 @@ enum Props {
         g.cylinder(0.04, 0.0015, Clay.matte(0xF3B0B0), at: [-0.035, 0.004, 0], rotation: .z(.pi / 2 - 0.15))
     }
 
-    /// A plush bunny sitting up.
     static func plush(_ parent: Entity, at position: SIMD3<Float>, rotation: simd_quatf,
                       tone: UInt32 = 0xF6E6D4) {
         let g = parent.group(at: position, rotation: rotation)
@@ -206,7 +204,7 @@ enum Props {
         g.sphere(0.004, Clay.matte(0xF3A0B5), at: [0.022, 0.062, 0])
     }
 
-    /// A retro radio facing +X.
+    /// Facing +X.
     static func radio(_ parent: Entity, at position: SIMD3<Float>, rotation: simd_quatf) {
         let g = parent.group(at: position, rotation: rotation)
         g.box(0.05, 0.05, 0.08, r: 0.008, Clay.matte(0x7C9A7E), at: [0, 0.025, 0])

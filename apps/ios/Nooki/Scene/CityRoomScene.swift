@@ -24,15 +24,12 @@ private enum Tone {
     static let heart: UInt32 = 0xE0554A
 }
 
-/// The second room, ported from nooki-scene/src/three/cityRoom.js: a bedroom with a wide window onto a living town,
-/// lit by the time of day (the real local hour), where Mochi wanders between her bed and the windowsill.
-/// The window is a hole in the wall: the suburb view is drawn flat behind the room at the screen's own pixels
-/// (`windowView`, which HomeView puts under the room), told each frame where the window lands on screen. The original
-/// TownPicture fills the hole on a plane of its own until that view is showing, or wherever it isn't hosted.
+/// A bedroom with a window onto a living town, lit by the real local hour. The window is a hole in the wall: the
+/// town is drawn flat behind the room at screen pixels (`windowView`, under the room in HomeView), told each frame
+/// where the window lands. TownPicture fills the hole on its own plane until that view shows or where it isn't hosted.
 final class CityRoomScene: CatRoom {
     private enum Clock {
         case live
-        /// A whole day in `seconds`.
         case cycle(seconds: Float)
     }
 
@@ -45,7 +42,7 @@ final class CityRoomScene: CatRoom {
     /// cat-standing.ply is 0.26 m tall on all fours; here Mochi sits about as tall as the nightstand.
     private let catScale: Float = 0.5 * (0.162 / 0.152)
 
-    /// The view behind the glass, to be shown under the room at the same size.
+    /// Shown under the room at the same size.
     let windowView = FlatWindowView()
     /// The town in the hole until `windowView` shows.
     private var fallback: ModelEntity?
@@ -135,7 +132,6 @@ final class CityRoomScene: CatRoom {
         fill.components.set(DirectionalLightComponent(color: Daylight.color(fillColor), intensity: 300 * (0.25 + 0.5 * (1 - darkness))))
         setPoint(skyLight, color: light.horizon, lumens: 2500 * (1 - darkness * 0.85), radius: 1.2)
 
-        // People switch the lamps on as it gets dark.
         let lamps = smoothstep(darkness, 0.2, 0.7)
         lampsOn = lamps > 0.5
         setPoint(lampLight, color: Daylight.rgb(0xFFC27A), lumens: 2200 * lamps, radius: 1.1)
@@ -206,7 +202,6 @@ final class CityRoomScene: CatRoom {
         }
     }
 
-    /// Puts `image` on the plane in the window's hole.
     private func show(_ image: CGImage) {
         guard let fallback else { return }
         if let fallbackTexture {
@@ -289,7 +284,7 @@ final class CityRoomScene: CatRoom {
         pivot.box(0.014, 0.05, 1.0, r: 0.004, wood, at: [-0.493, 0.025, 0])
         pivot.box(1.0, 0.05, 0.014, r: 0.004, wood, at: [0, 0.025, -0.493])
 
-        // Corner posts and top beams, as in the first room.
+        // Corner posts and top beams.
         for (x, z) in [(-0.535, 0.52), (-0.535, -0.535), (0.52, -0.535)] as [(Float, Float)] {
             pivot.box(0.075, h + 0.06, 0.075, r: 0.012, wood, at: [x, (h + 0.06) / 2, z])
         }
@@ -297,7 +292,6 @@ final class CityRoomScene: CatRoom {
         pivot.box(1.13, 0.065, 0.085, r: 0.015, wood, at: [-0.01, h + 0.02, -0.535])
     }
 
-    /// The window: a hole the flat view shows through, with the town on a plane in it until then.
     private func buildWindow() {
         let o = opening
         let width = o.right - o.left, height = o.top - o.bottom
@@ -402,7 +396,6 @@ final class CityRoomScene: CatRoom {
         pivot.cylinder(0.03, 0.013, matte(0xF2E6D2, roughness: 0.4), at: [0.07, sillTop + 0.015, -0.45])
     }
 
-    /// Curtains, the left wall's shelf, clock and pictures, and the things lying around on the floor.
     private func buildDecor() {
         Props.curtains(pivot, at: [0, 0.765, -0.48], width: opening.right - opening.left + 0.1, drop: 0.5)
 

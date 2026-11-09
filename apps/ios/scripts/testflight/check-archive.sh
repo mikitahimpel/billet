@@ -1,14 +1,7 @@
 #!/bin/bash
-# Checks a Release archive before it goes to TestFlight:
-#   check-archive.sh <path.xcarchive> <build-number>
-#
-# - the app and its widget extension have their bundle IDs, version 0.1.0 and the build number, and
-#   are signed by team 2666YPBJTB and pass codesign --verify;
-# - the server host (DEMO_HOST in the environment) is the app's BilletAPIHost and is nowhere in the
-#   git history of this checkout;
-# - the app was built with the StoreKit store and without Labs (BilletPayments and BilletLabs in its
-#   Info.plist), and its binary carries no mock store.
-# Prints what it checked, never the host. Run from the repository root with full history.
+# Checks a Release archive before TestFlight: bundle IDs, version 0.1.0, build number, team 2666YPBJTB signing;
+# DEMO_HOST is the app's BilletAPIHost and nowhere in git history; StoreKit store, no Labs, no mock store.
+#   check-archive.sh <path.xcarchive> <build-number>  (repository root, full history; never prints the host)
 set -euo pipefail
 
 archive=${1:?usage: check-archive.sh <path.xcarchive> <build-number>}

@@ -1,8 +1,7 @@
 #!/bin/zsh
-# Renders Nooki/Resources/Coats/Coat-<coat>.png, the onboarding carousel cards, with Tools/make_coat_card.py.
-# Grey renders Cat.usdz as it is; every other coat a copy holding that coat's colour atlas. Needs Blender
-# (BLENDER=/path/to/blender to override); WIDTH and SAMPLES override the 900 px width and 512 samples.
-# 1200 px tall is the 340 pt onboarding hero at 3x; more only slows the splash's first frame.
+# Renders Nooki/Resources/Coats/Coat-<coat>.png, the onboarding carousel cards, with Tools/make_coat_card.py (grey
+# from Cat.usdz as is, others from a copy with that coat's atlas). Needs Blender (BLENDER=path); WIDTH and SAMPLES
+# override 900 px and 512 samples. 1200 px tall is the 340 pt hero at 3x; more only slows the splash's first frame.
 set -e
 IOS=${0:a:h:h:h}
 BLENDER=${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}

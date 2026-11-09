@@ -15,7 +15,6 @@ final class BrushStage: GameStage {
     private var strokes: BrushStrokes
     private var last: CGPoint?
     private var sinceTap: Float = 0
-    /// Tufts of fur in flight: the entity, its velocity and how long it has left.
     private var tufts: [(entity: ModelEntity, velocity: SIMD3<Float>, life: Float)] = []
     private let seat: SIMD3<Float>
     private let furTone: UInt32
@@ -119,7 +118,6 @@ final class BrushStage: GameStage {
         }
     }
 
-    /// A soft tuft lifting off the brush.
     private func shed(at point: SIMD3<Float>) {
         guard tufts.count < 24 else { return }
         let tuft = root.sphere(0.004, Clay.matte(furTone, roughness: 1), at: point, scale: [1.4, 0.8, 1.1])

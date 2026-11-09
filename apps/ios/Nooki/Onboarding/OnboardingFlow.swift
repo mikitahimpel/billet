@@ -3,10 +3,9 @@ import Observation
 import Transport
 import Wire
 
-/// The first launch: a welcome over the room (or the partner's code, for whoever was invited), the server's questions,
-/// the day the story started, the cat's coat and name, an invite for the partner, notifications and the widget, then
-/// home. Every step but the code can be skipped; under 13 it stops. Answers are queued in a file and sent when the server can be reached
-/// (`AnswerQueue`); the questions come from the server, or from the copy in the app when it can't be reached.
+/// First launch: welcome (or the partner's code), the server's questions, the start date, the cat's coat and name,
+/// an invite, notifications and the widget, then home. Every step but the code can be skipped; under 13 it stops.
+/// Answers queue in a file until the server is reachable (`AnswerQueue`); questions fall back to the bundled copy.
 @MainActor
 @Observable
 final class OnboardingFlow {

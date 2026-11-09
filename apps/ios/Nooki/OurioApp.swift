@@ -121,6 +121,5 @@ struct OurioApp: App {
         #endif
     }
 
-    /// The app was launched to host OurioTests.
     private static let isHostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 }

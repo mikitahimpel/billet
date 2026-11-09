@@ -3,7 +3,6 @@ import SwiftUI
 import Design
 import Wire
 
-/// The paper on the desk: grain and shadow from `PaperSheet`, a curled corner, and the text and ink layers on top.
 struct ComposerPaper: View {
     @Bindable var model: ComposerModel
     let size: CGSize
@@ -137,7 +136,6 @@ private struct ComposerInkLayer: UIViewRepresentable {
     }
 }
 
-/// The folded-up corner, a right triangle in the bottom trailing corner.
 nonisolated struct CurlCorner: Shape {
     func path(in rect: CGRect) -> Path {
         Path { path in
@@ -149,7 +147,6 @@ nonisolated struct CurlCorner: Shape {
     }
 }
 
-/// A triangle standing on its base: a pen's tip, a cat's ear.
 nonisolated struct Peak: Shape {
     func path(in rect: CGRect) -> Path {
         Path { path in

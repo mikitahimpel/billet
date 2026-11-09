@@ -5,10 +5,9 @@ import RealityKit
 import SwiftUI
 import UIKit
 
-/// Weigh the food: tap the bowl onto the kitchen scale, press TARE or don't, and pour what her card asks for. The
-/// kibble goes in four ways: tip the bag (drag it; tipped fast, a clump drops), a scoop (tap it), one by one (tap
-/// the bag), or a shake of the phone. Drag the bowl to tip some back, or tap it for one kibble out. Feed works once
-/// the bowl is within tolerance; then Mochi comes and eats.
+/// Weigh the food: tap the bowl onto the scale, press TARE or not, and pour what her card asks. Kibble goes in by
+/// tipping the bag (drag; fast drops a clump), the scoop (tap), one by one (tap the bag) or a phone shake. Drag the
+/// bowl to tip some back, or tap it for one out. Feed works once within tolerance; then Mochi eats.
 @MainActor
 final class FeedStage: GameStage {
     private enum Grip {
@@ -62,7 +61,7 @@ final class FeedStage: GameStage {
     private var pourDebt: Double = 0
     private var backDebt: Double = 0
     private var flights: [Flight] = []
-    /// The kibble resting in the bowl, in the order it landed.
+    /// In the order it landed.
     private var pile: [ModelEntity] = []
     private var bowlMove: (from: SIMD3<Float>, to: SIMD3<Float>, time: Float)?
     private var shown: Double = 0
@@ -103,7 +102,6 @@ final class FeedStage: GameStage {
         tareButton = base.cylinder(0.005, 0.0085, Clay.matte(0xE0554A, roughness: 0.5), at: [-0.058, 0.028, 0.072])
         tareAt = base.convert(position: [-0.058, 0.028, 0.072], to: room.pivot)
 
-        // The bowl, waiting beside it.
         bowl = root.group(at: bowlHome)
         bowl.cylinder(Self.bowlHeight, Self.bowlRadius, Clay.matte(0x6F8FB0, roughness: 0.4), at: [0, Self.bowlHeight / 2, 0])
         bowl.cylinder(0.001, Self.bowlRadius - 0.004, Clay.matte(0xFFF3E2, roughness: 0.35), at: [0, Self.bowlHeight + 0.0006, 0])
@@ -115,7 +113,6 @@ final class FeedStage: GameStage {
         bag.box(0.094, 0.004, 0.064, r: 0.002, Clay.matte(0x5A3A22, roughness: 1), at: [0, -0.0005, 0])
         bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward)
 
-        // The scoop, in front.
         let scoop = root.group(at: scoopAt)
         scoop.cylinder(0.02, 0.018, Clay.matte(0xE98A5B, roughness: 0.5), at: [0, 0.01, 0])
         scoop.box(0.05, 0.008, 0.01, r: 0.004, Clay.matte(0xE98A5B, roughness: 0.5), at: [0.04, 0.012, 0])
@@ -304,7 +301,6 @@ final class FeedStage: GameStage {
         bowlMove = (bowl.position, target, 0)
     }
 
-    /// Sends one kibble from `start` toward the bowl.
     private func pour(from start: SIMD3<Float>, spread: Float) {
         guard flights.count < 90 else { return }
         let kibble = root.sphere(0.0042, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),

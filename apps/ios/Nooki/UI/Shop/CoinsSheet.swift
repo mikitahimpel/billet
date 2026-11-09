@@ -4,9 +4,7 @@ import Design
 import WidgetBridge
 import Wire
 
-/// What the header's coins open, on any tab: the balance on top, the buy that was short, the coin packs (or why there
-/// are none), Billet Plus, then how the couple earns coins and where the latest went. The one place that sells coins;
-/// Home itself never does.
+/// The one place that sells coins; Home itself never does.
 struct CoinsSheet: View {
     let state: HomeState
     /// Nil in a build without a server: then nothing is sold.
@@ -40,7 +38,6 @@ struct CoinsSheet: View {
         .task { if sellsPacks { await packs?.load() } }
     }
 
-    /// What the waiting buy still needs, as the balance stands now.
     private var missing: Int { ask.retry.map { max(0, $0.cost - state.shop.coins) } ?? 0 }
 
     private var balance: some View {
@@ -110,7 +107,6 @@ private struct HistoryRow: View {
     }
 }
 
-/// One wallet entry as the Coins block reads it: what it was for, from its id and ref, and the signed amount.
 struct CoinLine: Hashable {
     let symbol: String
     let title: String
@@ -167,7 +163,6 @@ struct CoinLine: Hashable {
         }
     }
 
-    /// A piece, a set, an ink or the treat, by its id.
     static func name(of ref: String) -> String {
         if ref == "treat" { return "A treat" }
         if let item = Catalog.item(ref) { return item.name }
@@ -190,11 +185,9 @@ private struct EarnedOnly: View {
     }
 }
 
-/// The buy the balance didn't cover: how many coins it still needs, and, once they're there, finishing it in one tap.
 private struct ShortBanner: View {
     let state: HomeState
     let retry: CoinsAsk.Retry
-    /// Whether packs are on sale below; without them the coins can only be earned.
     let canBuy: Bool
     let done: () -> Void
 

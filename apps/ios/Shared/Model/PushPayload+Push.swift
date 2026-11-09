@@ -5,7 +5,6 @@ nonisolated extension PushPayload {
     /// The key under a push's custom data that holds a `PushPayload` (packages/contracts/push).
     static let pushKey = "billet"
 
-    /// The payload in a push's custom data, or nil when it has none.
     init?(push userInfo: [AnyHashable: Any]) {
         guard let object = userInfo[Self.pushKey], JSONSerialization.isValidJSONObject(object),
               let data = try? JSONSerialization.data(withJSONObject: object),
