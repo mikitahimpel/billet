@@ -19,9 +19,9 @@ enum AppPayments {
     /// A mock build fakes the store and only the dev server credits it. Either build sells coin packs only once the
     /// server turned the `payments` flag on (`CoinPacksModel.sells`).
     #if PAYMENTS_MOCK
-    static let isMock = true
+    nonisolated static let isMock = true
     #else
-    static let isMock = false
+    nonisolated static let isMock = false
     #endif
 
     /// The build's store over the pair's purchase routes, listening for transactions from launch on.
