@@ -19,9 +19,13 @@ public final class InboxModel {
   public var sheet: InboxMachine.Sheet { store.state.sheet }
   public var unread: Int { store.state.unread }
 
-  public init(list: @escaping List, markRead: @escaping MarkRead) {
+  /// - Parameter timeout: How long the first page may take before the sheet says it couldn't load;
+  ///   a stalled connection would otherwise keep it loading.
+  public init(
+    list: @escaping List, markRead: @escaping MarkRead, timeout: Duration = .seconds(15)
+  ) {
     store = Store(initial: .initial) { output in
-      await InboxMachine.run(output, list: list, markRead: markRead)
+      await InboxMachine.run(output, list: list, markRead: markRead, timeout: timeout)
     }
   }
 
@@ -47,15 +51,27 @@ public final class InboxModel {
 }
 
 extension InboxMachine {
-  static func run(_ output: Output, list: InboxModel.List, markRead: InboxModel.MarkRead) async
-    -> Event?
-  {
+  static func run(
+    _ output: Output, list: @escaping InboxModel.List, markRead: InboxModel.MarkRead,
+    timeout: Duration
+  ) async -> Event? {
     switch output {
     case .loadFirst(let request):
-      do {
-        return .loaded(try await list(nil), request: request)
-      } catch {
-        return .loadFailed(Failure(error), request: request)
+      return await withTaskGroup(of: Event.self) { group in
+        group.addTask {
+          do throws(TransportError) {
+            return .loaded(try await list(nil), request: request)
+          } catch {
+            return .loadFailed(Failure(error), request: request)
+          }
+        }
+        group.addTask {
+          try? await Task.sleep(for: timeout)
+          return .loadFailed(.unavailable, request: request)
+        }
+        let first = await group.next() ?? .loadFailed(.unavailable, request: request)
+        group.cancelAll()
+        return first
       }
     case .loadMore(let after):
       do {
