@@ -88,9 +88,11 @@ struct TabBar: View {
     private func item(_ tab: HomeTab) -> some View {
         let shown = (hovered ?? state.tab) == tab
         return VStack(spacing: 3) {
-            Image(systemName: tab.symbol).font(.system(size: 18, weight: .semibold))
-            Text(tab.title).font(.system(size: 11, weight: .medium))
+            Image(systemName: tab.symbol).ourioScaledFont(size: 18, weight: .semibold)
+            Text(tab.title).ourioScaledFont(size: 11, weight: .medium, relativeTo: .caption2)
         }
+        // The bar keeps its height: past this size its labels show in the large content viewer instead.
+        .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .foregroundStyle(shown ? Ink.glassGlyph : Ink.glassGlyphSecondary)
         .frame(maxWidth: .infinity)
         .frame(height: 54)
@@ -98,6 +100,9 @@ struct TabBar: View {
         // The drag on the bar does the switching; VoiceOver and the UI tests get each tab as a button.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.title)
+        .accessibilityShowsLargeContentViewer {
+            Label(tab.title, systemImage: tab.symbol)
+        }
         .accessibilityAddTraits(state.tab == tab ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { state.tab = tab }
     }
@@ -183,7 +188,8 @@ struct AddButton: View {
             }
         } label: {
             Image(systemName: "plus")
-                .font(.system(size: 24, weight: .semibold))
+                .ourioScaledFont(size: 24, weight: .semibold)
+                .dynamicTypeSize(...DynamicTypeSize.xLarge)
                 .foregroundStyle(Ink.heroInk)
                 .modifier(PlusLook())
         }
