@@ -123,9 +123,9 @@ struct MomentViewer: View {
             } label: {
                 Image(systemName: "ellipsis")
                     .font(.body.weight(.bold))
-                    .foregroundStyle(Ink.primary)
+                    .foregroundStyle(Ink.glassGlyph)
                     .frame(width: Size.control, height: Size.control)
-                    .glass(.circle, tint: Ink.glassTint, clear: true, interactive: true)
+                    .glass(.circle, role: .control)
             }
             .accessibilityLabel("Share and more")
         }

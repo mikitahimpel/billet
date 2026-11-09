@@ -44,10 +44,9 @@ import Testing
       #expect(Palette.glassGlyph.value(appearance).contrast(over: fill) >= 4.5)
       // The unselected label of the segmented control.
       #expect(Palette.glassGlyphSecondary.value(appearance).over(fill).contrast(over: fill) >= 4.5)
-      // The selected thumb is a solid surface.
-      #expect(
-        Palette.text.value(appearance).over(Palette.surface.value(appearance)).contrast(
-          over: Palette.surface.value(appearance)) >= 4.5)
+      // The selected tab or room: the selection laid on the glass.
+      let selected = Palette.glassSelection.value(appearance).over(fill)
+      #expect(Palette.glassGlyph.value(appearance).contrast(over: selected) >= 4.5)
     }
   }
 

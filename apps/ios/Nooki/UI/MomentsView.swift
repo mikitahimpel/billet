@@ -155,10 +155,10 @@ struct MomentsView: View {
             if notes.isEmpty, store.pinned.isEmpty {
                 Text("Leave a note or doodle for the board")
                     .font(.nookiCallout.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Ink.glassGlyph)
                     .padding(.horizontal, 18)
                     .frame(height: 42)
-                    .glass(.capsule)
+                    .glass(.capsule, role: .bar)
                     .padding(.bottom, Space.l)
             }
         }

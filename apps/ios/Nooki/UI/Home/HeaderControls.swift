@@ -27,7 +27,9 @@ struct MoodHeaderButton: View {
         }
         .overlay(alignment: .topTrailing) {
             if let theirs {
-                MoodArt(mood: theirs.mood, size: 22)
+                MoodArt(mood: theirs.mood, size: 18)
+                    .frame(width: 22, height: 22)
+                    .glassBadge(Ink.surface)
                     .offset(x: 5, y: -5)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
@@ -59,11 +61,11 @@ struct CoinPill: View {
                 .contentTransition(.numericText(value: Double(coins)))
                 .animation(.snappy(duration: 0.4), value: coins)
         }
-        .foregroundStyle(Ink.primary)
+        .foregroundStyle(Ink.glassGlyph)
         .padding(.leading, Space.s)
         .padding(.trailing, Space.l - 2)
         .frame(height: Size.control)
-        .glass(.capsule, tint: Ink.glassTint, clear: true, interactive: true)
+        .glass(.capsule, role: .control)
         .contentShape(.capsule)
         // Where the coins are on screen, so a purchase can burst coins out of the pill (read it with
         // `.overlayPreferenceValue(CoinPillAnchor.self)`).
@@ -79,7 +81,8 @@ struct CoinPillAnchor: PreferenceKey {
     }
 }
 
-/// The couple's two avatars, which open the profile: the same height as every other header control.
+/// The couple's two avatars, which open the profile: the same height as every other header control, ringed in the
+/// glass's colour like its badges. Not glass themselves: photos stay sharp.
 struct CoupleButton: View {
     let state: HomeState
     let plus: Bool
@@ -88,8 +91,8 @@ struct CoupleButton: View {
     var body: some View {
         Button(action: action) {
             HStack(spacing: -Space.m) {
-                Monogram(partner: state.partners.0, profile: state.profile, size: Size.control)
-                Monogram(partner: state.partners.1, profile: state.profile, size: Size.control)
+                Monogram(partner: state.partners.0, profile: state.profile, size: Size.control, onGlass: true)
+                Monogram(partner: state.partners.1, profile: state.profile, size: Size.control, onGlass: true)
             }
             .overlay(alignment: .bottom) { badge(symbol: "heart.fill").offset(y: 4) }
             .overlay(alignment: .topTrailing) {
@@ -106,10 +109,8 @@ struct CoupleButton: View {
     private func badge(symbol: String) -> some View {
         Image(systemName: symbol)
             .font(.caption2.weight(.bold))
-            .foregroundStyle(Ink.heroInk)
             .frame(width: 20, height: 20)
-            .background(.honeyGradient, in: .circle)
-            .overlay(Circle().stroke(.white, lineWidth: 1.5))
+            .glassBadge()
             .accessibilityHidden(true)
     }
 }
