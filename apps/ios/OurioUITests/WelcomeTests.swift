@@ -1,7 +1,7 @@
 import XCTest
 import notify
 
-/// The welcome screen fits the smallest iPhone and the largest text, and plays its timeline without a late frame.
+/// The welcome screen fits the smallest iPhone and the largest text, and plays its timeline without visible jank.
 final class WelcomeTests: XCTestCase {
     @MainActor
     private func launch(textSize: String? = nil) -> XCUIApplication {
@@ -70,7 +70,7 @@ final class WelcomeTests: XCTestCase {
             }.first ?? -1
         }
         XCTAssertGreaterThan(value("frames"), 30, summary)
-        XCTAssertEqual(value("hitches"), 0, summary)
+        XCTAssertEqual(value("janks"), 0, summary)
         XCTAssertTrue((0..<500).contains(value("firstFrameMs")), summary)
     }
 }

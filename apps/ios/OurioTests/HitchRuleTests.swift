@@ -43,4 +43,24 @@ import Testing
         #expect(HitchRule.counted(frames(0, 3), from: 1) > 110)
         #expect(HitchRule.counted(frames(0, 3), from: .infinity) == 0, "no signal, nothing measured")
     }
+
+    @Test func runnerNoiseIsNotJank() {
+        // main on 8ecad628: three late frames of 41-66 ms.
+        let late = [
+            ProbeFrame(gap: 0.066, at: 2.145), ProbeFrame(gap: 0.041, at: 2.25), ProbeFrame(gap: 0.041, at: 2.295),
+        ]
+        #expect(!HitchRule.janks(late))
+        #expect(!HitchRule.janks([]))
+    }
+
+    @Test func aStallIsJank() {
+        #expect(HitchRule.janks([ProbeFrame(gap: 0.101, at: 2)]))
+        #expect(!HitchRule.janks([ProbeFrame(gap: 0.1, at: 2)]))
+    }
+
+    @Test func manyLateFramesAreJank() {
+        let frame = ProbeFrame(gap: 0.05, at: 2)
+        #expect(!HitchRule.janks(Array(repeating: frame, count: HitchRule.lateBudget)))
+        #expect(HitchRule.janks(Array(repeating: frame, count: HitchRule.lateBudget + 1)))
+    }
 }

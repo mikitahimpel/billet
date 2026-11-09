@@ -22,6 +22,17 @@ enum HitchRule {
     static func counted(_ frames: [ProbeFrame], from start: TimeInterval) -> Int {
         frames.filter { $0.at - $0.gap >= start }.count
     }
+
+    /// A frame this late is a stall anyone sees.
+    static let stall: TimeInterval = 0.1
+    /// Late frames a shared CI runner adds on its own: main's runs show up to 3 of 41-66 ms on a script that has
+    /// none locally. Tighter budgets are perf.yml's A/B, on one runner for both builds.
+    static let lateBudget = 5
+
+    /// Whether the welcome visibly janks: a stall, or more late frames than the runner's own.
+    static func janks(_ late: [ProbeFrame]) -> Bool {
+        late.contains { $0.gap > stall } || late.count > lateBudget
+    }
 }
 
 /// Counts frames that came late while the welcome timeline plays, and how long the first one took. The UI test reads
@@ -80,10 +91,12 @@ final class HitchProbe {
     func finish() {
         guard summary == nil, start.isFinite else { return }
         if token != NOTIFY_TOKEN_INVALID { notify_cancel(token) }
-        let late = HitchRule.late(frames, from: start).map { "\(Int($0.gap * 1000))@\(Int($0.at * 1000))" }
+        let lateFrames = HitchRule.late(frames, from: start)
+        let late = lateFrames.map { "\(Int($0.gap * 1000))@\(Int($0.at * 1000))" }
         let startMs = start.isFinite ? Int(start * 1000) : -1
-        let summary = "hitches=\(late.count) frames=\(HitchRule.counted(frames, from: start))"
-            + " firstFrameMs=\(firstFrameMs ?? -1) startMs=\(startMs) late=\(late.joined(separator: ","))"
+        let summary = "janks=\(HitchRule.janks(lateFrames) ? 1 : 0) hitches=\(late.count)"
+            + " frames=\(HitchRule.counted(frames, from: start)) firstFrameMs=\(firstFrameMs ?? -1) startMs=\(startMs)"
+            + " late=\(late.joined(separator: ","))"
         self.summary = summary
         FileHandle.standardError.write(Data("\nPERF phase welcome \(summary)\nPERF done\n".utf8))
     }
