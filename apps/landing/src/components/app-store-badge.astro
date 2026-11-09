@@ -1,6 +1,6 @@
 ---
 import QrCode from "./qr-code.astro";
-import { appStoreUrl } from "../config";
+import { appStoreLive, appStoreUrl } from "../config";
 
 type Props = { qr?: boolean; class?: string };
 const { qr = false, class: className } = Astro.props;
@@ -8,9 +8,13 @@ const { qr = false, class: className } = Astro.props;
 
 <div class:list={["flex items-center gap-5", className]}>
   <a
-    href={appStoreUrl}
-    class="group inline-flex h-14 items-center gap-3 rounded-[14px] bg-paper px-5 text-ink shadow-[0_10px_40px_-10px_var(--color-gold)] transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
-    data-cta
+    href={appStoreLive ? appStoreUrl : undefined}
+    aria-disabled={appStoreLive ? undefined : "true"}
+    class:list={[
+      "group inline-flex h-14 items-center gap-3 rounded-[14px] bg-paper px-5 text-ink shadow-[0_10px_40px_-10px_var(--color-gold)]",
+      appStoreLive ? "transition-transform hover:-translate-y-0.5 active:scale-[0.98]" : "cursor-default",
+    ]}
+    data-cta={appStoreLive ? "" : undefined}
   >
     <svg viewBox="0 0 384 512" class="size-7" aria-hidden="true"
       ><path
@@ -19,12 +23,12 @@ const { qr = false, class: className } = Astro.props;
       ></path></svg
     >
     <span class="flex flex-col leading-none">
-      <span class="text-[12px] font-medium">Download on the</span>
+      <span class="text-[12px] font-medium">{appStoreLive ? "Download on the" : "Coming soon to the"}</span>
       <span class="mt-0.5 text-[22px] font-bold tracking-[-0.02em]">App Store</span>
     </span>
   </a>
   {
-    qr && (
+    qr && appStoreLive && (
       <div class="hidden items-center gap-3 lg:flex">
         <QrCode class="size-[5.5rem] drop-shadow-[0_10px_30px_rgb(0_0_0/0.35)]" />
         <p class="max-w-[13ch] text-small leading-snug text-muted">Scan with your iPhone camera</p>

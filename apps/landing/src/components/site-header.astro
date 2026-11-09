@@ -1,5 +1,5 @@
 ---
-import { appStoreUrl } from "../config";
+import { appStoreLive, appStoreUrl } from "../config";
 
 interface Props {
   // Over the home page's story the header floats; on every other page it sits on the page.
@@ -58,11 +58,19 @@ const links = [
           <a href="/support/" class="rounded-[14px] px-4 py-3 font-semibold hover:bg-paper/10">Support</a>
         </nav>
       </details>
-      <a
-        href={appStoreUrl}
-        class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md transition-colors hover:bg-gold hover:text-ink"
-        data-cta>Get the app</a
-      >
+      {
+        appStoreLive ? (
+          <a
+            href={appStoreUrl}
+            class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md transition-colors hover:bg-gold hover:text-ink"
+            data-cta
+          >
+            Get the app
+          </a>
+        ) : (
+          <span class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md">Coming soon</span>
+        )
+      }
     </div>
   </div>
 </header>

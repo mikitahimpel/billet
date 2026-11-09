@@ -4,6 +4,9 @@ export const appStoreUrl = "https://apps.apple.com/app/nooki";
 // note: placeholder until the App Store listing exists; set it to turn on Safari's Smart App Banner.
 export const appStoreId: string | null = null;
 
+// Until the listing is live, every download button says "Coming soon" and links nowhere, and the QR codes are hidden.
+export const appStoreLive = appStoreId !== null;
+
 // Canonical, Open Graph, sitemap, robots.txt, llms.txt and the Markdown twins all read it.
 export const siteUrl = "https://ourio.app";
 
