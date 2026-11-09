@@ -2,7 +2,7 @@ import Foundation
 
 public struct AppGroupStorage: Sendable {
   /// The App Group shared by the app, the widget and the notification service.
-  public static let billetIdentifier = "group.com.mikitahimpel.billet"
+  public static let billetIdentifier = "group.com.ourio.app"
 
   public var read: @Sendable (_ name: String) throws(PersistenceError) -> Data?
   public var write: @Sendable (_ name: String, _ data: Data) throws(PersistenceError) -> Void

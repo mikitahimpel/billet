@@ -52,7 +52,7 @@ final class WelcomeTests: XCTestCase {
         app.launch()
         // launch() is done waiting for the app to idle and snapshotting it: the welcome plays again from the start,
         // and the probe counts from here.
-        notify_post("com.mikitahimpel.billet.uitest.launched")
+        notify_post("com.ourio.app.uitest.launched")
         // The script is under 3.5 s; let it play out and a little more. Nothing is queried meanwhile: each query
         // snapshots the app's accessibility tree on its main thread, which is itself a late frame.
         Thread.sleep(forTimeInterval: 5)

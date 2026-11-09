@@ -1,6 +1,6 @@
 import { Effect, Layer, Redacted } from "effect";
 import { AppleTokenRevoker, type RevokeOutcome } from "@billet/backend-account/apple-token-revoker";
-import { appleAudience } from "@billet/backend-auth/apple-identity-verifier";
+import { appleAudiences } from "@billet/backend-auth/apple-identity-verifier";
 import { appleTeamId, signEs256 } from "./es256-jwt.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 import { type Now, systemNow } from "./wall-clock.ts";
@@ -31,14 +31,19 @@ const refreshTokenOf = (body: unknown): string | undefined => {
   return typeof token === "string" && token.length > 0 ? token : undefined;
 };
 
-/** Nothing from a response or a failure is logged: they carry the code, tokens or identity. */
-export const revokeAppleToken = async (
+type Exchanged = {
+  readonly clientId: string;
+  readonly clientSecret: string;
+  readonly refreshToken: string;
+};
+
+const exchange = async (
   key: SignInWithAppleKey,
+  clientId: string,
   code: Redacted.Redacted<string>,
-  send: AppleFetch = fetch,
-  clock: Now = systemNow,
-): Promise<RevokeOutcome> => {
-  const now = Math.floor(clock() / 1000);
+  send: AppleFetch,
+  now: number,
+): Promise<Exchanged | undefined> => {
   const clientSecret = await signEs256(
     { pem: Redacted.value(key.pem), keyId: Redacted.value(key.keyId) },
     {
@@ -46,24 +51,48 @@ export const revokeAppleToken = async (
       iat: now,
       exp: now + secretLifetimeSeconds,
       aud: appleOrigin,
-      sub: appleAudience,
+      sub: clientId,
     },
   );
-  const client = { client_id: appleAudience, client_secret: clientSecret };
-
   const exchanged = await send(
     `${appleOrigin}/auth/token`,
-    form({ ...client, code: Redacted.value(code), grant_type: "authorization_code" }),
+    form({
+      client_id: clientId,
+      client_secret: clientSecret,
+      code: Redacted.value(code),
+      grant_type: "authorization_code",
+    }),
   );
-  if (!exchanged.ok) return "rejected";
+  if (!exchanged.ok) return undefined;
   const refreshToken = refreshTokenOf(await exchanged.json());
-  if (refreshToken === undefined) return "rejected";
+  return refreshToken === undefined ? undefined : { clientId, clientSecret, refreshToken };
+};
 
-  const revoked = await send(
-    `${appleOrigin}/auth/revoke`,
-    form({ ...client, token: refreshToken, token_type_hint: "refresh_token" }),
-  );
-  return revoked.ok ? "revoked" : "rejected";
+/** The code names no app, and Apple redeems it only for the bundle that asked for it, so each
+ * accepted bundle id is tried in turn. Nothing from a response or a failure is logged: they carry
+ * the code, tokens or identity. */
+export const revokeAppleToken = async (
+  key: SignInWithAppleKey,
+  code: Redacted.Redacted<string>,
+  send: AppleFetch = fetch,
+  clock: Now = systemNow,
+): Promise<RevokeOutcome> => {
+  const now = Math.floor(clock() / 1000);
+  for (const clientId of appleAudiences) {
+    const exchanged = await exchange(key, clientId, code, send, now);
+    if (exchanged === undefined) continue;
+    const revoked = await send(
+      `${appleOrigin}/auth/revoke`,
+      form({
+        client_id: exchanged.clientId,
+        client_secret: exchanged.clientSecret,
+        token: exchanged.refreshToken,
+        token_type_hint: "refresh_token",
+      }),
+    );
+    return revoked.ok ? "revoked" : "rejected";
+  }
+  return "rejected";
 };
 
 /** Without the key (an empty secret) it revokes nothing, and says so. */

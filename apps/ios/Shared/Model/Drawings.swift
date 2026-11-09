@@ -12,7 +12,7 @@ nonisolated struct LatestDrawing: Codable, Hashable, Sendable {
 
     static let path = "Drawings/latest.json"
     /// WidgetKit kind of the drawing widgets, so a write reloads only them.
-    static let widgetKind = "com.mikitahimpel.billet.drawing"
+    static let widgetKind = "com.ourio.app.drawing"
 
     static func load() -> LatestDrawing? { SharedFile.read(LatestDrawing.self, from: path) }
 

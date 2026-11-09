@@ -1,8 +1,9 @@
 import { inviteCodeAlphabet, inviteCodeLength } from "@billet/contracts-domain/ids";
 import { inviteLinkPrefix } from "@billet/contracts-http-api/routes";
 
-/** Team id and bundle id, as `project.yml` signs it. */
-export const appId = "2666YPBJTB.com.mikitahimpel.billet";
+/** Team id and bundle id, as `project.yml` signs it, then the first App Store app's, whose
+ * installed builds still open invite links until the owner retires it. */
+export const appIds = ["2666YPBJTB.com.ourio.app", "2666YPBJTB.com.mikitahimpel.billet"] as const;
 
 const half = inviteCodeLength / 2;
 const typedCode = new RegExp(
@@ -76,7 +77,7 @@ const pageHeaders = {
 export const respondAppLink = (pathname: string): Response | undefined => {
   if (pathname === "/.well-known/apple-app-site-association") {
     return Response.json({
-      applinks: { details: [{ appIDs: [appId], components: [{ "/": `${inviteLinkPrefix}*` }] }] },
+      applinks: { details: [{ appIDs: appIds, components: [{ "/": `${inviteLinkPrefix}*` }] }] },
     });
   }
   if (isInviteLinkPath(pathname)) {

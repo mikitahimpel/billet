@@ -172,7 +172,7 @@ final class CoupleStore {
 
 extension Notification.Name {
     /// The couple was saved by another `CoupleStore`, so the one on screen reads it again.
-    static let coupleChanged = Notification.Name("com.mikitahimpel.billet.couple-changed")
+    static let coupleChanged = Notification.Name("com.ourio.app.couple-changed")
 }
 
 private extension CGImagePropertyOrientation {
