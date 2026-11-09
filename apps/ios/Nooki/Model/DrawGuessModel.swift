@@ -1,3 +1,4 @@
+import FeatureGames
 import Foundation
 import Ink
 import Observation
@@ -6,11 +7,17 @@ import Wire
 
 /// Draw & guess as this user plays it. One partner draws a word, the other builds it from letter tiles while the
 /// drawing replays; each has at most one open riddle at a time. The room sends each change over its socket too.
+///
+/// The rules live in `DrawGuessMachine` (FeatureGames); this is its store with the drawer's word offers and the
+/// screen's words around it.
 @Observable
 final class DrawGuessModel {
     enum Phase: Equatable {
         case loading, guess, waiting, draw, ended, unpaired, offline
     }
+
+    typealias Slot = DrawGuessMachine.Slot
+    typealias Tile = DrawGuessMachine.Tile
 
     /// What a round pays the guesser (`solveReward` and `giveUpReward` on the server).
     nonisolated static let solveCoins = 10
@@ -20,199 +27,137 @@ final class DrawGuessModel {
     nonisolated static let maxLetters = 12
     nonisolated static let maxLength = 24
 
-    /// The pair's riddles as the room last answered them, with later changes from the socket and this phone merged in.
-    private(set) var response: RiddlesResponse?
-    /// The room wasn't reachable on the last read.
-    private(set) var offline = false
-    /// The last try, hint or send didn't reach the room.
-    private(set) var unsent = false
-    private(set) var sending = false
-    /// A try, hint or give-up is on its way; until it answers the tiles and hints wait, so a second tap can't spend
-    /// another hint or a late answer clear tiles placed after it.
-    private(set) var busy = false
-    /// The riddle this user was guessing that ended here, shown until they move on to drawing.
-    private(set) var finished: Riddle?
-    /// Letter slot (spaces not counted) to the tile placed in it.
-    private(set) var placed: [Int: Int] = [:]
-    /// Counts wrong tries, so the screen shakes the tiles once for each.
-    private(set) var misses = 0
     /// One word of each tier to offer the drawer.
     private(set) var offers: [String] = []
 
-    @ObservationIgnored private let sync: DrawGuessSync?
-    @ObservationIgnored private let viewer: UserId?
+    @ObservationIgnored private let store: DrawGuessStore
     @ObservationIgnored private let words: RiddleWords
-    /// The id of the riddle being sent, kept for a retry of the same word so the room stores it once.
-    @ObservationIgnored private var draft: (word: String, id: RiddleId)?
-    /// The key of a try that didn't reach the room, reused when the same guess is sent again.
-    @ObservationIgnored private var unsentTry: (guess: String, key: IdempotencyKey)?
 
     /// Without `sync` or `viewer` the account has no partner and the game is `unpaired`.
     init(sync: DrawGuessSync?, viewer: UserId?, words: RiddleWords) {
-        self.sync = sync
-        self.viewer = viewer
+        store = .drawGuess(sync, viewer: viewer)
         self.words = words
         offers = words.offers()
     }
 
+    private var game: DrawGuessMachine.Game? {
+        if case .playing(let game) = store.state { game } else { nil }
+    }
+
+    private var guess: DrawGuessMachine.Guess? {
+        if case .guessing(let guess) = game?.turn { guess } else { nil }
+    }
+
     var phase: Phase {
-        guard sync != nil, viewer != nil else { return .unpaired }
-        guard response != nil else { return offline ? .offline : .loading }
-        if finished != nil { return .ended }
-        if theirs != nil { return .guess }
-        if mine != nil { return .waiting }
-        return .draw
+        switch store.state {
+        case .unpaired: .unpaired
+        case .unread: .loading
+        case .unreachable: .offline
+        case .playing(let game):
+            switch game.turn {
+            case .guessing: .guess
+            case .waiting: .waiting
+            case .ended: .ended
+            case .drawing: .draw
+            }
+        }
     }
 
     /// The partner's open riddle, for this user to guess.
-    var theirs: Riddle? { response?.open.first { $0.drawer != viewer } }
+    var theirs: Riddle? { game?.theirs }
     /// This user's own open riddle, waiting for the partner.
-    var mine: Riddle? { response?.open.first { $0.drawer == viewer } }
+    var mine: Riddle? { game?.mine }
     /// The newest riddle that ended, of either partner.
-    var lastEnded: Riddle? { response?.ended.first }
-    var series: Int { response?.series ?? 0 }
-    var best: Int { response?.best ?? 0 }
+    var lastEnded: Riddle? { game?.board.ended.first }
+    var series: Int { game?.board.series ?? 0 }
+    var best: Int { game?.board.best ?? 0 }
+    /// The riddle this user was guessing that ended here, shown until they move on to drawing.
+    var finished: Riddle? {
+        if case .ended(let riddle) = game?.turn { riddle } else { nil }
+    }
+    /// Counts wrong tries, so the screen shakes the tiles once for each.
+    var misses: Int { game?.misses ?? 0 }
+    /// Letter slot (spaces not counted) to the tile placed in it.
+    var placed: [Int: Int] { guess?.placed ?? [:] }
+    /// A try, hint or give-up is on its way; the tiles and hints wait for it.
+    var busy: Bool { guess?.isBusy ?? false }
+    var sending: Bool {
+        if case .drawing(.sending) = game?.turn { true } else { false }
+    }
+    /// The last try, hint, give-up or send on the screen shown now didn't reach the room.
+    var unsent: Bool {
+        switch game?.turn {
+        case .guessing(let guess): guess.step == .notSent
+        case .drawing(.notSent): true
+        case .drawing(.idle), .drawing(.sending), .waiting, .ended, nil: false
+        }
+    }
 
-    func isMine(_ riddle: Riddle) -> Bool { riddle.drawer == viewer }
+    func isMine(_ riddle: Riddle) -> Bool { riddle.drawer == game?.viewer }
 
     // MARK: Reading
 
     func load() async {
-        guard let sync else { return }
-        do throws(TransportError) {
-            merge(try await sync.fetch())
-            offline = false
-        } catch {
-            offline = true
+        store.send(.loadAsked)
+        await store.until { [self] in !isReading }
+    }
+
+    private var isReading: Bool {
+        switch store.state {
+        case .unpaired: false
+        case .unread(_, let read), .unreachable(_, let read): read.isReading
+        case .playing(let game): game.read.isReading
         }
     }
 
     /// A riddle as the room's socket sent it.
     func changed(_ riddle: Riddle) {
-        apply(riddle)
+        store.send(.changed(riddle))
     }
 
     // MARK: Guessing
 
     /// The letter slots of the open riddle, revealed ones filled in.
     var slots: [Slot] {
-        guard let riddle = theirs else { return [] }
-        let letters = riddle.shape.reduce(0, +)
-        let revealed = Dictionary(riddle.revealed.map { ($0.index, $0.letter) }, uniquingKeysWith: { first, _ in first })
-        return (0..<letters).map { index in
-            if let letter = revealed[index] { return Slot(index: index, letter: letter, kind: .revealed) }
-            if let tile = placed[index], riddle.tiles.indices.contains(tile) {
-                return Slot(index: index, letter: riddle.tiles[tile], kind: .placed(tile: tile))
-            }
-            return Slot(index: index, letter: nil, kind: .empty)
-        }
+        theirs.map { DrawGuessMachine.slots($0, placed: placed) } ?? []
     }
 
     /// The tiles still to pick from: not taken away by the first hint, not placed, and not standing in for a letter a
     /// later hint revealed.
     var tiles: [Tile] {
-        guard let riddle = theirs else { return [] }
-        let used = Set(placed.values).union(Self.spent(riddle))
-        return riddle.tiles.enumerated().compactMap { index, letter in
-            used.contains(index) ? nil : Tile(index: index, letter: letter)
-        }
+        theirs.map { DrawGuessMachine.tiles($0, placed: placed) } ?? []
     }
 
     /// Whether Mochi has a hint left: the first takes away decoys, each later one shows a letter, up to all but one.
-    var canHint: Bool {
-        guard let riddle = theirs else { return false }
-        return riddle.hints == 0 || riddle.revealed.count < riddle.shape.reduce(0, +) - 1
+    var canHint: Bool { theirs.map(DrawGuessMachine.canHint) ?? false }
+
+    /// The word in the slots, with the riddle's spaces.
+    var attempt: String {
+        theirs.map { DrawGuessMachine.attempt($0, slots: slots) } ?? ""
     }
 
     /// Puts tile `index` in the first empty slot. Once every slot is filled, sends the word as a try.
     func place(_ index: Int) async {
-        guard !busy, tiles.contains(where: { $0.index == index }),
-              let slot = slots.first(where: { $0.kind == .empty }) else { return }
-        placed[slot.index] = index
-        if !slots.contains(where: { $0.kind == .empty }) { await submit() }
+        await act(.tilePlaced(index, key: .make()))
     }
 
     /// Takes the tile in `slot` back to the tiles.
     func takeBack(_ slot: Int) {
-        guard !busy else { return }
-        placed[slot] = nil
-    }
-
-    /// The word in the slots, with the riddle's spaces.
-    var attempt: String {
-        guard let riddle = theirs else { return "" }
-        let letters = slots.map { $0.letter ?? "" }
-        var words: [String] = []
-        var start = 0
-        for length in riddle.shape {
-            words.append(letters[start..<min(start + length, letters.count)].joined())
-            start += length
-        }
-        return words.joined(separator: " ")
-    }
-
-    @discardableResult
-    func submit() async -> Bool {
-        guard !busy, let sync, let riddle = theirs, !slots.contains(where: { $0.kind == .empty }) else { return false }
-        busy = true
-        defer { busy = false }
-        let guess = attempt
-        let key = unsentTry.flatMap { $0.guess == guess ? $0.key : nil } ?? IdempotencyKey.make()
-        unsent = false
-        do throws(TransportError) {
-            let answer = try await sync.guess(riddle.id, key, guess)
-            unsentTry = nil
-            if !answer.right {
-                placed = [:]
-                misses += 1
-            }
-            apply(answer.riddle)
-            return answer.right
-        } catch {
-            if case .api = error {
-                // The round ended meanwhile, on the other phone or by the drawer's side: the room's view is the truth.
-                unsentTry = nil
-                placed = [:]
-                await load()
-            } else {
-                unsentTry = (guess, key)
-                unsent = true
-            }
-            return false
-        }
+        store.send(.tileTakenBack(slot: slot))
     }
 
     func hint() async {
-        guard !busy, let sync, let riddle = theirs, canHint else { return }
-        busy = true
-        defer { busy = false }
-        unsent = false
-        do throws(TransportError) {
-            let hinted = try await sync.hint(riddle.id)
-            // The hint can take a placed tile away or fill its slot, so the guess starts again.
-            placed = [:]
-            apply(hinted)
-        } catch {
-            if case .api = error { await load() } else { unsent = true }
-        }
+        await act(.hintTapped)
     }
 
     func giveUp() async {
-        guard !busy, let sync, let riddle = theirs else { return }
-        busy = true
-        defer { busy = false }
-        unsent = false
-        do throws(TransportError) {
-            apply(try await sync.giveUp(riddle.id))
-        } catch {
-            if case .api = error { await load() } else { unsent = true }
-        }
+        await act(.giveUpTapped)
     }
 
     /// Leaves the ended round for the word picker.
     func drawNext() {
-        finished = nil
         offers = words.offers()
+        store.send(.drawNextTapped)
     }
 
     func shuffleOffers() {
@@ -225,103 +170,20 @@ final class DrawGuessModel {
     /// keeps the riddle's id.
     @discardableResult
     func send(word: String, png: Data, compact: CompactStrokes) async -> Bool {
-        guard let sync, let word = Self.riddleWord(word), !sending else { return false }
-        let id = draft.flatMap { $0.word == word ? $0.id : nil } ?? RiddleId.make()
-        draft = (word, id)
-        sending = true
-        unsent = false
-        defer { sending = false }
-        do throws(TransportError) {
-            let image = try await sync.upload(png)
-            apply(try await sync.send(SendRiddleRequest(id: id, word: word, compact: compact, image: image)))
-            draft = nil
-            return true
-        } catch {
-            if case .api = error {
-                // A riddle of this user's is still open, or the word wasn't one: the room's view says which.
-                draft = nil
-                await load()
-            } else {
-                unsent = true
-            }
-            return false
-        }
+        guard let word = Self.riddleWord(word) else { return false }
+        await act(.sendTapped(word: word, png: png, compact: compact, id: .make()))
+        return mine?.word == word
     }
 
-    // MARK: Merging
-
-    /// How far a riddle's round has come. Nothing in a round goes back, so a lower one is older news.
-    private static func progress(_ riddle: Riddle) -> [Int] {
-        [riddle.state == .open ? 0 : 1, riddle.tries, riddle.hints, riddle.revealed.count]
-    }
-
-    private static func newer(_ old: Riddle?, _ next: Riddle) -> Riddle {
-        guard let old else { return next }
-        return progress(next).lexicographicallyPrecedes(progress(old)) ? old : next
-    }
-
-    private var all: [Riddle] { (response?.open ?? []) + (response?.ended ?? []) }
-
-    private static func endedAt(_ riddle: Riddle) -> Int {
-        switch riddle.state {
-        case .open: riddle.at
-        case .solved(let at), .givenUp(let at): at
-        }
-    }
-
-    /// Takes the room's whole view, keeping anything newer this phone already has: a read that left before a try or a
-    /// socket frame can't undo it.
-    private func merge(_ next: RiddlesResponse) {
-        var known = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        for riddle in next.open + next.ended { known[riddle.id] = Self.newer(known[riddle.id], riddle) }
-        rebuild(known.values, series: next.series, best: next.best)
-    }
-
-    private func apply(_ riddle: Riddle) {
-        let old = all.first { $0.id == riddle.id }
-        let next = Self.newer(old, riddle)
-        var series = response?.series ?? 0
-        var best = response?.best ?? 0
-        if old?.state == .open, next.state != .open {
-            // The socket and the answers carry no series; the next read brings the room's.
-            switch next.state {
-            case .solved:
-                series += 1
-                best = max(best, series)
-            case .givenUp: series = 0
-            case .open: break
-            }
-            if next.drawer != viewer { finished = next }
-        }
-        var known = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-        known[next.id] = next
-        rebuild(known.values, series: series, best: best)
-    }
-
-    private func rebuild(_ riddles: some Collection<Riddle>, series: Int, best: Int) {
-        // One open riddle per drawer: a newer one from the same drawer means the older ended unseen.
-        var open: [UserId: Riddle] = [:]
-        for riddle in riddles where riddle.state == .open {
-            if let other = open[riddle.drawer], other.at >= riddle.at { continue }
-            open[riddle.drawer] = riddle
-        }
-        let ended = riddles.filter { $0.state != .open }.sorted { Self.endedAt($0) > Self.endedAt($1) }
-        response = RiddlesResponse(open: open.values.sorted { $0.at < $1.at }, ended: Array(ended.prefix(20)),
-                                   series: series, best: best)
+    /// Sends `event` and, if it started a request, waits for its answer.
+    private func act(_ event: DrawGuessMachine.Event) async {
+        let before = store.state
+        store.send(event)
+        guard store.state != before else { return }
+        await store.until { [self] in !busy && !sending }
     }
 
     // MARK: Rules
-
-    /// The tiles that stand in for revealed letters: for each, the first tile of that letter the hint didn't take away.
-    nonisolated static func spent(_ riddle: Riddle) -> Set<Int> {
-        var spent = Set(riddle.removed)
-        for letter in riddle.revealed {
-            if let tile = riddle.tiles.indices.first(where: { riddle.tiles[$0] == letter.letter && !spent.contains($0) }) {
-                spent.insert(tile)
-            }
-        }
-        return spent
-    }
 
     /// `text` as the room keeps a word (trimmed, lowercased), or nil when it can't be one: a to z with single spaces,
     /// at most 12 letters and 24 characters (`RiddleWord` on the server).
@@ -407,21 +269,6 @@ final class DrawGuessModel {
             left -= stroke.points.count
         }
         return shown
-    }
-
-    struct Slot: Equatable {
-        enum Kind: Equatable { case empty, revealed, placed(tile: Int) }
-
-        let index: Int
-        let letter: String?
-        let kind: Kind
-    }
-
-    struct Tile: Equatable, Identifiable {
-        let index: Int
-        let letter: String
-
-        var id: Int { index }
     }
 }
 
