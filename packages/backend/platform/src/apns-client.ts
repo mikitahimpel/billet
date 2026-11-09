@@ -1,7 +1,11 @@
 import { appleTeamId, signEs256 } from "./es256-jwt.ts";
 
 /** The alert topic, and the root of the other two. */
-export const appBundleId = "com.mikitahimpel.billet";
+export const appBundleId = "com.ourio.app";
+/** The first App Store app's bundle. A token from one of its installed builds is refused for
+ * `appBundleId` with `DeviceTokenNotForTopic`, and is sent again under this one, until the owner
+ * retires it. */
+export const legacyBundleId = "com.mikitahimpel.billet";
 
 export type ApnsPushType = "alert" | "widgets" | "liveactivity";
 export type ApnsEnvironment = "sandbox" | "production";
@@ -11,14 +15,14 @@ const hosts: Record<ApnsEnvironment, string> = {
   production: "https://api.push.apple.com",
 };
 
-export const topicOf = (pushType: ApnsPushType): string => {
+export const topicOf = (pushType: ApnsPushType, bundleId: string = appBundleId): string => {
   switch (pushType) {
     case "alert":
-      return appBundleId;
+      return bundleId;
     case "widgets":
-      return `${appBundleId}.push-type.widgets`;
+      return `${bundleId}.push-type.widgets`;
     case "liveactivity":
-      return `${appBundleId}.push-type.liveactivity`;
+      return `${bundleId}.push-type.liveactivity`;
   }
 };
 
@@ -99,10 +103,14 @@ export class ProviderTokens {
 export type ApnsFetch = (url: string, init: RequestInit) => Promise<Response>;
 
 /** Start and end of a Live Activity go at once (10). */
-const headersOf = (push: ApnsPush, providerToken: string): Record<string, string> => ({
+const headersOf = (
+  push: ApnsPush,
+  topic: string,
+  providerToken: string,
+): Record<string, string> => ({
   authorization: `bearer ${providerToken}`,
   "apns-push-type": push.pushType,
-  "apns-topic": topicOf(push.pushType),
+  "apns-topic": topic,
   // WidgetKit pushes are budgeted by the system either way; 5 lets APNs batch them with others.
   "apns-priority": push.pushType === "widgets" ? "5" : "10",
   "content-type": "application/json",
@@ -116,12 +124,25 @@ export const sendApns = async (
   tokens: ProviderTokens,
   fetcher: ApnsFetch = fetch,
 ): Promise<ApnsResult> => {
+  const result = await sendTo(appBundleId, push, credentials, tokens, fetcher);
+  return result._tag === "Unregistered" && result.reason === "DeviceTokenNotForTopic"
+    ? sendTo(legacyBundleId, push, credentials, tokens, fetcher)
+    : result;
+};
+
+const sendTo = async (
+  bundleId: string,
+  push: ApnsPush,
+  credentials: ApnsCredentials,
+  tokens: ProviderTokens,
+  fetcher: ApnsFetch,
+): Promise<ApnsResult> => {
   let response: Response;
   try {
     const providerToken = await tokens.token(credentials);
     response = await fetcher(`${hosts[push.environment]}/3/device/${push.token}`, {
       method: "POST",
-      headers: headersOf(push, providerToken),
+      headers: headersOf(push, topicOf(push.pushType, bundleId), providerToken),
       body: JSON.stringify(push.body),
     });
   } catch (error) {

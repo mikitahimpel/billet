@@ -21,6 +21,16 @@ The run ends by printing one line, `build <number>: <processing state>`, also sh
 summary. `VALID` means testers can install it. `PROCESSING` means App Store Connect has the build and
 is still working on it, which can take up to half an hour after the run ends.
 
+### The first run for a new app
+
+The app is `com.ourio.app` (App Store Connect record "Ourio", SKU `ourio`), with the extensions
+`com.ourio.app.widget`, `.notification-service` and `.share` and the app group
+`group.com.ourio.app`. The owner registers those App IDs and the record; no provisioning profile
+exists for them before the first run. Automatic signing creates the profiles through the API key on
+that run (`-allowProvisioningUpdates`), so the key needs its Admin role (see below). A run that
+fails with "No profiles for 'com.ourio.app…'" on a fresh app is missing an App ID or a capability
+(App Groups, Push Notifications, Sign in with Apple, Associated Domains) on one of them.
+
 ## What it does
 
 1. Fails straight away, naming them, if any of the four secrets is missing.
@@ -120,7 +130,7 @@ If a key leaks, revoke it first, then do steps 1 to 4.
 To sign the archive, Xcode makes a new Apple Development certificate through the API key on every
 run ("Created via API"), with its private key in the run's keychain. The team may hold only a few.
 Once they are used up, the archive fails with "Choose a certificate to revoke. Your account has
-reached the maximum number of certificates" and "No profiles for 'com.mikitahimpel.billet.…'".
+reached the maximum number of certificates" and "No profiles for 'com.ourio.app.…'".
 
 So the step "Revoke this run's development certificate" runs at the end of every run, also after a
 failure:

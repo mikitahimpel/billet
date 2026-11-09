@@ -146,7 +146,8 @@ stage binds them for now. Before `prod` serves real accounts, the owner:
 
 1. adds the fields `APPLE_SIGN_IN_KEY` and `APPLE_SIGN_IN_KEY_ID` to an `Apple` item in
    `Billet Release` (the same key works: it is the team's Sign in with Apple key, with
-   `com.mikitahimpel.billet` as its primary App ID);
+   `com.ourio.app` as its primary App ID; the Worker still accepts tokens and revokes codes for
+   the first app, `com.mikitahimpel.billet`, until the owner retires it);
 2. adds both `pass://Billet Release/Apple/...` lines to `.env.pass.release`;
 3. moves the two bindings in `alchemy.run.ts` out of the `dev`-only block.
 

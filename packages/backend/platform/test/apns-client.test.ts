@@ -108,19 +108,19 @@ describe("sending a push", () => {
   };
 
   it.each([
-    ["alert", "production", "https://api.push.apple.com", "com.mikitahimpel.billet", "10"],
+    ["alert", "production", "https://api.push.apple.com", "com.ourio.app", "10"],
     [
       "widgets",
       "sandbox",
       "https://api.sandbox.push.apple.com",
-      "com.mikitahimpel.billet.push-type.widgets",
+      "com.ourio.app.push-type.widgets",
       "5",
     ],
     [
       "liveactivity",
       "production",
       "https://api.push.apple.com",
-      "com.mikitahimpel.billet.push-type.liveactivity",
+      "com.ourio.app.push-type.liveactivity",
       "10",
     ],
   ] as const)(
@@ -156,6 +156,38 @@ describe("sending a push", () => {
       _tag: "Unregistered",
       reason: "Unregistered",
     });
+  });
+
+  it("sends a token the first app registered again under its topic", async () => {
+    const { pem } = await throwawayKey();
+    const calls: Array<string> = [];
+    const fetcher = async (_url: string, init: RequestInit) => {
+      const topic = (init.headers as Record<string, string>)["apns-topic"] ?? "";
+      calls.push(topic);
+      return topic.startsWith("com.mikitahimpel.billet")
+        ? new Response(null, { status: 200 })
+        : new Response(JSON.stringify({ reason: "DeviceTokenNotForTopic" }), { status: 400 });
+    };
+    const result = await sendApns(
+      push({ pushType: "widgets" }),
+      { key: pem, keyId: "K" },
+      new ProviderTokens(() => 1),
+      fetcher,
+    );
+    expect(result).toEqual({ _tag: "Delivered" });
+    expect(calls).toEqual([
+      "com.ourio.app.push-type.widgets",
+      "com.mikitahimpel.billet.push-type.widgets",
+    ]);
+  });
+
+  it("drops a token that is for neither app", async () => {
+    const { pem } = await throwawayKey();
+    const { calls, fetcher } = capture(400, { reason: "DeviceTokenNotForTopic" });
+    expect(
+      await sendApns(push(), { key: pem, keyId: "K" }, new ProviderTokens(() => 1), fetcher),
+    ).toEqual({ _tag: "Unregistered", reason: "DeviceTokenNotForTopic" });
+    expect(calls).toHaveLength(2);
   });
 
   it("signs a new provider token after APNs calls the old one expired", async () => {

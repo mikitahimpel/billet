@@ -2,6 +2,6 @@
   "balance": 1234,
   "coins": 550,
   "duplicate": true,
-  "productId": "com.mikitahimpel.billet.coins.550",
+  "productId": "com.ourio.app.coins.550",
   "transactionId": "2000000812345678"
 }

@@ -197,12 +197,12 @@ describe("the read-only agent API", () => {
   it("answers the same purchases the panel shows, from D1", async () => {
     await env.DB.batch([
       env.DB.prepare(
-        `INSERT INTO purchases VALUES ('tx-1', 'tx-1', 'pair-1', 'com.mikitahimpel.billet.coins.100',
+        `INSERT INTO purchases VALUES ('tx-1', 'tx-1', 'pair-1', 'com.ourio.app.coins.100',
          100, 'Sandbox', 'refunded', 1, 1, 1000, 1000, 2000)`,
       ),
       env.DB.prepare(
         `INSERT INTO coin_ledger VALUES ('purchase:tx-1', 'pair-1', 'purchase', 100,
-         'com.mikitahimpel.billet.coins.100', 'tx-1', 1000)`,
+         'com.ourio.app.coins.100', 'tx-1', 1000)`,
       ),
     ]);
     const agent = await (

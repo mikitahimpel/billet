@@ -109,7 +109,7 @@ const handlerFor = (email: string) =>
                         originalTransactionId: "2000000900000001",
                         transactionId: "2000000900000001",
                         ownerId: "pair-1",
-                        productId: "com.mikitahimpel.billet.coins.100",
+                        productId: "com.ourio.app.coins.100",
                         coins: 100,
                         environment: "Sandbox",
                         status: "refunded",
