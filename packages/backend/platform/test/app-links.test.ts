@@ -2,17 +2,24 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { respondApi } from "../src/api-fetch.ts";
-import { appId, codeOfInviteLink, respondAppLink } from "../src/app-links.ts";
+import { codeOfInviteLink, respondAppLink } from "../src/app-links.ts";
 import { limits } from "../src/rate-limit.ts";
 import { resetDirectory } from "./directory-migrations.ts";
 import { testExperiments } from "./test-experiments.ts";
 
 describe("Universal Links", () => {
-  it("serves the association file for invite links", async () => {
+  it("serves the association file for invite links, to both apps", async () => {
     const response = respondAppLink("/.well-known/apple-app-site-association");
     expect(response?.headers.get("content-type")).toBe("application/json");
     expect(await response?.json()).toEqual({
-      applinks: { details: [{ appIDs: [appId], components: [{ "/": "/i/*" }] }] },
+      applinks: {
+        details: [
+          {
+            appIDs: ["2666YPBJTB.com.ourio.app", "2666YPBJTB.com.mikitahimpel.billet"],
+            components: [{ "/": "/i/*" }],
+          },
+        ],
+      },
     });
   });
 

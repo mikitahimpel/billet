@@ -20,7 +20,7 @@ struct OurioWidgetBundle: WidgetBundle {
 /// Large: Mochi's room on top, two blocks of the couple's choice below.
 struct CornerWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "com.mikitahimpel.billet.corner", intent: CornerConfiguration.self,
+        AppIntentConfiguration(kind: "com.ourio.app.corner", intent: CornerConfiguration.self,
                                provider: OurioProvider<CornerConfiguration>()) { entry in
             VStack(spacing: 0) {
                 Link(destination: DeepLink.room.url) { MochiRoom(snapshot: entry.snapshot) }
@@ -45,7 +45,7 @@ struct CornerWidget: Widget {
 /// Medium: Mochi next to the smart slot or a fixed block.
 struct MochiWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "com.mikitahimpel.billet.mochi", intent: MochiConfiguration.self,
+        AppIntentConfiguration(kind: "com.ourio.app.mochi", intent: MochiConfiguration.self,
                                provider: OurioProvider<MochiConfiguration>()) { entry in
             HStack(spacing: 0) {
                 Link(destination: DeepLink.room.url) { MochiRoom(snapshot: entry.snapshot, showsCaption: false) }
@@ -64,7 +64,7 @@ struct MochiWidget: Widget {
 /// Small: one block. Medium: two side by side.
 struct BlockWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "com.mikitahimpel.billet.block", intent: ModuleConfiguration.self,
+        AppIntentConfiguration(kind: "com.ourio.app.block", intent: ModuleConfiguration.self,
                                provider: OurioProvider<ModuleConfiguration>()) { entry in
             BlockWidgetView(entry: entry)
                 .containerBackground(Ink.screen, for: .widget)

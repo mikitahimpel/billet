@@ -13,7 +13,7 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.mikitahimpel.billet.coins.100",
+      "productID": "com.ourio.app.coins.100",
       "referenceName": "Coins 100",
       "type": "Consumable"
     },
@@ -28,7 +28,7 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.mikitahimpel.billet.coins.550",
+      "productID": "com.ourio.app.coins.550",
       "referenceName": "Coins 550",
       "type": "Consumable"
     },
@@ -43,7 +43,7 @@
           "locale": "en_US"
         }
       ],
-      "productID": "com.mikitahimpel.billet.coins.1200",
+      "productID": "com.ourio.app.coins.1200",
       "referenceName": "Coins 1200",
       "type": "Consumable"
     }

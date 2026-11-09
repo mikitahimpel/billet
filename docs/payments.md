@@ -44,9 +44,12 @@ are **placeholders** until the owner sets them:
 
 | Product id | Coins | Price (USD) |
 | --- | --- | --- |
-| `com.mikitahimpel.billet.coins.100` | 100 | 0.99 |
-| `com.mikitahimpel.billet.coins.550` | 550 | 4.99 |
-| `com.mikitahimpel.billet.coins.1200` | 1200 | 9.99 |
+| `com.ourio.app.coins.100` | 100 | 0.99 |
+| `com.ourio.app.coins.550` | 550 | 4.99 |
+| `com.ourio.app.coins.1200` | 1200 | 9.99 |
+
+They belong to the Ourio app record in App Store Connect (`com.ourio.app`, SKU `ourio`), where the
+owner creates them as consumables.
 
 The app's copy (`packages/ios/payments/Sources/Payments/Resources/coin-packs.json`) and the Xcode StoreKit
 configuration (`apps/ios/Ourio.storekit`) must sell
@@ -239,8 +242,13 @@ needs by hand, and the signatures go through `effect/crypto`. The trusted roots 
 (`PaymentsConfig`), so tests build their own chains (`test/app-store-signer.ts`), shaped like
 Apple's.
 
-Then the payload must name the bundle `com.mikitahimpel.billet`, a known pack, type `Consumable`, no
+Then the payload must name the bundle `com.ourio.app`, a known pack, type `Consumable`, no
 `revocationDate`, and an environment the stage accepts.
+
+Until the owner retires it, the first App Store app is accepted as well: bundle
+`com.mikitahimpel.billet`, products `com.mikitahimpel.billet.coins.<n>`. Such a product credits the
+same pack, under its `com.ourio.app` id. `legacyBundleId` in `contracts-domain/coin-packs.ts` is
+the one place to remove.
 
 ### Stages
 
