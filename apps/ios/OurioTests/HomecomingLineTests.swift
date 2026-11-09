@@ -23,8 +23,8 @@ import Testing
     }
 
     @Test func aMealIsTheNewsOverPetsAndGames() {
-        let care = [Self.event(.pet, hour: 8), Self.event(.feed, hour: 9, minute: 5), Self.event(.play, hour: 12)]
-        #expect(Self.line(care) == "Ilya fed Mochi at 09:05")
+        let care = [Self.event(.pet, hour: 8), Self.event(.feed, hour: 10, minute: 5), Self.event(.play, hour: 12)]
+        #expect(Self.line(care) == "Ilya fed Mochi at 10:05")
     }
 
     @Test func theLatestOfTheKindIsTold() {
