@@ -11,12 +11,27 @@ struct AddTitleSheet: View {
     @Environment(ServerSession.self) private var session: ServerSession?
     @Environment(\.dismiss) private var dismiss
     @State private var query = ""
-    @State private var results: [TitleSummary] = []
-    @State private var searching = false
-    @State private var failed = false
+    @State private var search = Search.idle
     @FocusState private var focused: Bool
 
+    /// TMDB's answer for the text typed. A failure shows as one, never as the last query's results.
+    private enum Search: Equatable {
+        case idle
+        /// `shown` stays on screen until the answer comes.
+        case searching(shown: [TitleSummary])
+        case found([TitleSummary])
+        case failed
+    }
+
     private var trimmed: String { query.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var results: [TitleSummary] {
+        switch search {
+        case .searching(let shown): shown
+        case .found(let found): found
+        case .idle, .failed: []
+        }
+    }
 
     var body: some View {
         BilletSheet("Add to watch", scrolls: false) {
@@ -30,7 +45,7 @@ struct AddTitleSheet: View {
                     .focused($focused)
                     .submitLabel(.search)
                     .autocorrectionDisabled()
-                if searching { ProgressView() }
+                if case .searching = search { ProgressView() }
             }
             .fieldSurface()
             .padding(.horizontal, Space.gutter)
@@ -46,7 +61,7 @@ struct AddTitleSheet: View {
                             }
                         }
                         .cardSurface()
-                    } else if failed {
+                    } else if search == .failed {
                         note("Search isn't reachable right now. You can still add it as text.")
                     } else if session?.titles == nil {
                         note("Search needs the server. You can still add it as text.")
@@ -62,28 +77,26 @@ struct AddTitleSheet: View {
         }
         }
         .onAppear { focused = true }
-        .task(id: trimmed) { await search(trimmed) }
+        .task(id: trimmed) { await find(trimmed) }
     }
 
-    private func search(_ text: String) async {
+    private func find(_ text: String) async {
         guard let source = session?.titles, !text.isEmpty else {
-            results = []
-            failed = false
+            search = .idle
             return
         }
         // Waits for a pause in the typing; a new letter cancels this task.
         try? await Task.sleep(for: .milliseconds(350))
         guard !Task.isCancelled else { return }
-        searching = true
-        defer { searching = false }
+        // A cancelled search leaves the state to the one that replaced it.
+        search = .searching(shown: results)
         do throws(TransportError) {
             let found = try await source.search(text)
             guard !Task.isCancelled else { return }
-            results = found
-            failed = false
+            search = .found(found)
         } catch {
             guard !Task.isCancelled else { return }
-            failed = true
+            search = .failed
         }
     }
 

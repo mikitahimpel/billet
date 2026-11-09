@@ -36,6 +36,21 @@ import Wire
         #expect(reads.count == 0)
     }
 
+    @Test @MainActor func aSecondPackWaitsForTheBuyOnItsWay() async throws {
+        let store = HeldStore()
+        let model = CoinPacksModel(payments: FakePayments(result: .succeed, held: store)) {}
+        await model.load()
+        let first = try #require(model.packs.first)
+        let buying = Task { await model.buy(first) }
+        while store.held == nil { await Task.yield() }
+        await model.buy(try #require(model.packs.last))
+        #expect(model.status == .buying(first.id))
+        store.held?.resume()
+        await buying.value
+        #expect(model.status == .bought(coins: 100))
+        #expect(store.purchases == 1)
+    }
+
     @Test @MainActor func aStoreThatCantBeReachedShowsAnEmptyShelfAndCanTryAgain() async {
         let down = CoinPacksModel(payments: FakePayments(result: .succeed, shelf: .fail(.unavailable))) {}
         #expect(down.shelf == .loading)
@@ -82,6 +97,12 @@ import Wire
     }
 }
 
+/// A store sheet the buyer hasn't answered yet: each purchase waits in `held` until the test resumes it.
+nonisolated private final class HeldStore: @unchecked Sendable {
+    var purchases = 0
+    var held: CheckedContinuation<Void, Never>?
+}
+
 @MainActor private final class Counter {
     var count = 0
 }
@@ -101,6 +122,7 @@ nonisolated private struct FakePayments: Payments {
 
     let result: Outcome
     var shelf = Shelf.standard
+    var held: HeldStore?
 
     func products() async throws(PaymentsError) -> [StampPack] {
         switch shelf {
@@ -111,7 +133,13 @@ nonisolated private struct FakePayments: Payments {
     }
 
     func purchase(_ pack: StampPack) async throws(PaymentsError) -> PurchaseResult {
-        switch result {
+        // Only the first purchase waits, so a second one that slips past the guard returns and is counted
+        // instead of hanging the test.
+        if let held {
+            held.purchases += 1
+            if held.purchases == 1 { await withCheckedContinuation { held.held = $0 } }
+        }
+        return switch result {
         case .succeed:
             .purchased(StampCredit(
                 entryID: "purchase:t1", transactionID: "t1", productID: pack.id, stamps: pack.stamps,

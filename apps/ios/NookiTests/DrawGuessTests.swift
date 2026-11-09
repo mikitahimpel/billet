@@ -191,6 +191,19 @@ struct DrawGuessTests {
                                       endedMine: false) == "Solved! Your turn to draw")
     }
 
+    @Test func theNextRiddleStartsWithNoTilesPlaced() async {
+        let room = FakeRiddleRoom()
+        room.add("cat", by: partner, tiles: catTiles)
+        let model = DrawGuessModel(sync: room.sync, viewer: me, words: words)
+        await model.load()
+        for tile in [1, 3, 6] { await model.place(tile) }
+        model.drawNext()
+        model.changed(room.add("cats", by: partner, tiles: catTiles, at: 2))
+        #expect(model.phase == .guess)
+        #expect(model.slots.map(\.kind) == [.empty, .empty, .empty, .empty])
+        #expect(model.tiles.count == 12)
+    }
+
     @Test func givingUpEndsTheRoundAndShowsTheWord() async {
         let room = FakeRiddleRoom()
         room.add("cat", by: partner, tiles: catTiles)
