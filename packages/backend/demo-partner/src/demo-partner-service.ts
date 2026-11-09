@@ -18,9 +18,7 @@ const unavailable =
     new DemoPartnerUnavailable({ reason, cause });
 
 /**
- * A partner for testing the app alone, on the dev stage: a user with no device and no way to sign
- * in, paired with its owner through an invite like anyone else, so everything a new pair gets, it
- * gets too. Its room acts for it now and then (`DemoBots`), as a gentle partner would.
+ * A dev-stage partner for testing alone: a user with no device, paired by invite like anyone.
  */
 export class DemoPartnerService extends Context.Service<
   DemoPartnerService,

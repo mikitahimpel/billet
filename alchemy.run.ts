@@ -1,9 +1,6 @@
-// Infrastructure for billet, declared with Alchemy v2 (beta). See docs/alchemy.md.
-//
-// Nothing personal lives here: physical names derive from the stack, the stage (`--stage` or
-// ALCHEMY_STAGE) and the logical ids below. The Cloudflare account comes from CLOUDFLARE_ACCOUNT_ID
-// and CLOUDFLARE_API_TOKEN, read only by a real deploy. `alchemy dev` emulates every resource here
-// locally and needs no credentials.
+// Alchemy v2 (beta), docs/alchemy.md. Physical names derive from the stack, the stage and the
+// logical ids. CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are read only by a real deploy;
+// `alchemy dev` emulates every resource locally and needs no credentials.
 import * as Cloudflare from "@alchemy.run/cloudflare";
 import { providers as drizzleProviders } from "@alchemy.run/drizzle/Providers";
 import { Schema } from "@alchemy.run/drizzle/Schema";
@@ -18,10 +15,9 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as D1State from "./alchemy-d1-state.ts";
 
-// The tables of the cross-couple directory. A deploy applies the committed migrations.
-// `pnpm db:generate` writes them, and a test fails if a schema change has none.
-// Import the subpaths above, not the package root: that pulls `@effect/sql-d1`, which needs effect
-// 4.1, into this effect 4.0 process.
+// A deploy applies the committed migrations; a test fails if a schema change has none. Import the
+// subpaths above, not the package root: that pulls `@effect/sql-d1`, which needs effect 4.1, into
+// this effect 4.0 process.
 export const DirectorySchema = Schema("DirectorySchema", {
   schema: "./packages/backend/platform/src/directory-schema.ts",
   out: "./packages/backend/platform/migrations/directory",
@@ -121,9 +117,8 @@ export default Alchemy.Stack(
         // Shown in the admin panel's top bar, so the owner always sees which stage they change.
         // Payments read it too: only `dev` takes Xcode and mock purchases (docs/payments.md).
         STAGE: stage,
-        // The Cloudflare Access application in front of /admin (docs/admin.md). Not secret, but
-        // kept out of the public repo: they come from the deploy's environment. Empty keeps the
-        // panel closed to everyone.
+        // The Access application in front of /admin (docs/admin.md): not secret, but kept out of
+        // the public repo. Empty keeps the panel closed to everyone.
         ACCESS_TEAM_DOMAIN: Config.String("ACCESS_TEAM_DOMAIN").pipe(Config.withDefault("")),
         ACCESS_AUD: Config.String("ACCESS_AUD").pipe(Config.withDefault("")),
         // The Access application that lets agents' service tokens read /admin/api/agent. Empty
@@ -138,7 +133,7 @@ export default Alchemy.Stack(
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
         // The Sign in with Apple key revokes a deleted account's Apple token. Only the dev vault
-        // has it so far; prod needs it in "Billet Release" first (docs/alchemy.md).
+        // has it; prod needs it in "Billet Release" first (docs/alchemy.md).
         ...(stage === "dev"
           ? {
               DEMO_ROOM: Cloudflare.DurableObject("DemoRoom"),

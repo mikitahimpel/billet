@@ -11,11 +11,7 @@ const decodePairId = Schema.decodeUnknownOption(PairId);
 const paymentsKey = "payments";
 
 /**
- * `PaymentsSwitch` from the `payments` flag, as `FlagsService` would deliver it to the pair now.
- * Only the variant `on` opens the purchase routes: a draft without an override, a killed flag and a
- * pair outside its targeting are all off. A demo room has no pair, so it is on only when the flag
- * is on for everyone. The dev stage (its dev extras on) sells to everyone whatever the flag says,
- * so coin packs can be tried there before the flag is on anywhere.
+ * Only `on` opens purchases; a demo room needs it on for everyone; the dev stage always sells.
  */
 export const PaymentsSwitchLive: Layer.Layer<PaymentsSwitch, never, FlagsService | PaymentsConfig> =
   Layer.effect(

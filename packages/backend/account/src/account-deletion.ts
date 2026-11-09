@@ -11,17 +11,13 @@ import { AppleTokenRevoker } from "./apple-token-revoker.ts";
 const unavailable = (reason: string) => () => new AccountUnavailable({ reason });
 
 /**
- * Deletes an account and everything it owns (App Store guideline 5.1.1(v)). The pair's cat and its
- * activity go with it, as the pair is over; the partner keeps their own notes, is unpaired, and is
- * told why the next time the app asks.
+ * App Store guideline 5.1.1(v). The pair's cat goes too; the partner keeps their notes.
  */
 export class AccountDeletion extends Context.Service<
   AccountDeletion,
   {
     /**
-     * Revokes the Apple token if the app sent a code, then deletes the user's notes and images in
-     * every room they were in, then the user in one atomic write. A failure before that write
-     * leaves the account in place, so the app can try again; nothing deleted comes back.
+     * A failure before the final atomic write leaves the account, so the app can retry.
      */
     readonly deleteAccount: (
       userId: UserId,
@@ -49,7 +45,6 @@ export class AccountDeletion extends Context.Service<
       ) {
         const notes = yield* rooms.forgetMember(pairId, userId);
         const uploaded = yield* media.uploadedBy(pairId, userId);
-        // A text note has no image to remove.
         const images = notes.flatMap(({ note }) => (note._tag === "Text" ? [] : [note.image]));
         const keys = new Set<MediaKey>([...uploaded, ...images]);
         yield* media.remove([...keys]);
@@ -85,9 +80,8 @@ export class AccountDeletion extends Context.Service<
 
         yield* repository.erase({ userId, partner, at: yield* Clock.currentTimeMillis });
 
-        // A note sent between clearing the room and the erase would outlive the account, and a
-        // socket may have reconnected in that window. The user can no longer sign in, so one more
-        // pass catches both; if it fails, the log says so and the deletion still stands.
+        // A note or socket reconnect between clearing the room and the erase would outlive the
+        // account; one more pass catches both. Its failure is logged and the deletion stands.
         if (Option.isSome(current)) {
           yield* clearRoom(current.value, userId).pipe(
             Effect.catchCause(() => Effect.logWarning("account deletion follow-up failed")),

@@ -74,8 +74,6 @@ export class DioramaScene extends CatRoom {
     this.tickMotes(dt);
   }
 
-  // MARK: - Structure
-
   buildFloor() {
     const pivot = this.pivot;
     box(pivot, 1.14, 0.1, 1.14, 0.03, Clay.matte(Tone.woodDark), [-0.01, -0.05, -0.01]);
@@ -183,8 +181,6 @@ export class DioramaScene extends CatRoom {
       this.bulbs.push(sphere(this.walls, 0.011, material, [-0.47, top - sag, -0.47 + t * 0.94]));
     }
   }
-
-  // MARK: - Furniture
 
   buildRug() {
     cylinder(this.pivot, 0.006, 0.33, Clay.matte(Tone.rugEdge, 1), [0.0, 0.016, 0.04]);

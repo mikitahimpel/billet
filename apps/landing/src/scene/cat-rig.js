@@ -1,6 +1,5 @@
-// Mochi's skeletons: a two-part spine, head with ears, tail and, standing, two bones per leg, skinned by Spark's dual
-// quaternions. Bones, eyes and per-splat weights come from the generation pipeline (generate/rigs/<name>.json, bound
-// by generate/skin.py), the same files the app reads.
+// Skinned by Spark's dual quaternions. Bones, eyes and per-splat weights come from
+// generate/rigs/<name>.json (bound by generate/skin.py), the same files the app reads.
 import * as THREE from "three";
 import { SplatSkinning } from "@sparkjsdev/spark";
 import { solveLeg, legOrder } from "./cat-gait.js";
@@ -12,7 +11,6 @@ export class Pose {
     this.t = t;
   }
 
-  /** Rotation by q about a pivot point. */
   static about(pivot, q) {
     return new Pose(q.clone(), pivot.clone().sub(pivot.clone().applyQuaternion(q)));
   }
@@ -34,7 +32,6 @@ export class Pose {
     return p.clone().applyQuaternion(this.q).add(this.t);
   }
 
-  /** `t` of the way from this to `other`. */
   mix(other, t) {
     return new Pose(this.q.clone().slerp(other.q, t), this.t.clone().lerp(other.t, t));
   }
@@ -44,8 +41,8 @@ const axisX = new THREE.Vector3(1, 0, 0);
 const axisY = new THREE.Vector3(0, 1, 0);
 const axisZ = new THREE.Vector3(0, 0, 1);
 const turn = (axis, angle) => new THREE.Quaternion().setFromAxisAngle(axis, angle);
-// Radians each lid swings from open to shut: the upper rim (6.5 mm above the eye's middle, 12 mm before the hinge)
-// and the lower one (7.5 mm below) meet 2 mm under the middle, the upper lid doing most of the work.
+// Radians each lid swings shut: the upper rim (6.5 mm above the eye's middle, 12 mm before the
+// hinge) and the lower (7.5 mm below) meet 2 mm under the middle.
 const lidSwing = { upper: 0.7, lower: 0.42 };
 
 export class CatRig {
@@ -64,7 +61,7 @@ export class CatRig {
     this.tailBones = rig.bones
       .filter((b) => b.name.startsWith("tail"))
       .map((b) => this.bone[b.name]);
-    // Each leg it has: where it leaves the body, the elbow or knee, and the paw's center on the floor.
+    // `paw` is the paw's center on the floor.
     this.legs = Object.fromEntries(
       legOrder
         .filter((name) => `${name}Upper` in this.bone)
@@ -86,7 +83,7 @@ export class CatRig {
     this.eyesCenter = new THREE.Vector3(...rig.eyes);
     this.headPose = new Pose();
     this.hipsPose = new Pose();
-    // Set by the motion each frame, in model space. `feet` are where the paws should be; a leg that cannot reach
+    // Set by the motion each frame, in model space. A leg that cannot reach its `feet` point
     // stretches toward it.
     this.pose = {
       lift: 0,
@@ -151,11 +148,9 @@ export class CatRig {
     if (!this.ready) return;
     const p = this.pose;
     const { bone: Bone, spineMid, neck, ears, legs } = this;
-    // The whole body pitches nose up (+) and rolls about its middle, then rises by `lift` and moves back by `back`;
-    // the spine then sags by `bend`, chest and rump both up for positive values, and the rump swings by `wiggle` to her
-    // left (+) about the spine's middle. `chestMove` and `hipsMove` are laid over the result in model space. The head
-    // turns on the neck, hung `headSeat` of the way from the chest to where the seated skeleton holds it, and then
-    // moves by `headShift`, in model space.
+    // Body pitches nose up (+), rolls, rises, moves back; +`bend` lifts chest and rump, +`wiggle`
+    // swings the rump to her left. The head hangs `headSeat` of the way from the chest to the
+    // seated skeleton's hold. `*Move` and `headShift` apply last, in model space.
     const body = Pose.about(spineMid, turn(axisX, p.pitch).multiply(turn(axisZ, p.roll)));
     body.t.y += p.lift;
     body.t.z += p.back;
@@ -176,7 +171,7 @@ export class CatRig {
     set(Bone.chest, chest);
     set(Bone.hips, hips);
     set(Bone.head, head);
-    // An ear swivels its opening out toward its own side (`earTurn`), folds back with `earsBack` and flicks outward.
+    // `earTurn` swivels the opening out toward its own side; the flick goes outward.
     const ear = (side, sign) =>
       Pose.about(
         ears[`ear${side}`],
@@ -186,8 +181,7 @@ export class CatRig {
       ).under(head);
     set(Bone.earLeft, ear("Left", 1));
     set(Bone.earRight, ear("Right", -1));
-    // The lids are the fur above and below an eye, swung over it about a hinge behind the eye until they meet; 1 shuts
-    // them.
+    // Lids are the fur above and below an eye, swung about a hinge behind it; 1 shuts them.
     for (const lid of ["lidLeft", "lidRight"]) {
       if (!(lid in Bone)) continue;
       set(
@@ -259,7 +253,7 @@ export function noise(x, seed = 0) {
   return 2 * lerp(a, b, f * f * f * (f * (f * 6 - 15) + 10));
 }
 
-/** Moves `state[key]` toward `goal` as a spring of angular frequency `w` and damping ratio `zeta`, in 120 Hz substeps. */
+/** Spring toward `goal`: angular frequency `w`, damping ratio `zeta`, in 120 Hz substeps. */
 function spring(state, speed, key, goal, w, zeta, dt) {
   const n = Math.ceil(dt * 120);
   const h = dt / n;
@@ -271,18 +265,9 @@ function spring(state, speed, key, goal, w, zeta, dt) {
 
 const earKeys = ["earLeft", "earRight", "earsBack", "earTurnLeft", "earTurnRight"];
 
-/**
- * What the cat does at rest: looks around on its own, follows the pointer when it is near, checks on whoever watches,
- * twitches its ears, waves its tail, washes its chest now and then, and leans into a pet with ears back and a happy
- * head tilt. It looks the way a cat does, eyes first: the head snaps after them, overshoots a little and holds. Now and
- * then an ear swivels toward a sound she alone hears, she tips her head back in a yawn, and left alone for a while she
- * flicks or curls the tip of her tail. She blinks every few seconds and with each big turn of her head, narrows her
- * eyes while petted, looks up and slow-blinks after a pet, and slow-blinks at someone who lingers. Her ears are
- * springs: they drift on their own, swing their openings to sounds, point at the pointer and lag her head's turns.
- * A mood drives all of it: `energy` drains at rest and makes her drowsy when low, `interest` rises with anything going
- * on and makes her quick and alert, `contentment` grows with pets and softens her eyes and tail. Its values ease toward
- * their targets; whoever poses the rig blends them in.
- */
+/** What the cat does at rest, driven by a mood: `energy` drains at rest (drowsy when low),
+ * `interest` rises with anything going on, `contentment` grows with pets. Values ease toward
+ * their targets; whoever poses the rig blends them in. */
 export class CatBehavior {
   constructor(rig) {
     this.rig = rig;
@@ -360,7 +345,6 @@ export class CatBehavior {
     this.stir(0.25);
   }
 
-  /** Wakes her up by `amount` of her energy. */
   stir(amount) {
     this.mood.energy = Math.min(1, this.mood.energy + amount);
   }
@@ -379,8 +363,7 @@ export class CatBehavior {
     const left = t - Math.max(this.lastPointer, this.petStart);
     const near = this.lookTarget && t - this.lastPointer < 2 ? 1 : 0;
 
-    // Idle glances: every few seconds a new direction, sometimes with a curious head tilt; livelier, she glances
-    // more often and wider.
+    // Livelier, she glances more often and wider.
     if (t > this.nextGlance) {
       const reach = 0.6 + 0.6 * mood.energy;
       this.glance = {
@@ -414,7 +397,7 @@ export class CatBehavior {
       roll = 0;
     }
 
-    // Now and then she checks on whoever watches, more often when curious, and slow-blinks at them when content;
+    // She checks on whoever watches, more often when curious, slow-blinking when content;
     // right after a pet she looks up at them.
     if (t > this.nextCheck) {
       if (this.viewer && Math.random() < 0.3 + 0.5 * mood.interest) {
@@ -434,8 +417,8 @@ export class CatBehavior {
     yaw = clamp(yaw, -0.6, 0.6);
     pitch = clamp(pitch, -0.25, 0.3);
 
-    // The eyes are on (yaw, pitch) at once; the head re-aims once they are far enough off it or have rested there,
-    // in smaller steps while following the pointer.
+    // The eyes are on (yaw, pitch) at once; the head re-aims once they are far enough off it or
+    // have rested there, in smaller steps while following the pointer.
     const aim = this.aim;
     const off = Math.hypot(yaw - aim.yaw, pitch - aim.pitch);
     if (off > (near ? 0.06 : 0.12) || (off > 0.03 && t - aim.time > 0.5)) {
@@ -455,8 +438,7 @@ export class CatBehavior {
     const drowse = (1 - smoothstep(mood.energy, 0.1, 0.35)) * (1 - heard) * (1 - near);
     this.drowse = drowse;
 
-    // Every 10-20 s she settles her weight a little differently, leaning to a side or forward, and holds it; her chest
-    // turns a little after her head.
+    // She shifts her weight now and then; her chest turns a little after her head.
     if (t > this.nextShift) {
       this.shift = { lean: random(-0.025, 0.025), forward: random(-0.01, 0.02) };
       this.nextShift = t + random(10, 20);
@@ -469,8 +451,7 @@ export class CatBehavior {
     const petting =
       p < 2 ? Math.sin((Math.min(p / 0.3, 1) * Math.PI) / 2) * (1 - smoothstep(p, 1.5, 2)) : 0;
 
-    // Grooming: every minute or so, awake and left alone, she washes her chest in short licks, head down and to a
-    // side, eyes half shut.
+    // Grooming: awake and left alone, she washes her chest in short licks, head down to a side.
     if (t > this.nextGroom) {
       if (left > 8 && drowse < 0.3)
         this.groom = { start: t, length: random(3, 5.5), side: Math.random() < 0.5 ? -1 : 1 };
@@ -499,8 +480,7 @@ export class CatBehavior {
       0.25 * heard * smoothstep(Math.abs(this.sound?.yaw ?? 0), 1.2, 2.2) +
       0.15 * washing;
 
-    // Interest jumps with anything going on and fades over several seconds; contentment grows with pets and slowly
-    // settles back.
+    // Interest jumps and fades over seconds; contentment grows with pets and slowly settles back.
     const lure = Math.max(near, heard, 0.6 * petting, 0.5 * checking);
     mood.interest +=
       (lure - mood.interest) * (1 - Math.exp(-dt * (lure > mood.interest ? 3 : 1 / 8)));
@@ -510,7 +490,7 @@ export class CatBehavior {
       1,
     );
 
-    // Ear twitches: one ear, quick flick out and back; more of them when she is curious.
+    // Ear twitches, more of them when she is curious.
     if (t > this.nextTwitch) {
       this.twitch = {
         start: t,
@@ -526,16 +506,15 @@ export class CatBehavior {
       if (this.twitch.both) target.earLeft = target.earRight = amount;
       else target[this.twitch.ear] = amount;
     }
-    // An ear swings ahead of the head toward where it turns (negative yaw is her left), and both lag the turn itself,
+    // An ear leads the head's turn (negative yaw is her left); both lag the turn itself,
     // one flaring as the other folds.
     const lead = Math.abs(aim.turn) > 0.2 ? 0.3 * bump(t, aim.time, 0.45) : 0;
     target[aim.turn < 0 ? "earLeft" : "earRight"] += lead;
     target.earLeft += 0.03 * this.speed.yaw;
     target.earRight -= 0.03 * this.speed.yaw;
 
-    // Ears drift on their own, each its own way; the one on a sound's side swings its opening round to it, the other
-    // following for a sound behind her. They point at the pointer, forward when she is curious, and spread out while
-    // petted, drowsy or content.
+    // The ear on a sound's side swings its opening to it, the other following for a sound
+    // behind her.
     const behind = smoothstep(Math.abs(this.sound?.yaw ?? 0), 1.2, 2.2);
     for (const [ear, seed] of [
       ["Left", 10],
@@ -552,9 +531,8 @@ export class CatBehavior {
         0.1 * mood.contentment;
     }
 
-    // Eyes: quick blinks, sometimes doubled, fewer when curious; half shut while petted or washing; a slow blink back
-    // at someone who has lingered a few seconds, after a pet, and now and then when content; heavy lids when drowsy,
-    // soft ones when content, and shut through a yawn.
+    // Blinks, sometimes doubled, also on each big head turn; slow blinks at someone who lingers,
+    // after a pet, and now and then when content.
     if (t > this.nextBlink || (aim.time === t && Math.abs(aim.turn) > 0.35)) {
       this.blinks.push(t);
       if (Math.random() < 0.2) this.blinks.push(t + 0.3);
@@ -589,9 +567,8 @@ export class CatBehavior {
     target.lidLeft = lid;
     target.lidRight = lid * (1 - 0.08 * drowse);
 
-    // Tail: a wave runs from the base to the tip, each joint a little later and wider than the last, its pace and
-    // size wandering; calmer when she is content, quicker when curious, the tip twitching then. Now and then the tip
-    // lifts, and it stays up while petted. Left alone, she flicks the tip sideways or curls it up for a while.
+    // Tail: a wave runs from base to tip, each joint a little later and wider than the last;
+    // left alone, she flicks the tip sideways or curls it up for a while.
     this.tailPhase += dt * 0.9 * (1 + 0.35 * noise(t * 0.15, 4)) * (1 + 0.5 * mood.interest);
     const swing = (1.3 - 0.6 * mood.contentment) * (1 + 0.3 * noise(t * 0.2, 5));
     const flick = Math.max(0, noise(t * 0.35, 6)) ** 3;
@@ -613,8 +590,8 @@ export class CatBehavior {
     else if (this.flick)
       target[`tailSway${last}`] += 0.5 * this.flick.side * bump(t, this.flick.start, 0.35);
 
-    // The head snaps after the eyes as a lightly damped spring, overshooting a little before it holds; the ears are
-    // looser springs still. The rest eases, tail lifts quicker, the body's weight slowly.
+    // The head snaps after the eyes as a lightly damped spring, overshooting before it holds; the
+    // ears are looser springs. The rest eases, tail lifts quicker, the body's weight slowly.
     for (const key of ["yaw", "pitch"])
       spring(this.state, this.speed, key, target[key], 11, 0.6, dt);
     for (const key of earKeys) spring(this.state, this.speed, key, target[key], 20, 0.35, dt);

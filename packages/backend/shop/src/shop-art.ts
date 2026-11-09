@@ -2,7 +2,6 @@ import { Context, Data, type Effect, type Option } from "effect";
 
 export type ShopArtType = "webp" | "png" | "jpg";
 
-/** The largest picture an upload may be. */
 export const shopArtMaxBytes = 1_048_576;
 
 const startsWith = (bytes: Uint8Array, prefix: ReadonlyArray<number>, at = 0) =>

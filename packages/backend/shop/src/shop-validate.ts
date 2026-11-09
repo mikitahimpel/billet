@@ -1,10 +1,6 @@
 import type { ShopCatalogItem } from "@billet/contracts-domain/shop-catalog";
 
-/**
- * The rules a catalog entry must keep beyond its shape, or a sentence saying which it breaks. An
- * ink is sold under its own id and never discounted into the deals draw; a sale is a window with
- * an end after its start.
- */
+/** The rule a catalog entry breaks beyond its shape, or undefined. */
 export const shopItemProblem = (item: ShopCatalogItem): string | undefined => {
   if (item.kind === "ink" && !item.id.startsWith("ink-")) return "An ink's id starts with ink-.";
   if (item.kind !== "ink" && item.id.startsWith("ink-"))

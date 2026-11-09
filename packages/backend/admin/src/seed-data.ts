@@ -2,12 +2,7 @@ import type { MetricEventName } from "@billet/contracts-domain/metrics";
 import { addDays } from "@billet/backend-metrics/funnel";
 
 /**
- * Made-up pairs for the admin panel, across ten weeks: who paired when, which variant they got,
- * which build and system they ran, and what they did each day. Deterministic: the same seed and
- * day give the same rows, so a test can check a view against a hand-written SQL query over them.
- *
- * Every id starts with `seed-`, so the rows can be told apart from real ones and removed
- * (`seedCleanupSql`). Nothing here is a person: no name, no note, no Apple subject.
+ * Deterministic made-up pairs. Every id starts with `seed-`, so `seedCleanupSql` can remove them.
  */
 
 export interface SeedOptions {
@@ -15,7 +10,6 @@ export interface SeedOptions {
   readonly today: string;
   /** How many weeks of pairs, oldest first. Ten by default. */
   readonly weeks?: number;
-  /** The PRNG seed. */
   readonly seed?: number;
   /** Scales the number of pairs formed each week. 1 makes about 170 pairs over ten weeks. */
   readonly scale?: number;
@@ -125,10 +119,7 @@ const startOf = (day: string) => Date.parse(`${day}T00:00:00Z`);
 const pad = (n: number) => String(n).padStart(4, "0");
 
 /**
- * Makes the rows. About 170 pairs (at `scale` 1) form over the weeks, more each week as the app
- * grows, plus inviters who never pair. Each pair has a pull (how much it uses the app) and a day it
- * drifts off; `immersive` pairs hold on a little longer but open the app less often, so the
- * experiment has a result and a guardrail to find.
+ * `immersive` pairs hold on longer but open the app less: a result and a guardrail to find.
  */
 export const makeSeed = (options: SeedOptions): Seed => {
   const weeks = options.weeks ?? 10;
@@ -398,9 +389,7 @@ export const seedCleanupSql = [
 ] as const;
 
 /**
- * The seed as SQL statements for D1, each well under D1's statement limit: the cleanup first (so
- * running it twice gives the same rows), then the inserts. `event_details` rows add to what is
- * there, since they cannot be told apart.
+ * Cleanup first, so running it twice gives the same rows; `event_details` rows still add up.
  */
 export const seedStatements = (
   seed: Seed,

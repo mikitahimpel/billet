@@ -6,10 +6,7 @@ import type {
   OnboardingStepId,
 } from "@billet/contracts-domain/onboarding";
 
-/**
- * A pick from a set the app owns, such as the cat's coat: any catalogue id is a valid option, so a
- * coat added in an app release needs no server change. Only the app's own steps are open.
- */
+/** Any id is valid, so a coat added in an app release needs no server change. */
 export interface OpenChoiceStep {
   readonly _tag: "OpenChoice";
   readonly id: OnboardingStepId;
@@ -23,10 +20,7 @@ export const refusedOptions: ReadonlySet<string> = new Set(["age-under-13"]);
 /** A step an answer is checked against: a served question, or one the app draws itself. */
 export type CheckedStep = OnboardingStep | OpenChoiceStep;
 
-/**
- * Why `answer` doesn't fit `step`, or undefined when it does. The schema already checked the shape;
- * this checks it against the catalogue: the kind, the options, the range and the length.
- */
+/** Why `answer` doesn't fit `step`, or undefined when it does. The schema checked the shape. */
 export const answerProblem = (step: CheckedStep, answer: OnboardingAnswer): string | undefined => {
   const mismatch = `step takes a ${step._tag === "OpenChoice" ? "Single" : step._tag} answer`;
   switch (answer._tag) {

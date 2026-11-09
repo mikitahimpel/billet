@@ -18,8 +18,7 @@ const adminData = () =>
   );
 
 /**
- * The hand-checked query: per variant of `home-layout` (or everyone, as `*`), the pairs with any
- * row from `from` to today, and of those the pairs with one of the `names`.
+ * Hand-checked: per variant (or `*`), pairs with a row from `from` on, and those with `names`.
  */
 const usageSql = (names: ReadonlyArray<string>) => {
   const list = names.map((name) => `'${name}'`).join(", ");

@@ -7,7 +7,7 @@ import { PairId } from "@billet/contracts-domain/pair-id";
 import { PartnerLeftReason } from "@billet/contracts-http-api/account";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
-/** What a `partner_notices` row holds. A test fails if the table's columns differ. */
+/** A test fails if the table's columns differ. */
 export const StoredPartnerNotice = Schema.Struct({
   userId: UserId,
   reason: PartnerLeftReason,
@@ -27,9 +27,7 @@ const guarded = <A>(run: () => Promise<A>) =>
   });
 
 /**
- * `AccountRepository` on the D1 directory. The erase is one `batch`, which D1 runs as a single
- * transaction. Its order follows the foreign keys: rows that point at `users` without a cascade
- * go before it, and deleting `auth_user` takes its sessions and Apple link with it.
+ * The erase is one D1 batch (a transaction), ordered by the foreign keys: non-cascading rows first.
  */
 export const AccountRepositoryLive = (db: D1Database): Layer.Layer<AccountRepository> =>
   Layer.succeed(
@@ -90,7 +88,7 @@ export const AccountRepositoryLive = (db: D1Database): Layer.Layer<AccountReposi
     ),
   );
 
-/** `AccountNotices` on the D1 directory. A notice counts only while its user has no pair. */
+/** A notice counts only while its user has no pair. */
 export const AccountNoticesLive = (db: D1Database): Layer.Layer<AccountNotices> =>
   Layer.succeed(
     AccountNotices,

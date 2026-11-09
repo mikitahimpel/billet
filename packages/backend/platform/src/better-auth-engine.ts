@@ -42,19 +42,7 @@ const errorCode = (error: unknown): string | undefined => {
   return typeof body?.code === "string" ? body.code : undefined;
 };
 
-/**
- * Better Auth, configured for this API. Built per request, because it holds the D1 binding.
- *
- * - Its HTTP handler is never mounted: `AuthService` calls `auth.api` after its own checks, so the
- *   only way in is through our typed routes.
- * - `verified` is how an Apple token reaches it: `AuthService` has already checked the signature,
- *   the audience and the nonce, and the provider accepts only tokens put in this map.
- * - The secret only signs the cookie the bearer plugin builds from the `Authorization` header and
- *   checks a moment later, in the same request; nothing kept is signed or encrypted with it. So it
- *   is random per instance, and there is no long-lived secret to leak.
- * - No real email is stored: an Apple user's is made up, so Better Auth never links by email.
- * - No Apple token is stored: the hooks drop them before an account row is written.
- */
+/** Per request (holds D1). Never mounted; the secret signs only a same-request cookie: random. */
 const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>, now: Now) => {
   const secret = [...crypto.getRandomValues(new Uint8Array(32))]
     .map((byte) => byte.toString(16).padStart(2, "0"))
@@ -129,8 +117,7 @@ const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>, n
           const subject = tokens.idToken === undefined ? undefined : verified.get(tokens.idToken);
           if (subject === undefined) return Promise.resolve(null);
           const email = `${crypto.randomUUID()}@apple.billet.invalid`;
-          // Only `sub` is read: it is the account's subject. The rest is the shape Apple's profile
-          // has, filled with nothing about the person.
+          // Only `sub` is read; the rest fills the shape of Apple's profile with nothing personal.
           return Promise.resolve({
             user: { name: "", email, emailVerified: false },
             data: {
@@ -157,7 +144,7 @@ const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>, n
     databaseHooks: {
       user: {
         create: {
-          // The rest of the API keys on `users`. Idempotent, so a retried sign-up can't fail here.
+          // Idempotent, so a retried sign-up can't fail here.
           after: async (user) => {
             await db
               .prepare("INSERT INTO users (id, created_at) VALUES (?, ?) ON CONFLICT DO NOTHING")
@@ -168,7 +155,7 @@ const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>, n
       },
       session: {
         create: {
-          // A device per session, made first so the session's foreign key holds.
+          // Made first so the session's foreign key holds.
           before: async (session) => {
             const deviceId = crypto.randomUUID();
             await db
@@ -199,10 +186,7 @@ const makeBetterAuth = (db: D1Database, verified: ReadonlyMap<string, string>, n
   });
 };
 
-/**
- * `AuthEngine` on Better Auth and the D1 directory. Build it once per request, as the other
- * directory layers are.
- */
+/** Build it once per request, as the other directory layers are. */
 export const BetterAuthEngineLive = (
   db: D1Database,
   now: Now = systemNow,
@@ -278,8 +262,8 @@ export const BetterAuthEngineLive = (
             return yield* issued(session.token);
           }),
 
-        // Two first sign-ins with one Apple ID at once both open a user, and the second link fails
-        // on the unique index. Trying again finds the first one's link and signs in to that user.
+        // Two concurrent first sign-ins with one Apple ID: the second link fails on the unique
+        // index, and trying again finds the first link and signs in to that user.
         signInWithApple: (apple) =>
           trusting(apple, (token) =>
             auth.api.signInSocial({

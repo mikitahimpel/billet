@@ -3,11 +3,7 @@ import { jsonLogger, type LogSink } from "./json-logger.ts";
 import { traceLogTracer } from "./trace-log-tracer.ts";
 
 /**
- * The JSON logger, the tracer that writes spans as `trace` lines, and an error reporter that logs
- * a failure the HTTP server could not answer (a defect) once, with its redacted cause and the
- * span it happened in. Typed failures are answered and logged by each route's error handler.
- *
- * Build it once per isolate and reuse it: the tracer keeps the spans of unfinished traces.
+ * Logs each defect once with its redacted cause. Build once per isolate: the tracer holds state.
  */
 export const observabilityLayer = (sink: LogSink): Layer.Layer<never> => {
   const logger = jsonLogger(sink);

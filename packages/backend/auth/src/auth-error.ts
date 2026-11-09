@@ -1,9 +1,6 @@
 import { Data } from "effect";
 
-/**
- * The caller is not who it claims to be. `reason` is a fixed label for logs, never token or claim
- * content, and it stays on the server: every rejection looks the same to the client.
- */
+/** `reason` is a fixed log label that stays on the server: every rejection looks the same. */
 export class AuthRejected extends Data.TaggedError("AuthRejected")<{
   readonly reason: string;
 }> {}
@@ -15,5 +12,4 @@ export class AuthUnavailable extends Data.TaggedError("AuthUnavailable")<{
   readonly cause?: unknown;
 }> {}
 
-/** The Apple ID is already linked to another account, so it can't be linked to the caller's. */
 export class AppleIdInUse extends Data.TaggedError("AppleIdInUse")<{}> {}

@@ -16,20 +16,13 @@ const AppleKeysClient = FetchHttpClient.layer.pipe(
   ),
 );
 
-/**
- * Build this once per request. `Jwks` shares one in-flight fetch between its callers, and a Worker
- * request must not wait on I/O started by another, so the layer can't outlive a request. The key
- * cache is therefore Cloudflare's, shared across requests through the subrequest: forged tokens
- * can't drive traffic to Apple, and a rotated key is picked up within 10 minutes. A failed or slow
- * (over 5 seconds) fetch fails the sign-in, and an expired key set is never used.
- */
+/** Per request: `Jwks` shares an in-flight fetch, and a request must not wait on another's I/O. */
 const AppleKeys = Jwks.layerRemote({ url: appleKeysUrl }).pipe(
   // Only a malformed constant above can fail this.
   Layer.orDie,
   Layer.provide(AppleKeysClient),
 );
 
-/** The real `IdentityVerifier`, on `fetch` and Web Crypto. */
 export const AppleIdentityLive: Layer.Layer<IdentityVerifier> = AppleIdentityVerifier.pipe(
   Layer.provide(AppleKeys),
   Layer.provide(Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto))),

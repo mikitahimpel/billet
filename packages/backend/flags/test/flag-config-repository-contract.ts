@@ -19,10 +19,8 @@ const config = (exposure: number): FlagConfig => ({
   targeting: { minAppVersion: "1.2", pairIds: [pair("p1")] },
 });
 
-/**
- * The behaviour every `FlagConfigRepository` must have, run against each implementation so the
- * in-memory fake can't drift from D1. `make` must return an empty repository.
- */
+/** Run against each implementation so the in-memory fake can't drift from D1. `make` must
+ * return an empty repository. */
 export const describeFlagConfigRepositoryContract = (
   name: string,
   make: () => Promise<FlagConfigRepository["Service"]>,

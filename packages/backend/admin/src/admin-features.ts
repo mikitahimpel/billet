@@ -2,14 +2,7 @@ import type { ClientEventName } from "@billet/contracts-domain/metrics";
 import { addDays, type EventRow, type FlagRow, wilson } from "@billet/backend-metrics/funnel";
 import { minimumGroup } from "./admin-retention.ts";
 
-/**
- * Feature usage: for each product event, the share of pairs that used it in the last 7 and the
- * last 30 days, overall or by an experiment's variant. Pure, from the D1 rows.
- *
- * "Of pairs" means pairs active in that window: any row of theirs (after pairing) fell in it. A
- * pair that left a month ago does not count against a feature. Each area also has an "any" row: a
- * pair that used at least one of its events.
- */
+/** "Of pairs" means pairs active in that window, so one that left long ago doesn't count. */
 
 export type FeatureArea = "cat" | "room" | "shop" | "streak" | "widget";
 

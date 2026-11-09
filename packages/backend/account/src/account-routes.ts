@@ -26,7 +26,6 @@ const respondAccountFailures = <R>(
     respondFailures,
   );
 
-/** The account routes of the API. Needs `AuthService` and `AccountDeletion`. */
 export const AccountRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const deletion = yield* AccountDeletion;

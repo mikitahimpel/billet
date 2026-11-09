@@ -249,9 +249,7 @@ describe("the needs", () => {
   });
 
   /**
-   * Golden values the Swift `PetLife` must reproduce within 1e-9 for the same journal, with
-   * `LifeContext(partners: ["user-alice", "user-bob"], utcOffset: 3600, born: start)` and each
-   * entry as a `LifeEvent` with its `id`, `by` and whole-second `at`.
+   * Golden values Swift `PetLife` must match within 1e-9, with the same partners, offset and birth.
    */
   it("matches the golden vectors", async () => {
     const journal: ReadonlyArray<CatEntry> = [

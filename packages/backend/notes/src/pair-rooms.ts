@@ -64,10 +64,7 @@ export class PairRooms extends Context.Service<
       pairId: PairId,
       inks: ReadonlyArray<InkId>,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
-    /**
-     * The pair's balance and wallet entries after `after`, oldest first, or null while the room is
-     * not open. A room owed its welcome coins gets them first.
-     */
+    /** Oldest first; null while the room isn't open. Owed welcome coins land first. */
     readonly coins: (
       pairId: PairId,
       after: CoinEntryId | undefined,
@@ -81,15 +78,9 @@ export class PairRooms extends Context.Service<
       ink: InkId,
       terms?: PriceTerms,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
-    /**
-     * What the pair has: balance, inks, room pieces and wishlist, or null while the room is not
-     * open. A room owed its welcome coins gets them first.
-     */
+    /** Null while the room isn't open. Owed welcome coins land first. */
     readonly shop: (pairId: PairId) => Effect.Effect<ShopResponse | null, NotesUnavailable>;
-    /**
-     * Buys one offer with the pair's coins, once per `id`, on the local day `utcOffsetSeconds`
-     * from UTC (absent: the cat's, else UTC).
-     */
+    /** Once per `id`, on the day `utcOffsetSeconds` from UTC (absent: the cat's, else UTC). */
     readonly order: (
       pairId: PairId,
       by: UserId,
@@ -129,24 +120,17 @@ export class PairRooms extends Context.Service<
       wished: boolean,
       offered?: boolean,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
-    /** Notes with `seq` above `afterSeq`, in order. */
     readonly notesAfter: (
       pairId: PairId,
       afterSeq: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
-    /**
-     * Deletes every note `user` sent in the room and returns them, deletes the cat and its
-     * journal, and closes the room's sockets: the pair is ending. Safe to repeat.
-     */
+    /** Deletes `user`'s notes (returned), the cat and journal; closes sockets. Safe to repeat. */
     readonly forgetMember: (
       pairId: PairId,
       user: UserId,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>, NotesUnavailable>;
-    /**
-     * Deletes everything in the room, wallet included, and closes its sockets: the pair is over.
-     * Safe to repeat.
-     */
+    /** Deletes everything in the room, wallet included, and closes its sockets. Safe to repeat. */
     readonly destroy: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
     /** Closes the room's open sockets, as the pair has ended. Safe to repeat. */
     readonly endSessions: (pairId: PairId) => Effect.Effect<void, NotesUnavailable>;
@@ -164,7 +148,6 @@ export class PairRooms extends Context.Service<
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** The cat now, or null while the room is not open. */
     readonly cat: (pairId: PairId) => Effect.Effect<CatResponse | null, NotesUnavailable>;
-    /** Journal entries with `seq` above `afterSeq`, in order. */
     readonly catJournal: (
       pairId: PairId,
       afterSeq: number,
@@ -189,7 +172,6 @@ export class PairRooms extends Context.Service<
       afterRev: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<NoteReaction>, NotesUnavailable>;
-    /** Replaces `by`'s check-in with how they feel now. */
     readonly setMood: (
       pairId: PairId,
       by: UserId,
@@ -197,7 +179,6 @@ export class PairRooms extends Context.Service<
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Each member's latest check-in. A room not opened yet has none. */
     readonly moods: (pairId: PairId) => Effect.Effect<ReadonlyArray<MoodCheckIn>, NotesUnavailable>;
-    /** Counts `by`'s day in the pair's love streak. */
     readonly recordStreakDay: (
       pairId: PairId,
       by: UserId,

@@ -48,9 +48,7 @@ export interface PickDecision {
 }
 
 /**
- * What `by` swiping `request` at `at` does to `rows`. Pure. The same choice on a card again within
- * the session changes nothing, so a retry never makes a second match. A ♥ makes a match when the
- * partner's latest swipe on that card is a ♥ within the session.
+ * Pure. The same choice on a card again in the session changes nothing, so a retry never rematches.
  */
 export const decidePick = (
   rows: ReadonlyArray<PickRow>,
@@ -76,10 +74,7 @@ export const decidePick = (
   return partner ? { write, match: matchOf(write) } : { write };
 };
 
-/**
- * The matches among `rows` swiped within the session ending at `now`, newest first: each card both
- * members swiped ♥ within the session of each other.
- */
+/** Each card both members swiped ♥ within one session of each other, newest first. */
 export const pickMatches = (
   rows: ReadonlyArray<PickRow>,
   now: EpochMillis,
@@ -122,12 +117,8 @@ export const pickView = (
 export class PickTonightStore extends Context.Service<
   PickTonightStore,
   {
-    /** Every stored swipe at or after `since`. */
     readonly since: (since: EpochMillis) => Effect.Effect<ReadonlyArray<PickRow>>;
-    /**
-     * Writes `row` over the member's swipe on that card, and deletes every swipe before
-     * `pruneBefore`, as one atomic write.
-     */
+    /** Writes `row` over the member's swipe and prunes before `pruneBefore`, atomically. */
     readonly put: (row: PickRow, pruneBefore: EpochMillis) => Effect.Effect<void>;
     /** Deletes every swipe: the pair is ending. */
     readonly forget: Effect.Effect<void>;
@@ -194,8 +185,7 @@ export class PickTonightRoom extends Context.Service<PickTonightRoom>()(
         }).pipe(lock.withPermits(1));
 
       /**
-       * The match `key` made at `at`, while both members still want that card, and whom to tell:
-       * the member whose swipe came first.
+       * The match `key` made, while both still want the card, and whom to tell: the first swiper.
        */
       const notice = (key: string, at: EpochMillis): Effect.Effect<MatchNotice | undefined> =>
         Effect.gen(function* () {

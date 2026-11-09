@@ -7,7 +7,7 @@ export type Color = typeof Color.Type;
 export const Point = Schema.Struct({ x: Schema.Finite, y: Schema.Finite });
 export type Point = typeof Point.Type;
 
-/** A full-precision stroke, used while drawing live. */
+/** Full precision, used while drawing live. */
 export const Stroke = Schema.Struct({
   color: Color,
   width: Schema.Finite,
@@ -24,11 +24,7 @@ const CompactStroke = Schema.Struct({
   ),
 });
 
-/**
- * Compact vector rendition that travels inside a push (under about 3 KB).
- * The quantisation grid, simplification and size budget are decided in #13, so this
- * keeps only a version tag and integer coordinates.
- */
+/** Travels inside a push, so it stays under about 3 KB. */
 export const CompactStrokes = Schema.Struct({
   version: Schema.Literal(1),
   strokes: Schema.Array(CompactStroke),

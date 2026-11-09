@@ -2,9 +2,8 @@ import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-// The first request to a Durable Object loads the whole module graph of its Worker, which took
-// 4-9 s for the PairRoom graph (Effect, Drizzle) on this machine and timed out the first demo test
-// of every file. The demo Worker must stay free of that graph.
+// The first request to a Durable Object loads its Worker's whole module graph; the PairRoom graph
+// (Effect, Drizzle) is slow enough to time out a demo test. The demo Worker must stay free of it.
 const heavy = /from "(effect|drizzle-orm|@effect\/|@billet\/)[^"]*"|room-database|pair-room/;
 
 const graph = (file: string, seen = new Set<string>()): Set<string> => {

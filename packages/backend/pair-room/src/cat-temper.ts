@@ -53,10 +53,7 @@ const clamp = (value: number) => Math.min(temperHigh, Math.max(temperLow, value)
 const toward = (value: number, target: number, rate: number) =>
   clamp(value + rate * (target - value));
 
-/**
- * The temper after one more journal entry: pure, so every replay of the journal gives the same
- * cat. `previousAt` is the time of the entry before, or undefined for the first one.
- */
+/** The temper after one more journal entry: pure, so every replay gives the same cat. */
 export const nextTemper = (
   temper: CatTemper,
   event: CatEvent,

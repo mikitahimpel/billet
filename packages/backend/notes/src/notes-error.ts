@@ -13,22 +13,17 @@ export class InvalidNote extends Data.TaggedError("InvalidNote") {}
 /** A text note in an ink colour the pair has not bought. */
 export class InkNotOwned extends Data.TaggedError("InkNotOwned")<{ readonly ink: InkId }> {}
 
-/** A buy that costs more than the pair's balance. */
 export class NotEnoughCoins extends Data.TaggedError("NotEnoughCoins")<{
   readonly needed: number;
   readonly have: number;
 }> {}
 
-/**
- * An order whose price is now above the one the buyer saw; nothing was charged. `price` is the
- * price now.
- */
+/** The price is now above the one the buyer saw; nothing was charged. `price` is the new one. */
 export class PriceChanged extends Data.TaggedError("PriceChanged")<{ readonly price: number }> {}
 
 /** A buy of something the pair already owns: an ink, a piece, or every piece of a set. */
 export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly itemId: string }> {}
 
-/** A bonus for a collection with a piece still missing. */
 export class CollectionIncomplete extends Data.TaggedError("CollectionIncomplete")<{
   readonly collection: CollectionId;
 }> {}
@@ -44,18 +39,12 @@ export class BonusTaken extends Data.TaggedError("BonusTaken")<{
 /** A buy for the cat, such as a treat, before the couple adopted one. */
 export class CatNotAdopted extends Data.TaggedError("CatNotAdopted") {}
 
-/**
- * A Who knows who answer the room would not lock: to a round whose day is over, to a question not
- * in the round, or a second answer to one already answered.
- */
+/** A round whose day is over, a question not in the round, or a second answer to one. */
 export class GuessRefused extends Data.TaggedError("GuessRefused")<{
   readonly reason: "RoundClosed" | "NotInRound" | "Answered";
 }> {}
 
-/**
- * A draw-guess command the room would not take: `BadWord` is a bad request, `NotFound` a riddle
- * the room does not hold, and the rest a conflict with what it holds.
- */
+/** `BadWord` is a bad request, `NotFound` an unknown riddle, the rest a conflict. */
 export class RiddleRefused extends Data.TaggedError("RiddleRefused")<{
   readonly reason: Exclude<RiddleRefusal, "NotOpen">;
 }> {}

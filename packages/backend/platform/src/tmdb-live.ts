@@ -13,8 +13,7 @@ const retryAfterOf = (header: string | null): number => {
 };
 
 /**
- * `Tmdb` over TMDB's API, signed with the API read access token in a header, so the token is in no
- * URL. Nothing TMDB answers on a failure is kept: its body may quote the request.
+ * The token goes in a header, never a URL. No failure body is kept: it may quote the request.
  */
 export const TmdbLive = (token: string, fetcher: typeof fetch = fetch): Layer.Layer<Tmdb> =>
   Layer.succeed(
@@ -54,9 +53,6 @@ const TmdbMissing: Layer.Layer<Tmdb> = Layer.succeed(
   Tmdb.of({ get: () => Effect.fail(new TitlesUnavailable({ reason: "tmdb-token-missing" })) }),
 );
 
-/**
- * TMDB for this Worker: the real one with a token. Without one, `prod` answers 503 and every other
- * stage, `alchemy dev` included, answers from `TmdbStub`.
- */
+/** Without a token, `prod` answers 503 and every other stage answers from `TmdbStub`. */
 export const tmdbFor = (token: string | undefined, stage: string | undefined): Layer.Layer<Tmdb> =>
   token !== undefined && token !== "" ? TmdbLive(token) : stage === "prod" ? TmdbMissing : TmdbStub;

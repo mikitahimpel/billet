@@ -8,19 +8,16 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-// D1 tables. `Drizzle.Schema` in the root alchemy.run.ts generates migrations from this file, so it
-// imports nothing but drizzle-orm: drizzle-kit loads it in Node, outside the Worker.
+// drizzle-kit loads this file in Node, outside the Worker, so it imports nothing but drizzle-orm.
 
-// Everything else points at this table. `auth_user` holds the same ids for Better Auth, which owns
-// sign-in, and a hook in better-auth-engine.ts writes the row here when it opens a user.
+// `auth_user` holds the same ids for Better Auth; a hook in better-auth-engine.ts writes this row.
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   createdAt: integer("created_at").notNull(),
 });
 
-// Better Auth's own tables (better-auth-engine.ts names each column). It writes dates as ISO text
-// and booleans as 0 or 1, unlike the epoch milliseconds everywhere else. No email is real: an
-// anonymous user's is made up, and an Apple user's is built from their subject, never Apple's.
+// Better Auth writes dates as ISO text and booleans as 0 or 1, unlike epoch milliseconds elsewhere.
+// No email is real: an anonymous one is made up, an Apple one is built from the subject.
 export const authUsers = sqliteTable(
   "auth_user",
   {
@@ -36,8 +33,7 @@ export const authUsers = sqliteTable(
   (table) => [uniqueIndex("auth_user_email_unique").on(table.email)],
 );
 
-// `token` is SHA-256 of the session token, which is never stored (hashed-session-tokens.ts). Each
-// session has its own device, and push tokens hang off the device.
+// `token` is SHA-256 of the session token, which is never stored (hashed-session-tokens.ts).
 export const authSessions = sqliteTable(
   "auth_session",
   {
@@ -63,8 +59,8 @@ export const authSessions = sqliteTable(
   ],
 );
 
-// Linked identities: `provider_id` is `apple` and `account_id` the Apple subject. One Apple ID
-// belongs to one user, which the unique index makes a database rule. No Apple token is kept.
+// `account_id` is the Apple subject; the unique index makes one Apple ID per user a database rule.
+// No Apple token is kept.
 export const authAccounts = sqliteTable(
   "auth_account",
   {
@@ -90,7 +86,7 @@ export const authAccounts = sqliteTable(
   ],
 );
 
-// Better Auth's one-time values. None of the flows in use writes here today; it must exist.
+// Better Auth requires this table even though no flow in use writes to it.
 export const authVerifications = sqliteTable(
   "auth_verification",
   {
@@ -104,8 +100,8 @@ export const authVerifications = sqliteTable(
   (table) => [index("auth_verification_identifier_index").on(table.identifier)],
 );
 
-// `key_hash` is SHA-256 of the account key, which is never stored. The key is the anonymous
-// account: the app keeps it in the iCloud Keychain and signs in with it on every phone.
+// `key_hash` is SHA-256 of the account key, which is never stored. The app keeps the key in the
+// iCloud Keychain and signs in with it on every phone.
 export const accountKeys = sqliteTable(
   "account_keys",
   {
@@ -118,8 +114,7 @@ export const accountKeys = sqliteTable(
   (table) => [index("account_keys_user_id_index").on(table.userId)],
 );
 
-// What a user should be told about the end of their pair: a row per user, written when their
-// partner deletes their account. The app shows it while the user is unpaired.
+// Written when the partner deletes their account; the app shows it while the user is unpaired.
 export const partnerNotices = sqliteTable("partner_notices", {
   userId: text("user_id")
     .primaryKey()
@@ -150,7 +145,7 @@ export const authChallenges = sqliteTable(
   (table) => [index("auth_challenges_expires_at_index").on(table.expiresAt)],
 );
 
-// `code_hash` is SHA-256 of the invite code, which is never stored. A user has one invite at a time.
+// `code_hash` is SHA-256 of the invite code, never stored. A user has one invite at a time.
 export const invites = sqliteTable(
   "invites",
   {
@@ -167,7 +162,7 @@ export const invites = sqliteTable(
   ],
 );
 
-// The pair lookup. Keying on the user is what makes one partner per account a database rule.
+// Keying on the user makes one partner per account a database rule.
 export const pairMembers = sqliteTable(
   "pair_members",
   {
@@ -180,8 +175,8 @@ export const pairMembers = sqliteTable(
   (table) => [index("pair_members_pair_id_index").on(table.pairId)],
 );
 
-// Who blocked whom. A block ends the pair and keeps the two from claiming each other's invites.
-// Not foreign keys: the rows go with either user in the account erasure.
+// A block ends the pair and keeps the two from claiming each other's invites.
+// Not foreign keys: the account erasure deletes the rows.
 export const blocks = sqliteTable(
   "blocks",
   {
@@ -195,10 +190,8 @@ export const blocks = sqliteTable(
   ],
 );
 
-// What a user keeps when their pair ends: purchases are never deleted. The coins are their share
-// of the pair's balance, the rows of `kept_items` the inks and room pieces; a new pair's room is
-// given them when the user pairs again, and the rows go. Not foreign keys: the account erasure
-// deletes them.
+// What a user keeps when their pair ends: their share of coins and the bought items, given to the
+// next pair's room on re-pairing. Not foreign keys: the account erasure deletes them.
 export const keptWallets = sqliteTable("kept_wallets", {
   userId: text("user_id").primaryKey(),
   coins: integer("coins").notNull(),
@@ -214,8 +207,8 @@ export const keptItems = sqliteTable(
   (table) => [primaryKey({ columns: [table.userId, table.kind, table.itemId] })],
 );
 
-// What a user told the team about their partner. Kept after the pair or either account ends, so a
-// report can still be acted on; the pair id is not a foreign key for the same reason.
+// Kept after the pair or either account ends so a report can still be acted on; hence no foreign
+// key on the pair id.
 export const partnerReports = sqliteTable(
   "partner_reports",
   {
@@ -225,15 +218,14 @@ export const partnerReports = sqliteTable(
     pairId: text("pair_id").notNull(),
     reason: text("reason").notNull(),
     details: text("details"),
-    // The note or photo reported, if the report is about one. Not a key: the note may be gone.
+    // Not a key: the reported note may be gone.
     noteId: text("note_id"),
     createdAt: integer("created_at").notNull(),
   },
   (table) => [index("partner_reports_reported_id_index").on(table.reportedId)],
 );
 
-// The dev stage's demo partners: a bot user per owner, which pairs like anyone else but has no
-// device and never signs in. Deleting either user takes the row with it.
+// Dev stage only: the bot pairs like anyone else but has no device and never signs in.
 export const demoPartners = sqliteTable("demo_partners", {
   botId: text("bot_id")
     .primaryKey()
@@ -262,8 +254,8 @@ export const pushTokens = sqliteTable(
   ],
 );
 
-// Fixed-window request counters. `bucket` is a SHA-256 of the route group and the caller's address,
-// never the address itself. Old windows are deleted as new ones are written.
+// Fixed-window counters. `bucket` is SHA-256 of the route group and caller address, never the
+// address itself. Old windows are deleted as new ones are written.
 export const rateLimits = sqliteTable(
   "rate_limits",
   {
@@ -277,10 +269,8 @@ export const rateLimits = sqliteTable(
   ],
 );
 
-// The variant each pair was given in each experiment it entered. Only pairs inside an experiment
-// have a row, and a row is never updated, so changing weights or exposure later moves nobody.
-// Pairs outside it get the default and have no row. The pair id is not a foreign key: a pair has no
-// table of its own, and the rows stay for analysis after the pair ends.
+// A row is never updated, so changing weights or exposure later moves nobody; pairs outside an
+// experiment have no row. Not a foreign key: a pair has no table, and rows outlive it for analysis.
 export const pairFlags = sqliteTable(
   "pair_flags",
   {
@@ -292,10 +282,8 @@ export const pairFlags = sqliteTable(
   (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
 );
 
-// First-party counts: how many times one person did one named thing on one UTC day, with the pair
-// they were in at the time (empty before pairing). Nothing else is stored: no note, image or
-// text, no device, address or place. The names are a closed list in `contracts-domain/metrics`.
-// Like `pair_flags`, the pair id is not a foreign key and the rows outlive the pair for analysis.
+// Per person, name and UTC day; nothing else is stored (no content, device, address or place).
+// Names are a closed list in `contracts-domain/metrics`. Pair id: no foreign key, as `pair_flags`.
 export const pairEvents = sqliteTable(
   "pair_events",
   {
@@ -306,9 +294,8 @@ export const pairEvents = sqliteTable(
     count: integer("count").notNull(),
     firstAt: integer("first_at").notNull(),
     lastAt: integer("last_at").notNull(),
-    // The build (`1.2.0+14`) and system (`iOS 26.1`) the app sent with its latest report that day,
-    // as `clientInfoOf` reads the headers. Null for names the server records itself. The same
-    // values Analytics Engine gets; here so the admin can split cohorts by build past its 90 days.
+    // From the latest report that day (`clientInfoOf`); null for server-recorded names. Kept here
+    // so the admin can split cohorts by build past Analytics Engine's 90 days.
     appVersion: text("app_version"),
     os: text("os"),
   },
@@ -318,10 +305,8 @@ export const pairEvents = sqliteTable(
   ],
 );
 
-// What the detailed app events carried, per UTC day: how many times each name came with each
-// detail (a catalogue id such as a cat or an item, or a word from a closed list), and the sum of
-// their values (a price in coins). No user and no pair: only which things are chosen, for the
-// admin's top lists. The rules for each name are `clientEventRules` in `contracts-domain/metrics`.
+// Per name, detail and UTC day, with the sum of values (a price in coins). No user and no pair.
+// The rules for each name are `clientEventRules` in `contracts-domain/metrics`.
 export const eventDetails = sqliteTable(
   "event_details",
   {
@@ -337,8 +322,7 @@ export const eventDetails = sqliteTable(
   ],
 );
 
-// Funnels the owner saved in the admin panel: a name and the definition (steps, window, unit) as
-// JSON, with who saved it (the Cloudflare Access email). Nothing about any pair or person.
+// `created_by` is the Cloudflare Access email. Nothing about any pair or person.
 export const adminFunnels = sqliteTable("admin_funnels", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
@@ -347,10 +331,8 @@ export const adminFunnels = sqliteTable("admin_funnels", {
   createdBy: text("created_by").notNull(),
 });
 
-// The live configuration of each experiment and remote flag, as the admin panel last saved it.
-// The registry in `backend-flags/experiments` defines the keys and variants; a row here only
-// changes weights, default, exposure, status, kill switch and targeting (JSON in `config`).
-// `version` goes up by one per save, so two editors cannot overwrite each other.
+// The registry in `backend-flags/experiments` defines keys and variants; a row only overrides
+// config. `version` goes up by one per save, so two editors cannot overwrite each other.
 export const flagConfigs = sqliteTable("flag_configs", {
   key: text("key").primaryKey(),
   config: text("config").notNull(),
@@ -359,8 +341,7 @@ export const flagConfigs = sqliteTable("flag_configs", {
   updatedBy: text("updated_by").notNull(),
 });
 
-// Every change the admin panel made, newest last: who (the Cloudflare Access email), what, and the
-// configuration before and after. Written in the same batch as the change itself.
+// `by` is the Cloudflare Access email. Written in the same batch as the change itself.
 export const flagChanges = sqliteTable(
   "flag_changes",
   {
@@ -376,8 +357,8 @@ export const flagChanges = sqliteTable(
   (table) => [index("flag_changes_key_index").on(table.key, table.id)],
 );
 
-// A variant forced on one pair, for testing on the owner's own phones. It beats the pair's stored
-// assignment but never the kill switch. Not a foreign key, like `pair_flags`.
+// Forced variant for testing on the owner's phones: beats the stored assignment, never the kill
+// switch. Not a foreign key, like `pair_flags`.
 export const pairFlagOverrides = sqliteTable(
   "pair_flag_overrides",
   {
@@ -390,11 +371,9 @@ export const pairFlagOverrides = sqliteTable(
   (table) => [primaryKey({ columns: [table.pairId, table.experimentKey] })],
 );
 
-// App Store purchases of coin packs (and the dev stage's mock ones), one row per original
-// transaction, so each is credited once. `owner_id` is the pair the coins went to, or
-// `demo:<code>` for a demo room on the dev stage; not a foreign key, so the record outlives the
-// pair. No user, Apple account or receipt is kept. `flagged` is 1 when a refund could not take the
-// whole pack back, for the admin to look at.
+// One row per original transaction, so each is credited once. `owner_id` is a pair or
+// `demo:<code>`, not a foreign key, so the record outlives the pair. No user or receipt is kept.
+// `flagged` is 1 when a refund could not take the whole pack back.
 export const purchases = sqliteTable(
   "purchases",
   {
@@ -414,8 +393,8 @@ export const purchases = sqliteTable(
   (table) => [index("purchases_owner_id_index").on(table.ownerId)],
 );
 
-// Every change to an owner's bought coins; the balance is the sum of `amount`. Ids are stable
-// (`purchase:<id>`, `refund:<id>`, `restore:<id>`), and the app merges entries by them.
+// The balance is the sum of `amount`. Ids are stable (`purchase:<id>`, `refund:<id>`,
+// `restore:<id>`) because the app merges entries by them.
 export const coinLedger = sqliteTable(
   "coin_ledger",
   {
@@ -430,7 +409,7 @@ export const coinLedger = sqliteTable(
   (table) => [index("coin_ledger_owner_id_index").on(table.ownerId, table.at)],
 );
 
-// The App Store Server Notifications handled, by Apple's UUID, so a retried one is applied once.
+// Keyed by Apple's UUID, so a retried notification is applied once.
 export const appStoreNotifications = sqliteTable(
   "app_store_notifications",
   {
@@ -445,9 +424,8 @@ export const appStoreNotifications = sqliteTable(
   (table) => [index("app_store_notifications_received_at_index").on(table.receivedAt)],
 );
 
-// One row per account and onboarding step: the answer, or a skip (`kind` = `Skipped`). Picks are a
-// JSON array of option ids, so the admin panel counts them without reading `text`, the one column
-// a person typed. A save keeps the row with the later `answered_at`. Deleted with the account.
+// `option_ids` is a JSON array so the admin counts picks without reading `text`, the one typed
+// column. A save keeps the row with the later `answered_at`.
 export const onboardingAnswers = sqliteTable(
   "onboarding_answers",
   {
@@ -468,9 +446,8 @@ export const onboardingAnswers = sqliteTable(
   ],
 );
 
-// The shop's catalog, as the admin panel sets it. Items are never deleted: an id stays once it has
-// been sold. `asset` is JSON (`ShopAsset`). `version` goes up by one per save, so two editors
-// cannot overwrite each other. The first rows are the shop as the app sold it before this table.
+// Items are never deleted: an id stays once sold. `asset` is JSON (`ShopAsset`). `version` goes up
+// by one per save, so two editors cannot overwrite each other.
 export const shopItems = sqliteTable(
   "shop_items",
   {
@@ -502,8 +479,7 @@ export const shopItems = sqliteTable(
   (table) => [index("shop_items_order_index").on(table.sortOrder)],
 );
 
-// Every change the admin panel made to the shop, newest last: who (the Cloudflare Access email),
-// what, and the item before and after as JSON. Written in the same batch as the change itself.
+// `by` is the Cloudflare Access email. Written in the same batch as the change itself.
 export const shopItemChanges = sqliteTable(
   "shop_item_changes",
   {
@@ -518,8 +494,7 @@ export const shopItemChanges = sqliteTable(
   (table) => [index("shop_item_changes_item_index").on(table.itemId, table.id)],
 );
 
-// The App Review partner (docs/app-review.md): one ordinary user the team owns, which App Review
-// pairs with through a review code. Deleting the user takes the row with it.
+// The App Review partner (docs/app-review.md), paired with through a review code.
 export const reviewPartners = sqliteTable("review_partners", {
   userId: text("user_id")
     .primaryKey()
@@ -527,8 +502,8 @@ export const reviewPartners = sqliteTable("review_partners", {
   createdAt: integer("created_at").notNull(),
 });
 
-// Review codes, only as their SHA-256, with the last four symbols for the panel. Reusable until
-// `expires_at` or until revoked; a new code revokes every earlier one.
+// Only the SHA-256 is kept, plus the last four symbols for the panel. A new code revokes every
+// earlier one.
 export const reviewCodes = sqliteTable("review_codes", {
   codeHash: text("code_hash").primaryKey(),
   partnerId: text("partner_id")
@@ -543,7 +518,7 @@ export const reviewCodes = sqliteTable("review_codes", {
   lastClaimedAt: integer("last_claimed_at"),
 });
 
-// Every review action taken in the admin panel, newest last, with the Cloudflare Access email.
+// `by` is the Cloudflare Access email.
 export const reviewChanges = sqliteTable("review_changes", {
   id: integer("id").primaryKey({ autoIncrement: true }),
   at: integer("at").notNull(),

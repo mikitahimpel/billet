@@ -24,9 +24,7 @@ import { RoomStore } from "./room-store.ts";
 export const endedRiddleLimit = 20;
 
 /**
- * The riddles of one room, for reading. They are written with the room's own commit, so a round's
- * end, its journal entry and its coins are stored together. Failures are defects, as for
- * `RoomStore`.
+ * Read-only: the room's commit writes riddles, so an end, its entry and its coins land together.
  */
 export class RiddleStore extends Context.Service<
   RiddleStore,
@@ -74,10 +72,7 @@ export interface RiddleOutcome {
   readonly result: RiddleResult;
   /** The riddle after a command that stored a change, for each follower as its user sees it. */
   readonly changed?: RiddleRow;
-  /**
-   * The riddle to push to its guesser as new, or to its drawer as ended. A retry of the send or of
-   * the solving try names it again, in case the first try stored it and failed before its push.
-   */
+  /** The riddle to push as new or ended; a retry names it again in case its first push failed. */
   readonly push?: { readonly riddle: RiddleRow; readonly kind: "sent" | "ended" };
   /** The room's decision for a stored change: the journal entry and coins of an end. */
   readonly decision?: RoomDecision;

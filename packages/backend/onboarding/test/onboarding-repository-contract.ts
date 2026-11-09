@@ -19,11 +19,7 @@ const row = (
 const sorted = (rows: ReadonlyArray<StoredOnboardingAnswer>) =>
   rows.toSorted((a, b) => a.stepId.localeCompare(b.stepId));
 
-/**
- * The behaviour every `OnboardingRepository` must have. Run it against each implementation, so the
- * in-memory fake can't drift from the real one. `make` must return an empty repository, in which
- * the users `u1` and `u2` exist.
- */
+/** Runs against every implementation. `make` returns an empty one in which `u1` and `u2` exist. */
 export const describeOnboardingRepositoryContract = (
   name: string,
   make: () => Promise<OnboardingRepository["Service"]>,

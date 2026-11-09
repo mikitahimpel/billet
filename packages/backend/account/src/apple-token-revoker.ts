@@ -4,9 +4,7 @@ import { Context, Effect, Layer, type Redacted } from "effect";
 export type RevokeOutcome = "revoked" | "not-configured" | "rejected" | "failed";
 
 /**
- * Revokes the user's Sign in with Apple token through Apple's REST API, as Apple asks of an app
- * that deletes an account: trades a fresh authorization code for a token, then revokes it. The
- * code is single-use and never stored or logged.
+ * Apple requires revocation on account deletion. The code is single-use, never stored or logged.
  */
 export class AppleTokenRevoker extends Context.Service<
   AppleTokenRevoker,

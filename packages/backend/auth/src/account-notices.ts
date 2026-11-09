@@ -2,11 +2,7 @@ import { Context, Effect, Layer, type Option } from "effect";
 import type { UserId } from "@billet/contracts-domain/ids";
 import type { PartnerLeft } from "@billet/contracts-http-api/account";
 
-/**
- * What the app should tell a user about their account: for now, that their partner left. A notice
- * is a courtesy, never a condition of a request, so it cannot fail; an implementation that can't
- * read it answers none.
- */
+/** A courtesy, never a condition of a request: it cannot fail, and an unreadable one is none. */
 export class AccountNotices extends Context.Service<
   AccountNotices,
   {

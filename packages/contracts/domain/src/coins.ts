@@ -2,10 +2,7 @@ import { Schema } from "effect";
 import { type CatEvent, drawGuessGame } from "./cat.ts";
 import { EpochMillis } from "./ids.ts";
 
-/**
- * Where a coin entry came from. `earn` is care for the cat, paid by the server from the journal;
- * `spend` is a purchase in the shop. The others arrive with the shop and with coin packs.
- */
+/** `earn` is care for the cat, paid by the server from the journal; `spend` is a shop purchase. */
 export const CoinEntryKind = Schema.Literals(["earn", "buy", "spend", "refund", "gift", "bonus"]);
 export type CoinEntryKind = typeof CoinEntryKind.Type;
 
@@ -15,10 +12,7 @@ export const CoinEntryId = Schema.String.check(
 ).pipe(Schema.brand("CoinEntryId"));
 export type CoinEntryId = typeof CoinEntryId.Type;
 
-/**
- * One line of the pair's wallet. `amount` is signed: a spend is negative. `ref` names what it came
- * from: the cat entry, the item bought, the transaction or the day.
- */
+/** `amount` is signed: a spend is negative. `ref`: the cat entry, item, transaction or day. */
 export const CoinEntry = Schema.Struct({
   id: CoinEntryId,
   kind: CoinEntryKind,
@@ -28,13 +22,10 @@ export const CoinEntry = Schema.Struct({
 });
 export type CoinEntry = typeof CoinEntry.Type;
 
-/** The kinds of care that earn coins, each with its own daily cap. */
 export type EarnSource = "care" | "notes" | "games" | "lists";
 
-/**
- * The most coins each kind of care earns the pair in one local day. Placeholders until the owner
- * sets them: a caring day earns about 80 coins, so a 60-coin ink is a day's care.
- */
+/** Per local day. Placeholders until the owner sets them: a caring day earns about 80 coins, so
+ * a 60-coin ink is a day's care. */
 export const dailyEarnCaps: Readonly<Record<EarnSource, number>> = {
   care: 10,
   notes: 30,
@@ -42,10 +33,7 @@ export const dailyEarnCaps: Readonly<Record<EarnSource, number>> = {
   lists: 15,
 };
 
-/**
- * What one journal entry earns before the daily cap, and the cap it counts against. Placeholders
- * like the caps. Sleep and shooing earn nothing.
- */
+/** Before the daily cap. Placeholders like the caps. */
 export const rewardFor = (event: CatEvent): { source: EarnSource; coins: number } | undefined => {
   switch (event._tag) {
     case "Fed":
@@ -67,7 +55,7 @@ export const rewardFor = (event: CatEvent): { source: EarnSource; coins: number 
   }
 };
 
-/** `YYYY-MM-DD` on the pair's local calendar, the day the caps reset on. */
+/** On the pair's local calendar, the day the caps reset on. */
 export const LocalDay = Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)).pipe(
   Schema.brand("LocalDay"),
 );
@@ -75,13 +63,11 @@ export type LocalDay = typeof LocalDay.Type;
 
 const decodeDay = Schema.decodeSync(LocalDay);
 
-/** The local day `at` falls on, `utcOffsetSeconds` from UTC. */
 export const localDayOf = (at: EpochMillis, utcOffsetSeconds: number): LocalDay =>
   decodeDay(new Date(at + utcOffsetSeconds * 1000).toISOString().slice(0, 10));
 
 const decodeEntryId = Schema.decodeSync(CoinEntryId);
 
-/** What an earn in the app names: a wish, a date idea, a list item, a moment or a note. */
 export const EarnRef = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9._-]{1,80}$/)).pipe(
   Schema.brand("EarnRef"),
 );
@@ -89,37 +75,25 @@ export type EarnRef = typeof EarnRef.Type;
 
 const decodeEarnRef = Schema.decodeSync(EarnRef);
 
-/**
- * Something the couple did in the app that earns coins. The server pays it once per `ref`: the same
- * wish, idea, plan, item, moment or note again earns nothing more.
- */
+/** The server pays once per `ref`: the same wish, idea, item or note again earns nothing. */
 export const EarnEvent = Schema.TaggedUnion({
-  /** The partner confirmed a wished-for gift arrived. */
   WishReceived: { wish: EarnRef },
-  /** Both partners said yes to the same date idea. */
   DateMatched: { idea: EarnRef },
-  /**
-   * A right guess in Who knows who: `question` (a `GuessQuestionId`) of the round of `round`. The
-   * room pays it at the reveal, never the app.
-   */
+  /** `question` is a `GuessQuestionId`. The room pays it at the reveal, never the app. */
   GuessHit: { round: LocalDay, question: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)) },
-  /** Both partners finished the Who knows who round of `round`. Paid by the room, like a hit. */
+  /** Paid by the room, like a hit. */
   RoundPlayed: { round: LocalDay },
-  /** A planned date was rated, which marks it done. */
+  /** Rating a planned date marks it done. */
   DateRated: { plan: EarnRef },
-  /** A "we want to" item was ticked. Groceries earn nothing, so the app never sends those. */
+  /** Groceries earn nothing, so the app never sends those. */
   ListTicked: { item: EarnRef },
   MomentAdded: { moment: EarnRef },
   NoteAdded: { note: EarnRef },
 });
 export type EarnEvent = typeof EarnEvent.Type;
 
-/**
- * What an app earn pays before the daily cap, the cap it counts against (none: once per ref is the
- * only limit), and the entry id that makes it once. Moments and notes count against the `notes`
- * cap, which the room's own entries for stored notes fill too, so a shared note can't earn past
- * it. Placeholders mirroring the app's local amounts.
- */
+/** No `source`: once per ref is the only limit. The room's stored-note entries fill the `notes`
+ * cap too, so a shared note can't earn past it. Placeholders mirroring the app's amounts. */
 export const rewardForEarn = (
   event: EarnEvent,
 ): {

@@ -42,9 +42,7 @@ const guarded = <R>(effect: Effect.Effect<HttpServerResponse.HttpServerResponse,
   );
 
 /**
- * The review pair's controls. Needs `CurrentAdmin`, so only a person through Access reaches them,
- * and every change is recorded under their email. A new code is in the answer that made it and
- * nowhere else: the status shows only its last four symbols.
+ * A new code appears only in the answer that made it; the status shows its last four symbols.
  */
 export const ReviewAdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {

@@ -2,22 +2,17 @@ import { Context, Layer, Schema } from "effect";
 import { ExperimentKey, VariantId } from "@billet/contracts-domain/flags";
 import { PairId } from "@billet/contracts-domain/pair-id";
 
-/**
- * - `draft`: delivered to nobody but pairs with an override, so the owner can try it first.
- * - `running`: pairs enter as they read their flags, and keep what they were given.
- * - `stopped`: nobody new enters; pairs already in keep their variant, so a test can finish.
- */
+/** `draft`: only pairs with an override; `running`: pairs enter as they read their flags and
+ * keep their variant; `stopped`: nobody new enters, pairs already in keep theirs. */
 export const ExperimentStatus = Schema.Literals(["draft", "running", "stopped"]);
 export type ExperimentStatus = typeof ExperimentStatus.Type;
 
-/**
- * - `experiment`: a question with one primary metric, compared variant against variant.
- * - `flag`: a Labs setting the owner can roll out remotely. Same delivery, no comparison.
- */
+/** `experiment` compares variants on one primary metric; `flag` is a Labs setting rolled out
+ * remotely, with no comparison. */
 export const ExperimentKind = Schema.Literals(["experiment", "flag"]);
 export type ExperimentKind = typeof ExperimentKind.Type;
 
-/** The age bands pairing allows (decisions.md, 2026-11-02): 13–17 with 13–17, 18+ with 18+. */
+/** Pairing allows 13–17 with 13–17 and 18+ with 18+. */
 export const AgeBand = Schema.Literals(["13-17", "18+"]);
 export type AgeBand = typeof AgeBand.Type;
 
@@ -32,32 +27,24 @@ export const PairedSince = Schema.String.check(
   Schema.makeFilter((value) => !Number.isNaN(Date.parse(value)) || "not a real moment"),
 );
 
-/**
- * Who may enter. Every rule left out lets everyone through; every rule given must hold. A pair the
- * rules leave out is not listed at all, so its app keeps its built-in default.
- */
+/** Every rule given must hold. A pair the rules leave out is not listed at all, so its app keeps
+ * its built-in default. */
 export const Targeting = Schema.Struct({
   /** Inclusive. A build that sent no version is left out by either bound. */
   minAppVersion: Schema.optional(AppVersionBound),
   maxAppVersion: Schema.optional(AppVersionBound),
   /** Pairs whose band is known and listed. Empty or absent: every pair, known band or not. */
   ageBands: Schema.optional(Schema.Array(AgeBand)),
-  /**
-   * Only pairs formed at or after this moment, so an experiment can be kept to new pairs: set it to
-   * when the experiment starts. A pair whose formation time is unknown is left out.
-   */
+  /** Set to the experiment's start to keep it to new pairs. A pair whose formation time is
+   * unknown is left out. */
   pairedSince: Schema.optional(PairedSince),
   /** Only these pairs, for a test on the owner's own pair. Empty or absent: every pair. */
   pairIds: Schema.optional(Schema.Array(PairId).check(Schema.isMaxLength(200))),
 });
 export type Targeting = typeof Targeting.Type;
 
-/**
- * One question asked of real pairs, or one setting rolled out to them. The unit is the pair, so
- * both partners always see the same variant. Every variant must already be built into the app:
- * assignment only picks between variants a reviewed build contains, and never turns on code that
- * App Review has not seen.
- */
+/** The unit is the pair, so both partners see the same variant. Every variant must already be in
+ * a reviewed build: assignment never turns on code App Review has not seen. */
 export interface Experiment {
   readonly key: ExperimentKey;
   readonly kind: ExperimentKind;
@@ -127,7 +114,6 @@ export const defineExperiment = (spec: ExperimentSpec): Experiment => {
   };
 };
 
-/** A list of experiments with unique keys. */
 export const defineExperiments = (
   specs: ReadonlyArray<ExperimentSpec>,
 ): ReadonlyArray<Experiment> => {
@@ -137,20 +123,11 @@ export const defineExperiments = (
   return experiments;
 };
 
-/**
- * Every experiment and remote flag this server knows: the one place they are defined. The key,
- * kind and variant ids here are fixed, because they must match what the app contains
- * (`Experiments` in packages/ios/features/Sources/WidgetBridge/RemoteFlags.swift, checked by a Swift test
- * that reads this file). Everything else here is only the starting configuration: the admin
- * panel changes weights, default, exposure, status, kill switch and targeting without a deploy,
- * and stores them in D1 (`flag_configs`). See docs/experiments.md and docs/admin.md.
- *
- * An entry stays here after it ends, so its key is never reused for another question.
- * Variant ids are the app's case names in kebab-case.
- */
+/** Key, kind and variant ids must match the app (WidgetBridge/RemoteFlags.swift, checked by a
+ * Swift test reading this file); the admin panel overrides the rest in D1. Entries stay after
+ * they end so a key is never reused; variant ids are the app's case names in kebab-case. */
 export const registry: ReadonlyArray<Experiment> = defineExperiments([
-  // Labs settings the owner can roll out remotely. Each is a complete, reviewed choice in the
-  // app; a Labs choice on the phone still wins. Draft: nothing changes until the owner starts one.
+  // A Labs choice on the phone still wins over these.
   {
     key: "room-lighting",
     kind: "flag",
@@ -194,9 +171,7 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
-  // The server's switch for buying coins (docs/payments.md, `payments.enabled`). Off: the
-  // purchase routes answer 404 and the app offers no coin packs. Draft, so it stays off on every
-  // stage until the owner overrides it for a test pair or starts it with `on` weighted.
+  // Off: the purchase routes answer 404 and the app offers no coin packs (docs/payments.md).
   {
     key: "payments",
     kind: "flag",
@@ -208,8 +183,6 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
-  // Pick tonight on the To watch list. On by default; `off` hides the button, for a pair or for
-  // everyone.
   {
     key: "pick-tonight",
     kind: "flag",
@@ -220,9 +193,7 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
-  // The rooms' static shell: built from boxes at launch (`live`), or one baked lightmapped model
-  // per room (`baked`, docs/baked-shell.md). Draft with all weight on `live`: starting it changes
-  // nothing. To roll back for everyone, set `live` as the only weighted variant or kill it.
+  // Rollback for everyone: `live` as the only weighted variant, or kill it (docs/baked-shell.md).
   {
     key: "room-shell",
     kind: "flag",

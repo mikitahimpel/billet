@@ -18,9 +18,7 @@ const decodeKey = Schema.decodeUnknownOption(MediaKey);
 const deleteBatch = 1000;
 
 /**
- * `MediaStore` on the private R2 bucket. Each image carries its uploader's id as custom metadata,
- * so deleting an account finds the images it uploaded and never sent. Images stored before that
- * have none; a sent one is still found through its note.
+ * The uploader's id rides as metadata so account deletion finds unsent images; older ones lack it.
  */
 export const MediaStoreLive = (bucket: R2Bucket): Layer.Layer<MediaStore> =>
   Layer.succeed(

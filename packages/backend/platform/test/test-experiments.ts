@@ -1,6 +1,6 @@
 import { defineExperiments } from "@billet/backend-flags/experiments";
 
-/** What the test Worker serves instead of the real registry, so a test can rely on what is running. */
+/** Served instead of the real registry, so a test can rely on what is running. */
 export const testExperiments = defineExperiments([
   {
     key: "split",

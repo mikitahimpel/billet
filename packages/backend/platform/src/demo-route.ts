@@ -4,10 +4,7 @@ const ROUTE =
   /^\/demo\/rooms\/([23456789ABCDEFGHJKMNPQRSTVWXYZ]{10})\/(socket|notes\/[0-9a-fA-F-]{36}|plays)$/;
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
-/**
- * Temporary demo route. `rooms` is bound only on the dev stage; without it every demo path is
- * a plain 404, so no other stage exposes it.
- */
+/** `rooms` is bound only on the dev stage; without it every demo path is a plain 404. */
 export const routeDemo = (
   request: Request,
   rooms: DurableObjectNamespace<DemoRoom> | undefined,
