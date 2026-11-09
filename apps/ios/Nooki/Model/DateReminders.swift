@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import UserNotifications
 
 /// Local notifications for a planned date, a day and an hour before it. Both partners share this phone's copy of the

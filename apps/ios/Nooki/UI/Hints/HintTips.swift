@@ -1,3 +1,4 @@
+import OurioShared
 import SwiftUI
 import TipKit
 

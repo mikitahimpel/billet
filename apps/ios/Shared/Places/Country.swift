@@ -2,11 +2,11 @@ import Foundation
 
 /// The 195 countries a pair can go to: the UN's 193 members, the Holy See and Palestine, as ISO 3166-1 alpha-2
 /// codes. Names come from the phone's locale, so none are bundled.
-nonisolated enum Country {
-    enum Region: String, CaseIterable {
+public nonisolated enum Country {
+    public enum Region: String, CaseIterable, Sendable {
         case africa, americas, asia, europe, oceania
 
-        var title: String {
+        public var title: String {
             switch self {
             case .africa: "Africa"
             case .americas: "Americas"
@@ -40,20 +40,20 @@ nonisolated enum Country {
         region.codes.split(separator: " ").map { (String($0), region) }
     })
 
-    static let codes: [String] = regions.keys.sorted()
-    static var count: Int { regions.count }
+    public static let codes: [String] = regions.keys.sorted()
+    public static var count: Int { regions.count }
 
-    static func isCountry(_ code: String) -> Bool { regions[code] != nil }
+    public static func isCountry(_ code: String) -> Bool { regions[code] != nil }
 
-    static func region(_ code: String) -> Region? { regions[code] }
+    public static func region(_ code: String) -> Region? { regions[code] }
 
     /// The country's name in `locale`, or its code when the locale has none.
-    static func name(_ code: String, locale: Locale = .current) -> String {
+    public static func name(_ code: String, locale: Locale = .current) -> String {
         locale.localizedString(forRegionCode: code) ?? code
     }
 
     /// The two regional indicator letters, which the system draws as the flag.
-    static func emoji(_ code: String) -> String {
+    public static func emoji(_ code: String) -> String {
         String(String.UnicodeScalarView(code.uppercased().unicodeScalars.compactMap {
             Unicode.Scalar(0x1F1E6 + $0.value - 0x41)
         }))
@@ -61,7 +61,7 @@ nonisolated enum Country {
 
     /// Countries whose name in `locale` or in English has a word starting with `query`, ignoring case and accents;
     /// names that start with it come first.
-    static func search(_ query: String, locale: Locale = .current) -> [String] {
+    public static func search(_ query: String, locale: Locale = .current) -> [String] {
         let query = fold(query.trimmingCharacters(in: .whitespacesAndNewlines))
         guard !query.isEmpty else { return [] }
         let english = Locale(identifier: "en")
@@ -86,12 +86,17 @@ nonisolated enum Country {
 }
 
 /// A country or a place in one that couples go to most, offered before anything is typed.
-nonisolated struct PopularPlace: Hashable {
-    let country: String
+public nonisolated struct PopularPlace: Hashable, Sendable {
+    public let country: String
     /// Set for a place in the country, such as Bali.
-    var place: String?
+    public var place: String?
 
-    static let all: [PopularPlace] = [
+    public init(country: String, place: String? = nil) {
+        self.country = country
+        self.place = place
+    }
+
+    public static let all: [PopularPlace] = [
         .init(country: "GR"), .init(country: "TH"), .init(country: "FR"), .init(country: "ID", place: "Bali"),
         .init(country: "IT"), .init(country: "JP"), .init(country: "ES"), .init(country: "PT"),
         .init(country: "IS"), .init(country: "MX"),
@@ -100,37 +105,37 @@ nonisolated struct PopularPlace: Hashable {
 
 extension ListItem {
     /// A country on a travel list, rather than a place in one or a line of text.
-    nonisolated var isCountry: Bool { !place && country.map(Country.isCountry) == true }
+    public nonisolated var isCountry: Bool { !place && country.map(Country.isCountry) == true }
 }
 
 extension UsList {
     /// The countries the pair has been to, each once however many items name it; places don't count.
-    nonisolated var beenCountries: Set<String> {
+    public nonisolated var beenCountries: Set<String> {
         Set(items.compactMap { $0.done != nil && $0.isCountry ? $0.country : nil })
     }
 
-    nonisolated var wantedCountries: Set<String> {
+    public nonisolated var wantedCountries: Set<String> {
         Set(items.compactMap { $0.done == nil && $0.isCountry ? $0.country : nil }).subtracting(beenCountries)
     }
 
     /// "7 of 195 countries together · 4%".
-    nonisolated var travelSummary: (been: Int, percent: Int) {
+    public nonisolated var travelSummary: (been: Int, percent: Int) {
         let been = beenCountries.count
         return (been, Int((Double(been) / Double(Country.count) * 100).rounded()))
     }
 }
 
 /// A month the pair went somewhere, kept as `2026-10`.
-nonisolated struct TravelMonth: Hashable, Comparable {
-    let year: Int
-    let month: Int
+public nonisolated struct TravelMonth: Hashable, Comparable, Sendable {
+    public let year: Int
+    public let month: Int
 
-    init(year: Int, month: Int) {
+    public init(year: Int, month: Int) {
         self.year = year
         self.month = month
     }
 
-    init?(_ text: String) {
+    public init?(_ text: String) {
         let parts = text.split(separator: "-")
         guard parts.count == 2, let year = Int(parts[0]), let month = Int(parts[1]), (1...12).contains(month) else {
             return nil
@@ -138,18 +143,18 @@ nonisolated struct TravelMonth: Hashable, Comparable {
         self.init(year: year, month: month)
     }
 
-    init(_ date: Date, calendar: Calendar = .current) {
+    public init(_ date: Date, calendar: Calendar = .current) {
         let parts = calendar.dateComponents([.year, .month], from: date)
         self.init(year: parts.year ?? 2000, month: parts.month ?? 1)
     }
 
-    var text: String { String(format: "%04d-%02d", year, month) }
+    public var text: String { String(format: "%04d-%02d", year, month) }
 
     /// "October 2026", in the phone's language.
-    func formatted(calendar: Calendar = .current) -> String {
+    public func formatted(calendar: Calendar = .current) -> String {
         let date = calendar.date(from: DateComponents(year: year, month: month, day: 1)) ?? .now
         return date.formatted(.dateTime.month(.wide).year())
     }
 
-    static func < (a: TravelMonth, b: TravelMonth) -> Bool { (a.year, a.month) < (b.year, b.month) }
+    public static func < (a: TravelMonth, b: TravelMonth) -> Bool { (a.year, a.month) < (b.year, b.month) }
 }

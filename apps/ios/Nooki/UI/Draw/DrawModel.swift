@@ -2,6 +2,7 @@ import FeatureCanvas
 import Foundation
 import Ink
 import Observation
+import OurioShared
 import QuartzCore
 import SwiftUI
 import Transport

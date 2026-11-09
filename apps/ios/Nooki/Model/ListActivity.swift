@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 
 /// A partner's newest change to a list: what they did, how many times that day, and when.
 nonisolated struct ListChange: Equatable {

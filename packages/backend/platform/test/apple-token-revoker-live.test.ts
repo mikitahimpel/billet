@@ -1,7 +1,7 @@
 import { Effect, Redacted } from "effect";
 import { describe, expect, it } from "vitest";
 import { AppleTokenRevoker } from "@billet/backend-account/apple-token-revoker";
-import { appleAudience } from "@billet/backend-auth/apple-identity-verifier";
+import { appleAudience, legacyAppleAudience } from "@billet/backend-auth/apple-identity-verifier";
 import {
   type AppleFetch,
   AppleTokenRevokerLive,
@@ -72,10 +72,29 @@ describe("revoking a Sign in with Apple token", () => {
     expect(valid).toBe(true);
   });
 
-  it("stops at a refused code, and revokes nothing", async () => {
-    const apple = fakeApple([Response.json({ error: "invalid_grant" }, { status: 400 })]);
+  it("stops at a code refused for every bundle id, and revokes nothing", async () => {
+    const refused = () => Response.json({ error: "invalid_grant" }, { status: 400 });
+    const apple = fakeApple([refused(), refused()]);
     expect(await revokeAppleToken(key, Redacted.make("stale"), apple.send)).toBe("rejected");
-    expect(apple.calls).toHaveLength(1);
+    expect(apple.calls.map(({ url }) => url)).toEqual([
+      "https://appleid.apple.com/auth/token",
+      "https://appleid.apple.com/auth/token",
+    ]);
+  });
+
+  it("redeems a code from the first app under its bundle id", async () => {
+    const apple = fakeApple([
+      Response.json({ error: "invalid_client" }, { status: 400 }),
+      Response.json({ refresh_token: "refresh-old" }),
+      new Response(null, { status: 200 }),
+    ]);
+    expect(await revokeAppleToken(key, Redacted.make("code-old"), apple.send)).toBe("revoked");
+    const [first, second, revoke] = apple.calls;
+    expect(first?.fields.get("client_id")).toBe(appleAudience);
+    expect(second?.fields.get("client_id")).toBe(legacyAppleAudience);
+    expect(revoke?.url).toBe("https://appleid.apple.com/auth/revoke");
+    expect(revoke?.fields.get("client_id")).toBe(legacyAppleAudience);
+    expect(revoke?.fields.get("token")).toBe("refresh-old");
   });
 
   it("says so when Apple refuses the revocation", async () => {

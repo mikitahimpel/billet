@@ -1,3 +1,4 @@
+import OurioShared
 import UIKit
 
 /// Item PNGs are 1024 px with generous transparent margins: each place decodes them at the size it draws,

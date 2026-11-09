@@ -6,7 +6,7 @@ import Wire
 
 /// The picture of a note: a square of transparent ink, and the App Group file of the latest one.
 public enum NoteImage {
-  public static let appGroup = "group.com.mikitahimpel.billet"
+  public static let appGroup = "group.com.ourio.app"
   private static let latestFileName = "latest-note.png"
 
   public static var latestFile: URL? {

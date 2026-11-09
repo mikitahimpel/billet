@@ -1,5 +1,6 @@
 import ActivityKit
 import Foundation
+import OurioShared
 import Persistence
 import PetScene
 import Transport
@@ -110,5 +111,5 @@ final class PushAppDelegate: NSObject, UIApplicationDelegate {
 }
 
 extension Notification.Name {
-    static let pushTokenChanged = Notification.Name("com.mikitahimpel.billet.push-token-changed")
+    static let pushTokenChanged = Notification.Name("com.ourio.app.push-token-changed")
 }

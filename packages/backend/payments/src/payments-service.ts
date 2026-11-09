@@ -3,7 +3,7 @@ import type { Signature } from "effect/crypto";
 import { CoinEntryId } from "@billet/contracts-domain/coins";
 import type { UserId } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { appBundleId, coinPackOf } from "@billet/contracts-domain/coin-packs";
+import { acceptedBundleIds, coinPackOf } from "@billet/contracts-domain/coin-packs";
 import type {
   MockPurchaseRequest,
   PurchaseResponse,
@@ -121,7 +121,7 @@ export class PaymentsService extends Context.Service<
       const verifiedTransaction = Effect.fnUntraced(function* (jws: string, allowXcode: boolean) {
         const { payload, chain } = yield* verified(jws, allowXcode);
         const transaction = yield* shapeOf(Transaction, "transaction-shape")(payload);
-        if (transaction.bundleId !== appBundleId) {
+        if (!acceptedBundleIds.includes(transaction.bundleId)) {
           return yield* new InvalidPurchase({ reason: "bundle-mismatch" });
         }
         // Only Xcode signs with its own certificate, and Apple never signs for Xcode.
@@ -308,7 +308,7 @@ export class PaymentsService extends Context.Service<
         const { payload } = yield* verified(Redacted.value(signedPayload), false);
         const decoded = yield* shapeOf(Notification, "notification-shape")(payload);
         const { data } = decoded;
-        if (data?.bundleId !== undefined && data.bundleId !== appBundleId) {
+        if (data?.bundleId !== undefined && !acceptedBundleIds.includes(data.bundleId)) {
           return yield* new InvalidPurchase({ reason: "bundle-mismatch" });
         }
         if (yield* repository.hasNotification(decoded.notificationUUID)) return;

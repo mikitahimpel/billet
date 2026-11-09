@@ -3,21 +3,30 @@ import Foundation
 /// What the pair has put on grocery lists, by `GroceryWords.key`: how often, and the aisle last picked. Built from the
 /// items this phone sees, both partners' included, so it outlives "Clear".
 // note: misses items the partner added and cleared unseen here; a table in the pair's room would catch them.
-nonisolated struct GroceryHistory: Codable, Hashable {
-    struct Entry: Codable, Hashable {
+public nonisolated struct GroceryHistory: Codable, Hashable, Sendable {
+    public struct Entry: Codable, Hashable, Sendable {
         /// The name as last written.
-        var text: String
-        var count = 0
-        var aisle: String?
-        var last: Date
+        public var text: String
+        public var count = 0
+        public var aisle: String?
+        public var last: Date
+
+        public init(text: String, count: Int = 0, aisle: String? = nil, last: Date) {
+            self.text = text
+            self.count = count
+            self.aisle = aisle
+            self.last = last
+        }
     }
 
-    private(set) var entries: [String: Entry] = [:]
+    public private(set) var entries: [String: Entry] = [:]
     /// Grocery items already counted. Only the ones still on a list are kept, since a deleted item never comes back.
     private var counted: Set<UUID> = []
 
+    public init() {}
+
     /// Counts every grocery item seen for the first time and keeps the aisle a partner set on one.
-    mutating func observe(_ lists: [UsList]) {
+    public mutating func observe(_ lists: [UsList]) {
         let items = lists.filter { $0.kind == .groceries }.flatMap(\.items).sorted { $0.added < $1.added }
         for item in items {
             let key = GroceryWords.key(item.text)
@@ -34,10 +43,10 @@ nonisolated struct GroceryHistory: Codable, Hashable {
         counted = Set(items.map(\.id))
     }
 
-    func entry(for text: String) -> Entry? { entries[GroceryWords.key(text)] }
+    public func entry(for text: String) -> Entry? { entries[GroceryWords.key(text)] }
 
     /// The most bought first, the latest first among equals.
-    func often(limit: Int) -> [Entry] {
+    public func often(limit: Int) -> [Entry] {
         Array(entries.values.sorted { ($0.count, $0.last) > ($1.count, $1.last) }.prefix(limit))
     }
 }

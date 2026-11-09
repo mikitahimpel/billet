@@ -1,6 +1,7 @@
 import CoreGraphics
 import Design
 import Foundation
+import OurioShared
 import Persistence
 import Synchronization
 import Testing
