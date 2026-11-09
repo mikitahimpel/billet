@@ -124,7 +124,11 @@ struct SettingsView: View {
                              + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
                              + "them baked, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
-                             + "the controls over the room after a few seconds without a touch.") {
+                             + "the controls over the room after a few seconds without a touch. Coins come from the dev "
+                             + "server's mock store, into the pair's wallet.") {
+                if let session {
+                    LabsCoinsRows(shop: state.shop, purchases: session.purchases)
+                }
                 ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
                 ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
                 ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
