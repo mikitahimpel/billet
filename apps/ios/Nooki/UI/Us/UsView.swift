@@ -1,3 +1,4 @@
+import PetScene
 import SwiftUI
 import Design
 
@@ -9,6 +10,8 @@ struct UsView: View {
     /// The round for a build without a server, which has no partner to play with.
     @State private var unpaired = WhoKnowsModel(sync: nil, viewer: nil, catalog: [])
     @State private var unpairedRiddles = DrawGuessModel(sync: nil, viewer: nil, words: .bundled)
+    /// Where the page is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
+    @State private var position = ScrollPosition(edge: .top)
 
     enum Route: Identifiable, Hashable {
         case dates, whoKnows, drawGuess, wishlists, calendar, list(UUID), newList
@@ -45,7 +48,13 @@ struct UsView: View {
             .padding(.bottom, Space.l)
         }
         .scrollIndicators(.hidden)
+        .scrollPosition($position)
         .softScrollEdges()
+        .onAppear {
+            guard ScenePerf.isOn else { return }
+            OurioPerf.scrolls[.us] = { position.scrollTo(y: $0) }
+        }
+        .onDisappear { OurioPerf.scrolls[.us] = nil }
         .task(id: session?.isPaired) {
             await whoKnows.load()
             await drawGuess.load()

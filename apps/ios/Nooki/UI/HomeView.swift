@@ -71,7 +71,7 @@ struct HomeView: View {
         content
         .modifier(StreakNudging(streak: state.streak))
         .task {
-            OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
+            OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 }, selectRoom: select)
             await lift()
         }
         .task {
