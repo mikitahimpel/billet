@@ -105,7 +105,7 @@ struct PackStore: View {
             ForEach(Array(model.packs.enumerated()), id: \.element.id) { index, pack in
                 PackCard(
                     pack: pack, tier: min(index, Self.piles.count - 1), badge: badge(for: index, of: model.packs),
-                    buying: model.status == .buying(pack.id), isFit: pack.id == fit?.id
+                    buying: model.status == .buying(pack.id), locked: model.isBuying, isFit: pack.id == fit?.id
                 ) {
                     Task { await model.buy(pack) }
                 }
@@ -159,6 +159,8 @@ private struct PackCard: View {
     let tier: Int
     let badge: String?
     let buying: Bool
+    /// Some pack is being bought, this one or another.
+    let locked: Bool
     let isFit: Bool
     let buy: () -> Void
 
@@ -199,7 +201,7 @@ private struct PackCard: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             priceButton
-                .disabled(buying)
+                .disabled(locked)
             .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
         }
         .padding(Space.l)

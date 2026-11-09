@@ -49,8 +49,14 @@ final class CoinPacksModel {
         packs = (try? await payments.products()) ?? []
     }
 
+    /// A pack is on its way through the store; every buy waits for it.
+    var isBuying: Bool {
+        if case .buying = status { true } else { false }
+    }
+
     func buy(_ pack: StampPack) async {
-        guard let payments, status != .buying(pack.id) else { return }
+        // One buy at a time: a second pack tapped meanwhile would race the first for `status`.
+        guard let payments, !isBuying else { return }
         status = .buying(pack.id)
         do throws(PaymentsError) {
             switch try await payments.purchase(pack) {

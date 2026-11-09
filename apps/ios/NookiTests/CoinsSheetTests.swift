@@ -41,6 +41,21 @@ import Wire
         #expect(reads.count == 0)
     }
 
+    @Test @MainActor func aSecondPackWaitsForTheBuyOnItsWay() async throws {
+        let store = HeldStore()
+        let model = CoinPacksModel(payments: FakePayments(result: .succeed, held: store)) {}
+        await model.load()
+        let first = try #require(model.packs.first)
+        let buying = Task { await model.buy(first) }
+        while store.held == nil { await Task.yield() }
+        await model.buy(try #require(model.packs.last))
+        #expect(model.status == .buying(first.id))
+        store.held?.resume()
+        await buying.value
+        #expect(model.status == .bought(coins: 100))
+        #expect(store.purchases == 1)
+    }
+
     @Test func theSmallestPackThatCoversTheGapIsTheOneShown() {
         let packs = StampPackCatalog.standard.packs.map(StampPackCatalog.standard.pack)
         #expect(CoinPacksModel.fit(for: 0, in: packs) == nil)
@@ -71,6 +86,12 @@ import Wire
     }
 }
 
+/// A store sheet the buyer hasn't answered yet: each purchase waits in `held` until the test resumes it.
+nonisolated private final class HeldStore: @unchecked Sendable {
+    var purchases = 0
+    var held: CheckedContinuation<Void, Never>?
+}
+
 @MainActor private final class Counter {
     var count = 0
 }
@@ -83,13 +104,18 @@ nonisolated private struct FakePayments: Payments {
     }
 
     let result: Outcome
+    var held: HeldStore?
 
     func products() async throws(PaymentsError) -> [StampPack] {
         StampPackCatalog.standard.packs.map(StampPackCatalog.standard.pack)
     }
 
     func purchase(_ pack: StampPack) async throws(PaymentsError) -> PurchaseResult {
-        switch result {
+        if let held {
+            held.purchases += 1
+            await withCheckedContinuation { held.held = $0 }
+        }
+        return switch result {
         case .succeed:
             .purchased(StampCredit(
                 entryID: "purchase:t1", transactionID: "t1", productID: pack.id, stamps: pack.stamps,
