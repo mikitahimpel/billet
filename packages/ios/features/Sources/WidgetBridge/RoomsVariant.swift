@@ -1,10 +1,10 @@
-/// One of Nooki's two rooms: Ilya's diorama (`room`) and the City room with the big window.
-public enum NookiRoom: String, CaseIterable, Sendable {
+/// One of Ourio's two rooms: Ilya's diorama (`room`) and the City room with the big window.
+public enum OurioRoom: String, CaseIterable, Sendable {
   case room
   case city
 }
 
-/// Which rooms a pair's Nooki has: the `rooms` experiment, given only to pairs formed after it
+/// Which rooms a pair's Ourio has: the `rooms` experiment, given only to pairs formed after it
 /// started. Every other pair, and any phone the server said nothing to, has both.
 public enum RoomsVariant: String, CaseIterable, Sendable, RemoteChoice {
   case both
@@ -12,7 +12,7 @@ public enum RoomsVariant: String, CaseIterable, Sendable, RemoteChoice {
   case cityOnly
 
   /// The rooms Home offers, in the order of its switch. Never empty.
-  public var rooms: [NookiRoom] {
+  public var rooms: [OurioRoom] {
     switch self {
     case .both: [.room, .city]
     case .roomOnly: [.room]
@@ -24,7 +24,7 @@ public enum RoomsVariant: String, CaseIterable, Sendable, RemoteChoice {
   public var hasRoomChoice: Bool { rooms.count > 1 }
 
   /// The room Home opens on.
-  public var firstRoom: NookiRoom { rooms[0] }
+  public var firstRoom: OurioRoom { rooms[0] }
 
   /// What the phone shows: a choice made in Labs on this phone, then the pair's variant, then both.
   public static func resolved(labs: RoomsVariant?, remote: RemoteFlags) -> RoomsVariant {

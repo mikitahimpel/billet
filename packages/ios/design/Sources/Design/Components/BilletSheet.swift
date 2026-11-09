@@ -29,6 +29,9 @@ public enum SheetSize: Sendable {
 ///
 /// The system draws both buttons as toolbar items. With `hasChanges` the confirm button stays disabled until
 /// something changed, closing asks "Discard changes?" and a swipe down is blocked while there are changes.
+///
+/// A sheet's own toolbar items go on the content, inside the closure: a `.toolbar` on the `BilletSheet` itself
+/// sits outside its navigation stack and is never drawn.
 public struct BilletSheet<Content: View>: View {
   /// Which edge of the toolbar the close button sits on.
   enum ClosePlacement: Equatable {
@@ -198,8 +201,8 @@ struct SheetSubtitle: View {
 
   var body: some View {
     VStack(spacing: 0) {
-      Text(title).font(.nookiHeadline).foregroundStyle(Ink.text)
-      Text(subtitle).font(.nookiMicro).foregroundStyle(Ink.textSecondary).monospacedDigit()
+      Text(title).font(.ourioHeadline).foregroundStyle(Ink.text)
+      Text(subtitle).font(.ourioMicro).foregroundStyle(Ink.textSecondary).monospacedDigit()
     }
     .accessibilityElement(children: .combine)
     .accessibilityAddTraits(.isHeader)

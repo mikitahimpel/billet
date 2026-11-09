@@ -17,10 +17,10 @@ struct DailyGiftCard: View {
             box
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 subtitle
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

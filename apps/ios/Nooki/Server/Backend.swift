@@ -6,7 +6,7 @@ import Transport
 /// the anonymous account key in the iCloud Keychain.
 ///
 /// The host comes from the build (`BILLET_API_HOST`, read into Info.plist as `BilletAPIHost`) and never from the
-/// repository. A build without one has no backend and keeps everything on the phone, as Nooki did before.
+/// repository. A build without one has no backend and keeps everything on the phone, as Ourio did before.
 struct Backend {
     let baseURL: URL
     let api: APIClient

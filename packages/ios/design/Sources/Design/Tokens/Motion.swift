@@ -25,7 +25,7 @@ public enum Motion {
     VStack(spacing: Space.l) {
       ZStack {
         Text("Page \(page + 1)")
-          .font(.nookiTitle)
+          .font(.ourioTitle)
           .foregroundStyle(Ink.text)
           .id(page)
           .transition(.opacity)

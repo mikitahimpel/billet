@@ -1,8 +1,8 @@
 """Turns reference images into Gaussian splats the app renders with GaussianSplatComponent.
 
 Run through `npm run splat --`, which uses the Python that `npm run setup` built:
-  npm run splat -- nooki                    # every asset of generate/scenes/nooki.json
-  npm run splat -- nooki --only Cat         # some of them
+  npm run splat -- ourio                    # every asset of generate/scenes/ourio.json
+  npm run splat -- ourio --only Cat         # some of them
   npm run splat -- --image photo.png --out Lamp.ply --height 0.4 [--mode real]
   npm run splat -- --ply generate/out/Cat.ply --out Cat.ply --height 0.30   # skip generation, only post-process
   npm run splat -- --ply generate/out/Cat.ply --out Cat.ply --height 0.30 --yaw -87   # and turn it to face -Z

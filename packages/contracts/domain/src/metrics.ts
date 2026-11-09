@@ -43,7 +43,7 @@ export const ClientEventName = Schema.Literals([
   "RoomItemPutAway",
   /** The room itself was changed: walls, floor, window (detail: what was changed). */
   "RoomCustomised",
-  /** One of Nooki's rooms came on screen: the diorama `room` or the `city` (detail: which). */
+  /** One of Ourio's rooms came on screen: the diorama `room` or the `city` (detail: which). */
   "RoomOpened",
 
   /** The shop was opened. */

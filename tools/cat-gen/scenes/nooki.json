@@ -1,6 +1,0 @@
-{
-  "out": "../out/nooki",
-  "assets": {
-    "Cat": { "image": "../refs/cat-sitting.png", "height": 0.30 }
-  }
-}

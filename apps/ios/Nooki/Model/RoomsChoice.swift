@@ -49,7 +49,7 @@ final class RoomsChoice {
 }
 
 extension RoomKind {
-    init(_ room: NookiRoom) {
+    init(_ room: OurioRoom) {
         switch room {
         case .room: self = .home
         case .city: self = .city

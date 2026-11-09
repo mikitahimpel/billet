@@ -37,14 +37,15 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
   ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
-  ("FeatureGamesTests", ["FeatureGames", "GamesInterface", "Wire"]),
+  ("FeatureGamesTests", ["FeatureGames", "GamesInterface", "Transport", "Wire"]),
   ("RoomInterfaceTests", ["RoomInterface", "Pet"]),
 ]
 
 // The mini-games' rules, apart from how they are drawn: the scale, the bowl, the dot, the brush, and what a finished
 // game puts in the cat's journal.
 let games: Target = .target(
-  name: "FeatureGames", dependencies: dependencies(["GamesInterface", "Wire"]))
+  name: "FeatureGames",
+  dependencies: dependencies(["GamesInterface", "BilletKit", "Transport", "Wire"]))
 
 // Coins and Shop: the interface other features see (value types, protocols) and the feature itself
 // (the machine, its store, the server client). docs/ios-architecture.md.

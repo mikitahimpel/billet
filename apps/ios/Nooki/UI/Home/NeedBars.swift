@@ -33,7 +33,7 @@ struct NeedBars: View {
             } else {
                 // Before her needs are known: one calm line rather than four empty bars.
                 Text("\(name) is settling in. Her needs show here soon.")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity, minHeight: 60)
@@ -61,7 +61,7 @@ private struct NeedCell: View {
                                                startPoint: .top, endPoint: .bottom), in: .circle)
                     .shadow(color: need.hue.opacity(0.35), radius: 3, y: 2)
                 Text(need.title)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                     .lineLimit(1)
             }
@@ -121,7 +121,7 @@ struct PetActions: View {
                                 Text("\(price)").monospacedDigit()
                             }
                         }
-                        .font(.nookiCallout.weight(.semibold))
+                        .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.text)
                         .lineLimit(1)
                     }

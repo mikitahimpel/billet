@@ -52,7 +52,7 @@ for devices in json.load(sys.stdin)["devices"].values():
 ' $device)
   [[ -n $udid ]] || { echo "no Simulator named $device" >&2; exit 1; }
   TEST_RUNNER_BAKE_EXPORT_DIR=$work xcodebuild test -project $repo/apps/ios/Billet.xcodeproj -scheme Billet \
-    -destination "platform=iOS Simulator,id=$udid" -only-testing:NookiTests/BakedShellTests/export\(\) \
+    -destination "platform=iOS Simulator,id=$udid" -only-testing:OurioTests/BakedShellTests/export\(\) \
     -derivedDataPath $work/derived CODE_SIGNING_ALLOWED=NO -quiet
   give_lock
   cp $work/*.json $here/shells/ && for f in $here/shells/*.json; do mv $f ${f%.json}.shapes; done

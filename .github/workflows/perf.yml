@@ -133,7 +133,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
@@ -193,6 +193,11 @@ jobs:
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -229,7 +234,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
@@ -279,6 +284,11 @@ jobs:
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
 
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
+
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
@@ -290,7 +300,7 @@ jobs:
     # What each part of the room costs to draw on a small and a large screen: one build, each part
     # switched off and back on in turn within a launch. After the other jobs, on one runner.
     needs: [ab, shots]
-    # The parts it switches are NookiPerf's `switches`: Mochi's shadow and the room's shadows, lights,
+    # The parts it switches are OurioPerf's `switches`: Mochi's shadow and the room's shadows, lights,
     # particles and bloom.
     if: >-
       !cancelled() && github.event_name == 'workflow_dispatch'
@@ -319,7 +329,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
@@ -364,6 +374,11 @@ jobs:
           grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
+
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
@@ -410,7 +425,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
@@ -468,6 +483,11 @@ jobs:
           grep -l -s com.mikitahimpel.billet ~/Library/Logs/DiagnosticReports/*.ips \
             | xargs -I{} cp {} "$RUNNER_TEMP/perf/crashes/" || true
           ls "$RUNNER_TEMP/perf/crashes"
+
+      # The host's Metal log, which shows whether the Simulator stopped running the app's GPU work.
+      - name: Simulator Metal log
+        if: always()
+        run: head/.github/scripts/gpu-log.sh "$RUNNER_TEMP/perf"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

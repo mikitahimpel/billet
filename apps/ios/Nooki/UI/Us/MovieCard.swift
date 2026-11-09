@@ -45,14 +45,14 @@ struct MovieCard: View {
                     if let info {
                         if !info.overview.isEmpty {
                             Text(info.overview)
-                                .font(.nookiBody)
+                                .font(.ourioBody)
                                 .foregroundStyle(Ink.textSecondary)
                         }
                         whereToWatch(info.watch)
                     } else if item.media != nil {
                         if failed {
                             Text("The details aren't reachable right now.")
-                                .font(.nookiCallout)
+                                .font(.ourioCallout)
                                 .foregroundStyle(Ink.textSecondary)
                         } else {
                             ProgressView().frame(maxWidth: .infinity)
@@ -93,12 +93,12 @@ struct MovieCard: View {
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(item.text)
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .lineLimit(3)
                 if let caption = caption(item, info: info) {
                     Text(caption)
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
             }
@@ -120,16 +120,16 @@ struct MovieCard: View {
         VStack(alignment: .leading, spacing: Space.s) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Where to watch")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer()
                 Text("JustWatch")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
             if watch.stream.isEmpty && watch.rentOrBuy.isEmpty {
                 Text("Not streaming in your region yet.")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
             } else {
                 ScrollView(.horizontal) {
@@ -143,7 +143,7 @@ struct MovieCard: View {
             }
             if let link = watch.link.flatMap(URL.init(string:)) {
                 Link("See all options", destination: link)
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.accentText)
             }
         }
@@ -154,7 +154,7 @@ struct MovieCard: View {
             Text(name)
             if let extra { Text(extra).foregroundStyle(Ink.textTertiary) }
         }
-        .font(.nookiCallout)
+        .font(.ourioCallout)
         .foregroundStyle(Ink.text)
         .padding(.horizontal, 14)
         .frame(minHeight: 34)
@@ -174,18 +174,18 @@ struct MovieCard: View {
             }
             if viewerWants && partnerWants {
                 Text("You both want to watch it")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
                 Text("♥").foregroundStyle(Color.honey)
             } else if viewerWants {
                 Text("Waiting for \(couple.name(of: couple.other))")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
             } else {
                 Text(partnerWants ? "\(couple.name(of: couple.other)) wants to watch it" : "Want to watch it?")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
                 Button("Want too") {
@@ -193,7 +193,7 @@ struct MovieCard: View {
                         state.us.setWant(itemID, in: listID, wants: true, by: state.viewer)
                     }
                 }
-                .font(.nookiCallout.weight(.semibold))
+                .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.heroInk)
                 .padding(.horizontal, 14)
                 .frame(minHeight: 34)
@@ -210,12 +210,12 @@ struct MovieCard: View {
         if let done = item.done {
             VStack(spacing: Space.s) {
                 Label("Watched together on \(done.formatted(.dateTime.day().month()))", systemImage: "checkmark.circle.fill")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Button("Not watched yet") {
                     state.us.setItem(itemID, in: listID, done: false, by: state.viewer)
                 }
-                .font(.nookiCallout.weight(.semibold))
+                .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.accentText)
             }
             .frame(maxWidth: .infinity)
@@ -231,7 +231,7 @@ struct MovieCard: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { state.usRoute = .dates }
         } label: {
             Label("Plan a movie night", systemImage: "dice.fill")
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity)
                 .frame(minHeight: 50)

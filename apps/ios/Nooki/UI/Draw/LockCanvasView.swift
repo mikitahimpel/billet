@@ -84,13 +84,13 @@ struct LockCanvasView: View {
 
             VStack(spacing: 3) {
                 Text(model.partnerName)
-                    .font(.nookiCallout.weight(.semibold))
+                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.primary)
                 if model.isPartnerDrawing {
                     HStack(spacing: 5) {
                         Circle().fill(Color(hex: 0x41D37E)).frame(width: 7, height: 7)
                         Text("\(model.partnerName) is drawing…")
-                            .font(.nookiMicro)
+                            .font(.ourioMicro)
                             .foregroundStyle(Ink.primary)
                     }
                     .transition(.opacity)
@@ -124,9 +124,9 @@ struct LockCanvasView: View {
         TimelineView(.everyMinute) { context in
             VStack(spacing: -6) {
                 Text(context.date, format: .dateTime.weekday(.wide).day().month(.wide))
-                    .font(.nookiClockDate)
+                    .font(.ourioClockDate)
                 Text(context.date, format: .dateTime.hour().minute())
-                    .font(.nookiClock)
+                    .font(.ourioClock)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)
                     .lineLimit(1)

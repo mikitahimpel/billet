@@ -89,11 +89,11 @@ struct PurchaseMoment: View {
             MochiHop(trigger: flights)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(purchase.title) is yours")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                     .lineLimit(2)
                 Text(detail(purchase))
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                     .lineLimit(2)
             }
@@ -112,12 +112,12 @@ struct PurchaseMoment: View {
     private func refusal(_ purchase: Purchase) -> some View {
         HStack(spacing: Space.m) {
             Image(systemName: "arrow.uturn.backward.circle.fill")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(Color.honey)
                 .accessibilityHidden(true)
             Text("Couldn't buy \(purchase.title). Your coins are back.")
-                .font(.nookiCallout)
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }

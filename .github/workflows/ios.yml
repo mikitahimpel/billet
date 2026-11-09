@@ -25,7 +25,7 @@ on:
   workflow_dispatch:
     inputs:
       shots:
-        description: "UI test screenshots only: an -only-testing filter, e.g. NookiUITests/NeedBarsTests"
+        description: "UI test screenshots only: an -only-testing filter, e.g. OurioUITests/NeedBarsTests"
         required: false
         default: ""
 
@@ -90,7 +90,7 @@ jobs:
           key: turbo-ios-${{ runner.os }}-${{ github.sha }}
 
   # The app's own tests on a Simulator of the newest iOS this Xcode has. Pull requests run the unit tests
-  # (NookiTests, NookiWidgetsTests); the UI tests (NookiUITests) run on main and by hand.
+  # (OurioTests, OurioWidgetsTests); the UI tests (OurioUITests) run on main and by hand.
   app:
     if: inputs.shots == ''
     runs-on: xcode-27
@@ -145,7 +145,7 @@ jobs:
           # Tests that need a Simulator that can draw skip themselves on GITHUB_ACTIONS.
           export TEST_RUNNER_GITHUB_ACTIONS="$GITHUB_ACTIONS"
           skip=()
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:NookiUITests); fi
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           if ! xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
@@ -166,7 +166,7 @@ jobs:
           fi
           exit "$status"
 
-      # Looks rendered by the app tests (NookiTests/PolaroidLookTests.swift), for review without a Simulator.
+      # Looks rendered by the app tests (OurioTests/PolaroidLookTests.swift), for review without a Simulator.
       - name: Keep the rendered samples
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

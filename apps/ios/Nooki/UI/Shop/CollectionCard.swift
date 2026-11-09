@@ -19,11 +19,11 @@ struct CollectionCard: View {
         VStack(alignment: .leading, spacing: Space.m) {
             HStack(alignment: .firstTextBaseline) {
                 Text(collection.name)
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: Space.s)
                 Text("\(have)/\(collection.itemIDs.count)")
-                    .font(.nookiHeadline.monospacedDigit())
+                    .font(.ourioHeadline.monospacedDigit())
                     .foregroundStyle(Ink.accentText)
                     .contentTransition(.numericText())
             }
@@ -78,7 +78,7 @@ struct CollectionCard: View {
                     Text("Complete it for \(collection.bonus) coins")
                 }
             }
-            .font(.nookiCallout)
+            .font(.ourioCallout)
             .foregroundStyle(Ink.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
 

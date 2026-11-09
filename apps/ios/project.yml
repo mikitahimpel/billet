@@ -62,15 +62,16 @@ targets:
         BilletPayments: $(BILLET_PAYMENTS_MODE)
         BilletLabs: $(BILLET_LABS_MODE)
         # The invite step scans the partner's QR code (Onboarding/InviteScanner).
-        NSCameraUsageDescription: Nooki uses the camera to scan the invite code on your partner's screen.
-        # nooki:// links from the widgets and controls (Shared/Widget/DeepLink.swift).
+        NSCameraUsageDescription: Ourio uses the camera to scan the invite code on your partner's screen.
+        # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename
+        # (Shared/Widget/DeepLink.swift).
         CFBundleURLTypes:
           - CFBundleURLName: com.mikitahimpel.billet
-            CFBundleURLSchemes: [nooki]
+            CFBundleURLSchemes: [ourio, nooki]
     dependencies:
-      - target: NookiWidgets
-      - target: NookiNotifications
-      - target: NookiShare
+      - target: OurioWidgets
+      - target: OurioNotifications
+      - target: OurioShare
       - target: WindowViews
       - package: BilletContracts
         products: [Wire]
@@ -85,7 +86,7 @@ targets:
       - package: BilletPayments
         products: [Payments, PaymentsLive]
     entitlements:
-      path: Nooki/Nooki.entitlements
+      path: Nooki/Ourio.entitlements
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
         keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
@@ -102,7 +103,7 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
-        INFOPLIST_KEY_CFBundleDisplayName: Nooki
+        INFOPLIST_KEY_CFBundleDisplayName: Ourio
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
         # The partner's drawing as a Live Activity, started by a push (Shared/Draw/DrawingActivity.swift).
         INFOPLIST_KEY_NSSupportsLiveActivities: YES
@@ -118,24 +119,24 @@ targets:
     dependencies:
       - package: BilletPet
         product: Pet
-  NookiWidgets:
+  OurioWidgets:
     type: app-extension
     platform: iOS
     sources:
-      - path: NookiWidgets
+      - path: OurioWidgets
       - path: Shared
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
     info:
-      path: NookiWidgets/Info.plist
+      path: OurioWidgets/Info.plist
       properties:
-        CFBundleDisplayName: Nooki
+        CFBundleDisplayName: Ourio
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     entitlements:
-      path: NookiWidgets/NookiWidgets.entitlements
+      path: OurioWidgets/OurioWidgets.entitlements
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
     dependencies:
@@ -151,26 +152,26 @@ targets:
         # Extensions keep Swift's default isolation; Shared types that cross into App Intents are marked nonisolated.
         SKIP_INSTALL: YES
   # Writes the drawing a push carries to the App Group and reloads the drawing widgets, before the alert shows.
-  NookiNotifications:
+  OurioNotifications:
     type: app-extension
     platform: iOS
     sources:
-      - path: NookiNotifications
+      - path: OurioNotifications
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
         # Places' flags and map are for the app and its widgets.
         excludes: [Draw/DrawingActivity.swift, Places/Flags.xcassets, Places/WorldMap.txt]
     info:
-      path: NookiNotifications/Info.plist
+      path: OurioNotifications/Info.plist
       properties:
-        CFBundleDisplayName: Nooki
+        CFBundleDisplayName: Ourio
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
           NSExtensionPointIdentifier: com.apple.usernotifications.service
           NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).NotificationService
     entitlements:
-      path: NookiNotifications/NookiNotifications.entitlements
+      path: OurioNotifications/OurioNotifications.entitlements
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
     dependencies:
@@ -185,20 +186,20 @@ targets:
         # The id the first app's notification service registered, so automatic signing finds it.
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
         SKIP_INSTALL: YES
-  # The share sheet's "Nooki" action: a page shared from Safari or another app becomes a wish.
-  NookiShare:
+  # The share sheet's "Ourio" action: a page shared from Safari or another app becomes a wish.
+  OurioShare:
     type: app-extension
     platform: iOS
     sources:
-      - path: NookiShare
+      - path: OurioShare
       - path: Shared
         # Places' flags and map are for the app and its widgets.
         excludes: [Draw/DrawingActivity.swift, Places/Flags.xcassets, Places/WorldMap.txt]
       - path: Nooki/UI/Us/UsKit.swift
     info:
-      path: NookiShare/Info.plist
+      path: OurioShare/Info.plist
       properties:
-        CFBundleDisplayName: Nooki
+        CFBundleDisplayName: Ourio
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         NSExtension:
@@ -209,7 +210,7 @@ targets:
               NSExtensionActivationSupportsWebURLWithMaxCount: 1
               NSExtensionActivationSupportsText: true
     entitlements:
-      path: NookiShare/NookiShare.entitlements
+      path: OurioShare/OurioShare.entitlements
       properties:
         com.apple.security.application-groups: [group.com.mikitahimpel.billet]
     dependencies:
@@ -225,26 +226,26 @@ targets:
         SKIP_INSTALL: YES
   # The widgets' views rendered into BILLET_SAMPLES for review (WidgetGalleryTests). An extension can't host tests, so
   # the widget sources are compiled in, without their @main bundle; the app hosts it so their images load.
-  NookiWidgetsTests:
+  OurioWidgetsTests:
     type: bundle.unit-test
     platform: iOS
     sources:
-      - path: NookiWidgetsTests
-      - path: NookiWidgets
+      - path: OurioWidgetsTests
+      - path: OurioWidgets
         excludes: [Widgets.swift]
       - path: Shared
-    # Wire and Ink come from the app it is loaded into, as for NookiTests: linking them here as well makes Xcode
-    # build them as frameworks, and NookiTests then finds none of their symbols.
+    # Wire and Ink come from the app it is loaded into, as for OurioTests: linking them here as well makes Xcode
+    # build them as frameworks, and OurioTests then finds none of their symbols.
     dependencies:
       - target: Billet
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget-tests
         GENERATE_INFOPLIST_FILE: YES
-  NookiTests:
+  OurioTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [NookiTests]
+    sources: [OurioTests]
     dependencies:
       - target: Billet
     settings:
@@ -252,10 +253,10 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.tests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
-  NookiUITests:
+  OurioUITests:
     type: bundle.ui-testing
     platform: iOS
-    sources: [NookiUITests]
+    sources: [OurioUITests]
     dependencies:
       - target: Billet
     settings:
@@ -272,6 +273,6 @@ schemes:
       config: Debug
     test:
       config: Debug
-      targets: [NookiTests, NookiWidgetsTests, NookiUITests]
+      targets: [OurioTests, OurioWidgetsTests, OurioUITests]
     archive:
       config: Release

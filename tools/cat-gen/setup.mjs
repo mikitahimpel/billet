@@ -50,4 +50,4 @@ if (mlx) run('uv', ['pip', 'install', '--python', python, MLX_VLM, 'plyfile', 'p
 else run('uv', ['pip', 'install', '--python', python, '--torch-backend=auto', '-e', join(here, 'idol-sdk')]);
 
 run(python, ['-c', FETCH_WEIGHTS, join(here, 'weights')]);
-console.log(`\nReady (${mlx ? 'MLX' : 'PyTorch'}). Try: npm run splat -- nooki`);
+console.log(`\nReady (${mlx ? 'MLX' : 'PyTorch'}). Try: npm run splat -- ourio`);

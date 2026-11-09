@@ -14,21 +14,21 @@ struct DateMatchOverlay: View {
 
             VStack(spacing: 10) {
                 Text("It's a match!")
-                    .font(.nookiLargeTitle)
+                    .font(.ourioLargeTitle)
                     .foregroundStyle(Ink.text)
                 UsIcon(glyph: .init(symbol: "heart.fill", tint: .blush), size: 72)
                 Text(idea.title)
-                    .font(.nookiTitle)
+                    .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .multilineTextAlignment(.center)
                 Label("+10", systemImage: "star.fill")
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                     .foregroundStyle(Ink.accentText)
 
                 HStack(spacing: 10) {
                     Button(action: onKeep) {
                         Text("Keep swiping")
-                            .font(.nookiHeadline)
+                            .font(.ourioHeadline)
                             .foregroundStyle(Ink.text)
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 44)
@@ -38,7 +38,7 @@ struct DateMatchOverlay: View {
 
                     Button(action: onPlan) {
                         Text("Plan it")
-                            .font(.nookiHeadline)
+                            .font(.ourioHeadline)
                             .foregroundStyle(Ink.heroInk)
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 44)
@@ -92,7 +92,7 @@ struct DatePlanCard: View {
                                      : idea?.place.icon ?? .init(symbol: "heart.fill", tint: .blush), size: 42)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(hidden ? "Surprise from \(plan.organizer)" : idea?.title ?? "Date")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                     HStack(spacing: 4) {
                         Text(plan.date.formatted(.dateTime.weekday().day().month().hour().minute()))
@@ -101,7 +101,7 @@ struct DatePlanCard: View {
                                 .accessibilityLabel("Reminder on")
                         }
                     }
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
@@ -125,12 +125,12 @@ struct DatePlanCard: View {
             if hidden {
                 if !plan.hint.isEmpty {
                     Text("Hint: \(plan.hint)")
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
             } else if !plan.place.isEmpty {
                 Label(plan.place, systemImage: "mappin.and.ellipse")
-                    .font(.nookiCaption)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }
 
@@ -146,7 +146,7 @@ struct DatePlanCard: View {
             HStack(spacing: 4) {
                 ForEach(1...3, id: \.self) { value in
                     Image(systemName: value <= rating ? "heart.fill" : "heart")
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Color.blushPink.opacity(value <= rating ? 1 : 0.4))
                 }
                 Spacer(minLength: 0)
@@ -158,9 +158,9 @@ struct DatePlanCard: View {
                     Text("How was it? Mark it done")
                     Spacer(minLength: 0)
                     Image(systemName: "chevron.right")
-                        .font(.nookiCaption.weight(.bold))
+                        .font(.ourioCaption.weight(.bold))
                 }
-                .font(.nookiCallout.weight(.semibold))
+                .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Color.honey)
                 .padding(.horizontal, 12)
                 .frame(minHeight: 40)

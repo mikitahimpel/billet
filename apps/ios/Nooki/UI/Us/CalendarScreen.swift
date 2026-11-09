@@ -63,21 +63,21 @@ struct CalendarScreen: View {
                 UsIcon(glyph: item.icon, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
-                        .font(.nookiHeadline)
+                        .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                         .lineLimit(1)
                     Text(item.date.formatted(.dateTime.weekday(.abbreviated).day().month(.wide)))
-                        .font(.nookiCaption)
+                        .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
                 }
                 Spacer(minLength: 0)
                 VStack(spacing: 0) {
                     Text(item.daysLeft == 0 ? "today" : "\(abs(item.daysLeft))")
-                        .font((item.daysLeft == 0 ? Font.nookiCaption : Font.nookiTitle).monospacedDigit())
+                        .font((item.daysLeft == 0 ? Font.ourioCaption : Font.ourioTitle).monospacedDigit())
                         .foregroundStyle((0...7).contains(item.daysLeft) ? Color.honey : Ink.text)
                     if item.daysLeft != 0 {
                         Text((abs(item.daysLeft) == 1 ? "day" : "days") + (item.daysLeft < 0 ? " ago" : ""))
-                            .font(.nookiMicro)
+                            .font(.ourioMicro)
                             .foregroundStyle(Ink.textSecondary)
                     }
                 }
@@ -104,23 +104,23 @@ private struct MonthGrid: View {
                 Button { shift(-1) } label: { Image(systemName: "chevron.left") }
                 Spacer()
                 Text(month.formatted(.dateTime.month(.wide).year()))
-                    .font(.nookiHeadline)
+                    .font(.ourioHeadline)
                 Spacer()
                 Button { shift(1) } label: { Image(systemName: "chevron.right") }
             }
-            .font(.nookiHeadline)
+            .font(.ourioHeadline)
             .foregroundStyle(Ink.text)
             .buttonStyle(.plain)
 
             LazyVGrid(columns: columns, spacing: 6) {
                 ForEach(weekdaySymbols, id: \.self) { d in
-                    Text(d).font(.nookiMicro).foregroundStyle(Ink.textSecondary)
+                    Text(d).font(.ourioMicro).foregroundStyle(Ink.textSecondary)
                 }
                 ForEach(Array(cells.enumerated()), id: \.offset) { _, day in
                     if let day {
                         let isToday = cal.isDateInToday(day)
                         Text("\(cal.component(.day, from: day))")
-                            .font(.nookiCallout.weight(isToday ? .bold : .medium).monospacedDigit())
+                            .font(.ourioCallout.weight(isToday ? .bold : .medium).monospacedDigit())
                             .foregroundStyle(isToday ? Ink.heroInk : Ink.text)
                             .frame(maxWidth: .infinity)
                             .frame(height: 36)
@@ -181,13 +181,13 @@ struct EventEditor: View {
             DatePicker("Date", selection: $event.date)
                 .datePickerStyle(.compact)
                 .tint(Color.honey)
-                .font(.nookiBody)
+                .font(.ourioBody)
                 .foregroundStyle(Ink.text)
                 .fieldSurface()
 
             Toggle("Every year", isOn: $event.yearly)
                 .tint(Color.honey)
-                .font(.nookiBody)
+                .font(.ourioBody)
                 .foregroundStyle(Ink.text)
                 .fieldSurface()
 
@@ -203,7 +203,7 @@ struct EventEditor: View {
                     state.us.deleteEvent(event.id)
                     dismiss()
                 }
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .frame(maxWidth: .infinity)
             }
         }

@@ -39,7 +39,7 @@ struct PairingSheet: View {
         case .choosing(let failure, _):
             if let failure {
                 Text(PairingCopy.message(for: failure))
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(ShopInk.coral)
                     .multilineTextAlignment(.center)
                     .frame(maxWidth: .infinity)
@@ -62,10 +62,10 @@ struct PairingSheet: View {
         card {
             UsIcon(glyph: .init(symbol: "qrcode", tint: .honey), size: 52)
             Text("Show my code")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
-            Text("Your partner types it into Nooki on their phone.")
-                .font(.nookiCallout)
+            Text("Your partner types it into Ourio on their phone.")
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
             Button {
@@ -82,7 +82,7 @@ struct PairingSheet: View {
         card {
             UsIcon(glyph: .init(symbol: "keyboard", tint: .blush), size: 52)
             Text("I have their code")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
             Field("Code", text: $code, font: .system(.title2, design: .monospaced, weight: .semibold))
                 .multilineTextAlignment(.center)
@@ -100,7 +100,7 @@ struct PairingSheet: View {
     private func waitingCard(code: String, expiresAt: Int) -> some View {
         card {
             Text("Your code")
-                .font(.nookiHeadline)
+                .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
             Text(PairingCopy.spaced(code))
                 .font(.system(.largeTitle, design: .monospaced, weight: .bold))
@@ -110,18 +110,18 @@ struct PairingSheet: View {
                 .lineLimit(1)
             TimelineView(.periodic(from: .now, by: 1)) { context in
                 Text(PairingCopy.expiry(expiresAt: expiresAt, now: context.date))
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .monospacedDigit()
             }
             HStack(spacing: Space.s) {
                 ProgressView().tint(Ink.accentText)
                 Text("Waiting for your partner…")
-                    .font(.nookiCallout)
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.text)
             }
             .padding(.top, 4)
-            ShareLink(item: "Pair with me on Nooki: \(code)") {
+            ShareLink(item: "Pair with me on Ourio: \(code)") {
                 Label("Send the code", systemImage: "square.and.arrow.up")
             }
             .buttonStyle(SecondaryButtonStyle())
@@ -133,10 +133,10 @@ struct PairingSheet: View {
             UsIcon(glyph: .init(symbol: "heart.fill", tint: .blush), size: 64)
                 .symbolEffect(.bounce, options: .nonRepeating)
             Text("You're paired!")
-                .font(.nookiTitle)
+                .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
-            Text("Notes you pin now reach your partner's Nooki.")
-                .font(.nookiCallout)
+            Text("Notes you pin now reach your partner's Ourio.")
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
             Button {
@@ -176,8 +176,8 @@ enum PairingCopy {
         switch failure {
         case .invalidCode: "That code isn't working. It may be mistyped, expired, already used or your own."
         case .alreadyPaired: "You already have a partner."
-        case .signedOut: "This phone was signed out. Open Nooki again to sign back in."
-        case .unavailable: "Nooki can't reach its server right now. Try again in a moment."
+        case .signedOut: "This phone was signed out. Open Ourio again to sign back in."
+        case .unavailable: "Ourio can't reach its server right now. Try again in a moment."
         }
     }
 

@@ -114,7 +114,7 @@ private struct GroceryPeek: View {
         HStack(spacing: 6) {
             UsIcon(glyph: icon, size: 22)
             Text(text)
-                .font(.nookiCallout)
+                .font(.ourioCallout)
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
         }
@@ -126,7 +126,7 @@ private struct GroceryPeek: View {
 
     private func more(_ text: String) -> some View {
         Text(text)
-            .font(.nookiCallout.weight(.semibold))
+            .font(.ourioCallout.weight(.semibold))
             .foregroundStyle(Ink.textSecondary)
             .padding(.horizontal, 12)
             .frame(minHeight: 32)
@@ -200,7 +200,7 @@ private struct FlagPeek: View {
                     }
                     .clipShape(.capsule)
                 Text("\(summary.percent)%")
-                    .font(.nookiMicro.monospacedDigit())
+                    .font(.ourioMicro.monospacedDigit())
                     .foregroundStyle(Ink.textSecondary)
             }
         }
@@ -239,7 +239,7 @@ struct ListRow: View {
             symbol: list.icon.symbol, tint: list.icon.tint.color) {
             if !list.items.isEmpty {
                 Text(counts)
-                    .font(.nookiCaption.monospacedDigit())
+                    .font(.ourioCaption.monospacedDigit())
                     .foregroundStyle(Ink.textSecondary)
             }
             RowChevron()

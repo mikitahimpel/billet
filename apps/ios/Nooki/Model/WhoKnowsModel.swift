@@ -1,3 +1,4 @@
+import FeatureGames
 import Foundation
 import Observation
 import Transport
@@ -6,6 +7,9 @@ import Wire
 /// Today's Who knows who round as this user plays it. One partner, the subject, answers five questions about
 /// themselves while the other guesses; the room keeps each side's answers hidden until both are done, then opens them
 /// together. The partner's progress and the reveal also arrive over the room socket.
+///
+/// The rules live in `WhoKnowsMachine` (FeatureGames); this is its store with the question catalog and the screen's
+/// words around it.
 @Observable
 final class WhoKnowsModel {
     enum Phase: Equatable {
@@ -16,41 +20,40 @@ final class WhoKnowsModel {
     nonisolated static let roundCoins = 10
     nonisolated static let hitCoins = 2
 
-    /// Today's round as the room last answered it.
-    private(set) var response: GuessResponse?
-    /// The room wasn't reachable on the last read.
-    private(set) var offline = false
-    /// The last answer didn't reach the room; its question is open again.
-    private(set) var unsent = false
-    /// Answers tapped here that the room hasn't confirmed yet, so the screen moves on at once.
-    private(set) var pending: [GuessAnswer] = []
     private(set) var catalog: [Int: GuessQuestion]
 
-    @ObservationIgnored private let sync: WhoKnowsSync?
-    @ObservationIgnored private let viewer: UserId?
+    @ObservationIgnored private let store: WhoKnowsStore
 
     /// Without `sync` or `viewer` the account has no partner and the round is `unpaired`.
     init(sync: WhoKnowsSync?, viewer: UserId?, catalog: [GuessQuestion]) {
-        self.sync = sync
-        self.viewer = viewer
+        store = .whoKnows(sync, viewer: viewer)
         self.catalog = Dictionary(catalog.map { ($0.id, $0) }, uniquingKeysWith: { _, newer in newer })
     }
 
-    var phase: Phase {
-        guard sync != nil, viewer != nil else { return .unpaired }
-        guard let response else { return offline ? .offline : .loading }
-        if response.reveal != nil { return .revealed }
-        if answers.count < response.round.questions.count { return isSubject ? .answerAboutYou : .guessAboutPartner }
-        return .waitingForPartner
+    private var round: WhoKnowsMachine.Round? {
+        if case .playing(let round) = store.state { round } else { nil }
     }
 
-    var isSubject: Bool { response.map { $0.round.subject == viewer } ?? false }
+    var phase: Phase {
+        switch store.state {
+        case .unpaired: return .unpaired
+        case .unread: return .loading
+        case .unreachable: return .offline
+        case .playing(let round):
+            if round.response.reveal != nil { return .revealed }
+            if round.next != nil { return round.isSubject ? .answerAboutYou : .guessAboutPartner }
+            return .waitingForPartner
+        }
+    }
+
+    /// Today's round as the room last answered it.
+    var response: GuessResponse? { round?.response }
+    /// The last answer didn't reach the room; its question is open again.
+    var unsent: Bool { round?.unsent ?? false }
+    var isSubject: Bool { round?.isSubject ?? false }
 
     /// This user's answers, the room's and the ones still on their way.
-    var answers: [GuessAnswer] {
-        let confirmed = response?.answers ?? []
-        return confirmed + pending.filter { answer in !confirmed.contains { $0.question == answer.question } }
-    }
+    var answers: [GuessAnswer] { round?.answers ?? [] }
 
     var total: Int { response?.round.questions.count ?? 5 }
     var remaining: Int { max(0, total - answers.count) }
@@ -62,11 +65,7 @@ final class WhoKnowsModel {
     var coinsEarned: Int { response?.reveal == nil ? 0 : Self.roundCoins + Self.hitCoins * hits }
 
     /// The next question to answer, in round order; nil once every one is answered, or while the catalog lacks it.
-    var current: GuessQuestion? {
-        guard let response else { return nil }
-        let done = Set(answers.map(\.question))
-        return response.round.questions.first { !done.contains($0) }.flatMap { catalog[$0] }
-    }
+    var current: GuessQuestion? { round?.next.flatMap { catalog[$0] } }
 
     /// Whether the round asks a question this phone's catalog doesn't have yet.
     var lacksQuestions: Bool {
@@ -80,70 +79,39 @@ final class WhoKnowsModel {
     }
 
     func load() async {
-        guard let sync else { return }
-        do throws(TransportError) {
-            apply(try await sync.fetch())
-            offline = false
-        } catch {
-            offline = true
+        store.send(.loadAsked)
+        await store.until { [self] in !isReading }
+    }
+
+    private var isReading: Bool {
+        switch store.state {
+        case .unpaired: false
+        case .unread(_, let read), .unreachable(_, let read): read.isReading
+        case .playing(let round): round.read.isReading
         }
     }
 
     /// Locks `option` for the current question and sends it. The screen moves on at once; an answer that doesn't
-    /// reach the room opens its question again and sets `unsent`.
+    /// reach the room opens its question again and sets `unsent`. True once the room has taken it.
     @discardableResult
     func answer(_ option: Int) async -> Bool {
-        guard let sync, let response, let question = current, question.options.indices.contains(option) else {
-            return false
+        guard let question = current, question.options.indices.contains(option) else { return false }
+        store.send(.answerTapped(question: question.id, option: option))
+        await store.until { [self] in
+            !(round?.pending.contains { $0.question == question.id } ?? false) && !isReading
         }
-        pending.append(GuessAnswer(question: question.id, option: option))
-        unsent = false
-        let request = GuessAnswerRequest(round: response.round.id, question: question.id, option: option)
-        do throws(TransportError) {
-            let answered = try await sync.answer(request)
-            pending.removeAll { $0.question == question.id }
-            apply(answered)
-            return true
-        } catch {
-            pending.removeAll { $0.question == question.id }
-            if case .api(.invalidRequest) = error {
-                // The room took another option for it already, or the day ended: its own view is the truth.
-                await load()
-            } else {
-                unsent = true
-            }
-            return false
-        }
+        let taken = GuessAnswer(question: question.id, option: option)
+        return !unsent && (response?.answers.contains(taken) ?? false)
     }
 
     /// The partner's count of locked answers, from the room's socket.
     func progressed(round: String, answered: Int) {
-        guard let response, response.round.id == round else { return }
-        apply(GuessResponse(round: response.round, answers: response.answers, partnerAnswered: answered,
-                            reveal: response.reveal, score: response.score))
+        store.send(.progressed(round: round, answered: answered))
     }
 
     /// Both partners finished the round: every answer, and the score after it, from the room's socket.
     func revealed(round: String, reveal: [GuessReveal], score: GuessScore) {
-        guard let response, response.round.id == round else { return }
-        apply(GuessResponse(round: response.round, answers: response.answers,
-                            partnerAnswered: response.round.questions.count, reveal: reveal, score: score))
-    }
-
-    /// Takes the room's view. Within one round nothing goes back: answers and the partner's count only grow and the
-    /// reveal stays, so a late answer to an earlier request or socket frame can't undo a newer one.
-    private func apply(_ next: GuessResponse) {
-        // Round ids are `YYYY-MM-DD`, so they order as text: a late answer about an earlier day is dropped.
-        if let old = response, next.round.id < old.round.id { return }
-        guard let old = response, old.round.id == next.round.id else {
-            response = next
-            return
-        }
-        let added = next.answers.filter { answer in !old.answers.contains { $0.question == answer.question } }
-        let reveal = next.reveal ?? old.reveal
-        response = GuessResponse(round: next.round, answers: old.answers + added,
-                                 partnerAnswered: max(old.partnerAnswered, next.partnerAnswered), reveal: reveal,
-                                 score: next.reveal != nil || old.reveal == nil ? next.score : old.score)
+        store.send(.revealed(round: round, reveal: reveal, score: score))
     }
 
     // MARK: Words

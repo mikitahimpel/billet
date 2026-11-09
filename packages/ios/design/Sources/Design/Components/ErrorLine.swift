@@ -8,7 +8,7 @@ public struct ErrorLine: View {
 
   public var body: some View {
     Label {
-      Text(text).font(.nookiCallout)
+      Text(text).font(.ourioCallout)
     } icon: {
       Image(systemName: "exclamationmark.circle.fill")
     }
@@ -24,7 +24,7 @@ public struct QuietButtonStyle: ButtonStyle {
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
-      .font(.nookiHeadline)
+      .font(.ourioHeadline)
       .foregroundStyle(Ink.accentText)
       .frame(maxWidth: .infinity, minHeight: Size.control)
       .contentShape(.rect)

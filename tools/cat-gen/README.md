@@ -41,7 +41,7 @@ node tools/cat-gen/splat.mjs --image tools/cat-gen/refs/cat-standing.png --out M
 cp Mochi.ply MochiStanding.ply Mochi.rig.json Mochi.skin MochiStanding.rig.json MochiStanding.skin apps/ios/Nooki/Resources/
 ```
 
-`node tools/cat-gen/splat.mjs nooki` builds every asset of `scenes/nooki.json` into `out/nooki`.
+`node tools/cat-gen/splat.mjs ourio` builds every asset of `scenes/ourio.json` into `out/ourio`.
 `make_splat.py --help` lists the rest (`--bind` to only re-skin, `--recolor` to only match colors,
 `--seed`, `--steps`, `--num_gaussians`).
 
