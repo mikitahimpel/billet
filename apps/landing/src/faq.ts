@@ -32,6 +32,12 @@ export const questions: Question[] = [
   },
   {
     topic: "Basics",
+    question: "Is Ourio related to the Oura ring?",
+    answer:
+      "No. Ourio is a couples app for iPhone. It has nothing to do with the Oura ring or with other apps that have a similar name.",
+  },
+  {
+    topic: "Basics",
     home: true,
     question: "Is it a chat app?",
     answer:

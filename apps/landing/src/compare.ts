@@ -200,7 +200,7 @@ export const alternatives: Alternative[] = [
   {
     slug: "locket-widget-alternative",
     app: "Locket Widget",
-    title: "Locket Widget alternative for couples: drawings, notes and a shared cat · Ourio",
+    title: "Locket Widget alternative for couples: Lock Screen drawings · Ourio",
     description:
       "An alternative to Locket Widget made for couples: Ourio sends drawings and notes to your partner's Lock Screen and Home Screen widgets, with a shared cat, mood and days together. Free, no subscription.",
     summary: "Ourio vs Locket Widget: drawings and notes on your partner's Lock Screen, for two.",

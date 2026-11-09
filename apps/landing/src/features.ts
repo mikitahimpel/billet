@@ -162,7 +162,7 @@ export const featureList: Feature[] = [
           "Yes. Ourio is free with no in-app purchases; even her treats and furniture are bought with coins you earn together.",
       },
     ],
-    related: ["widgets-and-notifications", "shop-and-coins", "love-streak", "games"],
+    related: ["widgets-and-notifications", "shop-and-coins", "love-streak", "free-couples-app"],
   },
   {
     slug: "lock-screen-drawings",
@@ -256,7 +256,7 @@ export const featureList: Feature[] = [
           "No. Ourio is iPhone-only for now, so both of you need an iPhone on iOS 18 or later.",
       },
     ],
-    related: ["widgets-and-notifications", "moments", "games", "room-and-mochi"],
+    related: ["widgets-and-notifications", "moments", "games", "long-distance-relationship-app"],
   },
   {
     slug: "moments",
@@ -480,7 +480,12 @@ export const featureList: Feature[] = [
           "Yes, 15 of them, like a synced movie night, cooking the same recipe or a same-sky walk.",
       },
     ],
-    related: ["movie-night", "calendar-and-countdown", "wishlists", "us"],
+    related: [
+      "movie-night",
+      "calendar-and-countdown",
+      "wishlists",
+      "long-distance-relationship-app",
+    ],
   },
   {
     slug: "wishlists",
@@ -736,7 +741,12 @@ export const featureList: Feature[] = [
         answer: "Yes. Add the trip to the shared calendar and it counts down on both phones.",
       },
     ],
-    related: ["widgets-and-notifications", "date-night", "wishlists", "us"],
+    related: [
+      "widgets-and-notifications",
+      "date-night",
+      "wishlists",
+      "long-distance-relationship-app",
+    ],
   },
   {
     slug: "love-streak",
@@ -866,11 +876,16 @@ export const featureList: Feature[] = [
         answer: "Yes. Everything happens over the internet between your two iPhones.",
       },
     ],
-    related: ["love-streak", "room-and-mochi", "date-night", "lock-screen-drawings"],
+    related: [
+      "love-streak",
+      "room-and-mochi",
+      "long-distance-relationship-app",
+      "lock-screen-drawings",
+    ],
   },
   {
     slug: "shop-and-coins",
-    title: "Couples app with no in-app purchases: coins you earn together · Ourio",
+    title: "Shop and coins: decorate your room with coins you earn together · Ourio",
     description:
       "In Ourio every coin is earned by doing things together: caring for Mochi, notes, photos, lists, dates and games. Spend them on furniture, decor, inks and toys. Nothing is for sale and there's no subscription.",
     eyebrow: "Shop and coins",
@@ -936,7 +951,7 @@ export const featureList: Feature[] = [
           "Yes. Coins belong to the pair. If you unpair, each of you keeps the inks and pieces you bought and half of the coins.",
       },
     ],
-    related: ["room-and-mochi", "games", "lock-screen-drawings", "date-night"],
+    related: ["room-and-mochi", "games", "lock-screen-drawings", "free-couples-app"],
   },
   {
     slug: "widgets-and-notifications",
