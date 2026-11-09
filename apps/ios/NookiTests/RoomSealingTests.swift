@@ -30,52 +30,75 @@ struct RoomSealingTests {
         }
     }
 
-    private func mount(_ shell: Shell, input: RoomInput, controller: RoomController) -> UIWindow {
+    /// Mounts the shell with the room and returns once changes to the shell have stopped reaching the host: in
+    /// the first moments of a window, and of the test process most of all, its traits and the first frame each give
+    /// every view a pass of SwiftUI's own, and when those end depends on the machine. Quiet means several changes in
+    /// a row, each one applied, with no host pass. The probe is reset after, so a test counts only what it does.
+    private func mount(
+        _ shell: Shell, input: RoomInput, controller: RoomController
+    ) async throws -> (UIWindow, UIHostingController<ShellView>) {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
-        window.rootViewController = UIHostingController(rootView: ShellView(shell: shell, input: input, controller: controller))
+        let host = UIHostingController(rootView: ShellView(shell: shell, input: input, controller: controller))
+        window.rootViewController = host
         window.makeKeyAndVisible()
-        return window
+        try await wait("the first pass") { shell.bodies >= 1 && controller.probe.hostBodies >= 1 }
+        var quiet = 0
+        for _ in 0..<500 where quiet < 5 {
+            controller.probe.reset()
+            try await flush(shell)
+            quiet = controller.probe.hostBodies == 0 ? quiet + 1 : 0
+            try await Task.sleep(for: .milliseconds(20))
+        }
+        #expect(quiet >= 5, "changes to the shell still reach the host after mounting")
+        controller.probe.reset()
+        return (window, host)
     }
 
-    /// A window left behind would keep evaluating its views while the next test counts.
-    private func unmount(_ window: UIWindow) async throws {
+    /// Changes the shell and returns once it has re-evaluated: any update still pending runs by then too, in that
+    /// pass or before it, so what a test then counts is final.
+    private func flush(_ shell: Shell) async throws {
+        let before = shell.bodies
+        shell.coins += 1
+        try await wait("the shell's pass") { shell.bodies > before }
+    }
+
+    /// Polls until `condition` holds; the limit only bounds a broken run, a passing one never waits for it.
+    private func wait(_ what: String, _ condition: () -> Bool) async throws {
+        let deadline = ContinuousClock.now + .seconds(10)
+        while !condition() {
+            guard ContinuousClock.now < deadline else {
+                Issue.record("timed out waiting for \(what)")
+                return
+            }
+            try await Task.sleep(for: .milliseconds(5))
+        }
+    }
+
+    private func unmount(_ window: UIWindow) {
         window.rootViewController = nil
         window.isHidden = true
-        try await settle()
     }
-
-    private func settle() async throws { try await Task.sleep(for: .milliseconds(150)) }
 
     private let visible = RoomInput(scene: .home, coat: .grey, visibility: .visible)
 
     @Test func changesOutsideTheRoomDoNotReEvaluateIt() async throws {
         let controller = RoomController(usesStandIn: true)
         let shell = Shell()
-        let window = mount(shell, input: visible, controller: controller)
-        try await settle()
-        // The first pass after mounting is SwiftUI's own: it has no earlier host to compare with yet.
-        shell.coins = 1
-        try await settle()
-        controller.probe.reset()
+        let (window, _) = try await mount(shell, input: visible, controller: controller)
         let shellBefore = shell.bodies
 
-        for coins in 2...6 {
-            shell.coins = coins
-            try await settle()
-        }
+        for _ in 2...6 { try await flush(shell) }
 
         #expect(shell.bodies > shellBefore, "the shell did re-evaluate for the coins")
         #expect(controller.probe.hostBodies == 0)
         #expect(controller.probe.stageBodies == 0)
-        try await unmount(window)
+        unmount(window)
     }
 
     @Test func theRoomsOwnTicksDoNotReachTheShell() async throws {
         let controller = RoomController(usesStandIn: true)
         let shell = Shell()
-        let window = mount(shell, input: visible, controller: controller)
-        try await settle()
-        controller.probe.reset()
+        let (window, _) = try await mount(shell, input: visible, controller: controller)
         let shellBefore = shell.bodies
 
         // A few seconds of ticks at 60 Hz that change nothing the shell reads.
@@ -83,49 +106,44 @@ struct RoomSealingTests {
             controller.refreshStatus()
             await Task.yield()
         }
-        try await settle()
+        try await flush(shell)
 
-        #expect(shell.bodies == shellBefore)
+        #expect(shell.bodies == shellBefore + 1, "only the flush re-evaluated the shell")
         #expect(controller.probe.hostBodies == 0)
         #expect(controller.status == CatStatus())
-        try await unmount(window)
+        unmount(window)
     }
 
     @Test func aGameChangesTheStageAndNothingOutside() async throws {
         let controller = RoomController(usesStandIn: true)
         let shell = Shell()
-        let window = mount(shell, input: visible, controller: controller)
-        try await settle()
-        controller.probe.reset()
+        let (window, _) = try await mount(shell, input: visible, controller: controller)
         let shellBefore = shell.bodies
 
         controller.play(.laser)
-        try await settle()
+        try await wait("the stage's pass for the game") { controller.probe.stageBodies >= 1 }
+        let stageDuringGame = controller.probe.stageBodies
         controller.endGame()
-        try await settle()
+        try await wait("the stage's pass for the game's end") { controller.probe.stageBodies > stageDuringGame }
+        try await flush(shell)
 
-        #expect(controller.probe.stageBodies >= 1)
         #expect(controller.game == nil)
         #expect(controller.probe.hostBodies == 0)
-        #expect(shell.bodies == shellBefore)
-        try await unmount(window)
+        #expect(shell.bodies == shellBefore + 1, "only the flush re-evaluated the shell")
+        unmount(window)
     }
 
     @Test func aChangedInputReEvaluatesTheHost() async throws {
         let controller = RoomController(usesStandIn: true)
         let shell = Shell()
-        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 390, height: 844))
-        let host = UIHostingController(rootView: ShellView(shell: shell, input: visible, controller: controller))
-        window.rootViewController = host
-        window.makeKeyAndVisible()
-        try await settle()
-        controller.probe.reset()
+        let (window, host) = try await mount(shell, input: visible, controller: controller)
 
         host.rootView = ShellView(
             shell: shell, input: RoomInput(scene: .home, coat: .grey, visibility: .covered), controller: controller)
-        try await settle()
+        try await wait("the host's pass for the new input") { controller.probe.hostBodies >= 1 }
+        try await flush(shell)
 
         #expect(controller.probe.hostBodies == 1)
-        try await unmount(window)
+        unmount(window)
     }
 }

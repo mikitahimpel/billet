@@ -136,8 +136,8 @@ private struct MonthGrid: View {
                 }
             }
         }
-        .padding(14)
-        .cardSurface(radius: 24)
+        .padding(CardMetrics.padding)
+        .cardSurface()
     }
 
     private var weekdaySymbols: [String] {
@@ -183,17 +183,13 @@ struct EventEditor: View {
                 .tint(Color.honey)
                 .font(.nookiBody)
                 .foregroundStyle(Ink.text)
-                .padding(.horizontal, 16)
-                .frame(height: 50)
-                .cardSurface(radius: Radius.control)
+                .fieldSurface()
 
             Toggle("Every year", isOn: $event.yearly)
                 .tint(Color.honey)
                 .font(.nookiBody)
                 .foregroundStyle(Ink.text)
-                .padding(.horizontal, 16)
-                .frame(height: 50)
-                .cardSurface(radius: Radius.control)
+                .fieldSurface()
 
             HStack(spacing: 8) {
                 FilterChip("Ours", isSelected: event.owner == nil) { event.owner = nil }

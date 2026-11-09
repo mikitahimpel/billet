@@ -18,55 +18,48 @@ struct StreakCard: View {
         let days = streak.current(on: now)
         let milestone = streak.milestone(on: now)
 
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                Flame(days: days, lit: status == .done)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Love streak")
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
+        return Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                CardHeader("Love streak") {
+                    Flame(days: days, lit: status == .done)
+                } detail: {
+                    Text(caption(status, now: now)).lineLimit(2)
+                } trailing: {
                     Text(days == 1 ? "1 day" : "\(days) days")
                         .font(.nookiTitle.monospacedDigit())
                         .foregroundStyle(Ink.text)
                         .contentTransition(.numericText())
-                    Text(caption(status, now: now))
-                        .font(.nookiCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(2)
                 }
-                Spacer(minLength: 0)
-                StatusPill(status: status, now: now)
-            }
 
-            if status == .restorable {
-                Button {
-                    Task { await store.restore() }
-                } label: {
-                    Label("Restore \(streak.count)-day streak", systemImage: "arrow.counterclockwise")
-                        .frame(maxWidth: .infinity)
+                if status == .restorable {
+                    Button {
+                        Task { await store.restore() }
+                    } label: {
+                        Label("Restore \(streak.count)-day streak", systemImage: "arrow.counterclockwise")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(PrimaryButtonStyle())
                 }
-                .buttonStyle(PrimaryButtonStyle())
-            }
 
-            HStack(spacing: 10) {
-                Badge(reached: milestone.reached)
-                Spacer(minLength: 0)
-                Label("Best \(streak.best)", systemImage: "trophy.fill")
-                    .font(.nookiCaption.monospacedDigit())
-                    .foregroundStyle(Ink.textSecondary)
-            }
-
-            if let next = milestone.next {
-                VStack(alignment: .leading, spacing: 6) {
-                    ProgressCapsule(value: Double(days) / Double(next))
-                    Text("\(next - days) to the \(next)-day badge")
-                        .font(.nookiCaption)
+                HStack(spacing: Space.s) {
+                    Badge(reached: milestone.reached)
+                    StatusPill(status: status, now: now)
+                    Spacer(minLength: 0)
+                    Label("Best \(streak.best)", systemImage: "trophy.fill")
+                        .font(.nookiCaption.monospacedDigit())
                         .foregroundStyle(Ink.textSecondary)
+                }
+
+                if let next = milestone.next {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ProgressCapsule(value: Double(days) / Double(next))
+                        Text("\(next - days) to the \(next)-day badge")
+                            .font(.nookiCaption)
+                            .foregroundStyle(Ink.textSecondary)
+                    }
                 }
             }
         }
-        .padding(Space.l)
-        .cardSurface()
         .animation(.snappy(duration: 0.3), value: days)
     }
 
@@ -96,11 +89,11 @@ private struct Flame: View {
 
     var body: some View {
         Image(systemName: "flame.fill")
-            .font(.system(.largeTitle, weight: .semibold))
+            .font(.system(.title2, weight: .semibold))
             .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
             .opacity(lit || days == 0 ? 1 : 0.45)
             .symbolEffect(.bounce, value: days)
-            .frame(width: 64, height: 64)
+            .frame(width: Size.cardMark, height: Size.cardMark)
             .background(colors[1].opacity(lit ? 0.22 : 0.1), in: .circle)
             .shadow(color: colors[1].opacity(lit ? 0.55 : 0), radius: 12)
     }

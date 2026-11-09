@@ -93,9 +93,9 @@ struct ItemSheet: View {
             )
         }
                 .frame(height: CGFloat(ItemTurntable.stageHeight))
-        .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
+        .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
         .overlay {
-            RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(item.rarity == .common ? Ink.separator : item.rarity.tint.opacity(0.7), lineWidth: 1.5)
         }
         .scaleEffect(celebrating ? 1.03 : 1)
@@ -216,8 +216,8 @@ private struct MochiReaction: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(Space.m)
-        .cardSurface(radius: Radius.control)
+        .padding(CardMetrics.padding)
+        .cardSurface()
         .accessibilityElement(children: .combine)
     }
 
