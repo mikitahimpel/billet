@@ -20,17 +20,10 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
-    /// The World's room may be mounted: false off the World, and on the way back until the switch has played. The
-    /// mount holds the main thread for one long frame, which would freeze the switch halfway; under the snapshot it
-    /// freezes a still screen.
-    @State private var roomInWorld = true
     /// Counts the World coming on screen; a return's task acts only while it is still the latest one.
     @State private var worldShows = 0
     /// The World as it was when a tab switch left it, fading out under the page coming in.
     @State private var worldLeaving: UIView?
-    /// The tab the last switch came from, which sets the side the new page comes in from.
-    @State private var tabFrom = HomeTab.world
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// A room switch is under way; another waits for it.
     @State private var switchingRoom = false
     /// The Coins sheet's packs, once there is a server to buy them through.
@@ -61,10 +54,8 @@ struct HomeView: View {
         state.drawing || state.showsInbox || state.composingNote != nil || state.showsProfile || coinsShown != nil
             || scenePhase != .active
     }
-    /// The room's tab is up and its room may be mounted.
-    private var roomShown: Bool { state.tab == .world && roomInWorld || showsBoard }
     /// The room is mounted only while it can be seen.
-    private var roomOnScreen: Bool { roomShown && !roomCovered }
+    private var roomOnScreen: Bool { showsRoom && !roomCovered }
     /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
     private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
@@ -128,15 +119,9 @@ struct HomeView: View {
             if new { worldShows += 1 }
             if new, room.hasHome, worldSnapshot != nil {
                 roomLive = false
-                let held = !roomInWorld
                 let show = worldShows
                 let current = { show == worldShows && worldOnScreen }
                 Task {
-                    if held {
-                        try? await Task.sleep(for: .seconds(Motion.quick))
-                        guard current() else { return }
-                        roomInWorld = true
-                    }
                     await room.nextFrame()
                     guard current() else { return }
                     withAnimation(Motion.fade()) { roomLive = true }
@@ -148,15 +133,8 @@ struct HomeView: View {
         .onChange(of: state.tab) { _, tab in
             NookiPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
-            tabFrom = tab
             // A fade cut short by a quick return never comes back over a later switch.
             if tab == .world { worldLeaving = nil }
-            if tab != .world {
-                roomInWorld = false
-            } else if worldSnapshot == nil || !room.hasHome || roomCovered {
-                // Nothing to stand in for the room, or a cover over it: no switch to play out first.
-                roomInWorld = true
-            }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
         .onChange(of: state.care.petPulse) {
@@ -261,10 +239,9 @@ struct HomeView: View {
                     Color.clear
                 }
             }
-            // Tab to tab, the page alone moves; the header and the tab bar are outside it and stay put. Read in the
-            // pass that switches, `tabFrom` is still the tab left.
-            .transition(.page(HomeTab.direction(from: tabFrom, to: state.tab), reduceMotion: reduceMotion))
-            .animation(Motion.move(), value: state.tab)
+            // Tab to tab, the page alone fades; the header and the tab bar are outside it and stay put.
+            .transition(.opacity)
+            .animation(Motion.fade(), value: state.tab)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
@@ -462,7 +439,7 @@ struct HomeView: View {
     /// What the room is told to show, from the shell's coarse state.
     private var roomInput: RoomInput {
         let visibility: RoomVisibility =
-            roomOnScreen ? .visible : (roomShown ? .covered : .hidden)
+            roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility)
     }

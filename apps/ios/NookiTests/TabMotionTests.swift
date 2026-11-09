@@ -1,8 +1,8 @@
-import Design
+import CoreGraphics
 import Testing
 @testable import Billet
 
-/// The side a tab's page comes in from follows the tab bar's order.
+/// The selection pill sits at a tab's slot and a touch picks the tab under it, both in the bar's order.
 struct TabMotionTests {
     @Test func theBarRunsWorldMomentsShopUs() {
         #expect(HomeTab.allCases == [.world, .moments, .shop, .us])
@@ -10,40 +10,28 @@ struct TabMotionTests {
     }
 
     @Test(arguments: [
-        (HomeTab.world, HomeTab.shop, Motion.Direction.forward),
-        (.world, .us, .forward),
-        (.moments, .shop, .forward),
-        (.shop, .us, .forward),
-        (.us, .shop, .backward),
-        (.shop, .world, .backward),
-        (.us, .moments, .backward),
-        (.moments, .world, .backward),
+        (CGFloat(0), HomeTab.world),
+        (99, .world),
+        (100, .moments),
+        (250, .shop),
+        (399, .us),
     ])
-    func aSwitchMovesTowardsTheNewTab(from old: HomeTab, to new: HomeTab, direction: Motion.Direction) {
-        #expect(HomeTab.direction(from: old, to: new) == direction)
+    func aTouchPicksTheTabUnderIt(x: CGFloat, tab: HomeTab) {
+        #expect(HomeTab.at(x, across: 400) == tab)
+    }
+
+    @Test func pastTheEndsIsTheFirstOrLastTab() {
+        #expect(HomeTab.at(-30, across: 400) == .world)
+        #expect(HomeTab.at(430, across: 400) == .us)
     }
 
     @Test(arguments: HomeTab.allCases)
-    func noSwitchStaysStill(tab: HomeTab) {
-        #expect(HomeTab.direction(from: tab, to: tab) == .still)
+    func theMiddleOfATabsSlotIsThatTab(tab: HomeTab) {
+        let slot: CGFloat = 100
+        #expect(HomeTab.at(slot * (CGFloat(tab.order) + 0.5), across: 400) == tab)
     }
 
-    @Test func goingThereAndBackMirrors() {
-        for old in HomeTab.allCases {
-            for new in HomeTab.allCases where new != old {
-                let there = HomeTab.direction(from: old, to: new)
-                let back = HomeTab.direction(from: new, to: old)
-                #expect(there != back)
-                #expect(Motion.entryOffset(there, reduceMotion: false) == -Motion.entryOffset(back, reduceMotion: false))
-            }
-        }
-    }
-
-    @Test func reduceMotionSwitchesTabsWithAFadeAlone() {
-        for old in HomeTab.allCases {
-            for new in HomeTab.allCases {
-                #expect(Motion.entryOffset(HomeTab.direction(from: old, to: new), reduceMotion: true) == 0)
-            }
-        }
+    @Test func noWidthNoTab() {
+        #expect(HomeTab.at(10, across: 0) == nil)
     }
 }

@@ -1,6 +1,6 @@
-import Design
+import CoreGraphics
 
-/// A tab as the tab bar shows it, in `allCases` order, left to right.
+/// A tab as the tab bar shows it, in `allCases` order, left to right, each in an equal slot.
 extension HomeTab {
     var title: String {
         switch self {
@@ -23,8 +23,11 @@ extension HomeTab {
     /// Its slot in the bar, counted from the leading edge.
     var order: Int { Self.allCases.firstIndex(of: self) ?? 0 }
 
-    /// Which way the screen moves when the bar goes from `old` to `new`: forward is to a tab on the right.
-    static func direction(from old: HomeTab, to new: HomeTab) -> Motion.Direction {
-        Motion.Direction(from: old.order, to: new.order)
+    /// The tab whose slot holds `x` on a row of slots `width` wide, `x` from the row's leading edge; past the ends
+    /// it is the first or last. Nil before the row has a width.
+    static func at(_ x: CGFloat, across width: CGFloat) -> HomeTab? {
+        guard width > 0 else { return nil }
+        let index = Int((x / width * CGFloat(allCases.count)).rounded(.down))
+        return allCases[min(max(index, 0), allCases.count - 1)]
     }
 }
