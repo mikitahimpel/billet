@@ -11,7 +11,14 @@ const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..", "..");
 
 const roots = ["apps/ios", "packages/ios"];
-const skipped = ["packages/ios/design/", "/.build/", "/Tests/", "Tests/", "Billet.xcodeproj/", "/node_modules/"];
+const skipped = [
+  "packages/ios/design/",
+  "/.build/",
+  "/Tests/",
+  "Tests/",
+  "Billet.xcodeproj/",
+  "/node_modules/",
+];
 const checks = [
   {
     pattern: /Color\(\s*red:|\.font\(\s*\.system\(\s*size:/g,
@@ -70,7 +77,9 @@ function count(pattern) {
 if (process.argv.includes("--update")) {
   for (const check of checks) {
     const counts = count(check.pattern);
-    const sorted = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
+    const sorted = Object.fromEntries(
+      Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)),
+    );
     writeFileSync(check.baseline, JSON.stringify(sorted, null, 2) + "\n");
     console.log(`${relative(root, check.baseline)}: ${Object.keys(sorted).length} files`);
   }
