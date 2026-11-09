@@ -74,7 +74,7 @@ struct MomentViewer: View {
         .onChange(of: editing) { _, now in if !now { saveCaption() } }
         .onDisappear(perform: saveCaption)
         .task(id: moment?.caption) {
-            // After the zoom in has played and the caption has stopped changing: the render is a main-thread
+            // After the cover has come up and the caption has stopped changing: the render is a main-thread
             // rasterization of a 1080 px print.
             try? await Task.sleep(for: .milliseconds(700))
             guard !Task.isCancelled else { return }
