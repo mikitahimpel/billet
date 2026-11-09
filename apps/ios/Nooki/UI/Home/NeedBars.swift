@@ -126,7 +126,7 @@ struct PetActions: View {
                         .lineLimit(1)
                     }
                     .frame(maxWidth: .infinity, minHeight: 70)
-                    .cardSurface(radius: Radius.card, warm: true)
+                    .cardSurface(warm: true)
                     .contentShape(.rect(cornerRadius: Radius.card))
                 }
                 .buttonStyle(PressScaleStyle())

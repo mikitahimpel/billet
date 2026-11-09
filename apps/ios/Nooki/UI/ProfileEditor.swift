@@ -68,13 +68,10 @@ struct ProfileEditor: View {
             }
 
             VStack(alignment: .leading, spacing: 8) {
-                TextField("Name", text: Binding(get: { names[partner] ?? "" }, set: { names[partner] = $0 }))
-                    .font(.nookiHeadline)
+                Field("Name", text: Binding(get: { names[partner] ?? "" }, set: { names[partner] = $0 }),
+                      font: .nookiHeadline)
                     .textInputAutocapitalization(.words)
                     .submitLabel(.done)
-                    .padding(.horizontal, 12)
-                    .frame(height: 42)
-                    .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control))
 
                 if profile.couple.viewer == partner {
                     Label("This phone", systemImage: "iphone")
@@ -87,7 +84,7 @@ struct ProfileEditor: View {
                 }
             }
         }
-        .padding(Space.l)
+        .padding(CardMetrics.padding)
         .cardSurface()
     }
 
@@ -100,7 +97,7 @@ struct ProfileEditor: View {
                 .font(.nookiCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
-        .padding(Space.l)
+        .padding(CardMetrics.padding)
         .cardSurface()
     }
 }

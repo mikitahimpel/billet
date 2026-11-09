@@ -28,15 +28,13 @@ struct PetButton: View {
                         .rotationEffect(.degrees(-90))
                         .animation(.spring(duration: 0.5), value: state.care.progress)
                 }
-                .glass(.circle, interactive: true)
+                .glass(.circle, role: .control)
                 .overlay(alignment: .bottom) {
                     Text("Lv.\(state.care.level)")
                         .font(.nookiMicro)
-                        .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 7)
                         .frame(height: 17)
-                        .background(.honeyGradient, in: .capsule)
-                        .overlay(Capsule().stroke(.white.opacity(0.7), lineWidth: 1))
+                        .glassBadge()
                         .contentTransition(.numericText())
                         .offset(y: 8)
                 }
@@ -46,14 +44,6 @@ struct PetButton: View {
                 } keyframes: { _ in
                     SpringKeyframe(1.12, duration: 0.15)
                     SpringKeyframe(1.0, duration: 0.35)
-                }
-                // A soft dark disc under the glass, instead of a shadow traced from it on every frame over the room.
-                .background {
-                    Circle()
-                        .fill(RadialGradient(colors: [.black.opacity(0.32), .clear], center: .center,
-                                             startRadius: 30, endRadius: 46))
-                        .frame(width: 92, height: 92)
-                        .offset(y: 4)
                 }
         }
         .buttonStyle(.plain)
@@ -143,7 +133,7 @@ private struct PetSheet: View {
         }
         .padding(.vertical, Space.l)
         .frame(maxWidth: .infinity)
-        .cardSurface(radius: Radius.card, warm: true)
+        .cardSurface(warm: true)
     }
 }
 

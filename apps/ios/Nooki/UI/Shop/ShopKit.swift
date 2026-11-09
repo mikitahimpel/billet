@@ -51,7 +51,7 @@ struct RarityFrame<Content: View>: View {
     let rarity: ShopRarity
     @ViewBuilder let content: Content
 
-    private let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
+    private let shape = RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
 
     var body: some View {
         content

@@ -1,0 +1,23 @@
+{
+  "apps/ios/Nooki/UI/BoardFaces.swift": 1,
+  "apps/ios/Nooki/UI/Composer/ComposerPaper.swift": 2,
+  "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 7,
+  "apps/ios/Nooki/UI/Moments/Polaroid.swift": 1,
+  "apps/ios/Nooki/UI/MomentsView.swift": 4,
+  "apps/ios/Nooki/UI/Shop/DailyGiftCard.swift": 2,
+  "apps/ios/NookiWidgets/DrawingLiveActivity.swift": 2,
+  "apps/ios/NookiWidgets/Modules.swift": 2,
+  "apps/ios/WindowViews/Views/DesertStars.swift": 2,
+  "apps/ios/WindowViews/Views/DormQuad.swift": 2,
+  "apps/ios/WindowViews/Views/FireEscape.swift": 2,
+  "apps/ios/WindowViews/Views/ForestCabin+Life.swift": 1,
+  "apps/ios/WindowViews/Views/MistyLake+Life.swift": 2,
+  "apps/ios/WindowViews/Views/MoonlitPeaks+Life.swift": 1,
+  "apps/ios/WindowViews/Views/NeonStreet+Life.swift": 1,
+  "apps/ios/WindowViews/Views/RainySuburb.swift": 1,
+  "apps/ios/WindowViews/Views/SnowyDecember.swift": 1,
+  "apps/ios/WindowViews/Views/SuburbNight.swift": 2,
+  "apps/ios/WindowViews/Views/ViewLife.swift": 1,
+  "apps/ios/WindowViews/Views/ViewRecipe.swift": 1,
+  "apps/ios/WindowViews/Views/ViewWalker.swift": 3
+}

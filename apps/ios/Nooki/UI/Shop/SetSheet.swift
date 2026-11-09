@@ -65,7 +65,7 @@ struct SetSheet: View {
         .padding(.horizontal, Space.m)
         .frame(maxWidth: .infinity)
         .frame(height: 180)
-        .background(ShopInk.lamplight, in: .rect(cornerRadius: Radius.hero, style: .continuous))
+        .background(ShopInk.lamplight, in: .rect(cornerRadius: Radius.card, style: .continuous))
         .accessibilityHidden(true)
     }
 

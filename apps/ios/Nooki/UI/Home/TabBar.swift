@@ -17,8 +17,8 @@ struct TabBar: View {
     /// The tabs only navigate; adding lives in its own button beside them, as iOS 26 places search.
     var body: some View {
         // One container, so the bar and the "+" sample the room together and read as one piece of glass.
-        GlassGroup(spacing: 10) {
-            HStack(spacing: 10) {
+        GlassGroup {
+            HStack(spacing: GlassMetrics.gap) {
                 HStack(spacing: 0) {
                     ForEach(Self.tabs, id: \.self) { tab in
                         switch tab {
@@ -48,7 +48,7 @@ struct TabBar: View {
                             state.tab = tab(at: drag.location.x)
                         }
                 )
-                .warmGlass(.capsule, interactive: true)
+                .glass(.capsule, role: .bar)
                 .accessibilityElement(children: .contain)
                 .accessibilityIdentifier("tabbar")
 
@@ -80,13 +80,13 @@ struct TabBar: View {
             Image(systemName: tab.symbol).font(.system(size: 18, weight: .semibold))
             Text(tab.title).font(.system(size: 11, weight: .medium))
         }
-        .foregroundStyle(shown ? Ink.primary : Ink.secondary)
+        .foregroundStyle(shown ? Ink.glassGlyph : Ink.glassGlyphSecondary)
         .frame(maxWidth: .infinity)
         .frame(height: 54)
         .background {
             if shown {
                 Capsule()
-                    .fill(Color.honey.opacity(hovered == nil ? 0.32 : 0.42))
+                    .fill(Ink.glassSelection)
                     .modifier(SlidingPill(namespace: selection, slides: !reduceMotion))
             }
         }
@@ -181,10 +181,10 @@ struct AddButton: View {
         } label: {
             Image(systemName: "plus")
                 .font(.system(size: 24, weight: .semibold))
-                .foregroundStyle(.white)
+                .foregroundStyle(Ink.heroInk)
                 .modifier(PlusLook())
         }
-        .modifier(PlusGlass())
+        .accentGlass()
         .accessibilityLabel("Add")
         .popoverTip(AddHint(), arrowEdge: .bottom)
         .onChange(of: adding) { _, adding in
@@ -216,33 +216,14 @@ struct AddButton: View {
     }
 }
 
-/// The "+" disc: before iOS 26 a solid honey gradient with a soft shadow. From iOS 26 the label is just its symbol,
-/// sized so the prominent glass around it comes out at the same 66 pt.
+/// The "+" disc, 66 pt: from iOS 26 the label is just its symbol, sized so the prominent glass around it comes out
+/// at 66; before, the label is the disc that `accentGlass` fills.
 private struct PlusLook: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 26, *) {
             content.frame(width: 46, height: 46)
         } else {
-            content
-                .frame(width: 66, height: 66)
-                .background(.honeyGradient, in: .circle)
-                .overlay(Circle().stroke(.white.opacity(0.35), lineWidth: 1))
-                .shadow(color: .honeyDeep.opacity(0.45), radius: 8, y: 3)
-        }
-    }
-}
-
-/// Honey-tinted prominent glass from iOS 26, the system's look for the one main action beside a tab bar.
-private struct PlusGlass: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content
-                .menuStyle(.button)
-                .buttonStyle(.glassProminent)
-                .buttonBorderShape(.circle)
-                .tint(.honey)
-        } else {
-            content
+            content.frame(width: 66, height: 66)
         }
     }
 }

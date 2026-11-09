@@ -65,8 +65,14 @@ struct HomeView: View {
     /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
     private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
+    /// In three parts: as one chain of modifiers, `body` takes the Release type-checker past its time limit on Xcode 26.
     var body: some View {
-        layout
+        presenting(following(layout))
+    }
+
+    /// The room's tasks and what it follows in the state.
+    private func following(_ content: some View) -> some View {
+        content
         .task {
             NookiPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
             await lift()
@@ -150,6 +156,11 @@ struct HomeView: View {
         .onChange(of: state.tab, initial: true) { visitHints() }
         .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in phaseChanged(from: old, to: phase) }
+    }
+
+    /// The sheets and the canvas over Home, and what the app hears from outside.
+    private func presenting(_ content: some View) -> some View {
+        content
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
         }
@@ -235,11 +246,8 @@ struct HomeView: View {
                 case .us:
                     UsView(state: state)
                 case .world:
-                    VStack(spacing: 16) {
-                        RoomSwitch(state: state, select: select)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, 16)
+                    // The room switch is in the header's bar, so it shares the header's glass container.
+                    Color.clear
                 }
             }
             // Tab to tab, the page alone moves; the header and the tab bar are outside it and stay put. Read in the
@@ -251,11 +259,15 @@ struct HomeView: View {
             // view runs full-bleed under both and only its content is inset.
             .bars(fades: !showsRoom) {
                 if hud != .hidden {
-                    AppHeader(state: state) {
+                    AppHeader(state: state, erase: {
                         room.stop()
                         HomeState.eraseAll()
                         state = HomeState(stores: .live())
                         Task { await followPair() }
+                    }) {
+                        if state.tab == .world {
+                            RoomSwitch(state: state, select: select).transition(.opacity)
+                        }
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
@@ -477,10 +489,10 @@ private struct ShowcaseLabel: View {
                 .contentTransition(.opacity)
         }
         .font(.system(size: 14, weight: .semibold, design: .rounded))
-        .foregroundStyle(.white)
+        .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, 14)
         .frame(height: 40)
-        .warmGlass(.capsule)
+        .glass(.capsule, role: .bar)
         .frame(height: 44)
         .accessibilityLabel("Playing \(label)")
     }
