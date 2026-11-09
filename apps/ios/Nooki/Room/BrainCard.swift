@@ -24,7 +24,7 @@ struct BrainCard: View {
         .foregroundStyle(.white)
         .padding(12)
         .frame(width: 210, alignment: .leading)
-        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 
     /// Labs controls: a tour of every state, the brain's clock, a neglected cat, and the couple's touches.

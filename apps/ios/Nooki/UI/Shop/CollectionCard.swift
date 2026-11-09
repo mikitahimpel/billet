@@ -39,7 +39,7 @@ struct CollectionCard: View {
 
             bonus
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .cardSurface()
         .haptic(.success, trigger: claims)
         .animation(.spring(duration: 0.35), value: have)
@@ -57,7 +57,7 @@ struct CollectionCard: View {
             .opacity(owns ? 1 : 0.4)
             .aspectRatio(1, contentMode: .fit)
             .frame(maxWidth: .infinity)
-            .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
+            .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.inner, style: .continuous))
             .overlay(alignment: .bottomTrailing) {
                 if owns { OwnedCheck().offset(x: 3, y: 3) }
             }
@@ -94,6 +94,6 @@ struct CollectionCard: View {
             }
         }
         .padding(Space.m)
-        .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.inner, style: .continuous))
     }
 }

@@ -84,17 +84,13 @@ struct PairingSheet: View {
             Text("I have their code")
                 .font(.nookiTitle)
                 .foregroundStyle(Ink.text)
-            TextField("Code", text: $code)
-                .font(.system(.title2, design: .monospaced, weight: .semibold))
-                .foregroundStyle(Ink.text)
+            Field("Code", text: $code, font: .system(.title2, design: .monospaced, weight: .semibold))
                 .multilineTextAlignment(.center)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
                 .focused($typing)
                 .submitLabel(.join)
                 .onSubmit(submit)
-                .padding(.vertical, Space.m)
-                .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control))
             Button("Pair", action: submit)
                 .buttonStyle(SecondaryButtonStyle())
             .disabled(code.trimmingCharacters(in: .whitespaces).isEmpty)
@@ -155,7 +151,7 @@ struct PairingSheet: View {
 
     private func card<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
         VStack(spacing: Space.m, content: content)
-            .padding(Space.gutter)
+            .padding(CardMetrics.padding)
             .frame(maxWidth: .infinity)
             .cardSurface()
     }

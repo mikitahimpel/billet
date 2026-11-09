@@ -274,7 +274,7 @@ struct MoodModule: View {
             MoodArt(mood: mood, size: 20)
                 .frame(maxWidth: .infinity, minHeight: 26)
                 .background(isMine(mood) ? Color.honey : Ink.surfaceRaised,
-                            in: .rect(cornerRadius: Radius.tag, style: .continuous))
+                            in: .rect(cornerRadius: Radius.inner, style: .continuous))
                 .widgetAccentable(isMine(mood))
         }
         .buttonStyle(.plain)

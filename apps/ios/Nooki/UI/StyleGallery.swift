@@ -83,9 +83,9 @@ struct StyleGallery: View {
 
     private func swatch(_ name: String, _ colour: Color) -> some View {
         HStack(spacing: Space.m) {
-            RoundedRectangle(cornerRadius: Radius.tag)
+            RoundedRectangle(cornerRadius: Radius.inner)
                 .fill(colour)
-                .overlay { RoundedRectangle(cornerRadius: Radius.tag).stroke(Ink.separator) }
+                .overlay { RoundedRectangle(cornerRadius: Radius.inner).stroke(Ink.separator) }
                 .frame(width: 36, height: 28)
             Text(name).font(.nookiCallout).foregroundStyle(Ink.text)
         }

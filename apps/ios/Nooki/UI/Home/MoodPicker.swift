@@ -18,12 +18,7 @@ struct MoodPicker: View {
                     }
                 }
 
-                TextField("A few words (optional)", text: $note, axis: .vertical)
-                    .lineLimit(1...3)
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.text)
-                    .padding(Space.m)
-                    .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
+                Field("A few words (optional)", text: $note, axis: .vertical, lines: 1...3)
                     .onChange(of: note) { _, new in
                         if new.utf16.count > MoodCheckIn.noteLimit { note = MoodCheckIn.clean(new) ?? "" }
                     }
@@ -102,7 +97,7 @@ private struct PartnerLine: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(Space.l)
+        .padding(CardMetrics.padding)
         .cardSurface()
         .accessibilityElement(children: .combine)
     }

@@ -103,7 +103,7 @@ struct PurchaseMoment: View {
             }
             .accessibilityHint("Gives back \(purchase.cost) coins")
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .cardSurface()
         .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
         .accessibilityElement(children: .contain)
@@ -121,7 +121,7 @@ struct PurchaseMoment: View {
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .cardSurface()
         .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
         .accessibilityElement(children: .combine)

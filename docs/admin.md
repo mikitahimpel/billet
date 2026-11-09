@@ -190,6 +190,43 @@ panel's **Shop** page edits them; the app reads the active ones from `GET /v1/sh
   on the item's page. Writes need the panel's origin, like every other write.
 - **Agents** read `GET /admin/api/agent/shop-items` and `shop-history[?limit=<1-500>]`.
 
+### Sand3D items
+
+The app bundles six armchair colourways, a chest of drawers and a potted monstera made with
+Sand3D ([tools/sand3d](../tools/sand3d/README.md)). None of them is in the catalog: listing them,
+naming them and pricing them is the owner's call, made here. Coins are earned in the app; nothing
+here takes money.
+
+| Bundled asset id | Season | Suggested name |
+| --- | --- | --- |
+| `armchair-frost` | winter | Frost Armchair |
+| `armchair-cocoa` | winter | Cocoa Armchair |
+| `armchair-blossom` | spring | Blossom Armchair |
+| `armchair-meadow` | spring | Meadow Armchair |
+| `armchair-sunbeam` | summer | Sunbeam Armchair |
+| `armchair-ember` | autumn | Ember Armchair |
+| `chest` | any | Chest of Drawers |
+| `monstera-potted` | any | Potted Monstera |
+
+The colourways' suggested names and blurbs are in
+[`tools/sand3d/armchair-colourways.json`](../tools/sand3d/armchair-colourways.json).
+
+To add one, on **Shop → New item**:
+
+1. **Id:** the bundled asset id, such as `armchair-frost`. It can never change, so decide first.
+2. **Kind and shelf:** `furniture` and `furniture`.
+3. **Name, blurb, rarity, price, sort order:** your choice. The blurb may use `{cat}`.
+4. **Picture:** "Bundled in the app", with the same asset id. The app draws `Item_<id>.png` on
+   the card and `Item_<id>.usdz` on the item's stage.
+5. **Minimum build:** the first build that bundles the files, so older phones skip the item.
+6. Leave **Active** off until you want it on the shelves. A season's colourways can go on together
+   and be made inactive when the season ends; pairs that bought one keep it.
+
+Until the Shop lists furniture from this catalog, the app's shelves still show only their own
+bundled pieces (`Catalog` in `apps/ios/Nooki/Model/Shop.swift`). An active row makes the server
+sell the item, but no shelf shows it until the app reads its furniture from `GET /v1/shop/catalog`,
+which is a separate app change.
+
 ## App Review pair
 
 The **App Review** page runs the reviewer's pair ([app-review.md](app-review.md)):

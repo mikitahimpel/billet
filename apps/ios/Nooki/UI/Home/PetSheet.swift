@@ -133,7 +133,7 @@ private struct PetSheet: View {
         }
         .padding(.vertical, Space.l)
         .frame(maxWidth: .infinity)
-        .cardSurface(radius: Radius.card, warm: true)
+        .cardSurface(warm: true)
     }
 }
 

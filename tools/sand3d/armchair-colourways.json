@@ -1,0 +1,61 @@
+{
+  "note": "The first seasonal batch of the Sand3D armchair. build.py reads this file; the admin's catalog rows are the owner's (docs/admin.md#sand3d-items). No prices here on purpose.",
+  "fit": "width",
+  "size": 0.4,
+  "variants": [
+    {
+      "id": "armchair-frost",
+      "season": "winter",
+      "fabric": "sky",
+      "cushion": "plump",
+      "legs": "tapered",
+      "name": "Frost Armchair",
+      "blurb": "Pale blue, like the window on a snowy morning."
+    },
+    {
+      "id": "armchair-cocoa",
+      "season": "winter",
+      "fabric": "ink",
+      "cushion": "tufted",
+      "legs": "bun",
+      "name": "Cocoa Armchair",
+      "blurb": "Dark and soft, for long evenings in."
+    },
+    {
+      "id": "armchair-blossom",
+      "season": "spring",
+      "fabric": "rose",
+      "cushion": "tufted",
+      "legs": "tapered",
+      "name": "Blossom Armchair",
+      "blurb": "Petal pink with a cream cushion."
+    },
+    {
+      "id": "armchair-meadow",
+      "season": "spring",
+      "fabric": "sage",
+      "cushion": "plump",
+      "legs": "peg",
+      "name": "Meadow Armchair",
+      "blurb": "Sage green with a honey pillow."
+    },
+    {
+      "id": "armchair-sunbeam",
+      "season": "summer",
+      "fabric": "honey",
+      "cushion": "flat",
+      "legs": "peg",
+      "name": "Sunbeam Armchair",
+      "blurb": "Warm as the sunny patch {cat} naps in."
+    },
+    {
+      "id": "armchair-ember",
+      "season": "autumn",
+      "fabric": "terracotta",
+      "cushion": "plump",
+      "legs": "bun",
+      "name": "Ember Armchair",
+      "blurb": "Terracotta and oat, for falling leaves."
+    }
+  ]
+}

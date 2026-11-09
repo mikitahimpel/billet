@@ -31,7 +31,7 @@ struct DailyGiftCard: View {
                     .accessibilityHint("Opens today's free gift")
             }
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .cardSurface()
         .overlay { GiftBurst(trigger: bursts) }
         .haptic(.success, trigger: bursts)
@@ -59,7 +59,7 @@ struct DailyGiftCard: View {
     private var box: some View {
         GiftBox(opened: !ready, opens: bursts, reward: reward)
             .frame(width: 56, height: 56)
-            .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
+            .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.inner, style: .continuous))
             .accessibilityHidden(true)
     }
 

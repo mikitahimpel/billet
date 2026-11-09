@@ -1,19 +1,33 @@
-// Fails when feature code gains a raw `Color(red:` or `.font(.system(size:` outside the design package: colours
-// and type come from `Ink` and the `.nooki*` fonts (docs/design-system.md). Run from anywhere in the repository.
+// Fails when feature code gains a raw `Color(red:` or `.font(.system(size:`, or a corner radius written as a
+// number, outside the design package: colours, type and corners come from `Ink`, the `.nooki*` fonts and `Radius`
+// (docs/design-system.md). Run from anywhere in the repository.
 //
-// Files that already had raw values when the guard was added are listed in design-baseline.json with their
-// counts, and may only shrink. `node check-design.mjs --update` rewrites the list after a cleanup.
+// Files that already had raw values when a guard was added are listed in its baseline with their counts, and may
+// only shrink. `node check-design.mjs --update` rewrites the baselines after a cleanup.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..", "..");
-const baselinePath = join(here, "design-baseline.json");
 
 const roots = ["apps/ios", "packages/ios"];
 const skipped = ["packages/ios/design/", "/.build/", "/Tests/", "Tests/", "Billet.xcodeproj/", "/node_modules/"];
-const raw = /Color\(\s*red:|\.font\(\s*\.system\(\s*size:/g;
+const checks = [
+  {
+    pattern: /Color\(\s*red:|\.font\(\s*\.system\(\s*size:/g,
+    baseline: join(here, "design-baseline.json"),
+    what: "raw Color(red:) / .font(.system(size:)",
+    fix: "Use Ink colours and the .nooki* text styles from the design package (docs/design-system.md).",
+  },
+  {
+    pattern:
+      /\b(?:cornerRadius|(?:top|bottom)(?:Leading|Trailing)Radius)\s*:\s*[\d.]|cardSurface\(\s*radius:\s*[\d.]/g,
+    baseline: join(here, "radius-baseline.json"),
+    what: "corner radii written as numbers",
+    fix: "Corners come from Radius (card, inner, control) or Field / Card (docs/design-system.md#shape).",
+  },
+];
 
 function swiftFiles(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
@@ -31,35 +45,44 @@ function stripComments(text) {
     .replace(/\/\/.*$/gm, "");
 }
 
-const counts = {};
-for (const base of roots) {
-  for (const file of swiftFiles(join(root, base))) {
-    const found = stripComments(readFileSync(file, "utf8")).match(raw)?.length ?? 0;
-    if (found > 0) counts[relative(root, file)] = found;
+const sources = roots.flatMap((base) =>
+  swiftFiles(join(root, base)).map((file) => [
+    relative(root, file),
+    stripComments(readFileSync(file, "utf8")),
+  ]),
+);
+
+function count(pattern) {
+  const counts = {};
+  for (const [file, text] of sources) {
+    const found = text.match(pattern)?.length ?? 0;
+    if (found > 0) counts[file] = found;
   }
+  return counts;
 }
 
 if (process.argv.includes("--update")) {
-  const sorted = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
-  writeFileSync(baselinePath, JSON.stringify(sorted, null, 2) + "\n");
-  console.log(`design baseline: ${Object.keys(sorted).length} files`);
+  for (const check of checks) {
+    const counts = count(check.pattern);
+    const sorted = Object.fromEntries(Object.entries(counts).sort(([a], [b]) => a.localeCompare(b)));
+    writeFileSync(check.baseline, JSON.stringify(sorted, null, 2) + "\n");
+    console.log(`${relative(root, check.baseline)}: ${Object.keys(sorted).length} files`);
+  }
   process.exit(0);
 }
 
-const baseline = JSON.parse(readFileSync(baselinePath, "utf8"));
-const violations = Object.entries(counts).flatMap(([file, count]) => {
-  const allowed = baseline[file] ?? 0;
-  return count > allowed
-    ? [`${file}: ${count} raw Color(red:) / .font(.system(size:), ${allowed} allowed`]
-    : [];
-});
-
-if (violations.length > 0) {
-  console.error(violations.join("\n"));
-  console.error(
-    "Use Ink colours and the .nooki* text styles from the design package (docs/design-system.md).",
-  );
-  process.exit(1);
+let failed = false;
+for (const check of checks) {
+  const baseline = JSON.parse(readFileSync(check.baseline, "utf8"));
+  const violations = Object.entries(count(check.pattern)).flatMap(([file, found]) => {
+    const allowed = baseline[file] ?? 0;
+    return found > allowed ? [`${file}: ${found} ${check.what}, ${allowed} allowed`] : [];
+  });
+  if (violations.length > 0) {
+    console.error(violations.join("\n"));
+    console.error(check.fix);
+    failed = true;
+  }
 }
 
 // Content scrolling under the Home header and the tab bar fades out on every tab: each tab's vertical scroll
@@ -90,9 +113,9 @@ for (const view of tabViews) {
     );
   }
 }
-for (const file of appFiles) {
-  if (/scrollEdgeEffectStyle\(\s*\.hard/.test(stripComments(readFileSync(file, "utf8")))) {
-    edgeViolations.push(`${relative(root, file)}: a hard scroll edge`);
+for (const [file, text] of sources) {
+  if (/scrollEdgeEffectStyle\(\s*\.hard/.test(text)) {
+    edgeViolations.push(`${file}: a hard scroll edge`);
   }
 }
 if (edgeViolations.length > 0) {
@@ -100,5 +123,7 @@ if (edgeViolations.length > 0) {
   console.error(
     "Every tab's scroll view fades under the bars with .softScrollEdges() (docs/design-system.md).",
   );
-  process.exit(1);
+  failed = true;
 }
+
+if (failed) process.exit(1);
