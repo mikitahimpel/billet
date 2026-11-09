@@ -61,5 +61,5 @@ Before adding or changing state, a store, a feature module or anything that touc
   (`check-room-boundary.sh`).
 - `RoomProbe` counts body and update evaluations; a change that makes the room re-render from
   outside, or the outside from the room, fails `RoomSealingTests`.
-- `CatRoom.swift`, `CityRoomScene.swift`, `DioramaScene.swift`, `DioramaView.swift` are Ilya's.
+- `CatRoom.swift`, `CityRoomScene.swift`, `DioramaScene.swift`, `DioramaView.swift` belong to the app's original author.
   A change inside them is listed and asked for through the manager first.

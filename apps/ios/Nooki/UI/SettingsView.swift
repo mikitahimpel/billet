@@ -113,7 +113,7 @@ struct SettingsView: View {
             }
 
             GroupedSection(header: "Labs",
-                         footer: "With the brain off, \(CatProfile.name()) lives on her own timers as Ilya made her. The "
+                         footer: "With the brain off, \(CatProfile.name()) lives on her own original timers. The "
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
                              + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "

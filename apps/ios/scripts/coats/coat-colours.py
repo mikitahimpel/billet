@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Writes a coat's colours for the app: Nooki/Resources/Coats/<pose>-<coat>.fdc.
 
-billet-gpu's coat PLYs differ from Ilya's only in f_dc_0..2, so the app ships just those floats and lays them over
-Ilya's PLY when it loads (CatCoat.dress). This checks that claim and that the result rebuilds the coat PLY byte for byte.
+billet-gpu's coat PLYs differ from the original only in f_dc_0..2, so the app ships just those floats and lays them over
+the original PLY when it loads (CatCoat.dress). This checks that claim and that the result rebuilds the coat PLY byte for byte.
 
     python3 scripts/coats/coat-colours.py Nooki/Resources/Mochi.ply ~/billet-gpu/out/coats/Mochi-ginger.ply \
         Nooki/Resources/Coats/Mochi-ginger.fdc

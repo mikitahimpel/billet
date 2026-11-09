@@ -2,7 +2,7 @@
 
 billet: a two-person iPhone app. The app is `apps/ios` (Ourio), the backend is
 Cloudflare Workers on Effect. Architecture: [docs/architecture.md](docs/architecture.md). Current
-work: GitHub issues, tracker #46. [docs/plan.md](docs/plan.md) is the original plan.
+work: GitHub issues, tracker #46.
 
 ## Layout
 
@@ -13,11 +13,9 @@ work: GitHub issues, tracker #46. [docs/plan.md](docs/plan.md) is the original p
 | `packages/ios/<layer>` | Swift packages: `contracts`, `core`, `design`, `pet`, `features`, `payments`. |
 | `packages/backend/<context>` | Backend contexts and `platform`. |
 | `packages/contracts/<name>` | Effect Schema, source of truth for TS and Swift. |
-| `archive/ios-v1` | Old app, not built, with the packages only it used. Don't build on it. |
 
 App look: [docs/design-system.md](docs/design-system.md), the `design` package (`packages/ios/design`). Read it
 before any UI work; no raw colours or fonts in feature code.
-[docs/design.md](docs/design.md) is the old Little House design, not the app's.
 Images for docs and mockups live in `docs/images/<topic>/` as WebP; app images stay in their bundle.
 
 ## Commands

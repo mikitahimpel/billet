@@ -123,7 +123,7 @@ all its weight on today's standard value, so starting one changes nothing until 
 ### `rooms`: one room or two for new pairs
 
 An experiment, in `draft` until the owner starts it. Variants: `both` (the default and the control:
-Room and City, as before), `room-only` (Ilya's diorama) and `city-only` (the City room with the big
+Room and City, as before), `room-only` (the original diorama) and `city-only` (the City room with the big
 window). Set `pairedSince` to the start, so only new pairs enter and every existing pair keeps both.
 Primary metric: both partners active on day 7 (the retention grid, filtered by variant). Also
 compare notes per pair, and `RoomOpened` (which room came on screen) in the funnel builder, split

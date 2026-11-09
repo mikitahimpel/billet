@@ -27,7 +27,7 @@ private enum Tone {
 /// The second room, ported from nooki-scene/src/three/cityRoom.js: a bedroom with a wide window onto a living town,
 /// lit by the time of day (the real local hour), where Mochi wanders between her bed and the windowsill.
 /// The window is a hole in the wall: the suburb view is drawn flat behind the room at the screen's own pixels
-/// (`windowView`, which HomeView puts under the room), told each frame where the window lands on screen. Ilya's
+/// (`windowView`, which HomeView puts under the room), told each frame where the window lands on screen. The original
 /// TownPicture fills the hole on a plane of its own until that view is showing, or wherever it isn't hosted.
 final class CityRoomScene: CatRoom {
     private enum Clock {

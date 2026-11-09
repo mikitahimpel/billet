@@ -1,4 +1,4 @@
-/// One of Ourio's two rooms: Ilya's diorama (`room`) and the City room with the big window.
+/// One of Ourio's two rooms: the original diorama (`room`) and the City room with the big window.
 public enum OurioRoom: String, CaseIterable, Sendable {
   case room
   case city

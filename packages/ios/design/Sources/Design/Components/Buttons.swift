@@ -234,7 +234,7 @@ public struct PriceButton: View {
 #Preview("Buttons") {
   ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
     VStack(spacing: Space.m) {
-      PrimaryButton("Share with Ilya") {}
+      PrimaryButton("Share with Alex") {}
       PrimaryButton("Pick how you feel") {}.disabled(true)
       SecondaryButton("Place", symbol: "mappin") {}
       SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
