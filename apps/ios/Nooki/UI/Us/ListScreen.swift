@@ -97,7 +97,6 @@ struct ListScreen: View {
                 }
             }
         }
-        }
         .toolbar {
             ToolbarItemGroup(placement: .topBarLeading) {
                 if list.kind == .watch {
@@ -115,6 +114,7 @@ struct ListScreen: View {
                 }
                 .accessibilityLabel("List options")
             }
+        }
         }
         .onAppear {
             guard focusesField else { return }
