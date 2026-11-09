@@ -1,4 +1,5 @@
 import Observation
+import OurioShared
 
 /// Mochi's care on this phone: pets, treats and the bar that fills her level. The level lives in the shared wallet
 /// file, so the widgets show the same one.

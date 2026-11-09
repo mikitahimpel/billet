@@ -4,7 +4,7 @@ import Wire
 
 extension UsStore {
     /// Next occurrence of every event, planned date and milestone from `now`'s day on, soonest first.
-    func upcoming(togetherSince start: Date, limit: Int = 30, from now: Date = .now) -> [Upcoming] {
+    public func upcoming(togetherSince start: Date, limit: Int = 30, from now: Date = .now) -> [Upcoming] {
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
         var rows: [Upcoming] = []
@@ -36,7 +36,7 @@ extension UsStore {
     }
 
     /// Every event, planned date and milestone that falls in `interval`, past ones too; yearly events once per year.
-    func occurrences(togetherSince start: Date, in interval: DateInterval) -> [Upcoming] {
+    public func occurrences(togetherSince start: Date, in interval: DateInterval) -> [Upcoming] {
         let cal = Calendar.current
         let contains = { (date: Date) in date >= interval.start && date < interval.end }
         var rows: [Upcoming] = []

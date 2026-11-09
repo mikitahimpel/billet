@@ -3,19 +3,19 @@ import Foundation
 /// JSON files in the app group, written atomically because the app and the widget extension share them. Writes are
 /// coalesced onto a background queue; call `flush()` before anything outside this process reads the files (intents
 /// before they return, the app before it reloads the widgets).
-nonisolated enum SharedFile {
-    static let delay: DispatchTimeInterval = .milliseconds(400)
+public nonisolated enum SharedFile {
+    public static let delay: DispatchTimeInterval = .milliseconds(400)
 
     private static let queue = DispatchQueue(label: "com.ourio.app.shared-file", qos: .utility)
     /// Latest unwritten value per path. Only touched on `queue`.
     nonisolated(unsafe) private static var pending: [String: (id: UUID, write: @Sendable () -> Void)] = [:]
 
-    static func url(_ path: String) -> URL { AppGroup.container.appending(path: path) }
+    public static func url(_ path: String) -> URL { AppGroup.container.appending(path: path) }
 
     /// Sees this process's own pending write to `path` too. A file that is there but won't decode (cut short, or
     /// written in a shape this build doesn't know) moves to `<path>.unreadable` first, so the store's next save of its
     /// defaults doesn't overwrite what it held.
-    static func read<Value: Decodable>(_ type: Value.Type, from path: String) -> Value? {
+    public static func read<Value: Decodable>(_ type: Value.Type, from path: String) -> Value? {
         queue.sync { writePending(path) }
         let file = url(path)
         guard let data = try? Data(contentsOf: file) else { return nil }
@@ -26,7 +26,7 @@ nonisolated enum SharedFile {
         return nil
     }
 
-    static func write(_ value: some Encodable & Sendable, to path: String) {
+    public static func write(_ value: some Encodable & Sendable, to path: String) {
         let id = UUID()
         queue.async {
             pending[path] = (id, { store(value, at: path) })
@@ -36,7 +36,7 @@ nonisolated enum SharedFile {
         }
     }
 
-    static func flush() {
+    public static func flush() {
         queue.sync {
             for path in Array(pending.keys) { writePending(path) }
         }

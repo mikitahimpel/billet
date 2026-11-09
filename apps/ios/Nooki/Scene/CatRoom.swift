@@ -1,3 +1,4 @@
+import OurioShared
 import Pet
 import RealityKit
 import SwiftUI

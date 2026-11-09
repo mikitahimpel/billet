@@ -2,11 +2,11 @@ import Observation
 import UIKit
 import Wire
 
-nonisolated struct Note: Identifiable, Codable, Hashable {
-    enum Paper: String, Codable, CaseIterable {
+public nonisolated struct Note: Identifiable, Codable, Hashable, Sendable {
+    public enum Paper: String, Codable, CaseIterable, Sendable {
         case butter, blush, sage, sky, cream
 
-        var hex: UInt32 {
+        public var hex: UInt32 {
             switch self {
             case .butter: 0xFFE7A0
             case .blush: 0xFFC9C9
@@ -17,55 +17,69 @@ nonisolated struct Note: Identifiable, Codable, Hashable {
         }
     }
 
-    let id: UUID
+    public let id: UUID
     /// Monogram of the partner who wrote it, "L" or "M".
-    let author: String
-    let date: Date
+    public let author: String
+    public let date: Date
     /// Empty for a doodle.
-    var text: String
+    public var text: String
     /// PNG file name inside the app group's Notes folder; nil for a text note.
-    let doodle: String?
-    var paper: Paper
-    var stamp: NoteStamp? = nil
-    var seal: NoteSeal? = nil
+    public let doodle: String?
+    public var paper: Paper
+    public var stamp: NoteStamp? = nil
+    public var seal: NoteSeal? = nil
     /// The text's ink, 0xRRGGBB; nil on notes written before inks, which keep the old brown.
-    var ink: UInt32? = nil
+    public var ink: UInt32? = nil
     /// The server's id once the note is on it; nil for notes kept on this phone only.
-    var noteID: String? = nil
+    public var noteID: String? = nil
     /// True while a text note written here still has to reach the partner.
-    var unsent: Bool? = nil
+    public var unsent: Bool? = nil
 
-    var inkHex: UInt32 { ink ?? 0x5B3A28 }
+    public init(id: UUID, author: String, date: Date, text: String, doodle: String? = nil, paper: Paper, stamp: NoteStamp? = nil, seal: NoteSeal? = nil, ink: UInt32? = nil, noteID: String? = nil, unsent: Bool? = nil) {
+        self.id = id
+        self.author = author
+        self.date = date
+        self.text = text
+        self.doodle = doodle
+        self.paper = paper
+        self.stamp = stamp
+        self.seal = seal
+        self.ink = ink
+        self.noteID = noteID
+        self.unsent = unsent
+    }
+
+    public var inkHex: UInt32 { ink ?? 0x5B3A28 }
 }
 
 /// The couple's notes on this phone; the JSON index and doodle PNGs live in the app group's Notes folder. Text notes
 /// also go to the partner (see `TextNoteSync`); doodles stay here.
 @Observable
-final class NoteStore {
+public final class NoteStore {
     /// Longest note worth pinning on the board.
-    static let maxLength = 120
+    public static let maxLength = 120
 
-    private(set) var notes: [Note] = []
+    public private(set) var notes: [Note] = []
 
     private static let folder = AppGroup.container.appending(path: "Notes", directoryHint: .isDirectory)
     private static let index = "Notes/notes.json"
 
-    init() {
+    public init() {
         reload()
     }
 
     /// Picks up changes made outside this process.
-    func reload() {
+    public func reload() {
         notes = SharedFile.read([Note].self, from: Self.index) ?? []
     }
 
-    static func doodleURL(for note: Note) -> URL? {
+    public static func doodleURL(for note: Note) -> URL? {
         note.doodle.map { folder.appending(path: $0) }
     }
 
     /// Empty notes are not worth saving, and long ones are cut to `maxLength`.
     @discardableResult
-    func add(
+    public func add(
         text: String, paper: Note.Paper, author: String, ink: UInt32? = nil, stamp: NoteStamp? = nil,
         seal: NoteSeal? = nil
     ) -> Note? {
@@ -79,7 +93,7 @@ final class NoteStore {
     }
 
     @discardableResult
-    func add(
+    public func add(
         doodle: UIImage, paper: Note.Paper, author: String, stamp: NoteStamp? = nil, seal: NoteSeal? = nil
     ) -> Note? {
         guard let data = doodle.pngData() else { return nil }
@@ -97,20 +111,20 @@ final class NoteStore {
         return note
     }
 
-    func delete(_ note: Note) {
+    public func delete(_ note: Note) {
         notes.removeAll { $0.id == note.id }
         if let url = Self.doodleURL(for: note) { try? FileManager.default.removeItem(at: url) }
         save()
     }
 
     /// Text notes written here that the partner doesn't have yet, oldest first.
-    var unsent: [Note] { notes.filter { $0.unsent == true }.reversed() }
+    public var unsent: [Note] { notes.filter { $0.unsent == true }.reversed() }
 
-    func contains(noteID: String) -> Bool { notes.contains { $0.noteID == noteID } }
+    public func contains(noteID: String) -> Bool { notes.contains { $0.noteID == noteID } }
 
-    func note(noteID: String) -> Note? { notes.first { $0.noteID == noteID } }
+    public func note(noteID: String) -> Note? { notes.first { $0.noteID == noteID } }
 
-    func setSent(_ id: UUID, noteID: String) {
+    public func setSent(_ id: UUID, noteID: String) {
         guard let index = notes.firstIndex(where: { $0.id == id }) else { return }
         notes[index].unsent = nil
         notes[index].noteID = noteID
@@ -118,7 +132,7 @@ final class NoteStore {
     }
 
     /// The partner's text note from the server, in date order with the rest.
-    func addReceived(
+    public func addReceived(
         text: String, paper: Note.Paper, stamp: NoteStamp? = nil, seal: NoteSeal? = nil, ink: UInt32?,
         author: String, date: Date, noteID: String
     ) {
@@ -129,7 +143,7 @@ final class NoteStore {
         save()
     }
 
-    func latest(notBy viewer: String) -> Note? {
+    public func latest(notBy viewer: String) -> Note? {
         notes.first { $0.author != viewer }
     }
 

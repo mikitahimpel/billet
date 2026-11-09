@@ -2,17 +2,17 @@ import Foundation
 
 /// An ourio:// URL. Invites also come as the server's `https://<host>/i/<code>` Universal Link, or as a nooki://
 /// link from before the rename, which invites already sent and the server still carry.
-enum DeepLink: Hashable {
+public enum DeepLink: Hashable, Sendable {
     case room, moments, us, calendar, dates, newNote, draw, inbox
     case list(UUID)
     case invite(String)
     /// The Shop at an ink, by its catalog id.
     case shopInk(String)
 
-    static let scheme = "ourio"
-    static let schemes: Set<String> = [scheme, "nooki"]
+    public static let scheme = "ourio"
+    public static let schemes: Set<String> = [scheme, "nooki"]
 
-    var url: URL {
+    public var url: URL {
         let path = switch self {
         case .room: "room"
         case .moments: "moments"
@@ -29,7 +29,7 @@ enum DeepLink: Hashable {
         return URL(string: "\(Self.scheme)://\(path)")!
     }
 
-    init?(url: URL) {
+    public init?(url: URL) {
         let path = url.pathComponents.filter { $0 != "/" }
         if url.scheme == "https", path.count == 2, path[0] == "i" {
             self = .invite(path[1])
