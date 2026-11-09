@@ -45,7 +45,7 @@ extension CatModel {
       .voidCat,
       .siamese,
       .gingerChonk,
-      .idolIlya,
+      .illustratedTabby,
       .idolCalico, .idolGreyTabby, .splatGinger:
       .madeCat
     }

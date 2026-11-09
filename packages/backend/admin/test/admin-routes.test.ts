@@ -501,7 +501,7 @@ describe("the admin API", () => {
   it("ranks the most chosen things over the range, with coins spent on bought ones", async () => {
     details.push(
       { name: "CatChosen", detail: "tabby", day: today, count: 2, total: 0 },
-      { name: "CatChosen", detail: "idolIlya", day: today, count: 5, total: 0 },
+      { name: "CatChosen", detail: "marmalade", day: today, count: 5, total: 0 },
       { name: "CatChosen", detail: "hero", day: "2020-01-01", count: 50, total: 0 },
       { name: "ShopItemBought", detail: "lamp", day: today, count: 2, total: 60 },
     );
@@ -509,7 +509,7 @@ describe("the admin API", () => {
     const top = (name: string) =>
       body.top.find((entry: { name: string }) => entry.name === name).items;
     expect(top("CatChosen")).toEqual([
-      { detail: "idolIlya", count: 5 },
+      { detail: "marmalade", count: 5 },
       { detail: "tabby", count: 2 },
     ]);
     expect(top("ShopItemBought")).toEqual([{ detail: "lamp", count: 2, total: 60 }]);

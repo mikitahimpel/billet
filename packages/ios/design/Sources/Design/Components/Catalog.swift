@@ -55,7 +55,7 @@ private struct Catalog: View {
 
         SectionHeader("Buttons and fields")
         Field("A few words (optional)", text: $note, axis: .vertical, lines: 1...3)
-        PrimaryButton("Share with Ilya") {}
+        PrimaryButton("Share with Alex") {}
         PrimaryButton("Pick how you feel") {}.disabled(true)
         HStack {
           SecondaryButton("Place", symbol: "mappin") {}

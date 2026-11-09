@@ -6,7 +6,7 @@
 Last updated: <DATE OF RELEASE>
 
 ## Who we are
-Billet is provided by <NAME AND ADDRESS OF THE PROVIDER> ("we"). Contact: gimpelllll@gmail.com.
+Billet is provided by <NAME AND ADDRESS OF THE PROVIDER> ("we"). Contact: <SUPPORT_EMAIL>.
 
 ## What Billet is
 A private app for two people to send each other drawings and photos, and to share a cat, a room and

@@ -4,8 +4,7 @@ import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import type { CheckedStep } from "./answer-check.ts";
 
 /**
- * The onboarding questions as they ship, in the order of the design (docs/design/onboarding-
- * mockups.html). "Together since" is not here: it is a date the app keeps on the phone. The app's
+ * The onboarding questions as they ship, in the order of the design. "Together since" is not here: it is a date the app keeps on the phone. The app's
  * own steps that follow are in `nativeSteps`.
  *
  * Changing the wording is safe. Changing what an id means is not: add a new id instead, and bump

@@ -1,6 +1,6 @@
 import Foundation
 
-/// The blocks a widget is built from (docs/widget-concept.md, section 2).
+/// The blocks a widget is built from.
 enum WidgetModule: String, Codable, CaseIterable {
     case mochi, us, mood, list, date, moment
 }
@@ -148,7 +148,7 @@ extension OurioSnapshot {
     }
 }
 
-/// Picks what the smart slot shows: the first rule that holds wins (docs/widget-concept.md, section 3).
+/// Picks what the smart slot shows: the first rule that holds wins.
 /// note: gifts, notes and today's question rank above the mood once those features exist; they have no data yet.
 enum SmartSlot {
     static func pick(for s: OurioSnapshot) -> WidgetModule {

@@ -1093,7 +1093,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     detailed: {
       events: [
         { name: "AppOpened" },
-        { name: "CatChosen", detail: "idolIlya" },
+        { name: "CatChosen", detail: "marmalade" },
         { name: "NoteOpened", detail: "widget" },
         { name: "ShopItemBought", detail: "fairy-lights", value: 40 },
         "CatPetted",

@@ -90,7 +90,7 @@ than reusing it.
 > The coin packs are off in this version: nothing in the app can be bought with money. Pairing
 > with a real partner works by sharing a 10-character invite code from **Us > Invite**; the code
 > above is the same screen with a longer code.
-> Contact: gimpelllll@gmail.com
+> Contact: <SUPPORT_EMAIL>
 
 (Check the last two sentences against the release before submitting: the coin-pack line is true
 while the `payments` flag stays off, see `docs/release-flags.md`.)

@@ -38,7 +38,7 @@ struct CatCoatTests {
         #expect(Self.sha256(try coat.dressedPLY(pose)) == Self.expected["\(pose)-\(coat.rawValue)"])
     }
 
-    @Test func aCoatsBundleHoldsItsPLYsBesideIlyasSkinsAndRigs() throws {
+    @Test func aCoatsBundleHoldsItsPLYsBesideTheOriginalSkinsAndRigs() throws {
         let caches = URL.temporaryDirectory.appending(path: "coats-\(UUID().uuidString)")
         let bundle = try CatCoat.ginger.bundle(caches: caches)
         for pose in CatCoat.poses {

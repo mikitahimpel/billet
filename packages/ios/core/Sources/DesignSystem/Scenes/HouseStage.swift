@@ -1,5 +1,5 @@
 /// The fixed set of house drawings. Each adds one thing to the one before it, and the set does not
-/// grow with the streak. `docs/design.md` records why these five.
+/// grow with the streak.
 public enum HouseStage: Int, CaseIterable, Comparable, Sendable {
   /// 0–6 days: the house itself, lit.
   case lit

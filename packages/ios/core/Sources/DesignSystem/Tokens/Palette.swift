@@ -1,6 +1,4 @@
 /// Every colour in billet. Interface colours are few; the ramps below them belong to the art.
-///
-/// Measured pairs and the reason for each non-obvious value are in `docs/design.md`.
 public enum Palette {
   // MARK: Interface
 

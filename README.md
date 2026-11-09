@@ -1,38 +1,22 @@
-# billet
+# Ourio
 
-A private two-person iPhone app for love notes. You draw something or send a photo, and it lands on
-your partner's widget.
-
-## Status
-
-Pre-alpha, under construction. There is no app code yet; the repository currently holds the plan
-and architecture only.
-
-The iOS app in `apps/ios` is Ilya's Nooki ([nexishq/nooki-ios](https://github.com/nexishq/nooki-ios)),
-used with his permission and shipped under its own name, Nooki; see [NOTICE.md](NOTICE.md#the-ios-app). The first
-billet app is archived in `archive/ios-v1`.
+A private two-person iPhone app. You draw a note or send a photo and it lands on your partner's
+widget; together you raise a cat, play small games and keep a streak.
 
 ## Stack
 
-- iOS: SwiftUI and WidgetKit
-- Backend: Cloudflare Workers, Durable Objects, D1 and R2, written with Effect TS
+- iOS: SwiftUI and WidgetKit (`apps/ios`, `packages/ios`)
+- Backend: Cloudflare Workers, Durable Objects, D1 and R2, written with Effect TS (`apps/api`,
+  `packages/backend`)
+- Contracts: Effect Schema, shared by TypeScript and Swift (`packages/contracts`)
 - Tooling: pnpm and Turborepo
-
-## Repository layout
-
-```
-apps/       Deployable entry points (api Worker, iOS app)
-packages/   Shared code: contracts, backend modules, config, and the Swift package
-docs/       Plan and architecture
-```
-
-Most of these directories do not exist yet; see the architecture document for the intended layout.
 
 ## Docs
 
-- [docs/plan.md](docs/plan.md): the project plan, constraints and ticket breakdown
 - [docs/architecture.md](docs/architecture.md): how the system fits together
+- [docs/design-system.md](docs/design-system.md): how the app looks
+- [AGENTS.md](AGENTS.md): commands and repository rules
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) for this project's own code; see [NOTICE.md](NOTICE.md) for the parts it does not cover.
