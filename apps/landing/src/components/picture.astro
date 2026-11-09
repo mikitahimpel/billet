@@ -21,7 +21,7 @@ const loading = eager ? "eager" : "lazy";
         className,
       ]}
     >
-      <Image src={picture.src} alt={picture.alt} widths={[272, 544]} sizes="272px" loading={loading} class="w-full rounded-[2.1rem]" />
+      <Image src={picture.src} alt={picture.alt} widths={[272, 544]} sizes="272px" loading={loading} class="h-full w-full rounded-[2.1rem] object-cover object-top" />
     </figure>
   ) : picture.kind === "cutout" ? (
     <figure class:list={["relative grid place-items-center", className]}>

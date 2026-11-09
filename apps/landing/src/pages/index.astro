@@ -342,9 +342,10 @@ const schema = [
                     <PictureView
                       picture={hubArt[feature.slug]!}
                       class:list={[
-                        "h-48 [&_img]:max-h-48",
+                        "h-48",
                         hubArt[feature.slug]!.kind === "scene" && "w-full",
-                        hubArt[feature.slug]!.kind === "shot" && "max-w-[8.5rem] !rounded-[1.6rem] !border-4 overflow-hidden",
+                        hubArt[feature.slug]!.kind === "cutout" && "[&_img]:max-h-48",
+                        hubArt[feature.slug]!.kind === "shot" && "!max-w-[12rem] overflow-hidden",
                       ]}
                     />
                     <span class="eyebrow mt-6">{feature.eyebrow}</span>
