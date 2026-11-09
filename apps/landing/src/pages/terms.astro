@@ -1,0 +1,84 @@
+---
+import Page from "../layouts/page.astro";
+import { supportEmail } from "../site";
+
+// Follows docs/legal/terms.md. Change both together.
+const updated = "November 9, 2026";
+---
+
+<Page
+  title="Terms of use · Ourio"
+  description="The terms for using Ourio, the iPhone app for couples: your account, what you send, coins, ending your account and our limits."
+>
+  <article class="container-page pt-10 pb-24 md:pt-14">
+    <p class="eyebrow">Terms</p>
+    <h1 class="mt-4 max-w-[18ch] text-h2">Ourio terms of use</h1>
+    <p class="mt-5 max-w-[40rem] text-lead text-soft">
+      Ourio is a private app for two people to send each other drawings and photos, and to share a cat, a room and small
+      games. By using the app you accept these terms.
+    </p>
+    <p class="mt-4 text-small text-muted">Last updated: <time datetime="2026-11-09">{updated}</time></p>
+
+    <div class="doc">
+      <h2 id="account">Your account</h2>
+      <ul>
+        <li>
+          The app creates an anonymous account for you. Keep your iCloud Keychain, or link Sign in with Apple in the app, if
+          you want a new phone to find your account.
+        </li>
+        <li>
+          You must be at least 13. If you are under the age of majority where you live, you need a parent's or guardian's
+          permission.
+        </li>
+        <li>
+          You are responsible for who you share your invite code with. Anyone with a valid code can become your partner until
+          you unpair.
+        </li>
+      </ul>
+
+      <h2 id="content">What you send</h2>
+      <ul>
+        <li>
+          Your drawings, photos and words are yours. You give us the right to store them and show them to your partner so the
+          app works, and nothing else. We don't sell them, use them for ads, or train AI on them (see the{" "}
+          <a href="/privacy/">privacy policy</a>).
+        </li>
+        <li>
+          Don't send anything unlawful, abusive or that you have no right to send. We may remove content or close an account
+          that breaks this, or to protect people. You can report or block your partner in Settings.
+        </li>
+      </ul>
+
+      <h2 id="coins">Coins</h2>
+      <p>
+        Coins are earned in the app and have no cash value. They can't be exchanged, transferred outside your pair or
+        refunded for money.
+      </p>
+
+      <h2 id="use">Using the app</h2>
+      <p>
+        Don't copy or reverse engineer the app, attack the service, or use it to send spam or to harass anyone. We may change
+        or stop features, for example the games or the shop, and will try to give notice for changes that remove your data.
+      </p>
+
+      <h2 id="ending">Ending</h2>
+      <p>
+        You can unpair or delete your account at any time in Settings. We may suspend an account that breaks these terms.
+      </p>
+
+      <h2 id="limits">No promises</h2>
+      <p>
+        Ourio is provided as is. We work to keep it available and your notes safe, but we can't promise it will never be down
+        or lose data. To the extent the law allows, we aren't liable for indirect loss. Nothing here limits rights you have by
+        law as a consumer.
+      </p>
+
+      <h2 id="changes">Changes and contact</h2>
+      <p>
+        We may change these terms and will change the date above. Questions: <a href={`mailto:${supportEmail}`}
+          >{supportEmail}</a
+        >.
+      </p>
+    </div>
+  </article>
+</Page>

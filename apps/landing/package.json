@@ -9,7 +9,8 @@
     "preview": "astro preview",
     "lint": "oxlint .",
     "format:check": "oxfmt --check .",
-    "typecheck": "astro sync && tsc --noEmit -p tsconfig.json"
+    "typecheck": "astro sync && tsc --noEmit -p tsconfig.json",
+    "test": "node --test scripts/ai/page-to-markdown.test.mjs"
   },
   "dependencies": {
     "@astrojs/react": "catalog:",
@@ -34,6 +35,7 @@
     "@types/three": "catalog:",
     "oxfmt": "catalog:",
     "oxlint": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "ultrahtml": "catalog:"
   }
 }

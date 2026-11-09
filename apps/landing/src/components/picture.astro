@@ -1,0 +1,50 @@
+---
+import { Image } from "astro:assets";
+import type { Picture } from "../features";
+
+interface Props {
+  picture: Picture;
+  class?: string;
+  // Above the fold: load at once instead of lazily.
+  eager?: boolean;
+}
+
+const { picture, class: className, eager = false } = Astro.props;
+const loading = eager ? "eager" : "lazy";
+---
+
+{
+  picture.kind === "shot" ? (
+    <figure
+      class:list={[
+        "relative mx-auto w-full max-w-[17rem] rounded-[2.6rem] border-[6px] border-plate bg-plate shadow-[0_40px_80px_-30px_var(--color-plate)]",
+        className,
+      ]}
+    >
+      <Image src={picture.src} alt={picture.alt} widths={[272, 544]} sizes="272px" loading={loading} class="h-full w-full rounded-[2.1rem] object-cover object-top" />
+    </figure>
+  ) : picture.kind === "cutout" ? (
+    <figure class:list={["relative grid place-items-center", className]}>
+      <div class="lamp-glow absolute inset-0" aria-hidden="true" />
+      <Image
+        src={picture.src}
+        alt={picture.alt}
+        widths={[360, 720, 1080]}
+        sizes="(min-width: 768px) 360px, 70vw"
+        loading={loading}
+        class="relative max-h-[18rem] w-auto md:max-h-[26rem] object-contain drop-shadow-[0_30px_40px_rgb(0_0_0/0.35)]"
+      />
+    </figure>
+  ) : (
+    <figure class:list={["lit-panel overflow-hidden", className]}>
+      <Image
+        src={picture.src}
+        alt={picture.alt}
+        widths={[480, 800, 1024]}
+        sizes="(min-width: 1024px) 560px, 100vw"
+        loading={loading}
+        class="h-full w-full object-cover"
+      />
+    </figure>
+  )
+}

@@ -193,3 +193,68 @@
 .faq summary::-webkit-details-marker {
   display: none;
 }
+
+/* Long-form pages (privacy, terms, help): headings, lists and links in the dusk palette. */
+.doc {
+  max-width: 44rem;
+  color: var(--color-soft);
+}
+.doc h2 {
+  margin-top: 3.5rem;
+  font-size: var(--text-h3);
+  line-height: var(--text-h3--line-height);
+  color: var(--color-paper);
+  scroll-margin-top: 6rem;
+}
+.doc h3 {
+  margin-top: 2rem;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-paper);
+  scroll-margin-top: 6rem;
+}
+.doc p,
+.doc ul,
+.doc ol,
+.doc table {
+  margin-top: 1rem;
+}
+.doc ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.doc ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.doc li + li {
+  margin-top: 0.5rem;
+}
+.doc li::marker {
+  color: var(--color-honey);
+}
+.doc strong {
+  color: var(--color-paper);
+  font-weight: 750;
+}
+.doc a {
+  color: var(--color-honey);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.doc table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-small);
+}
+.doc th,
+.doc td {
+  padding: 0.75rem 0.75rem 0.75rem 0;
+  border-bottom: 1px solid color-mix(in oklab, var(--color-paper) 15%, transparent);
+  text-align: left;
+  vertical-align: top;
+}
+.doc th {
+  color: var(--color-paper);
+  font-weight: 800;
+}

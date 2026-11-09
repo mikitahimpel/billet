@@ -5,12 +5,14 @@ import { HeroStage } from "../components/hero-stage";
 import QrCode from "../components/qr-code.astro";
 import Step from "../components/setup-step.astro";
 import { TwoPhones } from "../components/two-phones";
-import { appStoreId, appStoreUrl, siteDescription, siteTitle } from "../config";
+import { appStoreUrl, siteDescription, siteTitle } from "../config";
 import { faq } from "../faq";
-import "../styles/global.css";
+import Page from "../layouts/page.astro";
+import PictureView from "../components/picture.astro";
+import { featureList, hubArt } from "../features";
 
 import appIcon from "../assets/app-icon.png";
-import mochi from "../assets/MochiPortrait.png";
+import mochi from "../assets/mochi-portrait.webp";
 import armchair from "../assets/Item_armchair.png";
 import lamp from "../assets/Item_lamp.png";
 import donutbed from "../assets/Item_donutbed.png";
@@ -62,18 +64,21 @@ const inbox = [
 
 const promises = [
   {
-    title: "A missed day stays warm.",
-    body: "Your shared flame rests as a glowing ember. It never goes dark, and nothing tells you what you lost.",
+    title: "A missed day isn't the end.",
+    body: "Your love streak can be brought back once a month, and Mochi never gets sick or sad because you were busy.",
   },
   { title: "Mochi never suffers.", body: "Furniture lifts her mood. Buying nothing doesn't hurt her." },
   { title: "Only the two of you.", body: "One code pairs your phones. Nobody else gets into your room." },
 ];
 
+// The home page tells the room's story; these link to the rest of the app.
+const more = ["date-night", "games", "love-streak", "widgets-and-notifications"].map(
+  (slug) => featureList.find((feature) => feature.slug === slug)!,
+);
+
 const canonical = new URL("/", Astro.site).href;
 const ogImage = new URL("/og.png", Astro.site).href;
-const structuredData = {
-  "@context": "https://schema.org",
-  "@graph": [
+const schema = [
     {
       "@type": "WebSite",
       "@id": `${canonical}#website`,
@@ -104,56 +109,17 @@ const structuredData = {
         acceptedAnswer: { "@type": "Answer", text: item.answer },
       })),
     },
-  ],
-};
+  ];
 ---
 
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#2e1838" />
-    <title>{siteTitle}</title>
-    <meta name="description" content={siteDescription} />
-    <link rel="canonical" href={canonical} />
-    <meta name="robots" content="index, follow, max-image-preview:large" />
-
-    <link rel="icon" href="/favicon.png" type="image/png" sizes="48x48" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-    <link rel="alternate" type="text/plain" href="/llms.txt" title="Ourio for language models" />
-    {appStoreId && <meta name="apple-itunes-app" content={`app-id=${appStoreId}`} />}
-
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Ourio" />
-    <meta property="og:locale" content="en_US" />
-    <meta property="og:url" content={canonical} />
-    <meta property="og:title" content="Ourio: a cat you raise together" />
-    <meta property="og:description" content="One room. Two phones. One cat. Free on iPhone." />
-    <meta property="og:image" content={ogImage} />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Mochi, a grey tabby kitten, beside the words: Your love has a cat now." />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Ourio: a cat you raise together" />
-    <meta name="twitter:description" content="One room. Two phones. One cat. Free on iPhone." />
-    <meta name="twitter:image" content={ogImage} />
-
-    <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
-  </head>
-  <body>
-    <header class="fixed inset-x-0 top-0 z-30 bg-linear-to-b from-page-deep/80 to-transparent">
-      <div class="container-page flex items-center justify-between py-5">
-        <a href="#" class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</a>
-        <a
-          href={appStoreUrl}
-          class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md transition-colors hover:bg-gold hover:text-ink"
-          data-cta>Get the app</a
-        >
-      </div>
-    </header>
-
-    <main class="overflow-x-clip">
+<Page
+  title={siteTitle}
+  description={siteDescription}
+  shareTitle="Ourio: a cat you raise together"
+  shareDescription="One room. Two phones. One cat. Free on iPhone."
+  schema={schema}
+  overlayHeader
+>
       <!-- The story: one pinned room, lit and approached as you scroll (see diorama.tsx). -->
       <section id="story" class="relative h-[420svh]">
         <div class="sticky top-0 h-svh overflow-hidden">
@@ -289,17 +255,15 @@ const structuredData = {
                 <div class="rounded-[20px] bg-plate/80 p-3.5">
                   <div class="flex items-center gap-3">
                     <img src={portrait.src} alt="" width="36" height="36" class="size-9 rounded-full bg-raised" />
-                    <span class="flex-1 text-small font-semibold">Mochi is carrying your note</span>
-                    <span class="font-mono text-label text-honey">2 min</span>
-                  </div>
-                  <div class="mt-3 h-1.5 overflow-hidden rounded-full bg-raised-top">
-                    <div class="h-full w-3/5 rounded-full bg-gold"></div>
+                    <span class="flex-1 text-small font-semibold">New note on Mochi's board</span>
+                    <span class="font-mono text-label text-honey">now</span>
                   </div>
                 </div>
               </div>
-              <h3 class="mt-8 text-h3">Notes in your own ink.</h3>
+              <h3 class="mt-8 text-h3">Notes on her board.</h3>
               <p class="mt-3 text-body text-soft">
-                Pick a colour, pin a note to her wall. Mochi carries it over, and the trip plays on your Lock Screen.
+                Type or draw a note, pick the paper, add a stamp. It goes up on Mochi's board and on your partner's Lock
+                Screen widget.
               </p>
             </article>
 
@@ -307,7 +271,7 @@ const structuredData = {
               <div class="grid h-48 place-items-center" aria-hidden="true">
                 <figure class="w-36 -rotate-3 rounded-[4px] bg-paper p-2.5 pb-3 shadow-[0_20px_40px_-16px_var(--color-plate)]">
                   <div class="lamp-glow aspect-square bg-raised">
-                    <Image src={mochi} alt="" widths={[160, 320]} sizes="160px" class="h-full w-full object-contain" />
+                    <Image src={mochi} alt="" widths={[160, 320, 480]} sizes="160px" class="h-full w-full object-contain" />
                   </div>
                   <figcaption class="mt-2 text-center text-small font-semibold text-ink">sunday nap</figcaption>
                 </figure>
@@ -356,6 +320,45 @@ const structuredData = {
               </p>
             </article>
           </div>
+        </div>
+      </section>
+
+      <section class="section-y">
+        <div class="container-page">
+          <div class="grid gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
+            <div>
+              <p class="eyebrow">Beyond the room</p>
+              <h2 class="mt-5 max-w-[40rem] text-h2">Plans, games and a flame to keep lit.</h2>
+            </div>
+            <p class="max-w-[26rem] text-lead text-soft">
+              Date night ideas you swipe together, wishlists, shared lists, a love streak, two games and six widgets.
+              Apart for now? See{" "}
+              <a href="/long-distance-relationship-app/" class="text-honey underline underline-offset-4">Ourio for long-distance couples</a>.
+            </p>
+          </div>
+          <ul class="mt-14 grid gap-4 sm:grid-cols-2 md:mt-20 md:gap-5 lg:grid-cols-4">
+            {
+              more.map((feature) => (
+                <li>
+                  <a href={`/features/${feature.slug}/`} class="lit-panel group flex h-full flex-col overflow-hidden p-5 transition-transform hover:-translate-y-1">
+                    <PictureView
+                      picture={hubArt[feature.slug]!}
+                      class:list={[
+                        "h-48",
+                        hubArt[feature.slug]!.kind === "scene" && "w-full",
+                        hubArt[feature.slug]!.kind === "cutout" && "[&_img]:max-h-48",
+                        hubArt[feature.slug]!.kind === "shot" && "!max-w-[12rem] overflow-hidden",
+                      ]}
+                    />
+                    <span class="eyebrow mt-6">{feature.eyebrow}</span>
+                    <span class="mt-2 text-[1.25rem] leading-tight font-extrabold">{feature.h1}</span>
+                    <span class="mt-4 text-small font-bold text-honey">Read more →</span>
+                  </a>
+                </li>
+              ))
+            }
+          </ul>
+          <a href="/features/" class="mt-10 inline-block font-bold text-honey underline underline-offset-4">See every feature</a>
         </div>
       </section>
 
@@ -454,7 +457,7 @@ const structuredData = {
           <Image
             src={mochi}
             alt="Mochi, a grey tabby kitten with a red collar and a gold bell"
-            widths={[256, 512]}
+            widths={[256, 512, 768]}
             sizes="256px"
             class="w-52 [mask-image:linear-gradient(#000_70%,transparent)] md:w-64"
           />
@@ -480,22 +483,7 @@ const structuredData = {
           <p class="mt-4 hidden text-small text-muted lg:block">On a computer? Scan the code with your iPhone camera.</p>
         </div>
       </section>
-    </main>
-
-    <footer class="border-t border-paper/10">
-      <div class="container-page flex flex-col gap-6 pt-10 pb-28 md:flex-row md:items-end md:justify-between md:pb-10">
-        <div>
-          <p class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</p>
-          <p class="mt-1 max-w-[28rem] text-small text-muted">A free iPhone app for couples: one shared room, one cat, and everything you do for her on your partner's Lock Screen.</p>
-        </div>
-        <nav class="flex flex-wrap gap-x-6 gap-y-2 text-small text-muted" aria-label="Footer">
-          <a href={appStoreUrl} class="underline-offset-4 hover:text-paper hover:underline">App Store</a>
-          <a href="#" class="underline-offset-4 hover:text-paper hover:underline">Privacy</a>
-          <span>© 2026 Ourio</span>
-        </nav>
-      </div>
-    </footer>
-
+  <Fragment slot="after">
     <!-- Phones get a download bar once the story's own buttons are out of view. -->
     <div
       id="sticky-cta"
@@ -529,5 +517,5 @@ const structuredData = {
       addEventListener("resize", update);
       update();
     </script>
-  </body>
-</html>
+  </Fragment>
+</Page>

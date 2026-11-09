@@ -1,0 +1,68 @@
+---
+import { appStoreUrl } from "../config";
+
+interface Props {
+  // Over the home page's story the header floats; on every other page it sits on the page.
+  overlay?: boolean;
+}
+
+const { overlay = false } = Astro.props;
+const current = Astro.url.pathname;
+const links = [
+  { href: "/features/", label: "Features" },
+  { href: "/how-it-works/", label: "How it works" },
+  { href: "/faq/", label: "FAQ" },
+  { href: "/help/", label: "Help" },
+];
+---
+
+<header
+  class:list={[
+    "inset-x-0 top-0 z-30",
+    overlay ? "fixed bg-linear-to-b from-page-deep/80 to-transparent" : "sticky border-b border-paper/10 bg-page-deep/80 backdrop-blur-xl",
+  ]}
+>
+  <div class="container-page flex items-center justify-between gap-4 py-4 md:py-5">
+    <a href="/" class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</a>
+    <nav aria-label="Main" class="hidden items-center gap-1 md:flex">
+      {
+        links.map((link) => (
+          <a
+            href={link.href}
+            aria-current={current.startsWith(link.href) ? "page" : undefined}
+            class="rounded-full px-4 py-2 text-small font-semibold text-soft transition-colors hover:bg-paper/10 hover:text-paper aria-[current=page]:text-honey"
+          >
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+    <div class="flex items-center gap-2">
+      <details class="relative md:hidden">
+        <summary
+          class="grid size-10 cursor-pointer list-none place-items-center rounded-full bg-plate/70 backdrop-blur-md [&::-webkit-details-marker]:hidden"
+          aria-label="Menu"
+        >
+          <svg viewBox="0 0 20 20" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path d="M3 6h14M3 10h14M3 14h14"></path>
+          </svg>
+        </summary>
+        <nav aria-label="Main" class="lit-panel absolute top-12 right-0 flex w-56 flex-col p-2">
+          {
+            links.map((link) => (
+              <a href={link.href} class="rounded-[14px] px-4 py-3 font-semibold hover:bg-paper/10">
+                {link.label}
+              </a>
+            ))
+          }
+          <a href="/support/" class="rounded-[14px] px-4 py-3 font-semibold hover:bg-paper/10">Support</a>
+        </nav>
+      </details>
+      <a
+        href={appStoreUrl}
+        class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md transition-colors hover:bg-gold hover:text-ink"
+        data-cta>Get the app</a
+      >
+    </div>
+  </div>
+</header>

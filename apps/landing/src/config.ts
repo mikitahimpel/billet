@@ -4,8 +4,8 @@ export const appStoreUrl = "https://apps.apple.com/app/nooki";
 // note: placeholder until the App Store listing exists; set it to turn on Safari's Smart App Banner.
 export const appStoreId: string | null = null;
 
-// note: placeholder until the landing's domain is chosen; canonical, Open Graph, sitemap and llms.txt read it.
-export const siteUrl = "https://nooki.app";
+// Canonical, Open Graph, sitemap, robots.txt, llms.txt and the Markdown twins all read it.
+export const siteUrl = "https://ourio.app";
 
 export const siteTitle = "Ourio: the couples app with a cat you raise together";
 export const siteDescription =

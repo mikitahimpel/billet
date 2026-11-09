@@ -1,0 +1,144 @@
+---
+import Page from "../layouts/page.astro";
+import { supportEmail } from "../site";
+
+// Follows docs/legal/privacy-policy.md, the release policy written from what the code collects. Change both together.
+const updated = "November 9, 2026";
+---
+
+<Page
+  title="Privacy policy · Ourio"
+  description="What Ourio, the iPhone app for couples, stores about you and your partner, why, for how long, and how to delete it. No ads, no tracking, no AI training on your drawings or photos."
+>
+  <article class="container-page pt-10 pb-24 md:pt-14">
+    <p class="eyebrow">Privacy</p>
+    <h1 class="mt-4 max-w-[18ch] text-h2">Ourio privacy policy</h1>
+    <p class="mt-5 max-w-[40rem] text-lead text-soft">
+      Ourio is a private iPhone app for two people. It stores what you make for each other so it reaches your partner,
+      and nothing it doesn't need. It has no ads, no third-party analytics or tracking, and never uses your drawings or
+      photos to train AI.
+    </p>
+    <p class="mt-4 text-small text-muted">Last updated: <time datetime="2026-11-09">{updated}</time></p>
+
+    <div class="doc">
+      <h2 id="summary">In short</h2>
+      <table>
+        <thead>
+          <tr><th scope="col">Question</th><th scope="col">Answer</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Do you know my name or email?</td><td>No. Your account is anonymous; Sign in with Apple, if you add it, gives us only an identifier.</td></tr>
+          <tr><td>Who sees what I send?</td><td>Only your partner and you.</td></tr>
+          <tr><td>Ads or tracking?</td><td>None. No third-party analytics.</td></tr>
+          <tr><td>Do you train AI on my content?</td><td>No.</td></tr>
+          <tr><td>Contacts or location?</td><td>Never asked for.</td></tr>
+          <tr><td>Can I delete everything?</td><td>Yes: Settings › Delete account. A report sent to us about a partner is kept until you ask us to delete it.</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="what">What the app handles</h2>
+      <ul>
+        <li>
+          <strong>Your account.</strong> The app creates an anonymous account with a key kept in your iCloud Keychain. There
+          is no password and we never see your name or email address. If you choose “Save your cat and notes”, you link the
+          account to Sign in with Apple, and we then also keep an identifier that is unique to our app.
+        </li>
+        <li>
+          <strong>Pairing.</strong> An invite code, valid for 24 hours, links your account to your partner's. We keep only a
+          one-way hash of the code, never the code itself. A pair is exactly two accounts.
+        </li>
+        <li>
+          <strong>Devices and sessions.</strong> A random device ID, and a session that keeps you signed in. We keep only a
+          one-way hash of the session token.
+        </li>
+        <li>
+          <strong>What you send each other.</strong> Drawings, notes and photos (Moments), with who sent them and when, and
+          what you add together: list items, wishes, calendar dates, places, date night plans, games and the things you buy
+          for the room.
+        </li>
+        <li>
+          <strong>Onboarding answers.</strong> A few questions you can each skip: your age range (never your date of birth),
+          how we should talk about you, the name your partner calls you, and what you want to do together. The day your
+          story started stays on your phone.
+        </li>
+        <li>
+          <strong>Pick tonight.</strong> Each partner's latest swipe on each film or show in the last 24 hours. A title you
+          both want is a match, and your partner gets a notification that names it.
+        </li>
+        <li>
+          <strong>Who knows who.</strong> For each day's round, which questions it asked, who it was about and the option each
+          of you picked. Neither of you sees the other's picks until you have both answered. We keep each week's score.
+        </li>
+        <li><strong>Push token.</strong> An Apple identifier used to notify your device, if you allow notifications.</li>
+        <li>
+          <strong>Usage counts.</strong> How many times each account did named things in the app on a given day (for example
+          paired, sent a note, petted the cat, opened the shop), with the app and iOS version. Never what a note says or
+          shows, your name or anything you type. We use it to see whether the app works for couples.
+        </li>
+        <li>
+          <strong>Test variants.</strong> To compare two versions of a screen, each pair is placed in one version; both
+          partners always get the same one.
+        </li>
+      </ul>
+
+      <h2 id="where">Where it goes and how long it stays</h2>
+      <p>Everything above is stored on our own backend, which runs on Cloudflare.</p>
+      <ul>
+        <li>
+          <strong>Notes, drawings and photos</strong> are kept in your pair's private storage, reachable only by the two
+          accounts in the pair, for as long as the pair exists.
+        </li>
+        <li><strong>Account and pairing data</strong> are kept as long as the account exists.</li>
+        <li>
+          <strong>Pick tonight swipes</strong> are kept for 24 hours. To suggest titles, our backend asks The Movie Database
+          (TMDB) for titles like the ones on your list, by their TMDB numbers only, never with your account.
+        </li>
+        <li>
+          <strong>Usage events</strong> are written to Cloudflare's analytics storage with a one-way hash of your pair (never
+          your account or network address) and deleted after three months.
+        </li>
+        <li>
+          <strong>Abuse protection</strong> counts requests per minute against a one-way hash of the caller's network
+          address; the address itself is not stored.
+        </li>
+        <li>
+          <strong>Server logs</strong> record the type of request, whether it worked and how long it took. They hold no note
+          content, tokens, codes, emails or addresses, and are kept for 7 days.
+        </li>
+      </ul>
+      <p>
+        Notifications are sent through Apple Push Notification service. Ourio has no in-app purchases. We don't sell your data or use it for advertising.
+      </p>
+
+      <h2 id="device">Your data on your device</h2>
+      <p>
+        The app keeps your session, device ID and recent notes on your phone to show them. Deleting the app removes these
+        from your phone, but not from our backend: use Delete account for that.
+      </p>
+
+      <h2 id="delete">Unpairing and deleting your account</h2>
+      <ul>
+        <li><strong>Unpair</strong> (Settings › Partner): you stop sharing with each other. You can pair again with a new code.</li>
+        <li><strong>Block partner</strong>: you are unpaired, and neither of you can pair with the other again.</li>
+        <li>
+          <strong>Delete account</strong> (Settings › Delete account): your account and what you sent are deleted from the
+          server, your partner is unpaired, and everything on the phone is erased. This can't be undone.
+        </li>
+        <li>
+          <strong>Reports</strong> you or your partner sent us about the other are kept after either account is deleted, so
+          we can still act on them. Email us to have one deleted.
+        </li>
+      </ul>
+      <p>To ask about your data, or to have a report deleted, email <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.</p>
+
+      <h2 id="children">Children</h2>
+      <p>
+        The app asks your age range on first launch. If you are under 13, the app stops there, your answer is never sent and
+        no account data is kept for you.
+      </p>
+
+      <h2 id="changes">Changes</h2>
+      <p>We will say here when this policy changes, and change the date above.</p>
+    </div>
+  </article>
+</Page>
