@@ -266,8 +266,9 @@ final class ServerSession {
         pairEnded()
     }
 
-    func reportPartner(_ reason: ReportReason, details: String?) async throws(TransportError) {
-        try await backend.api.reportPartner(ReportPartnerRequest(reason: reason, details: details))
+    /// `note` is the one note or photo the report is about, when there is one.
+    func reportPartner(_ reason: ReportReason, note: NoteId? = nil, details: String?) async throws(TransportError) {
+        try await backend.api.reportPartner(ReportPartnerRequest(reason: reason, noteId: note, details: details))
     }
 
     /// Deletes the account on the server, then forgets the session and the account key on this phone, so the next

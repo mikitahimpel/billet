@@ -13,6 +13,7 @@
     "./admin-funnel": "./src/admin-funnel.ts",
     "./admin-overview": "./src/admin-overview.ts",
     "./admin-retention": "./src/admin-retention.ts",
+    "./admin-review": "./src/admin-review.ts",
     "./admin-routes": "./src/admin-routes.ts",
     "./admin-trends": "./src/admin-trends.ts",
     "./analytics-engine-reader": "./src/analytics-engine-reader.ts",
@@ -34,12 +35,14 @@
     "@billet/backend-flags": "workspace:*",
     "@billet/backend-metrics": "workspace:*",
     "@billet/backend-onboarding": "workspace:*",
+    "@billet/backend-review": "workspace:*",
     "@billet/backend-shop": "workspace:*",
     "@billet/contracts-domain": "workspace:*",
     "@billet/contracts-http-api": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
+    "@billet/backend-demo-partner": "workspace:*",
     "@billet/backend-pairing": "workspace:*",
     "@billet/config-typescript": "workspace:*",
     "@cloudflare/workers-types": "catalog:",

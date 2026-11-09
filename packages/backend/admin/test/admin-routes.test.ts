@@ -131,6 +131,22 @@ const handlerFor = (email: string) =>
                   ],
                   accounts: 2,
                 }),
+                reports: (limit) =>
+                  Effect.succeed({
+                    reports: [
+                      {
+                        id: "report-1",
+                        reporterId: "user-a",
+                        reportedId: "user-b",
+                        pairId: "pair-1",
+                        reason: "inappropriate",
+                        details: null,
+                        noteId: "note-1",
+                        createdAt: 1_000,
+                      },
+                    ].slice(0, limit),
+                    total: 1,
+                  }),
                 pair: (pairId) =>
                   Effect.succeed(
                     pairId === "pair-1"
@@ -641,6 +657,18 @@ describe("purchases", () => {
     expect(listed.body).toMatchObject({ ledger: [], notifications: [] });
     expect((await call(`${adminApi.purchases}?limit=0`)).status).toBe(400);
     expect((await call(adminApi.purchases, "POST", {})).status).toBe(404);
+  });
+});
+
+describe("reports", () => {
+  it("lists partner reports with the note they are about, read-only", async () => {
+    const listed = await call(adminApi.reports);
+    expect(listed.status).toBe(200);
+    expect(listed.body).toMatchObject({
+      total: 1,
+      reports: [{ id: "report-1", reason: "inappropriate", noteId: "note-1", details: null }],
+    });
+    expect((await call(adminApi.reports, "POST", {})).status).toBe(404);
   });
 });
 

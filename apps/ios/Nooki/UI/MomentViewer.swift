@@ -17,6 +17,7 @@ struct MomentViewer: View {
     @Environment(ServerSession.self) private var session: ServerSession?
     @State private var caption = ""
     @State private var confirmDelete = false
+    @State private var reportFailed = false
     @State private var polaroid: Image?
     @FocusState private var editing: Bool
 
@@ -76,6 +77,11 @@ struct MomentViewer: View {
             guard !Task.isCancelled else { return }
             polaroid = await renderPolaroid()
         }
+        .alert("Couldn't send the report", isPresented: $reportFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Check your connection and try again.")
+        }
         .confirmationDialog("Delete this moment?", isPresented: $confirmDelete, titleVisibility: .visible) {
             Button("Delete", role: .destructive) {
                 if let moment { store.delete(moment) }
@@ -102,6 +108,17 @@ struct MomentViewer: View {
                 }
                 Button { editing = true } label: { Label("Edit caption", systemImage: "pencil") }
                 Divider()
+                if let note = moment.noteID, moment.author == state.otherPartner, let session {
+                    Menu {
+                        ForEach(ReportReason.allCases, id: \.self) { reason in
+                            Button(reason.title) {
+                                report(moment, note: NoteId(note), reason: reason, session: session)
+                            }
+                        }
+                    } label: {
+                        Label("Report and hide", systemImage: "flag")
+                    }
+                }
                 Button(role: .destructive) { confirmDelete = true } label: { Label("Delete", systemImage: "trash") }
             } label: {
                 Image(systemName: "ellipsis")
@@ -111,6 +128,19 @@ struct MomentViewer: View {
                     .glass(.circle, role: .control)
             }
             .accessibilityLabel("Share and more")
+        }
+    }
+
+    /// Sends the report to the team, then takes the photo off this phone. Nothing is hidden if the report fails.
+    private func report(_ moment: Moment, note: NoteId, reason: ReportReason, session: ServerSession) {
+        Task {
+            do {
+                try await session.reportPartner(reason, note: note, details: nil)
+                store.delete(moment)
+                dismiss()
+            } catch {
+                reportFailed = true
+            }
         }
     }
 

@@ -61,7 +61,19 @@ struct WelcomeView: View {
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.bottom, Space.l)
+            .padding(.bottom, Space.m)
+            // Both actions below accept this (OnboardingFlow.termsAcceptedKey). App Review 1.2 asks for terms that
+            // forbid objectionable content before anyone can send any.
+            Text("""
+                By continuing you agree to the terms of use: no abusive or objectionable content, and every \
+                report is acted on.
+                """)
+                .font(.nookiCaption)
+                .foregroundStyle(Ink.textSecondary)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(.bottom, Space.s)
+                .modifier(Reveal(script.progress(.subtitle, at: time), rise: 0))
         }
         .padding(.horizontal, Space.gutter)
         .frame(width: size.width, height: size.height)

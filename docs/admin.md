@@ -190,6 +190,28 @@ panel's **Shop** page edits them; the app reads the active ones from `GET /v1/sh
   on the item's page. Writes need the panel's origin, like every other write.
 - **Agents** read `GET /admin/api/agent/shop-items` and `shop-history[?limit=<1-500>]`.
 
+## App Review pair
+
+The **App Review** page runs the reviewer's pair ([app-review.md](app-review.md)):
+
+- **New code** makes a 26-symbol review code that lives 1 to 30 days and revokes every earlier
+  one. The code is shown once, in the page that made it; the directory keeps only its SHA-256 and
+  its last four symbols. The first code also opens the review partner, an ordinary user.
+- **Revoke** stops every code at once. **Wipe the pair** ends the partner's pair, which deletes
+  its room, notes, photos and cat, and stills its bot.
+- The page shows the live code's last four, its expiry, its claims and the last claim, and every
+  action with the Access email (`review_changes`).
+- `GET /admin/api/review`, `POST /admin/api/review/code {days}`, `POST /admin/api/review/revoke`,
+  `POST /admin/api/review/wipe`. Not in the agent API.
+
+## Reports
+
+The **Reports** page lists `partner_reports`, newest first: the reason, the reported user, the
+pair, the note or photo a report is about (`note_id`) and what the reporter typed. It is read-only:
+act on a report (block, delete the account) within a day. Each report also logs the warning
+`partner report received` with its reason, so an alert on that message reaches the team at once.
+`GET /admin/api/reports[?limit=<1-1000>]`. Not in the agent API, since it holds what users typed.
+
 ## Seed data
 
 `pnpm admin:seed` writes `admin-seed.sql`: about 170 made-up pairs formed over the last 10 weeks

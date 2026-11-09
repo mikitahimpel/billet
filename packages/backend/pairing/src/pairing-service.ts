@@ -170,8 +170,13 @@ export class PairingService extends Context.Service<
           pairId,
           reason: request.reason,
           details: request.details,
+          noteId: request.noteId,
           at: yield* Clock.currentTimeMillis,
         });
+        // The alert on reports matches this fixed message; the admin's Reports tab has the rest.
+        yield* Effect.logWarning("partner report received").pipe(
+          Effect.annotateLogs({ reason: request.reason, onNote: request.noteId !== undefined }),
+        );
       });
 
       return PairingService.of({

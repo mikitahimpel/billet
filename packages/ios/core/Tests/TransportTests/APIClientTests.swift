@@ -79,6 +79,15 @@ import Wire
     #expect(request.body.map { String(decoding: $0, as: UTF8.self) } == #"{"code":"ABC"}"#)
   }
 
+  @Test func aReviewCodeIsClaimedOnItsOwnRoute() async throws {
+    let server = Server(body: #"{"pairId":"p1"}"#)
+    let code = String(repeating: "A", count: InviteCode.reviewLength)
+    _ = try await Self.client(server).claimInvite(ClaimInviteRequest(code: InviteCode(code)))
+    let request = try #require(server.requests.first)
+    #expect(request.path == "/v1/review/claim")
+    #expect(request.body.map { String(decoding: $0, as: UTF8.self) } == #"{"code":"\#(code)"}"#)
+  }
+
   @Test func historyAsksAfterTheLastSeqItHolds() async throws {
     let server = Server(body: #"{"notes":[]}"#)
     _ = try await Self.client(server).listNotes(nil)
