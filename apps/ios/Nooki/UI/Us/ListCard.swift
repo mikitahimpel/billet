@@ -168,7 +168,12 @@ private struct PosterPeek: View {
                         .padding(4)
                 }
             }
-            .shadow(color: .black.opacity(0.3), radius: 4, y: 3)
+            // Cast by a shape the poster's size, not traced from the poster's pixels: an offscreen pass per poster.
+            .background {
+                RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
+                    .fill(Ink.surfaceRaised)
+                    .shadow(color: .black.opacity(0.3), radius: 4, y: 3)
+            }
     }
 }
 

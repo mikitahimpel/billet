@@ -67,13 +67,26 @@ struct RarityFrame<Content: View>: View {
     }
 }
 
-/// Crosses once per period, only while on screen; still under Reduce Motion. An animated effect, not a timeline:
-/// SwiftUI moves it each frame without building the view again, and a card scrolled out of sight stops it.
+/// Whether the page under the shop's cards is being scrolled. Its own object, read only by the sweeps, so a scroll
+/// starting or ending re-evaluates them and not the page.
+@MainActor
+@Observable
+final class ShopScrolling {
+    var isScrolling = false
+}
+
+/// Crosses once per period, only while on screen and the page holds still; still under Reduce Motion. An animated
+/// effect, not a timeline: SwiftUI moves it each frame without building the view again, and a card scrolled out of
+/// sight stops it. Each frame of it is still the main thread's work, so it waits while the page scrolls.
 private struct ShineSweep: View {
     let period: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// 0 to 1 through each period, animated forever while the frame is on screen.
+    @Environment(ShopScrolling.self) private var scrolling: ShopScrolling?
+    /// 0 to 1 through each period, animated forever while the sweep runs.
     @State private var progress = 0.0
+    @State private var visible = false
+
+    private var runs: Bool { visible && scrolling?.isScrolling != true }
 
     var body: some View {
         if !reduceMotion {
@@ -84,8 +97,9 @@ private struct ShineSweep: View {
                     .rotationEffect(.degrees(12))
                     .modifier(SweepEffect(progress: progress, frameWidth: proxy.size.width, bandWidth: width))
             }
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
-                if visible {
+            .onScrollVisibilityChange(threshold: 0.01) { visible = $0 }
+            .onChange(of: runs) { _, runs in
+                if runs {
                     withAnimation(.linear(duration: period).repeatForever(autoreverses: false)) { progress = 1 }
                 } else {
                     var still = Transaction(animation: nil)

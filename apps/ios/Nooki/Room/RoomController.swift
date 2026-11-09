@@ -96,14 +96,22 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     // MARK: Showing a room
 
-    /// Makes `target` the room that is driven, stopping the one before it. The City is built here and released when
-    /// the Room comes back; the corkboard is built on first use and kept.
+    /// Makes `target` the room that is driven, stopping the one before it. A room is built on first use, unless
+    /// `prepare` built it before, and kept: building the City on the main thread costs a switch its frames, and
+    /// a stopped room only holds memory.
     func show(_ target: RoomScene) {
         guard target != shown else { return }
-        let previous = shown
-        scene(for: previous)?.stop()
+        scene(for: shown)?.stop()
+        prepare(target)
         shown = target
+    }
+
+    /// Builds `target` without showing it, for a moment when the room is off screen and a dropped frame can't be
+    /// seen, so the first switch to it only shows it.
+    func prepare(_ target: RoomScene) {
+        guard home != nil else { return }
         switch target {
+        case .home: break
         case .board:
             if board == nil { board = makeBoard() }
         case .city:
@@ -111,11 +119,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
                 let built = CityRoomScene()
                 wire(built)
                 city = built
-            }
-        case .home:
-            if previous == .city {
-                city?.stop()
-                city = nil
             }
         }
     }
