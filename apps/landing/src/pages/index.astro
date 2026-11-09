@@ -72,7 +72,7 @@ const promises = [
 ];
 
 // The home page tells the room's story; these link to the rest of the app.
-const more = ["us", "games", "love-streak", "widgets-and-notifications"].map(
+const more = ["date-night", "games", "love-streak", "widgets-and-notifications"].map(
   (slug) => featureList.find((feature) => feature.slug === slug)!,
 );
 
@@ -332,6 +332,8 @@ const schema = [
             </div>
             <p class="max-w-[26rem] text-lead text-soft">
               Date night ideas you swipe together, wishlists, shared lists, a love streak, two games and six widgets.
+              Apart for now? See{" "}
+              <a href="/long-distance-relationship-app/" class="text-honey underline underline-offset-4">Ourio for long-distance couples</a>.
             </p>
           </div>
           <ul class="mt-14 grid gap-4 sm:grid-cols-2 md:mt-20 md:gap-5 lg:grid-cols-4">

@@ -3,7 +3,10 @@ import { appStoreUrl } from "../config";
 import { features, pages } from "../site";
 
 const groups = [
-  { title: "Features", links: [{ path: "/features/", label: "All features" }, ...features] },
+  {
+    title: "Features",
+    links: [{ path: "/features/", label: "All features" }, ...features, ...pages.filter((page) => page.path === "/long-distance-relationship-app/")],
+  },
   { title: "Help", links: pages.filter((page) => page.group === "help") },
   {
     title: "Ourio",

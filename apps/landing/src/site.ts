@@ -11,14 +11,14 @@ export type SitePage = {
 export const features: SitePage[] = [
   {
     path: "/features/room-and-mochi/",
-    label: "The Room and Mochi",
+    label: "Virtual pet: Mochi and the room",
     summary:
       "A shared cozy room and a cat you both look after: pet, feed and play with her, pick her coat.",
     group: "features",
   },
   {
     path: "/features/lock-screen-drawings/",
-    label: "Lock Screen drawings and notes",
+    label: "Lock Screen drawings",
     summary:
       "Draw on a canvas that looks like your partner's Lock Screen, or pin a note; it lands in their widget.",
     group: "features",
@@ -32,21 +32,53 @@ export const features: SitePage[] = [
   },
   {
     path: "/features/us/",
-    label: "The Us tab",
+    label: "The Us tab: planner for two",
     summary:
-      "Countdown, love streak, date night, wishlists, calendar, shared lists, To watch with Pick tonight and Places to go.",
+      "Everything that is yours as a couple in one tab: dates, wishlists, lists, calendar and streak.",
+    group: "features",
+  },
+  {
+    path: "/features/date-night/",
+    label: "Date night ideas",
+    summary: "150 date ideas you each swipe; the ones you both love become plans, with reminders.",
+    group: "features",
+  },
+  {
+    path: "/features/wishlists/",
+    label: "Shared wishlists",
+    summary:
+      "Wishlists for each other with secret “I'll get this” gifting and a “What I love” cheat sheet.",
+    group: "features",
+  },
+  {
+    path: "/features/shared-lists/",
+    label: "Shared lists",
+    summary:
+      "Groceries sorted by aisle, a bucket list, places to go and lists of your own, in sync.",
+    group: "features",
+  },
+  {
+    path: "/features/movie-night/",
+    label: "Movie night: Pick tonight",
+    summary: "Swipe movies and shows together until you both want the same one.",
+    group: "features",
+  },
+  {
+    path: "/features/calendar-and-countdown/",
+    label: "Calendar and countdown",
+    summary: "Days together, a shared calendar and countdowns on both Lock Screens.",
     group: "features",
   },
   {
     path: "/features/love-streak/",
-    label: "Love streak",
+    label: "Couples streak",
     summary:
       "A shared flame you light by doing something together each day; a broken streak can be restored once a month.",
     group: "features",
   },
   {
     path: "/features/games/",
-    label: "Games for two",
+    label: "Couples games",
     summary:
       "Who knows who, a daily quiz about each other, and Draw & guess, a turn-based drawing game.",
     group: "features",
@@ -60,7 +92,7 @@ export const features: SitePage[] = [
   },
   {
     path: "/features/widgets-and-notifications/",
-    label: "Widgets, notifications and sharing",
+    label: "Couple widgets",
     summary:
       "Six Home and Lock Screen widgets, Control Center buttons, quiet notifications and a Safari share extension.",
     group: "features",
