@@ -1,0 +1,85 @@
+name: iOS Release
+
+# The app's Release build for a device, which the Debug app tests miss: optimiser-only type-check
+# limits, and the splat code under `#if !targetEnvironment(simulator)`. Hourly when main has moved,
+# not on every merge, so it holds no macOS runner per push. TestFlight archives the same build.
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: ios-release-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # A scheduled run builds unless this commit already passed; a failed or skipped hour is
+      # retried on the next one.
+      - name: New commits since the last green build
+        id: changed
+        env:
+          EVENT: ${{ github.event_name }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          last=$(gh run list --workflow ios-release.yml --branch main --status success --limit 20 \
+            --json headSha,event --jq '[.[] | select(.event == "schedule")][0].headSha // ""')
+          if [ "$EVENT" = schedule ] && [ "$last" = "$GITHUB_SHA" ]; then
+            echo "$GITHUB_SHA already built"
+            echo "build=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "build=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Select Xcode from .xcode-version
+        if: steps.changed.outputs.build == 'true'
+        run: .github/scripts/select-xcode.sh .xcode-version
+
+      - name: Metal Toolchain
+        if: steps.changed.outputs.build == 'true'
+        run: .github/scripts/metal-toolchain.sh
+
+      - name: Install XcodeGen
+        if: steps.changed.outputs.build == 'true'
+        run: .github/scripts/install-xcodegen.sh
+
+      # As in ios.yml: Xcode's compilation cache, a fresh one each week.
+      - name: Compilation cache key
+        if: steps.changed.outputs.build == 'true'
+        id: cas
+        run: echo "prefix=xcode-cas-release-${{ runner.os }}-$(cat .xcode-version)-$(date -u +%G-%V)-" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the compilation cache
+        if: steps.changed.outputs.build == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/cas
+          key: ${{ steps.cas.outputs.prefix }}${{ github.sha }}
+          restore-keys: ${{ steps.cas.outputs.prefix }}
+
+      - name: App Release build (device, unsigned)
+        if: steps.changed.outputs.build == 'true'
+        run: |
+          (cd apps/ios && xcodegen generate --quiet)
+          set -o pipefail
+          xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
+            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/app-device" \
+            COMPILATION_CACHE_ENABLE_CACHING=YES COMPILATION_CACHE_CAS_PATH="$RUNNER_TEMP/cas" \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$RUNNER_TEMP/app-device.log" \
+            | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
+
+      - name: Save the compilation cache
+        if: always() && steps.changed.outputs.build == 'true' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/cas
+          key: ${{ steps.cas.outputs.prefix }}${{ github.sha }}

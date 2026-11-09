@@ -96,8 +96,8 @@ private struct ButtonLabel: View {
   }
 }
 
-/// A round glass button for a header: one size, the same as the avatars and the coin pill. Its symbol is a
-/// plain SF Symbol, or any view of the same size through `init(label:action:content:)`.
+/// A round `control` glass button for a header: one size, the same as the avatars and the coin pill. Its symbol
+/// is a plain SF Symbol, or any view of the same size through `init(label:action:content:)`.
 public struct GlassIconButton<Content: View>: View {
   /// What sits on the corner of a header button.
   public enum Badge: Equatable, Sendable {
@@ -125,7 +125,7 @@ public struct GlassIconButton<Content: View>: View {
     Button(action: action) {
       content
         .frame(width: Size.control, height: Size.control)
-        .glass(.circle, tint: Ink.glassFill, clear: false, interactive: true)
+        .glass(.circle, role: .control)
         .overlay(alignment: .topTrailing) { badgeView }
         .contentShape(.circle)
     }
@@ -139,20 +139,17 @@ public struct GlassIconButton<Content: View>: View {
     case .none:
       EmptyView()
     case .dot:
-      Circle()
-        .fill(Color.blushPink)
+      Color.clear
         .frame(width: 10, height: 10)
-        .overlay(Circle().strokeBorder(Ink.glassFill, lineWidth: 1.5))
+        .glassBadge(.blushPink)
         .offset(x: -3, y: 3)
         .accessibilityHidden(true)
     case .count(let count):
       Text(count > 9 ? "9+" : "\(count)")
         .font(.nookiMicro.monospacedDigit())
-        .foregroundStyle(Ink.heroInk)
         .padding(.horizontal, 5)
         .frame(minWidth: 18, minHeight: 18)
-        .background(Color.blushPink, in: .capsule)
-        .overlay(Capsule().strokeBorder(Ink.glassFill, lineWidth: 1.5))
+        .glassBadge(.blushPink)
         .offset(x: 4, y: -4)
         .accessibilityHidden(true)
     }

@@ -63,6 +63,8 @@ public enum Ink {
   /// The glyph on `glassFill`, and the unselected label of a glass segmented control.
   public static let glassGlyph = Palette.glassGlyph.color
   public static let glassGlyphSecondary = Palette.glassGlyphSecondary.color
+  public static let glassRim = Palette.glassRim.color
+  public static let glassSelection = Palette.glassSelection.color
 
   /// The fill and label of a disabled button.
   public static let disabledFill = Palette.disabledFill.color

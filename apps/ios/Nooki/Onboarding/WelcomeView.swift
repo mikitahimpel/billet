@@ -25,7 +25,9 @@ struct WelcomeView: View {
                 let time = reduceMotion ? script.duration : context.date.timeIntervalSince(start)
                 content(proxy.size, time: time)
                     // Only while the script plays: the frames after it are the UI test's, reading the probe.
-                    .onChange(of: context.date) { if time <= script.duration { probe?.frame(context.date) } }
+                    .onChange(of: context.date) {
+                        if time <= script.duration { probe?.frame(context.date) } else { probe?.finish() }
+                    }
             }
         }
         .background { WelcomeBackdrop() }

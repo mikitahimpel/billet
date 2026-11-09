@@ -1,9 +1,10 @@
 import SwiftUI
 
-/// A capsule track with one segment selected, for choosing between a few views of the same screen. The thumb is a
-/// solid `Ink.surface` capsule with `Ink.text`; the unselected labels are `Ink.glassGlyphSecondary` on the track.
-/// Thumb and track are both capsules with one inset, so the thumb's radius is the track's minus the inset. Meant
-/// to float over a room; on a plain screen use a native picker.
+/// A capsule track with one segment selected, for choosing between a few views of the same screen. The track is
+/// the `bar` glass; the thumb is `Ink.glassSelection` under an `Ink.glassGlyph` label, as the tab bar's, and the
+/// unselected labels are `Ink.glassGlyphSecondary`. Thumb and track are both capsules with one inset, so the
+/// thumb's radius is the track's minus the inset. Meant to float over a room, inside the bar's `GlassGroup`; on
+/// a plain screen use a native picker.
 public struct GlassSegmented<Value: Hashable>: View {
   static var inset: CGFloat { Space.xs }
 
@@ -31,13 +32,12 @@ public struct GlassSegmented<Value: Hashable>: View {
         } label: {
           Text(segment.title)
             .font(.nookiCallout.weight(isSelected ? .semibold : .medium))
-            .foregroundStyle(isSelected ? Ink.text : Ink.glassGlyphSecondary)
+            .foregroundStyle(isSelected ? Ink.glassGlyph : Ink.glassGlyphSecondary)
             .padding(.horizontal, Space.l)
             .frame(minWidth: 72, minHeight: Size.control - 2 * Self.inset)
             .background {
               if isSelected {
-                Capsule().fill(Ink.surface)
-                  .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                Capsule().fill(Ink.glassSelection)
                   .matchedGeometryEffect(id: "thumb", in: thumb)
               }
             }
@@ -49,8 +49,7 @@ public struct GlassSegmented<Value: Hashable>: View {
       }
     }
     .padding(Self.inset)
-    .background(Ink.glassFill, in: .capsule)
-    .overlay(Capsule().strokeBorder(Ink.separator, lineWidth: 0.5))
+    .glass(.capsule, role: .bar)
     .haptic(.selection, trigger: selection)
     .accessibilityElement(children: .contain)
   }
