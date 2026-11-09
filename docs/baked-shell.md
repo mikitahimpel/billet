@@ -16,8 +16,8 @@ is unchanged; the baked shell is a second path chosen at runtime. Background and
 ## Rolling back
 
 1. **Flag off**: Labs to Live, or the `room-shell` flag to `live` / killed in the admin. Nothing to ship.
-2. **Delete the code**: remove `apps/ios/Nooki/Scene/BakedShell.swift`, `Room_shell.usdz`, `City_shell.usdz`,
-   `scripts/bake-room/`, `NookiTests/BakedShellTests.swift`, `RoomShell.swift` and the Labs row; and the hooks:
+2. **Delete the code**: remove `apps/ios/Ourio/Scene/BakedShell.swift`, `Room_shell.usdz`, `City_shell.usdz`,
+   `scripts/bake-room/`, `OurioTests/BakedShellTests.swift`, `RoomShell.swift` and the Labs row; and the hooks:
    the one `useBakedShell(named:)` line in each of `DioramaScene.init` and `CityRoomScene.init`, the `isBaked` guard in
    `CityRoomScene.setPoint`, the `tintShell` line in `applyLight`, `ShellLive` on the garland and the clock hands, and
    the `skipsForShell` / `tagForShell` / `shape:` lines in `Kit.swift`.

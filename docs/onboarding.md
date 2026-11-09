@@ -1,8 +1,8 @@
 # First launch
 
-## Nooki
+## Ourio
 
-Nooki's first launch is `Nooki/Onboarding`: `OnboardingFlow` holds the pages, `OnboardingView`
+Ourio's first launch is `Ourio/Onboarding`: `OnboardingFlow` holds the pages, `OnboardingView`
 draws them. The questions come from the server (`GET /v1/onboarding`) or the bundled
 `Onboarding.json`, and answers queue in `AnswerQueue` for `POST /v1/onboarding/answers`.
 
@@ -23,7 +23,7 @@ draws them. The questions come from the server (`GET /v1/onboarding`) or the bun
 - **Without a server** there is no code page, invite or notifications primer.
 - **Invite links:** `https://<server>/i/<code>`. The Worker serves the
   `apple-app-site-association` file for `/i/*` (`app-links.ts`), the app has the matching
-  associated domain, and `DeepLink.invite` also reads `nooki://invite/<code>`.
+  associated domain, and `DeepLink.invite` also reads `ourio://invite/<code>`.
 - **A closed app** opens again on the page it was on, with the questions and picks it had. A
   pairing that finished while it was closed moves the code page on.
 

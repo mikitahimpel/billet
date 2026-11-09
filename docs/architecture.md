@@ -43,7 +43,7 @@ D1 has no interactive transactions. An operation that spans statements runs as o
 
 ### Coins and payments
 
-Nooki's coins are the one currency. Coins bought for money live in D1 (`purchases` and
+Ourio's coins are the one currency. Coins bought for money live in D1 (`purchases` and
 `coin_ledger`), because a transaction id is unique across every pair and Apple's refund
 notifications name no pair. Coins earned in play and spent in the shop live in the pair's
 `PairRoom` (`wallet` and `coin_entry`), next to the cat's journal, so a coin is credited in the
@@ -378,7 +378,7 @@ package they link in `project.yml`.
 
 ### Graphics engines
 
-RealityKit lives in the app (`apps/ios/Nooki/Scene`); `ios:test` fails if any package in
+RealityKit lives in the app (`apps/ios/Ourio/Scene`); `ios:test` fails if any package in
 `packages/ios` imports RealityKit or Rive, so the widget never links an engine.
 
 The SwiftPM dependency graph enforces the other boundaries at compile time.

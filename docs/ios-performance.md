@@ -1,6 +1,6 @@
 # iOS performance: rules and audit
 
-How Nooki (`apps/ios`) should spend its frame, its memory and its launch, and where it doesn't today.
+How Ourio (`apps/ios`) should spend its frame, its memory and its launch, and where it doesn't today.
 Part A is the rules, each with its source. Part B checks our code against them, ranked.
 
 Read this before you change the room, the cat, the window views, or a scrolling screen.
@@ -61,7 +61,7 @@ measured; the "Measure" column says how.
 - **Bake room lighting into textures and keep dynamic light for the cat only.** This matches Apple's unlit-plus-baked-lighting advice. ([visionOS rendering cost](https://developer.apple.com/documentation/visionos/reducing-the-rendering-cost-of-realitykit-content-on-visionos)) `[inference]`
 - **Remove grounding shadows where a baked contact shadow is enough.** Apple lists them as an effect to drop when the GPU is under pressure. ([visionOS rendering cost](https://developer.apple.com/documentation/visionos/reducing-the-rendering-cost-of-realitykit-content-on-visionos))
 - **Set each `content.renderingEffects` field (`antialiasing`, `dynamicRange`, `motionBlur`, `depthOfField`, `cameraGrain`) on purpose.** The defaults depend on GPU capability. Disabling effects saves GPU time and some render-thread CPU. Apple names shadows, HDR, motion blur, DoF and environment texturing as candidates. ([RealityViewRenderingEffects](https://developer.apple.com/documentation/realitykit/realityviewrenderingeffects); [Reducing GPU utilization](https://developer.apple.com/documentation/realitykit/reducing-gpu-utilization-in-your-realitykit-app); [Reducing CPU utilization](https://developer.apple.com/documentation/realitykit/reducing-cpu-utilization-in-your-realitykit-app))
-- **Nooki uses RealityKit's built-in `BloomComponent` (iOS 27, `CatRoom.addBloom`), not a custom effect.** Its cost is Apple's to tune; ours is the scope (`.unbounded`, full screen) and leaving it on when nothing glows. The custom-effect rules below apply only if we ever write our own `PostProcessEffect`.
+- **Ourio uses RealityKit's built-in `BloomComponent` (iOS 27, `CatRoom.addBloom`), not a custom effect.** Its cost is Apple's to tune; ours is the scope (`.unbounded`, full screen) and leaving it on when nothing glows. The custom-effect rules below apply only if we ever write our own `PostProcessEffect`.
 - **Write bloom in `PostProcessEffect.postProcess(context:)` with GPU work only: Metal compute, MPS or Core Image.** It runs every frame. It must write `targetColorTexture`, or nothing is displayed. ([PostProcessEffectContext](https://developer.apple.com/documentation/realitykit/postprocesseffectcontext); [PostProcessEffect](https://developer.apple.com/documentation/realitykit/postprocesseffect))
 - **Create pipeline states and intermediate textures in `prepare(for:)`, not per frame.** That is the setup hook Apple provides for this. ([PostProcessEffect](https://developer.apple.com/documentation/realitykit/postprocesseffect)) Per-frame PSO or texture creation causes hitches. ([WWDC22 10102](https://developer.apple.com/videos/play/wwdc2022/10102/))
 - **Do bloom at half or quarter resolution (downsample, blur, upsample), and reuse textures across frames.** A full-resolution multi-tap blur is the main cost of bloom. `[unverified: general practice; Apple gives no bloom numbers]`
@@ -85,7 +85,7 @@ measured; the "Measure" column says how.
 - **Relative cost of blend shapes vs skeletal animation is unverified.** Apple publishes no comparison. Profile with RealityKit Animations (CPU/GPU) in RealityKit Trace. `[unverified]`
 
 #### 1.8 Gaussian splat cat
-- **Nooki draws Mochi with RealityKit's `GaussianSplatComponent` (iOS 27, Apple7 GPUs; `SplatLoader.make`) and skins her with its own compute pass (`SkinSplats.metal`) into a `LowLevelBuffer`.** RealityKit owns the sort and the blend, so the levers we hold are splat count per pose, how often the buffer is rewritten, how many poses stay resident, and the file format. The engine-level rules below explain why those matter.
+- **Ourio draws Mochi with RealityKit's `GaussianSplatComponent` (iOS 27, Apple7 GPUs; `SplatLoader.make`) and skins her with its own compute pass (`SkinSplats.metal`) into a `LowLevelBuffer`.** RealityKit owns the sort and the blend, so the levers we hold are splat count per pose, how often the buffer is rewritten, how many poses stay resident, and the file format. The engine-level rules below explain why those matter.
 - **Splat cost has three parts: per-splat projection, a depth sort, and alpha-blended fill.** The reference renderer culls per 16×16 tile and uses a GPU radix sort. ([Kerbl et al. 2023, 3D Gaussian Splatting](https://arxiv.org/abs/2308.04079))
 - **Fill rate is usually the limit on mobile.** Each splat is a blended quad with heavy overdraw, often dozens of fragments per pixel. Lowering render resolution is the most direct lever. ([PlayCanvas: Splat performance](https://developer.playcanvas.com/user-manual/gaussian-splatting/building/performance/))
 - **Render the splat pass at a lower resolution scale, and do it before raising splat count.** Fragment count scales with pixels. PlayCanvas tells you to drop device pixel ratio and to disable MSAA for splats. ([PlayCanvas: Splat performance](https://developer.playcanvas.com/user-manual/gaussian-splatting/building/performance/))
@@ -228,7 +228,7 @@ measured; the "Measure" column says how.
 - **What CI Simulator numbers can show:** *relative* regressions on the same runner image in CPU-side work. That covers SwiftUI body counts and durations, signpost intervals for load and parse, allocation counts, and launch-to-first-frame trend. Compare A/B on the same runner, not against absolute budgets. `[inference]`
 - **What they can't show:** GPU-bound costs (bloom, splat fill, transparency, shadows), absolute frame times, energy and thermal behavior. Gate those on device runs or MetricKit. `[inference]`
 
-## Part B: audit of Nooki (main at 392fdced, 2026-11-05)
+## Part B: audit of Ourio (main at 392fdced, 2026-11-05)
 
 Read-only. Nothing was built or profiled for this part.
 
@@ -256,7 +256,7 @@ Ranked by expected win over risk.
 | # | Issue | Where | Owner | Expected cost today | Fix | Measure | Risk |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | The City window paints its view on the main thread inside the frame loop. Life repaints at 12 Hz through a new `ImageRenderer` and a texture upload. The sky repaints every 4 s. A new look paints five stills of up to 1800×1000 px. | WindowPane.swift:20, :104-107, :149; WindowLayers.swift:103, :173-178; driven from CityRoomScene.swift:111,170 | ours (WindowPane, WindowViews), the call site needs Ilya; coordinate with billet-window | ~36–120 ms of main thread per second for life; a 20–60 ms frame every 4 s; ~28–37 MB of stills | Life at 6–8 Hz and only when the moment changed. Sky every 15–30 s. Middle, street and near at density 7. One reused renderer or a `LowLevelTexture`. Life pauses while orbiting. | `perf.yml -f room=city -f jobs=steady`, then `ab`: `cpuMsPerS`, hitches, p99, `PERF frame long` | low |
-| 2 | Launch loads every store several times on the main thread. `HomeView()` is built in `NookiApp.body`, and its `@State` starts from `HomeState(stores: .live())`. That runs on every App-body pass, at least 3 per launch (sign-in idle → signingIn → signedIn), and each pass reads ~9 JSON files and both avatar JPEGs. Then `onChange(of: scenePhase, initial: true)` runs `refresh()` and reads them again. `isSignedIn` reads the Keychain on each pass. The polaroids are built twice. | HomeView.swift:9, :158-162, :224-227; NookiApp.swift:40-74; HomeState.swift:194-207; ServerSession.swift:64 | ours | ~10–40 ms of main thread during the splash, plus invalidations | Build `HomeState` once, in NookiApp or as an optional `@State` filled in `.task`. Keep `.id(wornCoat)` and erase. Skip `refresh()` on the initial pass and reload a store only when its file's mtime changed. Cache `hasSavedAccount`. Drop the first `setPolaroids`. | `perf.yml` `ab` launches: `room on screen`, `styled cat placed`. Time Profiler on launch. | low |
+| 2 | Launch loads every store several times on the main thread. `HomeView()` is built in `OurioApp.body`, and its `@State` starts from `HomeState(stores: .live())`. That runs on every App-body pass, at least 3 per launch (sign-in idle → signingIn → signedIn), and each pass reads ~9 JSON files and both avatar JPEGs. Then `onChange(of: scenePhase, initial: true)` runs `refresh()` and reads them again. `isSignedIn` reads the Keychain on each pass. The polaroids are built twice. | HomeView.swift:9, :158-162, :224-227; OurioApp.swift:40-74; HomeState.swift:194-207; ServerSession.swift:64 | ours | ~10–40 ms of main thread during the splash, plus invalidations | Build `HomeState` once, in OurioApp or as an optional `@State` filled in `.task`. Keep `.id(wornCoat)` and erase. Skip `refresh()` on the initial pass and reload a store only when its file's mtime changed. Cache `hasSavedAccount`. Drop the first `setPolaroids`. | `perf.yml` `ab` launches: `room on screen`, `styled cat placed`. Time Profiler on launch. | low |
 | 3 | The room keeps drawing while it is covered: under the full-screen drawing canvas, the large Inbox sheet and ItemSheet (which has its own RealityView), and while the app is inactive. `showsRoom` looks only at the tab. | HomeView.swift:36, :251-271, :224-247 | ours | the room's full CPU+GPU for as long as it is covered; competes with pen latency | Unmount the room the same way #417 does when it is fully covered (drawing, large detents, not `.active`). #421's snapshot covers the way back. Keep it live under half-height sheets. | New ScenePerf step that opens the drawing and records. Energy Log on a phone. | low |
 | 4 | Photos are encoded and written on the main thread: partner photos on every foreground and socket frame, "Add to Moments", doodles. Wish cards read their JPEG from disk inside `body`. The moment viewer rasterizes a 1080 px polaroid while it zooms open. | Moments.swift:110-131 (via PhotoSync.swift:74, Journal.swift:28); Notes `add(doodle:)`; WishlistScreen.swift:299, :652; MomentsView.swift:688, :742-749 | ours | ~20–60 ms per photo; ~15–40 ms on viewer open | Encode and write in a detached task, then insert on main. Write received ≤2048 px JPEGs as they are. Cache downsampled wish thumbnails in `.task`. Render the polaroid only when sharing. | Hitches + Time Profiler (not in perf.yml) | low |
 | 5 | The bokeh backdrop redraws a full-screen `Canvas` (14 radial gradients) at 30 Hz under the live room. The room and every glass control over it composite against it. | HomeView.swift:527-548 | ours | ~0.5–3 ms main/render per update, plus a full-screen layer | Render-server motion (pre-rendered blobs moved by one repeating animation) or 10–15 Hz. The drift is only ±18–24 pt. | `jobs=steady` A/B. `-uitestStill YES` already freezes it, so a with/without run gives the cost. | low |
@@ -278,7 +278,7 @@ Scene:
   CatRig.swift:198 and :238, and copy-on-write copies of pose arrays (CatWalker.swift:416-513).
   - Fix: scale the threshold by the cat's size on screen, skin at 30 Hz while she only breathes,
     and keep the buffers in the rig.
-  - Measure: the `skin_passes`, `skin_skipped` and `skin_ms` census (NookiPerf.swift:57-59), on a
+  - Measure: the `skin_passes`, `skin_skipped` and `skin_ms` census (OurioPerf.swift:57-59), on a
     phone.
 - **B13. No thermal, Low Power or frame-rate policy anywhere.** Use `thermalState` and
   `isLowPowerModeEnabled` (§1.9, §1.10).
@@ -334,7 +334,7 @@ UI and app:
   - The moment photo is downsampled and re-encoded on every timeline (:45).
   - The app calls `reloadAllTimelines()` on every background (HomeState.swift:227-231).
   - Fix: a no-photos read, a cached 600 px JPEG, and a reload only when something changed.
-- **B24. `Tips.configure` runs synchronously in `App.init`** (NookiApp.swift:19, Hints.swift:70).
+- **B24. `Tips.configure` runs synchronously in `App.init`** (OurioApp.swift:19, Hints.swift:70).
   Measure before moving it: tips evaluated before configure don't show.
 - **B25. Small items.**
   - `price` is computed three times per `ShopItemCard` body, each building a `ShopOffers`
@@ -356,8 +356,8 @@ Checked and fine:
 
 What has to exist before some of the fixes above can show their A/B on CI:
 
-1. **H1. More cost switches.** `jobs=cost` has one switch for Nooki (`"cat shadow"`,
-   NookiPerf.swift:61). Add window life, motes, furniture shadow, fur shells, point lights and bloom
+1. **H1. More cost switches.** `jobs=cost` has one switch for Ourio (`"cat shadow"`,
+   OurioPerf.swift:61). Add window life, motes, furniture shadow, fur shells, point lights and bloom
    (bloom on a phone only).
 2. **H2. A `notes.scroll` step** (Moments feed), and the Us tab in `selectTab`, which only knows
    shop, notes and home.

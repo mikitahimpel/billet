@@ -5,12 +5,12 @@ size, Z up, front towards -Y, centred in X and Y with its base on z = 0: the piv
 scales it so one measure (`ShopItem.Fit`) is the catalog size.
 
 Look: rounded "clay" shapes, every sharp edge softened; one matte, non-metallic material per colour from the
-Nooki palette; fabric gets a little sheen, nothing is glossy; emission only on light sources.
+Ourio palette; fabric gets a little sheen, nothing is glossy; emission only on light sources.
 """
 
 import sand3d as s3d
 
-# The Nooki palette, sRGB, as in make_items.py.
+# The Ourio palette, sRGB, as in make_items.py.
 CREAM = "#f6e8d4"
 OAT = "#e9d2b0"
 HONEY = "#f2a65e"

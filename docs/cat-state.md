@@ -1,6 +1,6 @@
 # The cat's shared state
 
-Nooki's cat used to live only on each phone: `CatDirector` drew a random seed per device and kept
+Ourio's cat used to live only on each phone: `CatDirector` drew a random seed per device and kept
 the feeds, pets and games in the user defaults, so the two partners saw two different cats. Now the
 couple's `PairRoom` keeps the cat's **facts**, and each phone keeps its **dice**.
 
@@ -127,7 +127,7 @@ comes later; for now a phone in the background catches up from `GET /v1/cat/jour
 
 ## On the phone
 
-`CatLife` (`apps/ios/Nooki/Model/CatLife.swift`) is the brain's `CatEventSource` in every room. Once the phone is
+`CatLife` (`apps/ios/Ourio/Model/CatLife.swift`) is the brain's `CatEventSource` in every room. Once the phone is
 paired, `RoomController.connectCat` points it at the pair's room:
 
 - `GET /v1/cat` gives the nature seed, `bornAt` and the pair's offset, so both phones fold the same cat. The phone

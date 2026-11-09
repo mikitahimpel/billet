@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Bakes the Room and City shells: Room_shell.usdz and City_shell.usdz in apps/ios/Nooki/Resources/Room.
+# Bakes the Room and City shells: Room_shell.usdz and City_shell.usdz in apps/ios/Ourio/Resources/Room.
 #
 #   scripts/bake-room/bake.sh [room|city ...] [--skip-export] [--samples N] [--size N]
 #
@@ -52,7 +52,7 @@ for devices in json.load(sys.stdin)["devices"].values():
 ' $device)
   [[ -n $udid ]] || { echo "no Simulator named $device" >&2; exit 1; }
   TEST_RUNNER_BAKE_EXPORT_DIR=$work xcodebuild test -project $repo/apps/ios/Billet.xcodeproj -scheme Billet \
-    -destination "platform=iOS Simulator,id=$udid" -only-testing:NookiTests/BakedShellTests/export\(\) \
+    -destination "platform=iOS Simulator,id=$udid" -only-testing:OurioTests/BakedShellTests/export\(\) \
     -derivedDataPath $work/derived CODE_SIGNING_ALLOWED=NO -quiet
   give_lock
   cp $work/*.json $here/shells/ && for f in $here/shells/*.json; do mv $f ${f%.json}.shapes; done
@@ -62,12 +62,12 @@ for room in $rooms; do
   name=$names[$room]
   [[ -f $here/shells/$name.shapes ]] || { echo "shells/$name.shapes is missing: run without --skip-export" >&2; exit 1; }
   extra=()
-  [[ $room == room ]] && extra=(--furniture $repo/apps/ios/Nooki/Resources/Room/Room_furniture.usdz)
+  [[ $room == room ]] && extra=(--furniture $repo/apps/ios/Ourio/Resources/Room/Room_furniture.usdz)
   take_lock
   perl -e 'alarm 600; exec @ARGV' $blender -b -P $here/bake_shell.py -- $room $here/shells/$name.shapes $work/$name.usdz \
     --size $size --samples $samples ${=BAKE_ARGS:-} $extra
   give_lock
-  cp $work/$name.usdz $repo/apps/ios/Nooki/Resources/Room/$name.usdz
+  cp $work/$name.usdz $repo/apps/ios/Ourio/Resources/Room/$name.usdz
   bytes=$(stat -f %z $work/$name.usdz)
   printf '%s: %.2f MB\n' $name $((bytes / 1e6))
   (( bytes < 8000000 )) || { echo "$name is over the 8 MB budget" >&2; exit 1; }

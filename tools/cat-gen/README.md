@@ -38,10 +38,10 @@ node tools/cat-gen/splat.mjs --image tools/cat-gen/refs/cat-sitting.png --out Mo
   --rig tools/cat-gen/rigs/cat-sit.json
 node tools/cat-gen/splat.mjs --image tools/cat-gen/refs/cat-standing.png --out MochiStanding.ply \
   --height 0.30 --rig tools/cat-gen/rigs/cat-standing.json --match_colors Mochi.ply
-cp Mochi.ply MochiStanding.ply Mochi.rig.json Mochi.skin MochiStanding.rig.json MochiStanding.skin apps/ios/Nooki/Resources/
+cp Mochi.ply MochiStanding.ply Mochi.rig.json Mochi.skin MochiStanding.rig.json MochiStanding.skin apps/ios/Ourio/Resources/
 ```
 
-`node tools/cat-gen/splat.mjs nooki` builds every asset of `scenes/nooki.json` into `out/nooki`.
+`node tools/cat-gen/splat.mjs ourio` builds every asset of `scenes/ourio.json` into `out/ourio`.
 `make_splat.py --help` lists the rest (`--bind` to only re-skin, `--recolor` to only match colors,
 `--seed`, `--steps`, `--num_gaussians`).
 

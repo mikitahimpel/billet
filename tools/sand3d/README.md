@@ -6,7 +6,7 @@ Shop furniture written as short Python programs over [Sand3D](https://github.com
 
 | File | What |
 | --- | --- |
-| `billet_style.py` | The room's look: Nooki palette, `clay` / `cloth` / `wood` materials, bevel radii, tessellation |
+| `billet_style.py` | The room's look: Ourio palette, `clay` / `cloth` / `wood` materials, bevel radii, tessellation |
 | `armchair.py` | `armchair(fabric, cushion, legs)` |
 | `drawers.py` | `chest_of_drawers(..., open=)`; the bottom drawer slides on a joint |
 | `plant.py` | `potted_plant(kind, pot, ...)`: monstera, snake plant, bush |
@@ -25,13 +25,13 @@ Shop furniture written as short Python programs over [Sand3D](https://github.com
 3. Build into the app's bundle:
 
    ```sh
-   PYTHONPATH=tools/sand3d .venv/bin/python tools/sand3d/build.py apps/ios/Nooki/Resources/Shop --thumbs
+   PYTHONPATH=tools/sand3d .venv/bin/python tools/sand3d/build.py apps/ios/Ourio/Resources/Shop --thumbs
    ```
 
    With no ids it builds what the app ships: every colourway in `armchair-colourways.json`, `chest` and
    `monstera-potted`. Each becomes `Item_<id>.usdz` and `Item_<id>.png`, the names `Thumbnails` and
    `ItemSheet` load.
-4. Check the numbers: `python3 tools/sand3d/measure.py apps/ios/Nooki/Resources/Shop/Item_<id>.usdz`.
+4. Check the numbers: `python3 tools/sand3d/measure.py apps/ios/Ourio/Resources/Shop/Item_<id>.usdz`.
 5. The catalog row is the owner's, made in the admin: [docs/admin.md](../../docs/admin.md#sand3d-items).
 
 What `build.py` does to every export:

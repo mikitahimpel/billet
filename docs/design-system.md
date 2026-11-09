@@ -9,7 +9,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 ## Rules
 
 1. **No raw colours or fonts in feature code.** Colours are `Ink.*` and `Color.honey`; type is the
-   `.nooki*` text styles. `Color(hex:)` is for art (scenes, icons' own tints), never for UI chrome. CI fails on a
+   `.ourio*` text styles. `Color(hex:)` is for art (scenes, icons' own tints), never for UI chrome. CI fails on a
    new `Color(red:` or `.font(.system(size:` outside the package (`packages/ios/scripts/check-design.mjs`).
 2. **One sheet scaffold:** `BilletSheet`. No hand-built headers, no `NavigationStack` + `toolbar` of your own for a sheet.
 3. **Close and confirm have one place, drawn by the system.** `BilletSheet` puts them in the native toolbar
@@ -98,7 +98,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | `Ink.disabledFill`, `.disabledText`, `.destructive` | disabled buttons, destructive text and tiles |
 | `Ink.primary`, `.secondary`, `.glassTint` | white on the dark full-screen canvas's warm glass only |
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
-| `.nookiLargeTitle` `.nookiTitle` `.nookiHeadline` `.nookiBody` `.nookiCallout` `.nookiCaption` `.nookiMicro` | text styles |
+| `.ourioLargeTitle` `.ourioTitle` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 
 Over the room use the glass roles; elsewhere solid surfaces. Nothing in the app is red for the cat or the couple.
@@ -145,7 +145,7 @@ relations, so a redesign changes a token, not the screens.
 - A card is the container shape for what is inside it, so an iOS 26 `ConcentricRectangle` there follows its
   corners. Prefer `Radius.inner` where the inset is the card padding.
 - One card family: `Card`, `CardMetrics.padding`, `CardHeader` with a `Size.cardMark` icon (`RowIcon`) or
-  `CardArt`, the title in `.nookiHeadline` over a `.nookiCaption` line, a `RowChevron` when it opens something.
+  `CardArt`, the title in `.ourioHeadline` over a `.ourioCaption` line, a `RowChevron` when it opens something.
   The screen's hero differs only by `warm`.
 - Art (paper, pens, gift boxes, window views, widgets) may keep its own drawn corners; those files are in
   `packages/ios/scripts/radius-baseline.json` and may only shrink.

@@ -1,6 +1,6 @@
 # AGENTS.md
 
-billet: a two-person iPhone app. The app is `apps/ios` (Nooki, shipped as Billet), the backend is
+billet: a two-person iPhone app. The app is `apps/ios` (Ourio), the backend is
 Cloudflare Workers on Effect. Architecture: [docs/architecture.md](docs/architecture.md). Current
 work: GitHub issues, tracker #46. [docs/plan.md](docs/plan.md) is the original plan.
 
@@ -48,8 +48,8 @@ macOS runners are few and shared by every agent.
 
 - The pull request's own `iOS` run is the check. Don't `gh workflow run ios.yml` for a full run;
   a dispatch takes about an hour and holds a runner from everyone else.
-- UI tests (`NookiUITests`) run on main only, and some skip on GitHub Actions. Run the ones your
-  change can reach locally with `-only-testing:NookiUITests/<Class>`.
+- UI tests (`OurioUITests`) run on main only, and some skip on GitHub Actions. Run the ones your
+  change can reach locally with `-only-testing:OurioUITests/<Class>`.
 - Before you debug a red run, compare it with the latest `iOS` run on main
   (`gh run list --workflow ios.yml --branch main`). A test that fails there with the same error
   isn't yours: report it, don't rerun.
@@ -77,7 +77,7 @@ macOS runners are few and shared by every agent.
   table is tested, rejected events included.
 - Stores take every dependency in `init`; views get other features as protocols. No
   `UserDefaults.standard`, `NotificationCenter`, `SharedFile` or `CatProfile` in a feature.
-- The Room (`apps/ios/Nooki/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
+- The Room (`apps/ios/Ourio/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
   through `RoomControlling`, events out through `RoomEvent`. No scene type is named outside it,
   and no scene tick reaches state outside it.
 - A horizontal drag on Home never switches rooms; only the explicit control does (`RoomSwipeTests`).

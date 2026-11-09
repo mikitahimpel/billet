@@ -24,7 +24,7 @@ in a line are in AGENTS.md.
 ### 1.1 The graph
 
 ```
-apps/ios/Nooki                 the App target: composition root (NookiApp), the shell (tabs,
+apps/ios/Ourio                 the App target: composition root (OurioApp), the shell (tabs,
 │                              sheets, deep links), nothing else
 ├── Room/                      the sealed Room module (section 5): RoomHost, the scenes, the cat,
 │                              the mini-game stages, the cat's care. The only RealityKit code.
@@ -129,7 +129,7 @@ Rules:
 
 ## 3. Dependency injection
 
-- **One composition root.** `NookiApp` builds `AppDependencies.live(session:)` once: every store,
+- **One composition root.** `OurioApp` builds `AppDependencies.live(session:)` once: every store,
   every client, the `RoomController`. `HomeView` and the shell receive them; nothing below makes
   its own. Widgets and extensions have their own small root over the interface targets' file
   types (`Wallet`, `Us`, `Couple`), never the app's stores.
@@ -189,7 +189,7 @@ Every screen and flow state is such a machine:
 ### 4.2 Worked example: Coins and Shop
 
 What `ShopModel` + `WalletStore` + `CatCare.fed/notice` + `CoinsAsk` + `Purchase` do today
-(`apps/ios/Nooki/Model/ShopModel.swift`), as a machine. Behaviour is the same: only the server
+(`apps/ios/Ourio/Model/ShopModel.swift`), as a machine. Behaviour is the same: only the server
 changes coins; a buy shows at once, waits out its Undo window, then is ordered under one
 idempotency key with retries; a refused buy is taken back and the room read again; the Coins
 sheet opens for a buy the balance doesn't cover and finishes it once it does.
@@ -595,7 +595,7 @@ public enum RoomVisibility: Equatable, Sendable {
 ```
 
 ```swift
-// Room/RoomHost.swift (the App target, folder Nooki/Room)
+// Room/RoomHost.swift (the App target, folder Ourio/Room)
 public struct RoomHost: View, Equatable {
   public let input: RoomInput
   public let controller: RoomController          // identity only; not observed by the host
@@ -676,11 +676,11 @@ The last-frame stand-in (`worldSnapshot`) and the splash stay in the shell for n
 pixels, not state. `.hidden` keeps `CatRoom` loaded, as today, so coming back makes a new view
 only.
 
-### 5.5 What moves into `Nooki/Room`
+### 5.5 What moves into `Ourio/Room`
 
 The Scene folder as it is (Ilya's files untouched, see 5.7), plus the code that reaches into it
 today: `Games/*` (stages, `GameSession`, `GameCamera`, `GameView`), `Model/CatCare.swift`,
-`UI/Home/PetSheet`, `NeedBars`, `BrainCard`, `HeartBubble`, `PetButton`, `Perf/NookiPerf.swift`
+`UI/Home/PetSheet`, `NeedBars`, `BrainCard`, `HeartBubble`, `PetButton`, `Perf/OurioPerf.swift`
 (the scene part), the room's part of `HomeView` (building the scenes, the room switch's scene
 side, `setPolaroids`, `setPins`, `purr`, `appOpened`, `stop`), and `ItemSheet`'s use of
 `CatRoom.gradientImage` (becomes a `Design` helper).
@@ -694,7 +694,7 @@ Leaks today, from the census: `CatRoom` is named in 11 files outside Scene, `Boa
   `updates` (RealityView update closures), plus `ShellProbe` counters the shell registers for the
   header, the tab bar and an open sheet. An atomic increment is free, so they stay in Release and
   the perf runs read them; the reset and read hooks are `public` for tests.
-- `NookiTests/RoomSealingTests`: hosts the shell with fakes and the stand-in room (`-uitestNoRoom`,
+- `OurioTests/RoomSealingTests`: hosts the shell with fakes and the stand-in room (`-uitestNoRoom`,
   CI's virtual Macs can't draw RealityKit). Changing coins, setting a mood, opening the Coins
   sheet and scrolling the Shop list leave `RoomProbe.bodies` unchanged. Then 10 s of stand-in
   ticks (the internal model mutated at 60 Hz) leave the header's, the tab bar's and the sheet's
@@ -719,13 +719,13 @@ possible one later: `BubbleSpot` in `DioramaView` is already private to the view
 ### 5.8 Enforcement
 
 `apps/ios/scripts/check-room-boundary.sh`, run by `ios.yml` before the build: outside
-`apps/ios/Nooki/Room/`, no Swift file in the app target may mention `CatRoom`, `DioramaScene`,
+`apps/ios/Ourio/Room/`, no Swift file in the app target may mention `CatRoom`, `DioramaScene`,
 `CityRoomScene`, `BoardRoomScene`, `DioramaView`, `CatDirector`, `CatWalker`, `RoomModel` or
 `import RealityKit`. A grep, not hope.
 
 ### 5.9 Later: a library target
 
-Once sealed, `Nooki/Room` can become a static library target `NookiRoom` in `project.yml`, like
+Once sealed, `Ourio/Room` can become a static library target `OurioRoom` in `project.yml`, like
 `WindowViews`: then `internal` means internal and the grep is redundant. That moves Ilya's files
 (a rename, no content change) and needs the owner's OK; it is not part of the sealing PR.
 
@@ -755,7 +755,7 @@ One route at a time is what the screen can show; the enum says so. Deep links an
 transitions are tested. `ShopOpening` is the shell's conformance: `openShop(at:)` sends
 `.link(.shop(focus))`.
 
-The composition root (`NookiApp`) builds `AppDependencies.live(session:)` and the shell store;
+The composition root (`OurioApp`) builds `AppDependencies.live(session:)` and the shell store;
 `HomeView` becomes the shell's view: the tab views, the sheets by route, `RoomHost` with the
 input derived from the shell state and the interfaces. `followPair`, `refresh`, `eraseAll`,
 `didEnterBackground` become events the root sends to the features that own them.
@@ -779,12 +779,12 @@ fails an import that is not declared; the script makes the rule visible in the d
 
 ### 8.1 Today
 
-`HomeState` (`apps/ios/Nooki/Model/HomeState.swift`, 278 lines) holds the shell's navigation and
+`HomeState` (`apps/ios/Ourio/Model/HomeState.swift`, 278 lines) holds the shell's navigation and
 the 13 stores of `HomeStores`. 48 views take the whole object; 58 files name it.
 
 | Slice | HomeState members | Read by | Written by |
 | --- | --- | --- | --- |
-| Shell | `tab`, `room`, `game`, `showsProfile`, `showsInbox`, `invitedCode`, `showsPetSheet`, `openedShopItem`, `usRoute`, `composingNote`, `drawing`, `openedPin`, `momentsMode`, `open(DeepLink)`, `open(ActivityTarget)` | HomeView, TabBar, AppHeader, MomentsView, Us screens, NookiPerf | the same views: `tab` from 7 files, `composingNote` from 4, `usRoute` from 4 |
+| Shell | `tab`, `room`, `game`, `showsProfile`, `showsInbox`, `invitedCode`, `showsPetSheet`, `openedShopItem`, `usRoute`, `composingNote`, `drawing`, `openedPin`, `momentsMode`, `open(DeepLink)`, `open(ActivityTarget)` | HomeView, TabBar, AppHeader, MomentsView, Us screens, OurioPerf | the same views: `tab` from 7 files, `composingNote` from 4, `usRoute` from 4 |
 | Coins and Shop | `shop`, `wallet`, `shopFocus`, `openShop` | 19 files: Shop views, Draw (InkPalette, InkShelf, LockCanvasView), AppHeader, PetSheet, ItemSheet | ShopModel itself; `wallet` by CatCare |
 | Room and cat | `care`, `game`, `showsPetSheet` | HomeView, PetSheet | HomeView (petPulse into DioramaView) |
 | Moments | `moments`, `notes`, `journal`, `openedPin`, `momentsMode`, `composingNote` | 10 + 6 + 5 files: Moments views, BoardFaces, Us (dates, places add photos), Draw, TabBar | Moments views, Draw, Us, HomeView+Pair (board) |
@@ -811,7 +811,7 @@ open.
 | --- | --- | --- | --- | --- | --- |
 | 0 | `arch/plan` | this doc, AGENTS.md, the skill, the two script rules (no code moves) | | | docs only |
 | 1 | `arch/shop` | ShopModel → ShopMachine + ShopStore; Shop, ShopOffers, ShopPurchase, CoinPacksModel, ShopSync → ShopClient, ShopFixture, PaletteInk, Inks catalog; ShopView, UI/Shop/*, ItemSheet, CoinsSheet; `Wallet` → ShopInterface; WalletStore deleted | CoinsBalanceProviding, CoinEarning, ShopOpening, TreatBuying | `shop`, `wallet`, `shopFocus`, `openedShopItem`, `openShop`, the `-shopCoins` args | the 19 readers switch from `state.shop` to `@Environment(ShopStore.self)` or a protocol; CatCare stays in the app and is passed as closures; ShopModelTests port; ShopBuyTests unchanged |
-| 2 | `arch/room` | section 5.5 into `Nooki/Room`; RoomInterface; RoomHost, RoomController, RoomModel, RoomProbe; the probe tests; the perf census keys; the boundary script | RoomControlling, CatStatusProviding | `care`, `game`, `showsPetSheet`, `room` (to the shell's state) | HomeView keeps its layout, swaps the DioramaView block for RoomHost; Ilya's four files untouched; the games' UI tests unchanged |
+| 2 | `arch/room` | section 5.5 into `Ourio/Room`; RoomInterface; RoomHost, RoomController, RoomModel, RoomProbe; the probe tests; the perf census keys; the boundary script | RoomControlling, CatStatusProviding | `care`, `game`, `showsPetSheet`, `room` (to the shell's state) | HomeView keeps its layout, swaps the DioramaView block for RoomHost; Ilya's four files untouched; the games' UI tests unchanged |
 | 3 | `arch/moments` | MomentStore, NoteStore, Journal, PhotoSync, TextNoteSync, BoardFaces, Moments views, NoteComposer, NoteSheet, NotesHistory, ComposeSheet; joins FeatureMoments (reactions) | WallMomentsProviding, MomentAdding, JournalRecording | `moments`, `notes`, `journal`, `openedPin`, `momentsMode`, `composingNote` | `RoomInput.polaroids` and `pins` come from the interface; Us and Draw add through MomentAdding |
 | 4 | `arch/us-lists` | UsStore (lists, wishlist, grocery), GiftsModel, ListsModel, ListSync, GiftSync, ListActivity, GroceryCatalog, UI/Us list screens, share extension's write | UsInterface: ListsProviding (widgets, intents) | `us` (part), `gifts`, `lists` | UsStore stays whole behind the store until PR 5; the widgets read the Us file through the interface |
 | 5 | `arch/us-dates` | calendar, dates, Pick tonight, DateReminders, PickTonightSync, TitleSource, StreakStore, the rest of UI/Us | StreakRecording | `us`, `streak`, `usRoute` | `UsRoute` becomes a shell route |
