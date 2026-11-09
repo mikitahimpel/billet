@@ -1,4 +1,5 @@
 import Foundation
+import MoodInterface
 
 enum WidgetModule: String, Codable, CaseIterable {
     case mochi, us, mood, list, date, moment

@@ -108,7 +108,7 @@ protocol property re-renders when it changes; Observation tracks through an exis
 | `MomentAdding` | MomentsInterface | `add(image:caption:)`, `addNote(…)` | Us (dates, places), Draw |
 | `JournalRecording` | MomentsInterface | `record(JournalEntry)` | Draw, Us, Games |
 | `StreakRecording` | UsInterface | `record()` | Mood, Room (pets, treats) |
-| `MoodChecking` | MoodInterface | `latest: [String: MoodCheck]`, `set(PartnerMood, note:)` | header, widgets |
+| `MoodChecking` | MoodInterface | `latest: [String: MoodCheckIn]`, `take(_:for:replacing:)` | header, widgets |
 | `InboxCounting` | InboxInterface | `unread: Int` | header badge |
 | `RoomControlling` | RoomInterface | section 5.3 | the shell, Games, Shop (through the shell) |
 | `CatStatusProviding` | RoomInterface | `status: CatStatus` (coarse, throttled) | header badge, Pet sheet |
@@ -831,6 +831,12 @@ tests. `InboxView` and `InboxLine` stay in the app until `PartnerMood`, `ListKin
 PRs 3 to 11 can be reordered around other agents' work; 1 and 2 cannot. Where a PR would touch
 more than about 25 files of UI that others are editing, it splits: the store and interface first
 (the views keep reading the old property through a one-line forward for a day), the views next.
+
+PR 6 moved the logic first. `MoodCheckIn`, its merge rule and `MoodChecking` are in `MoodInterface`,
+which the widget, notification and share extensions link; `MoodSync` is in `FeatureMood`, with its
+tests. `PartnerMood` is `Wire.CheckInMood` under the app's name. `MoodStore` stays in
+`apps/ios/Shared`, since it writes the App Group file the extensions read, and conforms to
+`MoodChecking`; MoodPicker and the header stay in the app with `MoodArt`.
 
 ### 8.3 Each PR, the same checklist
 

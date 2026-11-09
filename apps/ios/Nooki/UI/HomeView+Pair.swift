@@ -1,4 +1,5 @@
 import FeatureGames
+import FeatureMood
 import SwiftUI
 import Design
 import TipKit

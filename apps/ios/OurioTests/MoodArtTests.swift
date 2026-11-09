@@ -12,13 +12,6 @@ import Wire
         }
     }
 
-    @Test func everyWireMoodIsAnAppMood() {
-        for wire in CheckInMood.allCases {
-            #expect(PartnerMood(rawValue: wire.rawValue) != nil, "\(wire.rawValue) has no face")
-        }
-        #expect(PartnerMood.allCases.map(\.rawValue).sorted() == CheckInMood.allCases.map(\.rawValue).sorted())
-    }
-
     @Test func aSharedMoodShowsItsFaceInTheInbox() {
         let names = InboxLine.Names(partner: "Anya", cat: "Mochi")
         let item = ActivityItem(id: "x", at: 0, actor: .partner, event: .moodShared(mood: .missing))
