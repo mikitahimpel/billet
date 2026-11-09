@@ -115,7 +115,7 @@ private final class FakeStreakRoom {
         pushed.record(on: day(1))
         store.received(pushed)
         #expect(store.streak.count == 3)
-        #expect(store.streak.lastDay == day(2))
+        #expect(store.streak.lastDay == cal.startOfDay(for: day(2)))
         #expect(store.unsent == [day(2)])
     }
 
