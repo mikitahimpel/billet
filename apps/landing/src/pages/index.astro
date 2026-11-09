@@ -5,7 +5,7 @@ import { HeroStage } from "../components/hero-stage";
 import QrCode from "../components/qr-code.astro";
 import Step from "../components/setup-step.astro";
 import { TwoPhones } from "../components/two-phones";
-import { appStoreUrl, siteDescription, siteTitle } from "../config";
+import { appStoreLive, appStoreUrl, siteDescription, siteTitle } from "../config";
 import { faq } from "../faq";
 import Page from "../layouts/page.astro";
 import PictureView from "../components/picture.astro";
@@ -471,16 +471,26 @@ const schema = [
               <p class="mt-0.5 text-small text-muted">A cat you raise together</p>
               <p class="mt-1.5 text-label font-bold tracking-[0.08em] text-honey uppercase">Free · iPhone</p>
             </div>
-            <a
-              href={appStoreUrl}
-              class="shrink-0 rounded-full bg-gold px-6 py-3 font-extrabold text-ink transition-transform hover:-translate-y-0.5 active:scale-[0.97]"
-              data-cta>Get</a
-            >
-            <div class="hidden shrink-0 border-l border-paper/15 pl-5 lg:block">
-              <QrCode class="size-24" />
-            </div>
+            {
+              appStoreLive ? (
+                <>
+                  <a
+                    href={appStoreUrl}
+                    class="shrink-0 rounded-full bg-gold px-6 py-3 font-extrabold text-ink transition-transform hover:-translate-y-0.5 active:scale-[0.97]"
+                    data-cta
+                  >
+                    Get
+                  </a>
+                  <div class="hidden shrink-0 border-l border-paper/15 pl-5 lg:block">
+                    <QrCode class="size-24" />
+                  </div>
+                </>
+              ) : (
+                <span class="shrink-0 rounded-full bg-gold px-5 py-3 font-extrabold text-ink">Coming soon</span>
+              )
+            }
           </div>
-          <p class="mt-4 hidden text-small text-muted lg:block">On a computer? Scan the code with your iPhone camera.</p>
+          {appStoreLive && <p class="mt-4 hidden text-small text-muted lg:block">On a computer? Scan the code with your iPhone camera.</p>}
         </div>
       </section>
   <Fragment slot="after">
@@ -491,7 +501,15 @@ const schema = [
     >
       <img src={portrait.src} alt="" width="40" height="40" class="size-10 rounded-[10px] bg-raised" />
       <p class="flex-1 text-small leading-tight"><b>Ourio</b><br /><span class="text-muted">Free · iPhone</span></p>
-      <a href={appStoreUrl} class="rounded-full bg-gold px-5 py-3 text-small font-bold text-ink">Get</a>
+      {
+        appStoreLive ? (
+          <a href={appStoreUrl} class="rounded-full bg-gold px-5 py-3 text-small font-bold text-ink">
+            Get
+          </a>
+        ) : (
+          <span class="rounded-full bg-gold px-5 py-3 text-small font-bold text-ink">Soon</span>
+        )
+      }
     </div>
 
     <script>

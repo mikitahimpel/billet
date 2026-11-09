@@ -1,5 +1,5 @@
 ---
-import { appStoreUrl } from "../config";
+import { appStoreLive, appStoreUrl } from "../config";
 import { features, pages } from "../site";
 
 const page = (path: string) => pages.find((candidate) => candidate.path === path)!;
@@ -40,9 +40,15 @@ const groups = [
         A free iPhone app for couples: one shared room, one cat, and everything you do for her on your partner's Lock
         Screen.
       </p>
-      <a href={appStoreUrl} class="mt-5 inline-block rounded-full bg-gold px-5 py-2.5 text-small font-extrabold text-ink" data-cta
-        >Get Ourio for iPhone</a
-      >
+      {
+        appStoreLive ? (
+          <a href={appStoreUrl} class="mt-5 inline-block rounded-full bg-gold px-5 py-2.5 text-small font-extrabold text-ink" data-cta>
+            Get Ourio for iPhone
+          </a>
+        ) : (
+          <p class="mt-5 inline-block rounded-full bg-gold px-5 py-2.5 text-small font-extrabold text-ink">Coming soon to iPhone</p>
+        )
+      }
     </div>
     <nav class="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4" aria-label="Footer">
       {
