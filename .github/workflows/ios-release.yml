@@ -52,7 +52,10 @@ jobs:
         if: steps.changed.outputs.build == 'true'
         run: .github/scripts/install-xcodegen.sh
 
-      # As in ios.yml: Xcode's compilation cache, a fresh one each week.
+      # Xcode's compilation cache, keyed by file contents, so a build replays what an earlier one compiled at the
+      # same paths. Pull requests don't use it: restoring its ~220 MB takes 4-5 min on a macOS runner, more than it
+      # saves on the Debug build. Here nobody waits, and a shorter build frees a runner sooner. It never shrinks,
+      # so a new week starts a fresh one.
       - name: Compilation cache key
         if: steps.changed.outputs.build == 'true'
         id: cas
