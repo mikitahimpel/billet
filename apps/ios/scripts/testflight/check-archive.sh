@@ -5,7 +5,9 @@
 # - the app and its widget extension have their bundle IDs, version 0.1.0 and the build number, and
 #   are signed by team 2666YPBJTB and pass codesign --verify;
 # - the server host (DEMO_HOST in the environment) is the app's BilletAPIHost and is nowhere in the
-#   git history of this checkout.
+#   git history of this checkout;
+# - the app was built with the StoreKit store and without Labs (BilletPayments and BilletLabs in its
+#   Info.plist), and its binary carries no mock store.
 # Prints what it checked, never the host. Run from the repository root with full history.
 set -euo pipefail
 
@@ -42,6 +44,18 @@ check_bundle() {
 
 check_bundle "$app" com.mikitahimpel.billet
 check_bundle "$app/PlugIns/NookiWidgets.appex" com.mikitahimpel.billet.widget
+
+payments=$(plist "$app" BilletPayments)
+labs=$(plist "$app" BilletLabs)
+[ "$payments" = storekit ] || fail "the app's store is '$payments', not storekit: build with BILLET_PAYMENTS=storekit"
+[ "$labs" = NO ] || fail "Labs is '$labs' in the app, not NO: build without BILLET_LABS"
+binary="$app/$(plist "$app" CFBundleExecutable)"
+if [ ! -f "$binary" ]; then
+  fail "missing the app's binary"
+elif grep -qa MockPaymentsBuild "$binary"; then
+  fail "the app's binary carries the mock store"
+fi
+echo "store: $payments, Labs: $labs"
 
 if [ -z "${DEMO_HOST:-}" ]; then
   fail "DEMO_HOST is not set"

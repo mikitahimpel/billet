@@ -23,6 +23,8 @@ public enum ApiError: Codable, Hashable, Sendable {
   case bonusTaken(collection: String)
   /// A buy for the cat, such as a treat, before the couple adopted one.
   case catNotAdopted
+  /// A restore of a streak that is alive, too short, out for longer than a day, or in cooldown.
+  case streakNotRestorable
   /// An order whose price is now above the `expectedPrice` sent; nothing was charged. `price` is
   /// the price now.
   case priceChanged(price: Int)
@@ -64,6 +66,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "BonusTaken":
       self = .bonusTaken(collection: try container.decode(String.self, forKey: .collection))
     case "CatNotAdopted": self = .catNotAdopted
+    case "StreakNotRestorable": self = .streakNotRestorable
     case "PriceChanged": self = .priceChanged(price: try container.decode(Int.self, forKey: .price))
     default:
       throw DecodingError.dataCorruptedError(
@@ -102,6 +105,7 @@ public enum ApiError: Codable, Hashable, Sendable {
       try container.encode("BonusTaken", forKey: .tag)
       try container.encode(collection, forKey: .collection)
     case .catNotAdopted: try container.encode("CatNotAdopted", forKey: .tag)
+    case .streakNotRestorable: try container.encode("StreakNotRestorable", forKey: .tag)
     case .priceChanged(let price):
       try container.encode("PriceChanged", forKey: .tag)
       try container.encode(price, forKey: .price)

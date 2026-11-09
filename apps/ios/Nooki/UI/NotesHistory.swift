@@ -57,6 +57,7 @@ private struct NoteCard: View {
     let note: Note
 
     @State private var doodle: UIImage?
+    @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
         Color.clear
@@ -72,6 +73,16 @@ private struct NoteCard: View {
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                         .padding(14)
+                }
+            }
+            .overlay {
+                GeometryReader { proxy in
+                    Color.clear.postage(of: note, width: proxy.size.width)
+                }
+            }
+            .overlay(alignment: .topTrailing) {
+                if note.unsent == true, session?.isPaired == true {
+                    UnsentMark(size: 11, tint: Color(hex: note.inkHex).opacity(0.6)).padding(8)
                 }
             }
             .overlay(alignment: .bottomTrailing) {

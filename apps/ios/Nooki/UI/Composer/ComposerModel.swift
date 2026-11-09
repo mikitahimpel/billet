@@ -2,6 +2,7 @@ import Observation
 import PencilKit
 import SwiftUI
 import UIKit
+import Wire
 
 /// What is on the note being written: text and ink on the same paper.
 @MainActor
@@ -11,10 +12,12 @@ final class ComposerModel {
     var paper: Note.Paper = .butter
     var kind: PaperKind
     var ink = PaletteInk.free
+    var stamp: NoteStamp?
+    var seal: NoteSeal?
     /// True while the finger draws; false while it types.
     var drawing: Bool
     private(set) var hasInk = false
-    /// Stickers, stamps and seals on the paper, under the ink. Nothing puts one here yet.
+    /// Stickers on the paper, under the ink. Nothing puts one here yet.
     var decorations: [Decoration] = []
     @ObservationIgnored let canvas = PKCanvasView()
 
@@ -39,8 +42,10 @@ final class ComposerModel {
 
     /// Text alone stays a text note for the partner; anything drawn is a picture of the whole note.
     func save(into journal: Journal, size: CGSize) -> Bool {
-        guard hasInk || !decorations.isEmpty else { return journal.addNote(text: text, paper: paper, ink: ink.light) }
-        return journal.addNote(doodle: picture(size: size), paper: paper)
+        guard hasInk || !decorations.isEmpty else {
+            return journal.addNote(text: text, paper: paper, ink: ink.light, stamp: stamp, seal: seal)
+        }
+        return journal.addNote(doodle: picture(size: size), paper: paper, stamp: stamp, seal: seal)
     }
 
     /// The strokes over the text, on a transparent square so the board's paper shows through.

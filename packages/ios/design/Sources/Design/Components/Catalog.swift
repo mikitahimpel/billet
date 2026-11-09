@@ -3,6 +3,7 @@ import SwiftUI
 private struct Catalog: View {
   @State private var room = "Room"
   @State private var isOn = true
+  @State private var note = ""
 
   private let inks: [(String, Color)] = [
     ("screen", Ink.screen), ("surface", Ink.surface), ("surfaceRaised", Ink.surfaceRaised),
@@ -20,8 +21,8 @@ private struct Catalog: View {
         {
           ForEach(inks, id: \.0) { name, color in
             VStack(spacing: Space.xs) {
-              RoundedRectangle(cornerRadius: Radius.tag).fill(color).frame(height: 36)
-                .overlay(RoundedRectangle(cornerRadius: Radius.tag).strokeBorder(Ink.separator))
+              RoundedRectangle(cornerRadius: Radius.inner).fill(color).frame(height: 36)
+                .overlay(RoundedRectangle(cornerRadius: Radius.inner).strokeBorder(Ink.separator))
               Text(name).font(.nookiMicro).foregroundStyle(Ink.textSecondary)
             }
           }
@@ -47,12 +48,13 @@ private struct Catalog: View {
             Rectangle().fill(Ink.accentText).frame(width: $0, height: $0)
           }
           Spacer()
-          ForEach([Radius.tag, Radius.control, Radius.card, Radius.hero], id: \.self) {
+          ForEach([Radius.inner, Radius.control, Radius.card, Radius.sheet], id: \.self) {
             RoundedRectangle(cornerRadius: $0).fill(Ink.surfaceRaised).frame(width: 40, height: 40)
           }
         }
 
-        SectionHeader("Buttons")
+        SectionHeader("Buttons and fields")
+        Field("A few words (optional)", text: $note, axis: .vertical, lines: 1...3)
         PrimaryButton("Share with Ilya") {}
         PrimaryButton("Pick how you feel") {}.disabled(true)
         HStack {
@@ -74,13 +76,23 @@ private struct Catalog: View {
           CoinIcon(size: 28)
         }
 
+        SectionHeader("Stamps and seals")
+        HStack {
+          ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, width: 32) }
+        }
+        HStack {
+          ForEach(SealArt.allCases, id: \.self) { WaxSeal($0, size: 36) }
+        }
+
         SectionHeader("Rows")
         GroupedSection(header: "Settings", footer: "Haptics are only on this phone.") {
           Row("Profile", detail: "Mikita", symbol: "person.fill") { RowChevron() }
           ToggleRow("Haptics", symbol: "hand.tap.fill", tint: .blushPink, isOn: $isOn)
           Row("Erase all data", symbol: "trash.fill", destructive: true)
         }
-        Card(warm: true) { Text("A hero card").font(.nookiHeadline).foregroundStyle(Ink.text) }
+        Card(warm: true) {
+          CardHeader("A hero card", detail: "Same radius, warmer", symbol: "sparkles")
+        }
         EmptyState(symbol: "tray", title: "All quiet", text: "Notes and gifts show up here.")
       }
       .padding(Space.gutter)

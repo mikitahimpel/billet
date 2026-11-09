@@ -1,6 +1,7 @@
 import PencilKit
 import SwiftUI
 import Design
+import Wire
 
 /// The paper on the desk: grain and shadow from `PaperSheet`, a curled corner, and the text and ink layers on top.
 struct ComposerPaper: View {
@@ -19,6 +20,9 @@ struct ComposerPaper: View {
             curl
         }
         .frame(width: size.width, height: size.height)
+        .postage(stamp: model.stamp?.art, seal: model.seal?.art, width: size.width)
+        .animation(.snappy(duration: 0.2), value: model.stamp)
+        .animation(.snappy(duration: 0.2), value: model.seal)
         .accessibilityElement(children: .contain)
     }
 

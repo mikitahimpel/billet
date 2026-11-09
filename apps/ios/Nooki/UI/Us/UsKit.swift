@@ -45,18 +45,12 @@ struct UsCheck: View {
     }
 }
 
-/// Text field styled for the dark sheet.
 struct UsField: View {
     let placeholder: String
     @Binding var text: String
 
     var body: some View {
-        TextField("", text: $text, prompt: Text(placeholder).foregroundStyle(Ink.textTertiary))
-            .font(.nookiBody)
-            .foregroundStyle(Ink.text)
-            .padding(.horizontal, Space.l)
-            .frame(minHeight: 50)
-            .cardSurface(radius: Radius.control)
+        Field(placeholder, text: $text)
     }
 }
 
@@ -93,7 +87,7 @@ struct UsGlyphPicker: View {
                 .animation(.snappy(duration: 0.2), value: selection)
             }
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .cardSurface()
     }
 }

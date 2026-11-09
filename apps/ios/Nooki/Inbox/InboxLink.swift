@@ -6,7 +6,7 @@ import Wire
 /// photos as they are sent, reactions to photos, the pair's shop and lists, each partner's check-in, how Who knows
 /// who goes, and the Draw & guess riddles. It resumes after
 /// the last note the photos
-/// looked at and leaves the cat's journal out, so no cat frames; the canvas keeps its own socket for those.
+/// looked at, and after the cat's last journal entry this phone holds, so both partners' care reaches her here.
 @MainActor
 final class InboxLink {
     private var client: WebSocketClient?
@@ -28,6 +28,10 @@ final class InboxLink {
         var guessRevealed: @MainActor @Sendable (_ round: String, [GuessReveal], GuessScore) -> Void
         /// A Draw & guess riddle as this user sees it after a send, try, hint or give-up.
         var riddle: @MainActor @Sendable (Riddle) -> Void
+        /// One entry of the cat's journal, either partner's.
+        var catEntry: @MainActor @Sendable (CatEntry) -> Void
+        /// The last journal entry held, read as each socket opens; nil follows no cat frames.
+        var lastCatSeq: @MainActor @Sendable () -> Int?
     }
 
     init(baseURL: URL, token: @escaping @Sendable () async -> String?, lastSeq: Int?, handlers: Handlers) {
@@ -53,13 +57,15 @@ final class InboxLink {
                 case .guessProgress(let round, let answered): await handlers.guessProgress(round, answered)
                 case .guessRevealed(let round, let reveal, let score): await handlers.guessRevealed(round, reveal, score)
                 case .riddleChanged(let riddle): await handlers.riddle(riddle)
+                case .catEntryAdded(let entry): await handlers.catEntry(entry)
                 case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
-                     .clear, .catEntryAdded, .catSaved:
+                     .clear, .catSaved:
                     break
                 }
             },
             followsActivity: true,
             lastReactionRev: { await handlers.lastReactionRev() },
+            lastCatSeq: { await handlers.lastCatSeq() },
             followsShop: true,
             followsLists: true,
             followsMoods: true,

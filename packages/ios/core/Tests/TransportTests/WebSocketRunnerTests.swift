@@ -136,6 +136,18 @@ import Wire
     #expect(await iterator.next() == .resume(lastSeq: 3, moods: true))
   }
 
+  @Test func aSocketThatFollowsTheCatResumesAfterTheLastEntryItHolds() async {
+    let socket = makeFakeSocket()
+    var dependencies = Self.dependencies(pool: ConnectionPool([socket.connection]))
+    dependencies.lastCatSeq = { 41 }
+    let runner = WebSocketRunner(dependencies: dependencies)
+
+    _ = await runner.run(.open(attempt: 1, resumeFrom: 3))
+
+    var iterator = socket.sent.makeAsyncIterator()
+    #expect(await iterator.next() == .resume(lastSeq: 3, lastCatSeq: 41))
+  }
+
   @Test func aSocketThatFollowsTheGuessGameAsksForItInEachResume() async {
     let socket = makeFakeSocket()
     var dependencies = Self.dependencies(pool: ConnectionPool([socket.connection]))

@@ -17,8 +17,22 @@ final class CoinPacksModel {
         case failed(String)
     }
 
-    private(set) var packs: [StampPack] = []
+    /// What the store has on sale: nothing yet, the packs, or nothing because it couldn't be reached.
+    enum Shelf: Equatable {
+        case loading
+        case ready([StampPack])
+        case unavailable
+    }
+
+    private(set) var shelf: Shelf = .loading
     private(set) var status: Status = .idle
+
+    var packs: [StampPack] {
+        switch shelf {
+        case .ready(let packs): packs
+        case .loading, .unavailable: []
+        }
+    }
     @ObservationIgnored private let payments: (any Payments)?
     @ObservationIgnored private let credited: () async -> Void
 
@@ -31,10 +45,10 @@ final class CoinPacksModel {
     /// The server's switch for selling coins (docs/payments.md).
     nonisolated static let flag = Experiment(key: "payments", variants: ["off", "on"])
 
-    /// Packs on sale in this build for this pair: always in a mock build (the dev server's mock route credits them),
-    /// otherwise only once the server turned `payments` on.
-    nonisolated static func sells(_ flags: RemoteFlags, mockStore: Bool) -> Bool {
-        mockStore || flags.variant(of: flag) == "on"
+    /// Packs on sale for this pair: only once the server turned `payments` on, whichever store the build carries, so a
+    /// mock build that reaches testers or App Review sells nothing while the flag is off. Dev turns it on in the admin.
+    nonisolated static func sells(_ flags: RemoteFlags) -> Bool {
+        flags.variant(of: flag) == "on"
     }
 
     /// The smallest pack that covers `missing`, or the biggest when none does; nil when nothing is missing.
@@ -45,8 +59,18 @@ final class CoinPacksModel {
     }
 
     func load() async {
-        guard let payments, packs.isEmpty else { return }
-        packs = (try? await payments.products()) ?? []
+        guard let payments else {
+            shelf = .unavailable
+            return
+        }
+        if case .ready = shelf { return }
+        shelf = .loading
+        do throws(PaymentsError) {
+            let packs = try await payments.products()
+            shelf = packs.isEmpty ? .unavailable : .ready(packs)
+        } catch {
+            shelf = .unavailable
+        }
     }
 
     func buy(_ pack: StampPack) async {

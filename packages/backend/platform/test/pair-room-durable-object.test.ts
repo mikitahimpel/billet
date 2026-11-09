@@ -147,7 +147,7 @@ describe("PairRoom storage", () => {
         { user: bob, presence: "drawing" },
       ],
       lastSeq: 1,
-      streakDays: 4,
+      streak: { days: 4, best: 0 },
       inks: [],
       items: [],
       wishlist: [],
@@ -191,6 +191,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_movie_swipes"),
       expect.stringContaining("_guess"),
       expect.stringContaining("_riddles"),
+      expect.stringContaining("_streak"),
     ]);
   });
 

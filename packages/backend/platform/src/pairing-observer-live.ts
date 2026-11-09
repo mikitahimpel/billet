@@ -14,6 +14,7 @@ import { PairRooms } from "@billet/backend-notes/pair-rooms";
 import { mergeKept, splitKept } from "@billet/backend-pairing/kept-purchases";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingObserver } from "@billet/backend-pairing/pairing-observer";
+import { ReviewRepository } from "@billet/backend-review/review-repository";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
 const decodeInk = Schema.decodeSync(InkId);
@@ -29,7 +30,13 @@ const decodeEntryId = Schema.decodeSync(CoinEntryId);
 export const PairingObserverLive: Layer.Layer<
   PairingObserver,
   never,
-  FlagsService | Metrics | PairRooms | MediaStore | PairingRepository | DemoPartnerRepository
+  | FlagsService
+  | Metrics
+  | PairRooms
+  | MediaStore
+  | PairingRepository
+  | DemoPartnerRepository
+  | ReviewRepository
 > = Layer.effect(
   PairingObserver,
   Effect.gen(function* () {
@@ -38,11 +45,19 @@ export const PairingObserverLive: Layer.Layer<
     const rooms = yield* PairRooms;
     const media = yield* MediaStore;
     const demos = yield* DemoPartnerRepository;
+    const review = yield* ReviewRepository;
     const pairing = yield* PairingRepository;
-    // A demo partner is a test fixture, not a person: its invite isn't counted, and its pair is
-    // kept under its own name, out of the funnel. If the lookup fails, it counts as a person.
+    // A demo partner or the App Review partner is a fixture, not a person: its invite isn't
+    // counted, and its pair is kept under its own name, out of the funnel. If the lookup fails, it
+    // counts as a person.
     const withBot = (users: ReadonlyArray<UserId>) =>
-      Effect.forEach(users, (userId) => demos.isBot(userId)).pipe(
+      Effect.forEach(users, (userId) =>
+        Effect.zipWith(
+          demos.isBot(userId),
+          review.isPartner(userId),
+          (bot, partner) => bot || partner,
+        ),
+      ).pipe(
         Effect.map((bots) => bots.includes(true)),
         Effect.catchCause(() => Effect.succeed(false)),
       );

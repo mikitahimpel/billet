@@ -190,6 +190,65 @@ panel's **Shop** page edits them; the app reads the active ones from `GET /v1/sh
   on the item's page. Writes need the panel's origin, like every other write.
 - **Agents** read `GET /admin/api/agent/shop-items` and `shop-history[?limit=<1-500>]`.
 
+### Sand3D items
+
+The app bundles six armchair colourways, a chest of drawers and a potted monstera made with
+Sand3D ([tools/sand3d](../tools/sand3d/README.md)). None of them is in the catalog: listing them,
+naming them and pricing them is the owner's call, made here. Coins are earned in the app; nothing
+here takes money.
+
+| Bundled asset id | Season | Suggested name |
+| --- | --- | --- |
+| `armchair-frost` | winter | Frost Armchair |
+| `armchair-cocoa` | winter | Cocoa Armchair |
+| `armchair-blossom` | spring | Blossom Armchair |
+| `armchair-meadow` | spring | Meadow Armchair |
+| `armchair-sunbeam` | summer | Sunbeam Armchair |
+| `armchair-ember` | autumn | Ember Armchair |
+| `chest` | any | Chest of Drawers |
+| `monstera-potted` | any | Potted Monstera |
+
+The colourways' suggested names and blurbs are in
+[`tools/sand3d/armchair-colourways.json`](../tools/sand3d/armchair-colourways.json).
+
+To add one, on **Shop → New item**:
+
+1. **Id:** the bundled asset id, such as `armchair-frost`. It can never change, so decide first.
+2. **Kind and shelf:** `furniture` and `furniture`.
+3. **Name, blurb, rarity, price, sort order:** your choice. The blurb may use `{cat}`.
+4. **Picture:** "Bundled in the app", with the same asset id. The app draws `Item_<id>.png` on
+   the card and `Item_<id>.usdz` on the item's stage.
+5. **Minimum build:** the first build that bundles the files, so older phones skip the item.
+6. Leave **Active** off until you want it on the shelves. A season's colourways can go on together
+   and be made inactive when the season ends; pairs that bought one keep it.
+
+Until the Shop lists furniture from this catalog, the app's shelves still show only their own
+bundled pieces (`Catalog` in `apps/ios/Nooki/Model/Shop.swift`). An active row makes the server
+sell the item, but no shelf shows it until the app reads its furniture from `GET /v1/shop/catalog`,
+which is a separate app change.
+
+## App Review pair
+
+The **App Review** page runs the reviewer's pair ([app-review.md](app-review.md)):
+
+- **New code** makes a 26-symbol review code that lives 1 to 30 days and revokes every earlier
+  one. The code is shown once, in the page that made it; the directory keeps only its SHA-256 and
+  its last four symbols. The first code also opens the review partner, an ordinary user.
+- **Revoke** stops every code at once. **Wipe the pair** ends the partner's pair, which deletes
+  its room, notes, photos and cat, and stills its bot.
+- The page shows the live code's last four, its expiry, its claims and the last claim, and every
+  action with the Access email (`review_changes`).
+- `GET /admin/api/review`, `POST /admin/api/review/code {days}`, `POST /admin/api/review/revoke`,
+  `POST /admin/api/review/wipe`. Not in the agent API.
+
+## Reports
+
+The **Reports** page lists `partner_reports`, newest first: the reason, the reported user, the
+pair, the note or photo a report is about (`note_id`) and what the reporter typed. It is read-only:
+act on a report (block, delete the account) within a day. Each report also logs the warning
+`partner report received` with its reason, so an alert on that message reaches the team at once.
+`GET /admin/api/reports[?limit=<1-1000>]`. Not in the agent API, since it holds what users typed.
+
 ## Seed data
 
 `pnpm admin:seed` writes `admin-seed.sql`: about 170 made-up pairs formed over the last 10 weeks

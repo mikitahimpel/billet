@@ -69,7 +69,7 @@ struct SwipeDeck: View {
             .padding(.horizontal, 10)
             .padding(.vertical, 3)
             .overlay(
-                RoundedRectangle(cornerRadius: Radius.tag, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
                     .stroke(tint, lineWidth: 3)
             )
             .rotationEffect(.degrees(text == "LOVE" ? -14 : 14))
@@ -154,7 +154,7 @@ struct DateIdeaCard: View {
     let idea: DateIdea
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Radius.hero, style: .continuous)
+        let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
         DateScenePicture(art: idea.art)
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 8) {

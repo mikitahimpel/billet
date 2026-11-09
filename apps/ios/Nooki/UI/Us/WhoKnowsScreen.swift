@@ -273,7 +273,7 @@ private struct WhoKnowsReveal: View {
                         .buttonStyle(SecondaryButtonStyle())
                 }
                 .frame(maxWidth: .infinity)
-                .padding(Space.l)
+                .padding(CardMetrics.padding)
                 .cardSurface(warm: true)
                 .accessibilityElement(children: .contain)
             }
@@ -292,7 +292,7 @@ private struct WhoKnowsReveal: View {
                 }
                 Spacer(minLength: 0)
             }
-            .padding(Space.l)
+            .padding(CardMetrics.padding)
             .cardSurface()
             .accessibilityElement(children: .combine)
         }

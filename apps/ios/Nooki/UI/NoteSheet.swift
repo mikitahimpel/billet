@@ -1,14 +1,18 @@
 import SwiftUI
 import Design
 import UIKit
+import Wire
 
-/// One note opened from the board: the paper big, its text or doodle, and a way to take it down.
+/// One note opened from the board: the paper big, its text or doodle, a way to take it down, and for the partner's
+/// note a way to report it.
 struct NoteSheet: View {
     let state: HomeState
     let id: UUID
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(ServerSession.self) private var session: ServerSession?
     @State private var confirmDelete = false
+    @State private var reportFailed = false
     @State private var doodle: UIImage?
 
     private var note: Note? { state.notes.notes.first { $0.id == id } }
@@ -36,12 +40,42 @@ struct NoteSheet: View {
                                 dismiss()
                             }
                         }
+
+                    if let id = note.noteID, note.author == state.otherPartner, let session {
+                        Menu {
+                            ForEach(ReportReason.allCases, id: \.self) { reason in
+                                Button(reason.title) { report(note, id: NoteId(id), reason: reason, session: session) }
+                            }
+                        } label: {
+                            Label("Report and hide", systemImage: "flag")
+                                .font(.nookiCallout)
+                                .foregroundStyle(Ink.textSecondary)
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }
         }
         .animation(.snappy(duration: 0.25), value: note)
         .task(id: id) { await loadDoodle() }
+        .alert("Couldn't send the report", isPresented: $reportFailed) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Check your connection and try again.")
+        }
+    }
+
+    /// Sends the report to the team, then takes the note off this phone. Nothing is hidden if the report fails.
+    private func report(_ note: Note, id: NoteId, reason: ReportReason, session: ServerSession) {
+        Task {
+            do {
+                try await session.reportPartner(reason, note: id, details: nil)
+                state.notes.delete(note)
+                dismiss()
+            } catch {
+                reportFailed = true
+            }
+        }
     }
 
     private func face(_ note: Note) -> some View {
@@ -59,6 +93,7 @@ struct NoteSheet: View {
             }
         }
         .frame(width: 300, height: 300)
+        .postage(of: note, width: 300)
     }
 
     private func loadDoodle() async {
