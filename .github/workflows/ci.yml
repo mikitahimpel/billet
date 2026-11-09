@@ -25,6 +25,9 @@ jobs:
       - name: The pinned cat files and shop thumbnails match the manifest
         run: .github/scripts/check-nooki-cat.sh
 
+      - name: TestFlight scripts' tests
+        run: python3 -I -m unittest discover -s apps/ios/scripts/testflight
+
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0

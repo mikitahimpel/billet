@@ -197,6 +197,13 @@ jobs:
           echo "$line"
           echo "$line" >> "$GITHUB_STEP_SUMMARY"
 
+      # Xcode makes a new Apple Development certificate through the key on every run, in this run's
+      # keychain, and the team may hold only a few. Revoke the ones in this keychain, also when an
+      # earlier step failed; Distribution certificates are never touched.
+      - name: Revoke this run's development certificate
+        if: always() && env.KEYCHAIN != '' && env.ASC_KEY_PATH != ''
+        run: python3 -I apps/ios/scripts/testflight/asc.py revoke-run-certificates --keychain "$KEYCHAIN"
+
       - name: Remove the key and the keychain
         if: always()
         run: |

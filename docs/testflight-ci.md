@@ -24,7 +24,8 @@ is still working on it, which can take up to half an hour after the run ends.
 
 1. Fails straight away, naming them, if any of the four secrets is missing.
 2. Writes the App Store Connect key to a file only the runner user can read (mode 0600). The last
-   step deletes it, along with the run's keychain, even when an earlier step failed.
+   step deletes it, along with the run's keychain, even when an earlier step failed. Just before
+   that, the run revokes its own development certificate (see below).
 3. Picks the build number: one above the highest build App Store Connect has for the app, and at
    least 16, since the local archives went up to 15. A number given with `-f build=N` is used
    instead, and the run stops if App Store Connect already has that build or a later one. The version
@@ -103,7 +104,52 @@ gh secret set DEMO_HOST --env testflight < ~/.billet-manager/pet-concept/demo-ho
 
 If a key leaks, revoke it first, then do steps 1 to 4.
 
-Each run may leave an Apple Development certificate named "Created via API" in the developer
-account. When the account nears its certificate limit, revoke the old ones under Certificates,
-Identifiers & Profiles. They only signed CI archives, so revoking them changes nothing for
-TestFlight builds.
+## The development certificate
+
+To sign the archive, Xcode makes a new Apple Development certificate through the API key on every
+run ("Created via API"), with its private key in the run's keychain. The team may hold only a few.
+Once they are used up, the archive fails with "Choose a certificate to revoke. Your account has
+reached the maximum number of certificates" and "No profiles for 'com.mikitahimpel.billet.…'".
+
+So the step "Revoke this run's development certificate" runs at the end of every run, also after a
+failure:
+
+- `asc.py revoke-run-certificates --keychain "$KEYCHAIN"` reads the serial numbers of the
+  certificates in the run's keychain. The keychain is made empty at the start of the run, so they
+  are this run's.
+- It looks each serial up in App Store Connect (`GET /v1/certificates?filter[serialNumber]=…`).
+- It revokes only the development ones (`DELETE /v1/certificates/{id}`). Distribution
+  certificates are never revoked.
+- The token is the same ES256 JWT from the `ASC_*` secrets that the build-number step uses.
+
+The step prints each certificate it revoked, or that the keychain held none. It holds none when
+the archive failed before Xcode made one. The certificate only signed this run's archive.
+TestFlight builds are re-signed in the cloud at export, so revoking it changes nothing for testers.
+
+The selection is tested in `apps/ios/scripts/testflight/test_asc.py`, which CI runs:
+`python3 -I -m unittest discover -s apps/ios/scripts/testflight`.
+
+## When the certificate limit is hit again
+
+The archive fails with "Choose a certificate to revoke". Most likely, older runs, which didn't
+revoke their certificates, or a run killed before its last steps, left certificates behind.
+
+1. List the team's certificates. This is read-only and needs the same key as the workflow:
+
+   ```sh
+   export PROTON_PASS_AGENT_REASON="billet: list Apple certificates for the TestFlight limit"
+   pp run --env-file asc.env -- sh -c 'printf %s "$ASC_P8" > "$TMPDIR/asc.p8" && chmod 600 "$TMPDIR/asc.p8" &&
+     ASC_KEY_PATH="$TMPDIR/asc.p8" python3 -I apps/ios/scripts/testflight/asc.py certificates; rm -f "$TMPDIR/asc.p8"'
+   ```
+
+   `asc.env` is the reference-only env file from "Setting the secrets". Each line shows the type,
+   serial, expiry and name.
+2. The leftovers are the `DEVELOPMENT` or `IOS_DEVELOPMENT` certificates named "Created via API".
+   The owner revokes them in developer.apple.com → Certificates, Identifiers & Profiles →
+   Certificates. Keep every Distribution certificate, and any development certificate a person
+   uses on their own Mac (named after the Mac or the person, not "Created via API").
+3. Start the TestFlight run again.
+
+If the limit comes back after a run that finished normally, look at that run's "Revoke this run's
+development certificate" step. It should list one revoked certificate. If it found none, Xcode put
+the certificate somewhere other than the run's keychain, and the step has to look there.
