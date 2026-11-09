@@ -43,10 +43,7 @@ const sources: ReadonlyArray<readonly [MetricEventName, AppEvent["source"]]> = [
   ...ServerEventName.literals.map((name) => [name, "server"] as const),
 ];
 
-/**
- * The "In the app" page, from the D1 counts: what each event did over the range and when it
- * landed. Pure. Counts and days only: no ids leave it, the pair set is reduced to a number.
- */
+/** Counts and days only: no ids leave it. */
 export const buildAppEvents = (
   events: ReadonlyArray<EventRow>,
   today: string,

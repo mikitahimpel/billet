@@ -24,9 +24,7 @@ const CatalogDeck = Layer.succeed(GuessDeck, {
 });
 
 /**
- * The service graph of one room. It still requires `RoomDb`, given once at the object edge. Who
- * knows who pays its coins, and draw-guess commits its riddles, through the room's one
- * `RoomService`, so all share its lock.
+ * Needs `RoomDb`. Who knows who and draw-guess commit through `RoomService`, sharing its lock.
  */
 export const PairRoomLive: Layer.Layer<
   RoomService | GiftsRoom | PickTonightRoom | GuessRoom | RiddleRoom,

@@ -1,7 +1,6 @@
-// Gives date ideas their pictures: `pnpm --filter @billet/backend-dates catalog:art <id> <image> [<id> <image>...]`.
-// Each image becomes an 800x993 WebP in apps/api/public/art/dates, named after the idea and a hash of its bytes
-// so the path never serves anything else and is cached for good. The idea's `art` and the catalog's `version`
-// follow. Needs ImageMagick (`magick`) with WebP.
+// Gives date ideas their pictures: `pnpm --filter @billet/backend-dates catalog:art <id> <image>`.
+// Each image becomes a content-hashed 800x993 WebP in apps/api/public/art/dates, cached for good.
+// Needs ImageMagick (`magick`) with WebP.
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";

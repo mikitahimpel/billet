@@ -41,10 +41,7 @@ const isRoot = (span: Tracer.Span): boolean =>
 /** A URL's path and query can hold an id or a media key; the host and route say enough. */
 const urlKeys = new Set(["url.full", "url.path", "url.query"]);
 
-/**
- * Left out of a line: the caller's source location, which Effect adds to some spans, the SQL of
- * `@effect/sql` spans, which the repository span above it already names, and URLs.
- */
+/** Effect's source locations, `@effect/sql` SQL (the repository span names it) and URLs. */
 const isNoise = (key: string): boolean =>
   key.startsWith("code.") || key === "db.query.text" || urlKeys.has(key);
 
@@ -75,13 +72,7 @@ const maxSpansPerTrace = 100;
 const maxOpenTraces = 500;
 
 /**
- * Effect's native tracer, made to write its spans as log lines: Workers traces cannot carry
- * Effect's spans, but Workers Logs indexes JSON fields, so the spans land there.
- *
- * Each root span (the request, a Durable Object call, an alarm) writes one `trace` line when it
- * ends, holding its own name, ids, duration, status and attributes, and every child span that
- * ended before it under `spans`. A child that ends after its root (forked follow-up work) gets a
- * `span` line of its own. Attributes pass through `redactField`.
+ * Spans as log lines: Workers traces can't carry Effect's spans, but Workers Logs indexes JSON.
  */
 export const traceLogTracer = (sink: LogSink): Tracer.Tracer => {
   const open = new Map<string, { spans: Array<SpanRecord>; dropped: number }>();

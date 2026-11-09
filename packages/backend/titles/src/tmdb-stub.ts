@@ -155,10 +155,7 @@ const detailsOf = (title: StubTitle) => ({
   },
 });
 
-/**
- * TMDB for a Worker with no key, such as `alchemy dev`: a few real films and shows, found by any
- * word of their title. No request leaves the Worker.
- */
+/** TMDB for a Worker with no key, such as `alchemy dev`. No request leaves the Worker. */
 export const TmdbStub: Layer.Layer<Tmdb> = Layer.succeed(
   Tmdb,
   Tmdb.of({

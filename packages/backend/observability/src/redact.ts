@@ -3,10 +3,7 @@ import { type Cause, Redacted } from "effect";
 /** What a log line shows in place of anything secret or personal. */
 export const hidden = "<redacted>";
 
-/**
- * Field names whose values never reach a log: credentials, contact details and what people write.
- * Matched anywhere in the name, so `sessionToken`, `mediaKey` and `noteText` are all hidden.
- */
+/** Matched anywhere in the name, so `sessionToken`, `mediaKey` and `noteText` are all hidden. */
 const sensitiveKey =
   /token|secret|password|passphrase|authori[sz]ation|cookie|session|email|e-mail|phone|body|text|content|key|signature|credential|stroke/i;
 
@@ -35,10 +32,7 @@ const framesOf = (stack: string | undefined): ReadonlyArray<string> | undefined 
   return frames.length === 0 ? undefined : frames.slice(0, maxFrames);
 };
 
-/**
- * An error by its class and tag and its own fields, never its message: a message can quote the
- * input (a schema error does), and a tagged error's fields are fixed labels by convention.
- */
+/** Never the message: it can quote the input. Tagged errors' fields are fixed labels. */
 const redactError = (error: Error, depth: number): Record<string, unknown> => {
   const out: Record<string, unknown> = { name: error.name };
   for (const [key, field] of Object.entries(error).slice(0, maxEntries)) {
@@ -51,10 +45,7 @@ const redactError = (error: Error, depth: number): Record<string, unknown> => {
   return out;
 };
 
-/**
- * A copy of `value` that is safe to log: `Redacted` values, secret-looking strings, emails and
- * sensitive fields are hidden, errors lose their messages, and anything deep or long is cut.
- */
+/** Hides secrets, emails and sensitive fields, drops error messages, cuts deep or long values. */
 export const redact = (value: unknown, depth = 0): unknown => {
   if (Redacted.isRedacted(value)) return hidden;
   switch (typeof value) {

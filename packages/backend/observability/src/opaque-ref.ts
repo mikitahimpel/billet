@@ -6,9 +6,7 @@ const mask = 0xffffffffffffffffn;
 const encoder = new TextEncoder();
 
 /**
- * A stable, opaque stand-in for an id in logs and spans: 16 hex digits of FNV-1a 64. The same id
- * always gives the same ref, so one user's or pair's lines can be followed, but the ref is not
- * the id. To find a known id's lines, compute its ref (docs/observability.md).
+ * 16 hex digits of FNV-1a 64: lines can be followed without the id (docs/observability.md).
  */
 export const opaqueRef = (id: string): string => {
   let hash = offset;
@@ -31,11 +29,7 @@ const rootOf = (span: Tracer.Span): Tracer.Span => {
   }
 };
 
-/**
- * Puts `user.ref` and `pair.ref` on the current span and on its root (the request span), so a
- * request's `trace` line says whose request it was without naming them. Does nothing outside a
- * span.
- */
+/** Also on the root span, so a request's `trace` line says whose it was. No-op outside a span. */
 export const annotateRefs = (refs: RequestRefs): Effect.Effect<void> =>
   Effect.currentSpan.pipe(
     Effect.map((span) => {

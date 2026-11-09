@@ -81,10 +81,8 @@ export class PaymentsService extends Context.Service<
     readonly ownerOf: (
       userId: UserId,
     ) => Effect.Effect<CoinOwner, PaymentsNotFound | PaymentsUnavailable>;
-    /**
-     * Verifies a StoreKit 2 transaction and credits its pack, once, to the ledger and to the pair's
-     * wallet. The answer's `balance` is the wallet's.
-     */
+    /** Credits the pack once, to the ledger and to the pair's wallet. The answer's `balance` is
+     * the wallet's. */
     readonly purchase: (
       owner: CoinOwner,
       signedTransaction: Redacted.Redacted<string>,
@@ -95,14 +93,8 @@ export class PaymentsService extends Context.Service<
       request: MockPurchaseRequest,
     ) => Effect.Effect<PurchaseResponse, InvalidPurchase | PaymentsNotFound | PaymentsUnavailable>;
     readonly purchases: (owner: CoinOwner) => Effect.Effect<PurchasesResponse, PaymentsUnavailable>;
-    /**
-     * Applies an App Store Server Notification V2 once. Refunds and revocations take the coins
-     * back, a reversed refund gives them back, and everything else is only recorded.
-     *
-     * `CONSUMPTION_REQUEST` (Apple asking about a refund request for a consumable) is recorded and
-     * not answered: answering needs an App Store Server API key, which does not exist yet. Apple
-     * then decides the refund without that information.
-     */
+    /** Applied once. `CONSUMPTION_REQUEST` is recorded, not answered: that needs an App Store
+     * Server API key, so Apple decides the refund without it. */
     readonly notification: (
       signedPayload: Redacted.Redacted<string>,
     ) => Effect.Effect<void, InvalidPurchase | PaymentsUnavailable>;
@@ -167,11 +159,8 @@ export class PaymentsService extends Context.Service<
         return { duplicate: credited.duplicate, balance };
       });
 
-      // A refund or a reversed refund, in the pair's wallet, under the id the ledger's step will
-      // write. It goes before the ledger's step, which records the notification: once that is
-      // stored a retry stops early, so a wallet that failed would never get it. A refund takes back
-      // what the credit or the last restore paid; a restore gives back what its refund took.
-      // Nothing when the purchase is not in the state the step starts from, or has no pair.
+      // Before the ledger's step: once that records the notification a retry stops early, so a
+      // wallet that failed would never get it. Uses the id the ledger's step will write.
       const reverseInWallet = Effect.fnUntraced(function* (
         stored: StoredPurchase,
         step: "refund" | "restore",

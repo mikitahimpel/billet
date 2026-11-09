@@ -2,7 +2,7 @@ import { Schema } from "effect";
 import { NoteId } from "@billet/contracts-domain/ids";
 import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 
-/** Sets the caller's reaction to the partner's photo, or takes it back when `reaction` is absent. */
+/** Takes the caller's reaction back when `reaction` is absent. */
 export const ReactRequest = Schema.Struct({
   note: NoteId,
   reaction: Schema.optionalKey(Reaction),

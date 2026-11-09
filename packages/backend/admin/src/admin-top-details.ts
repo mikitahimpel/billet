@@ -17,7 +17,6 @@ export interface TopDetail {
   readonly total?: number;
 }
 
-/** The most chosen details of one name. */
 export interface TopDetails {
   readonly name: ClientEventName;
   readonly items: ReadonlyArray<TopDetail>;
@@ -40,10 +39,7 @@ export const topNames: ReadonlyArray<ClientEventName> = [
 
 const topCount = 5;
 
-/**
- * The most chosen cats, items, toys and the like over the `days` ending `today`, at most
- * `topCount` per name, from `event_details`. Pure. Rows hold no person or pair.
- */
+/** At most `topCount` per name over the `days` ending `today`. Rows hold no person or pair. */
 export const buildTopDetails = (
   details: ReadonlyArray<DetailRow>,
   today: string,

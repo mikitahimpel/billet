@@ -1,8 +1,7 @@
 import { systemNow } from "./wall-clock.ts";
 
 // The demo Worker must not load Effect or any @billet package (test/demo-imports.node.test.ts), so
-// its trace and log lines are written here by hand, in the shape of the main Worker's
-// (docs/observability.md). Only fixed labels and numbers are passed in.
+// these lines are hand-written in the main Worker's shape. Only fixed labels and numbers go in.
 
 type Level = "info" | "warn" | "error";
 
@@ -18,18 +17,14 @@ const hex = (bytes: number): string =>
     byte.toString(16).padStart(2, "0"),
   ).join("");
 
-/** One log line from the demo Worker. `fields` must hold fixed labels and numbers only. */
+/** `fields` must hold fixed labels and numbers only. */
 export const logLine = (
   level: Level,
   message: string,
   fields: Readonly<Record<string, string | number | boolean>> = {},
 ): void => write(level, { message, ...fields });
 
-/**
- * Runs `run` as a root span named `name` and writes one `trace` line when it ends: ids, `ms`,
- * `status`, the error's class if it threw (never its message), and `attributes`. A throw is
- * rethrown.
- */
+/** Logs the error's class if it threw, never its message, and rethrows. */
 export const traced = async <A>(
   name: string,
   attributes: Readonly<Record<string, string>>,

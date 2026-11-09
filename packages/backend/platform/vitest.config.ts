@@ -79,8 +79,8 @@ export default defineConfig({
           name: "node",
           environment: "node",
           include: ["test/**/*.node.test.ts"],
-          // drizzle-kit spawns here and has only the default timeout, so it runs before the
-          // workerd projects instead of beside them. Three projects at once starved it on CI.
+          // drizzle-kit spawns here with only the default timeout, so it runs before the workerd
+          // projects instead of beside them, where they starve it.
           sequence: { groupOrder: 0 },
         },
       },

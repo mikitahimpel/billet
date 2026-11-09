@@ -17,17 +17,11 @@ export const StoredOnboardingAnswer = Schema.Struct({
 });
 export type StoredOnboardingAnswer = typeof StoredOnboardingAnswer.Type;
 
-/**
- * Persistence for onboarding answers: one per account and step. The rows go with the account.
- * `test/onboarding-repository-contract.ts` is the behaviour any implementation must pass.
- */
+/** One answer per account and step. Contract: `test/onboarding-repository-contract.ts`. */
 export class OnboardingRepository extends Context.Service<
   OnboardingRepository,
   {
-    /**
-     * Stores the answer, replacing the account's earlier one to the same step unless that one has
-     * a later `answeredAt`. A repeat of the same answer changes nothing. Safe to call at once.
-     */
+    /** Keeps whichever answer to the step has the later `answeredAt`. Safe to call concurrently. */
     readonly save: (answer: StoredOnboardingAnswer) => Effect.Effect<void, OnboardingUnavailable>;
     /** The account's answers, in no set order. */
     readonly answersOf: (

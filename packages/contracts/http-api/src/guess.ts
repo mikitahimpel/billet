@@ -11,9 +11,7 @@ import {
 } from "@billet/contracts-domain/guess";
 
 /**
- * `GET /v1/guess`, and the answer to an answer: today's round as the caller sees it. `answers` are
- * the caller's own, in the order given; the partner's stay hidden, counted in `partnerAnswered`,
- * until both have answered every question. Then `reveal` holds each question in round order.
+ * `answers`: the caller's own. The partner's stay hidden until both answered all; then `reveal`.
  */
 export const GuessResponse = Schema.Struct({
   round: GuessRound,
@@ -24,10 +22,7 @@ export const GuessResponse = Schema.Struct({
 });
 export type GuessResponse = typeof GuessResponse.Type;
 
-/**
- * `POST /v1/guess/answers`: one answer to a question of today's round. The subject's is the truth,
- * the guesser's a guess. It locks: the same option again changes nothing, another one is refused.
- */
+/** The subject's is the truth, the guesser's a guess. Locks: a different option is refused. */
 export const GuessAnswerRequest = Schema.Struct({
   round: LocalDay,
   question: GuessQuestionId,
@@ -35,10 +30,7 @@ export const GuessAnswerRequest = Schema.Struct({
 });
 export type GuessAnswerRequest = typeof GuessAnswerRequest.Type;
 
-/**
- * `GET /v1/guess/catalog`: every question. `version` changes with the questions and is the
- * response's ETag, so a client that has it gets a 304.
- */
+/** `GET /v1/guess/catalog`. `version` is the ETag, so a client that has it gets a 304. */
 export const GuessCatalogResponse = Schema.Struct({
   version: Schema.String.check(Schema.isPattern(/^[0-9a-f]{16}$/)),
   questions: Schema.Array(GuessQuestion),

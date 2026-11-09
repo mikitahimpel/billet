@@ -26,11 +26,8 @@ export interface FlagConfigSave {
   readonly at: EpochMillis;
 }
 
-/**
- * What the admin panel writes: the live configuration of each registry entry, its history, and
- * per-pair overrides. Every write adds a history line in the same transaction.
- * `test/flag-config-repository-contract.ts` is the behaviour any implementation must pass.
- */
+/** Every write adds a history line in the same transaction.
+ * `test/flag-config-repository-contract.ts` is the behaviour any implementation must pass. */
 export class FlagConfigRepository extends Context.Service<
   FlagConfigRepository,
   {

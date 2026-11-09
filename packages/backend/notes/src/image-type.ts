@@ -9,10 +9,7 @@ const jpegSignature = [0xff, 0xd8, 0xff];
 /** `ftyp`, the box an ISO-BMFF file opens with, at offset 4 after the box's size. */
 const fileTypeBox = [0x66, 0x74, 0x79, 0x70];
 
-/**
- * The major brands of HEIF stills and sequences an iPhone or other camera writes. `mif1` is the
- * generic HEIF brand, which some encoders write in place of `heic`.
- */
+/** HEIF brands a camera writes; some encoders write the generic `mif1` in place of `heic`. */
 const heifBrands = new Set(["heic", "heix", "heim", "heis", "hevc", "hevx", "mif1"]);
 
 const startsWith = (bytes: Uint8Array, signature: ReadonlyArray<number>, offset = 0) =>
@@ -38,14 +35,9 @@ const contentTypes: Record<string, string> = {
   heic: "image/heic",
 };
 
-/** The file extension a key of this type ends with. */
 export const extensionOf = (type: ImageType): string => extensions[type];
 
-/**
- * The content type of the image under `key`, from the extension the upload gave it. Keys from
- * before JPEG and HEIC were accepted all end in `.png`. Anything else is served as bytes, never
- * as something a browser might render.
- */
+/** By the key's extension; anything else is served as bytes, never as something to render. */
 export const contentTypeOf = (key: MediaKey): string => {
   const dot = key.lastIndexOf(".");
   return (dot === -1 ? undefined : contentTypes[key.slice(dot + 1)]) ?? "application/octet-stream";

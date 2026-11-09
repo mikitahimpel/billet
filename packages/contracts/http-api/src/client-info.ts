@@ -13,10 +13,7 @@ export interface ClientInfo {
   readonly os: string;
 }
 
-/**
- * The build and system the app named in its `clientHeaders`. Anything that is not exactly the
- * documented shape is `unknown`, so a header cannot carry free text any further.
- */
+/** Anything not exactly the documented shape is `unknown`, so no free text gets further. */
 export const clientInfoOf = (headers: Readonly<Record<string, string | undefined>>): ClientInfo => {
   const appVersion = headers[clientHeaders.appVersion]?.trim() ?? "";
   const os = headers[clientHeaders.os]?.trim() ?? "";

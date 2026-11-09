@@ -116,7 +116,6 @@ const pageLimit = 100;
 /** Open live strokes kept per socket; a begin past it is dropped. Bounds the attachment. */
 const maxOpenStrokes = 16;
 
-/** The Worker bindings the room reads: the directory for tokens, and the APNs settings. */
 interface PairRoomEnv extends PushLaneSettings {
   readonly DB: D1Database;
 }
@@ -128,21 +127,15 @@ interface SocketAttachment {
   readonly sentSeq: number | null;
   /** Live strokes this socket began and has not ended, dropped for the partner if it leaves. */
   readonly openStrokes?: ReadonlyArray<number>;
-  /**
-   * The highest cat journal `seq` this socket has been sent; null (or absent, on a socket accepted
-   * before the cat existed) until it resumes with `lastCatSeq`.
-   */
+  /** Highest cat journal `seq` sent; null or absent until it resumes with `lastCatSeq`. */
   readonly sentCatSeq?: number | null;
   /** Whether this socket resumed with `activity: true` and is told its user's unread count. */
   readonly activity?: boolean;
-  /**
-   * The highest reaction `rev` this socket has been sent; null (or absent) until it resumes with
-   * `lastReactionRev`.
-   */
+  /** Highest reaction `rev` sent; null or absent until it resumes with `lastReactionRev`. */
   readonly sentReactionRev?: number | null;
   /** Whether this socket resumed with `shop: true` and is sent the pair's shop when it changes. */
   readonly shop?: boolean;
-  /** Whether this socket resumed with `lists: true` and is sent the pair's lists when they change. */
+  /** Resumed with `lists: true`: sent the pair's lists when they change. */
   readonly lists?: boolean;
   /** Whether this socket resumed with `moods: true` and is told each check-in. */
   readonly moods?: boolean;
@@ -152,7 +145,6 @@ interface SocketAttachment {
   readonly riddle?: boolean;
 }
 
-/** Outputs that change what `shopOf` shows. */
 const shopOutputs: ReadonlySet<string> = new Set([
   "CoinsEntered",
   "InksGranted",
@@ -170,25 +162,17 @@ const send = (socket: WebSocket, message: ServerMessage): void => {
 };
 
 /**
- * One couple. This class only moves calls into the runtime: the rules are in
- * `@billet/backend-pair-room` and the SQL is in `pair-room-sqlite-store.ts`.
- *
- * The runtime holds the lock that orders this room's commands, so it must stay per object: do not
- * share a `memoMap` here. It holds no resources that outlive the object, and Durable Objects have
- * no shutdown hook, so eviction simply drops it and the next event builds a new one.
+ * The runtime holds this room's command lock, so it stays per object: never share a `memoMap`.
  */
 export class PairRoom extends DurableObject {
   /**
-   * Opens the database and applies pending migrations before any event is delivered. A migration
-   * that cannot apply rejects here, which resets the object, so every request retries it. The
-   * database lives in a scope that is never closed: the object has no shutdown hook, and eviction
-   * drops it.
+   * A failed migration resets the object, so each request retries; the scope is never closed.
    */
   private readonly database = this.ctx.blockConcurrencyWhile(() =>
     Effect.runPromise(openRoomDatabase(this.ctx.storage).pipe(Scope.provide(Scope.makeUnsafe()))),
   );
 
-  /** Set by `destroy`: the room's tables are gone, so the close of its sockets has nothing to settle. */
+  /** Set by `destroy`: the tables are gone, so closing sockets has nothing to settle. */
   private destroyed = false;
 
   private readonly frameWindows = new WeakMap<WebSocket, FrameWindow>();
@@ -215,13 +199,10 @@ export class PairRoom extends DurableObject {
     return this.env as PairRoomEnv;
   }
 
-  /**
-   * The lanes each accepted note is handed to: the APNs widget and alert lanes when the Worker has
-   * an APNs key, and the Live Activity lane when `LIVE_ACTIVITY_PUSH` is `on` (off by default).
-   */
+  /** APNs widget and alert lanes need an APNs key; Live Activity needs `LIVE_ACTIVITY_PUSH=on`. */
   protected deliveryLanes: ReadonlyArray<string> = enabledPushLanes(this.roomEnv);
 
-  /** Tries one lane once. Without an APNs key the alarm has nothing to do. */
+  /** Undefined without an APNs key: the alarm has nothing to send. */
   protected laneSender:
     | {
         readonly send: (
@@ -308,8 +289,7 @@ export class PairRoom extends DurableObject {
   };
 
   /**
-   * Runs one room command. A named command is a root span (`PairRoom.sendNote`) and writes a
-   * `trace` line; reads made per frame (`snapshot`) pass no name, so a drawing does not log.
+   * A named command is a logged root span; per-frame reads pass no name, so drawing does not log.
    */
   private async run<A>(
     program: (room: RoomService["Service"]) => Effect.Effect<A>,
@@ -323,7 +303,6 @@ export class PairRoom extends DurableObject {
     );
   }
 
-  /** Runs one gift command for `by` and answers with what they may see after it. */
   async gifts(by: UserId, command: GiftCommand): Promise<GiftsResult> {
     return (await this.runtime).runPromise(
       GiftsRoom.use((gifts) => gifts.run(by, command)).pipe(
@@ -336,8 +315,7 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * Runs one Pick tonight command for `by`. A swipe that makes a match is sent to every socket that
-   * follows the lists, the swiper's own included, and pushed to the partner who swiped first.
+   * A match goes to every lists follower, the swiper included, and is pushed to the first swiper.
    */
   async pickTonight(by: UserId, command: PickTonightCommand): Promise<PickTonightResult> {
     const result = await (
@@ -357,8 +335,8 @@ export class PairRoom extends DurableObject {
         if (attachmentOf(socket)?.lists === true) send(socket, { _tag: "MatchFound", match });
       }
     }
-    // A repeated ♥ answers no match but hands its match over again, in case the first try stored the
-    // swipe and failed before saving the delivery. A delivery already saved is left as it is.
+    // A repeated ♥ hands its match over again, in case the first try stored the swipe and failed
+    // before saving the delivery. A delivery already saved is left as it is.
     const key = command._tag === "Swipe" ? pickKeyOf(command.title) : undefined;
     const delivered =
       match ??
@@ -372,10 +350,7 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * Runs one Who knows who command for `by`. A stored answer is counted to the partner's sockets
-   * that follow the game; a member who finished their part while the partner has not is pushed to
-   * the partner; the answer that completes the round sends each follower the reveal as its own user
-   * sees it, and the coins it paid to the shop's followers.
+   * Progress goes to the partner's followers; the last answer sends each follower its own reveal.
    */
   async guess(by: UserId, command: GuessCommand): Promise<GuessResult> {
     const { result, progress, revealed, coins } = await (
@@ -413,11 +388,7 @@ export class PairRoom extends DurableObject {
     return result;
   }
 
-  /**
-   * Runs one draw-guess command for `by`. A stored change goes to every socket that follows the
-   * game, as its own user sees it; a new riddle is pushed to its guesser and an ended one to its
-   * drawer; an end's journal entry and coins go to the journal's and the shop's followers.
-   */
+  /** Each follower gets the change as its own user sees it. */
   async riddle(by: UserId, command: RiddleCommand): Promise<RiddleResult> {
     const { result, changed, push, decision } = await (
       await this.runtime
@@ -447,7 +418,6 @@ export class PairRoom extends DurableObject {
     return result;
   }
 
-  /** Sends every socket that follows draw-guess the riddle as its own user sees it. */
   private pushRiddle(row: RiddleRow): void {
     for (const socket of this.ctx.getWebSockets()) {
       const attachment = attachmentOf(socket);
@@ -457,10 +427,7 @@ export class PairRoom extends DurableObject {
     }
   }
 
-  /**
-   * What a socket that resumed following Who knows who missed: the reveal of today's round, or
-   * else how many questions the partner has answered, if any.
-   */
+  /** A resuming follower gets today's reveal, or else the partner's answered count. */
   private async catchUpGuess(socket: WebSocket, user: UserId): Promise<void> {
     const { result } = await (
       await this.runtime
@@ -474,7 +441,7 @@ export class PairRoom extends DurableObject {
     }
   }
 
-  /** What a socket that resumed following draw-guess missed: each open riddle as it stands. */
+  /** A resuming follower gets each open riddle as it stands. */
   private async catchUpRiddles(socket: WebSocket, user: UserId): Promise<void> {
     const { result } = await (
       await this.runtime
@@ -483,7 +450,6 @@ export class PairRoom extends DurableObject {
     for (const riddle of result.view.open) send(socket, { _tag: "RiddleChanged", riddle });
   }
 
-  /** Sends every socket that follows Who knows who the round's reveal, as its user sees it. */
   private async pushReveal(): Promise<void> {
     const views = new Map<string, GuessResult>();
     for (const socket of this.ctx.getWebSockets()) {
@@ -510,9 +476,7 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * The pair's lists for `by`, after `request` when there is one. A change is pushed to every socket
-   * that follows the lists; a tick's coins to every one that follows the shop; an add to the
-   * partner's Inbox count.
+   * Pushes changes to lists followers, coins to shop followers, an add to the partner's Inbox.
    */
   async lists(by: UserId, request?: ChangeListRequest): Promise<ListsResult> {
     const { result, decision } = await this.run(
@@ -564,10 +528,7 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  /**
-   * Sets or takes back `by`'s reaction, tells every socket that follows reactions, and sends the
-   * photo's author an alert for a new one.
-   */
+  /** Tells reaction followers; a new reaction also alerts the photo's author. */
   async react(by: UserId, request: ReactRequest): Promise<RoomDecision> {
     const decision = await this.run((room) => room.react(by, request), "PairRoom.react");
     if (decision._tag === "Accepted") {
@@ -582,15 +543,11 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  /** Reaction changes with `rev` above `afterRev`, oldest first. */
   reactions(afterRev: number, limit: number): Promise<ReadonlyArray<NoteReaction>> {
     return this.run((room) => room.reactionsAfter(afterRev, limit), "PairRoom.reactions");
   }
 
-  /**
-   * Replaces `by`'s check-in, tells every socket that follows moods, the caller's own other devices
-   * among them, and moves the partner's Inbox count.
-   */
+  /** Moods followers include the caller's own other devices; also moves the partner's Inbox. */
   async setMood(by: UserId, request: SetMoodRequest): Promise<RoomDecision> {
     const decision = await this.run((room) => room.setMood(by, request), "PairRoom.setMood");
     if (decision._tag === "Accepted") {
@@ -639,7 +596,6 @@ export class PairRoom extends DurableObject {
     return this.run((room) => room.streak, "PairRoom.streak");
   }
 
-  /** Adopts the couple's cat, or renames it, and tells every socket that follows the journal. */
   async saveCat(
     user: UserId,
     request: SaveCatRequest,
@@ -665,7 +621,6 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  /** Appends one journal entry and brings every socket that follows the journal up to date. */
   async recordCatEvent(by: UserId, request: RecordCatEventRequest): Promise<RoomDecision> {
     const decision = await this.run(
       (room) => room.recordCatEvent(by, request),
@@ -698,7 +653,6 @@ export class PairRoom extends DurableObject {
     return unread;
   }
 
-  /** Sends the pair's shop to every socket that follows it, when `decision` changed it. */
   private async pushShop(decision: RoomDecision): Promise<void> {
     if (decision._tag !== "Accepted") return;
     if (!decision.outputs.some((output) => shopOutputs.has(output._tag))) return;
@@ -711,10 +665,7 @@ export class PairRoom extends DurableObject {
     for (const socket of sockets) send(socket, { _tag: "ShopChanged", shop });
   }
 
-  /**
-   * Tells each socket that follows the Inbox, of the users `who` picks, its user's unread count.
-   * Each count is read once, however many devices a user has.
-   */
+  /** Each count is read once, however many devices a user has. */
   private async pushUnread(who: (user: string) => boolean): Promise<void> {
     const users = new Set<string>();
     for (const socket of this.ctx.getWebSockets()) {
@@ -744,12 +695,11 @@ export class PairRoom extends DurableObject {
     return this.run((room) => room.catView, "PairRoom.cat");
   }
 
-  /** Journal entries with `seq` above `afterSeq`, in order. */
   catJournal(afterSeq: number, limit: number): Promise<ReadonlyArray<CatEntry>> {
     return this.run((room) => room.catEntriesAfter(afterSeq, limit), "PairRoom.catJournal");
   }
 
-  /** Hands a note to every configured lane, once each, and makes sure the alarm will run. */
+  /** Once per lane per note: enqueueing is idempotent. */
   private async enqueueDeliveries(noteId: string): Promise<void> {
     if (this.deliveryLanes.length === 0) return;
     const deliveries = deliveriesOf(await this.database);
@@ -763,10 +713,7 @@ export class PairRoom extends DurableObject {
     await this.scheduleAlarm();
   }
 
-  /**
-   * The room has one alarm, for both its deliveries and its demo bot: it is set for whichever is
-   * due first. Without a lane sender the deliveries wait for nothing, so they set no alarm.
-   */
+  /** One alarm for deliveries and the demo bot; without a lane sender deliveries set none. */
   private async scheduleAlarm(): Promise<void> {
     const entries = await Effect.runPromise(deliveriesOf(await this.database).all);
     const bot = await this.demoBot();
@@ -778,21 +725,16 @@ export class PairRoom extends DurableObject {
     else await this.ctx.storage.deleteAlarm();
   }
 
-  /** How each lane is doing in this room. */
   async deliveryHealth(): Promise<Readonly<Record<string, LaneHealth>>> {
     return deliveryHealth(await this.deliveries());
   }
 
-  /** The delivery rows, for tests and diagnostics. */
   async deliveries(): Promise<ReadonlyArray<DeliveryEntry>> {
     return Effect.runPromise(deliveriesOf(await this.database).all);
   }
 
   /**
-   * Works through the pending deliveries that are due, one try each, then lets a demo pair's bot
-   * take its turn. A sender that throws counts as a retry, so a failing lane backs off instead of
-   * ending the alarm. Delivered and abandoned entries are never sent again, which is what makes a
-   * repeated alarm harmless.
+   * A throwing sender is a retry; delivered and abandoned entries never resend, so reruns are safe.
    */
   override async alarm(): Promise<void> {
     const sender = this.laneSender;
@@ -826,10 +768,7 @@ export class PairRoom extends DurableObject {
     });
   }
 
-  /**
-   * Makes this a demo pair's room: from now on `bot` acts here now and then, through the same
-   * calls a phone's requests reach. Repeating it for the same bot keeps its plans.
-   */
+  /** Acts through the calls a phone reaches. Repeating it for the same bot keeps its plans. */
   async startDemo(owner: UserId, bot: UserId): Promise<void> {
     if ((await this.demoBot())?.bot !== bot) {
       await this.ctx.storage.put(demoBotKey, startDemoBot(bot, owner, this.clock()));
@@ -837,7 +776,6 @@ export class PairRoom extends DurableObject {
     await this.scheduleAlarm();
   }
 
-  /** The bot does nothing more here. */
   async stopDemo(): Promise<void> {
     await this.ctx.storage.delete(demoBotKey);
     await this.scheduleAlarm();
@@ -848,7 +786,7 @@ export class PairRoom extends DurableObject {
     return stored._tag === "Some" ? stored.value : undefined;
   }
 
-  /** Lets the bot plan around a note just stored. Each read and write here is storage only. */
+  /** Storage reads and writes only. */
   private async showDemoBot(note: Note): Promise<void> {
     const bot = await this.demoBot();
     if (bot === undefined) return;
@@ -858,7 +796,6 @@ export class PairRoom extends DurableObject {
     await this.scheduleAlarm();
   }
 
-  /** Lets the bot plan its part of today's round around an answer just stored. */
   private async showDemoBotGuess(by: UserId): Promise<void> {
     const bot = await this.demoBot();
     if (bot === undefined) return;
@@ -869,8 +806,7 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * The bot's one due action, if any. Its plans move on before it acts, so an action that fails
-   * or is refused is dropped instead of retried. A room the bot no longer belongs to stops it.
+   * Plans move on before acting, so a failed action is dropped; a non-member bot is stopped.
    */
   private async actAsDemoBot(): Promise<void> {
     const bot = await this.demoBot();
@@ -927,15 +863,14 @@ export class PairRoom extends DurableObject {
     return this.run((room) => room.state);
   }
 
-  /** Notes with `seq` above `afterSeq`, in order. */
-  /** The ink colours the pair bought, in the order it got them. The free ink is not listed. */
+  /** In the order bought. The free ink is not listed. */
   inks(): Promise<ReadonlyArray<InkId>> {
     return this.run((room) =>
       room.state.pipe(Effect.map((state) => (state._tag === "Active" ? state.inks : []))),
     );
   }
 
-  /** Gives the pair room pieces it does not have: purchases kept from an earlier pair. */
+  /** Purchases kept from an earlier pair. */
   async grantItems(items: ReadonlyArray<RoomItemId>): Promise<RoomDecision> {
     const decision = await this.run(
       (room) => room.dispatch({ _tag: "GrantItems", items }),
@@ -945,7 +880,7 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  /** Gives the pair ink colours. The wallet calls it once it has taken their coins. */
+  /** The wallet calls it once it has taken the coins. */
   async grantInks(inks: ReadonlyArray<InkId>): Promise<RoomDecision> {
     const decision = await this.run(
       (room) => room.dispatch({ _tag: "GrantInks", inks }),
@@ -955,10 +890,7 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  /**
-   * The pair's balance and its wallet entries after `after`, oldest first, or null while the room
-   * is not open. A room owed its welcome coins gets them first.
-   */
+  /** Null while the room is not open. A room owed its welcome coins gets them first. */
   coins(after: CoinEntryId | undefined, limit: number): Promise<CoinsResponse | null> {
     return this.run(
       (room) =>
@@ -971,17 +903,14 @@ export class PairRoom extends DurableObject {
     );
   }
 
-  /** Buys one ink with the pair's coins. A repeated `id` answers with the first buy. */
+  /** A repeated `id` answers with the first buy. */
   async buy(by: UserId, id: IdempotencyKey, ink: InkId, terms?: PriceTerms): Promise<RoomDecision> {
     const decision = await this.run((room) => room.buy(by, id, ink, terms), "PairRoom.buy");
     await this.pushShop(decision);
     return decision;
   }
 
-  /**
-   * The pair's balance, inks, room pieces and wishlist, or null while the room is not open. A room
-   * owed its welcome coins gets them first.
-   */
+  /** Null while the room is not open. A room owed its welcome coins gets them first. */
   shop(): Promise<ShopResponse | null> {
     return this.run(
       (room) =>
@@ -990,7 +919,7 @@ export class PairRoom extends DurableObject {
     );
   }
 
-  /** Buys one offer with the pair's coins. A repeated `id` answers with the first order. */
+  /** A repeated `id` answers with the first order. */
   async order(
     by: UserId,
     id: IdempotencyKey,
@@ -1005,7 +934,7 @@ export class PairRoom extends DurableObject {
     return this.afterCoins(decision, by);
   }
 
-  /** Opens the day's gift, once a day for the pair. */
+  /** Once a day for the pair. */
   async openGift(by: UserId, utcOffsetSeconds: number | undefined): Promise<RoomDecision> {
     const decision = await this.run(
       (room) => room.openGift(by, utcOffsetSeconds),
@@ -1014,7 +943,7 @@ export class PairRoom extends DurableObject {
     return this.afterCoins(decision, by);
   }
 
-  /** Collects a complete collection's bonus, once. */
+  /** Once per collection. */
   async claimBonus(by: UserId, collection: CollectionId): Promise<RoomDecision> {
     const decision = await this.run(
       (room) => room.claimBonus(by, collection),
@@ -1023,7 +952,7 @@ export class PairRoom extends DurableObject {
     return this.afterCoins(decision, by);
   }
 
-  /** Pays an app earn, once per ref. An earn is no Inbox item. */
+  /** Once per ref. An earn is no Inbox item. */
   async earn(
     by: UserId,
     event: EarnEvent,
@@ -1037,7 +966,7 @@ export class PairRoom extends DurableObject {
     return decision;
   }
 
-  /** Pays in or takes back coins bought with money, once per entry id. No Inbox item. */
+  /** Coins bought with money, once per entry id. No Inbox item. */
   creditPurchase(credit: PurchaseCredit): Promise<RoomDecision> {
     return this.run((room) => room.creditPurchase(credit), "PairRoom.creditPurchase");
   }
@@ -1073,10 +1002,7 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * The pair is ending because `user` is leaving: deletes every note they sent with its delivery
-   * rows, and the cat with its whole journal, returns those notes so their images can go too, and
-   * closes every socket of the room.
-   * Repeating it finds nothing more to delete.
+   * Deletes the leaver's notes and deliveries and the cat; returns the notes so images go too.
    */
   async forgetMember(user: UserId): Promise<ReadonlyArray<SequencedNote>> {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
@@ -1092,10 +1018,7 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * The pair has ended and the room goes with it: closes every socket, cancels the alarm and
-   * deletes every row of every room table, the notes, cat, shop and wallet. The tables stay, so the
-   * object keeps working, empty, for a late request such as the account erasure that may follow.
-   * Safe to repeat.
+   * Empties every room table but keeps them, so a late request such as account erasure works.
    */
   async destroy(): Promise<void> {
     this.destroyed = true;
@@ -1109,10 +1032,7 @@ export class PairRoom extends DurableObject {
     });
   }
 
-  /**
-   * Closes every open socket and stills a demo pair's bot: the pair has ended, and the Worker
-   * won't route a new one here.
-   */
+  /** Also stills a demo pair's bot: the pair has ended and the Worker won't route here again. */
   async endSessions(): Promise<void> {
     for (const socket of this.ctx.getWebSockets()) {
       try {
@@ -1124,10 +1044,7 @@ export class PairRoom extends DurableObject {
     if ((await this.demoBot()) !== undefined) await this.stopDemo();
   }
 
-  /**
-   * Accepts a partner's hibernatable WebSocket. The object can leave memory while the socket stays
-   * open, so an idle room costs nothing. Its messages are the relay in `webSocketMessage`.
-   */
+  /** Hibernatable: the object can leave memory while the socket stays open. */
   override async fetch(request: Request): Promise<Response> {
     if (request.headers.get("Upgrade") !== "websocket") {
       return new Response(null, { status: 426 });
@@ -1149,10 +1066,7 @@ export class PairRoom extends DurableObject {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  /**
-   * One frame from a partner's device. Frames that are not text, too large, or not a
-   * `ClientMessage` are dropped; an oversized one also ends the connection.
-   */
+  /** Drops frames that are not text, too large, or not a `ClientMessage`; too large also closes. */
   override async webSocketMessage(socket: WebSocket, data: string | ArrayBuffer): Promise<void> {
     if (typeof data !== "string") return;
     if (data.length > maxFrameLength) {
@@ -1166,10 +1080,8 @@ export class PairRoom extends DurableObject {
 
     switch (message.value._tag) {
       case "Resume": {
-        // Start from what the client holds, never from more than it asks for. A client that
-        // leaves `lastCatSeq` out does not follow the cat's journal, nor one without `activity`
-        // the Inbox, nor one without `shop` the shop, nor one without `lists` the lists, nor one
-        // without `guess` or `riddle` those games.
+        // Start from what the client holds, never more. Each flag it leaves out (`lastCatSeq`,
+        // `activity`, `shop`, `lists`, `guess`, `riddle`) is a stream it does not follow.
         const {
           lastSeq,
           lastCatSeq,
@@ -1270,7 +1182,6 @@ export class PairRoom extends DurableObject {
     return admitted;
   }
 
-  /** Tells the partner to discard the strokes a leaving socket left open. */
   private dropOpenStrokes(socket: WebSocket): void {
     const attachment = attachmentOf(socket);
     if (attachment === undefined) return;
@@ -1280,7 +1191,7 @@ export class PairRoom extends DurableObject {
     socket.serializeAttachment({ ...attachment, openStrokes: [] } satisfies SocketAttachment);
   }
 
-  /** Sends one socket every stored note it has not seen, oldest first, without repeats. */
+  /** Oldest first, without repeats. */
   private async catchUp(socket: WebSocket): Promise<void> {
     for (;;) {
       const attachment = attachmentOf(socket);
@@ -1301,7 +1212,6 @@ export class PairRoom extends DurableObject {
     }
   }
 
-  /** Sends one socket every journal entry it has not seen, oldest first, without repeats. */
   private async catchUpCat(socket: WebSocket): Promise<void> {
     for (;;) {
       const attachment = attachmentOf(socket);
@@ -1320,7 +1230,6 @@ export class PairRoom extends DurableObject {
     }
   }
 
-  /** Sends one socket every reaction change it has not seen, oldest first, without repeats. */
   private async catchUpReactions(socket: WebSocket): Promise<void> {
     for (;;) {
       const attachment = attachmentOf(socket);
@@ -1343,12 +1252,10 @@ export class PairRoom extends DurableObject {
     await Promise.all(this.ctx.getWebSockets().map((socket) => this.catchUpReactions(socket)));
   }
 
-  /** After a journal entry is stored, brings every socket that follows the journal up to date. */
   private async pushCatEntries(): Promise<void> {
     await Promise.all(this.ctx.getWebSockets().map((socket) => this.catchUpCat(socket)));
   }
 
-  /** After a note is stored, brings every resumed socket of the couple up to date. */
   private async pushNotes(): Promise<void> {
     await Promise.all(this.ctx.getWebSockets().map((socket) => this.catchUp(socket)));
   }
@@ -1359,7 +1266,7 @@ export class PairRoom extends DurableObject {
     }
   }
 
-  /** The user has no open socket left: they cannot be drawing, so the partner is told they stopped. */
+  /** No open socket left: the user cannot be drawing, so the partner is told they stopped. */
   private async leave(socket: WebSocket): Promise<void> {
     const user = attachmentOf(socket)?.user;
     if (user === undefined) return;
@@ -1373,8 +1280,7 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * Answers a client's close. 1006 and 1015 mean the connection is already gone, so there is
-   * nothing to answer and `close` would throw. 1005 means no code was sent, and cannot be sent back.
+   * 1006 and 1015: connection gone, `close` would throw. 1005: no code was sent, none to echo.
    */
   override async webSocketClose(socket: WebSocket, code: number): Promise<void> {
     if (this.destroyed) return;

@@ -1,16 +1,7 @@
 #!/bin/sh
-# Reads the admin panel's data as an agent: GET https://$BILLET_ADMIN_HOST/admin/api/agent/<route>
-# with the agents' Cloudflare Access service token, and prints the JSON answer. Read-only: the
-# Worker refuses every write from a service token. See docs/admin.md#agent-api.
-#
 #   PROTON_PASS_AGENT_REASON="<why>" pp run --env-file .env.pass.agents -- scripts/admin-read.sh flags
-#
-# Routes: overview, experiments, flags, flag-history[?key=<key>&limit=<1-500>], pairs/<pair id>,
-# status, status-history[?limit=<1-200>], purchases[?limit=<1-1000>].
-# Needs CF_ACCESS_CLIENT_ID and CF_ACCESS_CLIENT_SECRET in the environment (`.env.pass.agents`
-# resolves them); the credentials go to curl on stdin, never on its command line. The API host is
-# BILLET_ADMIN_HOST, from the environment or else from a local file that is never committed:
-# $BILLET_ADMIN_ENV_FILE, by default ~/.config/billet/admin.env, with a line BILLET_ADMIN_HOST=<host>.
+# Routes: overview, experiments, flags, flag-history[?key=&limit=], pairs/<pair id>, status,
+# status-history[?limit=], purchases[?limit=]. Read-only; see docs/admin.md#agent-api.
 set -eu
 
 usage() {

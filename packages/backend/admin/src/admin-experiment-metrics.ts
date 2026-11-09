@@ -2,19 +2,12 @@ import { addDays, type FlagRow, wilson } from "@billet/backend-metrics/funnel";
 import { minimumGroup, type BuildEventRow } from "./admin-retention.ts";
 
 /**
- * Secondary and guardrail metrics for each experiment, per variant, each with a 95% interval and
- * the difference from the baseline (the experiment's default variant) with its own interval.
- * Pure, from the same D1 rows as the north star.
- *
- * Every metric is read over a pair's first week, so a variant whose pairs are younger is not
- * judged on less time: only pairs at least 7 days old count, and day 0 is the day the pair formed.
- * A guardrail is worse when the whole interval of its difference sits on the wrong side of zero.
+ * Each pair is read over its first week, so only pairs at least 7 days old count.
  */
 
 export type MetricRole = "secondary" | "guardrail";
 export type MetricUnit = "share" | "perDay";
 
-/** A number with its 95% interval. */
 export interface Estimate {
   readonly value: number;
   readonly low: number;
@@ -26,7 +19,6 @@ export type Change = "better" | "worse" | "unclear";
 
 export interface VariantMetric {
   readonly variant: string;
-  /** Pairs old enough to be measured. */
   readonly pairs: number;
   /** Null when `pairs` is below `minimumGroup` ("too few") or the metric is waiting. */
   readonly estimate: Estimate | null;
@@ -294,10 +286,7 @@ const metricFor = (
   };
 };
 
-/**
- * For each experiment in `flags`, the metrics above per variant. `baselines` maps a key to its
- * default variant; without one (or when no pair has it), the first variant by name is the baseline.
- */
+/** Without a baseline for a key (or no pair in it), the first variant by name is the baseline. */
 export const buildExperimentMetrics = (
   events: ReadonlyArray<BuildEventRow>,
   flags: ReadonlyArray<FlagRow>,

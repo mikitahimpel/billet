@@ -1,14 +1,6 @@
-// A remote Alchemy state store in a D1 database of the deploy's own Cloudflare account, reached
-// through the Cloudflare REST API with the deploy's credentials. It keeps the same rows as
-// `State.localState()` (one JSON document per resource, plus the stack output), so a deployed
-// stage's state does not depend on the checkout or CI run that deployed it. See docs/alchemy.md.
-//
-// Why not `Cloudflare.state()`: it keeps its token and encryption key in the account's Secrets
-// Store, and the deploy token deliberately has no access to that. This store needs only D1.
-//
-// The database is created on first use and is not part of the stack, so `alchemy destroy` keeps it.
-// Like the local store, rows hold Worker secrets in plaintext: anyone with the deploy token can
-// read them, which the token's Workers access already allows.
+// Not `Cloudflare.state()`: that needs the account's Secrets Store, which the deploy token cannot
+// reach. The database is outside the stack, so `alchemy destroy` keeps it. Rows hold Worker
+// secrets in plaintext, readable with the deploy token, as its Workers access already allows.
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import * as HttpClient from "effect/http/HttpClient";

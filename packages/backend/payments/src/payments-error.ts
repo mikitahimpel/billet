@@ -1,9 +1,6 @@
 import { Data } from "effect";
 
-/**
- * An App Store transaction or notification that is refused: its signature, chain, bundle,
- * environment or product. `reason` is a fixed label for the logs, never quoting the input.
- */
+/** `reason` is a fixed label for the logs, never quoting the input. */
 export class InvalidPurchase extends Data.TaggedError("InvalidPurchase")<{
   readonly reason: string;
 }> {}

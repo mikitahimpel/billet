@@ -1,18 +1,12 @@
 import { addDays, type EventRow, type FlagRow, wilson } from "@billet/backend-metrics/funnel";
 
-/**
- * The retention grid: one row per week in which pairs formed, one column per day after forming.
- * Pure, from the same D1 rows as the Overview. A day is a UTC day and day 0 is the day the pair
- * formed, as in the owner report (`buildReport`).
- */
+/** A day is a UTC day and day 0 is the day the pair formed, as in `buildReport`. */
 
-/** The days after forming the grid shows. */
 export const retentionDays = [1, 3, 7, 14, 30, 60] as const;
 
 /** Below this many pairs a cell says "too few" and carries no number at all. */
 export const minimumGroup = 5;
 
-/** A `pair_events` row with the build that sent it, when the server knew it. */
 export interface BuildEventRow extends EventRow {
   /** The day's last moment; the funnel uses it. Taken as `firstAt` when absent. */
   readonly lastAt?: number;
@@ -22,19 +16,12 @@ export interface BuildEventRow extends EventRow {
   readonly os?: string | null;
 }
 
-/**
- * - `both`: both partners active (opened the app or sent a note) on day N;
- * - `either`: at least one of them active;
- * - `bothNote`: both sent a note on day N, the north star at day 7.
- */
+/** Active means opened the app or sent a note. `bothNote` at day 7 is the north star. */
 export type RetentionMode = "both" | "either" | "bothNote";
 export const retentionModes: ReadonlyArray<RetentionMode> = ["both", "either", "bothNote"];
 
 /**
- * One cell. `pending`: no pair of the week has reached the day yet (greyed). `too-few`: fewer than
- * `minimumGroup` have, and nothing else is said. Otherwise the share of the pairs that have
- * reached it, with its 95% Wilson interval; `partial` when some of the week's pairs are still too
- * young to count.
+ * `pending`: no pair reached the day; `too-few`: under `minimumGroup`; `partial`: some too young.
  */
 export type RetentionCell =
   | { readonly state: "pending" }
@@ -102,9 +89,7 @@ const add = (map: Map<string, Set<string>>, day: string, user: string) => {
 };
 
 /**
- * The pairs in the rows: members are those with a `PairClaimed` row and the pair formed on the
- * earliest of those days. Its build is the one on its earliest row the app sent (the server's own
- * rows, such as the claim, carry none): the build it paired on. `unknown` when it has none.
+ * A pair forms on its earliest `PairClaimed` day; its build is the first one the app sent.
  */
 export const pairsOf = (events: ReadonlyArray<BuildEventRow>): ReadonlyArray<Pair> => {
   const byPair = new Map<string, Array<BuildEventRow>>();

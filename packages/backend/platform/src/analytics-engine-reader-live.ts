@@ -5,7 +5,7 @@ import {
   EngineUnavailable,
 } from "@billet/backend-admin/analytics-engine-reader";
 
-/** What the reader needs: the account, a token that can only read Account Analytics, the stage. */
+/** The token can only read Account Analytics. */
 export interface EngineReadConfig {
   readonly accountId: string;
   readonly token: string;
@@ -27,11 +27,7 @@ const Answer = Schema.Struct({
 });
 const decodeAnswer = Schema.decodeUnknownEffect(Answer);
 
-/**
- * `AnalyticsEngineReader` over the Analytics Engine SQL API. Without an account id, a token or a
- * stage it is `none`, and the panel uses D1. Nothing from a failed answer is passed on: the reason
- * is a fixed label, and the response body is never logged (it could echo the query).
- */
+/** Without an account id, token or stage it is `none`. A failure body is never logged. */
 export const AnalyticsEngineReaderLive = (
   config: { readonly [K in keyof EngineReadConfig]?: string | undefined },
   fetcher: typeof fetch = fetch,

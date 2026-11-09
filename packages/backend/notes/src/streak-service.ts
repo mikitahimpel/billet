@@ -17,21 +17,16 @@ const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-una
 const isNotOpen = (decision: RoomDecision) =>
   decision._tag === "Rejected" && decision.rejection._tag === "RoomNotOpen";
 
-/**
- * The couple's love streak, for the caller's own pair. Like notes, every method starts from the
- * pair D1 says the caller belongs to, never one the client names.
- */
+/** Every method starts from the caller's pair in D1, never from one the client names. */
 export class StreakService extends Context.Service<
   StreakService,
   {
     /** The pair's streak; empty before the room opens. */
     readonly get: (userId: UserId) => Effect.Effect<LoveStreak, NotesNotFound | NotesUnavailable>;
-    /** Counts the caller's day and answers with the streak after it. */
     readonly recordDay: (
       userId: UserId,
       request: RecordStreakDayRequest,
     ) => Effect.Effect<LoveStreak, NotesNotFound | NotesUnavailable>;
-    /** Brings the streak back after one missed day. */
     readonly restore: (
       userId: UserId,
       request: RestoreStreakRequest,

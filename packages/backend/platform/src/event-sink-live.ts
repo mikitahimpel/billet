@@ -2,12 +2,9 @@ import { Effect, Layer } from "effect";
 import { EventSink, type AnalyticsPoint } from "@billet/backend-metrics/analytics";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
-/**
- * The row an `AnalyticsPoint` becomes. Positions are the query schema, so never reorder them:
- * add a new blob at the end. docs/experiments.md lists them.
- */
+/** Positions are the query schema (docs/experiments.md): never reorder; append new blobs. */
 export const dataPointOf = (point: AnalyticsPoint): AnalyticsEngineDataPoint => ({
-  // The sampling key: Analytics Engine samples by index, so one pair's events stay together.
+  // Analytics Engine samples by index, so one pair's events stay together.
   indexes: [point.pairHash === "" ? "unpaired" : point.pairHash],
   blobs: [
     point.name,
@@ -20,11 +17,7 @@ export const dataPointOf = (point: AnalyticsPoint): AnalyticsEngineDataPoint => 
   doubles: [1, point.value ?? 0],
 });
 
-/**
- * `EventSink` on a Workers Analytics Engine dataset. `writeDataPoint` queues the point and returns
- * at once; it throws only on a malformed point, which is dropped with a fixed log line. Without
- * the binding (tests, a Worker that has none) nothing is written.
- */
+/** A malformed point is dropped with a fixed log line; without the binding nothing is written. */
 export const EventSinkLive = (
   dataset: AnalyticsEngineDataset | undefined,
 ): Layer.Layer<EventSink> =>

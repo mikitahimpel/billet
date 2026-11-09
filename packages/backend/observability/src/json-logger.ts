@@ -3,10 +3,7 @@ import { redact, redactField, summarizeCause } from "./redact.ts";
 
 export type SinkLevel = "debug" | "info" | "warn" | "error";
 
-/**
- * Where finished lines go. The Worker passes the console, so Workers Logs indexes every field of
- * the JSON and keeps the level; tests pass an array.
- */
+/** The Worker passes the console, so Workers Logs indexes the JSON; tests pass an array. */
 export type LogSink = (level: SinkLevel, line: string) => void;
 
 const sinkLevel = (level: LogLevel.LogLevel): SinkLevel => {
@@ -33,10 +30,7 @@ const spanOf = (context: Context.Context<never>): Tracer.Span | undefined => {
 };
 
 /**
- * One JSON object per `Effect.log*` call: `level`, `message`, the current `traceId`, `spanId` and
- * span name, the log annotations (`requestId`, `pair.ref`, …) as top-level fields, any further
- * message parts under `data`, and the cause summarised under `cause`. Everything but the ids
- * passes through `redact`, so a `Redacted` value, a token or an email never reaches the output.
+ * One JSON object per log call. Everything but the ids passes through `redact`.
  */
 export const jsonLogger = (sink: LogSink): Logger.Logger<unknown, void> =>
   Logger.make(({ message, logLevel, cause, fiber }) => {

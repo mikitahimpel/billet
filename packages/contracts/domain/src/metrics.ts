@@ -1,125 +1,81 @@
 import { Schema } from "effect";
 
-/**
- * Events the app may report about itself. A name, and for some a short detail from a closed set or
- * a catalogue id: no note, no image, no text, no time (the server stamps it). Adding a name here is
- * a privacy decision, listed in docs/privacy.md. `clientEventRules` says which detail each takes.
- */
+/** Never a note, image, text or time (the server stamps it). Adding a name is a privacy
+ * decision, listed in docs/privacy.md. */
 export const ClientEventName = Schema.Literals([
-  /** The app came to the front. At most one per launch. */
+  /** At most one per launch. */
   "AppOpened",
-  /** This phone now has a billet widget. Reported once per widget kind (detail: the kind). */
+  /** Reported once per widget kind. */
   "WidgetAdded",
-  /** The user watched the opening to the end. */
   "OpeningWatched",
-  /** The user skipped the opening. */
   "OpeningSkipped",
 
-  /** The cat was stroked. */
   "CatPetted",
-  /** The cat was fed: the day's shared `treat`, or other `food`. */
+  /** `treat` is the day's shared one. */
   "CatFed",
-  /** A game with the cat (detail: the toy). */
   "CatPlayed",
-  /** The cat was called over. */
   "CatCalled",
-  /** The cat did a trick it learned (detail: the trick). */
   "TrickDone",
-  /** A cat was chosen in the picker (detail: the cat). */
   "CatChosen",
-  /** The cat's temperament was shown to the user (detail: the temperament). */
   "TemperamentShown",
 
-  /** A note was opened, from the `widget` or in the `app`. */
   "NoteOpened",
 
-  /** Decorating the room started. */
   "DecoratingOpened",
-  /** A piece was put in the room (detail: the item). */
   "RoomItemPlaced",
-  /** A piece in the room was moved (detail: the item). */
   "RoomItemMoved",
-  /** A piece was taken out of the room (detail: the item). */
   "RoomItemPutAway",
-  /** The room itself was changed: walls, floor, window (detail: what was changed). */
+  /** Walls, floor or window. */
   "RoomCustomised",
-  /** One of Ourio's rooms came on screen: the diorama `room` or the `city` (detail: which). */
   "RoomOpened",
 
-  /** The shop was opened. */
   "ShopOpened",
-  /** An item was looked at in the shop (detail: the item). */
   "ShopItemViewed",
-  /** An item was bought with coins (detail: the item; value: its price in coins). */
+  /** value: the price in coins. */
   "ShopItemBought",
-  /** One of the shop's offers came on screen: the week's bundle, a deal or a bundle (detail: it). */
   "ShopOfferViewed",
-  /** A bundle was bought (detail: the bundle; value: its price in coins). */
+  /** value: the price in coins. */
   "ShopBundleBought",
-  /** A purchase was taken back within its few seconds (detail: the item or bundle; value: the
-   * coins given back). */
+  /** value: the coins given back. */
   "ShopPurchaseUndone",
-  /** The shop's free gift of the day was taken (detail: `coins` or the item; value: coins). */
+  /** detail: `coins` or the item; value: coins. */
   "ShopDailyGiftClaimed",
-  /** Something was bought for the partner (detail: the item; value: its price in coins). */
+  /** value: the price in coins. */
   "ShopGiftSent",
 
-  /** The streak's flame scene was opened. */
   "StreakOpened",
-  /** A streak milestone was shown (detail: the milestone). */
   "StreakMilestoneSeen",
 
-  /** A button on the widget was tapped: `pet` or `treat`. */
   "WidgetButtonTapped",
 
-  /** Pick tonight was opened: one session. */
+  /** One session. */
   "PickTonightOpened",
-  /** A Pick tonight swipe made a match. */
   "PickTonightMatched",
-  /** A match was planned as tonight's date. */
   "PickTonightPlanned",
 
-  /** The profile ("Us") was opened. */
   "ProfileOpened",
-  /** The app asked the user to sign in with Apple. */
   "SignInPromptShown",
-  /** The user answered that prompt: `accepted` or `dismissed`. */
   "SignInPromptAnswered",
 
-  /** An onboarding step came on screen (detail: the step id). */
   "OnboardingStepViewed",
-  /** An onboarding step was answered (detail: the step id). Never the answer itself. */
+  /** Never the answer itself. */
   "OnboardingStepAnswered",
-  /** An onboarding step was skipped (detail: the step id). */
   "OnboardingStepSkipped",
-  /** Onboarding stopped because the person is under 13. Their age answer is never sent. */
+  /** Under 13. The age answer is never sent. */
   "AgeGateStopped",
 
-  /** A hint came on screen (detail: the tip id). */
   "TipShown",
-  /** A hint was closed with its X (detail: the tip id). */
   "TipDismissed",
-  /** The hint's thing was done, or its button tapped (detail: the tip id). */
   "TipAction",
 ]);
 export type ClientEventName = typeof ClientEventName.Type;
 
-/**
- * A catalogue id from the app: a cat, a toy, a trick, an item, a temperament. Letters, digits and
- * hyphens, starting with a letter, at most 40. An id names a thing the app ships, never a person.
- */
+/** A catalogue id the app ships (cat, toy, item…), never a person. */
 export const EventDetail = Schema.String.check(Schema.isPattern(/^[A-Za-z][A-Za-z0-9-]{0,39}$/));
 export type EventDetail = typeof EventDetail.Type;
 
-/** The most `value` may be. Only a price uses it. */
 export const maxEventValue = 100_000;
 
-/**
- * What each name may carry besides itself:
- * - `detail`: absent (`none`), one of a closed list, or a catalogue `id`; `required` when it must
- *   be there;
- * - `value`: a whole number from 0 to `maxEventValue`, only where it says `value: true`.
- */
 export interface ClientEventRule {
   readonly detail: "none" | "id" | ReadonlyArray<string>;
   readonly required?: boolean;
@@ -171,7 +127,7 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   TipAction: { detail: "id", required: true },
 };
 
-/** Why an event breaks its name's rule, or undefined when it keeps it. */
+/** Undefined when the event keeps its name's rule. */
 export const clientEventProblem = (event: {
   readonly name: ClientEventName;
   readonly detail?: string | undefined;
@@ -189,7 +145,6 @@ export const clientEventProblem = (event: {
   return undefined;
 };
 
-/** One event with what it carries. The server checks it against `clientEventRules`. */
 export const ClientEvent = Schema.Struct({
   name: ClientEventName,
   detail: Schema.optional(EventDetail),
@@ -199,11 +154,8 @@ export const ClientEvent = Schema.Struct({
 }).check(Schema.makeFilter((event) => clientEventProblem(event) ?? true));
 export type ClientEvent = typeof ClientEvent.Type;
 
-/**
- * Events only the server records, from what it already does. `AccountDeleted` is written to
- * Analytics Engine only, since the account's counts go with it. `DemoPairClaimed` is a pair with a
- * dev-stage demo partner: kept as the account's pair history, out of the funnel.
- */
+/** `AccountDeleted` goes to Analytics Engine only, since the account's counts go with it.
+ * `DemoPairClaimed` (a dev-stage demo partner) stays in pair history, out of the funnel. */
 export const ServerEventName = Schema.Literals([
   "InviteCreated",
   "PairClaimed",

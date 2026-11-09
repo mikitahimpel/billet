@@ -15,7 +15,7 @@ const json = (body: unknown, status: number, headers: Record<string, string> = {
 
 const reads = new Set(["GET", "HEAD", "OPTIONS"]);
 
-/** Seconds a client should wait before trying a write again: until `until`, within 30 s – 1 h. */
+/** Until `until`, clamped to 30 s – 1 h. */
 export const retryAfterSeconds = (status: AppStatus, now: number): number => {
   const until = status.maintenance.until === undefined ? NaN : Date.parse(status.maintenance.until);
   if (Number.isNaN(until)) return 300;
@@ -23,10 +23,7 @@ export const retryAfterSeconds = (status: AppStatus, now: number): number => {
 };
 
 /**
- * What the service status decides for a `/v1` request before the API sees it: `/v1/status` itself;
- * while analytics is off, a 204 for reported events, which are dropped unread; and during
- * maintenance, a 503 for every write and for the realtime socket (which carries writes).
- * `undefined` lets the request through. Nothing here touches the database.
+ * Maintenance 503s writes and the socket (it carries writes); analytics off drops events (204).
  */
 export const gateRequest = (
   request: Request,

@@ -37,7 +37,7 @@ import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { ReviewServiceLive } from "./review-live.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
-/** Whether a path belongs to the admin panel. Everything under it is behind the Access check. */
+/** Everything under it is behind the Access check. */
 export const isAdminPath = (pathname: string) =>
   pathname === "/admin" || pathname.startsWith("/admin/");
 
@@ -73,8 +73,8 @@ const forbidden = () =>
     new Response("Forbidden", { status: 403, headers: { "content-type": "text/plain" } }),
   );
 
-// The team's keys, fetched like Apple's (see apple-identity-live.ts): no redirects, and only a
-// successful answer is cached by Cloudflare, for 10 minutes.
+// No redirects, as for Apple's keys (apple-identity-live.ts); Cloudflare caches only a successful
+// answer, for 10 minutes.
 const remoteKeys = (url: string): Layer.Layer<Jwks.Jwks> =>
   Jwks.layerRemote({ url }).pipe(
     Layer.orDie,
@@ -92,11 +92,10 @@ const remoteKeys = (url: string): Layer.Layer<Jwks.Jwks> =>
 
 const signature = Signature.layerWebCrypto.pipe(Layer.provide(SecureRandom.layerWebCrypto));
 
-/** Options for tests: the experiments, and the Access keys in place of the team's. */
 export interface AdminOptions {
   readonly experiments: ReadonlyArray<Experiment>;
   readonly accessKeys?: Layer.Layer<Jwks.Jwks>;
-  /** The request span's context (observability.ts), so the panel's spans and logs join it. */
+  /** So the panel's spans and logs join the request span (observability.ts). */
   readonly context?: Context.Context<never>;
 }
 
@@ -133,10 +132,7 @@ export const verifyAccess = async (
   );
 };
 
-/**
- * A browser sends `Origin` on every cross-site write; a write from another site must not ride the
- * Access cookie. Same-origin writes from the page carry the panel's own origin.
- */
+/** A write from another site must not ride the Access cookie; browsers send `Origin` on those. */
 const isSameOriginWrite = (request: Request) => {
   if (request.method === "GET" || request.method === "HEAD") return true;
   const origin = request.headers.get("origin");
@@ -204,14 +200,7 @@ const route = async (
   }
 };
 
-/**
- * Everything under `/admin`: the page, its script and style, and the JSON API. The Access check
- * runs first, before any routing, and a request that fails it gets the same bare 403 whatever the
- * path, so nothing about the panel is visible without a valid Access token.
- *
- * A service token (an agent) may only GET `/admin/api/agent/...`; anything else it sends, every
- * write included, is the same 403. Each agent read is logged with the token's `common_name`.
- */
+/** Checked before routing: one bare 403 for any path; agents may only GET agent routes. */
 export const respondAdmin = async (
   request: Request,
   env: WorkerEnv,

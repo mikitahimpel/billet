@@ -1,16 +1,12 @@
-/**
- * Frames one socket may send per second. A drawing phone sends a points batch every 30 to 50 ms,
- * so this leaves room for begin, end and presence; frames past it are dropped.
- */
+/** A drawing phone sends points every 30–50 ms; this leaves room for begin, end and presence. */
 export const maxFramesPerSecond = 60;
 
-/** A fixed one-second window of the frames one socket sent. */
 export interface FrameWindow {
   readonly start: number;
   readonly count: number;
 }
 
-/** Counts one frame at `now` (ms); `admitted` is false once the window already holds the budget. */
+/** `now` in ms; `admitted` is false once the window already holds the budget. */
 export const admitFrame = (
   window: FrameWindow | undefined,
   now: number,

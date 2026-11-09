@@ -10,10 +10,7 @@ export interface RoomMigrations {
 }
 
 /**
- * Drizzle over one Durable Object's SQLite, with pending migrations applied first. Pure Effect
- * drivers only (see docs/alchemy.md). A migration that cannot apply is a defect: the object is
- * useless without its schema, so run this inside `blockConcurrencyWhile`, which resets the object
- * and retries on the next request.
+ * A failed migration is a defect: run inside `blockConcurrencyWhile`, which resets and retries.
  */
 export const openRoomDatabase = (
   storage: DurableObjectStorage,

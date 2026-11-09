@@ -5,14 +5,7 @@ import { funnelEventNames } from "./admin-funnel.ts";
 import { minimumGroup, weekOf, type BuildEventRow } from "./admin-retention.ts";
 
 /**
- * The trends explorer: one event over time, by day or week, as a count, unique people, unique
- * pairs or count per pair, split by variant, build or system, against the period before. Pure.
- *
- * Two sources. The D1 counts (`pair_events`) answer everything. Analytics Engine, when the Worker
- * can read it, answers what it holds for its last 90 days: the count and, by day, the pairs, of an
- * event the app reports, overall or by build or system. It cannot answer people (it has no person),
- * a variant split, or a name the server records, so those always come from D1. Each point says
- * which source it came from.
+ * Analytics Engine has no person, variant or server-recorded name, so those always come from D1.
  */
 
 export const TrendMetric = Schema.Literals(["count", "people", "pairs", "perPair"]);
@@ -34,11 +27,10 @@ export interface TrendQuery {
   readonly interval: TrendInterval;
   readonly range: TrendRange;
   readonly split: TrendSplit;
-  /** The experiment key, for a variant split. */
   readonly key?: string | undefined;
 }
 
-/** Analytics Engine's own days: the days it keeps and Analytics Engine answers for. */
+/** How many days Analytics Engine keeps. */
 export const analyticsEngineDays = 90;
 
 /** One day of one group as Analytics Engine answered it. `group` is empty without a split. */
@@ -60,9 +52,7 @@ export interface TrendPoint {
 }
 
 /**
- * The Analytics Engine query for a trend: one SELECT over the dataset, by UTC day and group. The
- * event comes from the closed list and the days are generated, so nothing typed reaches the SQL;
- * the dataset name is `billet_<stage>_events` with a checked stage.
+ * The event comes from the closed list and the days are generated, so nothing typed reaches SQL.
  */
 export const engineSql = (
   dataset: string,
@@ -112,7 +102,6 @@ const maxGroups = 8;
 const isClientEvent = (name: string) =>
   (ClientEventName.literals as ReadonlyArray<string>).includes(name);
 
-/** Whether Analytics Engine can answer this question at all (see the module comment). */
 export const engineCanAnswer = (query: TrendQuery): boolean =>
   isClientEvent(query.event) &&
   query.split !== "variant" &&
@@ -213,7 +202,6 @@ export const buildTrends = (
     totals.set(group, total);
   }
 
-  // The starts of the current period, oldest first, and the start one period before each.
   const starts: Array<string> = [];
   for (let offset = 0; offset < days; offset += 1) {
     const start = startOf(addDays(from, offset));
@@ -264,7 +252,6 @@ export const buildTrends = (
   const shown = ranked.slice(0, maxGroups);
   const rest = ranked.slice(maxGroups);
   if (rest.length > 0) {
-    // Fold the rest into one group before building points.
     const other = new Map<string, Bucket>();
     const otherTotal = { current: emptyBucket(), previous: emptyBucket() };
     const merge = (into: Bucket, from: Bucket) => {

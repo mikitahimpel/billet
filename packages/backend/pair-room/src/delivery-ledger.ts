@@ -1,7 +1,5 @@
 /**
- * Which note has been handed to which delivery lane, and how far it got. Pure: the Durable Object
- * persists the entries and fires the alarm; this module only decides. A lane here is the name of a
- * `DeliveryLane` case: the order between lanes is not this module's business.
+ * Pure: decides which note went to which lane and how far. The Durable Object persists and alarms.
  */
 export type DeliveryStatus = "pending" | "delivered" | "abandoned";
 
@@ -26,10 +24,7 @@ const longestBackoffMillis = 15 * 60_000;
 export const backoffMillis = (attempts: number): number =>
   Math.min(firstBackoffMillis * 2 ** Math.max(0, attempts - 1), longestBackoffMillis);
 
-/**
- * The entry for a note on a lane. Asking again for a pair that already has one returns it
- * unchanged, so a repeated send can never start a second delivery.
- */
+/** A pair that already has an entry gets it back unchanged, so a resend never delivers twice. */
 export const enqueue = (
   existing: DeliveryEntry | undefined,
   noteId: string,
@@ -42,8 +37,7 @@ export const isDue = (entry: DeliveryEntry, now: number): boolean =>
   entry.status === "pending" && entry.nextAttemptAt <= now;
 
 /**
- * Applies what a try reported. Only a pending entry changes: a late or repeated report for a
- * delivered or abandoned one is ignored. The `maxAttempts`th retry abandons the delivery.
+ * Only a pending entry changes; late reports are ignored. The `maxAttempts`th retry abandons it.
  */
 export const settle = (
   entry: DeliveryEntry,

@@ -11,7 +11,7 @@ const secretLifetimeSeconds = 300;
 const requestTimeoutMillis = 5000;
 
 export interface SignInWithAppleKey {
-  /** The Sign in with Apple key, PKCS #8 PEM. */
+  /** PKCS #8 PEM. */
   readonly pem: Redacted.Redacted<string>;
   readonly keyId: Redacted.Redacted<string>;
 }
@@ -31,11 +31,7 @@ const refreshTokenOf = (body: unknown): string | undefined => {
   return typeof token === "string" && token.length > 0 ? token : undefined;
 };
 
-/**
- * Trades the code for a refresh token at `/auth/token`, then revokes that token at `/auth/revoke`.
- * Revoking the refresh token ends the app's authorization for this Apple ID. Nothing from either
- * response or from a failure is logged: they carry the code, tokens or the user's identity.
- */
+/** Nothing from a response or a failure is logged: they carry the code, tokens or identity. */
 export const revokeAppleToken = async (
   key: SignInWithAppleKey,
   code: Redacted.Redacted<string>,
@@ -70,9 +66,7 @@ export const revokeAppleToken = async (
   return revoked.ok ? "revoked" : "rejected";
 };
 
-/**
- * The real `AppleTokenRevoker`. Without the key (an empty secret) it revokes nothing, and says so.
- */
+/** Without the key (an empty secret) it revokes nothing, and says so. */
 export const AppleTokenRevokerLive = (
   key: SignInWithAppleKey | undefined,
   send: AppleFetch = fetch,
@@ -89,7 +83,7 @@ export const AppleTokenRevokerLive = (
     }),
   );
 
-/** The key from the Worker's secrets, if both are set. */
+/** Only if both are set. */
 export const signInWithAppleKeyOf = (env: {
   readonly APPLE_SIGN_IN_KEY?: string;
   readonly APPLE_SIGN_IN_KEY_ID?: string;

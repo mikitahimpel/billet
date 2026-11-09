@@ -1,9 +1,5 @@
-/**
- * Apple Root CA - G3, the root of every App Store signature (transactions and server
- * notifications), from https://www.apple.com/certificateauthority/AppleRootCA-G3.cer.
- * SHA-256 fingerprint 63:34:3A:BF:B8:9A:6A:03:EB:B5:7E:9B:3F:5F:A7:BE:7C:4F:5C:75:6F:30:17:B3:A8:C4:88:C3:65:3E:91:79,
- * valid until 2039-04-30. A test checks the fingerprint. Base64 of the DER.
- */
+/** Apple Root CA - G3 as base64 DER, valid until 2039-04-30; a test checks its fingerprint.
+ * From https://www.apple.com/certificateauthority/AppleRootCA-G3.cer. */
 export const appleRootCaG3 = [
   "MIICQzCCAcmgAwIBAgIILcX8iNLFS5UwCgYIKoZIzj0EAwMwZzEbMBkGA1UEAwwSQXBwbGUgUm9vdCBDQSAtIEcz",
   "MSYwJAYDVQQLDB1BcHBsZSBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0eTETMBEGA1UECgwKQXBwbGUgSW5jLjELMAkG",

@@ -9,9 +9,7 @@ const Count = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 const TypedText = Schema.String.check(Schema.isMaxLength(64));
 
 /**
- * `GET /v1/riddles`: the pair's draw-guess as the caller sees it. `open` holds at most one riddle
- * per member; `ended` the last 20 that ended, newest first. `series` counts solves in a row since
- * the last give-up, and `best` is the longest it has been.
+ * `open`: at most one per member. `ended`: last 20, newest first. `series`: solves since a give-up.
  */
 export const RiddlesResponse = Schema.Struct({
   open: Schema.Array(Riddle),
@@ -22,9 +20,7 @@ export const RiddlesResponse = Schema.Struct({
 export type RiddlesResponse = typeof RiddlesResponse.Type;
 
 /**
- * `POST /v1/riddles`: a drawing for the partner to guess, answered with the riddle. `id` is the
- * drawer's own and makes a retry answer with the first send. `word` is trimmed and lowercased,
- * then must be a `RiddleWord`. `image` is the PNG uploaded through `uploadImage` first.
+ * A retried `id` gets the first send. `word` is trimmed, lowercased, then a `RiddleWord`.
  */
 export const SendRiddleRequest = Schema.Struct({
   id: RiddleId,
@@ -34,10 +30,7 @@ export const SendRiddleRequest = Schema.Struct({
 });
 export type SendRiddleRequest = typeof SendRiddleRequest.Type;
 
-/**
- * `POST /v1/riddles/:id/guess`: one try. `key` is the guesser's own for this try: a retry with it
- * answers with the first try's result and counts nothing more.
- */
+/** `POST /v1/riddles/:id/guess`: a retried `key` answers the first try and counts nothing more. */
 export const GuessRiddleRequest = Schema.Struct({ key: IdempotencyKey, guess: TypedText });
 export type GuessRiddleRequest = typeof GuessRiddleRequest.Type;
 
