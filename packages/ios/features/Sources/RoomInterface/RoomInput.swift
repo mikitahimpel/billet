@@ -20,10 +20,15 @@ public struct RoomInput: Equatable, Sendable {
   public var scene: RoomScene
   public var coat: CatCoat
   public var visibility: RoomVisibility
+  /// What VoiceOver calls her.
+  public var catName: String
 
-  public init(scene: RoomScene, coat: CatCoat, visibility: RoomVisibility) {
+  public init(
+    scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi"
+  ) {
     self.scene = scene
     self.coat = coat
     self.visibility = visibility
+    self.catName = catName
   }
 }

@@ -138,6 +138,7 @@ struct PairingSheet: View {
                 .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
+            DeliveryNotice(partner: "your partner")
             Button {
                 finished()
                 dismiss()
