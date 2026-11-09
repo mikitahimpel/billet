@@ -13,7 +13,7 @@ public enum HomeRoom: String, CaseIterable, Codable, Hashable, Sendable {
   public var title: String {
     switch self {
     case .windowSeat: "Window Seat"
-    case .nookiCabin: "Nooki"
+    case .nookiCabin: "Cabin"
     }
   }
 

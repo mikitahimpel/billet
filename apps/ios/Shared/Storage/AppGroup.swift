@@ -2,7 +2,7 @@ import Foundation
 
 /// The container the app and its widgets both read and write: every store keeps its files here.
 nonisolated enum AppGroup {
-    static let id = "group.com.mikitahimpel.billet"
+    static let id = "group.com.ourio.app"
 
     /// Falls back to Documents when the build isn't signed with the group, so the app still works without widgets.
     static let container: URL = {

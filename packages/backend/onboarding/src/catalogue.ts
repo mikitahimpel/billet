@@ -14,8 +14,8 @@ export const seedCatalogue: OnboardingResponse = Schema.decodeUnknownSync(Onboar
       id: "age",
       title: { en: "How old are you?", ru: "Сколько тебе лет?" },
       subtitle: {
-        en: "Billet is for 13 and up. Only you see this.",
-        ru: "Billet — для тех, кому 13 и больше. Это видишь только ты.",
+        en: "Ourio is for 13 and up. Only you see this.",
+        ru: "Ourio — для тех, кому 13 и больше. Это видишь только ты.",
       },
       skippable: true,
       // Buckets only: the server never learns a date of birth. The app never sends `age-under-13`.

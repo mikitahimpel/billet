@@ -141,7 +141,7 @@ describe("demo push and note fetch", () => {
     expect(calls).toHaveLength(1);
     const call = calls[0]!;
     expect(call.url).toBe(`https://api.push.apple.com/3/device/${token}`);
-    expect(call.headers["apns-topic"]).toBe("com.mikitahimpel.billet");
+    expect(call.headers["apns-topic"]).toBe("com.ourio.app");
     expect(call.headers["apns-push-type"]).toBe("alert");
     expect(call.headers["authorization"]).toMatch(/^bearer [\w-]+\.[\w-]+\.[\w-]+$/);
     const payload = JSON.parse(call.body);

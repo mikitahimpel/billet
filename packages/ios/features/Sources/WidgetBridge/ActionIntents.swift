@@ -143,7 +143,7 @@ public struct CareForCatIntent: AppIntent {
 
 public struct OpenCanvasIntent: AppIntent {
   public static let title: LocalizedStringResource = "Draw a note"
-  public static let description = IntentDescription("Opens billet on the canvas.")
+  public static let description = IntentDescription("Opens Ourio on the canvas.")
   public static let openAppWhenRun = true
   public static let isDiscoverable = false
 

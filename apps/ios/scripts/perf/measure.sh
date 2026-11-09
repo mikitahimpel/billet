@@ -47,8 +47,8 @@ device_name=${PERF_DEVICE:-billet-perf}
 run_limit=${PERF_RUN_LIMIT:-600}
 # The model a missing device is made as, e.g. com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro-Max.
 device_type=${PERF_DEVICE_TYPE:-com.apple.CoreSimulator.SimDeviceType.iPhone-17-Pro}
-bundle=com.mikitahimpel.billet
-group=group.com.mikitahimpel.billet
+bundle=com.ourio.app
+group=group.com.ourio.app
 mkdir -p $out
 
 gate() {
