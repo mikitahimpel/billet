@@ -49,7 +49,7 @@ are **placeholders** until the owner sets them:
 | `com.mikitahimpel.billet.coins.1200` | 1200 | 9.99 |
 
 The app's copy (`packages/ios/payments/Sources/Payments/Resources/coin-packs.json`) and the Xcode StoreKit
-configuration (`archive/ios-v1/App/Billet.storekit` until the Ourio app has its own) must sell
+configuration (`apps/ios/Ourio.storekit`) must sell
 exactly these. A test in `contracts-fixtures` (`coin-packs-sync.test.ts`) fails if an id, a number
 of coins or a price differs, or if a StoreKit product is not a consumable.
 

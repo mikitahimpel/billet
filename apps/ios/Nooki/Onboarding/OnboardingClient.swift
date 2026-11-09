@@ -33,7 +33,7 @@ struct OnboardingClient: Sendable {
 }
 
 /// The questions the app ships, for a phone that is offline or has no server.
-enum BundledOnboarding {
+nonisolated enum BundledOnboarding {
     static func load(from bundle: Bundle = .main) -> OnboardingResponse {
         guard let url = bundle.url(forResource: "Onboarding", withExtension: "json"),
               let data = try? Data(contentsOf: url),

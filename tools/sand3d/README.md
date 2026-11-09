@@ -1,8 +1,7 @@
 # Sand3D programs
 
 Shop furniture written as short Python programs over [Sand3D](https://github.com/Sandflow-ai/sand3d)
-(Apache-2.0), which builds them with Blender's `bpy`. Why and how it compares with `make_items.py` and Idol:
-[docs/sand3d-spike.md](../../docs/sand3d-spike.md).
+(Apache-2.0), which builds them with Blender's `bpy`.
 
 | File | What |
 | --- | --- |

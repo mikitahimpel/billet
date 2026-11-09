@@ -1,10 +1,10 @@
 import Foundation
 import RoomInterface
 
-/// Mochi's coat, picked in onboarding. Grey is Ilya's cat as he made it; every other coat is a recolour by billet-gpu
+/// Mochi's coat, picked in onboarding. Grey is the original cat as it was made; every other coat is a recolour by billet-gpu
 /// that differs from it only in each splat's colour (`f_dc_0...2`), so the app ships just those colours
 /// (`Coats/<pose>-<coat>.fdc`, three little-endian floats per splat, in the PLY's order) and lays them over a copy of
-/// Ilya's PLY in Caches, which the rigs then load (`bundle`); his files and CatRig stay untouched. That rebuilds
+/// the original PLY in Caches, which the rigs then load (`bundle`); the pinned files and CatRig stay untouched. That rebuilds
 /// billet-gpu's coat PLY byte for byte (`CatCoatTests`). Where splats can't be drawn the mesh cat wears the coat's
 /// colour texture instead (`Coats/<model>Color-<coat>.jpg`).
 typealias CatCoat = RoomInterface.CatCoat
@@ -19,7 +19,7 @@ nonisolated extension CatCoat {
     static let poses = ["Mochi", "MochiStanding", "MochiLoaf", "MochiSleep"]
 
     /// Where the rigs are read from in this coat (`CatRig.Files(named:drawn:in:)`): the app itself for grey, else a
-    /// folder in Caches holding each of `poses`' PLY in this coat, written once, beside links to Ilya's skins and rigs.
+    /// folder in Caches holding each of `poses`' PLY in this coat, written once, beside links to the original skins and rigs.
     /// Each set of poses has a folder of its own: a Bundle caches its folder's listing, so files written later go unseen.
     func bundle(poses: [String] = Self.poses, from main: Bundle = .main, caches: URL = .cachesDirectory) throws -> Bundle {
         guard self != .grey else { return main }
@@ -51,7 +51,7 @@ nonisolated extension CatCoat {
         return bundle
     }
 
-    /// Ilya's PLY of `pose` with this coat's colours (`Coats/<pose>-<coat>.fdc`) laid over each splat's `f_dc`.
+    /// The original PLY of `pose` with this coat's colours (`Coats/<pose>-<coat>.fdc`) laid over each splat's `f_dc`.
     func dressedPLY(_ pose: String, from bundle: Bundle = .main) throws -> Data {
         let name = "\(pose)-\(rawValue)"
         guard let plyURL = bundle.url(forResource: pose, withExtension: "ply") else { throw Failure.missing(pose) }

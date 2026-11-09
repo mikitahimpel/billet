@@ -75,6 +75,10 @@ public struct BilletSheet<Content: View>: View {
   }
 
   public var body: some View {
+    #if canImport(UIKit)
+      // Before the stack makes its bar, which takes the fonts it finds then.
+      let _ = NavigationBarStyle.apply()
+    #endif
     NavigationStack {
       body(of: content)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

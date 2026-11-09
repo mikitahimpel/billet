@@ -41,7 +41,7 @@ We don't sell your data or use it for advertising, and we don't use your drawing
 The app keeps your session, device ID and recent notes on your device to show them. Deleting the app removes these from your device, but not from our backend.
 
 ## Questions and deletion
-You can sign out at any time, and unpairing removes the link between you and your partner. <TO CONFIRM BEFORE RELEASE: in-app account deletion, which deletes your account, notes, photos and pair data and revokes the Apple token. Until the app has it, App Review will reject the app (guideline 5.1.1(v)).> A report you or your partner sent us about the other is kept after either account is deleted, so we can still act on it. To ask about your data, or to have a report deleted, email gimpelllll@gmail.com.
+You can sign out at any time, and unpairing removes the link between you and your partner. <TO CONFIRM BEFORE RELEASE: in-app account deletion, which deletes your account, notes, photos and pair data and revokes the Apple token. Until the app has it, App Review will reject the app (guideline 5.1.1(v)).> A report you or your partner sent us about the other is kept after either account is deleted, so we can still act on it. To ask about your data, or to have a report deleted, email <SUPPORT_EMAIL>.
 
 ## Children
 The app asks your age range on first launch. If you are under 13, the app stops there, your answer is never sent and no account data is kept for you.

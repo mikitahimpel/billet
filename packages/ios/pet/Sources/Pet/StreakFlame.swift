@@ -3,7 +3,7 @@ import Foundation
 /// How big the pair's shared flame has grown. A broken streak rests as an ember, which still
 /// glows: the flame never goes out.
 ///
-/// The stages are the flame's own and do not follow ``HouseStage``. `docs/design.md` records why.
+/// The stages are the flame's own and do not follow ``HouseStage``.
 public enum FlameStage: Int, CaseIterable, Comparable, Sendable {
   /// No streak today: a warm coal that one day together lights again.
   case ember

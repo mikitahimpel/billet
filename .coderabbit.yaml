@@ -23,7 +23,6 @@ reviews:
     ignore_title_keywords:
       - "wip"
   path_filters:
-    - "!archive/**"
     - "!pnpm-lock.yaml"
     - "!**/Package.resolved"
     - "!**/*.xcodeproj/**"

@@ -1,7 +1,7 @@
 # Architecture
 
 This document explains how billet is put together and why. It is written for someone new to the
-project. For scope, milestones and open questions, see [plan.md](plan.md).
+project.
 
 ## What the system does
 
@@ -355,8 +355,6 @@ packages/
       Feature*          Onboarding, Pairing, Canvas, Moments, Games (the mini-games' rules)
       WidgetBridge      Flags, snapshot and queue shared by app and widget
     scripts/            The import check every package runs before build and test
-archive/ios-v1/         The old app, not built; its own screens (Home, Settings, Inbox, Labs,
-                        Surfaces, PetSceneCatalog) and RealityKit scenes are in packages/ there
 ```
 
 ### Swift package layers

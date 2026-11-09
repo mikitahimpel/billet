@@ -61,7 +61,8 @@ extension CatModel {
       CatMotion(tempo: 1.1, signature: [.headTilt, .perk], temperament: .explorer)
     case .siamese:
       CatMotion(tempo: 1.0, signature: [.yawn, .lickLips], temperament: .diva)
-    case .idolIlya: CatMotion(tempo: 1, signature: [.slowBlink, .headTilt], temperament: .cuddler)
+    case .illustratedTabby:
+      CatMotion(tempo: 1, signature: [.slowBlink, .headTilt], temperament: .cuddler)
     }
   }
 }

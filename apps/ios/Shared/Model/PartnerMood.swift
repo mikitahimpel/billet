@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// One-tap check-in a partner leaves for the other, mostly from the widget (docs/widget-concept.md, section 2).
+/// One-tap check-in a partner leaves for the other, mostly from the widget.
 /// Earns nothing, so nobody taps it for coins. Nonisolated because App Intents take it as a parameter.
 nonisolated enum PartnerMood: String, Codable, CaseIterable, Sendable {
     case happy, sleepy, missing, busy

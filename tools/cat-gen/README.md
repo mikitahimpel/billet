@@ -1,7 +1,6 @@
 # cat-gen
 
-Ilya's cat splat pipeline from [nexishq/idol-scenes](https://github.com/nexishq/idol-scenes)
-(`generate/`, commit `f12f168dd2f5a3159a3067a3a6e6ff120054d74c`), used with his permission. It
+A cat splat pipeline, used with its author's permission. It
 turns one picture of a cat into a Gaussian splat, binds it to a skeleton, and gives the app
 (`apps/ios`) the files it renders: `<name>.ply`, `<name>.rig.json` and `<name>.skin`.
 

@@ -3,8 +3,7 @@
 Each room's static shell (floor, walls, beams, trim, window frames, curtains, bed, nightstand, shelf,
 rug and the props that never move) can be one lightmapped model, `Room_shell.usdz` and `City_shell.usdz`,
 instead of ~80 (Room) or ~220 (City) boxes built at launch. The procedural build is the default and
-is unchanged; the baked shell is a second path chosen at runtime. Background and the estimate:
-[perf-plan-2026-11.md](perf-plan-2026-11.md) item 9.
+is unchanged; the baked shell is a second path chosen at runtime.
 
 ## The switch
 

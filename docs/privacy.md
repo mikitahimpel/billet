@@ -44,7 +44,7 @@ Some test builds exchange notes through a temporary test room instead. A test ro
 The app keeps your session, device ID and recent notes on your device to show them. Deleting the app removes these from your device, but not from our backend.
 
 ## Questions and deletion
-You can unpair at any time in Settings, which deletes the room you shared, and delete your account there too: that removes your account and the notes and photos you sent from our backend, and your partner is unpaired. To ask about your data, or to have a report deleted, email gimpelllll@gmail.com.
+You can unpair at any time in Settings, which deletes the room you shared, and delete your account there too: that removes your account and the notes and photos you sent from our backend, and your partner is unpaired. To ask about your data, or to have a report deleted, email <SUPPORT_EMAIL>.
 
 ## App Privacy answers for App Store Connect
 
