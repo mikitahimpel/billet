@@ -8,20 +8,15 @@ export type PurchaseEnvironment = "Production" | "Sandbox" | "Xcode" | "Mock";
 export interface PaymentsSettings {
   /** The App Store environments whose transactions are credited. */
   readonly environments: ReadonlyArray<PurchaseEnvironment>;
-  /**
-   * The dev stage's extras: Xcode StoreKit testing transactions, the mock purchase route, and
-   * demo-room callers with no session. Off everywhere else.
-   */
+  /** Xcode StoreKit testing, the mock purchase route and demo-room callers with no session. Off
+   * everywhere but dev. */
   readonly devTools: boolean;
   /** The roots an App Store chain must end in, as DER. Tests pass their own. */
   readonly roots: ReadonlyArray<Uint8Array>;
 }
 
-/**
- * Which purchases this deployment accepts, by Alchemy stage. `dev` takes Sandbox (a development
- * build) and Xcode (StoreKit testing) and has the dev extras. Every other stage, `prod` included,
- * takes Production and Sandbox, since TestFlight buys in the sandbox.
- */
+/** `dev` takes Sandbox and Xcode and has the dev extras; every other stage takes Production and
+ * Sandbox, since TestFlight buys in the sandbox. */
 export const settingsForStage = (
   stage: string | undefined,
   roots: ReadonlyArray<Uint8Array> = [decodeRoot(appleRootCaG3)],

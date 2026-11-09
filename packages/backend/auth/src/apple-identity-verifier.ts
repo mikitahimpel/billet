@@ -8,10 +8,7 @@ export const appleIssuer = "https://appleid.apple.com";
 export const appleKeysUrl = "https://appleid.apple.com/auth/keys";
 export const appleAudience = "com.mikitahimpel.billet";
 
-/**
- * Literals are deliberate: `aud` must be exactly the bundle id, so an array that merely contains it
- * is refused, and `sub` and `nonce` must be present and non-empty.
- */
+/** Literals are deliberate: an `aud` array that merely contains the bundle id is refused. */
 const AppleClaims = Schema.Struct({
   iss: Schema.Literal(appleIssuer),
   aud: Schema.Literal(appleAudience),
@@ -32,10 +29,7 @@ const fromJoseError = (error: JoseError.JoseError): AuthRejected | AuthUnavailab
 };
 
 /**
- * Verifies Apple identity tokens against the `Jwks` service. RS256 is the only accepted algorithm,
- * so `none`, HMAC and any other signature scheme fail before a key is looked up.
- *
- * `Jwks` carries the key-rotation policy: see `layerRemote` in the platform package.
+ * RS256 only, so `none`, HMAC and other schemes fail before a key is looked up.
  */
 export const AppleIdentityVerifier: Layer.Layer<
   IdentityVerifier,

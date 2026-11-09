@@ -64,10 +64,7 @@ export class CurrentAdmin extends Context.Service<CurrentAdmin, AdminIdentity>()
   "@billet/backend-admin/CurrentAdmin",
 ) {}
 
-/**
- * Which deployment the panel belongs to (the Alchemy stage: `dev`, `prod`), shown in its top bar
- * so a change is never made on the wrong one by mistake.
- */
+/** The Alchemy stage (`dev`, `prod`), shown in the top bar so no change hits the wrong one. */
 export class PanelEnvironment extends Context.Service<
   PanelEnvironment,
   { readonly name: string }
@@ -278,8 +275,7 @@ const transitions: Record<
 };
 
 /**
- * The answers both the panel and the agents read, built on the same services so an agent sees
- * exactly what the panel shows. Needs no identity: who may call them is decided by the routes.
+ * Shared by the panel and the agents so both see the same; who may call them is up to the routes.
  */
 const readHandlers = Effect.gen(function* () {
   const flags = yield* FlagsService;
@@ -540,8 +536,7 @@ const readHandlers = Effect.gen(function* () {
 });
 
 /**
- * The admin JSON API. Needs `CurrentAdmin`, which only the Access check provides for a person:
- * these routes are never reachable without it (see `admin-fetch` in the platform package).
+ * Needs `CurrentAdmin`, which only the Access check provides (`admin-fetch` in the platform).
  */
 export const AdminRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
@@ -625,9 +620,8 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.shopItems, reads.shopItems);
     yield* router.add("GET", adminApi.shopHistory, reads.shopHistory);
 
-    // The shop's catalog. An item is never deleted (its id stays once sold); it is made inactive,
-    // which hides it from the shop and leaves it owned by every pair that bought it. Each save is
-    // kept in the history with the Access email.
+    // An item is never deleted (its id stays once sold), only made inactive: hidden from the shop,
+    // still owned by every pair that bought it. Each save is kept in the history.
     const checkedItem = (item: ShopCatalogItem) => {
       const problem = shopItemProblem(item);
       return problem === undefined
@@ -787,8 +781,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
 ).pipe(Layer.orDie);
 
 /**
- * The read-only API for agents: the panel's reads, GET only, no identity and no route that
- * changes anything. `admin-fetch` serves it only to a service token, after the Access check.
+ * GET only, no identity. `admin-fetch` serves it only to a service token, after the Access check.
  */
 export const AgentRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {

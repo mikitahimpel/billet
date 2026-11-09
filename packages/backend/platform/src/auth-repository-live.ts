@@ -18,17 +18,10 @@ import {
 } from "./directory-schema.ts";
 import { spanMethods } from "@billet/backend-observability/span-methods";
 
-/**
- * A device is made just before its session, so one without a session is either signed out by
- * Better Auth itself or mid sign-in. Only the first kind is old.
- */
+/** A sessionless device was signed out by Better Auth or is mid sign-in; only the former ages. */
 const orphanGrace = 60 * 60 * 1000;
 
-/**
- * Users no one can reach: no Apple link, no session, no account key and nothing of theirs. Only
- * the loser of two first Apple sign-ins at once leaves one (Better Auth writes the user, then the
- * link, and D1 can't hold both in one transaction). The grace keeps a sign-in in progress.
- */
+/** Only the loser of concurrent first Apple sign-ins leaves one: D1 can't write both at once. */
 const unreachableUsers = (db: DirectoryDatabase, before: number) =>
   db
     .select({ id: users.id })
@@ -132,7 +125,7 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
         return guarded(
           atomically(db, [
             db.delete(authChallenges).where(lte(authChallenges.expiresAt, now)),
-            // An expired session goes with its device, which takes the push tokens with it.
+            // The device takes the push tokens with it.
             db
               .delete(devices)
               .where(
@@ -165,6 +158,6 @@ const makeAuthRepository = (db: DirectoryDatabase): AuthRepository["Service"] =>
     }),
   );
 
-/** `AuthRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const AuthRepositoryLive = (binding: D1Database): Layer.Layer<AuthRepository> =>
   Layer.effect(AuthRepository, Effect.map(openDirectoryDatabase(binding), makeAuthRepository));

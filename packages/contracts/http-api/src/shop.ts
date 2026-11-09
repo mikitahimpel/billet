@@ -16,16 +16,11 @@ import {
 export const ShopResponse = PairShop;
 export type ShopResponse = typeof ShopResponse.Type;
 
-/**
- * The pair's local day is counted `utcOffsetSeconds` from UTC: the caller's clock. When absent,
- * the cat's clock once it is adopted, else UTC.
- */
+/** The local day: `utcOffsetSeconds` from UTC (the caller's), else the cat's clock, else UTC. */
 const LocalClock = { utcOffsetSeconds: Schema.optionalKey(UtcOffsetSeconds) };
 
 /**
- * `POST /v1/shop/orders`: buys one offer at the server's price (never above `expectedPrice`), a piece at its deal price on the
- * pair's local day when it is one of the day's deals. `id` is the client's, repeated on every
- * retry; a retry answers with the first order and the pair as it is now.
+ * Server price, never above `expectedPrice`; a day's deal at its deal price. Retry gets the first.
  */
 export const OrderRequest = Schema.Struct({
   id: IdempotencyKey,
@@ -39,7 +34,6 @@ export type OrderRequest = typeof OrderRequest.Type;
 export const OrderResponse = Schema.Struct({ entry: CoinEntry, shop: ShopResponse });
 export type OrderResponse = typeof OrderResponse.Type;
 
-/** `PUT /v1/shop/wishlist`: adds a piece to the pair's wishlist, or takes it off. */
 export const WishRequest = Schema.Struct({ item: RoomItemId, wished: Schema.Boolean });
 export type WishRequest = typeof WishRequest.Type;
 
@@ -62,10 +56,7 @@ export type ClaimBonusRequest = typeof ClaimBonusRequest.Type;
 export const ClaimBonusResponse = Schema.Struct({ entry: CoinEntry, shop: ShopResponse });
 export type ClaimBonusResponse = typeof ClaimBonusResponse.Type;
 
-/**
- * `GET /v1/shop/catalog`: the active items of the shop, in shelf order. No session; the same for
- * everyone. `version` changes with the items and is the ETag, so a client that has it gets a 304.
- */
+/** Shelf order, no session. `version` is the ETag, so a client that has it gets a 304. */
 export const ShopCatalogResponse = Schema.Struct({
   version: Schema.String.check(Schema.isPattern(/^[0-9a-f]{16}$/)),
   items: Schema.Array(ShopCatalogItem),

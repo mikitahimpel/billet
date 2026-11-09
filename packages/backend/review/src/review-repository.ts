@@ -39,16 +39,13 @@ export type NewReviewCode = Pick<
 >;
 
 /**
- * The review partner, its codes and the admin's changes to them. Each method is one atomic write,
- * every storage failure is `ReviewUnavailable`, and raw codes never reach it.
- * `test/review-repository-contract.ts` is the behaviour any implementation must pass.
+ * Each method is one atomic write; raw codes never reach it. See review-repository-contract.ts.
  */
 export class ReviewRepository extends Context.Service<
   ReviewRepository,
   {
-    /** The review partner, once one was opened. */
     readonly partner: Effect.Effect<Option.Option<UserId>, ReviewUnavailable>;
-    /** Opens the partner as a user and records it, both or neither. */
+    /** Both or neither. */
     readonly createPartner: (
       partner: StoredReviewPartner,
     ) => Effect.Effect<void, ReviewUnavailable>;
@@ -71,16 +68,13 @@ export class ReviewRepository extends Context.Service<
       codeHash: TokenHash,
       now: EpochMillis,
     ) => Effect.Effect<Option.Option<UserId>, ReviewUnavailable>;
-    /** Counts a claim of the code at `at`. */
     readonly claimed: (
       codeHash: TokenHash,
       at: EpochMillis,
     ) => Effect.Effect<void, ReviewUnavailable>;
-    /** The newest `limit` codes, newest first. */
     readonly codes: (
       limit: number,
     ) => Effect.Effect<ReadonlyArray<StoredReviewCode>, ReviewUnavailable>;
-    /** The newest `limit` changes, newest first. */
     readonly changes: (
       limit: number,
     ) => Effect.Effect<ReadonlyArray<StoredReviewChange>, ReviewUnavailable>;

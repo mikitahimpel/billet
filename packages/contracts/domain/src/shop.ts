@@ -9,15 +9,15 @@ const slug = Schema.String.check(
   Schema.isMaxLength(40),
 );
 
-/** Names one piece of furniture or decor for the cat's room, such as `lamp`. Never reused. */
+/** Never reused. */
 export const RoomItemId = slug.pipe(Schema.brand("RoomItemId"));
 export type RoomItemId = typeof RoomItemId.Type;
 
-/** Names a set of pieces sold together: a bundle or a week's featured set. Never reused. */
+/** A bundle or a week's featured set. Never reused. */
 export const PieceSetId = slug.pipe(Schema.brand("PieceSetId"));
 export type PieceSetId = typeof PieceSetId.Type;
 
-/** One piece the shop sells. The app keeps its own name, art and copy for the id. */
+/** The app keeps its own name, art and copy for the id. */
 export interface RoomItem {
   readonly id: RoomItemId;
   /** In coins. */
@@ -42,11 +42,8 @@ const set = (id: string, items: ReadonlyArray<string>, share: number): PieceSet 
   share,
 });
 
-/**
- * Every piece for the cat's room. Pieces belong to the pair: one partner's purchase is both
- * partners'. This list is canonical, the app mirrors it, and an id stays here once it has been
- * sold. Prices are placeholders until the owner sets them.
- */
+/** Canonical: the app mirrors it, and an id stays once sold. One partner's purchase is both
+ * partners'. Prices are placeholders until the owner sets them. */
 export const roomItems: ReadonlyArray<RoomItem> = [
   item("armchair", 320),
   item("lamp", 140),
@@ -62,24 +59,23 @@ export const roomItems: ReadonlyArray<RoomItem> = [
   item("lantern", 150),
 ];
 
-/** The pieces every room starts with. They are never bought and never listed as bought. */
+/** Never bought and never listed as bought. */
 export const starterItems: ReadonlyArray<RoomItemId> = [decodeItemId("lamp"), decodeItemId("rug")];
 
-/** Bundles stay in the shop all year. */
 export const bundles: ReadonlyArray<PieceSet> = [
   set("mochi-playday", ["yarn", "mouse", "tower"], 0.7),
   set("reading-nook", ["bookcase", "armchair", "lamp"], 0.75),
   set("window-glow", ["lantern", "monstera", "print"], 0.75),
 ];
 
-/** The featured sets, one a week in turn, at half the sum of their pieces. */
+/** One a week in turn. */
 export const featuredSets: ReadonlyArray<PieceSet> = [
   set("rainy-evening", ["lamp", "armchair", "print"], 0.5),
   set("nap-time", ["donutbed", "rug", "lamp"], 0.5),
   set("tea-for-two", ["teatable", "monstera", "lantern"], 0.5),
 ];
 
-/** A treat for the cat: spent at once, so the pair never owns one. */
+/** Spent at once, so the pair never owns a treat. */
 export const treatPrice = 10;
 
 export const roomItemOf = (id: string): RoomItem | undefined =>
@@ -97,33 +93,26 @@ export const KnownPieceSetId = PieceSetId.check(
 );
 
 const dayMillis = 86_400_000;
-/** Monday 2024-01-01, the first day of week 0. */
+/** The first day of week 0. */
 const firstMonday = Date.UTC(2024, 0, 1);
 
-/**
- * The featured set of the week `at` falls in, counted from Monday 2024-01-01, so the set changes
- * on Mondays. `utcOffsetSeconds` moves the week to the couple's own midnight.
- */
+/** Changes on Mondays; `utcOffsetSeconds` moves the week to the couple's own midnight. */
 export const featuredSetAt = (at: EpochMillis, utcOffsetSeconds = 0): PieceSet => {
   const days = Math.floor((at + utcOffsetSeconds * 1000 - firstMonday) / dayMillis);
   const week = Math.floor(Math.max(0, days) / 7);
   return featuredSets[week % featuredSets.length] as PieceSet;
 };
 
-/** The piece `id` at the book's price, or at the canonical list's when there is no book. */
 export const soldIn = (id: string, book?: PriceBook): RoomItem | undefined => {
   if (book === undefined) return roomItemOf(id);
   const found = book.items.find((entry) => entry.id === id);
   return found === undefined ? undefined : { id: decodeItemId(found.id), price: found.price };
 };
 
-/** Rounded to 5 coins, so a set price reads cleanly. Halves round up, as the app's do. */
+/** Halves round up, as the app's do. */
 export const roundToFive = (value: number): number => Math.round(value / 5) * 5;
 
-/**
- * What the pair pays for a set: its share of the pieces it does not own yet, next to those
- * pieces' sum. Undefined once it owns them all.
- */
+/** The share of the pieces not owned yet, next to their sum. Undefined once all are owned. */
 export const setPrice = (
   pieces: PieceSet,
   owned: ReadonlySet<string>,
@@ -138,7 +127,7 @@ export const setPrice = (
   return { price: roundToFive(sum * pieces.share), sum };
 };
 
-/** What one order in the shop buys: an ink, a piece, a set's missing pieces, or a treat. */
+/** A `Set` buys only the set's missing pieces. */
 export const ShopOffer = Schema.TaggedUnion({
   Ink: { ink: InkId },
   Item: { item: RoomItemId },
@@ -147,16 +136,11 @@ export const ShopOffer = Schema.TaggedUnion({
 });
 export type ShopOffer = typeof ShopOffer.Type;
 
-/** Names pieces that earn a coin bonus once the pair owns them all, such as `cozy-autumn`. */
 export const CollectionId = slug.pipe(Schema.brand("CollectionId"));
 export type CollectionId = typeof CollectionId.Type;
 
-/**
- * What the pair has in the shop. `inks` starts with the free ink and `items` with the starter
- * pieces, then the rest in the order they were bought. `wishlist` is in the order it was wished.
- * `giftDay` is the pair's local day it last opened the daily gift on, absent before the first;
- * `bonuses` are the collections whose bonus it was paid.
- */
+/** `inks` and `items` start with the free ink and starter pieces, then purchase order.
+ * `giftDay`: the local day the daily gift was last opened, absent before the first. */
 export const PairShop = Schema.Struct({
   balance: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   inks: Schema.Array(InkId),
@@ -170,7 +154,7 @@ export type PairShop = typeof PairShop.Type;
 export interface PieceCollection {
   readonly id: CollectionId;
   readonly items: ReadonlyArray<RoomItemId>;
-  /** Coins paid once, when the pair first owns every piece. */
+  /** Paid once, when the pair first owns every piece. */
   readonly bonus: number;
 }
 
@@ -182,7 +166,7 @@ const collection = (id: string, items: ReadonlyArray<string>, bonus: number): Pi
   bonus,
 });
 
-/** Collections count the starter pieces as owned. Bonuses are placeholders until the owner sets them. */
+/** Starter pieces count as owned. Bonuses are placeholders until the owner sets them. */
 export const collections: ReadonlyArray<PieceCollection> = [
   collection(
     "cozy-autumn",
@@ -195,15 +179,14 @@ export const collections: ReadonlyArray<PieceCollection> = [
 export const collectionOf = (id: string): PieceCollection | undefined =>
   collections.find((entry) => entry.id === id);
 
-/** The coins every pair is given once, when its room opens. A placeholder until the owner sets it. */
+/** Given once, when the room opens. A placeholder until the owner sets it. */
 export const welcomeCoins = 560;
 
-/** How much a treat feeds the cat, in grams. */
+/** Grams. */
 export const treatGrams = 20;
 
-// Rotations. Each is a pure function of a seed and the pair's local day, so both phones and the
-// server agree without asking each other. The seed is the pair id: the app seeds the same
-// functions with it. The hash and the generator are 64-bit, as in the app's `ShopOffers`.
+// Rotations are pure in the seed (the pair id) and local day, so both phones and the server
+// agree without asking. 64-bit hash and generator, as in the app's `ShopOffers`.
 
 const mask64 = (1n << 64n) - 1n;
 
@@ -233,7 +216,6 @@ export const fnv1a = (text: string): bigint => {
   return hash;
 };
 
-/** SplitMix64: each call returns the next 64-bit value. */
 export const splitMix64 = (seed: bigint): (() => bigint) => {
   let state = seed & mask64;
   return () => {
@@ -252,19 +234,17 @@ const dayKey = (day: LocalDay): string =>
     .map((part) => String(Number(part)))
     .join("-");
 
-/** One of the day's discounted pieces. `discount` 0.25 is 25% off. */
+/** `discount` 0.25 is 25% off. */
 export interface Deal {
   readonly item: RoomItemId;
   readonly discount: number;
   readonly price: number;
 }
 
-/** How many deals a day has. */
 export const dealCount = 4;
 
 const dealOf = (item: string, discount: number) => ({ item: decodeItemId(item), discount });
 
-/** Pieces that can be a deal, with their discount; each day draws `dealCount` of them. */
 export const dealPool: ReadonlyArray<{ readonly item: RoomItemId; readonly discount: number }> = [
   dealOf("teatable", 0.25),
   dealOf("yarn", 0.3),
@@ -277,7 +257,7 @@ export const dealPool: ReadonlyArray<{ readonly item: RoomItemId; readonly disco
   dealOf("print", 0.25),
 ];
 
-/** The day's deals, in the order they were drawn. */
+/** In the order they were drawn. */
 export const dealsOn = (seed: string, day: LocalDay, book?: PriceBook): ReadonlyArray<Deal> => {
   const next = splitMix64(fnv1a(`${seed}|deals|${dayKey(day)}`));
   const pool =
@@ -298,7 +278,6 @@ export const dealsOn = (seed: string, day: LocalDay, book?: PriceBook): Readonly
   return picked;
 };
 
-/** What `item` costs on `day`: the deal price when it is one of the day's deals. */
 export const itemPriceOn = (
   item: RoomItem,
   seed: string,
@@ -309,7 +288,6 @@ export const itemPriceOn = (
   return deal === undefined ? { price: item.price } : { price: deal.price, deal };
 };
 
-/** The free gift for a day: coins, or a piece the pair doesn't own yet. */
 export const GiftReward = Schema.TaggedUnion({
   Coins: { coins: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
   Item: { item: RoomItemId },
@@ -322,7 +300,7 @@ export const giftItems: ReadonlyArray<RoomItemId> = ["mouse", "yarn", "monstera"
   decodeItemId(id),
 );
 
-/** The gift for `day`. A piece the pair already owns turns into coins. */
+/** A piece the pair already owns turns into coins. */
 export const giftOn = (seed: string, day: LocalDay, owned: ReadonlySet<string>): GiftReward => {
   const next = splitMix64(fnv1a(`${seed}|gift|${dayKey(day)}`));
   const roll = next();

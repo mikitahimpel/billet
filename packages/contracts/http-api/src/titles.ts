@@ -37,10 +37,7 @@ export const WatchProvider = Schema.Struct({
 });
 export type WatchProvider = typeof WatchProvider.Type;
 
-/**
- * Where the title can be watched in `country`, from JustWatch through TMDB. `stream` is included in
- * a subscription; `rentOrBuy` costs extra. `link` is TMDB's page that lists them.
- */
+/** From JustWatch via TMDB. `stream`: in a subscription; `rentOrBuy` costs extra. */
 export const WatchOptions = Schema.Struct({
   country: CountryCode,
   link: Schema.optionalKey(Schema.String),
@@ -74,12 +71,10 @@ export const TitleDetailsQuery = Schema.Struct({
 });
 export type TitleDetailsQuery = typeof TitleDetailsQuery.Type;
 
-/** At most this many titles are asked for recommendations at once. */
 export const maxRecommendationSeeds = 5;
 
 /**
- * `GET /v1/titles/recommendations?ids=&lang=`: `ids` is 1 to `maxRecommendationSeeds` titles as
- * `kind:tmdb`, comma-separated, such as `movie:329865,tv:95396`. Answers a `TitleSearchResponse`.
+ * `ids`: 1 to `maxRecommendationSeeds` `kind:tmdb`, comma-separated. Answers `TitleSearchResponse`.
  */
 export const TitleRecommendationsQuery = Schema.Struct({
   ids: Schema.String.check(

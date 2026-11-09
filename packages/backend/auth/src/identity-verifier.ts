@@ -1,7 +1,6 @@
 import { Context, type Effect, type Redacted } from "effect";
 import type { AuthRejected, AuthUnavailable } from "./auth-error.ts";
 
-/** What a verified identity token proves. */
 export interface VerifiedIdentity {
   /** Apple's stable user id for this team. */
   readonly subject: string;

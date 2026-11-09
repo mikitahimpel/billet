@@ -46,7 +46,6 @@ const wishFrom = (row: typeof giftWish.$inferSelect) =>
     ...(row.giftedBy === null ? {} : { giftedBy: row.giftedBy }),
   });
 
-/** `GiftsStore` on the room's own SQLite. */
 export const SqliteGiftsStore = Layer.effect(
   GiftsStore,
   Effect.gen(function* () {

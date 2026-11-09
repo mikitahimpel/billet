@@ -7,10 +7,7 @@ const coinCount = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 export const PurchaseRequest = Schema.Struct({ signedTransaction: nonEmpty });
 export type PurchaseRequest = typeof PurchaseRequest.Type;
 
-/**
- * `POST /v1/purchases/mock`, served on the dev stage only. Credits (`purchase`) or takes back
- * (`refund`) a pack without the App Store, under a transaction id the client makes up.
- */
+/** Dev stage only: credits or refunds a pack without the App Store, under a made-up id. */
 export const MockPurchaseRequest = Schema.Struct({
   productId: nonEmpty,
   transactionId: Schema.String.check(Schema.isPattern(/^mock-[A-Za-z0-9-]{1,64}$/)),
@@ -19,10 +16,7 @@ export const MockPurchaseRequest = Schema.Struct({
 export type MockPurchaseRequest = typeof MockPurchaseRequest.Type;
 
 /**
- * What a purchase did. `coins` is what this transaction credited, or for a mock refund what it
- * took back, as a positive number. `balance` is the pair's wallet after it (`GET /v1/coins`: coins
- * earned, bought and spent), or a demo room's bought coins. `duplicate` is true when the
- * transaction had already been handled: nothing changed, and `balance` is the current one.
+ * `coins` is positive, refunds too; `balance` is the wallet after. `duplicate`: nothing changed.
  */
 export const PurchaseResponse = Schema.Struct({
   transactionId: nonEmpty,
@@ -34,9 +28,7 @@ export const PurchaseResponse = Schema.Struct({
 export type PurchaseResponse = typeof PurchaseResponse.Type;
 
 /**
- * One change to a ledger. `id` is stable (`purchase:<originalTransactionId>`,
- * `refund:<originalTransactionId>`), so a client can merge entries it already holds. `amount` is
- * negative for a refund. `at` is ISO 8601 in UTC.
+ * `id` is stable: `<kind>:<originalTransactionId>`. Refunds have `amount` < 0. `at` ISO 8601 UTC.
  */
 export const PurchaseEntry = Schema.Struct({
   id: nonEmpty,

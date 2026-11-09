@@ -12,10 +12,7 @@ import type { ActiveRoom, RoomState, SequencedNote } from "./room-state.ts";
 /** A note to store, with the key its author sent it under. */
 export type AppendedNote = { readonly entry: SequencedNote; readonly key: IdempotencyKey };
 
-/**
- * A list change to store: the list written whole, or deleted with its items, and the key of the
- * change that did it, so the room applies that key once.
- */
+/** A list written whole or dropped, with the key of the change that did it, applied once. */
 export type ListWrite =
   | {
       readonly _tag: "Put";
@@ -36,9 +33,7 @@ export class RoomStore extends Context.Service<
   {
     readonly load: Effect.Effect<RoomState>;
     /**
-     * Saves the state and the cat, appends the notes, journal and wallet entries, writes the
-     * activity rows and reactions over any with the same id, writes or deletes the lists, and
-     * writes the riddles with their tries and series, as one atomic write. Rows older than the retention are pruned in the same write, list keys too.
+     * One atomic write. Same-id activity rows and reactions are replaced; old rows are pruned.
      */
     readonly commit: (
       room: ActiveRoom,
@@ -70,12 +65,8 @@ export class RoomStore extends Context.Service<
     readonly forgetReactions: Effect.Effect<void>;
     /** Deletes both members' check-ins: the pair is ending. */
     readonly forgetMoods: Effect.Effect<void>;
-    /** The wallet entry stored under `id`, if any. */
     readonly coinEntryById: (id: CoinEntryId) => Effect.Effect<Option.Option<CoinEntry>>;
-    /**
-     * Wallet entries stored after the one under `after` (from the first when absent), oldest
-     * first. An `after` the store does not hold reads from the first.
-     */
+    /** Wallet entries after `after`, oldest first; from the first when it is absent or unknown. */
     readonly coinEntriesAfter: (
       after: CoinEntryId | undefined,
       limit: number,
@@ -96,14 +87,11 @@ export class RoomStore extends Context.Service<
       author: UserId,
       key: IdempotencyKey,
     ) => Effect.Effect<Option.Option<SequencedNote>>;
-    /** Notes with `seq` above `afterSeq`, in order. */
     readonly notesAfter: (
       afterSeq: number,
       limit: number,
     ) => Effect.Effect<ReadonlyArray<SequencedNote>>;
-    /** The journal entry stored under `id`, if any. */
     readonly catEntryById: (id: IdempotencyKey) => Effect.Effect<Option.Option<CatEntry>>;
-    /** Journal entries with `seq` above `afterSeq`, in order. */
     readonly catEntriesAfter: (
       afterSeq: number,
       limit: number,

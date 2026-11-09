@@ -11,10 +11,7 @@ export const ReportReason = Schema.Literals([
 ]);
 export type ReportReason = typeof ReportReason.Type;
 
-/**
- * `POST /v1/pair/report`: reports the caller's current partner. The pair stays as it is. `noteId`
- * names the one note or photo the report is about, when there is one.
- */
+/** `POST /v1/pair/report`: the pair stays. `noteId` names the note or photo it is about. */
 export const ReportPartnerRequest = Schema.Struct({
   reason: ReportReason,
   noteId: Schema.optionalKey(NoteId),

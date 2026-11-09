@@ -1,10 +1,7 @@
-/** How hard a word is to draw. The drawer is offered one word of each. */
+/** The drawer is offered one word of each. */
 export type RiddleTier = "easy" | "medium" | "hard";
 
-/**
- * One thing to draw, named in each language the app speaks. Lowercase, at most 10 letters not
- * counting spaces, so the 12 tiles always leave room for decoys.
- */
+/** Lowercase, at most 10 letters not counting spaces, so 12 tiles always leave room for decoys. */
 export interface RiddleCatalogWord {
   readonly en: string;
   readonly ru: string;
@@ -13,7 +10,7 @@ export interface RiddleCatalogWord {
 const words = (pairs: ReadonlyArray<readonly [string, string]>): ReadonlyArray<RiddleCatalogWord> =>
   pairs.map(([en, ru]) => ({ en, ru }));
 
-/** The words a drawer is offered for draw-guess. A word the couple types itself is not here. */
+/** A word the couple types itself is not here. */
 export const riddleWords: Readonly<Record<RiddleTier, ReadonlyArray<RiddleCatalogWord>>> = {
   easy: words([
     ["cat", "кот"],

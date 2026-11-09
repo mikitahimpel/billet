@@ -43,9 +43,7 @@ const failureOf = <A, E extends { readonly _tag: string }>(effect: Effect.Effect
   );
 
 /**
- * The behaviour every `PairingRepository` must have. Run it against each implementation, so the
- * in-memory fake can't drift from the real one. `make` must return an empty repository in which
- * `contractUsers` exist.
+ * Runs against every implementation. `make` returns an empty one in which `contractUsers` exist.
  */
 export const describePairingRepositoryContract = (
   name: string,

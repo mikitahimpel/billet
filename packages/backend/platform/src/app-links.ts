@@ -1,7 +1,7 @@
 import { inviteCodeAlphabet, inviteCodeLength } from "@billet/contracts-domain/ids";
 import { inviteLinkPrefix } from "@billet/contracts-http-api/routes";
 
-/** The iOS app that opens `/i/<code>`: team id and bundle id, as `project.yml` signs it. */
+/** Team id and bundle id, as `project.yml` signs it. */
 export const appId = "2666YPBJTB.com.mikitahimpel.billet";
 
 const half = inviteCodeLength / 2;
@@ -9,11 +9,11 @@ const typedCode = new RegExp(
   `^([${inviteCodeAlphabet}]{${half}})-?([${inviteCodeAlphabet}]{${half}})$`,
 );
 
-/** Whether the path is an invite link's, well formed or not. */
+/** Well formed or not. */
 export const isInviteLinkPath = (pathname: string) =>
   pathname.startsWith(inviteLinkPrefix) && !pathname.slice(inviteLinkPrefix.length).includes("/");
 
-/** The code as the app takes it, from a link typed in any case, with the hyphen of the grouping. */
+/** From a link typed in any case, with the hyphen of the grouping. */
 export const codeOfInviteLink = (pathname: string): string | undefined => {
   const match = typedCode.exec(pathname.slice(inviteLinkPrefix.length).toUpperCase());
   return match === null ? undefined : `${match[1]}${match[2]}`;
@@ -72,10 +72,7 @@ const pageHeaders = {
     "default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; frame-ancestors 'none'",
 };
 
-/**
- * Universal Links: the association file iOS fetches, and the page an invite link opens where the
- * app isn't installed. The page never reads or claims the invite, and nothing here logs the path.
- */
+/** The invite page never reads or claims the invite, and nothing here logs the path. */
 export const respondAppLink = (pathname: string): Response | undefined => {
   if (pathname === "/.well-known/apple-app-site-association") {
     return Response.json({

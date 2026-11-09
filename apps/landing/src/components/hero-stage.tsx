@@ -1,17 +1,49 @@
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
-import { lazy, Suspense, useCallback, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 
 const Diorama = lazy(() => import("./diorama").then((module) => ({ default: module.Diorama })));
 
 type Heart = { id: number; x: number; y: number; drift: number };
 
-export function HeroStage({ portrait, storyId }: { portrait: string; storyId: string }) {
+export function HeroStage({
+  portrait,
+  storyId,
+  posterId,
+}: {
+  portrait: string;
+  storyId: string;
+  // A still of the room the page shows until the scene is up; faded out once it is.
+  posterId: string;
+}) {
   const reduce = useReducedMotion() ?? false;
   const [purrs, setPurrs] = useState(0);
   const [ready, setReady] = useState(false);
   const [hearts, setHearts] = useState<Heart[]>([]);
 
-  const onReady = useCallback(() => setReady(true), []);
+  // The scene is 3.5 MB of script and keeps the main thread busy while it starts. The page shows a still of the room
+  // instead, and the scene loads on the visitor's first scroll, tap or key, or a few seconds after the page has loaded.
+  const [start, setStart] = useState(false);
+  useEffect(() => {
+    const events = ["pointerdown", "touchstart", "wheel", "scroll", "keydown"] as const;
+    let timer = 0;
+    const go = () => setStart(true);
+    const later = () => {
+      timer = window.setTimeout(go, 3000);
+    };
+    for (const name of events) window.addEventListener(name, go, { once: true, passive: true });
+    if (document.readyState === "complete") later();
+    else window.addEventListener("load", later, { once: true });
+    return () => {
+      for (const name of events) window.removeEventListener(name, go);
+      window.removeEventListener("load", later);
+      window.clearTimeout(timer);
+    };
+  }, []);
+
+  const onReady = useCallback(() => {
+    setReady(true);
+    document.getElementById(posterId)?.classList.add("opacity-0");
+  }, [posterId]);
   const onPet = useCallback(
     (anchor: { x: number; y: number }) => {
       setPurrs((n) => n + 1);
@@ -35,9 +67,11 @@ export function HeroStage({ portrait, storyId }: { portrait: string; storyId: st
         animate={ready ? { opacity: 1, scale: 1 } : {}}
         transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
       >
-        <Suspense fallback={null}>
-          <Diorama storyId={storyId} reduceMotion={reduce} onPet={onPet} onReady={onReady} />
-        </Suspense>
+        {start && (
+          <Suspense fallback={null}>
+            <Diorama storyId={storyId} reduceMotion={reduce} onPet={onPet} onReady={onReady} />
+          </Suspense>
+        )}
       </motion.div>
 
       {hearts.map((heart) => (

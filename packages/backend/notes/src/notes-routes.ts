@@ -51,16 +51,10 @@ import type {
 import { contentTypeOf } from "./image-type.ts";
 import { NotesService } from "./notes-service.ts";
 
-/**
- * The most one image may take, a PNG drawing or a JPEG or HEIC photo alike. A rendered note or a
- * photo the app has resized fits, and a Worker holds the whole image in memory.
- */
+/** A rendered note or resized photo fits; a Worker holds the whole image in memory. */
 export const imageSizeLimit = ByteSize.mebibytes(10);
 
-/**
- * A note is at most a 3 KB compact rendition, or a photo's key, size, BlurHash (at most 166
- * characters) and 120-character caption, so anything larger is over budget anyway.
- */
+/** A 3 KB compact rendition, or a photo's key, size, 166-char BlurHash and 120-char caption. */
 const noteSizeLimit = ByteSize.kibibytes(16);
 
 export const historyPageLimit = 100;
@@ -151,7 +145,6 @@ const respondNotesFailures = <R>(
     respondFailures,
   );
 
-/** The notes and media routes of the API. Needs `AuthService` and `NotesService`. */
 export const NotesRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const notes = yield* NotesService;
@@ -171,7 +164,6 @@ export const NotesRoutes = HttpRouter.use((router) =>
       }).pipe(respondNotesFailures),
     );
 
-    // A key has slashes in it, so it is the rest of the path.
     yield* router.add(
       routes.downloadImage.method,
       routes.downloadImage.path,

@@ -20,10 +20,7 @@ const device = Schema.decodeSync(DeviceId);
 const user = Schema.decodeSync(UserId);
 const pushToken = Schema.decodeSync(PushToken);
 
-/**
- * When the tests sweep: 01:00 UTC on 2026-03-29, the hour Europe moves its clocks forward. The
- * repository takes the time it is given, so nothing here reads the real clock.
- */
+/** 01:00 UTC on 2026-03-29, when Europe moves its clocks forward. */
 const now = Date.UTC(2026, 2, 29, 1);
 
 /** A user and a device of theirs, as a sign-in leaves them. */

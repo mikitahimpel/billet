@@ -1,6 +1,5 @@
-// Mochi sitting: cat-sit.spz is the same cat generated sitting, on a skeleton of its own for head, ears and tail. She
-// rests on it and swaps to the standing splat in one frame, while the standing skeleton crouches in the seated
-// silhouette.
+// cat-sit.spz is the same cat generated sitting, with its own skeleton; it swaps with the standing
+// splat in one frame while the standing skeleton crouches in the seated silhouette.
 import { CatRig, Pose } from "./cat-rig.js";
 import rig from "./assets/cat-sit.rig.json";
 import skinUrl from "./assets/cat-sit.skin?url";
@@ -21,22 +20,17 @@ export class CatSeat {
     return this.amount > 0.5;
   }
 
-  /**
-   * 1 shows the seated cat, 0 the standing one, cutting from one to the other halfway: their collars, bells and paws
-   * sit a little apart, so any frame showing both, blended or dithered, shows two of each.
-   */
+  /** 1 seated, 0 standing, cutting at halfway: their collars, bells and paws sit a little apart,
+   * so any frame showing both, blended or dithered, shows two of each. */
   fade(amount) {
     this.amount = amount;
     this.splat.visible = this.seated;
     this.standing.visible = !this.seated;
   }
 
-  /**
-   * Poses the seated skeleton: head and ears as the standing one holds them, so the two heads stay on each other
-   * through a swap, `headPitch` being the standing head's own nod without its posture; the tail sweeps along the
-   * floor with the resting behavior. The model-space moves of chest and hips carry over too, shifted into the seated
-   * splat's space.
-   */
+  /** Head and ears follow the standing skeleton so the heads stay on each other through a swap;
+   * `headPitch` is the standing head's nod without its posture. Chest and hips moves carry over,
+   * shifted into the seated splat's space. */
   update(standing, headPitch, behavior) {
     const b = behavior.state;
     const p = this.rig.pose;

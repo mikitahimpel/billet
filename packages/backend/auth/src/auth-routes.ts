@@ -35,10 +35,7 @@ export type RouteFailure =
   | HttpServerError.HttpServerError
   | Schema.SchemaError;
 
-/**
- * The one place failures become responses. Logs carry fixed labels only: never a token, a header
- * or a schema error, whose message can quote the input.
- */
+/** Logs carry fixed labels only: never a token, a header or a schema error that quotes input. */
 export const respondFailures = <R>(
   effect: Effect.Effect<HttpServerResponse.HttpServerResponse, RouteFailure, R>,
 ) =>
@@ -73,7 +70,6 @@ export const principalOf = (
 ): Effect.Effect<Principal, AuthRejected | AuthUnavailable, HttpServerRequest.HttpServerRequest> =>
   Effect.flatMap(bearerToken, auth.authenticate);
 
-/** The auth and device routes of the API. Needs `AuthService`, which the Worker composes. */
 export const AuthRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const auth = yield* AuthService;

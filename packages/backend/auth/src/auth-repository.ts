@@ -44,11 +44,7 @@ export const StoredPushToken = Schema.Struct({
 });
 
 /**
- * Persistence for sign-in challenges, account keys and the device registry. Users and sessions
- * belong to `AuthEngine`. Each method is one atomic operation, so an implementation maps it to one
- * Drizzle statement or transaction. Methods have no service requirements (the Layer captures the
- * database) and every storage failure is `AuthUnavailable`. `test/auth-repository-contract.ts` is
- * the behaviour any implementation must pass.
+ * Atomic per method; users and sessions belong to `AuthEngine`. See auth-repository-contract.ts.
  */
 export class AuthRepository extends Context.Service<
   AuthRepository,
@@ -57,31 +53,21 @@ export class AuthRepository extends Context.Service<
       nonceHash: TokenHash,
       expiresAt: EpochMillis,
     ) => Effect.Effect<void, AuthUnavailable>;
-    /**
-     * Deletes the challenge and reports whether it was live. Must be a single atomic delete, so that
-     * of two concurrent sign-ins with one nonce, only one sees `true`.
-     */
+    /** Reports whether it was live. One atomic delete: of concurrent uses only one sees `true`. */
     readonly consumeChallenge: (
       nonceHash: TokenHash,
       now: EpochMillis,
     ) => Effect.Effect<boolean, AuthUnavailable>;
-    /** The user this account key opened, if any. */
     readonly findAccountKey: (
       keyHash: TokenHash,
     ) => Effect.Effect<Option.Option<UserId>, AuthUnavailable>;
-    /**
-     * Records that this key opened this user. A key is held by one user forever, so when two first
-     * sign-ins race on one key, only one sees `true`.
-     */
+    /** A key belongs to one user forever: of two racing first sign-ins only one sees `true`. */
     readonly saveAccountKey: (
       keyHash: TokenHash,
       userId: UserId,
       createdAt: EpochMillis,
     ) => Effect.Effect<boolean, AuthUnavailable>;
-    /**
-     * Sets the device's token of this kind, replacing any earlier one. A token already held by
-     * another device moves here: APNs tokens identify the install, so the latest sign-in owns it.
-     */
+    /** A token held by another device moves here: APNs tokens identify the install. */
     readonly savePushToken: (
       deviceId: DeviceId,
       record: PushTokenRecord,

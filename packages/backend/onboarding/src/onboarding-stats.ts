@@ -1,10 +1,7 @@
 import type { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import type { CheckedStep } from "./answer-check.ts";
 
-/**
- * What the admin panel reads of one stored answer: its step, its kind and what was picked. Never
- * what was typed: a `Text` answer counts as answered, and its words stay in the table.
- */
+/** Never what was typed: a `Text` answer counts as answered, and its words stay in the table. */
 export interface OnboardingCountRow {
   readonly stepId: string;
   /** The answer's `_tag`: `Skipped`, `Single`, `Multi`, `Range` or `Text`. */
@@ -24,8 +21,7 @@ export interface OnboardingStepStats {
   /** `skipped` over everyone who got to the step and did either; null before anyone has. */
   readonly skipRate: number | null;
   /**
-   * For `Single` and `Multi`: how many picked each option, in the step's order. A `Multi` answer
-   * counts once per pick. For `OpenChoice`: each option anyone picked, most picked first.
+   * `Single`/`Multi`: per option in step order, a `Multi` once per pick. `OpenChoice`: most first.
    */
   readonly options: ReadonlyArray<{
     readonly id: string;
@@ -64,7 +60,7 @@ const optionsOf = (step: CheckedStep, picks: ReadonlyMap<string, number>) => {
   }
 };
 
-/** Per-step answer counts and skip rates: the served steps in order, then the app's own. */
+/** The served steps in order, then the app's own. */
 export const buildOnboardingStats = (
   catalogue: OnboardingResponse,
   native: ReadonlyArray<CheckedStep>,

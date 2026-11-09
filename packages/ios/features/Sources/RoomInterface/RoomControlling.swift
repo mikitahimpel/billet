@@ -9,6 +9,8 @@ public enum RoomEvent: Equatable, Sendable {
   case pinOpened(UUID)
   /// The board's pencil was tapped: the couple wants to doodle.
   case drawAsked
+  /// VoiceOver asked for her treats and games, which cost coins and so stay with the shell.
+  case careAsked
 }
 
 /// The room's commands. Every way in, apart from the host's input value.

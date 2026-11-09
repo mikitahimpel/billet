@@ -7,10 +7,7 @@ export class EngineUnavailable extends Data.TaggedError("EngineUnavailable")<{
   readonly cause?: unknown;
 }> {}
 
-/**
- * Reads the app's events from Analytics Engine for the trends explorer, read-only (one SELECT).
- * `none` when the Worker has no read token: then the panel uses D1 alone.
- */
+/** One SELECT, read-only. `none` when the Worker has no read token: the panel uses D1 alone. */
 export class AnalyticsEngineReader extends Context.Service<
   AnalyticsEngineReader,
   {

@@ -26,9 +26,7 @@ const deadline = (window: FunnelDefinition["window"], t: string) =>
     : `(${t} + ${window === "1d" ? day : 7 * day})`;
 
 /**
- * The hand-checked query: the units that did step 1 from `from` on, then for each later step the
- * first moment it happened at or after the step before (the row's first moment, else its last),
- * kept only when it is within the window of step 1. Returns each unit's moments.
+ * Hand-checked: each later step's first moment after the one before, within step 1's window.
  */
 const funnelSql = (definition: FunnelDefinition, from: string | null) => {
   const unit = definition.unit === "pair" ? "pair_id" : "user_id";

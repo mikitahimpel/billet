@@ -9,17 +9,12 @@ import { PairRooms } from "./pair-rooms.ts";
 
 const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-unavailable" });
 
-/**
- * Reactions to the partner's photos, for the caller's own pair. Like notes, every method starts
- * from the pair D1 says the caller belongs to, never one the client names.
- */
+/** Every method starts from the caller's pair in D1, never from one the client names. */
 export class ReactionService extends Context.Service<
   ReactionService,
   {
     /**
-     * Sets or takes back the caller's reaction and answers with it. A note the room does not
-     * hold, or a take-back of nothing, is `NotesNotFound`; their own note or one that is not a
-     * photo is `InvalidNote`.
+     * Unknown note or empty take-back: `NotesNotFound`; own or non-photo note: `InvalidNote`.
      */
     readonly react: (
       userId: UserId,

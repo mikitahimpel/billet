@@ -29,7 +29,6 @@ export interface PurchaseRow {
   readonly updatedAt: number;
 }
 
-/** One coin ledger entry. */
 export interface PurchaseEntryRow {
   readonly id: string;
   readonly ownerId: string;
@@ -50,7 +49,6 @@ export interface NotificationRow {
   readonly receivedAt: number;
 }
 
-/** A user's report about their partner, as the panel lists it. */
 export interface ReportRow {
   readonly id: string;
   readonly reporterId: string;
@@ -65,9 +63,7 @@ export interface ReportRow {
 }
 
 /**
- * What the panel reads from the directory, besides the flags services. Read-only. It never reads a
- * note, an image, an Apple subject, a push token or a typed onboarding answer: counts, pair ids,
- * purchases, picked option ids and dates only, and the reports users sent the team.
+ * Read-only. Never reads a note, image, Apple subject, push token or typed onboarding answer.
  */
 export class AdminData extends Context.Service<
   AdminData,
@@ -76,7 +72,6 @@ export class AdminData extends Context.Service<
     readonly events: Effect.Effect<ReadonlyArray<BuildEventRow>, AdminUnavailable>;
     /** Every `event_details` row: which cats, items and toys were chosen, apart from anyone. */
     readonly details: Effect.Effect<ReadonlyArray<DetailRow>, AdminUnavailable>;
-    /** Every `pair_flags` row. */
     readonly assignments: Effect.Effect<ReadonlyArray<FlagRow>, AdminUnavailable>;
     readonly userCount: Effect.Effect<number, AdminUnavailable>;
     /** The newest `limit` purchases, ledger entries and App Store notifications, newest first. */
@@ -88,9 +83,7 @@ export class AdminData extends Context.Service<
       },
       AdminUnavailable
     >;
-    /**
-     * Every `onboarding_answers` row without its typed text, and how many accounts have one.
-     */
+    /** Every `onboarding_answers` row without its typed text, and how many accounts have one. */
     readonly onboarding: Effect.Effect<
       { readonly rows: ReadonlyArray<OnboardingCountRow>; readonly accounts: number },
       AdminUnavailable

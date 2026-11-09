@@ -29,10 +29,7 @@ const seedFrom = (bytes: Uint8Array): NatureSeed => {
   return decodeSeed(String(value === 0n ? 1n : value));
 };
 
-/**
- * The couple's cat, for the caller's own pair. Like notes, every method starts from the pair D1
- * says the caller belongs to, never one the client names. See docs/cat-state.md.
- */
+/** Every method starts from the caller's pair in D1, not the client's. See docs/cat-state.md. */
 export class CatService extends Context.Service<
   CatService,
   {

@@ -4,7 +4,7 @@ import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/id
 /** Up to `max` UTF-16 units. The app trims before it sends. */
 const Text = (max: number) => Schema.String.check(Schema.isMaxLength(max));
 
-/** What a wish is called: 1 to 200 units, not only whitespace. */
+/** 1 to 200 units, not only whitespace. */
 export const GiftTitle = Schema.String.check(
   Schema.makeFilter(
     (text) =>
@@ -14,10 +14,7 @@ export const GiftTitle = Schema.String.check(
 );
 export type GiftTitle = typeof GiftTitle.Type;
 
-/**
- * The day a wish is for, such as a birthday, as the owner's phone named it. Each phone keeps its
- * own calendar, so the wish carries the title and the day rather than a calendar entry.
- */
+/** Each phone keeps its own calendar, so a wish carries a title and day, not a calendar entry. */
 export const GiftOccasion = Schema.Struct({
   title: Schema.String.check(
     Schema.makeFilter(
@@ -31,11 +28,10 @@ export const GiftOccasion = Schema.Struct({
 export type GiftOccasion = typeof GiftOccasion.Type;
 
 /**
- * One partner's wish, as both partners see it. Nothing here says who plans to gift it: that is the
- * giver's `GiftPlan`, which the owner never receives. `giftedBy` appears only once it arrived.
+ * The giver's `GiftPlan` is never sent to the owner. `giftedBy` appears only once it arrived.
  */
 export const GiftWish = Schema.Struct({
-  /** The client's, chosen when the wish is made. */
+  /** Chosen by the client. */
   id: IdempotencyKey,
   owner: UserId,
   title: GiftTitle,
@@ -74,9 +70,7 @@ export const PartnerLoves = Schema.Struct({ user: UserId, loves: Loves });
 export type PartnerLoves = typeof PartnerLoves.Type;
 
 /**
- * `GET /v1/gifts`, and the answer to every change: the pair's wishes as the caller may see them.
- * `plans` holds only the caller's own. `surprise` is true while the partner plans to gift one of
- * the caller's open wishes, without saying which. `wishes` is oldest first.
+ * `plans`: only the caller's own. `surprise`: the partner plans one of the caller's open wishes.
  */
 export const GiftsResponse = Schema.Struct({
   wishes: Schema.Array(GiftWish),
@@ -86,7 +80,6 @@ export const GiftsResponse = Schema.Struct({
 });
 export type GiftsResponse = typeof GiftsResponse.Type;
 
-/** `PUT /v1/gifts/wishes`: makes the caller's wish, or changes one they made. */
 export const SaveGiftWishRequest = Schema.Struct({
   id: IdempotencyKey,
   title: GiftTitle,
@@ -103,10 +96,7 @@ export type SaveGiftWishRequest = typeof SaveGiftWishRequest.Type;
 export const DeleteGiftWishRequest = Schema.Struct({ id: IdempotencyKey });
 export type DeleteGiftWishRequest = typeof DeleteGiftWishRequest.Type;
 
-/**
- * `PUT /v1/gifts/plans`: the caller plans to gift the partner's wish, moves the plan on, or, with
- * no `stage`, lets it go. A wish has one giver at a time.
- */
+/** No `stage` lets the plan go. A wish has one giver at a time. */
 export const SetGiftPlanRequest = Schema.Struct({
   wish: IdempotencyKey,
   stage: Schema.optionalKey(GiftStage),
@@ -120,6 +110,5 @@ export const MarkGiftReceivedRequest = Schema.Struct({
 });
 export type MarkGiftReceivedRequest = typeof MarkGiftReceivedRequest.Type;
 
-/** `PUT /v1/gifts/loves`: the caller's own "What I love". */
 export const SaveLovesRequest = Schema.Struct({ loves: Loves });
 export type SaveLovesRequest = typeof SaveLovesRequest.Type;

@@ -14,7 +14,7 @@ const unavailable = (cause: unknown) =>
 const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, unavailable);
 
 const decodeRows = Schema.decodeUnknownEffect(Schema.Array(StoredAssignment));
-// A batch returns rows as stored, keyed by column name rather than by Drizzle field.
+// A batch returns rows keyed by column name rather than by Drizzle field.
 const decodeBatchRows = Schema.decodeUnknownEffect(
   Schema.Array(
     Schema.Struct({
@@ -71,6 +71,6 @@ const makeFlagsRepository = (db: DirectoryDatabase): FlagsRepository["Service"] 
   );
 };
 
-/** `FlagsRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const FlagsRepositoryLive = (binding: D1Database): Layer.Layer<FlagsRepository> =>
   Layer.effect(FlagsRepository, Effect.map(openDirectoryDatabase(binding), makeFlagsRepository));

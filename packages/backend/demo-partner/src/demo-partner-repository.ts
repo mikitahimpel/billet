@@ -10,22 +10,17 @@ export const StoredDemoPartner = Schema.Struct({
 });
 export type StoredDemoPartner = typeof StoredDemoPartner.Type;
 
-/**
- * Which user is whose demo partner. Every storage failure is `DemoPartnerUnavailable`.
- * `test/demo-partner-repository-contract.ts` is the behaviour any implementation must pass.
- */
+/** Which user is whose demo partner. Every storage failure is `DemoPartnerUnavailable`. */
 export class DemoPartnerRepository extends Context.Service<
   DemoPartnerRepository,
   {
     /**
-     * Opens the bot as a user and records it as the owner's demo partner, both or neither. An owner
-     * has at most one: a second fails, keeping the first.
+     * Opens the bot user and records it, both or neither; a second bot fails, keeping the first.
      */
     readonly create: (demo: StoredDemoPartner) => Effect.Effect<void, DemoPartnerUnavailable>;
     readonly botOf: (
       ownerId: UserId,
     ) => Effect.Effect<Option.Option<UserId>, DemoPartnerUnavailable>;
-    /** Whether `userId` is someone's demo partner. */
     readonly isBot: (userId: UserId) => Effect.Effect<boolean, DemoPartnerUnavailable>;
     /** Drops the record and keeps the bot's user. Does nothing for an unknown bot. */
     readonly forget: (botId: UserId) => Effect.Effect<void, DemoPartnerUnavailable>;

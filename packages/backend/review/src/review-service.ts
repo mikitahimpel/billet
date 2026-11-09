@@ -60,10 +60,7 @@ export interface IssuedReviewCode {
 }
 
 /**
- * The App Review pair (docs/app-review.md). A review code pairs whoever claims it with the one
- * review partner, through an ordinary invite, so every rule of pairing holds. The partner's pair is
- * reset on each claim, and its room's bot acts for it only in that pair. Codes are made, revoked
- * and the pair wiped from the admin only, each change recorded under the admin's email.
+ * The App Review pair (docs/app-review.md): an ordinary invite, so every pairing rule holds.
  */
 export class ReviewService extends Context.Service<
   ReviewService,
@@ -73,7 +70,7 @@ export class ReviewService extends Context.Service<
       code: ReviewCode,
     ) => Effect.Effect<PairId, InvalidInvite | AlreadyPaired | ReviewUnavailable>;
     readonly status: Effect.Effect<ReviewStatus, ReviewUnavailable>;
-    /** Makes a new code that lives `days`, revoking every earlier one. Opens the partner if needed. */
+    /** Revokes every earlier code. Opens the partner if needed. */
     readonly issue: (
       by: string,
       days: number,

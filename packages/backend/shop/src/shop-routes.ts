@@ -26,11 +26,7 @@ const unavailable = Effect.succeed(
   }),
 );
 
-/**
- * The shop catalog and its uploaded pictures. No session: the same for everyone. The catalog is
- * kept a minute by shared caches (an admin's change reaches the app by its next fetch); its
- * ETag is a hash of the body.
- */
+/** No session: the same for everyone, so shared caches keep the catalog a minute. */
 export const ShopCatalogRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const store = yield* ShopStore;

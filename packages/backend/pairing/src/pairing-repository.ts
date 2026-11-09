@@ -76,24 +76,17 @@ export interface PartnerReport {
 }
 
 /**
- * Persistence for invites and the pair lookup. Each method is one atomic operation, every storage
- * failure is `PairingUnavailable`, and raw invite codes never reach it.
- * `test/pairing-repository-contract.ts` is the behaviour any implementation must pass.
+ * Each method is atomic; raw invite codes never reach it (`test/pairing-repository-contract.ts`).
  */
 export class PairingRepository extends Context.Service<
   PairingRepository,
   {
-    /**
-     * Replaces the owner's invite, and removes every expired one. Fails, changing nothing for the
-     * owner, if the owner has a partner.
-     */
+    /** Also removes every expired invite. Fails, changing nothing, if the owner has a partner. */
     readonly saveInvite: (
       invite: StoredInvite,
     ) => Effect.Effect<void, AlreadyPaired | PairingUnavailable>;
     /**
-     * Pairs the claimer with the invite's owner and removes both users' invites, all or nothing, so
-     * of any number of concurrent claims of one code, only one succeeds. The claimer's own code
-     * is `InvalidInvite`. A failed claim leaves the invite as it was.
+     * All or nothing: of concurrent claims of one code only one wins. Own code is `InvalidInvite`.
      */
     readonly claimInvite: (
       claim: InviteClaim,
@@ -103,28 +96,22 @@ export class PairingRepository extends Context.Service<
     readonly pairedAt: (
       pairId: PairId,
     ) => Effect.Effect<Option.Option<EpochMillis>, PairingUnavailable>;
-    /** The users in a pair: none once it has ended. */
+    /** None once the pair has ended. */
     readonly findMembers: (
       pairId: PairId,
     ) => Effect.Effect<ReadonlyArray<UserId>, PairingUnavailable>;
     /** Removes the lookup of both partners. Does nothing for a user without a partner. */
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
     /**
-     * In one atomic write: records that `blocker` blocked `blocked` and removes the pair of
-     * `blocker`. A claim of an invite between the two, either way round, is `InvalidInvite` from
-     * then on. Safe to repeat.
+     * Atomic with the unpair; later invite claims between the two are `InvalidInvite`. Idempotent.
      */
     readonly block: (block: {
       readonly blocker: UserId;
       readonly blocked: UserId;
       readonly at: EpochMillis;
     }) => Effect.Effect<void, PairingUnavailable>;
-    /**
-     * Adds to what `userId` keeps from ended pairs: more coins, and the inks and pieces they did
-     * not have. Safe to repeat for the items, not for the coins.
-     */
+    /** Adds to what `userId` keeps. Safe to repeat for the items, not for the coins. */
     readonly keep: (userId: UserId, kept: KeptPurchases) => Effect.Effect<void, PairingUnavailable>;
-    /** What `userId` keeps, empty when nothing. */
     readonly kept: (userId: UserId) => Effect.Effect<KeptPurchases, PairingUnavailable>;
     /** Forgets what `userId` keeps, once the new pair's room has it. */
     readonly clearKept: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;

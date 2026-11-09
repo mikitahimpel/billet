@@ -50,19 +50,13 @@ export class FlagsService extends Context.Service<
       userId: UserId,
       caller: CallerContext,
     ) => Effect.Effect<FlagsResponse, FlagsUnavailable>;
-    /**
-     * Gives a pair its variants and stores the ones that put it in an experiment. Pairing calls it
-     * so the choice exists from the first moment; reading flags does the same for a pair that
-     * predates an experiment, so a failure here loses nothing. Pairing does not know the build,
-     * so an experiment targeted by app version waits for the pair's first flags read.
-     */
+    /** Pairing calls it; a flags read does the same, so a failure here loses nothing. Pairing does
+     * not know the build, so a version-targeted experiment waits for the first flags read. */
     readonly assignPair: (pairId: PairId) => Effect.Effect<void, FlagsUnavailable>;
     /** Every experiment as configured now: the registry with the admin's saved changes. */
     readonly current: Effect.Effect<ReadonlyArray<Experiment>, FlagsUnavailable>;
-    /**
-     * What the pair would be sent and why, without storing anything. For the admin panel, which
-     * does not know the pair's build: version targeting is judged on `appVersion`.
-     */
+    /** A dry run for the admin panel, which does not know the pair's build: version targeting is
+     * judged on `appVersion`. */
     readonly explain: (
       pairId: PairId,
       appVersion: string,
@@ -86,12 +80,9 @@ export class FlagsService extends Context.Service<
         Effect.map((stored) => effectiveExperiments(registry, stored)),
       );
 
-      /**
-       * One pass over the experiments. The kill switch beats everything; then an override; a
-       * draft is for overrides only; a stored variant is kept (a retired one becomes the default);
-       * a stopped experiment takes nobody new; targeting decides who may enter; exposure decides
-       * who is analysed. `store` is false for a dry run.
-       */
+      /** Kill switch, then override; a draft is for overrides only; a stored variant is kept (a
+       * retired one becomes the default); stopped takes nobody new; targeting decides who enters,
+       * exposure who is analysed. `store` is false for a dry run. */
       const decide = Effect.fnUntraced(function* (
         context: FlagContext,
         store: boolean,

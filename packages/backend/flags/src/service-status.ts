@@ -1,11 +1,8 @@
 import { Context, Layer } from "effect";
 import { type AppStatus, normalStatus } from "@billet/contracts-http-api/status";
 
-/**
- * The service status the Worker read for this request (maintenance, minimum build, notice). The
- * flags answer carries it, so one launch read gets both. Read once, before anything touches the
- * database; see `app-status-live` in the platform package.
- */
+/** Read once per request, before anything touches the database (`app-status-live` in platform).
+ * The flags answer carries it, so one launch read gets both. */
 export class ServiceStatus extends Context.Service<
   ServiceStatus,
   { readonly current: AppStatus }

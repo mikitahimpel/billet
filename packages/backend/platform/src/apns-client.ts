@@ -1,8 +1,6 @@
-// The APNs client for the PairRoom's push lanes: alert, WidgetKit and Live Activity pushes, with a
-// cached provider token and each failure classified into what the ledger should do about it.
 import { appleTeamId, signEs256 } from "./es256-jwt.ts";
 
-/** The app's bundle id: the alert topic, and the root of the other two. */
+/** The alert topic, and the root of the other two. */
 export const appBundleId = "com.mikitahimpel.billet";
 
 export type ApnsPushType = "alert" | "widgets" | "liveactivity";
@@ -13,7 +11,6 @@ const hosts: Record<ApnsEnvironment, string> = {
   production: "https://api.push.apple.com",
 };
 
-/** APNs routes each push type to its own topic: the bundle id, or the bundle id with a suffix. */
 export const topicOf = (pushType: ApnsPushType): string => {
   switch (pushType) {
     case "alert":
@@ -29,33 +26,26 @@ export interface ApnsPush {
   readonly token: string;
   readonly environment: ApnsEnvironment;
   readonly pushType: ApnsPushType;
-  /** The whole APNs JSON body, `aps` included. */
+  /** `aps` included. */
   readonly body: unknown;
   /** Pushes with the same id replace each other on the phone. */
   readonly collapseId?: string;
 }
 
-/**
- * What one push came to.
- * - `Delivered`: APNs accepted it.
- * - `Unregistered`: the token is dead; drop it and never send to it again.
- * - `Retry`: worth trying again later (throttled, APNs down, the network, an expired provider token).
- * - `Rejected`: this push will never be accepted (a malformed body, a wrong topic); do not retry.
- */
+/** `Unregistered`: drop the token for good. `Rejected`: will never be accepted; do not retry. */
 export type ApnsResult =
   | { readonly _tag: "Delivered" }
   | { readonly _tag: "Unregistered"; readonly reason: string }
   | { readonly _tag: "Retry"; readonly reason: string }
   | { readonly _tag: "Rejected"; readonly reason: string };
 
-/** Turns an APNs answer into an `ApnsResult`, from its status and the `reason` in its body. */
 export const classify = (status: number, reason: string): ApnsResult => {
   if (status === 200) return { _tag: "Delivered" };
   if (status === 410 || reason === "BadDeviceToken" || reason === "Unregistered") {
     return { _tag: "Unregistered", reason: reason || String(status) };
   }
-  // A token for the other environment is a wrong registration, not a dead device; it is dropped
-  // the same way, and the phone registers the right one on its next launch.
+  // A token for the other environment is a wrong registration; dropping it is safe because the
+  // phone registers the right one on its next launch.
   if (reason === "BadEnvironmentKeyInToken" || reason === "DeviceTokenNotForTopic") {
     return { _tag: "Unregistered", reason };
   }
@@ -67,7 +57,7 @@ export const classify = (status: number, reason: string): ApnsResult => {
 };
 
 export interface ApnsCredentials {
-  /** The `.p8` key, PKCS #8 PEM. */
+  /** PKCS #8 PEM. */
   readonly key: string;
   readonly keyId: string;
 }
@@ -75,7 +65,6 @@ export interface ApnsCredentials {
 /** APNs asks for a new provider token at most every 20 minutes and refuses one older than 60. */
 export const providerTokenLifetimeSeconds = 50 * 60;
 
-/** Signs the provider token once and reuses it until it is due for renewal. */
 export class ProviderTokens {
   private cached:
     | { readonly keyId: string; readonly token: string; readonly issuedAt: number }
@@ -101,7 +90,7 @@ export class ProviderTokens {
     return token;
   }
 
-  /** Forgets the cached token, after APNs said it is expired or invalid. */
+  /** After APNs said the token is expired or invalid. */
   reset(): void {
     this.cached = undefined;
   }
@@ -109,7 +98,7 @@ export class ProviderTokens {
 
 export type ApnsFetch = (url: string, init: RequestInit) => Promise<Response>;
 
-/** The headers APNs needs for a push type. Start and end of a Live Activity go at once (10). */
+/** Start and end of a Live Activity go at once (10). */
 const headersOf = (push: ApnsPush, providerToken: string): Record<string, string> => ({
   authorization: `bearer ${providerToken}`,
   "apns-push-type": push.pushType,
@@ -120,7 +109,7 @@ const headersOf = (push: ApnsPush, providerToken: string): Record<string, string
   ...(push.collapseId === undefined ? {} : { "apns-collapse-id": push.collapseId }),
 });
 
-/** Sends one push. Never throws: a network failure is a `Retry`. */
+/** Never throws: a network failure is a `Retry`. */
 export const sendApns = async (
   push: ApnsPush,
   credentials: ApnsCredentials,

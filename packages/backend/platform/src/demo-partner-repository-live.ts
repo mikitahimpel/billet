@@ -49,7 +49,7 @@ const makeDemoPartnerRepository = (db: DirectoryDatabase): DemoPartnerRepository
     }),
   );
 
-/** `DemoPartnerRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const DemoPartnerRepositoryLive = (
   binding: D1Database,
 ): Layer.Layer<DemoPartnerRepository> =>

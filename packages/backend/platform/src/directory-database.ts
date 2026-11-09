@@ -2,11 +2,7 @@ import * as D1Client from "@effect/sql-d1/D1Client";
 import { makeWithDefaults } from "drizzle-orm/effect-d1";
 import { Effect, Layer } from "effect";
 
-/**
- * Drizzle over the D1 directory. Pure Effect drivers only: this must not import `alchemy` or
- * `@alchemy.run/*` (see docs/alchemy.md). The client lives in the caller's `Scope`, so open it once
- * per request.
- */
+/** Must not import `alchemy` (docs/alchemy.md). Lives in the caller's `Scope`: once per request. */
 export const openDirectoryDatabase = (db: D1Database) =>
   Effect.gen(function* () {
     const services = yield* Layer.build(D1Client.layer({ db }));
@@ -19,11 +15,7 @@ interface Compilable {
   readonly toSQL: () => { readonly sql: string; readonly params: ReadonlyArray<unknown> };
 }
 
-/**
- * Runs the statements as one D1 batch, which is a transaction: D1 has no interactive ones, so
- * `db.transaction` can't be used and a later statement can't depend on JavaScript reading an
- * earlier result. Returns each statement's rows.
- */
+/** D1 has no interactive transactions, so a statement can't depend on an earlier result in JS. */
 export const atomically = (db: DirectoryDatabase, statements: ReadonlyArray<Compilable>) =>
   db.$client.batch(
     statements.map((statement) => {

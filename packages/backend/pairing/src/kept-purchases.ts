@@ -2,10 +2,7 @@ import type { UserId } from "@billet/contracts-domain/ids";
 import type { KeptPurchases } from "./pairing-repository.ts";
 
 /**
- * Purchases are never deleted when a pair ends. The pair's inks and pieces are copied to each
- * partner, as the room doesn't say who bought what, and the coins are split evenly, the odd coin
- * to the first of the partners in id order, a stable tie-break. A demo partner is no keeper: the
- * person gets it all.
+ * Items go to both (no record of who bought what); odd coin to the lower id; demo gets none.
  */
 export const splitKept = (
   keepers: ReadonlyArray<UserId>,

@@ -2,10 +2,8 @@ import { Context, type Effect, type Option, Schema } from "effect";
 import { EpochMillis } from "@billet/contracts-domain/ids";
 import type { PaymentsUnavailable } from "./payments-error.ts";
 
-/**
- * Whose coins these are: a pair id, or `demo:<code>` for a demo room on the dev stage. Coins
- * belong to the pair, so both partners share them, and a new pair starts from none.
- */
+/** A pair id, or `demo:<code>` for a demo room on the dev stage. Both partners share the pair's
+ * coins, and a new pair starts from none. */
 export const CoinOwner = Schema.String.check(Schema.isNonEmpty()).pipe(Schema.brand("CoinOwner"));
 export type CoinOwner = typeof CoinOwner.Type;
 
@@ -91,38 +89,27 @@ export interface Ledger extends Balance {
   readonly entries: ReadonlyArray<StoredPurchaseEntry>;
 }
 
-/**
- * Purchases, the coin ledger and handled notifications. Each method is one atomic operation and
- * every storage failure is `PaymentsUnavailable`. `test/payments-repository-contract.ts` is the
- * behaviour any implementation must pass.
- */
+/** Each method is one atomic operation; every storage failure is `PaymentsUnavailable`.
+ * `test/payments-repository-contract.ts` is the behaviour any implementation must pass. */
 export class PaymentsRepository extends Context.Service<
   PaymentsRepository,
   {
-    /**
-     * Stores the purchase and credits its coins to the owner, once per `originalTransactionId`.
-     * A purchase already stored, for any owner, credits nothing.
-     */
+    /** Credits once per `originalTransactionId`; a purchase already stored, for any owner,
+     * credits nothing. */
     readonly credit: (purchase: NewPurchase) => Effect.Effect<Credited, PaymentsUnavailable>;
     readonly findPurchase: (
       originalTransactionId: string,
     ) => Effect.Effect<Option.Option<StoredPurchase>, PaymentsUnavailable>;
-    /**
-     * Takes a credited purchase's coins back, at most the owner's balance, and marks it refunded.
-     * Takes fewer than the pack's coins only when the balance is short, and then flags the
-     * purchase. Its entry is `refund:<id>`, then `refund:<id>:2` and so on for later refunds.
-     * Records `notification` in the same batch, when given. A purchase that is not `credited`
-     * with `refunds` as given is left alone (`duplicate`).
-     */
+    /** Takes back at most the owner's balance, flagging the purchase when short; records
+     * `notification` in the same batch. A purchase not `credited` with `refunds` as given is left
+     * alone (`duplicate`). */
     readonly refund: (
       purchase: StoredPurchase,
       at: number,
       notification?: StoredNotification,
     ) => Effect.Effect<Reversal, PaymentsUnavailable>;
-    /**
-     * Gives a refunded purchase back what its last refund took (Apple reversed the refund), as a
-     * `purchase` entry `restore:<id>` (`restore:<id>:2`…), and marks it credited again.
-     */
+    /** Gives back what the last refund took (Apple reversed it) as a `purchase` entry, and marks
+     * it credited again. */
     readonly restore: (
       purchase: StoredPurchase,
       at: number,

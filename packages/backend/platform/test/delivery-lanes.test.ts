@@ -53,8 +53,7 @@ const alarmAt = (room: ReturnType<typeof env.LANE_ROOM.get>) =>
 type Room = ReturnType<typeof env.LANE_ROOM.get>;
 
 /**
- * The room's alarm, run now. The room lives at the fixed `TEST_NOW`, far ahead of the real clock,
- * so its alarms never go off by themselves: each try happens where a test runs it.
+ * Runs the alarm now: at `TEST_NOW`, far ahead of the real clock, alarms never fire by themselves.
  */
 const runAlarm = async (room: Room) => {
   expect(await runDurableObjectAlarm(room)).toBe(true);
