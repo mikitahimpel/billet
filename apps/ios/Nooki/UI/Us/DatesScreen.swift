@@ -32,11 +32,6 @@ struct DatesScreen: View {
 
     var body: some View {
         BilletSheet("Date night", scrolls: false) {
-        VStack(spacing: 0) {
-            SheetSubtitle(text: "Swipe together, or let \(CatProfile.name()) pick")
-                .padding(.horizontal, Space.gutter)
-            modeRow
-            if mode != .dates { filterBar }
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     switch mode {
@@ -45,13 +40,21 @@ struct DatesScreen: View {
                     case .surprise: surpriseContent
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.horizontal, Space.gutter)
+                .padding(.top, Space.s)
                 .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
-        }
-        .overlay { matchOverlay }
+            .scrollHeader {
+                VStack(spacing: 0) {
+                    SheetSubtitle(text: "Swipe together, or let \(CatProfile.name()) pick")
+                        .padding(.horizontal, Space.gutter)
+                    modeRow
+                    if mode != .dates { filterBar }
+                }
+                .padding(.bottom, Space.s)
+            }
+            .overlay { matchOverlay }
         }
         .sheet(item: $planner) { target in
             DatePlannerSheet(state: state, target: target) { mode = .dates }

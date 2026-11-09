@@ -135,7 +135,7 @@ struct PackStore: View {
                 VStack(spacing: Space.m) {
                     CardHeader("The store didn't open", detail: "Nothing was charged. You can still earn coins below.",
                                symbol: "wifi.exclamationmark", tint: Ink.textSecondary, opens: false)
-                    SecondaryButton("Try again", symbol: "arrow.clockwise") { Task { await model.load() } }
+                    RetryButton { Task { await model.load() } }
                 }
             }
             .accessibilityIdentifier("storeUnavailable")

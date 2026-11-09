@@ -61,6 +61,10 @@ private struct Catalog: View {
           SecondaryButton("Place", symbol: "mappin") {}
           SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
         }
+        HStack {
+          RetryButton {}
+          RetryButton(compact: true) {}
+        }
 
         SectionHeader("Labels")
         HStack {

@@ -65,6 +65,7 @@ struct MovieCard: View {
                 .padding(.bottom, 40)
             }
         }
+        .softScrollEdges()
         .scrollIndicators(.hidden)
         .ignoresSafeArea(edges: .top)
     }

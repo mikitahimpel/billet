@@ -39,7 +39,7 @@ struct NeedBars: View {
                     .frame(maxWidth: .infinity, minHeight: 60)
             }
         }
-        .padding(Space.m + 2)
+        .padding(CardMetrics.padding)
         .cardSurface()
     }
 }

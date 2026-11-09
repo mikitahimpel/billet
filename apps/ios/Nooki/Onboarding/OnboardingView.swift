@@ -209,7 +209,7 @@ struct OnboardingView: View {
         // the page scrolls with a smaller cat.
         ViewThatFits(in: .vertical) {
             coatPage(stage: nil)
-            ScrollView { coatPage(stage: 200) }
+            ScrollView { coatPage(stage: 200) }.softScrollEdges()
                 .scrollBounceBehavior(.basedOnSize)
         }
     }

@@ -17,57 +17,58 @@ struct AddPlaceSheet: View {
 
     var body: some View {
         BilletSheet(place.map { "Where is “\($0)”?" } ?? "Add a place", scrolls: false) {
-        VStack(spacing: 0) {
-            if place != nil {
-                SheetSubtitle(text: "Pick its country")
-                    .padding(.horizontal, Space.gutter)
-            }
-
-            HStack(spacing: Space.s) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Ink.textSecondary)
-                TextField("", text: $query,
-                          prompt: Text(place == nil ? "Search countries" : "Search its country")
-                              .foregroundStyle(Ink.textTertiary))
-                    .font(.ourioBody)
-                    .foregroundStyle(Ink.text)
-                    .focused($focused)
-                    .submitLabel(.search)
-                    .autocorrectionDisabled()
-            }
-            .fieldSurface()
-            .padding(.horizontal, Space.gutter)
-            .padding(.top, 14)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.m) {
-                    let found = Country.search(trimmed)
-                    if !found.isEmpty {
-                        VStack(spacing: 0) {
-                            ForEach(Array(found.prefix(30).enumerated()), id: \.element) { index, code in
-                                if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 62) }
-                                countryRow(code)
-                            }
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.m) {
+                let found = Country.search(trimmed)
+                if !found.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(Array(found.prefix(30).enumerated()), id: \.element) { index, code in
+                            if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 62) }
+                            countryRow(code)
                         }
-                        .cardSurface()
-                    } else if !trimmed.isEmpty, place != nil {
-                        Text("No country by that name.")
-                            .font(.ourioCallout)
-                            .foregroundStyle(Ink.textSecondary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, Space.l)
                     }
-                    if place == nil {
-                        if !trimmed.isEmpty { addAsPlace }
-                        if trimmed.isEmpty { popular }
-                    }
+                    .cardSurface()
+                } else if !trimmed.isEmpty, place != nil {
+                    Text("No country by that name.")
+                        .font(.ourioCallout)
+                        .foregroundStyle(Ink.textSecondary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, Space.l)
                 }
-                .padding(.horizontal, Space.gutter)
-                .padding(.top, Space.m)
-                .padding(.bottom, 40)
+                if place == nil {
+                    if !trimmed.isEmpty { addAsPlace }
+                    if trimmed.isEmpty { popular }
+                }
             }
-            .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
+            .padding(.horizontal, Space.gutter)
+            .padding(.top, Space.m)
+            .padding(.bottom, 40)
+        }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .scrollHeader {
+            VStack(spacing: 0) {
+                if place != nil {
+                    SheetSubtitle(text: "Pick its country")
+                        .padding(.horizontal, Space.gutter)
+                }
+
+                HStack(spacing: Space.s) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Ink.textSecondary)
+                    TextField("", text: $query,
+                              prompt: Text(place == nil ? "Search countries" : "Search its country")
+                                  .foregroundStyle(Ink.textTertiary))
+                        .font(.ourioBody)
+                        .foregroundStyle(Ink.text)
+                        .focused($focused)
+                        .submitLabel(.search)
+                        .autocorrectionDisabled()
+                }
+                .fieldSurface()
+                .padding(.horizontal, Space.gutter)
+                .padding(.top, 14)
+            }
         }
         .toolbar {
             if place != nil {
@@ -410,6 +411,7 @@ private struct MomentsPicker: View {
                     .padding(.top, Space.l)
                     .padding(.bottom, 40)
                 }
+                .softScrollEdges()
             }
         }
         }

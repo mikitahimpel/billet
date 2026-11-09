@@ -225,6 +225,49 @@ public struct PriceButton: View {
   }
 }
 
+/// Every "Try again" after a load or a send failed: the secondary capsule under an `EmptyState` or
+/// in a card, or `compact` at a row's trailing edge, the height of a `PriceButton`.
+public struct RetryButton: View {
+  let title: String
+  let compact: Bool
+  let action: () -> Void
+
+  public init(_ title: String = "Try again", compact: Bool = false, action: @escaping () -> Void) {
+    self.title = title
+    self.compact = compact
+    self.action = action
+  }
+
+  public var body: some View {
+    if compact {
+      Button(action: action) { ButtonLabel(title: title, symbol: "arrow.clockwise") }
+        .buttonStyle(CompactSecondaryStyle())
+    } else {
+      SecondaryButton(title, symbol: "arrow.clockwise", fullWidth: false, action: action)
+    }
+  }
+}
+
+private struct CompactSecondaryStyle: ButtonStyle {
+  @Environment(\.isEnabled) private var isEnabled
+
+  func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.ourioCallout.weight(.semibold))
+      .foregroundStyle(isEnabled ? Ink.accentText : Ink.disabledText)
+      .padding(.horizontal, Space.m)
+      .frame(minHeight: 36)
+      .background(isEnabled ? Ink.surfaceRaised : Ink.disabledFill, in: .capsule)
+      .overlay {
+        if isEnabled { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
+      }
+      .frame(minHeight: Size.control)
+      .contentShape(.rect)
+      .scaleEffect(configuration.isPressed ? 0.97 : 1)
+      .animation(.spring(duration: 0.2), value: configuration.isPressed)
+  }
+}
+
 #Preview("Buttons") {
   ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
     VStack(spacing: Space.m) {
@@ -232,6 +275,10 @@ public struct PriceButton: View {
       PrimaryButton("Pick how you feel") {}.disabled(true)
       SecondaryButton("Place", symbol: "mappin") {}
       SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
+      HStack {
+        RetryButton {}
+        RetryButton(compact: true) {}
+      }
       HStack {
         GlassIconButton(symbol: "face.smiling", label: "How are you?") {}
         GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}

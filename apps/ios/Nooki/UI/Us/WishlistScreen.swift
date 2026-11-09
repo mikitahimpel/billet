@@ -17,21 +17,23 @@ struct WishlistScreen: View {
 
     var body: some View {
         BilletSheet("Wishlists", scrolls: false) {
-        VStack(spacing: 0) {
-            SheetSubtitle(text: "Little hints for each other")
-                .padding(.horizontal, Space.gutter)
-            ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
-                    chips
-                    if mine { mineTab } else { partnerTab }
-                    giftedSection
-                    lovesSection
-                }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
-                .padding(.bottom, 40)
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                chips
+                if mine { mineTab } else { partnerTab }
+                giftedSection
+                lovesSection
             }
-            .scrollIndicators(.hidden)
+            .padding(.horizontal, 20)
+            .padding(.top, 16)
+            .padding(.bottom, 40)
+        }
+        .scrollIndicators(.hidden)
+        .scrollHeader {
+            VStack(spacing: 0) {
+                SheetSubtitle(text: "Little hints for each other")
+                    .padding(.horizontal, Space.gutter)
+            }
         }
         .toolbar {
             if mine {

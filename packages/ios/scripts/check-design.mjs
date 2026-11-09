@@ -1,6 +1,8 @@
 // Fails when feature code outside the design package gains a raw `Color(red:`,
-// `.font(.system(size:` or numeric corner radius (docs/design-system.md). Baseline counts may only
-// shrink; `--update` rewrites them after a cleanup. Run from anywhere in the repository.
+// `.font(.system(size:`, numeric corner radius or hand-made "Try again" button, a card whose
+// content is not at `CardMetrics.padding`, or a scroll view with a hard edge (docs/design-system.md).
+// Baseline counts may only shrink; `--update` rewrites them after a cleanup. Run from anywhere in the
+// repository.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -23,6 +25,13 @@ const checks = [
     baseline: join(here, "radius-baseline.json"),
     what: "corner radii written as numbers",
     fix: "Corners come from Radius (card, inner, control) or Field / Card (docs/design-system.md#shape).",
+  },
+  {
+    pattern:
+      /\b(?:Button|PrimaryButton|SecondaryButton|BilletButton)\(\s*"Try [Aa]gain|Label\(\s*"[^"]*[Tt]ry again"/g,
+    baseline: join(here, "retry-baseline.json"),
+    what: "hand-made Try again buttons",
+    fix: "A failed load or send is retried with RetryButton from the design package (docs/design-system.md).",
   },
 ];
 
@@ -82,43 +91,44 @@ for (const check of checks) {
   }
 }
 
-// Content scrolling under the Home header and the tab bar fades out on every tab: each tab's vertical scroll
-// view carries `.softScrollEdges()`, and nothing sets a hard edge. The tabs are the views Home switches on.
-const home = join(root, "apps/ios/Nooki/UI/HomeView.swift");
-const tabViews = [
-  ...stripComments(readFileSync(home, "utf8")).matchAll(/case \.\w+:\s*\n\s*(\w+View)\(state:/g),
-].map((match) => match[1]);
-const appFiles = swiftFiles(join(root, "apps/ios"));
-const edgeViolations = [];
-if (tabViews.length < 3) {
-  edgeViolations.push(`HomeView.swift: found only ${tabViews.length} tab views`);
+// A card's content sits at `CardMetrics.padding`, so `Radius.inner` inside it is concentric with its
+// corners. Rows that only pad one axis (lists of rows on a card) are not checked.
+const paddingViolations = [];
+for (const [file, text] of sources) {
+  for (const match of text.matchAll(
+    /\.padding\(\s*([^.\s)][^)]*)\)\s*(?:\.frame\([^)]*\)\s*)*\.cardSurface\(/g,
+  )) {
+    if (match[1].trim() !== "CardMetrics.padding") {
+      paddingViolations.push(`${file}: a card padded by ${match[1].trim()}`);
+    }
+  }
 }
-for (const view of tabViews) {
-  const file = appFiles.find((path) =>
-    new RegExp(`\\bstruct ${view}\\b`).test(readFileSync(path, "utf8")),
+if (paddingViolations.length > 0) {
+  console.error(paddingViolations.join("\n"));
+  console.error(
+    "Pad a card's content by CardMetrics.padding, so what is inside it takes Radius.inner (docs/design-system.md#shape).",
   );
-  if (!file) {
-    edgeViolations.push(`${view}: no file declares it`);
-    continue;
-  }
-  const text = stripComments(readFileSync(file, "utf8"));
-  const scrolls = text.match(/ScrollView\s*(\{|\(\s*\.vertical)/g)?.length ?? 0;
-  const soft = text.match(/\.softScrollEdges\(\)/g)?.length ?? 0;
-  if (scrolls === 0 || soft < scrolls) {
-    edgeViolations.push(
-      `${relative(root, file)}: ${scrolls} vertical scroll views, ${soft} .softScrollEdges()`,
-    );
-  }
+  failed = true;
 }
+
+// Every vertical scroll view in a file on the design package fades out under the bars and under a
+// pinned header: `.softScrollEdges()`, or `.scrollHeader { }`, which applies it. Nothing sets a hard edge.
+const edgeViolations = [];
 for (const [file, text] of sources) {
   if (/scrollEdgeEffectStyle\(\s*\.hard/.test(text)) {
     edgeViolations.push(`${file}: a hard scroll edge`);
+  }
+  if (!/^import Design$/m.test(text)) continue;
+  const scrolls = text.match(/ScrollView\s*(\{|\(\s*\.vertical)/g)?.length ?? 0;
+  const soft = text.match(/\.softScrollEdges\(\)|\.scrollHeader\s*\{/g)?.length ?? 0;
+  if (soft < scrolls) {
+    edgeViolations.push(`${file}: ${scrolls} vertical scroll views, ${soft} soft edges`);
   }
 }
 if (edgeViolations.length > 0) {
   console.error(edgeViolations.join("\n"));
   console.error(
-    "Every tab's scroll view fades under the bars with .softScrollEdges() (docs/design-system.md).",
+    "Every scroll view fades under the bars with .softScrollEdges(), and under a sheet's chips or search with .scrollHeader { } (docs/design-system.md).",
   );
   failed = true;
 }

@@ -50,6 +50,7 @@ struct DateFilterSheet: View {
                 .padding(.top, 18)
                 .padding(.bottom, 24)
             }
+            .softScrollEdges()
             .scrollIndicators(.hidden)
 
             PrimaryButton(fits == 0 ? "Nothing fits" : "Show \(fits) ideas") { dismiss() }

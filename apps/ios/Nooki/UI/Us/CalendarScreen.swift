@@ -16,16 +16,6 @@ struct CalendarScreen: View {
 
     var body: some View {
         BilletSheet("Calendar", scrolls: false) {
-        VStack(spacing: 0) {
-            SheetSubtitle(text: "Day \(state.daysTogether) together")
-                .padding(.horizontal, Space.gutter)
-            HStack(spacing: 8) {
-                FilterChip("Soon", isSelected: !showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = false } }
-                FilterChip("Month", isSelected: showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = true } }
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, Space.gutter)
-
             ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
                     if showsMonth {
@@ -41,12 +31,23 @@ struct CalendarScreen: View {
                         }
                     }
                 }
-                .padding(.horizontal, 20)
-                .padding(.top, 16)
+                .padding(.horizontal, Space.gutter)
+                .padding(.top, Space.s)
                 .padding(.bottom, 40)
             }
             .scrollIndicators(.hidden)
-        }
+            .scrollHeader {
+                VStack(spacing: 0) {
+                    SheetSubtitle(text: "Day \(state.daysTogether) together")
+                    HStack(spacing: Space.s) {
+                        FilterChip("Soon", isSelected: !showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = false } }
+                        FilterChip("Month", isSelected: showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = true } }
+                        Spacer(minLength: 0)
+                    }
+                }
+                .padding(.horizontal, Space.gutter)
+                .padding(.bottom, Space.s)
+            }
         }
         .addToolbarButton { editing = UsEvent(title: "", icon: UsGlyph.palette[0], date: .now) }
         .sheet(item: $editing) { event in
@@ -81,7 +82,7 @@ struct CalendarScreen: View {
                     }
                 }
             }
-            .padding(12)
+            .padding(CardMetrics.padding)
             .cardSurface()
         }
         .buttonStyle(.plain)

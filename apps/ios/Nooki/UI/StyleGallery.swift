@@ -28,11 +28,13 @@ struct StyleGallery: View {
                 PrimaryButton("Primary", symbol: "heart.fill") {}
                 PrimaryButton("Disabled primary") {}.disabled(true)
                 SecondaryButton("Secondary") {}
+                RetryButton {}
             }
             GroupedSection(header: "Rows") {
                 Row("Opens a screen", symbol: "person.2.fill", tint: UsTint.sky.color) { RowChevron() }
                 ToggleRow("A switch", symbol: "hand.tap.fill", isOn: $isOn)
                 Row("Erase all data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
+                Row("Not connected", symbol: "icloud.slash", tint: UsTint.coral.color) { RetryButton(compact: true) {} }
             }
             GroupedSection(header: "Chips", inset: Space.l) {
                 HStack {
