@@ -58,13 +58,13 @@ struct DateFilterSheet: View {
                 .padding(.horizontal, Space.gutter)
                 .padding(.bottom, Space.m)
         }
-        }
         .toolbar {
             if !filter.isEmpty {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Reset") { withAnimation(.snappy(duration: 0.2)) { filter = DateFilter() } }
                 }
             }
+        }
         }
     }
 

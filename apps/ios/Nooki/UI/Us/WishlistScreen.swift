@@ -33,7 +33,6 @@ struct WishlistScreen: View {
             }
             .scrollIndicators(.hidden)
         }
-        }
         .toolbar {
             if mine {
                 ToolbarItem(placement: .topBarLeading) {
@@ -41,6 +40,7 @@ struct WishlistScreen: View {
                         .accessibilityLabel("Add")
                 }
             }
+        }
         }
         .task { await state.gifts.refresh() }
         .sheet(isPresented: $adding) {

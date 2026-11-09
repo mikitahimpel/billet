@@ -69,7 +69,6 @@ struct AddPlaceSheet: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
         }
-        }
         .toolbar {
             if place != nil {
                 ToolbarItem(placement: .topBarLeading) {
@@ -77,6 +76,7 @@ struct AddPlaceSheet: View {
                         .accessibilityLabel("Back")
                 }
             }
+        }
         }
         .onAppear { focused = true }
     }
