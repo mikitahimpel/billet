@@ -48,7 +48,7 @@ enum OurioPerf {
         host.scroll = { y in scrolls[state.tab]?(y) }
         if state.rooms.variant.hasRoomChoice {
             let kinds = state.rooms.variant.kinds
-            host.rooms = kinds.map(\.perfName)
+            host.rooms = { (kinds.filter { $0 == state.room } + kinds.filter { $0 != state.room }).map(\.perfName) }
             host.selectRoom = { name in
                 if let kind = kinds.first(where: { $0.perfName == name }) { selectRoom(kind) }
             }
