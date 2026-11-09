@@ -101,7 +101,7 @@ final class TabletopRoom: CatRoom {
             wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
             window(g, at: [0.2, 0.25, wallAt + 0.012])
             Props.picture(g, at: [-0.2, 0.22, wallAt + 0.012], width: 0.12, height: 0.09)
-            g.children.last?.orientation = onWall
+            Array(g.children).last?.orientation = onWall
             Props.snakePlant(g, at: [-0.36, top, -0.3])
             Props.plush(g, at: [0.34, top, -0.28], rotation: .y(-0.6))
         case .kitchen:
