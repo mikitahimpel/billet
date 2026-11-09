@@ -131,8 +131,6 @@ import Wire
     #expect(Self.game(drawing).turn == .drawing(.idle))
   }
 
-  /// A solved or given-up round left its tiles placed, and the partner's next riddle started with
-  /// them: a wrong try sent on the first tap.
   @Test func theNextRiddleStartsWithNoTilesPlaced() {
     let (placed, _) = Self.run(
       Self.playing([Self.riddle()]), .tilePlaced(1, key: Self.key), .tilePlaced(3, key: Self.key),
@@ -222,7 +220,6 @@ import Wire
     #expect(Self.game(waiting).turn == .waiting)
   }
 
-  /// "Didn't reach" from a failed send showed on the guess screen once the partner's riddle came.
   @Test func aFailedSendDoesNotFollowToTheGuessScreen() {
     let (unsent, _) = Self.run(
       Self.playing(),

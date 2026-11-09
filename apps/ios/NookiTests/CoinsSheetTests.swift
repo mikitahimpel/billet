@@ -133,9 +133,11 @@ nonisolated private struct FakePayments: Payments {
     }
 
     func purchase(_ pack: StampPack) async throws(PaymentsError) -> PurchaseResult {
+        // Only the first purchase waits, so a second one that slips past the guard returns and is counted
+        // instead of hanging the test.
         if let held {
             held.purchases += 1
-            await withCheckedContinuation { held.held = $0 }
+            if held.purchases == 1 { await withCheckedContinuation { held.held = $0 } }
         }
         return switch result {
         case .succeed:
