@@ -133,7 +133,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
@@ -234,7 +234,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
@@ -300,7 +300,7 @@ jobs:
     # What each part of the room costs to draw on a small and a large screen: one build, each part
     # switched off and back on in turn within a launch. After the other jobs, on one runner.
     needs: [ab, shots]
-    # The parts it switches are NookiPerf's `switches`: Mochi's shadow and the room's shadows, lights,
+    # The parts it switches are OurioPerf's `switches`: Mochi's shadow and the room's shadows, lights,
     # particles and bloom.
     if: >-
       !cancelled() && github.event_name == 'workflow_dispatch'
@@ -329,7 +329,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
@@ -425,7 +425,7 @@ jobs:
       - name: Select Xcode
         run: head/.github/scripts/select-perf-xcode.sh head/.xcode-version
 
-      # Nooki's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
+      # Ourio's splat shader is a .metal file: the Xcode on the runner needs the Metal Toolchain.
       - name: Metal Toolchain
         run: head/.github/scripts/metal-toolchain.sh
 
