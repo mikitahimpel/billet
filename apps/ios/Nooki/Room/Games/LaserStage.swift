@@ -33,7 +33,7 @@ final class LaserStage: GameStage {
         glow.blending = .transparent(opacity: .init(floatLiteral: 0.35))
         halo = dot.cylinder(0.001, 0.012, glow, at: [0, 0.0005, 0])
         dot.isEnabled = false
-        deck.say("Drag the dot across the floor", for: 4)
+        deck.say("Drag the red dot across the floor", for: 4)
         deck.bar = (0, "Play")
         let seat = spots.at(0, -0.05)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + spots.toward), id: "laser-start")
@@ -41,6 +41,11 @@ final class LaserStage: GameStage {
 
     var focus: [SIMD3<Float>] {
         [spots.at(-0.2, -0.14), spots.at(0.2, -0.14), spots.at(-0.2, 0.2), spots.at(0.2, 0.2), spots.at(0, 0, up: 0.12)]
+    }
+
+    var cue: GameCue? {
+        guard deck.result == nil, chases == 0 || !(room.walker?.moving ?? false) else { return nil }
+        return GameCue(step: 0, gesture: .drag(to: spots.at(0.14, 0.1)), at: spots.at(-0.12, 0.12))
     }
 
     func began(_ touch: GameTouch) { moved(touch) }
@@ -73,10 +78,12 @@ final class LaserStage: GameStage {
                 pouncing = false
                 laser.pounced()
                 deck.thump()
+                deck.cheer()
                 deck.say(laser.cheer, for: 0.9)
             }
             if deck.result == nil, laser.isDone {
                 dot.isEnabled = false
+                deck.cheer(big: true)
                 deck.result = GameResult(game: .laser, score: 100)
             } else if let cue = laser.cue(cat: SIMD2(Double(at.x), Double(at.z))) {
                 switch cue {

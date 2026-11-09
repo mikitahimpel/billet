@@ -87,6 +87,14 @@ final class WaterStage: GameStage {
 
     func act() { serve() }
 
+    var cue: GameCue? {
+        guard !served else { return nil }
+        if bowl.puddle > WaterBowl.dry { return GameCue(step: 2, gesture: .rub, at: puddleAt) }
+        if bowl.isOverLine { return GameCue(step: 3, gesture: .hold, at: bowlAt + [0, Self.bowlHeight, 0]) }
+        if bowl.canServe { return nil }
+        return GameCue(step: 1, gesture: .hold, at: jug.position + [0, 0.035, 0])
+    }
+
     func began(_ touch: GameTouch) {
         guard !served else { return }
         if bowl.puddle > WaterBowl.dry, let floor = touch.onPlane(y: spots.floor),
@@ -181,6 +189,7 @@ final class WaterStage: GameStage {
         room.send(to: [drink.x, spots.floor, drink.z], facing: GameSpots.yaw(from: drink, to: bowlAt), id: "water-drink") {
             [weak self] in self?.room.walker?.behavior.perform(.slowBlink)
         }
+        deck.cheer(big: true)
         deck.result = GameResult.water(bowl)
     }
 

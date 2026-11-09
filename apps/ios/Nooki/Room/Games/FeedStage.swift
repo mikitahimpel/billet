@@ -119,7 +119,7 @@ final class FeedStage: GameStage {
 
         let seat = spots.at(0, -0.17)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: scaleAt), id: "feed-watch")
-        deck.say("\(name) needs \(task.target) g. Put the bowl on the scale")
+        deck.say("Tap the bowl to weigh \(name)'s \(task.target) g")
         drawDisplay(force: true)
 
         if motion.isDeviceMotionAvailable {
@@ -134,6 +134,13 @@ final class FeedStage: GameStage {
     }
 
     var action: String? { started && eating == nil ? "Feed" : nil }
+
+    var cue: GameCue? {
+        guard eating == nil, bowlMove == nil else { return nil }
+        guard scale.bowlOnScale else { return GameCue(step: 0, gesture: .tap, at: bowlAt + [0, Self.bowlHeight, 0]) }
+        if case .ready = task.check(food: scale.food) { return nil }
+        return GameCue(step: 1, gesture: .drag(to: scaleAt + [0, 0.08, 0]), at: bagAt + [0, 0.1, 0])
+    }
 
     /// Where the bowl's food sits: on the platform or at home.
     private var bowlAt: SIMD3<Float> { bowl.position }
@@ -193,7 +200,8 @@ final class FeedStage: GameStage {
                 scale.putBowl(onScale: true)
                 settle = 0.4
                 started = true
-                deck.say("Press TARE to zero it, or don't, and pour", for: 3)
+                deck.cheer()
+                deck.say("Tip the bag to pour. TARE zeroes the scale", for: 3)
             } else if scale.food >= KibbleScale.kibbleGrams {
                 takeOne()
             }
@@ -416,6 +424,7 @@ final class FeedStage: GameStage {
         moveBowl(to: dinner)
         let seat = dinner - spots.right * 0.09
         room.send(to: [seat.x, spots.floor, seat.z], facing: GameSpots.yaw(from: seat, to: dinner), id: "feed-eat")
+        deck.cheer(big: true)
         deck.result = result
     }
 

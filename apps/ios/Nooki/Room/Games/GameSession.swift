@@ -15,6 +15,8 @@ final class GameSession {
     let deck = GameDeck()
     /// The finished game's toast, while it shows.
     private(set) var finished: GameResult?
+    /// Where the hand shows the gesture to make, while it shows.
+    private(set) var pointer: GamePointer?
 
     @ObservationIgnored private let room: CatRoom
     @ObservationIgnored private let catLife: CatLife
@@ -24,11 +26,18 @@ final class GameSession {
     @ObservationIgnored private var wasDirected = false
     @ObservationIgnored private var lens: CGSize = .zero
     @ObservationIgnored private var ended = false
+    @ObservationIgnored private var coach = GameCoach.State.idle
+    @ObservationIgnored private var gaze = GameGaze()
+    @ObservationIgnored private var finger: CGPoint?
+    @ObservationIgnored private var sinceTwitch: Float = 9
+    @ObservationIgnored private var sparkles: GameSparkles?
+    @ObservationIgnored private let spots: GameSpots
 
     init(game: MiniGame, room: CatRoom, catLife: CatLife) {
         self.game = game
         self.room = room
         self.catLife = catLife
+        spots = GameSpots(room: room)
     }
 
     var action: String? { finished == nil ? stage?.action : nil }
@@ -55,6 +64,7 @@ final class GameSession {
         deck.pointsPerMeter = { [weak self] point in
             self?.lensNow?.pointsPerMeter(at: pivot.convert(position: point, to: nil)) ?? 1
         }
+        sparkles = GameSparkles(in: room.pivot)
         subscription = room.root.scene?.subscribe(to: SceneEvents.Update.self) { [weak self] (event: SceneEvents.Update) in
             MainActor.assumeIsolated { self?.update(Float(event.deltaTime)) }
         }
@@ -65,6 +75,8 @@ final class GameSession {
         finished = nil
         deck.result = nil
         deck.bar = nil
+        coach = .idle
+        pointer = nil
         let stage = Self.stage(for: game, room: room, deck: deck)
         self.stage = stage
         camera?.focus = stage.focus
@@ -86,13 +98,65 @@ final class GameSession {
 
     private func update(_ dt: Float) {
         guard dt > 0, let stage else { return }
+        sinceTwitch += dt
         deck.tick(dt)
         stage.update(min(dt, 0.1))
+        for big in deck.takeCheers() { cheer(big: big) }
+        look(dt)
+        coach = GameCoach.transition(coach, .tick(Double(dt))).0
+        let cue = finished == nil ? stage.cue : nil
+        coach = GameCoach.transition(coach, .step(cue?.step)).0
+        show(coach.shown == nil ? nil : cue)
         if finished == nil, let result = deck.result { finish(result) }
+    }
+
+    // MARK: - Her
+
+    /// Just above her eyes, in the pivot's space.
+    private var head: SIMD3<Float>? {
+        room.walker.map { $0.at + [0, spots.length * 0.8, 0] }
+    }
+
+    /// Her eyes on the finger while it is down, otherwise mostly on the player.
+    private func look(_ dt: Float) {
+        switch gaze.update(dt: Double(dt), touching: finger != nil) {
+        case .finger:
+            guard let finger, let head, let at = deck.project(head) else { return }
+            room.follow(CGSize(width: finger.x - at.x, height: finger.y - at.y))
+        case .player: room.follow(.zero)
+        case .free: room.follow(nil)
+        }
+    }
+
+    /// A happy squint at the player, a purr and a puff of sparks.
+    private func cheer(big: Bool) {
+        guard let walker = room.walker else { return }
+        walker.behavior.perform(.slowBlink)
+        walker.pet()
+        gaze.pleased()
+        if let head { sparkles?.burst(at: head + [0, spots.length * 0.25, 0], big: big) }
+    }
+
+    /// Moves the hand only when its place on screen has moved by a few points: each write re-renders it.
+    private func show(_ cue: GameCue?) {
+        guard let cue, let from = deck.project(cue.at) else {
+            if pointer != nil { pointer = nil }
+            return
+        }
+        let next: GamePointer
+        switch cue.gesture {
+        case .tap: next = GamePointer(gesture: .tap, from: from, to: nil)
+        case .hold: next = GamePointer(gesture: .hold, from: from, to: nil)
+        case .rub: next = GamePointer(gesture: .rub, from: from, to: nil)
+        case .drag(let end): next = GamePointer(gesture: .drag, from: from, to: deck.project(end))
+        }
+        if let pointer, pointer.isNear(next) { return }
+        pointer = next
     }
 
     private func finish(_ result: GameResult) {
         finished = result
+        finger = nil
         deck.bar = nil
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         // On this phone at once, for her bars; in the pair's journal for both partners, and for the coins.
@@ -104,19 +168,24 @@ final class GameSession {
         begin()
     }
 
-    /// Ends the game wherever it is: the props go, the camera eases back, and her brain takes over again.
-    func close(_ done: @escaping () -> Void) {
+    /// Ends the game wherever it is: the props go, the camera eases back, and her brain takes over again. `now` lets
+    /// the camera go at once, for a game that moves to another scene and covers this one.
+    func close(now: Bool = false, _ done: @escaping () -> Void) {
         guard !ended else { return }
         ended = true
         stage?.tearDown()
         stage = nil
         subscription?.cancel()
         subscription = nil
+        pointer = nil
+        sparkles?.remove()
+        sparkles = nil
+        room.follow(nil)
         let room = room
         let directed = wasDirected
         room.walker?.directed = directed
         room.isPlayingGame = false
-        if room is TabletopRoom {
+        if room is TabletopRoom || now {
             camera?.cancel()
             done()
         } else if let camera {
@@ -130,15 +199,26 @@ final class GameSession {
 
     func touch(_ phase: TouchPhase, at point: CGPoint) {
         guard finished == nil, let stage else { return }
+        finger = phase == .ended ? nil : point
         let touch = ray(at: point)
         switch phase {
-        case .began: if let touch { stage.began(touch) }
+        case .began:
+            coach = GameCoach.transition(coach, .touched).0
+            react()
+            if let touch { stage.began(touch) }
         case .moved: if let touch { stage.moved(touch) }
         case .ended: stage.ended(touch)
         }
     }
 
     enum TouchPhase { case began, moved, ended }
+
+    /// Every touch gets an ear: a flick of one now and then, so it never turns into a tic.
+    private func react() {
+        guard sinceTwitch > 1.2, let walker = room.walker, !walker.moving else { return }
+        sinceTwitch = 0
+        walker.behavior.perform(.twitch)
+    }
 
     func act() { stage?.act() }
 
@@ -150,5 +230,20 @@ final class GameSession {
         let origin = room.pivot.convert(position: ray.origin, from: nil)
         let direction = simd_normalize(room.pivot.convert(direction: ray.direction, from: nil))
         return GameTouch(point: point, origin: origin, direction: direction)
+    }
+}
+
+/// The hint hand on screen: the gesture, where it starts and, for a drag, where it ends.
+struct GamePointer: Equatable {
+    enum Gesture { case tap, hold, rub, drag }
+
+    let gesture: Gesture
+    let from: CGPoint
+    let to: CGPoint?
+
+    func isNear(_ other: GamePointer) -> Bool {
+        guard gesture == other.gesture, (to == nil) == (other.to == nil) else { return false }
+        let close = { (a: CGPoint, b: CGPoint) in hypot(a.x - b.x, a.y - b.y) < 4 }
+        return close(from, other.from) && (to.flatMap { a in other.to.map { close(a, $0) } } ?? true)
     }
 }

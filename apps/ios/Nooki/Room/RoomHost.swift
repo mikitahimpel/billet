@@ -1,3 +1,5 @@
+import FeatureGames
+import GamesInterface
 import RoomInterface
 import SwiftUI
 
@@ -107,22 +109,31 @@ struct RoomGameLayer: View {
 
     var body: some View {
         if let game = controller.game, let room = controller.gameRoom {
-            if RoomController.usesCorner(game), !controller.isStandIn {
+            let switcher = GameSceneSwitch(
+                options: GameScenery.options(for: game), selected: controller.scenery,
+                select: { controller.showScenery($0) })
+            if controller.playsInCorner {
                 if let corner = controller.corner {
                     GameView(
                         session: GameSession(game: game, room: corner, catLife: controller.catLife),
-                        corner: corner
+                        corner: corner, scenes: switcher
                     ) { controller.endGame() }
-                    .id(game)
+                    .id(GameKey(game: game, inCorner: true))
                     .transition(.opacity)
                 }
             } else {
-                GameView(session: GameSession(game: game, room: room, catLife: controller.catLife)) {
+                GameView(session: GameSession(game: game, room: room, catLife: controller.catLife), scenes: switcher) {
                     controller.endGame()
                 }
-                .id(game)
+                .id(GameKey(game: game, inCorner: false))
                 .transition(.opacity)
             }
         }
+    }
+
+    /// A game keeps its session while it moves from one corner to another, and starts over between the room and one.
+    private struct GameKey: Hashable {
+        let game: MiniGame
+        let inCorner: Bool
     }
 }

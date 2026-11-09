@@ -23,6 +23,21 @@ struct GameTouch {
     }
 }
 
+/// The gesture a game teaches now, on the thing to touch: the hand shows it there until the first touch.
+struct GameCue: Equatable {
+    enum Gesture: Equatable {
+        case tap, hold, rub
+        /// From `at` to here, in the pivot's space.
+        case drag(to: SIMD3<Float>)
+    }
+
+    /// Which step of the game it teaches; a new step shows the hand again.
+    let step: Int
+    let gesture: Gesture
+    /// In the pivot's space.
+    let at: SIMD3<Float>
+}
+
 /// A game played in the room: it builds its props under `root`, answers touches and moves on each frame, telling
 /// the controller what to show through `deck`.
 @MainActor
@@ -35,6 +50,8 @@ protocol GameStage: AnyObject {
     func update(_ dt: Float)
     /// The overlay's button (Feed, Serve), if the game has one now.
     var action: String? { get }
+    /// What to show the player now, or nil when the game needs no gesture.
+    var cue: GameCue? { get }
     func act()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
@@ -42,6 +59,7 @@ protocol GameStage: AnyObject {
 
 extension GameStage {
     var action: String? { nil }
+    var cue: GameCue? { nil }
     func act() {}
 }
 
@@ -79,6 +97,16 @@ final class GameDeck {
     func tick(_ dt: Float) {
         hintAge += dt
         if hintAge > hintFor { hint = nil; hintFor = .infinity }
+    }
+
+    /// Something went well, for her to squint happily at the player; `big` for the game's end.
+    @ObservationIgnored private(set) var cheers: [Bool] = []
+
+    func cheer(big: Bool = false) { cheers.append(big) }
+
+    func takeCheers() -> [Bool] {
+        defer { cheers.removeAll() }
+        return cheers
     }
 
     func tap(_ intensity: CGFloat = 0.6) { light.impactOccurred(intensity: intensity) }
