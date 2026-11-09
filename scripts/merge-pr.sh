@@ -78,7 +78,12 @@ for _ in $(seq 1 300); do
     done
     if [ -n "$blocking" ]; then
       log "$behind behind; main changed$(echo "$blocking" | tr ' ' '\n' | sort -u | tr '\n' ' ')- updating"
-      gh pr update-branch "$n" || { log "update-branch failed"; exit 3; }
+      if ! gh pr update-branch "$n"; then
+        # Someone else may have merged it meanwhile; main then holds the PR's own squash.
+        [ "$(gh pr view "$n" --json state -q .state)" = MERGED ] && { log "merged"; exit 0; }
+        log "update-branch failed"
+        exit 3
+      fi
       sleep "$poll"
       continue
     fi
