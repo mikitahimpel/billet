@@ -10,7 +10,14 @@ import { LocalDay } from "@billet/contracts-domain/coins";
 import { GuessReveal, GuessScore } from "@billet/contracts-domain/guess";
 import { Riddle } from "@billet/contracts-domain/riddle";
 import { PairShop } from "@billet/contracts-domain/shop";
-import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
+import { LivePoints, LiveStrokeId } from "./client-message.ts";
+
+/**
+ * The partner as the room sees them: `away` while they have no open socket, else what they last
+ * said. A device never sends `away`; the room derives it.
+ */
+export const PartnerPresence = Schema.Literals(["idle", "drawing", "away"]);
+export type PartnerPresence = typeof PartnerPresence.Type;
 
 /**
  * What the room sends a device. `seq` supports reconnect. The live stroke frames are the
@@ -18,7 +25,11 @@ import { LivePoints, LiveStrokeId, PresenceState } from "./client-message.ts";
  */
 export const ServerMessage = Schema.TaggedUnion({
   Stroke: { seq: Schema.Int, stroke: Stroke },
-  Presence: { state: PresenceState },
+  /**
+   * The partner's presence: sent on connect, when their first socket opens or their last one
+   * closes, and when they start or stop drawing. Older rooms never send `away`.
+   */
+  Presence: { state: PartnerPresence },
   NoteReceived: { seq: Schema.Int, note: Note },
   StrokeBegin: { id: LiveStrokeId, color: Color, width: Schema.Finite },
   /**

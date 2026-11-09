@@ -13,6 +13,20 @@ struct RoomHost: View, Equatable {
     var body: some View {
         let _ = controller.probe.hostBody()
         RoomStage(input: input, controller: controller)
+            .onChange(of: PartnerSight(input), initial: true) { _, sight in
+                controller.partnerSeen(here: sight.here, visible: sight.visible)
+            }
+    }
+}
+
+/// The part of the input the cat's notice of the partner reads.
+private struct PartnerSight: Equatable {
+    let here: Bool
+    let visible: Bool
+
+    init(_ input: RoomInput) {
+        here = input.partnerHere
+        visible = input.visibility == .visible
     }
 }
 

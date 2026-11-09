@@ -30,6 +30,7 @@ final class InboxLink {
         var catEntry: @MainActor @Sendable (CatEntry) -> Void
         /// The last journal entry held, read as each socket opens; nil follows no cat frames.
         var lastCatSeq: @MainActor @Sendable () -> Int?
+        var presence: @MainActor @Sendable (PartnerPresence) -> Void
     }
 
     init(baseURL: URL, token: @escaping @Sendable () async -> String?, lastSeq: Int?, handlers: Handlers) {
@@ -56,7 +57,8 @@ final class InboxLink {
                 case .guessRevealed(let round, let reveal, let score): await handlers.guessRevealed(round, reveal, score)
                 case .riddleChanged(let riddle): await handlers.riddle(riddle)
                 case .catEntryAdded(let entry): await handlers.catEntry(entry)
-                case .noteReceived, .stroke, .presence, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
+                case .presence(let presence): await handlers.presence(presence)
+                case .noteReceived, .stroke, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
                      .clear, .catSaved:
                     break
                 }
@@ -70,6 +72,11 @@ final class InboxLink {
             followsGuess: true,
             followsRiddle: true)
         client = WebSocketClient(dependencies: dependencies, lastSeq: lastSeq)
+    }
+
+    var isConnected: Bool {
+        guard case .connected = client?.state.phase else { return false }
+        return true
     }
 
     func connect() { client?.connect() }

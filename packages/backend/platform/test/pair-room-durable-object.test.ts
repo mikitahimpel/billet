@@ -1069,7 +1069,7 @@ describe("PairRoom realtime across eviction", () => {
     expect(shopsOf(bobOld.frames)).toEqual([]);
   });
 
-  it("tells the partner the user stopped drawing when their last socket drops", async () => {
+  it("tells the partner the user is away when their last socket drops, and stores a drawing as stopped", async () => {
     const room = await openRoom();
     const a = await open(room, alice);
     const b = await open(room, bob);
@@ -1082,10 +1082,42 @@ describe("PairRoom realtime across eviction", () => {
       if (socket === undefined) throw new Error("expected an accepted socket");
       await instance.webSocketClose(socket, 1006);
     });
-    await until(() => b.frames.some((f) => f._tag === "Presence" && f["state"] === "idle"));
+    await until(() => b.frames.some((f) => f._tag === "Presence" && f["state"] === "away"));
     expect(await room.snapshot()).toMatchObject({
       members: [{ user: alice, presence: "idle" }, { user: bob }],
     });
+  });
+
+  const presences = (frames: Array<{ _tag: string; [key: string]: unknown }>) =>
+    frames.filter((f) => f._tag === "Presence").map((f) => f["state"]);
+
+  it("says the partner is away on connect while they have no socket", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    await until(() => presences(a.frames).length === 1);
+    expect(presences(a.frames)).toEqual(["away"]);
+  });
+
+  it("tells the partner the user arrived on their first socket only", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    await until(() => presences(a.frames).length === 1);
+    const b = await open(room, bob);
+    await until(() => presences(a.frames).length === 2 && presences(b.frames).length === 1);
+    expect(presences(a.frames)).toEqual(["away", "idle"]);
+    expect(presences(b.frames)).toEqual(["idle"]);
+
+    // A second socket of Bob's, the canvas say: Alice already knows he is here.
+    const second = await open(room, bob);
+    await until(() => presences(second.frames).length === 1);
+    second.socket.close(1000);
+    b.socket.send(JSON.stringify({ _tag: "Presence", state: "idle" }));
+    await until(() => presences(a.frames).length === 3);
+    expect(presences(a.frames)).toEqual(["away", "idle", "idle"]);
+
+    b.socket.close(1000);
+    await until(() => presences(a.frames).length === 4);
+    expect(presences(a.frames).at(-1)).toBe("away");
   });
 
   const live = (frames: Array<{ _tag: string }>) =>

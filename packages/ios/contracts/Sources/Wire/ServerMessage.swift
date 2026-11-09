@@ -2,7 +2,7 @@
 /// partner's, relayed as they arrive and never stored or replayed.
 public enum ServerMessage: Codable, Hashable, Sendable {
   case stroke(seq: Int, stroke: Stroke)
-  case presence(PresenceState)
+  case presence(PartnerPresence)
   case noteReceived(seq: Int, note: Note)
   case strokeBegin(LiveStrokeStart)
   /// `relayedAt`: the room's clock in ms when the frame reached it.
@@ -68,7 +68,7 @@ public enum ServerMessage: Codable, Hashable, Sendable {
         seq: try container.decode(Int.self, forKey: .seq),
         stroke: try container.decode(Stroke.self, forKey: .stroke))
     case "Presence":
-      self = .presence(try container.decode(PresenceState.self, forKey: .state))
+      self = .presence(try container.decode(PartnerPresence.self, forKey: .state))
     case "NoteReceived":
       self = .noteReceived(
         seq: try container.decode(Int.self, forKey: .seq),

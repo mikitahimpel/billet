@@ -72,6 +72,8 @@ final class CatDirector {
     @ObservationIgnored private var look = NookiLook.around
     @ObservationIgnored private var liveUntil = 0.0
     @ObservationIgnored private var holdUntil = 0.0
+    /// Until then her head turns toward the room's back, where the partner would come in.
+    @ObservationIgnored private var glanceUntil = 0.0
     @ObservationIgnored private var nextThink = 0.0
     @ObservationIgnored private var nextSeen = 0.0
     @ObservationIgnored var paused = false
@@ -121,6 +123,14 @@ final class CatDirector {
         live(.greeting, for: 4)
         lastEvent = "greeting after \(Int(now.timeIntervalSince(last) / 3600)) h"
         analytics.coupleEvent("greeting")
+    }
+
+    /// The partner opened the app on their phone: her ears go up and she looks toward the door for a moment.
+    func partnerArrived() {
+        walker.behavior.perform(.listen)
+        glanceUntil = Date.now.timeIntervalSince1970 + 3
+        lastEvent = "partner here"
+        analytics.coupleEvent("partnerHere")
     }
 
     /// She stays at `spot` a minute before the brain moves her on; a toy is a game.
@@ -290,6 +300,7 @@ final class CatDirector {
     /// Her head's heading for `look`, relative to her body and within what her neck turns.
     private func focus() -> Float? {
         let target: SIMD3<Float>
+        let look = Date.now.timeIntervalSince1970 < glanceUntil ? NookiLook.away : look
         switch look {
         case .around: return nil
         case .camera, .away:
