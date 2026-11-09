@@ -67,6 +67,7 @@ struct HomeView: View {
 
     private func following(_ content: some View) -> some View {
         content
+        .modifier(StreakNudging(streak: state.streak))
         .task {
             OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 })
             await lift()

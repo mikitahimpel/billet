@@ -21,6 +21,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     @AppStorage(AppSettings.quietRoomKey) private var quietRoom = QuietChrome.dim
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
+    @AppStorage(AppSettings.streakNudgeKey) private var streakNudge = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
@@ -52,6 +53,11 @@ struct SettingsView: View {
                 }
                 .buttonStyle(PressScaleStyle())
                 .disabled(hintsReset)
+            }
+
+            GroupedSection(header: "Reminders",
+                         footer: "One note at 8 pm on a day your love streak would go out at midnight.") {
+                ToggleRow("Streak at risk", symbol: "flame.fill", tint: UsTint.coral.color, isOn: $streakNudge)
             }
 
             if let session {

@@ -46,3 +46,9 @@ the unsent list for the next refresh (the app coming to the front), and a day th
 front the room socket (`InboxLink`) follows the streak, so the partner's day shows here at once. A restore
 goes to the room; offline it does nothing. Before pairing the streak stays on the phone, as it did before the room
 counted it.
+
+On a day the streak would go out at midnight, the phone shows one local notification at 20:00 in the cat's voice
+(`StreakNudge`, `apps/ios/Nooki/Model/StreakNudge.swift`). It is planned again whenever the streak changes: the day
+counting takes it back and plans tomorrow's. It is never sent once the evening has passed, nor asks for permission;
+Settings → Reminders turns it off. A day the partner counts reaches this phone only when the app is in front, so
+until then the nudge may still fire on it.
