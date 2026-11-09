@@ -4,11 +4,13 @@ import Wire
 @testable import FeatureInbox
 
 private let titles = ["lamp": "Mushroom Lamp", "rug": "Round Rug", "monstera": "Monstera"]
-private let names = InboxLine.Names(
-  partner: "Anya", cat: "Mochi", title: { titles[$0] },
-  mood: { $0 == .missing ? "missing you" : $0.rawValue },
-  list: { $0 == .groceries ? "basket.fill" : "list.bullet" },
-  reaction: { $0 == .heart ? "❤️" : "?" })
+private var names: InboxLine.Names {
+  InboxLine.Names(
+    partner: "Anya", cat: "Mochi", title: { titles[$0] },
+    mood: { $0 == .missing ? "missing you" : $0.rawValue },
+    list: { $0 == .groceries ? "basket.fill" : "list.bullet" },
+    reaction: { $0 == .heart ? "❤️" : "?" })
+}
 
 private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner) -> ActivityItem {
   ActivityItem(id: "x", at: 0, actor: actor, event: event, target: nil, cursor: "0~x")
