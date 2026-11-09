@@ -39,7 +39,7 @@ extension LiveRoomMachine.State {
     switch partner {
     case .drawing: return "Your partner is drawing…"
     case .idle: return "Your partner is here"
-    case nil: return nil
+    case .away, nil: return nil
     }
   }
 }

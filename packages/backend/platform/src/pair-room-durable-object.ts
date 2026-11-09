@@ -1086,7 +1086,16 @@ export class PairRoom extends DurableObject {
     const room = await this.snapshot();
     if (room._tag === "Active") {
       const partner = room.members.find((member) => member.user !== user.value);
-      if (partner !== undefined) send(server, { _tag: "Presence", state: partner.presence });
+      if (partner !== undefined) {
+        send(server, {
+          _tag: "Presence",
+          state: this.hasOpenSocket(partner.user) ? partner.presence : "away",
+        });
+      }
+      const own = room.members.find((member) => member.user === user.value);
+      if (own !== undefined && !this.hasOpenSocket(user.value, server)) {
+        this.toPartner(user.value, { _tag: "Presence", state: own.presence });
+      }
     }
     return new Response(null, { status: 101, webSocket: client });
   }
@@ -1295,17 +1304,27 @@ export class PairRoom extends DurableObject {
     }
   }
 
-  /** No open socket left: the user cannot be drawing, so the partner is told they stopped. */
+  /** Whether `user` has an open socket here besides `except`. */
+  private hasOpenSocket(user: string, except?: WebSocket): boolean {
+    return this.ctx
+      .getWebSockets(user)
+      .some((socket) => socket !== except && socket.readyState === WebSocket.OPEN);
+  }
+
+  /**
+   * The user has no open socket left: the partner is told they are away, and a drawing they left
+   * is stored as stopped, so their next connect announces them idle.
+   */
   private async leave(socket: WebSocket): Promise<void> {
     const user = attachmentOf(socket)?.user;
     if (user === undefined) return;
-    const others = this.ctx.getWebSockets(user).filter((other) => other !== socket);
-    if (others.some((other) => other.readyState === WebSocket.OPEN)) return;
+    if (this.hasOpenSocket(user, socket)) return;
     const room = await this.snapshot();
     if (room._tag !== "Active") return;
-    if (room.members.find((member) => member.user === user)?.presence === "idle") return;
-    const decision = await this.setPresence(user as UserId, "idle");
-    if (decision._tag === "Accepted") this.toPartner(user, { _tag: "Presence", state: "idle" });
+    if (room.members.find((member) => member.user === user)?.presence === "drawing") {
+      await this.setPresence(user as UserId, "idle");
+    }
+    this.toPartner(user, { _tag: "Presence", state: "away" });
   }
 
   /**

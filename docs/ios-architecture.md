@@ -583,6 +583,7 @@ public struct RoomInput: Equatable, Sendable {
   public var pins: [BoardPin]                    // the board's cards
   public var visibility: RoomVisibility
   public var interaction: RoomInteraction        // .free, .locked (a game, a focused photo)
+  public var partnerHere: Bool                   // the partner has the app open; the cat notices once
 }
 
 public enum RoomVisibility: Equatable, Sendable {
