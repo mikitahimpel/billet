@@ -449,7 +449,7 @@ describe("tagged unions", () => {
       id: Schema.decodeSync(CoinEntryId)("purchase:2000"),
       kind: "buy",
       coins: 550,
-      ref: "com.mikitahimpel.billet.coins.550",
+      ref: "com.ourio.app.coins.550",
       at: 1_700_000_000_000,
     }),
   };

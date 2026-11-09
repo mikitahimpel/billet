@@ -1,3 +1,4 @@
+import OurioShared
 import SwiftUI
 import Design
 import WidgetKit
@@ -5,7 +6,7 @@ import WidgetKit
 /// Lock Screen: the note your partner left last, or a pencil if the board is empty. Tap to write one back.
 struct NoteAccessoryWidget: Widget {
     var body: some WidgetConfiguration {
-        StaticConfiguration(kind: "com.mikitahimpel.billet.note", provider: NoteProvider()) { entry in
+        StaticConfiguration(kind: "com.ourio.app.note", provider: NoteProvider()) { entry in
             NoteAccessoryView(entry: entry)
         }
         .configurationDisplayName("Note")
@@ -113,7 +114,7 @@ private struct NoteAccessoryView: View {
 /// Control Center and Lock Screen button: opens Ourio straight into a blank note.
 struct NewNoteControl: ControlWidget {
     var body: some ControlWidgetConfiguration {
-        StaticControlConfiguration(kind: "com.mikitahimpel.billet.new-note") {
+        StaticControlConfiguration(kind: "com.ourio.app.new-note") {
             ControlWidgetButton(action: NewNoteIntent()) {
                 Label("New Note", systemImage: "square.and.pencil")
             }

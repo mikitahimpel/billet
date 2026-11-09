@@ -3,35 +3,47 @@ import Observation
 import UIKit
 import UniformTypeIdentifiers
 
-nonisolated struct Moment: Identifiable, Codable, Hashable {
-    let id: UUID
+public nonisolated struct Moment: Identifiable, Codable, Hashable, Sendable {
+    public let id: UUID
     /// Monogram of the partner who added it, "L" or "M".
-    let author: String
-    let date: Date
-    var caption: String
+    public let author: String
+    public let date: Date
+    public var caption: String
     /// JPEG file name inside the app group's Moments folder.
-    let file: String
-    var pinned: Bool
+    public let file: String
+    public var pinned: Bool
     /// The other partner tapped the heart.
-    var loved: Bool
+    public var loved: Bool
     /// Taken on this phone and still waiting to reach the partner.
-    var unsent: Bool? = nil
+    public var unsent: Bool? = nil
     /// The partner's photo note this came from, for photos they sent.
-    var noteID: String? = nil
+    public var noteID: String? = nil
+
+    public init(id: UUID, author: String, date: Date, caption: String, file: String, pinned: Bool, loved: Bool, unsent: Bool? = nil, noteID: String? = nil) {
+        self.id = id
+        self.author = author
+        self.date = date
+        self.caption = caption
+        self.file = file
+        self.pinned = pinned
+        self.loved = loved
+        self.unsent = unsent
+        self.noteID = noteID
+    }
 }
 
 /// The couple's moments on this phone: a JSON index and JPEGs in the app group's Moments folder, where the widgets read
 /// them. Photos taken here go to the partner and theirs come back through `PhotoSync`; this folder is the cache.
 @Observable
-final class MomentStore {
-    static let wallSlots = 6
+public final class MomentStore {
+    public static let wallSlots = 6
 
     /// Long side of the stored JPEGs; also what the viewer shows.
-    static let storedPixels = 2048
+    public static let storedPixels = 2048
     /// Shared by the room's polaroids and the strip that mirrors them, so both hit the same cache entry.
-    static let wallPixels = 384
+    public static let wallPixels = 384
 
-    private(set) var moments: [Moment] = []
+    public private(set) var moments: [Moment] = []
     private let cache: NSCache<NSString, UIImage> = {
         let cache = NSCache<NSString, UIImage>()
         cache.totalCostLimit = 64 << 20
@@ -41,26 +53,26 @@ final class MomentStore {
     private static let folder = AppGroup.container.appending(path: "Moments", directoryHint: .isDirectory)
     private static let index = "Moments/moments.json"
 
-    init() {
+    public init() {
         reload()
     }
 
     /// Picks up changes made outside this process.
-    func reload() {
+    public func reload() {
         moments = SharedFile.read([Moment].self, from: Self.index) ?? []
     }
 
-    static func imageURL(for moment: Moment) -> URL { folder.appending(path: moment.file) }
+    public static func imageURL(for moment: Moment) -> URL { folder.appending(path: moment.file) }
 
     /// Newest first, pinned ones capped at the wall size.
-    var pinned: [Moment] { Array(moments.filter(\.pinned).prefix(Self.wallSlots)) }
+    public var pinned: [Moment] { Array(moments.filter(\.pinned).prefix(Self.wallSlots)) }
 
-    func cachedThumbnail(for moment: Moment, maxPixels: Int) -> UIImage? {
+    public func cachedThumbnail(for moment: Moment, maxPixels: Int) -> UIImage? {
         cache.object(forKey: Self.key(moment, maxPixels))
     }
 
     /// Decoded off the main thread at `maxPixels` on the long side, then cached.
-    func thumbnail(for moment: Moment, maxPixels: Int) async -> UIImage? {
+    public func thumbnail(for moment: Moment, maxPixels: Int) async -> UIImage? {
         if let hit = cachedThumbnail(for: moment, maxPixels: maxPixels) { return hit }
         let url = Self.imageURL(for: moment)
         let image = await Task.detached(priority: .userInitiated) { Downsample.image(at: url, maxPixels: maxPixels) }.value
@@ -70,7 +82,7 @@ final class MomentStore {
         return image
     }
 
-    func thumbnails(for moments: [Moment], maxPixels: Int) async -> [UIImage] {
+    public func thumbnails(for moments: [Moment], maxPixels: Int) async -> [UIImage] {
         var images: [UIImage] = []
         for moment in moments {
             if let image = await thumbnail(for: moment, maxPixels: maxPixels) { images.append(image) }
@@ -78,12 +90,12 @@ final class MomentStore {
         return images
     }
 
-    func cachedFilmPrint(for moment: Moment, maxPixels: Int) -> UIImage? {
+    public func cachedFilmPrint(for moment: Moment, maxPixels: Int) -> UIImage? {
         cache.object(forKey: Self.key(moment, maxPixels, film: true))
     }
 
     /// The photo with the instant-film grade, as polaroids show it; graded off the main thread, then cached.
-    func filmPrint(for moment: Moment, maxPixels: Int) async -> UIImage? {
+    public func filmPrint(for moment: Moment, maxPixels: Int) async -> UIImage? {
         if let hit = cachedFilmPrint(for: moment, maxPixels: maxPixels) { return hit }
         guard let photo = await thumbnail(for: moment, maxPixels: maxPixels) else { return nil }
         let graded = await Task.detached(priority: .userInitiated) { InstantFilm.develop(photo) }.value ?? photo
@@ -93,7 +105,7 @@ final class MomentStore {
         return graded
     }
 
-    func filmPrints(for moments: [Moment], maxPixels: Int) async -> [UIImage] {
+    public func filmPrints(for moments: [Moment], maxPixels: Int) async -> [UIImage] {
         var images: [UIImage] = []
         for moment in moments {
             if let image = await filmPrint(for: moment, maxPixels: maxPixels) { images.append(image) }
@@ -106,7 +118,7 @@ final class MomentStore {
     }
 
     @discardableResult
-    func add(_ image: UIImage, caption: String, author: String, date: Date = .now, noteID: String? = nil,
+    public func add(_ image: UIImage, caption: String, author: String, date: Date = .now, noteID: String? = nil,
              unsent: Bool = false) -> Moment? {
         // Camera photos are 12+ MP; 2048 px is plenty for a full-screen look and keeps the folder small.
         let longSide = max(image.size.width, image.size.height)
@@ -122,7 +134,7 @@ final class MomentStore {
     /// A partner's photo as it was downloaded. A JPEG within `storedPixels` is kept as it came; anything else is fitted
     /// and encoded again. Either way off the main thread, which only adds it to the list.
     @discardableResult
-    func addReceived(_ data: Data, caption: String, author: String, date: Date, noteID: String) async -> Moment? {
+    public func addReceived(_ data: Data, caption: String, author: String, date: Date, noteID: String) async -> Moment? {
         let folder = Self.folder, maxPixels = Self.storedPixels
         let file = await Task.detached(priority: .utility) {
             MomentStore.store(received: data, maxPixels: maxPixels, in: folder)
@@ -167,12 +179,12 @@ final class MomentStore {
     }
 
     /// Photos taken here that have not reached the partner yet, oldest first.
-    var unsent: [Moment] { moments.filter { $0.unsent == true }.reversed() }
+    public var unsent: [Moment] { moments.filter { $0.unsent == true }.reversed() }
 
-    func contains(noteID: String) -> Bool { moments.contains { $0.noteID == noteID } }
+    public func contains(noteID: String) -> Bool { moments.contains { $0.noteID == noteID } }
 
     /// Marks a photo taken here as waiting to reach the partner, or as delivered as the server's note `noteID`.
-    func setUnsent(_ unsent: Bool, id: UUID, noteID: String? = nil) {
+    public func setUnsent(_ unsent: Bool, id: UUID, noteID: String? = nil) {
         guard let i = moments.firstIndex(where: { $0.id == id }) else { return }
         moments[i].unsent = unsent ? true : nil
         if let noteID { moments[i].noteID = noteID }
@@ -180,7 +192,7 @@ final class MomentStore {
     }
 
     /// Pinning a seventh moment unpins the oldest pinned one so the wall stays full but tidy.
-    func togglePin(_ moment: Moment) {
+    public func togglePin(_ moment: Moment) {
         guard let i = moments.firstIndex(of: moment) else { return }
         moments[i].pinned.toggle()
         if moments[i].pinned, let extra = moments.lastIndex(where: \.pinned), moments.filter(\.pinned).count > Self.wallSlots {
@@ -189,19 +201,19 @@ final class MomentStore {
         save()
     }
 
-    func toggleLove(_ moment: Moment) {
+    public func toggleLove(_ moment: Moment) {
         guard let i = moments.firstIndex(of: moment) else { return }
         moments[i].loved.toggle()
         save()
     }
 
-    func setCaption(_ caption: String, of moment: Moment) {
+    public func setCaption(_ caption: String, of moment: Moment) {
         guard let i = moments.firstIndex(of: moment) else { return }
         moments[i].caption = caption
         save()
     }
 
-    func delete(_ moment: Moment) {
+    public func delete(_ moment: Moment) {
         moments.removeAll { $0.id == moment.id }
         try? FileManager.default.removeItem(at: Self.folder.appending(path: moment.file))
         save()
@@ -214,13 +226,13 @@ final class MomentStore {
 
 /// ImageIO decodes straight to a bitmap of at most `maxPixels` on the long side, so a 2048 px JPEG or a 12 MP photo
 /// never sits in memory at full size. Safe off the main thread.
-nonisolated enum Downsample {
-    static func image(at url: URL, maxPixels: Int) -> UIImage? {
+public nonisolated enum Downsample {
+    public static func image(at url: URL, maxPixels: Int) -> UIImage? {
         CGImageSourceCreateWithURL(url as CFURL, [kCGImageSourceShouldCache: false] as CFDictionary)
             .flatMap { thumbnail($0, maxPixels: maxPixels) }
     }
 
-    static func image(data: Data, maxPixels: Int) -> UIImage? {
+    public static func image(data: Data, maxPixels: Int) -> UIImage? {
         CGImageSourceCreateWithData(data as CFData, [kCGImageSourceShouldCache: false] as CFDictionary)
             .flatMap { thumbnail($0, maxPixels: maxPixels) }
     }

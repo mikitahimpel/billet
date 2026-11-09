@@ -1,4 +1,5 @@
 import AppIntents
+import OurioShared
 import WidgetKit
 
 // One-tap actions on the widgets and controls. They live in both the app and the extension: the system runs the app's
@@ -12,11 +13,32 @@ private func savedReloadingWidgets() {
     WidgetCenter.shared.reloadAllTimelines()
 }
 
-nonisolated extension PartnerMood: AppEnum {
+/// `PartnerMood` as an intent parameter: App Intents' metadata takes only enums declared in the target.
+nonisolated enum MoodChoice: String, AppEnum {
+    case happy, sleepy, missing, busy
+
     static let typeDisplayRepresentation: TypeDisplayRepresentation = "Mood"
-    static let caseDisplayRepresentations: [PartnerMood: DisplayRepresentation] = [
+    static let caseDisplayRepresentations: [MoodChoice: DisplayRepresentation] = [
         .happy: "😊 Happy", .sleepy: "😴 Sleepy", .missing: "🥺 Missing you", .busy: "📚 Busy",
     ]
+
+    init(_ mood: PartnerMood) {
+        switch mood {
+        case .happy: self = .happy
+        case .sleepy: self = .sleepy
+        case .missing: self = .missing
+        case .busy: self = .busy
+        }
+    }
+
+    var mood: PartnerMood {
+        switch self {
+        case .happy: .happy
+        case .sleepy: .sleepy
+        case .missing: .missing
+        case .busy: .busy
+        }
+    }
 }
 
 /// Mochi purrs: the widget shows it right away, the app plays it on its next launch.
@@ -38,17 +60,17 @@ struct SetMoodIntent: AppIntent {
     static let title: LocalizedStringResource = "Set Mood"
     static let isDiscoverable = false
 
-    @Parameter(title: "Mood") var mood: PartnerMood
+    @Parameter(title: "Mood") var mood: MoodChoice
 
     init() {}
 
     init(_ mood: PartnerMood) {
-        self.mood = mood
+        self.mood = MoodChoice(mood)
     }
 
     @MainActor
     func perform() async throws -> some IntentResult {
-        MoodStore().set(mood, for: CoupleStore().couple.viewer)
+        MoodStore().set(mood.mood, for: CoupleStore().couple.viewer)
         savedReloadingWidgets()
         return .result()
     }

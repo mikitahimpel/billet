@@ -13,7 +13,7 @@ import { active, alice, bob, pairId, rose, uuid, vacant, welcomed } from "./samp
 
 const start: EpochMillis = 1_700_000_000_000;
 const entryId = Schema.decodeSync(CoinEntryId);
-const pack = "com.mikitahimpel.billet.coins.550";
+const pack = "com.ourio.app.coins.550";
 
 const credit = (kind: "buy" | "refund", coins: number, id = `purchase:${kind}-1`) =>
   RoomCommand.cases.CreditPurchase.make({ id: entryId(id), kind, coins, ref: pack, at: start });

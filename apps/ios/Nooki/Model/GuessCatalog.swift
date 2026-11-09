@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import Wire
 
 /// Every Who knows who question, as `GET /v1/guess/catalog` sends it. The build ships the server's catalog file

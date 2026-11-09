@@ -1,11 +1,11 @@
 import Foundation
 
 /// The container the app and its widgets both read and write: every store keeps its files here.
-nonisolated enum AppGroup {
-    static let id = "group.com.mikitahimpel.billet"
+public nonisolated enum AppGroup {
+    public static let id = "group.com.ourio.app"
 
     /// Falls back to Documents when the build isn't signed with the group, so the app still works without widgets.
-    static let container: URL = {
+    public static let container: URL = {
         let documents = URL.documentsDirectory
         guard let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id) else { return documents }
         moveLegacyFolders(from: documents, to: group)
