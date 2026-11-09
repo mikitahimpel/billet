@@ -9,6 +9,8 @@
                                        revokes the development certificates in the run's own
                                        keychain, the ones Xcode made through the key this run
     asc.py certificates                lists the team's certificates: type, serial, expiry, name
+    asc.py what-to-test --build N --text T
+                                       sets build N's TestFlight "What to test" note (en-US) to T
 
 The API key comes from ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH (the .p8 file). The app is
 found by BUNDLE_ID (default com.ourio.app). Nothing secret is printed.
@@ -84,10 +86,16 @@ class Client:
     def delete(self, path: str) -> None:
         self.call("DELETE", path)
 
-    def call(self, method: str, path: str) -> dict:
-        request = urllib.request.Request(
-            f"{API}/{path}", method=method, headers={"Authorization": f"Bearer {token(*self.key)}"}
-        )
+    def send(self, method: str, path: str, body: dict) -> dict:
+        return self.call(method, path, body)
+
+    def call(self, method: str, path: str, body: dict | None = None) -> dict:
+        headers = {"Authorization": f"Bearer {token(*self.key)}"}
+        data = None
+        if body is not None:
+            headers["Content-Type"] = "application/json"
+            data = json.dumps(body).encode()
+        request = urllib.request.Request(f"{API}/{path}", data=data, method=method, headers=headers)
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
                 body = response.read()
@@ -188,6 +196,32 @@ def revoke_run_certificates(client: Client, keychain: str) -> list[str]:
     return revoked
 
 
+def what_to_test_request(build_id: str, localizations: list[dict], text: str, locale: str = "en-US") -> tuple[str, str, dict]:
+    """The call that sets the note: a PATCH of the build's localization for `locale`, or a POST of a new one."""
+    for localization in localizations:
+        if localization["attributes"].get("locale") == locale:
+            body = {"data": {"type": "betaBuildLocalizations", "id": localization["id"], "attributes": {"whatsNew": text}}}
+            return "PATCH", f"betaBuildLocalizations/{localization['id']}", body
+    body = {
+        "data": {
+            "type": "betaBuildLocalizations",
+            "attributes": {"locale": locale, "whatsNew": text},
+            "relationships": {"build": {"data": {"type": "builds", "id": build_id}}},
+        }
+    }
+    return "POST", "betaBuildLocalizations", body
+
+
+def what_to_test(client: Client, app: str, build: int, text: str) -> None:
+    found = client.builds(app, str(build))
+    if not found:
+        sys.exit(f"asc.py: no build {build} in App Store Connect")
+    build_id = found[0]["id"]
+    localizations = client.get(f"builds/{build_id}/betaBuildLocalizations", {"limit": "50"})["data"]
+    method, path, body = what_to_test_request(build_id, localizations, text)
+    client.send(method, path, body)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
@@ -199,6 +233,9 @@ def main() -> None:
     rv = commands.add_parser("revoke-run-certificates")
     rv.add_argument("--keychain", required=True)
     commands.add_parser("certificates")
+    wt = commands.add_parser("what-to-test")
+    wt.add_argument("--build", type=int, required=True)
+    wt.add_argument("--text", required=True)
     args = parser.parse_args()
 
     client = Client()
@@ -212,7 +249,10 @@ def main() -> None:
             print(a["certificateType"], a["serialNumber"], a.get("expirationDate", "")[:10], a.get("name", ""))
         return
     app = client.app_id(os.environ.get("BUNDLE_ID", "com.ourio.app"))
-    if args.command == "next-build":
+    if args.command == "what-to-test":
+        what_to_test(client, app, args.build, args.text)
+        print(f"build {args.build}: What to test set")
+    elif args.command == "next-build":
         print(next_build(client, app, args.floor))
     else:
         print(f"build {args.build}: {state(client, app, args.build, args.wait)}")
