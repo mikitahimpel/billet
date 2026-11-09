@@ -13,6 +13,7 @@ import {
   type AdminIdentity,
 } from "@billet/backend-admin/access";
 import { adminCss, adminHtml, adminJs, adminLibJs } from "@billet/backend-admin/admin-assets";
+import { ReviewAdminRoutes } from "@billet/backend-admin/admin-review";
 import {
   AdminRoutes,
   agentApiPrefix,
@@ -33,6 +34,7 @@ import { AppStatusStoreLive } from "./app-status-live.ts";
 import { FlagConfigRepositoryLive } from "./flag-config-repository-live.ts";
 import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
+import { ReviewServiceLive } from "./review-live.ts";
 import type { WorkerEnv } from "./worker-env.ts";
 
 /** Whether a path belongs to the admin panel. Everything under it is behind the Access check. */
@@ -166,13 +168,20 @@ const dataLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
   );
 
 const adminLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, admin: AdminIdentity) =>
-  AdminRoutes.pipe(
-    Layer.provide(
-      Layer.mergeAll(
-        FlagsService.layer,
-        Layer.succeed(CurrentAdmin, admin),
-        Layer.succeed(PanelEnvironment, { name: env.STAGE || "unknown" }),
-      ).pipe(Layer.provideMerge(dataLayer(env, experiments))),
+  Layer.mergeAll(
+    AdminRoutes.pipe(
+      Layer.provide(
+        Layer.mergeAll(
+          FlagsService.layer,
+          Layer.succeed(CurrentAdmin, admin),
+          Layer.succeed(PanelEnvironment, { name: env.STAGE || "unknown" }),
+        ).pipe(Layer.provideMerge(dataLayer(env, experiments))),
+      ),
+    ),
+    ReviewAdminRoutes.pipe(
+      Layer.provide(
+        Layer.mergeAll(ReviewServiceLive(env, experiments), Layer.succeed(CurrentAdmin, admin)),
+      ),
     ),
   );
 

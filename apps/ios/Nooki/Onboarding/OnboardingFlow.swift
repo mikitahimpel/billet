@@ -26,6 +26,8 @@ final class OnboardingFlow {
     static let doneKey = "onboardingDone"
     static let pageKey = "onboardingPage"
     static let joiningKey = "onboardingJoining"
+    /// When the user agreed to the terms: either action on the welcome, under the line that says so. Kept for good.
+    static let termsAcceptedKey = "onboardingTermsAcceptedAt"
     static let stoppedKey = "onboardingStopped"
     static let catalogueKey = "onboardingCatalogue"
     static let picksKey = "onboardingPicks"
@@ -233,6 +235,7 @@ final class OnboardingFlow {
     /// "I have an invite code" on the welcome, or an invite link opened before onboarding was done.
     func join(code: String = "") {
         guard !isFinished, !stopped else { return }
+        if page == .welcome { acceptTerms() }
         joining = true
         defaults.set(true, forKey: Self.joiningKey)
         if !code.isEmpty { joinCode = code }
@@ -252,7 +255,10 @@ final class OnboardingFlow {
 
     func continueTapped() {
         switch page {
-        case .welcome, .join, .widget:
+        case .welcome:
+            acceptTerms()
+            advance()
+        case .join, .widget:
             advance()
         case .stopped:
             break
@@ -299,6 +305,12 @@ final class OnboardingFlow {
         case .welcome, .join, .stopped, .togetherSince, .notifications, .widget: break
         }
         advance()
+    }
+
+    var termsAccepted: Bool { defaults.object(forKey: Self.termsAcceptedKey) != nil }
+
+    private func acceptTerms() {
+        if !termsAccepted { defaults.set(Date.now, forKey: Self.termsAcceptedKey) }
     }
 
     func back() {

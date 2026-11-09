@@ -2,7 +2,7 @@ import { Duration, Effect, Layer, Option, Schema } from "effect";
 import { Digest, SecureRandom } from "effect/crypto";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
-import { InviteCode, UserId } from "@billet/contracts-domain/ids";
+import { InviteCode, NoteId, UserId } from "@billet/contracts-domain/ids";
 import { PairMoods } from "../src/pair-moods.ts";
 import { PairingObserver } from "../src/pairing-observer.ts";
 import { PairingRepository } from "../src/pairing-repository.ts";
@@ -120,6 +120,16 @@ describe("PairingService", () => {
     expect(dump.reports).toHaveLength(1);
     expect(dump.reports[0]).toMatchObject({ reporter: ben, reported: ana, reason: "harassment" });
     expect(dump.blocks).toEqual([`${ben}>${ana}`]);
+  });
+
+  it("keeps which note a report is about", async () => {
+    const { memory, run } = setup();
+    const { code } = await run((service) => service.createInvite(ana));
+    await run((service) => service.claimInvite(ben, code));
+    const noteId = Schema.decodeSync(NoteId)("note-7");
+    await run((service) => service.reportPartner(ben, { reason: "inappropriate", noteId }));
+    const dump = JSON.parse(await Effect.runPromise(memory.dump));
+    expect(dump.reports[0]).toMatchObject({ reported: ana, reason: "inappropriate", noteId });
   });
 
   describe("observer", () => {

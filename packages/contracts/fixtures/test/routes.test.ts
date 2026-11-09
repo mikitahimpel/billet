@@ -55,6 +55,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/invites/claim",
       },
+      "claimReviewCode": {
+        "method": "POST",
+        "path": "/v1/review/claim",
+      },
       "createDemoPartner": {
         "method": "POST",
         "path": "/v1/dev/demo-partner",
