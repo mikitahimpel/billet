@@ -1,37 +1,32 @@
 import Foundation
-import QuartzCore
 import Observation
+import QuartzCore
+import notify
+
+/// One frame the probe saw: how long after the frame before it, and when it ended, in seconds since launch.
+struct ProbeFrame: Equatable {
+    let gap: TimeInterval
+    let at: TimeInterval
+}
+
+/// Which frames came late. A frame is late when its gap is longer than two frames at 60 Hz: at least one frame was
+/// dropped on top of the late one. Only frames whose gap began at or after `start` count: before it the main thread
+/// is the UI test harness's as much as the app's.
+enum HitchRule {
+    static let gap: TimeInterval = 2.1 / 60
+
+    static func late(_ frames: [ProbeFrame], from start: TimeInterval) -> [ProbeFrame] {
+        frames.filter { $0.at - $0.gap >= start && $0.gap > gap }
+    }
+
+    static func counted(_ frames: [ProbeFrame], from start: TimeInterval) -> Int {
+        frames.filter { $0.at - $0.gap >= start }.count
+    }
+}
 
 /// Counts frames that came late while the welcome timeline plays, and how long the first one took. The UI test reads
 /// it through `welcome.probe`, and measure.sh's welcome runs read its `PERF` lines; it is created only with the
 /// `-uitestWelcomeProbe` launch argument.
-/// Which frames came late. A frame is late when its gap is over two of the display's frames, so at least one frame
-/// was dropped on top of the late one. The display's frame is the run's median gap: a Simulator without a GPU draws
-/// at 20-30 Hz, where a fixed 60 Hz gap would call every frame late or, near it, a few at random. The floor keeps the
-/// 60 Hz gap on faster displays, where a 120 Hz frame's double is shorter than anyone sees; past the ceiling a frame
-/// is a stall at any rate.
-enum HitchRule {
-    static let floor: TimeInterval = 2.1 / 60
-    static let ceiling: TimeInterval = 0.1
-    static let dropped = 2.1
-
-    static func cadence(_ gaps: [TimeInterval]) -> TimeInterval {
-        guard !gaps.isEmpty else { return 0 }
-        let sorted = gaps.sorted()
-        return sorted[sorted.count / 2]
-    }
-
-    static func limit(_ gaps: [TimeInterval]) -> TimeInterval {
-        min(ceiling, max(floor, dropped * cadence(gaps)))
-    }
-
-    /// The indexes of the late gaps.
-    static func late(_ gaps: [TimeInterval]) -> [Int] {
-        let limit = limit(gaps)
-        return gaps.indices.filter { gaps[$0] > limit }
-    }
-}
-
 @MainActor
 @Observable
 final class HitchProbe {
@@ -39,34 +34,51 @@ final class HitchProbe {
     /// re-evaluates a view or changes the accessibility tree.
     private(set) var summary: String?
 
-    @ObservationIgnored private var frames = 0
     @ObservationIgnored private var firstFrameMs: Int?
     @ObservationIgnored private let created = CACurrentMediaTime()
     @ObservationIgnored private var last: Date?
-    /// Each counted frame's gap since the one before, and seconds since launch when it ended.
-    @ObservationIgnored private var gaps: [(gap: TimeInterval, at: TimeInterval)] = []
+    @ObservationIgnored private var frames: [ProbeFrame] = []
+    /// Seconds since launch from which late frames count.
+    @ObservationIgnored private var start = HitchProbe.harnessSettle
+    @ObservationIgnored private var token: Int32 = NOTIFY_TOKEN_INVALID
+    /// Called when the harness is done, so the welcome plays its script again from the start, all of it measured.
+    @ObservationIgnored var restart: () -> Void = {}
 
-    /// Seconds after launch before late frames count. An XCUITest launch waits for the app to idle and snapshots its
-    /// accessibility tree on the main thread in this window, a 120-160 ms frame of the harness's own; launched
-    /// without XCUITest the same build has no such frame. Frames ending after it count, even if they started before.
+    /// Posted by the UI test once `XCUIApplication.launch()` has returned. Until then XCUITest waits for the app to
+    /// idle and snapshots its accessibility tree on the app's main thread: frames of 120-360 ms of its own, for up to
+    /// a second on a CI runner.
+    static let harnessDone = "com.mikitahimpel.billet.uitest.launched"
+
+    /// Without the UI test (measure.sh's plain launches): seconds after launch before late frames count.
     static let harnessSettle: TimeInterval = 0.5
+
+    init(waitsForHarness: Bool = false) {
+        guard waitsForHarness else { return }
+        start = .infinity
+        notify_register_dispatch(Self.harnessDone, &token, .main) { [weak self] _ in
+            MainActor.assumeIsolated {
+                guard let self, self.start == .infinity else { return }
+                self.start = CACurrentMediaTime() - self.created
+                self.restart()
+            }
+        }
+    }
 
     func frame(_ now: Date) {
         guard summary == nil else { return }
         let elapsed = CACurrentMediaTime() - created
         if firstFrameMs == nil { firstFrameMs = Int(elapsed * 1000) }
-        defer { last = now }
-        guard elapsed >= Self.harnessSettle else { return }
-        frames += 1
-        if let last { gaps.append((now.timeIntervalSince(last), elapsed)) }
+        if let last { frames.append(ProbeFrame(gap: now.timeIntervalSince(last), at: elapsed)) }
+        last = now
     }
 
     func finish() {
-        guard summary == nil else { return }
-        let intervals = gaps.map(\.gap)
-        let late = HitchRule.late(intervals).map { "\(Int(gaps[$0].gap * 1000))@\(Int(gaps[$0].at * 1000))" }
-        let summary = "hitches=\(late.count) frames=\(frames) firstFrameMs=\(firstFrameMs ?? -1)"
-            + " cadenceMs=\(Int(HitchRule.cadence(intervals) * 1000)) late=\(late.joined(separator: ","))"
+        guard summary == nil, start.isFinite else { return }
+        if token != NOTIFY_TOKEN_INVALID { notify_cancel(token) }
+        let late = HitchRule.late(frames, from: start).map { "\(Int($0.gap * 1000))@\(Int($0.at * 1000))" }
+        let startMs = start.isFinite ? Int(start * 1000) : -1
+        let summary = "hitches=\(late.count) frames=\(HitchRule.counted(frames, from: start))"
+            + " firstFrameMs=\(firstFrameMs ?? -1) startMs=\(startMs) late=\(late.joined(separator: ","))"
         self.summary = summary
         FileHandle.standardError.write(Data("\nPERF phase welcome \(summary)\nPERF done\n".utf8))
     }

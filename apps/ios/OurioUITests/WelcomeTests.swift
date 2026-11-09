@@ -1,4 +1,5 @@
 import XCTest
+import notify
 
 /// The welcome screen fits the smallest iPhone and the largest text, and plays its timeline without a late frame.
 final class WelcomeTests: XCTestCase {
@@ -45,7 +46,13 @@ final class WelcomeTests: XCTestCase {
         let warm = launch()
         XCTAssertTrue(warm.buttons["Let's go"].waitForExistence(timeout: 60))
         warm.terminate()
-        let app = launch()
+        let app = XCUIApplication()
+        app.launchArguments += ["-onboardingDone", "NO", "-onboardingPage", "0", "-uitestNoRoom", "YES",
+                                "-uitestNoHints", "YES", "-uitestWelcomeProbe", "-uitestWelcomeProbeHarness"]
+        app.launch()
+        // launch() is done waiting for the app to idle and snapshotting it: the welcome plays again from the start,
+        // and the probe counts from here.
+        notify_post("com.mikitahimpel.billet.uitest.launched")
         // The script is under 3.5 s; let it play out and a little more. Nothing is queried meanwhile: each query
         // snapshots the app's accessibility tree on its main thread, which is itself a late frame.
         Thread.sleep(forTimeInterval: 5)

@@ -2,44 +2,45 @@ import Testing
 @testable import Billet
 
 @Suite struct HitchRuleTests {
-    private let hz60 = Array(repeating: 1.0 / 60, count: 100)
-    private let hz120 = Array(repeating: 1.0 / 120, count: 100)
-    /// A Simulator without a GPU on CI: about 25 frames a second, unevenly.
-    private let slow = (0..<80).map { 0.036 + Double($0 % 5) * 0.002 }
+    /// Frames at 60 Hz from `from` to `to` seconds, with extra gaps (seconds) ending at the given times.
+    private func frames(_ from: Double, _ to: Double, late: [(gap: Double, at: Double)] = []) -> [ProbeFrame] {
+        var all: [ProbeFrame] = []
+        var at = from
+        while at < to {
+            if let stall = late.first(where: { abs($0.at - (at + 1.0 / 60)) < 0.5 / 60 }) {
+                all.append(ProbeFrame(gap: stall.gap, at: stall.at))
+                at = stall.at
+            } else {
+                at += 1.0 / 60
+                all.append(ProbeFrame(gap: 1.0 / 60, at: at))
+            }
+        }
+        return all
+    }
 
     @Test func steadyFramesAreNeverLate() {
-        #expect(HitchRule.late(hz60).isEmpty)
-        #expect(HitchRule.late(hz120).isEmpty)
-        #expect(HitchRule.late(slow).isEmpty)
+        #expect(HitchRule.late(frames(0, 3), from: 0.5).isEmpty)
     }
 
     @Test func oneDroppedFrameIsNotAHitchTwoAre() {
-        #expect(HitchRule.late(hz60 + [2.0 / 60]).isEmpty)
-        #expect(HitchRule.late(hz60 + [3.0 / 60]) == [100])
+        #expect(HitchRule.late([ProbeFrame(gap: 2.0 / 60, at: 1)], from: 0.5).isEmpty)
+        #expect(HitchRule.late([ProbeFrame(gap: 3.0 / 60, at: 1)], from: 0.5).count == 1)
     }
 
-    @Test func fastDisplaysKeepTheSixtyHertzLimit() {
-        #expect(HitchRule.limit(hz120) == HitchRule.floor)
-        #expect(HitchRule.late(hz120 + [0.03]).isEmpty)
-        #expect(HitchRule.late(hz120 + [0.04]) == [100])
+    @Test func aStallAfterTheStartCounts() {
+        let late = HitchRule.late(frames(0, 3, late: [(0.27, 2)]), from: 1)
+        #expect(late == [ProbeFrame(gap: 0.27, at: 2)])
     }
 
-    @Test func aSlowDisplayIsJudgedByItsOwnFrames() {
-        let cadence = HitchRule.cadence(slow)
-        #expect(cadence > 0.035 && cadence < 0.045)
-        #expect(HitchRule.late(slow + [cadence * 2]).isEmpty)
-        #expect(HitchRule.late(slow + [cadence * 3]) == [80])
-        #expect(HitchRule.late(slow + [0.25]) == [80], "a stall is late at any rate")
+    @Test func aStallThatBeganBeforeTheStartIsTheHarnesss() {
+        // XCUITest's launch handling on CI: a 274 ms frame ending at 0.98 s, the signal at 1 s.
+        #expect(HitchRule.late([ProbeFrame(gap: 0.274, at: 0.98), ProbeFrame(gap: 0.016, at: 0.996)], from: 0.9).isEmpty)
+        #expect(HitchRule.late([ProbeFrame(gap: 0.274, at: 1.2)], from: 1).isEmpty)
+        #expect(HitchRule.late([ProbeFrame(gap: 0.274, at: 1.3)], from: 1).count == 1)
     }
 
-    @Test func aStallIsLateHoweverSlowTheDisplay() {
-        let crawl = Array(repeating: 0.09, count: 40)
-        #expect(HitchRule.limit(crawl) == HitchRule.ceiling)
-        #expect(HitchRule.late(crawl + [0.12]) == [40])
-    }
-
-    @Test func noFramesNoHitches() {
-        #expect(HitchRule.late([]).isEmpty)
-        #expect(HitchRule.cadence([]) == 0)
+    @Test func onlyFramesAfterTheStartAreCounted() {
+        #expect(HitchRule.counted(frames(0, 3), from: 1) > 110)
+        #expect(HitchRule.counted(frames(0, 3), from: .infinity) == 0, "no signal, nothing measured")
     }
 }
