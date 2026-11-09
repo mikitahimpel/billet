@@ -1,7 +1,6 @@
 #!/bin/zsh
-# Renders Shared/Resources/MochiPortrait-<coat>.png, the round avatar in each coat, with the original
-# Tools/make_portrait.py, run unchanged on a copy of Cat.usdz that holds the coat's colour atlas instead of the original.
-# Grey is his MochiPortrait.png and is not rendered. Needs Blender (BLENDER=/path/to/blender to override).
+# Renders Shared/Resources/MochiPortrait-<coat>.png with Tools/make_portrait.py on a copy of Cat.usdz holding
+# the coat's colour atlas. Grey is the existing MochiPortrait.png, not rendered. Needs Blender (BLENDER=path).
 set -e
 IOS=${0:a:h:h:h}
 BLENDER=${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}

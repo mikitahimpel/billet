@@ -54,7 +54,6 @@ nonisolated enum TownPicture {
             let cg = context.cgContext
             let w = size.width
 
-            // Sky.
             let sky = [Daylight.color(light.top).cgColor, Daylight.color(light.horizon).cgColor] as CFArray
             if let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: sky, locations: [0, 1]) {
                 cg.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 0, y: street), options: [])
@@ -89,7 +88,6 @@ nonisolated enum TownPicture {
                 }
             }
 
-            // The houses across the street.
             for house in layout.houses {
                 lit(house.tone).setFill()
                 cg.fill(house.body)

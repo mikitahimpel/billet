@@ -1,8 +1,7 @@
 import SwiftUI
 import Design
 
-/// The seated cat in her coat, big and sharp, on a warm glow with a soft shadow under her paws. Drawn from the coat
-/// carousel's render, so it is the same cat the room shows.
+/// Drawn from the coat carousel's render, so it is the same cat the room shows.
 struct CatHero: View {
     var coat: CatCoat = .current()
     /// The height; the render is 3:4.

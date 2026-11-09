@@ -2,8 +2,7 @@ import PhotosUI
 import SwiftUI
 import Design
 
-/// Editing the couple's profile: each partner's photo and name, who is holding the phone, and the day they got
-/// together. Pushed from the profile; the back button leaves without saving.
+/// The back button leaves without saving.
 struct ProfileEditor: View {
     let profile: CoupleStore
     @Environment(\.dismiss) private var dismiss

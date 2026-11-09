@@ -1,37 +1,22 @@
 #!/bin/zsh
-# Measures Ourio's rooms on a Release build in the Simulator, the same way every time.
-#
-# Onboarding is skipped (`-onboardingDone YES`) and Home opens on PERF_ROOM: `room` (the default, the original
-# diorama) or `city`. A Simulator without an Apple7 GPU, such as a CI VM, draws Mochi as the mesh cat instead of
-# the splats, so the cat in CI shots and numbers is not the one a phone shows.
+# Measures Ourio's rooms on a Release build in the Simulator. Home opens on PERF_ROOM: `room` (default) or `city`.
+# A Simulator without an Apple7 GPU (CI VMs) draws Mochi as the mesh cat, not the splats a phone shows.
 #
 #   apps/ios/scripts/perf/measure.sh <label> [--build] [--build-only] [--launches N] [--full N]
-#                                    [--sweep] [--cost N]
-#                                    [--steady N] [--welcome N]
+#                                    [--sweep] [--cost N] [--steady N] [--welcome N]
 #
 # --build       generate the project and build Release for the Simulator first
-# --launches N  cold launches with `-perf.script launch` (default 7; the first after install is
-#               dropped, so N+1 are run)
-# --full N      runs of `-perf.script full`: orbit, tabs, settled (default 3)
-# --sweep       one `-perf.script sweep` run, saving a screenshot of the room, its turned poses and the tabs
-# --cost N      runs of `-perf.script cost`: each part of the room switched off in turn (default 0)
-#               PERF_SWITCHES=a,b keeps them to those parts
-# --steady N    runs of `-perf.script steady`: Home left alone, then a minute of it (default 0)
-# --welcome N   launches onto the welcome, as WelcomeTests does but without XCUITest, each counting the
-#               timeline's late frames (`PERF phase welcome hitches=`) (default 0)
 # --build-only  build, then stop
+# --launches N  cold launches with `-perf.script launch` (default 7; one extra first run is dropped)
+# --full N      runs of `-perf.script full`: orbit, tabs, settled (default 3)
+# --sweep       one `-perf.script sweep` run, screenshotting the room, its turned poses and the tabs
+# --cost N      runs of `-perf.script cost`, each room part off in turn (default 0; PERF_SWITCHES=a,b limits)
+# --steady N    runs of `-perf.script steady`: Home left alone for a minute (default 0)
+# --welcome N   launches onto the welcome counting late frames (`PERF phase welcome hitches=`) (default 0)
 #
-# PERF_APP_ARGS="-perf.hud opaque" adds launch arguments to every measured run, the same for every build.
-#
-# Runs add to <label>'s logs, so two builds can be measured in turns in one sitting, which is the
-# only fair comparison on a shared Mac:
-#   PERF_DERIVED=<a>/build-perf measure.sh base --launches 3 --full 1   # then the same for new,
-#   and again, then report.py <out>/base <out>/new. ab.sh does exactly this.
-#
-# Logs and a summary go to $PERF_OUT/<label> (default ~/.billet-manager/pet-concept/perf/runs).
-# Runs take the measuring lock (lock.sh), so agents queue instead of colliding. It then waits while
-# another Simulator is booted, swap is over 15 GB or the disk has under 4 GB free, refuses to build
-# while another build runs, and shuts its Simulator down when it ends.
+# PERF_APP_ARGS adds launch arguments to every run. Logs accumulate in $PERF_OUT/<label> (default
+# ~/.billet-manager/pet-concept/perf/runs), so two builds measured in turns compare fairly; ab.sh does that.
+# Takes the measuring lock (lock.sh); waits while another Simulator is up, swap > 15 GB or disk < 4 GB free.
 set -euo pipefail
 
 label=${1:?usage: measure.sh <label> [--build] [--launches N] [--full N] [--sweep] [--cost N] [--steady N] [--welcome N]}
@@ -141,7 +126,7 @@ room_args=()
 [[ $room == city ]] && room_args=(-room city)
 app_args=(${=PERF_APP_ARGS:-})
 
-# One run of the app with a script. Prints screenshots when the run asks for them.
+# Prints screenshots when the run asks for them.
 attempt() {
   local name=$1 script=$2 log=$out/$1-$stamp.log
   rm -rf $containers/perf-shots
@@ -170,13 +155,12 @@ attempt() {
       done
     fi
     python3 -c 'import time; time.sleep(0.2)'
-    # The app crashed or was killed: no more lines will come.
     if ! kill -0 $pid 2> /dev/null && ! grep -q '^PERF done' $log; then
       echo "PERF error app exited" >> $log
       break
     fi
     if ((SECONDS - started > run_limit)); then echo "PERF error timeout" >> $log; break; fi
-    # A build without `-perf.script` (one from before Ourio had it) never says anything: stop early.
+    # A build without `-perf.script` never prints anything: stop early.
     if ((SECONDS - started > 180)) && ! grep -q '^PERF' $log 2>/dev/null; then
       echo "PERF error no PERF lines: this build cannot run -perf.script" >> $log
       break

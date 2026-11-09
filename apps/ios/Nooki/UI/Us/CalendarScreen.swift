@@ -1,7 +1,6 @@
 import SwiftUI
 import Design
 
-/// Shared calendar: a "Soon" feed of countdowns by default, a month grid as the second view.
 struct CalendarScreen: View {
     let state: HomeState
 

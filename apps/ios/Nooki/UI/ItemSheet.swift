@@ -6,8 +6,6 @@ import UIKit
 
 // MARK: - Item sheet
 
-/// An item's card: the name with its rarity, the item big on a warm stage that turns into the live 3D model on Preview,
-/// what it does for Mochi, and one buy button with the price in coins. The sheet is as tall as what it shows.
 struct ItemSheet: View {
     let item: ShopItem
     let state: HomeState
@@ -66,13 +64,11 @@ struct ItemSheet: View {
                                      center: UnitPoint(x: 0.5, y: 0.46),
                                      startRadius: 6, endRadius: 230))
 
-            // The model's camera matches the thumbnail's (see ItemTurntable.frame), so the still
-            // dissolves into the live model without the two ever showing side by side.
-            // Always on screen, so RealityKit is already drawing; the model inside stays hidden
-            // until the turntable fades it in (see ItemTurntable.isRevealed).
+            // Same camera as the thumbnail (ItemTurntable.frame), so the still dissolves into the model
+            // without the two showing side by side. Always on screen, so RealityKit is already drawing; the
+            // model stays hidden until the turntable fades it in (ItemTurntable.isRevealed).
             ItemRealityPreview(item: item, turntable: turntable)
 
-            // Static thumbnail stands in for the model until the 3D preview is actually drawn.
             if let image = Thumbnails.image(item.thumbnail, maxPixels: 900) {
                 Image(uiImage: image)
                     .resizable()
@@ -115,7 +111,6 @@ struct ItemSheet: View {
 
     // MARK: Actions
 
-    /// One primary button (buy, or place once owned) and Preview beside it.
     private var actions: some View {
         VStack(spacing: Space.s) {
             HStack(spacing: Space.s) {
@@ -187,7 +182,6 @@ struct ItemSheet: View {
     }
 }
 
-/// What the item does for Mochi: her face and the mood it nudges.
 private struct MochiReaction: View {
     let name: String
     let mood: String
@@ -247,8 +241,7 @@ private struct ItemRealityPreview: View {
     }
 }
 
-/// Horizontal-only pan: vertical drags are declined by the recognizer so the sheet keeps its
-/// own pull-to-dismiss behaviour.
+/// Declines vertical drags so the sheet keeps its own pull-to-dismiss.
 private struct HorizontalDragCatcher: UIViewRepresentable {
     var onBegan: () -> Void
     var onChanged: (CGFloat) -> Void
@@ -286,7 +279,6 @@ private struct HorizontalDragCatcher: UIViewRepresentable {
             self.onEnded = onEnded
         }
 
-        /// Only claim drags that are clearly horizontal; everything else belongs to the sheet.
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             guard let pan = gestureRecognizer as? UIPanGestureRecognizer else { return true }
             let velocity = pan.velocity(in: pan.view)
@@ -311,7 +303,6 @@ private struct HorizontalDragCatcher: UIViewRepresentable {
     }
 }
 
-/// Owns the entity graph for one sheet: frames the model the way its thumbnail is framed, spins it, and follows drags.
 @Observable
 private final class ItemTurntable {
     /// True once the scene has drawn a few frames with the model loaded (hidden), so the still can give way to it.
@@ -361,7 +352,6 @@ private final class ItemTurntable {
             }
             if isRevealed, shown >= 1, !isDragging, delta.isFinite { angle += 0.4 * delta }
             pivot.orientation = .y(angle)
-            // A little hop when it is bought.
             if hop < 1, delta.isFinite {
                 hop = min(hop + delta / 0.6, 1)
                 pivot.position.y = 0.06 * sin(hop * .pi) * (1 - hop * 0.3)
@@ -400,9 +390,9 @@ private final class ItemTurntable {
         }
     }
 
-    /// The thumbnail's camera from Tools/make_items.py: a 70 mm lens on a 36 mm sensor, looking along
-    /// (0.55, -1, 0.62) in Blender (the export mirrors x and turns z up into y), backed off until the bounds' sphere fits
-    /// with 20% to spare. The stage is a little taller than the still, so the field of view widens by that much.
+    /// The thumbnail's camera from Tools/make_items.py: a 70 mm lens on a 36 mm sensor, looking along (0.55, -1, 0.62)
+    /// in Blender (the export mirrors x and turns z up into y), backed off until the bounds' sphere fits with 20% to
+    /// spare. The stage is a little taller than the still, so the field of view widens by that much.
     private func frame(_ bounds: BoundingBox) {
         let half = atan(Float(18) / 70)
         let radius = simd_length(bounds.extents) / 2
@@ -413,7 +403,6 @@ private final class ItemTurntable {
         camera.look(at: bounds.center, from: bounds.center + direction * distance, relativeTo: nil)
     }
 
-    /// A soft round contact shadow on the floor under the model.
     private static func makeShadow(under bounds: BoundingBox) -> Entity {
         let side = max(bounds.extents.x, bounds.extents.z) * 1.5
         let size = CGSize(width: 128, height: 128)

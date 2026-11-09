@@ -1,10 +1,8 @@
 import SwiftUI
 import Design
 
-/// Sheet for a note: text and ink on the same paper, in the look Labs picked (`ComposerStyle`). Sending pins it and
-/// earns 5 coins.
+/// Sending pins the note and earns 5 coins.
 struct NoteComposer: View {
-    /// Which tool the sheet opens with.
     enum Mode: String, Identifiable {
         case write, draw
         var id: String { rawValue }

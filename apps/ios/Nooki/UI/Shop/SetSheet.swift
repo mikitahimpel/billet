@@ -1,14 +1,12 @@
 import SwiftUI
 import Design
 
-/// Which set's sheet is open: the week's featured set or a bundle.
 struct SetChoice: Identifiable {
     let pieces: any PieceSet
     var id: String { pieces.id }
 }
 
-/// A set's card: the name with what it saves, its pieces with their rarity and own price, and one buy button with
-/// the set's price beside the sum it replaces. Pieces already owned are left out of the price and marked.
+/// Pieces already owned are left out of the price and marked.
 struct SetSheet: View {
     let state: HomeState
     let pieces: any PieceSet
@@ -47,7 +45,6 @@ struct SetSheet: View {
         .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
 
-    /// The pieces side by side on the warm stage, the middle one larger and in front.
     private var art: some View {
         HStack(alignment: .bottom, spacing: -Space.l) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in

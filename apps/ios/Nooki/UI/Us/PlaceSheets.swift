@@ -203,7 +203,6 @@ struct AddPlaceSheet: View {
     }
 }
 
-/// "Japan, been there!": ticks a country or a place with the month and photos from Moments, or changes them later.
 struct BeenSheet: View {
     let state: HomeState
     let listID: UUID
@@ -321,7 +320,6 @@ struct BeenSheet: View {
     }
 }
 
-/// When the pair went, as a month and a year, or left out.
 private struct MonthField: View {
     @Binding var month: TravelMonth?
 

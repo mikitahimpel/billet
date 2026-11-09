@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 10: snowy mountains under the moon. Far: a wall of peaks, their snow lit on the side
-/// towards the moon and blue in shadow, a paler range behind, and now and then a shooting star.
-/// Middle: a valley of snowy pines and a gondola's cable strung over it on two pylons, a cabin
-/// gliding along it, lit after dark. Street: a wooden chalet with warm windows, fairy lights under
-/// its eave and smoke from the chimney, a fox trotting over the snow now and then. Near: a snowy
-/// pine bough hanging in and a balcony rail with snow along it.
 struct MoonlitPeaks: ViewRecipe {
   static let streetBase: CGFloat = 46
   static let middleBase: CGFloat = 40
@@ -23,8 +17,6 @@ struct MoonlitPeaks: ViewRecipe {
   var moon: CGPoint { CGPoint(x: 74, y: -14) }
   var livePlanes: Set<ViewPlane> { [.far, .middle, .street] }
 
-  /// Moonlit blue at night, lilac at dusk, a clear bright sky by day, and far more stars than
-  /// over any town.
   static func grade(_ palette: inout ViewPalette, hour: ViewHour, share: Double) {
     let colours: [UInt32]
     switch hour {
@@ -64,7 +56,6 @@ struct MoonlitPeaks: ViewRecipe {
 
   private func paintFar(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let palette = look.palette
-    // A paler range further off, lost in the moonlit air.
     ViewKit.hills(
       context, base: 30, waves: [6, 9, 5, 10, 7, 8, 6],
       colour: colour.mixed(
@@ -87,7 +78,6 @@ struct MoonlitPeaks: ViewRecipe {
       mountain.addLine(to: rightFoot)
       mountain.closeSubpath()
       context.fill(mountain, with: .color(rock.color()))
-      // The snow cap: deep down the slopes, its lower edge in teeth.
       var cap = context
       cap.clip(to: mountain)
       let depth = (base - apex.y) * 0.68
@@ -104,7 +94,6 @@ struct MoonlitPeaks: ViewRecipe {
       }
       field.closeSubpath()
       cap.fill(field, with: .color(shade.color()))
-      // The face towards the moon.
       var face = Path()
       face.move(to: apex)
       face.addLine(to: CGPoint(x: peak.right + 2, y: base))
@@ -113,7 +102,6 @@ struct MoonlitPeaks: ViewRecipe {
       var litCap = cap
       litCap.clip(to: field)
       litCap.fill(face, with: .color(lit.color()))
-      // Rock ridges running down from the summit.
       for rib in 0..<3 {
         let spread = (CGFloat(rib) - 1) * 3.4
         var ridge = Path()
@@ -124,7 +112,6 @@ struct MoonlitPeaks: ViewRecipe {
         cap.stroke(ridge, with: .color(rock.color(0.55)), lineWidth: 0.3)
       }
     }
-    // The snowfield at the feet of the peaks.
     ViewKit.ground(context, top: base - 0.5, colour: shade.mixed(with: colour, by: 0.3))
   }
 
@@ -172,7 +159,6 @@ struct MoonlitPeaks: ViewRecipe {
       }
       ViewKit.rect(context, CGRect(x: x - 2.4, y: top - 0.6, width: 4.8, height: 0.6), steel)
     }
-    // Rows of snowy pines down the valley.
     for row in 0..<2 {
       for index in 0..<26 {
         let id = row * 40 + index
@@ -183,7 +169,6 @@ struct MoonlitPeaks: ViewRecipe {
           colour: colour.lit(row == 0 ? 0.03 : -0.04), look: snowy)
       }
     }
-    // The cable, two ropes a little apart.
     for offset in [0, 0.5] as [CGFloat] {
       var cable = Path()
       cable.move(to: CGPoint(x: -45, y: Self.cableY(-45) + offset))
@@ -209,7 +194,6 @@ struct MoonlitPeaks: ViewRecipe {
     let base = Self.streetBase
     let snowy = Self.snowLook(look)
     let snow = ViewKit.snow(look).mixed(with: colour, by: 0.35)
-    // Pines on either side of the chalet.
     let pines: [CGFloat] = [4, 14, 26, 40, 92, 104, 118]
     for (index, x) in pines.enumerated() {
       ViewKit.pine(
@@ -217,7 +201,6 @@ struct MoonlitPeaks: ViewRecipe {
         height: 13 + 6 * CGFloat(ViewRhythm.hash(index, seed: 1151)),
         colour: colour.lit(index % 2 == 0 ? 0 : -0.04), look: snowy)
     }
-    // The chalet: dark timber walls, a steep roof under a deep quilt of snow.
     let wood = colour.mixed(with: ViewColour(0x7A5034), by: look.isDark ? 0.3 : 0.5)
     let wall = Self.chalet
     ViewKit.rect(context, wall, wood)
@@ -230,7 +213,6 @@ struct MoonlitPeaks: ViewRecipe {
     for window in Self.chaletWindows { ViewKit.windowFrame(context, window.rect, wood) }
     ViewKit.rect(
       context, CGRect(x: 66.6, y: 41, width: 4, height: 5), wood.lit(-0.25))
-    // The balcony across the front.
     ViewKit.rect(
       context, CGRect(x: wall.minX - 1, y: 39.6, width: wall.width + 2, height: 0.6), wood.lit(0.06)
     )
@@ -243,7 +225,6 @@ struct MoonlitPeaks: ViewRecipe {
       context, CGRect(x: wall.minX - 1, y: 41, width: wall.width + 2, height: 0.4), wood.lit(-0.1))
     ViewKit.rect(
       context, CGRect(x: wall.minX - 1, y: 39.2, width: wall.width + 2, height: 0.45), snow)
-    // The chimney, then the roof over it.
     ViewKit.rect(
       context, CGRect(x: Self.chimney.x - 1, y: Self.chimney.y, width: 2.2, height: 6),
       colour.mixed(with: ViewColour(0x8A7A70), by: 0.3))
@@ -254,7 +235,6 @@ struct MoonlitPeaks: ViewRecipe {
     roof.addLine(to: CGPoint(x: wall.maxX + 3, y: wall.minY + 1))
     roof.closeSubpath()
     context.fill(roof, with: .color(wood.lit(-0.2).color()))
-    // The gable's own boards, inside the roof line.
     var gable = Path()
     gable.move(to: CGPoint(x: wall.minX + 0.5, y: wall.minY + 0.4))
     gable.addLine(to: CGPoint(x: apex.x, y: apex.y + 2.4))
@@ -262,7 +242,6 @@ struct MoonlitPeaks: ViewRecipe {
     gable.closeSubpath()
     context.fill(gable, with: .color(wood.lit(0.04).color()))
     ViewKit.windowFrame(context, Self.chaletWindows[4].rect, wood)
-    // A thick quilt of snow on the roof, rounded at the eaves, with a few icicles.
     var quilt = Path()
     quilt.move(to: CGPoint(x: wall.minX - 3.6, y: wall.minY + 1.4))
     quilt.addLine(to: CGPoint(x: apex.x, y: apex.y - 1.4))
@@ -290,7 +269,6 @@ struct MoonlitPeaks: ViewRecipe {
       icicle.closeSubpath()
       context.fill(icicle, with: .color(snow.lit(0.1).color(0.8)))
     }
-    // Deep snow over the ground, a trodden path to the door, and its drifts.
     var drift = Path()
     drift.move(to: CGPoint(x: -45, y: base + 0.6))
     var x: CGFloat = -45
@@ -315,7 +293,6 @@ struct MoonlitPeaks: ViewRecipe {
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let snow = ViewKit.snow(look).mixed(with: colour, by: 0.4)
-    // A pine bough hanging in from the top left, its needles in tufts, snow along the top.
     var bough = Path()
     bough.move(to: CGPoint(x: -20, y: -8))
     bough.addQuadCurve(to: CGPoint(x: 24, y: 4), control: CGPoint(x: 4, y: -6))
@@ -337,7 +314,6 @@ struct MoonlitPeaks: ViewRecipe {
         context, CGPoint(x: point.x, y: point.y - size * 0.55), size * 0.42, snow,
         index % 3 == 2 ? 0.6 : 0.9)
     }
-    // The balcony rail along the bottom of the window, snow piled on it.
     let wood = colour.mixed(with: ViewColour(0x5A3A26), by: look.isDark ? 0.25 : 0.4)
     ViewKit.ground(context, top: 56, colour: wood.lit(-0.1))
     ViewKit.rect(context, CGRect(x: -45, y: 50.4, width: 190, height: 1.4), wood)

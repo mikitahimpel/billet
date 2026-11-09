@@ -8,8 +8,7 @@ import UserNotifications
 import WidgetKit
 import Wire
 
-/// Keeps the drawing widgets and the push lanes up to date from the app's side: fetches the notes this phone has not
-/// seen and saves the partner's newest drawing for the widgets, and registers the APNs tokens with the server.
+/// Fetches unseen notes, saves the partner's newest drawing for the widgets, and registers APNs tokens.
 @MainActor
 struct DrawingSync {
     let api: APIClient
@@ -18,7 +17,6 @@ struct DrawingSync {
 
     static let cursorKey = "drawings.lastSeq"
 
-    /// Pages through the notes after the last one seen and saves the newest drawing the partner sent.
     func fetchLatest() async {
         let viewer = (try? accounts.load())?.record.userID
         var after = defaults.object(forKey: Self.cursorKey) as? Int
@@ -67,8 +65,7 @@ struct DrawingSync {
         }
     }
 
-    /// Asks once to show the partner's drawings as notifications, then registers for pushes. Later launches only
-    /// register, because the token can change.
+    /// Asks once; later launches only register, because the token can change.
     static func requestPushes(asking: Bool) async {
         let center = UNUserNotificationCenter.current()
         var status = await center.notificationSettings().authorizationStatus

@@ -3,8 +3,6 @@ import Design
 import UIKit
 import Wire
 
-/// One note opened from the board: the paper big, its text or doodle, a way to take it down, and for the partner's
-/// note a way to report it.
 struct NoteSheet: View {
     let state: HomeState
     let id: UUID

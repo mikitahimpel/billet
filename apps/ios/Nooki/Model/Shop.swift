@@ -42,7 +42,7 @@ struct ShopCollection: Identifiable, Hashable {
     func isComplete(_ owned: Set<String>) -> Bool { itemIDs.allSatisfy(owned.contains) }
 }
 
-/// Bundled mock catalog; later served as catalog.json.
+/// Bundled mock catalog.
 enum Catalog {
     /// Computed, so the copy calls the cat by the name given in onboarding.
     static var items: [ShopItem] { [

@@ -1,13 +1,7 @@
 #!/bin/zsh
-# Compares two Release builds fairly on a shared Mac: runs them in turns in one sitting, holding the
-# measuring lock throughout, then writes the side-by-side table.
-#
+# Runs two Release builds in turns under the measuring lock, then writes <out>/<new-label>/ab.md.
 #   apps/ios/scripts/perf/ab.sh <base-label> <base-derived> <new-label> <new-derived> [rounds]
-#
-# Each derived path is a -derivedDataPath holding a Release Simulator build, for example one made
-# with `PERF_DERIVED=<path> measure.sh <label> --build-only` from that checkout. Each round is
-# `--launches 2 --full 1` (PERF_AB_ARGS overrides it). PERF_BASE_APP_ARGS and PERF_NEW_APP_ARGS are extra
-# launch arguments for the app in each build, such as `-labs.roomShell baked`, to compare a setting on one build. The table goes to <out>/<new-label>/ab.md.
+# Derived = a Release Simulator build (measure.sh --build-only). PERF_AB_ARGS, PERF_{BASE,NEW}_APP_ARGS add run args.
 set -euo pipefail
 
 base=${1:?usage: ab.sh <base-label> <base-derived> <new-label> <new-derived> [rounds]}

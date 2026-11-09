@@ -115,7 +115,6 @@ enum InboxLayout: Equatable {
     }
 }
 
-/// The Inbox on a phone that isn't connected to the server: nothing can arrive yet, and that is all it says.
 struct InboxSignedOut: View {
     let petName: String
 
@@ -128,7 +127,6 @@ struct InboxSignedOut: View {
     }
 }
 
-/// One row: who did it, what, and when.
 private struct InboxRow: View {
     let item: ActivityItem
     let state: HomeState

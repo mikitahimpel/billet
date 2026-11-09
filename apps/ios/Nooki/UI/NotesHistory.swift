@@ -7,7 +7,7 @@ import Wire
 
 // MARK: - Notes history
 
-/// Every note and doodle the couple has left, by month, newest first; the board only has room for the latest few.
+/// Every note the couple has left; the board only has room for the latest few.
 struct NotesHistory: View {
     let state: HomeState
 
@@ -52,7 +52,6 @@ struct NotesHistory: View {
     }
 }
 
-/// A note as a small square of its paper: the text or doodle, and who left it; the same grain and shadow as the prints.
 private struct NoteCard: View {
     let note: Note
 

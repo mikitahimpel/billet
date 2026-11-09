@@ -3,10 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 4: a summer cul-de-sac. Far: a line of big round treetops. Middle: houses around the
-/// bulb of the street. Street: a lawn with a sprinkler, a trampoline, a basketball hoop over the
-/// garage, bikes on the grass, a big oak, a porch with a swing. Near: a hydrangea and a leafy
-/// branch. Fireflies come out from dusk, and a bat flits over the street at dusk.
 struct SummerCulDeSac: ViewRecipe {
   static let streetBase: CGFloat = 48
   static let roadway = ViewRoad(
@@ -66,7 +62,6 @@ struct SummerCulDeSac: ViewRecipe {
         look: look)
     }
     ViewKit.ground(context, top: Self.middleBase, colour: colour.lit(-0.04))
-    // The bulb of the cul-de-sac: a wide pale curve of road in front of the houses.
     context.fill(
       Path(ellipseIn: CGRect(x: -20, y: Self.middleBase - 0.4, width: 140, height: 5)),
       with: .color(colour.lit(look.isDark ? 0.04 : 0.1).color()))
@@ -78,10 +73,8 @@ struct SummerCulDeSac: ViewRecipe {
     let base = Self.streetBase
     let lawn = colour.mixed(with: ViewColour(0x2E5A3A), by: look.isDark ? 0.15 : 0.35)
     ViewKit.ground(context, top: base - 2, colour: lawn)
-    // The big oak on the left.
     ViewKit.tree(
       context, x: 6, base: base - 1, size: 22, colour: colour.lit(-0.06), seed: 77, look: look)
-    // The house with its porch and swing, and the garage with a hoop.
     let house = Self.house
     ViewKit.house(
       context, x: house.x, base: base, width: house.width, wall: house.wall, roof: house.roof,
@@ -99,14 +92,12 @@ struct SummerCulDeSac: ViewRecipe {
     ViewKit.rect(
       context, garage.insetBy(dx: 1, dy: 1.4).offsetBy(dx: 0, dy: 1.4),
       colour.lit(look.isDark ? 0.07 : 0.13))
-    // The hoop: backboard, rim and net.
     ViewKit.rect(
       context, CGRect(x: garage.midX - 2.4, y: garage.minY - 3.6, width: 4.8, height: 3.2),
       ViewColour(0xEEF2F7).mixed(with: colour, by: look.isDark ? 0.6 : 0.2))
     context.stroke(
       Path(ellipseIn: CGRect(x: garage.midX - 1.2, y: garage.minY - 0.7, width: 2.4, height: 0.6)),
       with: .color(ViewColour(0xE5503A).color(look.isDark ? 0.6 : 0.9)), lineWidth: 0.25)
-    // A trampoline on the lawn: a dark disc on bowed legs with its net.
     let trampoline = CGPoint(x: 40, y: base - 2.6)
     context.fill(
       Path(ellipseIn: CGRect(x: trampoline.x - 7, y: trampoline.y - 1, width: 14, height: 2)),
@@ -130,7 +121,6 @@ struct SummerCulDeSac: ViewRecipe {
     ViewKit.rect(
       context, CGRect(x: trampoline.x - 6.2, y: trampoline.y - 7.2, width: 12.4, height: 0.4),
       colour.lit(0.1))
-    // Two bikes lying in the grass.
     for (x, tilt) in [(22.0, 0.2), (27, -0.15)] as [(CGFloat, CGFloat)] {
       var bike = context
       bike.translateBy(x: x, y: base - 0.8)
@@ -166,7 +156,6 @@ struct SummerCulDeSac: ViewRecipe {
   ]
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // A hydrangea along the bottom: clumps of round flower heads among leaves.
     for index in 0..<10 {
       let x = -10 + CGFloat(index) * 7
       let y = 58 - CGFloat(ViewRhythm.hash(index, seed: 411)) * 2.4
@@ -208,7 +197,6 @@ struct SummerCulDeSac: ViewRecipe {
     }
   }
 
-  /// A kid on the trampoline while it is light, bouncing higher and lower, now and then a tuck.
   static let bouncing = ViewRhythm(seed: 461, slot: 70, chance: 0.65, length: 40...65)
 
   private func bouncer(_ context: GraphicsContext, moment: ViewMoment) {
@@ -223,7 +211,6 @@ struct SummerCulDeSac: ViewRecipe {
       moment: moment, walking: bounce > 1.5)
   }
 
-  /// The porch swing, rocking.
   private func swing(_ context: GraphicsContext, moment: ViewMoment) {
     let colour = moment.palette.street.lit(-0.2)
     let angle = sin(moment.now * 1.1) * 4
@@ -236,7 +223,6 @@ struct SummerCulDeSac: ViewRecipe {
     seat.fill(Path(CGRect(x: -2.4, y: 2.6, width: 4.8, height: 0.7)), with: .color(colour.color()))
   }
 
-  /// A sprinkler throwing an arc of drops back and forth across the lawn.
   private func sprinkle(_ context: GraphicsContext, moment: ViewMoment) {
     let base = Self.sprinkler
     let sweep = sin(moment.now * 0.6) * 0.8
@@ -255,7 +241,6 @@ struct SummerCulDeSac: ViewRecipe {
     }
   }
 
-  /// A bat at dusk: a quick zigzag across the street.
   private func flittingBat(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.hour == .dusk || moment.look.hour == .night,
       let pass = Self.bat.pass(at: moment.now)

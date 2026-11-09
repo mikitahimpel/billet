@@ -3,13 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 8: a beach at sunset. Far: the sea to the horizon with a hazy island, the low sun and its
-/// glitter path on the water, a sailboat sliding along the horizon now and then. Middle: a
-/// headland with a lighthouse whose beam sweeps after dark, and a pier on stilts with its lamps.
-/// Street: the sand, gentle waves running up it and slipping back, a beach shack with its window
-/// lit, string lights over to the lifeguard tower, an umbrella and a towel, someone walking a dog
-/// along the water. Near: a dune with grass moving in the breeze and a rope fence. Gulls glide
-/// over while it is light.
 struct SunsetBeach: ViewRecipe {
   static let horizon: CGFloat = 30
   static let shore: CGFloat = 44
@@ -31,7 +24,6 @@ struct SunsetBeach: ViewRecipe {
   var moon: CGPoint { CGPoint(x: 72, y: -10) }
   var livePlanes: Set<ViewPlane> { [.far, .middle, .street, .near] }
 
-  /// The beach's own colours: a warm sea at sunset, a deep blue one at night.
   static func grade(_ palette: inout ViewPalette, hour: ViewHour, share: Double) {
     let colours: [UInt32]
     switch hour {
@@ -69,7 +61,6 @@ struct SunsetBeach: ViewRecipe {
     let palette = look.palette
     let plate = ViewStage.plate
     let horizon = Self.horizon
-    // A hazy island on the horizon, clear of the sun.
     var island = Path()
     island.move(to: CGPoint(x: 62, y: horizon + 0.2))
     island.addQuadCurve(
@@ -78,7 +69,6 @@ struct SunsetBeach: ViewRecipe {
       to: CGPoint(x: 94, y: horizon + 0.2), control: CGPoint(x: 87, y: horizon - 2.4))
     island.closeSubpath()
     context.fill(island, with: .color(colour.mixed(with: palette.horizon, by: 0.35).color()))
-    // The sea: holding the sky's light at the horizon, deeper towards the shore.
     let sea = CGRect(
       x: plate.minX, y: horizon, width: plate.width, height: plate.maxY - horizon)
     context.fill(
@@ -88,7 +78,6 @@ struct SunsetBeach: ViewRecipe {
           palette.horizon.mixed(with: colour, by: 0.55).color(), colour.color(),
           colour.lit(-0.12).color(),
         ]), startPoint: CGPoint(x: 0, y: horizon), endPoint: CGPoint(x: 0, y: Self.shore + 4)))
-    // Swell lines, closer together far off.
     for index in 0..<18 {
       let share = CGFloat(index) / 18
       let y = horizon + 0.8 + share * share * 13
@@ -112,7 +101,6 @@ struct SunsetBeach: ViewRecipe {
     land.addLine(to: CGPoint(x: 24, y: 65))
     land.closeSubpath()
     context.fill(land, with: .color(colour.color()))
-    // The lit slope facing the sun.
     var lit = Path()
     lit.move(to: CGPoint(x: 2, y: 23.6))
     lit.addQuadCurve(to: CGPoint(x: 16, y: 37), control: CGPoint(x: 12, y: 26))
@@ -135,7 +123,6 @@ struct SunsetBeach: ViewRecipe {
       cap.closeSubpath()
       context.fill(cap, with: .color(ViewKit.snow(look).color(0.85)))
     }
-    // The lighthouse: a tapering white tower with red bands, the lamp room and a cap.
     let paint = colour.mixed(with: ViewColour(0xF0E8E0), by: look.isDark ? 0.18 : 0.45)
     let band = colour.mixed(with: ViewColour(0xD8504A), by: look.isDark ? 0.25 : 0.5)
     let x = Self.lighthouse.x
@@ -160,7 +147,6 @@ struct SunsetBeach: ViewRecipe {
     cap.addLine(to: CGPoint(x: x + 1.2, y: 12))
     cap.closeSubpath()
     context.fill(cap, with: .color(band.lit(-0.15).color()))
-    // The pier on stilts, running out from the right.
     let deck: CGFloat = 36
     let wood = colour.lit(-0.1)
     ViewKit.rect(context, CGRect(x: 84, y: deck, width: 61, height: 0.9), wood)
@@ -182,7 +168,6 @@ struct SunsetBeach: ViewRecipe {
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let base = Self.shore
     let sand = Self.sand(colour, look: look)
-    // Wet sand along the water, then the dry beach.
     ViewKit.rect(context, CGRect(x: -45, y: base, width: 190, height: 3.4), sand.lit(-0.14))
     ViewKit.ground(context, top: base + 3.4, colour: sand)
     for index in 0..<14 {
@@ -192,7 +177,6 @@ struct SunsetBeach: ViewRecipe {
         context, CGRect(x: x, y: y, width: 5 + CGFloat(index % 3) * 2, height: 0.15),
         sand.lit(0.08), 0.7)
     }
-    // The beach shack: a plank box, its counter window under a thatched roof.
     let shack = Self.shack
     let planks = colour.mixed(with: ViewColour(0xB07A50), by: look.isDark ? 0.2 : 0.45)
     ViewKit.rect(context, shack, planks)
@@ -225,7 +209,6 @@ struct SunsetBeach: ViewRecipe {
       cap.closeSubpath()
       context.fill(cap, with: .color(ViewKit.snow(look).color(0.85)))
     }
-    // The lifeguard tower: a hut on stilts with a ramp down to the sand.
     let tower = Self.tower
     let teal = colour.mixed(with: ViewColour(0x5FB7B0), by: look.isDark ? 0.25 : 0.55)
     let legs = colour.lit(-0.15)
@@ -262,7 +245,6 @@ struct SunsetBeach: ViewRecipe {
       CGRect(
         x: Self.flag.x - 0.15, y: Self.flag.y, width: 0.3, height: tower.minY - Self.flag.y - 1.6),
       legs)
-    // A striped umbrella and a towel.
     let pole = CGPoint(x: 32, y: base + 5)
     ViewKit.rect(context, CGRect(x: pole.x - 0.15, y: base - 4, width: 0.3, height: 9), legs)
     var dome = Path()
@@ -312,7 +294,6 @@ struct SunsetBeach: ViewRecipe {
       with: .color(
         (look.weather == .snow ? sand.mixed(with: ViewKit.snow(look), by: 0.45) : sand).color()))
     ViewKit.ground(context, top: 59, colour: sand.lit(-0.04))
-    // A rope fence on weathered posts.
     let wood = colour.lit(0.05)
     for x in [86, 104] as [CGFloat] {
       ViewKit.rect(context, CGRect(x: x, y: 45, width: 1.4, height: 17), wood)

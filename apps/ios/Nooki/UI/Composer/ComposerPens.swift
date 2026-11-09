@@ -12,7 +12,6 @@ func choose(_ ink: PaletteInk, state: HomeState, select: (PaletteInk) -> Void, c
     }
 }
 
-/// One pen standing upright: its body in the ink's colour, a sharpened tip, and for a locked one a small coin tag.
 struct Pen: View {
     let ink: PaletteInk
     let owned: Bool
@@ -52,7 +51,6 @@ struct Pen: View {
 }
 
 
-/// A button around a pen, for every holder.
 private struct PenButton: View {
     let ink: PaletteInk
     let state: HomeState
@@ -74,7 +72,6 @@ private struct PenButton: View {
     }
 }
 
-/// The pens of the style: a strip on the sticky pad, a pencil case on the desk, a cup beside the papers.
 struct PenHolder: View {
     let style: ComposerStyle
     let state: HomeState

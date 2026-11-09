@@ -5,9 +5,8 @@ import WidgetBridge
 import Wire
 
 /// Which of Mochi's rooms this pair's Home offers: the `rooms` experiment, a Labs choice on this phone, or both.
-///
-/// The server's answer replaces the kept copy on every read and is saved, so it is there at the next launch and
-/// offline. A phone without a partner, or one the server said nothing to, has both rooms.
+/// The server's answer replaces the kept copy on every read and is saved for launch and offline. A phone without a
+/// partner, or one the server said nothing to, has both rooms.
 @MainActor
 @Observable
 final class RoomsChoice {
@@ -66,10 +65,8 @@ extension RoomKind {
 }
 
 extension RoomsVariant {
-    /// The rooms Home offers, as Home names them.
     var kinds: [RoomKind] { rooms.map(RoomKind.init) }
 
-    /// How Labs names it.
     var title: String {
         switch self {
         case .both: "Both rooms"

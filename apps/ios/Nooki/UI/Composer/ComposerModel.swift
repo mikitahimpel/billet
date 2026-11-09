@@ -4,7 +4,6 @@ import SwiftUI
 import UIKit
 import Wire
 
-/// What is on the note being written: text and ink on the same paper.
 @MainActor
 @Observable
 final class ComposerModel {

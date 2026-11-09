@@ -4,9 +4,6 @@ import TipKit
 import Transport
 import Wire
 
-/// The hints after the onboarding (`HintTips.swift`): sets TipKit up, decides at each screen visit which hint shows
-/// (`HintPlan`), remembers the ones seen and reports what the hints do. Shared through the environment with the views
-/// the hints point at.
 @MainActor
 @Observable
 final class Hints {
@@ -20,7 +17,6 @@ final class Hints {
     static let shownAtKey = "hintsShownAt"
     static let actionWindow: TimeInterval = 24 * 3600
 
-    /// Every hint.
     static let all: [any HintTip.Type] = [
         PetHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self,
     ]
@@ -109,7 +105,6 @@ final class Hints {
         return id
     }
 
-    /// What the plan picks for `context`, with what this object knows filled in.
     func plan(_ context: HintContext) -> String? {
         var context = context
         context.onboarded = context.onboarded && onboarded
@@ -128,7 +123,6 @@ final class Hints {
         tip.invalidate(reason: .actionPerformed)
     }
 
-    /// The hint's own X.
     func close(_ tip: any Tip) {
         record(.tipDismissed, tip.id)
         if HintStage.current == tip.id { HintStage.current = "" }
@@ -136,7 +130,6 @@ final class Hints {
         tip.invalidate(reason: .tipClosed)
     }
 
-    /// A hint came on screen: it counts as seen from now on.
     func appeared(_ tip: any Tip) { shown(tip.id) }
 
     private func shown(_ id: String) {
@@ -167,7 +160,6 @@ final class Hints {
         defaults.set(seen.sorted(), forKey: Self.seenKey)
     }
 
-    /// A sheet or a cover is up over the app.
     static func keyWindowIsPresenting() -> Bool {
         UIApplication.shared.connectedScenes
             .compactMap { $0 as? UIWindowScene }

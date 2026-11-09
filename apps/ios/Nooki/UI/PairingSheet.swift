@@ -2,8 +2,7 @@ import FeaturePairing
 import SwiftUI
 import Design
 
-/// Pairs this phone with the partner's: one shows a code, the other types it in. Whoever shows the code waits here
-/// while the sheet checks every few seconds whether it was claimed.
+/// Whoever shows the code waits here while the sheet checks every few seconds whether it was claimed.
 struct PairingSheet: View {
     let model: PairingModel
     /// The code from an invite link.
@@ -181,7 +180,6 @@ enum PairingCopy {
         }
     }
 
-    /// The code in groups of four, easier to read aloud: "ABCD EFGH".
     static func spaced(_ code: String) -> String {
         var out = ""
         for (index, character) in code.enumerated() {

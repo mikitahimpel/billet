@@ -1,9 +1,8 @@
 import Foundation
 
-/// What the pair has put on its grocery lists, by `GroceryWords.key`: how often, and the aisle a partner last picked
-/// for it. Built from the items this phone sees, both partners' included, so it outlives "Clear".
-// note: an item the partner added and cleared while this phone never loaded the lists is not counted; a table in the
-// pair's room would catch it.
+/// What the pair has put on grocery lists, by `GroceryWords.key`: how often, and the aisle last picked. Built from the
+/// items this phone sees, both partners' included, so it outlives "Clear".
+// note: misses items the partner added and cleared unseen here; a table in the pair's room would catch them.
 nonisolated struct GroceryHistory: Codable, Hashable {
     struct Entry: Codable, Hashable {
         /// The name as last written.

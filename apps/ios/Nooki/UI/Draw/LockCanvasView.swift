@@ -3,9 +3,8 @@ import Design
 import Transport
 import Wire
 
-/// Drawing on what looks like the partner's lock screen: their wallpaper, the big clock and date, and a glass
-/// toolbar at the bottom. When both have it open, each sees the other's ink appear as it is drawn. With `riddle` it
-/// draws a Draw & guess word instead of a note: the word replaces the clock and Send hands the strokes to the riddle.
+/// With `riddle` it draws a Draw & guess word instead of a note: the word replaces the clock and Send hands the
+/// strokes to the riddle.
 struct LockCanvasView: View {
     let state: HomeState
     let api: APIClient?
@@ -23,7 +22,6 @@ struct LockCanvasView: View {
     @State private var canvasSize = CGSize.zero
     @State private var sent = 0
     @State private var coinsShown: CoinsAsk?
-    /// The coin packs the Store sheet sells, from the Home screen that presented this canvas.
     var coinPacks: CoinPacksModel?
 
     var body: some View {
@@ -33,7 +31,7 @@ struct LockCanvasView: View {
                     .ignoresSafeArea()
                     .accessibilityHidden(true)
 
-                // Under the chrome: a surface over the buttons takes their taps, which is how Close once did nothing.
+                // Under the chrome: a surface over the buttons would take their taps.
                 drawingSurface(size: geometry.size)
 
                 VStack(spacing: 0) {

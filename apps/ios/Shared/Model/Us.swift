@@ -4,11 +4,9 @@ import Wire
 
 // MARK: - Icons
 
-/// Soft gradient tints for icon tiles, matching the app's honey and blush palette.
 nonisolated enum UsTint: String, Codable, CaseIterable {
     case honey, blush, sky, sage, lilac, sun, coral
 
-    /// Top and bottom of the tile gradient.
     var colors: (top: UInt32, bottom: UInt32) {
         switch self {
         case .honey: (0xFFC27D, 0xD9784A)
@@ -22,12 +20,10 @@ nonisolated enum UsTint: String, Codable, CaseIterable {
     }
 }
 
-/// An SF Symbol on a tinted tile; replaces emoji everywhere on the Us tab.
 nonisolated struct UsGlyph: Codable, Hashable {
     var symbol: String
     var tint: UsTint
 
-    /// Choices offered for custom lists and calendar events.
     static let palette: [UsGlyph] = [
         .init(symbol: "heart.fill", tint: .blush), .init(symbol: "gift.fill", tint: .coral),
         .init(symbol: "birthday.cake.fill", tint: .sun), .init(symbol: "airplane", tint: .sky),
@@ -75,7 +71,7 @@ nonisolated enum ListKind: String, Codable, CaseIterable, Identifiable {
     var isChecklist: Bool { self == .groceries }
 }
 
-/// A film or a show on TMDB, with what the poster grid draws without asking TMDB.
+/// What the poster grid draws without asking TMDB.
 nonisolated struct ItemMedia: Codable, Hashable {
     enum Kind: String, Codable { case movie, tv }
     var kind: Kind
@@ -107,7 +103,6 @@ nonisolated struct ListItem: Identifiable, Codable, Hashable {
     var place = false
     /// The month the pair went, such as `2026-10`.
     var visitedIn: String?
-    /// Photos in Moments from the trip.
     var moments: [UUID] = []
     /// Monograms of the partners who want it.
     var wants: [String] = []
@@ -150,8 +145,7 @@ nonisolated struct UsList: Identifiable, Codable, Hashable {
 
 // MARK: - Wishlists
 
-/// The day a wish is for, such as a birthday, picked from the calendar. A title and a day rather than a calendar
-/// entry, since each partner's phone keeps its own calendar.
+/// A title and a day rather than a calendar entry, since each partner's phone keeps its own calendar.
 nonisolated struct WishOccasion: Codable, Hashable {
     var title: String
     var date: Date
@@ -168,7 +162,6 @@ nonisolated struct WishOccasion: Codable, Hashable {
 /// copy can never spoil the surprise.
 nonisolated struct WishItem: Identifiable, Codable, Hashable {
     var id = UUID()
-    /// Whose wish it is.
     var owner: String
     var title: String
     var link = ""
@@ -376,7 +369,6 @@ nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
     var ideaID: Int
     var date: Date
     var place = ""
-    /// Partner who organizes it.
     var organizer: String
     /// In surprise mode the other partner sees only the date and the hint.
     var surprise = false
@@ -385,6 +377,6 @@ nonisolated struct PlannedDate: Identifiable, Codable, Hashable {
     var rating: Int?
     /// Local reminders a day and an hour before; nil on dates saved before reminders existed.
     var remind: Bool?
-    /// The photo from this date in Moments, when it was marked done with one.
+    /// Set when it was marked done with a photo.
     var momentID: UUID?
 }

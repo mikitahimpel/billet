@@ -25,7 +25,7 @@ extension MistyLake {
     }
   }
 
-  /// How thick the mist lies on the water, from 0 to about 1.
+  /// From 0 to about 1.
   static func mistiness(_ look: ViewLook) -> Double {
     let byHour: Double =
       switch look.hour {
@@ -44,7 +44,6 @@ extension MistyLake {
     return byHour * byWeather
   }
 
-  /// Long soft bands of mist drifting slowly across the water.
   private func mist(_ context: GraphicsContext, moment: ViewMoment, rows: [CGFloat]) {
     let thick = Self.mistiness(moment.look)
     guard thick > 0.05 else { return }
@@ -68,8 +67,6 @@ extension MistyLake {
     }
   }
 
-  /// The sun just up over the hills at sunrise or low at dusk, or the moon's light at night, and
-  /// its glitter on the far water.
   private func sunrise(_ context: GraphicsContext, moment: ViewMoment) {
     let hour = moment.look.hour
     guard moment.look.weather != .rain else { return }
@@ -82,7 +79,6 @@ extension MistyLake {
     glitter(context, moment: moment, from: Self.shore + 0.6, rows: 7)
   }
 
-  /// Short bright dashes on the water under the sun, or the moon at night, twinkling.
   private func glitter(
     _ context: GraphicsContext, moment: ViewMoment, from top: CGFloat, rows: Int
   ) {
@@ -126,7 +122,6 @@ extension MistyLake {
     return CGPoint(x: x, y: 42 + 3 * CGFloat(pass.variant))
   }
 
-  /// A canoe paddled slowly across, a little wake behind it.
   private func canoe(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.canoe.pass(at: moment.now) else { return }
     let point = Self.canoePoint(pass)
@@ -147,7 +142,6 @@ extension MistyLake {
           line, with: .color(wake.color(0.5 - 0.12 * Double(step))), lineWidth: 0.14)
       }
     }
-    // Its reflection, then the hull.
     context.fill(
       Path(ellipseIn: CGRect(x: point.x - 5, y: point.y + 0.4, width: 10, height: 1.6)),
       with: .color(hull.lit(-0.3).color(0.3)))
@@ -157,7 +151,6 @@ extension MistyLake {
       to: CGPoint(x: point.x + 5.2, y: point.y - 1), control: CGPoint(x: point.x, y: point.y + 1.6))
     boat.closeSubpath()
     context.fill(boat, with: .color(hull.color()))
-    // The paddler, in a yellow jacket, and the paddle dipping on one side.
     let jacket = ViewColour(0xFFC24A).mixed(with: palette.middle, by: isDark ? 0.6 : 0.25)
     context.fill(
       Path(
@@ -187,7 +180,6 @@ extension MistyLake {
     return CGPoint(x: x, y: 47.6 + CGFloat(duck % 2) * 0.4)
   }
 
-  /// A mother duck and her ducklings gliding by in a line, while it is light.
   private func ducks(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.hour != .night, let pass = Self.ducks.pass(at: moment.now) else { return }
     let facing: CGFloat = pass.variant < 0.5 ? 1 : -1
@@ -225,7 +217,6 @@ extension MistyLake {
       y: 40 + 8 * CGFloat(ViewRhythm.hash(id, seed: 1272)))
   }
 
-  /// A fish jumping: a quick arc out of the water, then rings spreading where it went back in.
   private func fishJump(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.weather != .rain, let pass = Self.fish.pass(at: moment.now) else { return }
     let point = Self.fishPoint(pass)
@@ -252,7 +243,6 @@ extension MistyLake {
     }
   }
 
-  /// Rings from raindrops landing all over the lake.
   private func rainRings(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.weather == .rain else { return }
     let ring = Self.water(moment.palette, plane: moment.palette.middle, isDark: moment.look.isDark)
@@ -273,7 +263,6 @@ extension MistyLake {
     }
   }
 
-  /// The heron standing in the shallows, now and then striking down at a fish.
   private func heron(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.hour != .night else { return }
     let feet = Self.heronFeet
@@ -300,7 +289,6 @@ extension MistyLake {
       to: CGPoint(x: body.x - 1.8, y: body.y + 0.6),
       control: CGPoint(x: body.x + 0.6, y: body.y + 1))
     context.fill(bodyPath, with: .color(grey.color()))
-    // The neck: up in an S while it waits, down and forward when it strikes.
     let head = CGPoint(x: body.x + 1.8 + 1.4 * dip, y: body.y - 3.4 + 5.4 * dip)
     var neck = Path()
     neck.move(to: CGPoint(x: body.x + 1.2, y: body.y - 0.6))
@@ -314,7 +302,6 @@ extension MistyLake {
       beak, with: .color(ViewColour(0xD8A040).mixed(with: grey, by: 0.3).color()), lineWidth: 0.2)
   }
 
-  /// Reeds and cattails at the water's edge, bending with the breeze.
   private func reeds(_ context: GraphicsContext, moment: ViewMoment) {
     let wind = moment.look.weather == .rain ? 1.8 : 1
     let t = moment.now

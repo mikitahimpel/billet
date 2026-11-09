@@ -3,7 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// One moment of a view's life.
 struct ViewMoment {
   var look: ViewLook
   var palette: ViewPalette
@@ -37,7 +36,6 @@ struct ViewInterest: Equatable {
   var point: CGPoint
   /// The plane it is on, for how far beyond the glass it is. `nil` is on the glass itself.
   var plane: ViewPlane?
-  /// Whether the cat should paw at it rather than just watch.
   var paw: Bool
   /// The same for the whole of one pass, so a paw is played once per drop.
   var id: Int64
@@ -48,7 +46,6 @@ struct ViewInterest: Equatable {
 protocol ViewRecipe: Sendable {
   /// The still drawing of `plane`, in stage units, over the whole of ``ViewStage/plate``.
   func paint(_ plane: ViewPlane, _ context: GraphicsContext, look: ViewLook)
-  /// The planes that have life of their own.
   var livePlanes: Set<ViewPlane> { get }
   /// The moving things on `plane`, in stage units.
   func life(_ plane: ViewPlane, _ context: GraphicsContext, moment: ViewMoment)
@@ -60,7 +57,6 @@ protocol ViewRecipe: Sendable {
   var moon: CGPoint { get }
 }
 
-/// The native recipe for every view.
 enum ViewRecipes {
   static func recipe(for view: WindowView) -> any ViewRecipe {
     switch view {
@@ -101,7 +97,6 @@ enum ViewWindows {
       seed: UInt64(window.id) &* 977 &+ 5, slot: 47, chance: 0.2, length: 14...40)
     var level = litByMood ? 1.0 : 0
     if let pass = rhythm.pass(at: moment.now) {
-      // Flicks over at the start of the pass and back at its end.
       let edge = min(pass.progress, 1 - pass.progress) * pass.length
       let flipped = min(edge / 0.4, 1)
       level = litByMood ? 1 - flipped : flipped
@@ -127,7 +122,6 @@ enum ViewWindows {
     }
   }
 
-  /// Someone crossing the lit room now and then: head and shoulders sliding past the glass.
   private static func passer(
     _ window: ViewLitWindow, _ context: GraphicsContext, moment: ViewMoment
   ) {

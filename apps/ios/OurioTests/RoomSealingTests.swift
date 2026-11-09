@@ -30,10 +30,9 @@ struct RoomSealingTests {
         }
     }
 
-    /// Mounts the shell with the room and returns once changes to the shell have stopped reaching the host: in
-    /// the first moments of a window, and of the test process most of all, its traits and the first frame each give
-    /// every view a pass of SwiftUI's own, and when those end depends on the machine. Quiet means several changes in
-    /// a row, each one applied, with no host pass. The probe is reset after, so a test counts only what it does.
+    /// Mounts the shell and returns once shell changes stop reaching the host: early on, traits and the first frame
+    /// give every view extra SwiftUI passes that end when the machine allows. Quiet means several applied changes in a
+    /// row with no host pass; the probe is then reset, so a test counts only what it does.
     private func mount(
         _ shell: Shell, input: RoomInput, controller: RoomController
     ) async throws -> (UIWindow, UIHostingController<ShellView>) {

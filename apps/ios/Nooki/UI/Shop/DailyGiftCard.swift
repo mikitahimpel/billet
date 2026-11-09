@@ -1,8 +1,6 @@
 import SwiftUI
 import Design
 
-/// The free gift in Today: one tap asks the server to open it, the box shakes open with the reward it gave, and a new
-/// gift comes at local midnight.
 struct DailyGiftCard: View {
     let state: HomeState
 
@@ -84,7 +82,6 @@ struct DailyGiftCard: View {
     }
 }
 
-/// Coins, hearts and sparkles that pop out of the gift box once per trigger.
 private struct GiftBurst: View {
     let trigger: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -127,7 +124,6 @@ private struct GiftBurst: View {
                         }
                 }
             }
-            // The box sits at the card's leading edge.
             .position(x: Space.m + 28, y: proxy.size.height / 2)
         }
         .allowsHitTesting(false)
@@ -143,8 +139,6 @@ private struct BurstFrame {
     var opacity: Double = 0
 }
 
-/// A drawn gift box. While it waits it gives a little wiggle now and then; opening shakes it, pops the lid off and
-/// lifts the reward out. Under Reduce Motion it just shows the open box.
 private struct GiftBox: View {
     let opened: Bool
     /// Bumped once per opening; drives the shake.
@@ -182,7 +176,6 @@ private struct GiftBox: View {
             content.rotationEffect(.degrees(angle), anchor: .bottom)
         } animation: { _ in .easeInOut(duration: 0.09) }
         .task(id: opened) {
-            // A wiggle every few seconds while the gift waits.
             while !opened, !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(3))
                 idleTicks += 1
@@ -220,7 +213,6 @@ private struct GiftBox: View {
         }
     }
 
-    /// What was inside, rising out of the open box.
     @ViewBuilder private var prize: some View {
         Group {
             switch reward {

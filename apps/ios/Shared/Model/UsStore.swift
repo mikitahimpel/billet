@@ -4,38 +4,33 @@ import Wire
 
 // MARK: - Store
 
-/// Everything on the Us tab, as JSON in the app group shared with the widgets.
-/// Once paired, the gifts mirror the pair's room through `GiftsModel` and the lists through `ListsModel`; the rest
-/// stays on this phone.
+/// JSON in the app group, shared with the widgets. Once paired, gifts and lists mirror the pair's room.
 @Observable
 final class UsStore {
     private(set) var lists: [UsList] = []
     private(set) var wishes: [WishItem] = []
-    /// Each giver's secret picks. Kept apart from `wishes` so that, once the couple syncs, they stay on the giver's
-    /// phone.
+    /// Kept apart from `wishes` so these secret picks stay on the giver's phone once the couple syncs.
     private(set) var plans: [GiftPlan] = []
     private(set) var loves: [String: Loves] = [:]
-    /// Owners the pair's room says a surprise is coming for. The room never says which wish, and the plan behind it
-    /// is on the giver's phone only.
+    /// The room never says which wish; the plan behind it stays on the giver's phone.
     private(set) var surprises: Set<String> = []
     private(set) var events: [UsEvent] = []
     private(set) var planned: [PlannedDate] = []
     /// Per partner: idea id -> liked (true) or skipped (false).
     private(set) var swipes: [String: [Int: Bool]] = [:]
-    /// Per partner: idea id -> when they last skipped it, so the deck deals skipped ideas again oldest first.
+    /// Per partner: idea id -> last skip, so skipped ideas come back oldest first.
     private var passedAt: [String: [Int: Date]] = [:]
 
-    /// Told of each thing done here that the server pays coins for. The app sends it there; the widgets pass none.
+    /// Each action done here that the server pays coins for; the widgets pass a no-op.
     @ObservationIgnored var onEarn: (EarnEvent) -> Void
-    /// Called after each gift change made on this phone; the paired app sends it to the pair's room.
+    /// Local gift changes only; the paired app sends them to the pair's room.
     @ObservationIgnored var onGiftChange: ((GiftChange) -> Void)?
-    /// Called after each list change made on this phone while it follows the pair's room.
+    /// Local list changes only, while following the pair's room.
     @ObservationIgnored var onListChange: (() -> Void)?
-    /// The lists as the pair's room last answered, under `pendingLists`; nil while the lists are this phone's own.
+    /// The room's last answer, under `pendingLists`; nil while the lists are this phone's own.
     private var roomLists: [UsList]?
-    /// List changes made here, a widget's included, that the room has not answered yet, oldest first.
+    /// Changes the room has not answered yet, widgets' included, oldest first.
     private(set) var pendingLists: [PendingListChange] = []
-    /// What the pair buys, for the grocery suggestions and the aisle a partner picked.
     private(set) var groceries = GroceryHistory()
 
     private let file: String
@@ -105,7 +100,6 @@ final class UsStore {
 
     func list(_ id: UUID) -> UsList? { lists.first { $0.id == id } }
 
-    /// Whether the lists follow the pair's room rather than being this phone's own.
     var followsRoomLists: Bool { roomLists != nil }
 
     @discardableResult
@@ -137,8 +131,7 @@ final class UsStore {
         if media != nil { setWant(item, in: listID, wants: true, by: author) }
     }
 
-    /// Adds a country, or a place in one, to a travel list. A place brings its country along, so it shows under it;
-    /// a country already on the list isn't added again.
+    /// A place brings its country along, so it shows under it; a country already on the list isn't added again.
     func addTravel(country code: String, place: String? = nil, to listID: UUID, author: String) {
         guard let list = list(listID) else { return }
         if !list.items.contains(where: { $0.isCountry && $0.country == code }) {
@@ -149,7 +142,7 @@ final class UsStore {
         }
     }
 
-    /// Marks a travel item been to, with the month and the photos from Moments; nil and empty clear them.
+    /// Nil month and empty moments clear them.
     func markBeen(_ itemID: UUID, in listID: UUID, month: TravelMonth?, moments: [UUID], by partner: String) {
         guard var details = list(listID)?.items.first(where: { $0.id == itemID })?.details else { return }
         details.visitedIn = month?.text
@@ -165,7 +158,6 @@ final class UsStore {
                 by: nil)
     }
 
-    /// Says `partner` wants the item, or no longer does.
     func setWant(_ itemID: UUID, in listID: UUID, wants: Bool, by partner: String) {
         guard let item = list(listID)?.items.first(where: { $0.id == itemID }),
               item.wants.contains(partner) != wants else { return }
@@ -191,7 +183,6 @@ final class UsStore {
         perform(.deleteItem(key: .make(), list: Self.key(listID), item: Self.key(itemID)), by: nil)
     }
 
-    /// Groceries: drop everything already bought.
     func clearDone(in listID: UUID) {
         for item in list(listID)?.items ?? [] where item.done != nil { deleteItem(item.id, in: listID) }
     }
@@ -226,7 +217,6 @@ final class UsStore {
         save()
     }
 
-    /// The lists become this phone's own again, as they stand.
     func leaveRoomLists() {
         guard roomLists != nil else { return }
         roomLists = nil
@@ -261,7 +251,7 @@ final class UsStore {
         onGiftChange?(.delete(id))
     }
 
-    /// The viewer's own plan for this wish. Nobody else's plan is ever returned, so the owner gets nil for their own wishes.
+    /// The viewer's own plan for this wish, never anyone else's; nil for the owner's own wishes.
     func plan(for wishID: UUID, viewer: String) -> GiftPlan? {
         plans.first { $0.wishID == wishID && $0.giver == viewer }
     }
@@ -272,7 +262,7 @@ final class UsStore {
         return surprises.contains(owner) || plans.contains { open.contains($0.wishID) && $0.giver != owner }
     }
 
-    /// The giver secretly promises to gift it. One plan per wish; the owner can't plan their own.
+    /// One secret plan per wish; the owner can't plan their own.
     func pick(_ id: UUID, by giver: String) {
         guard let wish = wishes.first(where: { $0.id == id }), wish.owner != giver, wish.gifted == nil,
               !plans.contains(where: { $0.wishID == id }) else { return }
@@ -294,7 +284,7 @@ final class UsStore {
         onGiftChange?(.plan(id, nil))
     }
 
-    /// Only the owner says it arrived: it moves to "Gifted", the giver's plan closes and the couple earns 20 coins once.
+    /// Only the owner marks it arrived: it moves to "Gifted", the giver's plan closes, the couple earns 20 coins once.
     func markReceived(_ id: UUID, by owner: String) {
         guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].owner == owner, wishes[i].gifted == nil
         else { return }
@@ -309,7 +299,7 @@ final class UsStore {
         onGiftChange?(.received(id, true))
     }
 
-    /// Puts a wish marked by mistake back on the list. The coins stay paid.
+    /// The coins stay paid.
     func unmarkReceived(_ id: UUID, by owner: String) {
         guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].owner == owner else { return }
         wishes[i].gifted = nil
@@ -394,10 +384,8 @@ final class UsStore {
         return new + again
     }
 
-    /// Whether this idea is in the partner's deck again after they skipped it.
     func isSecondLook(_ ideaID: Int, for partner: String) -> Bool { swipes[partner]?[ideaID] == false }
 
-    /// Ideas the partner hasn't swiped at all.
     func unseenCount(for partner: String, filter: DateFilter) -> Int {
         let seen = swipes[partner] ?? [:]
         return DateIdea.all.count { seen[$0.id] == nil && filter.allows($0) }
@@ -440,6 +428,5 @@ final class UsStore {
     /// Rated, newest first.
     var done: [PlannedDate] { planned.filter { $0.rating != nil }.sorted { $0.date > $1.date } }
 
-    /// Not yet rated first (soonest on top), then rated ones newest first.
     var plannedSorted: [PlannedDate] { comingUp + done }
 }

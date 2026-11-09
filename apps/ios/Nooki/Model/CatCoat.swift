@@ -1,12 +1,9 @@
 import Foundation
 import RoomInterface
 
-/// Mochi's coat, picked in onboarding. Grey is the original cat as it was made; every other coat is a recolour by billet-gpu
-/// that differs from it only in each splat's colour (`f_dc_0...2`), so the app ships just those colours
-/// (`Coats/<pose>-<coat>.fdc`, three little-endian floats per splat, in the PLY's order) and lays them over a copy of
-/// the original PLY in Caches, which the rigs then load (`bundle`); the pinned files and CatRig stay untouched. That rebuilds
-/// billet-gpu's coat PLY byte for byte (`CatCoatTests`). Where splats can't be drawn the mesh cat wears the coat's
-/// colour texture instead (`Coats/<model>Color-<coat>.jpg`).
+/// Grey is the original cat; every other coat is a billet-gpu recolour differing only in each splat's `f_dc_0...2`.
+/// The app ships those (`Coats/<pose>-<coat>.fdc`, 3 little-endian floats per splat, PLY order) over a Caches copy
+/// of the original PLY, byte for byte billet-gpu's (`CatCoatTests`). Meshes wear `Coats/<model>Color-<coat>.jpg`.
 typealias CatCoat = RoomInterface.CatCoat
 
 nonisolated extension CatCoat {
@@ -18,9 +15,9 @@ nonisolated extension CatCoat {
     /// The poses that have coats; each is `<pose>.ply` with its `.skin` and `.rig.json` beside it.
     static let poses = ["Mochi", "MochiStanding", "MochiLoaf", "MochiSleep"]
 
-    /// Where the rigs are read from in this coat (`CatRig.Files(named:drawn:in:)`): the app itself for grey, else a
-    /// folder in Caches holding each of `poses`' PLY in this coat, written once, beside links to the original skins and rigs.
-    /// Each set of poses has a folder of its own: a Bundle caches its folder's listing, so files written later go unseen.
+    /// The app itself for grey, else a Caches folder with each of `poses`' PLY in this coat, written once, beside links
+    /// to the original skins and rigs. One folder per set of poses: a Bundle caches its folder's listing, so files
+    /// written later go unseen.
     func bundle(poses: [String] = Self.poses, from main: Bundle = .main, caches: URL = .cachesDirectory) throws -> Bundle {
         guard self != .grey else { return main }
         // One folder per build, so an update that changes a coat's colours never reads the old ones.

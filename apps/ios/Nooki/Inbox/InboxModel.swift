@@ -10,7 +10,6 @@ import Wire
 final class InboxModel {
     enum Phase: Equatable {
         case idle, loading, loaded
-        /// The server couldn't be reached or answered with an error.
         case failed
         /// No partner yet: the server has no room to read from.
         case unpaired
@@ -59,7 +58,6 @@ final class InboxModel {
         await readAll()
     }
 
-    /// The page after the last one shown.
     func loadMore() async {
         guard let next, phase == .loaded else { return }
         guard let page = try? await list(next) else { return }

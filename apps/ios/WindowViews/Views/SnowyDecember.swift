@@ -3,11 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 3: a snowy December street. Far: white hills with the town's big tree lit on top. Middle:
-/// houses with lights along their gutters and smoke from the chimneys. Street: one house that
-/// went all out (lights on every edge, an inflatable snowman, a lit tree in the yard) beside a
-/// neighbour with a single warm string; a snowman someone built. Near: icicles along the eave
-/// above the window and a snowy fence.
 struct SnowyDecember: ViewRecipe {
   static let streetBase: CGFloat = 48
   static let roadway = ViewRoad(
@@ -106,10 +101,8 @@ struct SnowyDecember: ViewRecipe {
       context, x: next.x, base: base, width: next.width, wall: next.wall, roof: next.roof,
       colour: colour.lit(0.02), look: look)
     for window in Self.streetWindows { ViewKit.windowFrame(context, window.rect, colour) }
-    // Doors, the big house's with a wreath drawn by the life.
     ViewKit.rect(context, CGRect(x: 67.5, y: base - 7, width: 3, height: 7), colour.lit(-0.3))
     ViewKit.rect(context, CGRect(x: -2, y: base - 6.6, width: 3, height: 6.6), colour.lit(-0.3))
-    // A snowman someone built: three balls, a stick arm, a scarf.
     let man = CGPoint(x: 26, y: base - 0.4)
     for (rise, r) in [(2.2, 2.4), (5.6, 1.7), (8.2, 1.2)] as [(CGFloat, CGFloat)] {
       ViewKit.circle(context, CGPoint(x: man.x, y: man.y - rise), r, snow)
@@ -121,10 +114,8 @@ struct SnowyDecember: ViewRecipe {
     ViewKit.rect(
       context, CGRect(x: man.x - 1.2, y: man.y - 7.3, width: 2.4, height: 0.6),
       ViewColour(0xE5503A), look.isDark ? 0.6 : 0.9)
-    // A car in the driveway with snow on its roof.
     ViewKit.car(context, x: 30, base: base, length: 12, body: colour.lit(-0.1))
     ViewKit.rect(context, CGRect(x: 30, y: base - 4.3, width: 12, height: 0.6), snow, 0.9)
-    // Sidewalk, road and banks of plowed snow.
     ViewKit.rect(
       context, CGRect(x: -45, y: base, width: 190, height: 1.4), snow.mixed(with: colour, by: 0.3))
     ViewKit.ground(context, top: base + 1.4, colour: colour.lit(-0.15).mixed(with: snow, by: 0.35))
@@ -148,7 +139,6 @@ struct SnowyDecember: ViewRecipe {
   ]
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // The eave above the window, heavy with snow, and a fence below.
     ViewKit.rect(context, CGRect(x: -45, y: -50, width: 190, height: 49), colour)
     context.fill(
       Path(roundedRect: CGRect(x: -45, y: -2.4, width: 190, height: 3.2), cornerRadius: 1.6),
@@ -219,7 +209,6 @@ struct SnowyDecember: ViewRecipe {
       context, CGPoint(x: tree.x, y: tree.y - 0.6), 1.8, ViewColour(0xFFD166), moment.lamps)
   }
 
-  /// Smoke curling up from the chimneys, drifting with the wind.
   private func smoke(_ context: GraphicsContext, moment: ViewMoment) {
     let colour = moment.palette.skyMiddle.lit(moment.look.isDark ? 0.15 : 0.35)
     for (index, top) in Self.chimneys.enumerated() {
@@ -235,7 +224,6 @@ struct SnowyDecember: ViewRecipe {
     }
   }
 
-  /// A neighbour clearing the driveway now and then: scoop, lift, toss, a puff of snow.
   static let shoveller = ViewRhythm(seed: 351, slot: 90, chance: 0.6, length: 50...80)
   static let shovelSpot = CGPoint(x: 46, y: streetBase + 0.2)
 
@@ -245,7 +233,6 @@ struct SnowyDecember: ViewRecipe {
     ViewWalker.figure(
       context, at: spot, height: 6.4, facing: -1, kind: .walker, coat: 0xE5503A, plane: .street,
       moment: moment, walking: false)
-    // One stroke every 2.4 s: down to the snow, up and over the shoulder.
     let phase = (moment.now / 2.4).truncatingRemainder(dividingBy: 1)
     let lift = phase < 0.5 ? 0 : sin((phase - 0.5) / 0.5 * Double.pi)
     let angle = -0.35 - 1.2 * lift
@@ -258,7 +245,6 @@ struct SnowyDecember: ViewRecipe {
     let dark = moment.palette.street.lit(-0.4)
     context.stroke(shaft, with: .color(dark.color()), lineWidth: 0.22)
     ViewKit.rect(context, CGRect(x: blade.x - 0.7, y: blade.y - 0.3, width: 1.4, height: 0.6), dark)
-    // The toss: a puff of snow flying off the blade and falling.
     if phase > 0.7 {
       let t = (phase - 0.7) / 0.3
       let snow = ViewKit.snow(moment.look)
@@ -276,13 +262,11 @@ struct SnowyDecember: ViewRecipe {
     shovelling(context, moment: moment)
     for string in Self.gutterLights.prefix(4) { string.draw(context, moment: moment) }
     let lamps = moment.lamps
-    // The wreath on the big house's door, with a red bow.
     let wreath = CGPoint(x: 69, y: Self.streetBase - 4.6)
     context.stroke(
       Path(ellipseIn: CGRect(x: wreath.x - 1, y: wreath.y - 1, width: 2, height: 2)),
       with: .color(ViewColour(0x2E6B4A).color()), lineWidth: 0.6)
     ViewKit.circle(context, CGPoint(x: wreath.x, y: wreath.y + 1), 0.35, ViewColour(0xE5503A))
-    // The inflatable snowman, glowing from inside and bobbing a little in the wind.
     let bob = CGFloat(sin(moment.now * 0.8)) * 0.3
     let body = ViewColour(0xF6F8FF).mixed(
       with: moment.palette.street, by: moment.look.isDark ? 0.45 - 0.3 * lamps : 0.1)
@@ -297,7 +281,6 @@ struct SnowyDecember: ViewRecipe {
     ViewKit.rect(
       context, CGRect(x: man.x - 2, y: man.y - 6.6, width: 4, height: 0.8), ViewColour(0xE5503A))
     ViewKit.glow(context, CGPoint(x: man.x, y: man.y - 5), 7, ViewColour(0xDDE6FF), 0.25 * lamps)
-    // A lit tree in the yard.
     let tree = CGPoint(x: 46, y: Self.streetBase - 0.4)
     ViewKit.pine(
       context, x: tree.x, base: tree.y, height: 12, colour: moment.palette.street.lit(-0.1),
@@ -318,7 +301,6 @@ struct SnowyDecember: ViewRecipe {
     Self.roadway.draw(context, moment: moment)
   }
 
-  /// Icicles along the eave, each with a glint now and then and a drop forming at its tip.
   private func icicles(_ context: GraphicsContext, moment: ViewMoment) {
     let ice = ViewColour(0xDDEBFF).mixed(
       with: moment.palette.skyMiddle, by: moment.look.isDark ? 0.4 : 0.1)

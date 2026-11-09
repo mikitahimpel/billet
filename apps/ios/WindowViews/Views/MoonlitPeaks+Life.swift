@@ -29,7 +29,6 @@ extension MoonlitPeaks {
     return CGPoint(x: x, y: cableY(x))
   }
 
-  /// A gondola cabin gliding along the cable, swinging a little, its windows lit after dark.
   private func gondola(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.gondola.pass(at: moment.now) else { return }
     let grip = Self.gondolaPoint(pass)
@@ -58,7 +57,6 @@ extension MoonlitPeaks {
       body.lit(-0.2))
   }
 
-  /// Smoke curling up from the chalet's chimney, drifting off with the wind.
   private func smoke(_ context: GraphicsContext, moment: ViewMoment) {
     let colour = moment.palette.skyMiddle.lit(moment.look.isDark ? 0.18 : 0.4)
     let top = Self.chimney
@@ -72,7 +70,6 @@ extension MoonlitPeaks {
     }
   }
 
-  /// Where the fox is: trotting across, stopping in the middle to sniff the snow.
   static func foxPose(_ pass: ViewRhythm.Pass) -> (point: CGPoint, facing: CGFloat, still: Bool) {
     let p = pass.progress
     let share: Double
@@ -113,7 +110,6 @@ extension MoonlitPeaks {
     shape.fill(
       Path(ellipseIn: CGRect(x: -1.6, y: -2.1, width: 3.4, height: 1.3)),
       with: .color(fur.color()))
-    // The brush of a tail, white at the tip.
     let wag = CGFloat(sin(moment.now * 2.2)) * 0.3
     shape.fill(
       Path(ellipseIn: CGRect(x: -4, y: -2.2 + wag, width: 2.8, height: 1)),
@@ -121,7 +117,6 @@ extension MoonlitPeaks {
     shape.fill(
       Path(ellipseIn: CGRect(x: -4.1, y: -2.1 + wag, width: 0.9, height: 0.8)),
       with: .color(ViewKit.snow(moment.look).color()))
-    // Head low when sniffing.
     let headY: CGFloat = still ? -1.5 : -2.6
     shape.fill(
       Path(ellipseIn: CGRect(x: 1.2, y: headY, width: 1.3, height: 1.1)),

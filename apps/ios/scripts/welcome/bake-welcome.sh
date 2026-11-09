@@ -1,9 +1,7 @@
 #!/bin/zsh
-# Bakes the welcome screen's Mochi: Tools/bake_welcome.py renders her bone by bone from Cat.usdz with Blender, then
-# ffmpeg encodes each clip as HEVC with alpha. Writes into Nooki/Resources/Welcome and the poster into the asset
-# catalog, and prints the size against the 3 MB budget. Re-running regenerates all of it.
+# Bakes the welcome Mochi: Tools/bake_welcome.py renders her in Blender (BLENDER=path), ffmpeg (hevc_videotoolbox)
+# encodes HEVC-with-alpha clips into Nooki/Resources/Welcome plus the poster; prints size vs the 3 MB budget.
 # Run under the build lock: shlock -f ~/.billet-manager/build.lock -p $$ && scripts/welcome/bake-welcome.sh
-# Needs Blender (BLENDER=/path to override) and ffmpeg with hevc_videotoolbox.
 set -e
 IOS=${0:a:h:h:h}
 BLENDER=${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}

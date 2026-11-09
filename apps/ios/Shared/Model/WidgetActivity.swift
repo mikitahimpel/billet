@@ -27,7 +27,6 @@ nonisolated struct WidgetActivity: Codable, Hashable {
         pendingPets += 1
     }
 
-    /// Hands the waiting pets to the app and clears them.
     mutating func takePendingPets() -> Int {
         defer { pendingPets = 0 }
         return pendingPets

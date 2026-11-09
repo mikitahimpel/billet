@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 11: a narrow city street in the rain. Far: a skyline of towers dotted with lit windows,
-/// red lights on their roofs. Middle: apartment blocks and an elevated line on pillars, a lit
-/// train sliding across it now and then. Street: a row of small shops, a ramen counter, an
-/// izakaya with red lanterns, a bright corner shop and glowing vending machines, tall neon signs
-/// of made-up glyphs that buzz, people under umbrellas, taxis, and the neon smeared down the wet
-/// road. Near: the eave over the window, a red lantern swaying under it and drips off its edge.
 struct NeonStreet: ViewRecipe {
   static let streetBase: CGFloat = 46
   static let roadway = ViewRoad(
@@ -28,7 +22,6 @@ struct NeonStreet: ViewRecipe {
   ]
   static let umbrellas: [UInt32] = [0xFF7AB0, 0xEAF2FA, 0xFFD166, 0x4FE8FF, 0x2A2A30]
 
-  /// A tall sign of stacked glyph cells on a pole, standing above the shops.
   struct Sign: Sendable {
     var x: CGFloat
     var top: CGFloat
@@ -74,8 +67,6 @@ struct NeonStreet: ViewRecipe {
   var moon: CGPoint { CGPoint(x: 30, y: -12) }
   var livePlanes: Set<ViewPlane> { [.middle, .street, .near] }
 
-  /// Violet city night with a magenta glow low down where the neon lights the cloud, and almost
-  /// no stars.
   static func grade(_ palette: inout ViewPalette, hour: ViewHour, share: Double) {
     let colours: [UInt32]
     switch hour {
@@ -157,7 +148,6 @@ struct NeonStreet: ViewRecipe {
   }()
 
   private func paintMiddle(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // Apartment blocks behind the line, balconies in rows.
     for (index, block)
       in ([(-34, 18, 4), (0, 16, 8), (60, 20, 2), (96, 18, 6), (120, 25, 0)]
       as [(CGFloat, CGFloat, CGFloat)]).enumerated()
@@ -173,7 +163,6 @@ struct NeonStreet: ViewRecipe {
       }
     }
     for window in Self.middleWindows { ViewKit.windowFrame(context, window.rect, colour) }
-    // The line on its pillars: a concrete deck with a parapet and the overhead wire.
     let concrete = colour.lit(-0.12)
     var x: CGFloat = -40
     while x < 145 {
@@ -229,7 +218,6 @@ struct NeonStreet: ViewRecipe {
       let wall = colour.lit(index % 2 == 0 ? 0.05 : -0.01)
       let rect = CGRect(x: shop.x, y: shop.top, width: shop.width, height: base - shop.top)
       ViewKit.rect(context, rect, wall)
-      // The roof's lip and a little water tank or unit on top.
       ViewKit.rect(
         context,
         CGRect(x: rect.minX - 0.4, y: rect.minY - 0.6, width: rect.width + 0.8, height: 0.6),
@@ -237,7 +225,6 @@ struct NeonStreet: ViewRecipe {
       ViewKit.rect(
         context, CGRect(x: rect.minX + rect.width * 0.7, y: rect.minY - 2.2, width: 3, height: 1.6),
         wall.lit(-0.1))
-      // The front: dark inside, under a faded awning.
       ViewKit.rect(
         context, CGRect(x: rect.minX + 1.2, y: 38.6, width: rect.width - 2.4, height: base - 38.6),
         wall.lit(-0.35))
@@ -247,18 +234,15 @@ struct NeonStreet: ViewRecipe {
         context, CGRect(x: rect.minX + 0.6, y: 37, width: rect.width - 1.2, height: 1.6), awning)
     }
     for window in Self.streetWindows { ViewKit.windowFrame(context, window.rect, colour) }
-    // Dark boards for the neon: the tall signs and the two over the counters.
     let board = colour.lit(-0.4)
     for sign in Self.signs { ViewKit.rect(context, sign.rect, board) }
     for centre in [Self.ramen, Self.cat] {
       ViewKit.rect(
         context, CGRect(x: centre.x - 5, y: centre.y - 2, width: 10, height: 4), board)
     }
-    // The vending machines' cases.
     for machine in Self.vending {
       ViewKit.rect(context, machine.insetBy(dx: -0.3, dy: -0.3), colour.lit(0.1))
     }
-    // Utility poles and wires sagging over the street.
     let left = ViewKit.pole(context, x: 12, top: 2, base: base, colour: poleColour)
     let right = ViewKit.pole(context, x: 108, top: 4, base: base, colour: poleColour)
     for (a, b) in zip(left, right) {
@@ -269,7 +253,6 @@ struct NeonStreet: ViewRecipe {
         context, from: point, to: CGPoint(x: -45, y: point.y + 4), sag: 1.4, colour: poleColour,
         width: 0.14)
     }
-    // Sidewalk, kerb and the wet road.
     ViewKit.rect(
       context, CGRect(x: -45, y: base, width: 190, height: 1.2),
       colour.lit(look.isDark ? 0.05 : 0.12))
@@ -279,7 +262,6 @@ struct NeonStreet: ViewRecipe {
   // MARK: - Near: the eave
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // The eave over the window, tiles end-on along its edge.
     var eave = Path()
     eave.move(to: CGPoint(x: 64, y: -50))
     eave.addLine(to: CGPoint(x: 145, y: -50))
@@ -293,7 +275,6 @@ struct NeonStreet: ViewRecipe {
       ViewKit.circle(context, CGPoint(x: tile + 1.2, y: y), 1.2, colour.lit(0.06))
       tile += 2.6
     }
-    // A rail along the bottom, wet and catching the light.
     ViewKit.ground(context, top: 57, colour: colour)
     ViewKit.rect(context, CGRect(x: -45, y: 52.6, width: 190, height: 0.8), colour.lit(0.04))
     ViewKit.rect(

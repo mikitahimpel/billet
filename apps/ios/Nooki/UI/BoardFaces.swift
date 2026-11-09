@@ -2,7 +2,6 @@ import SwiftUI
 import Design
 import UIKit
 
-/// Draws the notes and doodles pinned on the corkboard as small images the board puts on planes.
 enum BoardFaces {
     /// The newest `BoardRoomScene.slots` cards, newest first: the notes and doodles, and the photos pinned to the wall
     /// as polaroids.
@@ -44,7 +43,6 @@ enum BoardFaces {
         return pins
     }
 
-    /// Changes whenever a card on the board would.
     static func key(state: HomeState) -> [String] {
         state.notes.notes.prefix(BoardRoomScene.slots).map(\.id.uuidString)
             + state.moments.pinned.map { "\($0.id)\($0.caption)" }
@@ -68,7 +66,6 @@ enum BoardFaces {
     }
 }
 
-/// A note on the board: the couple's paper color with the prints' grain, the text or the doodle, and who wrote it.
 private struct NoteFace: View {
     let note: Note
     let doodle: UIImage?

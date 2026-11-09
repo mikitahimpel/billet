@@ -3,14 +3,11 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// A shooting star now and then on a clear dark night: a bright head drawing a fading tail down
-/// across the sky in under a second and a half. Drawn on the far plane, above its skyline.
 struct ViewShootingStar: Sendable {
   var rhythm: ViewRhythm
   /// Where streaks may start, in stage units.
   var area = CGRect(x: 0, y: -8, width: 100, height: 16)
 
-  /// The head of the streak and its direction of travel, for the pass under way.
   func head(_ pass: ViewRhythm.Pass) -> (point: CGPoint, direction: CGVector) {
     let start = CGPoint(
       x: area.minX + area.width * CGFloat(ViewRhythm.hash(Int(pass.index % 10_000), seed: 881)),
@@ -30,7 +27,6 @@ struct ViewShootingStar: Sendable {
   func draw(_ context: GraphicsContext, moment: ViewMoment) {
     guard isVisible(moment), let pass = rhythm.pass(at: moment.now) else { return }
     let (point, direction) = head(pass)
-    // Brightens quickly, fades out towards the end.
     let p = pass.progress
     let level = min(p / 0.15, 1) * min((1 - p) / 0.4, 1)
     let length: CGFloat = 9 * CGFloat(min(p / 0.3, 1))

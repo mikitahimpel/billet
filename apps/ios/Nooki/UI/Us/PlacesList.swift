@@ -1,8 +1,6 @@
 import SwiftUI
 import Design
 
-/// Places to go: how many of the 195 countries the pair has been to, a map of them, and the countries by tab.
-/// Places in a country show under it; a place whose country isn't on the list, or a line of text, is its own row.
 struct PlacesListBody: View {
     let state: HomeState
     let list: UsList
@@ -145,7 +143,6 @@ struct PlacesListBody: View {
 
 enum PlacesTab { case want, been }
 
-/// One row of Places to go: a country with the places in it, a place on its own, or a line of text.
 struct PlaceRow {
     let item: ListItem
     var places: [ListItem] = []

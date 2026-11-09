@@ -37,8 +37,6 @@ enum WatchFilter: Hashable {
     case service(Int)
 }
 
-/// The To watch list: posters three to a row, the ones both partners want marked, and what was watched together
-/// folded away below.
 struct WatchListBody: View {
     let state: HomeState
     let list: UsList
@@ -178,8 +176,6 @@ struct WatchListBody: View {
     }
 }
 
-/// One poster: TMDB's when the title has one, else its name on a warm card. Marked "♥ both" when both partners
-/// want it, else with the monogram of who added it.
 struct PosterTile: View {
     let item: ListItem
     let both: Bool

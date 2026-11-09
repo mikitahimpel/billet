@@ -1,7 +1,6 @@
 import Design
 import SwiftUI
 
-/// The Inbox, leftmost in the header: a glass circle with a tray and a count of what is unread.
 struct InboxButton: View {
     let unread: Int
     var action: () -> Void
@@ -11,7 +10,6 @@ struct InboxButton: View {
     }
 }
 
-/// "How are you?": the viewer's own mood once they've shared one today, and the partner's as a small badge.
 struct MoodHeaderButton: View {
     let state: HomeState
     var action: () -> Void
@@ -73,7 +71,6 @@ struct CoinPill: View {
     }
 }
 
-/// The coin pill's bounds, published by `CoinPill` for effects drawn over the whole screen.
 struct CoinPillAnchor: PreferenceKey {
     static let defaultValue: Anchor<CGRect>? = nil
     static func reduce(value: inout Anchor<CGRect>?, nextValue: () -> Anchor<CGRect>?) {
@@ -81,8 +78,7 @@ struct CoinPillAnchor: PreferenceKey {
     }
 }
 
-/// The couple's two avatars, which open the profile: the same height as every other header control, ringed in the
-/// glass's colour like its badges. Not glass themselves: photos stay sharp.
+/// Not glass themselves, so the photos stay sharp.
 struct CoupleButton: View {
     let state: HomeState
     let plus: Bool

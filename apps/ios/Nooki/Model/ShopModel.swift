@@ -5,12 +5,9 @@ import ShopInterface
 import Transport
 import Wire
 
-/// The Shop as the screens see it: the pair's coins, pieces, inks and wishlist as the room on the server keeps them,
-/// the day's offers, the free gift and the collection bonuses.
-///
-/// The rules live in `ShopMachine` (FeatureShop); this is its store with the wallet file, the cat and the day's prices
-/// around it. Only the server changes coins. Every buy, treat, gift, bonus and earn is a request to it, and the balance
-/// shown is the one in its last answer, less the buys it hasn't been sent yet.
+/// The Shop's store around `ShopMachine` (FeatureShop), with the wallet file, the cat and the day's prices.
+/// Only the server changes coins: every buy, treat, gift, bonus and earn is a request to it, and the balance
+/// shown is its last answer less the buys not sent yet.
 @Observable
 final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     nonisolated static let treatPrice = ShopMachine.treatPrice
@@ -69,7 +66,6 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
 
     var state: ShopMachine.State { store.state }
 
-    /// The pair's shop while this phone follows its room.
     private var open: ShopMachine.PairShop? {
         if case .open(let shop) = store.state { shop } else { nil }
     }
@@ -89,14 +85,13 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     }
     /// The pair's local day it last opened the gift on, as the server said.
     var giftDay: String? { open?.giftDay }
-    /// The collections whose bonus the pair has collected.
     var bonuses: Set<String> { open?.bonuses ?? [] }
     /// The inks on sale, the free one first: the server's catalog once it has answered.
     var inks: [PaletteInk] {
         let listed = open?.inks.compactMap(PaletteInk.init) ?? []
         return listed.isEmpty ? PaletteInk.bundled : listed
     }
-    /// The pair's latest wallet entries, newest first.
+    /// Newest first.
     var history: [CoinEntry] { open?.history ?? [] }
     /// The Coins sheet, open when set: from the header's coins, or for a buy the balance doesn't cover.
     var coinsAsk: CoinsAsk? {
@@ -122,7 +117,7 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     var wishlist: Set<String> { open?.wishlist ?? wallet.wallet.wishlist }
     var gifted: Set<String> { wallet.wallet.gifted.union(open?.giftedPending ?? []) }
 
-    /// The Shop's daily and weekly rotations, the same on both partners' phones and on the server.
+    /// The same on both partners' phones and on the server.
     var offers: ShopOffers {
         ShopOffers(pairSeed: couple.couple.pair?.pairID ?? couple.couple.partners.sorted().joined(separator: "+"))
     }
@@ -146,7 +141,7 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
 
     // MARK: Buying
 
-    /// Buys a set's missing pieces at the set price: the featured set or a bundle.
+    /// At the set price: the featured set or a bundle.
     @discardableResult
     func buy(_ set: some PieceSet) -> Bool {
         guard let quote = ShopOffers.price(of: set, owned: owned) else { return false }
@@ -287,15 +282,13 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
         await untilRead()
     }
 
-    /// Reads the pair's room again.
     func refresh() async {
         guard isSynced else { return }
         store.send(.refreshAsked)
         await untilRead()
     }
 
-    /// The room's shop as the socket pushes it, after either partner's change. Ignored unless this phone follows a
-    /// room.
+    /// The socket's push after either partner's change; ignored unless this phone follows a room.
     func received(_ shop: ShopResponse) {
         store.send(.pushed(shop))
     }

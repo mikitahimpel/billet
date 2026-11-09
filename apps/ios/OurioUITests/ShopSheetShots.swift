@@ -1,8 +1,7 @@
 import XCTest
 
-/// Screenshots every Shop sheet variant: items of each rarity, one for Mochi, one owned, one the couple can't afford,
-/// and the featured and bundle sets. Each launches straight into its sheet through the Shop's DEBUG launch arguments.
-/// It runs only from the ios.yml shots job, which sets UISHOTS.
+/// Screenshots every Shop sheet variant, each launched straight into its sheet through DEBUG launch arguments.
+/// Runs only from the ios.yml shots job, which sets UISHOTS.
 final class ShopSheetShots: XCTestCase {
     override func setUpWithError() throws {
         try XCTSkipUnless(ProcessInfo.processInfo.environment["UISHOTS"] == "1", "shots run only in the shots job")

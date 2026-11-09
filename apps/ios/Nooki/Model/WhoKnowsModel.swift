@@ -4,12 +4,9 @@ import Observation
 import Transport
 import Wire
 
-/// Today's Who knows who round as this user plays it. One partner, the subject, answers five questions about
-/// themselves while the other guesses; the room keeps each side's answers hidden until both are done, then opens them
-/// together. The partner's progress and the reveal also arrive over the room socket.
-///
-/// The rules live in `WhoKnowsMachine` (FeatureGames); this is its store with the question catalog and the screen's
-/// words around it.
+/// Today's Who knows who round: the subject answers five questions about themselves while the other guesses; the
+/// room hides each side's answers until both are done. Progress and the reveal also arrive over the socket. The
+/// store around `WhoKnowsMachine` (FeatureGames) with the question catalog.
 @Observable
 final class WhoKnowsModel {
     enum Phase: Equatable {
@@ -61,13 +58,11 @@ final class WhoKnowsModel {
     var reveal: [GuessReveal] { response?.reveal ?? [] }
     var score: GuessScore? { response?.score }
     var hits: Int { reveal.filter(\.hit).count }
-    /// What the revealed round paid the pair.
     var coinsEarned: Int { response?.reveal == nil ? 0 : Self.roundCoins + Self.hitCoins * hits }
 
     /// The next question to answer, in round order; nil once every one is answered, or while the catalog lacks it.
     var current: GuessQuestion? { round?.next.flatMap { catalog[$0] } }
 
-    /// Whether the round asks a question this phone's catalog doesn't have yet.
     var lacksQuestions: Bool {
         response?.round.questions.contains { catalog[$0] == nil } ?? false
     }
@@ -122,7 +117,6 @@ final class WhoKnowsModel {
         isSubject ? question.selfText : question.guess.replacingOccurrences(of: "{name}", with: subjectName)
     }
 
-    /// The Us tab card's line for the round.
     nonisolated static func status(_ phase: Phase, remaining: Int, partner: String) -> String {
         switch phase {
         case .loading: "Today's round"

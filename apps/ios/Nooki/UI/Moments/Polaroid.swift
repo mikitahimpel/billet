@@ -2,16 +2,12 @@ import SwiftUI
 import Design
 import UIKit
 
-/// Colors of the polaroid paper family, shared by photos and the notes beside them.
 enum PolaroidPaper {
-    /// The frame: warm off-white in light, a softer cream on the brown screen in dark so it doesn't glare.
+    /// A softer cream in dark, so it doesn't glare on the brown screen.
     static let frame = Color(light: Color(hex: 0xFFFBF3), dark: Color(hex: 0xF5E8D3))
-    /// Handwriting on the paper.
     static let ink = Color(hex: 0x4A2E1F)
     static let byline = Color(hex: 0x9A7A62)
-    /// The empty photo area before a print loads.
     static let blank = Color(hex: 0xE9D6BC)
-    /// The milky sheet a fresh print develops out of.
     static let milk = Color(hex: 0xEFE8DC)
     static let tapeTones: [Color] = [.blushPink, .honey, Color(hex: 0x9CC3A4), Color(hex: 0x9DBBF5)]
 }
@@ -31,10 +27,8 @@ extension UUID {
     }
 }
 
-/// An instant print: the photo on a square in a warm paper frame with a deeper bottom strip, a handwritten caption on
-/// the strip and who and when beneath it. `width` sets every proportion, so the same print works as a feed card, a
-/// board face or full screen. While `undeveloped` it is a milky blank; turning it off develops the photo over 1.5 s
-/// with a soft tap, like a fresh instant.
+/// `width` sets every proportion, so the same print works as a feed card, a board face or full screen.
+/// While `undeveloped` it is a milky blank; turning it off develops the photo over 1.5 s with a soft tap.
 struct Polaroid<Photo: View>: View {
     let width: CGFloat
     let caption: String
@@ -42,7 +36,6 @@ struct Polaroid<Photo: View>: View {
     var undeveloped = false
     /// Its own drop shadow; off where the print is drawn into a lit 3D scene.
     var lifted = true
-    /// Turns the caption into a field on the strip.
     var captionEditor: Binding<String>?
     var captionFocus: FocusState<Bool>.Binding?
     @ViewBuilder var photo: Photo
@@ -97,8 +90,7 @@ struct Polaroid<Photo: View>: View {
     }
 }
 
-/// A small mark on a print or a note written here that hasn't reached the partner yet. It goes once the server
-/// has it; nothing to tap, the app sends it again by itself.
+/// On a print or note the server doesn't have yet. Nothing to tap: the app sends it again by itself.
 struct UnsentMark: View {
     var size: CGFloat = 12
     var tint: Color = PolaroidPaper.byline
@@ -115,8 +107,6 @@ struct UnsentMark: View {
     }
 }
 
-/// Polaroid paper: the frame color with a soft grain, for prints and the notes that sit with them.
-///
 /// The grain is baked into a tile of the paper's own color and the shadow is cast by the sheet's shape, so a feed of
 /// prints scrolls without a blend or a shadow traced from each card's pixels, both offscreen passes.
 struct PaperSheet: View {
@@ -147,7 +137,6 @@ struct PaperSheet: View {
     }
 }
 
-/// A strip of washi tape with slightly ragged ends, holding a print to the board or the page.
 struct WashiTape: View {
     let tone: Color
     var width: CGFloat = 46

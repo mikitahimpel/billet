@@ -1,8 +1,7 @@
 import SwiftUI
 import Design
 
-/// An item on the Shop: its art in the rarity frame, then one fixed layout under it: the name, one line about it
-/// and the buy. Every card has the same three lines, so a row of cards is level.
+/// Every card has the same three lines under its art, so a row of cards is level.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState

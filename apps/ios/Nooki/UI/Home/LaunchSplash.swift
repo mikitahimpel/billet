@@ -1,8 +1,6 @@
 import SwiftUI
 import Design
 
-/// What the app opens on while the room loads: the seated cat breathing in a warm glow that blooms out of the
-/// launch screen's color, the app's name underneath and three soft dots keeping time.
 struct LaunchSplash: View {
     @State private var shown = false
     @State private var breathing = false
@@ -42,7 +40,6 @@ struct LaunchSplash: View {
     static let launchColor = Color(hex: 0x2A1A12)
 }
 
-/// Three dots rising and brightening one after another.
 private struct LoadingDots: View {
     var body: some View {
         TimelineView(.animation) { context in

@@ -1,13 +1,7 @@
 #!/bin/zsh
-# The standard screenshot set from one Release Simulator build: the World tab in each room (the
-# Room, then the City), turned to each side, with Shop and Moments over it (measure.sh --sweep), then the
-# first-launch onboarding on a fresh install. On a Simulator without an Apple7 GPU (a CI VM) Mochi is the
-# mesh cat, not the splats a phone draws.
-#
+# The standard screenshot set from one Release Simulator build: World in each room and pose, with Shop and Moments
+# over it (measure.sh --sweep), then first-launch onboarding on a fresh install, into $PERF_OUT/<label>/shots.
 #   PERF_DERIVED=<derived> [PERF_DEVICE=<name>] [PERF_DEVICE_TYPE=<type id>] shots.sh <label>
-#
-# Shots go to $PERF_OUT/<label>/shots (default ~/.billet-manager/pet-concept/perf/runs). Holds the
-# measuring lock throughout and shuts its Simulator down at the end.
 set -euo pipefail
 
 label=${1:?usage: shots.sh <label>}

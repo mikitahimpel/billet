@@ -3,7 +3,7 @@ import Testing
 @testable import Billet
 
 struct URLSchemeTests {
-    /// The widgets open the app with ourio:// links (DeepLink); iOS only routes them to an app that declares the scheme.
+    /// Widgets open the app with ourio:// links (DeepLink); iOS routes them only to an app declaring the scheme.
     /// Invites sent before the rename, and the server's, still carry nooki://.
     @Test(arguments: ["ourio", "nooki"])
     func theAppDeclaresAndOpensTheScheme(_ scheme: String) {

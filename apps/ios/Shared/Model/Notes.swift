@@ -2,9 +2,7 @@ import Observation
 import UIKit
 import Wire
 
-/// A little note for the couple: a line of text or a doodle on a colored piece of paper.
 nonisolated struct Note: Identifiable, Codable, Hashable {
-    /// The paper colors a note can be pinned on.
     enum Paper: String, Codable, CaseIterable {
         case butter, blush, sage, sky, cream
 
@@ -131,7 +129,6 @@ final class NoteStore {
         save()
     }
 
-    /// Newest note not written by `viewer`.
     func latest(notBy viewer: String) -> Note? {
         notes.first { $0.author != viewer }
     }

@@ -3,11 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 15: the desert at night under a huge starry sky. Far: the Milky Way over flat-topped
-/// mesas and a lone butte, shooting stars now and then. Middle: dunes and scrub, a road with
-/// telegraph poles, a far car's lights crossing, a coyote trotting by. Street: a camper van
-/// under warm fairy lights with its window lit, two camp chairs round a crackling fire, a
-/// telescope. Near: a tall cactus with its arms up, an agave, a tumbleweed rolling past.
 struct DesertStars: ViewRecipe {
   static let streetBase: CGFloat = 47.6
   static let road: CGFloat = 41
@@ -59,7 +54,6 @@ struct DesertStars: ViewRecipe {
     }
   }
 
-  /// The sand's colour, snowed over in snow.
   private static func sand(_ colour: ViewColour, look: ViewLook) -> ViewColour {
     look.weather == .snow ? colour.mixed(with: ViewKit.snow(look), by: 0.45) : colour
   }
@@ -85,7 +79,6 @@ struct DesertStars: ViewRecipe {
       shape.addLine(to: CGPoint(x: mesa.x + mesa.width + 5, y: base))
       shape.closeSubpath()
       context.fill(shape, with: .color(rock.color()))
-      // The lit face on the right, and bands of rock across the cliff.
       var face = context
       face.clip(to: shape)
       face.fill(
@@ -108,8 +101,6 @@ struct DesertStars: ViewRecipe {
     ViewKit.ground(context, top: base - 0.4, colour: Self.sand(colour, look: look).lit(-0.02))
   }
 
-  /// The Milky Way: a soft band of light across the sky and its crowd of small stars, still in
-  /// the far plate, above the mesas.
   private func milkyWay(_ context: GraphicsContext) {
     var band = context
     band.translateBy(x: 50, y: -16)
@@ -123,7 +114,6 @@ struct DesertStars: ViewRecipe {
         glow, CGPoint(x: x + 8, y: 6 * CGFloat(ViewRhythm.hash(index, seed: 1341) - 0.5)), 20,
         ViewColour(0xFFE0D0), 0.07)
     }
-    // A dark dust lane down the middle of it.
     for index in 0..<5 {
       let x = -60 + CGFloat(index) * 28
       var lane = band
@@ -149,7 +139,6 @@ struct DesertStars: ViewRecipe {
     ViewKit.hills(
       context, base: Self.road - 0.6, waves: [2, 3.4, 1.6, 2.8, 3.6, 2, 2.6, 1.8], colour: sand)
     ViewKit.ground(context, top: Self.road - 0.8, colour: sand)
-    // The road: a pale strip with a dashed middle line.
     ViewKit.rect(
       context, CGRect(x: -45, y: Self.road - 0.2, width: 190, height: 0.9),
       sand.lit(look.isDark ? -0.12 : -0.18))
@@ -160,7 +149,6 @@ struct DesertStars: ViewRecipe {
         ViewColour(0xE8D8A0).mixed(with: sand, by: 0.6))
       x += 4
     }
-    // Telegraph poles along the road, and their wire.
     let pole = sand.lit(-0.3)
     for px in Self.poles {
       ViewKit.rect(context, CGRect(x: px - 0.18, y: 33.6, width: 0.36, height: 6.8), pole)
@@ -171,7 +159,6 @@ struct DesertStars: ViewRecipe {
         context, from: CGPoint(x: from, y: 34.3), to: CGPoint(x: to, y: 34.3), sag: 0.7,
         colour: pole, width: 0.1)
     }
-    // Scrub dotted over the sand.
     for index in 0..<24 {
       let bx = -40 + 180 * CGFloat(ViewRhythm.hash(index, seed: 1351))
       let by = Self.road + 1.6 + 3.4 * CGFloat(ViewRhythm.hash(index, seed: 1352))
@@ -194,9 +181,7 @@ struct DesertStars: ViewRecipe {
     ground.closeSubpath()
     context.fill(ground, with: .color(sand.lit(0.03).color()))
     paintVan(context, colour: colour, look: look)
-    // The fairy lights' far pole.
     ViewKit.rect(context, CGRect(x: 30.3, y: 37.4, width: 0.5, height: 9.4), colour.lit(-0.25))
-    // Two camp chairs round the fire.
     for (x, hex) in [(33.6, 0xFF8A5B), (44.6, 0x5FB8A8)] as [(CGFloat, UInt32)] {
       let cloth = ViewColour(hex).mixed(with: colour, by: look.isDark ? 0.55 : 0.25)
       let facing: CGFloat = x < Self.fire.x ? 1 : -1
@@ -215,7 +200,6 @@ struct DesertStars: ViewRecipe {
       back.closeSubpath()
       context.fill(back, with: .color(cloth.lit(-0.06).color()))
     }
-    // The fire ring and its logs.
     let fire = Self.fire
     for index in 0..<6 {
       let angle = Double(index) / 6 * 2 * .pi
@@ -232,7 +216,6 @@ struct DesertStars: ViewRecipe {
         log, with: .color(ViewColour(0x5A3A28).mixed(with: colour, by: 0.4).color()),
         lineWidth: 0.5)
     }
-    // A telescope on its tripod, pointed at the sky.
     let scope = CGPoint(x: 84, y: 42)
     for foot in [81.6, 84.2, 86.6] as [CGFloat] {
       var leg = Path()
@@ -248,7 +231,6 @@ struct DesertStars: ViewRecipe {
       with: .color(ViewColour(0xE8E4DC).mixed(with: colour, by: look.isDark ? 0.6 : 0.3).color()))
   }
 
-  /// A rounded retro camper: two-tone, a cream band, its side window and its wheels.
   private func paintVan(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let van = Self.van
     let teal = ViewColour(0x5FB8A8).mixed(with: colour, by: look.isDark ? 0.6 : 0.3)
@@ -263,7 +245,6 @@ struct DesertStars: ViewRecipe {
     upper.fill(
       Path(CGRect(x: van.minX, y: van.minY + van.height * 0.45, width: van.width, height: 0.4)),
       with: .color(cream.lit(-0.1).color()))
-    // The cab's windscreen at the front, on the left.
     ViewKit.rect(
       context, CGRect(x: van.minX + 1.2, y: van.minY + 1, width: 4, height: 2.4), colour.lit(-0.3))
     ViewKit.windowFrame(context, Self.vanWindow.rect, cream)
@@ -285,7 +266,6 @@ struct DesertStars: ViewRecipe {
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let cactus = colour.mixed(with: ViewColour(0x3F6A4A), by: look.isDark ? 0.12 : 0.35)
-    // A tall cactus on the left with two arms raised.
     let parts: [CGRect] = [
       CGRect(x: -0.2, y: 6, width: 4.6, height: 54),
       CGRect(x: -7, y: 28, width: 8, height: 3.2),
@@ -298,7 +278,6 @@ struct DesertStars: ViewRecipe {
         Path(roundedRect: part, cornerRadius: min(part.width, part.height) / 2),
         with: .color(cactus.color()))
     }
-    // The lit side and the ribs down the trunk and the arms.
     for part in [parts[0], parts[2], parts[4]] {
       ViewKit.rect(
         context,
@@ -315,7 +294,6 @@ struct DesertStars: ViewRecipe {
           ViewKit.snow(look), 0.85)
       }
     }
-    // An agave on the right, stiff leaves fanning out.
     let agave = colour.mixed(with: ViewColour(0x5A8A7A), by: look.isDark ? 0.15 : 0.35)
     let root = CGPoint(x: 96, y: 60)
     for index in 0..<9 {

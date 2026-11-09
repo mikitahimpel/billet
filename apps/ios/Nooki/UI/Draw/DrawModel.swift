@@ -7,8 +7,6 @@ import SwiftUI
 import Transport
 import Wire
 
-/// The lock-screen drawing: this phone's strokes, the partner's strokes when both have the canvas open, and sending
-/// the finished drawing as a note.
 @MainActor
 @Observable
 final class DrawModel {
@@ -30,7 +28,6 @@ final class DrawModel {
 
     /// This phone's finished strokes, oldest first.
     private(set) var strokes: [Stroke] = []
-    /// The stroke under the finger.
     private(set) var current: Stroke?
     /// Earlier versions of `strokes`. Snapshots rather than single strokes, so undo also brings back what the
     /// eraser or a clear took.
@@ -52,7 +49,6 @@ final class DrawModel {
 
     // MARK: What is on the canvas
 
-    /// The partner's strokes, finished and in progress.
     var partnerStrokes: [Stroke] {
         guard let room else { return [] }
         return room.state.strokes + room.state.openStrokes.keys.sorted().compactMap { room.state.openStrokes[$0] }
@@ -204,7 +200,6 @@ final class DrawModel {
     }
 }
 
-/// Renders a drawing to images.
 @MainActor
 enum DrawingImage {
     /// The ink alone on a clear background, the canvas's shape: what widgets and history lay on their wallpaper.
@@ -214,7 +209,6 @@ enum DrawingImage {
         return renderer.uiImage?.pngData()
     }
 
-    /// The drawing on its wallpaper, for Moments.
     static func keepsake(_ strokes: [Stroke], canvas: CGSize, wallpaper: LockWallpaper, photo: UIImage?) -> UIImage? {
         let content = ZStack {
             LockWallpaperView(wallpaper: wallpaper, photo: photo)

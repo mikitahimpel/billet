@@ -21,12 +21,10 @@ protocol CatEventSource: AnyObject {
 enum CatLifeChange {
     /// One new event, this phone's or the partner's.
     case event(LifeEvent)
-    /// A different cat: the room's seed or birth arrived, or the pair changed. The brain starts over from
-    /// `events`.
+    /// A different cat: the room's seed or birth arrived, or the pair changed. The brain restarts from `events`.
     case reset
 }
 
-/// Where the brain's changes go, for the app's analytics.
 protocol CatAnalytics: AnyObject {
     func catChanged(from: CatMind?, to: CatMind, cause: String)
     /// Something one of the couple did that the cat answered.
@@ -52,7 +50,7 @@ final class CatDirector {
     private(set) var spot = NookiSpot.home
     /// Set while the Labs tour plays, instead of the brain.
     private(set) var touring = false
-    /// The hour Labs has set the brain's clock to, nil for the real one.
+    /// Nil for the real clock.
     private(set) var forcedHour: Double?
 
     /// A launch argument (`-labs.catBrainTour YES`) that starts the tour at once, for recordings.
@@ -125,8 +123,7 @@ final class CatDirector {
         analytics.coupleEvent("greeting")
     }
 
-    /// Someone sent her to `spot` with a tap: she stays there a minute before the brain moves her on, and a toy is a
-    /// game.
+    /// She stays at `spot` a minute before the brain moves her on; a toy is a game.
     func sent(to spot: NookiSpot) {
         holdUntil = Date.now.timeIntervalSince1970 + 60
         lastEvent = "sent to \(spot.rawValue)"
@@ -181,7 +178,6 @@ final class CatDirector {
         analytics.coupleEvent("feed")
     }
 
-    /// Greets as after a long time away.
     func greet() {
         live(.greeting, for: 4)
         lastEvent = "greeting"

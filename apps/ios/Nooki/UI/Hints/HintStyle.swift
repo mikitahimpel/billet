@@ -2,8 +2,7 @@ import SwiftUI
 import Design
 import TipKit
 
-/// The hints' look: a honey symbol, an SF Rounded title, the message and the hint's button under it, and an X. The
-/// background is the system's (glass on iOS 26), warmed before that.
+/// The background is the system's (glass on iOS 26), warmed before that.
 struct HintStyle: TipViewStyle {
     let hints: Hints
 
@@ -57,7 +56,6 @@ struct HintStyle: TipViewStyle {
 }
 
 extension View {
-    /// The hints' style and background for everything under this view.
     func hintStyle(_ hints: Hints) -> some View {
         modifier(HintLook(hints: hints))
     }

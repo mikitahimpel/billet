@@ -1,8 +1,7 @@
 import SwiftUI
 import Design
 
-/// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, the games, then shared lists;
-/// today's mood is in its header. Every card is a `Card` that starts with a `CardHeader`; only the hero is warm.
+/// Every card is a `Card` that starts with a `CardHeader`; only the hero is warm.
 struct UsView: View {
     @Bindable var state: HomeState
 

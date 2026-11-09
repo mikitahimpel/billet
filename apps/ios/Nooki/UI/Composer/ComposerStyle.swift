@@ -17,7 +17,6 @@ enum ComposerStyle: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The paper shapes this style offers; the sticky pad has one.
     var kinds: [PaperKind] {
         switch self {
         case .sticky: [.sticky]

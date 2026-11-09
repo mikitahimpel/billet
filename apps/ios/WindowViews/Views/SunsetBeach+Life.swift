@@ -38,14 +38,13 @@ extension SunsetBeach {
     }
   }
 
-  /// The breeze, from about -1 to 1, never quite repeating.
+  /// From about -1 to 1, never quite repeating.
   static func breeze(_ moment: ViewMoment) -> Double {
     let t = moment.now
     let wind = moment.look.weather == .rain ? 1.8 : 1
     return (0.55 * sin(t * 0.6) + 0.3 * sin(t * 1.7 + 1) + 0.15 * sin(t * 3.7)) * wind
   }
 
-  /// The low sun and its glitter path on the water at sunset and sunrise; the moon's at night.
   private func sunAndGlitter(_ context: GraphicsContext, moment: ViewMoment) {
     let look = moment.look
     guard look.weather != .rain, look.weather != .snow else { return }
@@ -89,7 +88,6 @@ extension SunsetBeach {
     return CGPoint(x: x, y: horizon + 1.4)
   }
 
-  /// A small sailboat sliding along the horizon, its mast light on after dark.
   private func sailboat(_ context: GraphicsContext, moment: ViewMoment) {
     guard let pass = Self.boat.pass(at: moment.now) else { return }
     let point = Self.boatPoint(pass)
@@ -124,7 +122,6 @@ extension SunsetBeach {
     }
   }
 
-  /// The lighthouse's beam sweeping round after dark, brightest as it turns towards the window.
   private func lighthouseBeam(_ context: GraphicsContext, moment: ViewMoment) {
     let lamp = Self.lighthouse
     let level = moment.lamps
@@ -165,7 +162,6 @@ extension SunsetBeach {
     return CGPoint(x: x, y: y)
   }
 
-  /// Three gulls gliding over in a loose line while it is light, now and then a wingbeat.
   private func gulls(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.hour != .night, moment.look.weather != .snow,
       let pass = Self.gulls.pass(at: moment.now)
@@ -186,7 +182,6 @@ extension SunsetBeach {
     }
   }
 
-  /// Waves running up the sand one after another, their foam sliding up and slipping back.
   private func waves(_ context: GraphicsContext, moment: ViewMoment) {
     let palette = moment.palette
     let dark = moment.look.isDark
@@ -194,7 +189,6 @@ extension SunsetBeach {
     let water = palette.far.lit(dark ? 0.04 : 0.1)
     let period = moment.look.weather == .rain ? 5.5 : 7.5
     let base = Self.shore
-    // A breaker further out, rising and settling.
     let swell = 0.5 + 0.5 * sin(moment.now * 2 * .pi / period)
     var breaker = Path()
     breaker.move(to: CGPoint(x: -45, y: 38.6))
@@ -231,7 +225,6 @@ extension SunsetBeach {
     }
   }
 
-  /// The lifeguard tower's flag lifting in the breeze.
   private func flag(_ context: GraphicsContext, moment: ViewMoment) {
     let top = Self.flag
     let flutter = CGFloat(sin(moment.now * 6)) * 0.4
@@ -253,7 +246,6 @@ extension SunsetBeach {
           .color()))
   }
 
-  /// Dune grass in tufts, bending with the breeze.
   private func dunegrass(_ context: GraphicsContext, moment: ViewMoment) {
     let sway = Self.breeze(moment)
     let colour = moment.palette.near.mixed(

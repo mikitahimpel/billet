@@ -1,12 +1,9 @@
 import SwiftUI
 import Design
 
-/// The week's hero offer at the top of Today: the set's pieces large on lamplight, its value against the sum of the
-/// missing parts, and a countdown to the real Monday rotation. The price pill buys it in one tap.
 struct FeaturedCard: View {
     let state: HomeState
     let offer: FeaturedOffer
-    /// Opens the set's sheet.
     var openSet: (FeaturedOffer) -> Void = { _ in }
 
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: offer, owned: state.shop.owned) }
@@ -78,7 +75,6 @@ struct FeaturedCard: View {
         return value.formatted(.number.precision(.fractionLength(0...1)))
     }
 
-    /// The pieces stand side by side, the middle one larger and in front, as large as the card's width lets them.
     private var art: some View {
         GeometryReader { proxy in
             let overlap = Space.l
@@ -106,7 +102,6 @@ struct FeaturedCard: View {
     }
 }
 
-/// The hero's sticker: what the set is worth against its missing pieces bought one by one, and the coins it saves.
 private struct ValueBadge: View {
     let multiple: String
     let saves: Int

@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 7: Los Angeles at pink dusk. Far: hills dotted with house lights, a small downtown and a
-/// line of skinny palms on the ridge, with planes lined up in the sky coming in to land. Middle:
-/// a stucco apartment block, a donut shop with a giant donut on its roof, and a row of very tall
-/// palms that sway. Street: a boulevard with cars, a taco truck under string lights, a wall of
-/// bougainvillea, a skateboarder now and then. Near: an agave and a palm frond hanging in. Wild
-/// parrots cross in a noisy flock while it is light.
 struct PinkDusk: ViewRecipe {
   static let streetBase: CGFloat = 46
   static let roadway = ViewRoad(
@@ -45,7 +39,6 @@ struct PinkDusk: ViewRecipe {
   // MARK: - Far: hills, downtown and ridge palms
 
   private func paintFar(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // Downtown, small and blue-grey behind the hills.
     for (index, tower) in [(64.0, 4.0, 20.0), (69, 5, 15), (75, 3.4, 22), (79, 5, 18), (85, 4, 24)]
       .enumerated() as EnumeratedSequence<[(CGFloat, CGFloat, CGFloat)]>
     {
@@ -54,7 +47,6 @@ struct PinkDusk: ViewRecipe {
         colour.mixed(with: look.palette.horizon, by: 0.3).lit(Double(index % 2) * 0.03))
     }
     ViewKit.hills(context, base: 34, waves: [3, 5, 2.4, 4, 6, 3, 2, 4.4, 3.6], colour: colour)
-    // House lights scattered over the hills after dark.
     if look.isDark {
       for index in 0..<70 {
         let x = -40 + 180 * CGFloat(ViewRhythm.hash(index, seed: 741))
@@ -64,7 +56,6 @@ struct PinkDusk: ViewRecipe {
           0.4 + 0.4 * ViewRhythm.hash(index, seed: 743))
       }
     }
-    // Skinny palms along the ridge.
     for index in 0..<12 {
       let x = -36 + CGFloat(index) * 15 + 6 * CGFloat(ViewRhythm.hash(index, seed: 744))
       ViewKit.palm(
@@ -95,7 +86,6 @@ struct PinkDusk: ViewRecipe {
 
   private func paintMiddle(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let stucco = colour.mixed(with: ViewColour(0xE8C8B8), by: look.isDark ? 0.12 : 0.3)
-    // The apartment block: flat roof, two floors of sliding windows over a carport.
     let block = CGRect(x: -20, y: 26, width: 42, height: 15)
     ViewKit.rect(context, block, stucco)
     ViewKit.rect(
@@ -109,7 +99,6 @@ struct PinkDusk: ViewRecipe {
     for x in stride(from: block.minX + 4, to: block.maxX, by: 8) {
       ViewKit.rect(context, CGRect(x: x, y: block.maxY - 3, width: 0.6, height: 3), stucco)
     }
-    // A bungalow with a low hip roof.
     let bungalow = CGRect(x: 30, y: 34, width: 22, height: 7)
     ViewKit.rect(context, bungalow, stucco.lit(-0.04))
     var roof = Path()
@@ -120,7 +109,6 @@ struct PinkDusk: ViewRecipe {
     roof.closeSubpath()
     context.fill(
       roof, with: .color(stucco.mixed(with: ViewColour(0xA85A40), by: 0.25).lit(-0.08).color()))
-    // The donut shop: a low box with big windows and its donut on two posts.
     let shop = CGRect(x: 68, y: 35, width: 26, height: 6)
     ViewKit.rect(context, shop, stucco.lit(0.03))
     ViewKit.rect(
@@ -144,7 +132,6 @@ struct PinkDusk: ViewRecipe {
 
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let base = Self.streetBase
-    // The bougainvillea wall on the right.
     let wall = CGRect(x: 76, y: 39.4, width: 70, height: base - 39.4)
     ViewKit.rect(
       context, wall, colour.mixed(with: ViewColour(0xE8C8B8), by: look.isDark ? 0.1 : 0.25))
@@ -158,7 +145,6 @@ struct PinkDusk: ViewRecipe {
         ViewKit.circle(context, CGPoint(x: x + 0.6, y: y + 2.6), 1, bloom.lit(-0.05))
       }
     }
-    // The taco truck: boxy, white, its serving hatch propped open.
     let truck = Self.truck
     let paint = ViewColour(0xF2EEE6).mixed(with: colour, by: look.isDark ? 0.6 : 0.25)
     ViewKit.rect(
@@ -188,7 +174,6 @@ struct PinkDusk: ViewRecipe {
     for x in [truck.minX + 3, truck.maxX - 3.4] {
       ViewKit.circle(context, CGPoint(x: x, y: truck.maxY - 1.2), 1.2, colour.lit(-0.4))
     }
-    // People waiting at the hatch.
     for (index, x) in [12.0, 15.4].enumerated() {
       ViewWalker.figure(
         context, at: CGPoint(x: x, y: base), height: 6, facing: 1,
@@ -196,7 +181,6 @@ struct PinkDusk: ViewRecipe {
         coat: index == 0 ? 0x9AC8E8 : 0xFF8A5B, plane: .street,
         moment: ViewMoment(look: look, now: 0, time: 10), walking: false)
     }
-    // Sidewalk, kerb and the boulevard.
     ViewKit.rect(
       context, CGRect(x: -45, y: base, width: 190, height: 1.2),
       colour.lit(look.isDark ? 0.06 : 0.15))
@@ -207,7 +191,6 @@ struct PinkDusk: ViewRecipe {
   }
 
   private func paintNear(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
-    // An agave in the bottom left: stiff pointed leaves fanning out.
     let agave = colour.mixed(with: ViewColour(0x5A8A7A), by: look.isDark ? 0.15 : 0.35)
     for index in 0..<9 {
       let angle = -Double.pi * (0.1 + 0.8 * Double(index) / 8)
@@ -252,7 +235,6 @@ struct PinkDusk: ViewRecipe {
       Self.skater.draw(context, moment: moment)
       Self.roadway.draw(context, moment: moment)
     case .near:
-      // A palm frond hanging in from the top right, moving with the breeze.
       let sway = Self.sway(moment)
       for (index, angle) in [0.3, 0.55, 0.85, 1.1].enumerated() {
         ViewKit.palmFrond(
@@ -263,7 +245,6 @@ struct PinkDusk: ViewRecipe {
     }
   }
 
-  /// A hummingbird working the bougainvillea while it is light: hover, dart, hover.
   static let hummer = ViewRhythm(seed: 761, slot: 45, chance: 0.6, length: 16...24)
 
   static func hummerPoint(_ pass: ViewRhythm.Pass, now: Double) -> CGPoint {
@@ -276,7 +257,6 @@ struct PinkDusk: ViewRecipe {
     let index = min(Int(step), flowers.count - 1)
     let next = flowers[(index + 1) % flowers.count]
     let here = flowers[index]
-    // Hover for most of each stop, dart to the next at its end.
     let local = step - Double(index)
     let dart = CGFloat(max(0, (local - 0.8) / 0.2))
     let x = here.x + (next.x - here.x) * dart + CGFloat(sin(now * 9)) * 0.15
@@ -299,20 +279,18 @@ struct PinkDusk: ViewRecipe {
     beak.move(to: CGPoint(x: point.x - 0.95, y: point.y - 0.2))
     beak.addLine(to: CGPoint(x: point.x - 1.9, y: point.y))
     context.stroke(beak, with: .color(body.lit(-0.4).color()), lineWidth: 0.1)
-    // Wings too fast to see: a pale blur above the back.
     context.fill(
       Path(ellipseIn: CGRect(x: point.x - 0.4, y: point.y - 1.3, width: 1.2, height: 1.1)),
       with: .color(ViewColour(0xEEF2F7).color(0.35)))
   }
 
-  /// The breeze in the palms, from -1 to 1, never quite repeating.
+  /// From -1 to 1, never quite repeating.
   static func sway(_ moment: ViewMoment) -> Double {
     let t = moment.now
     let wind = moment.look.weather == .rain ? 1.8 : 1
     return (0.55 * sin(t * 0.45) + 0.3 * sin(t * 1.3 + 2) + 0.15 * sin(t * 3.1)) * wind
   }
 
-  /// Landing lights strung out along the glide path, each sliding down towards the airport.
   private func approach(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.weather != .fog else { return }
     let slot = Self.approachGap
@@ -335,7 +313,6 @@ struct PinkDusk: ViewRecipe {
     }
   }
 
-  /// The donut's frosting lit pink after dark.
   private func donutGlow(_ context: GraphicsContext, moment: ViewMoment) {
     let donut = Self.donut
     let neon = ViewColour(0xFF6FA8)
@@ -347,7 +324,6 @@ struct PinkDusk: ViewRecipe {
     ViewKit.glow(context, donut, 9, neon, 0.3 * level)
   }
 
-  /// The truck's hatch light and the string of bulbs from it to the lamp post.
   private func truckLights(_ context: GraphicsContext, moment: ViewMoment) {
     let truck = Self.truck
     let level = moment.look.isDark ? 1.0 : 0.3
@@ -364,7 +340,6 @@ struct PinkDusk: ViewRecipe {
     ).draw(context, moment: moment)
   }
 
-  /// A flock of wild parrots crossing in a loose, noisy line, while it is light.
   private func parrots(_ context: GraphicsContext, moment: ViewMoment) {
     guard moment.look.hour != .night, moment.look.weather == .clear,
       let pass = Self.parrots.pass(at: moment.now)

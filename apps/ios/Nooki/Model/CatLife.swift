@@ -11,18 +11,15 @@ struct CatPair: Equatable {
 }
 
 extension Couple {
-    /// The two accounts behind the monograms, once paired.
     var catPair: CatPair? {
         guard let users = pair?.users, let me = users[viewer], let partner = users[other] else { return nil }
         return CatPair(me: me, partner: partner)
     }
 }
 
-/// The cat's life as both phones share it: the pair's journal from its room, this phone's touches on top, and the
-/// seed and birth of the cat the room adopted, so both partners raise the same cat. Everything is kept in the user
-/// defaults, so she is the same cat offline and on the next launch; what this phone did while offline waits in an
-/// outbox under its own key and goes once the room can be reached. Before pairing she is this phone's alone, as
-/// `LocalCatEvents` kept her.
+/// The cat both phones share: the pair's journal from its room, this phone's touches on top, and the adopted cat's
+/// seed and birth. Kept in the user defaults, so she survives offline and relaunch; offline touches wait in an
+/// outbox and go once the room is reachable. Before pairing she is this phone's alone, as `LocalCatEvents` kept her.
 final class CatLife: CatEventSource {
     private struct Saved: Codable {
         var events: [LifeEvent] = []
@@ -46,11 +43,10 @@ final class CatLife: CatEventSource {
     static let journalWindow = 500
     /// A run of strokes is one pet in the pair's journal and Inbox: one every 10 minutes at most.
     static let petEvery: TimeInterval = 600
-    /// What a treat from Labs weighs.
     static let labsTreatGrams = 30
     /// Most events the outbox keeps; past it the oldest go, so a phone that never reaches the room doesn't grow it.
     static let outboxLimit = 200
-    /// Where the outbox for game events alone was kept, before the journal came to this phone.
+    /// The outbox that held game events alone, before the journal came to this phone.
     nonisolated static var formerOutbox: URL {
         URL.applicationSupportDirectory.appending(path: "Outbox/cat-events.json")
     }

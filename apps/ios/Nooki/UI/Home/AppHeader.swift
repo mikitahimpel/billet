@@ -1,12 +1,9 @@
 import SwiftUI
 import Design
 
-/// The one header of every tab (World, Moments, Shop, Us), in the same place on each: the Inbox and "How are you?"
-/// top-left; top-right the coins, then the couple's avatars in the corner, which open the profile. Nothing else sits
-/// in it but what a tab hangs under it (the World's room switch), which shares its glass container.
+/// Nothing sits in it but what a tab hangs under it (the World's room switch), which shares its glass container.
 struct AppHeader<Below: View>: View {
     let state: HomeState
-    /// Wipes everything saved on this phone and starts the app over, from the profile's settings.
     var erase: () -> Void
     @ViewBuilder var below: Below
     @State private var pairing = false

@@ -2,7 +2,6 @@ import Design
 import SwiftUI
 import UIKit
 
-/// Settings' check of what reaches this phone: pushes on or off, the last one that arrived and the widgets.
 struct DeliveryHealthSection: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var health: DeliveryHealth?

@@ -37,7 +37,6 @@ final class CatCare {
         streak.record()
     }
 
-    /// Mochi notices something new in the room.
     func notice() {
         petPulse += 1
     }

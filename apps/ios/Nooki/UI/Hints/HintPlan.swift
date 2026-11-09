@@ -1,17 +1,14 @@
 import Foundation
 
-/// The screen a hint can point at.
 nonisolated enum HintScreen: Hashable {
     case world, moments, shop, other
 }
 
-/// What the app looks like when a screen visit settles: the facts the hint triggers read.
 nonisolated struct HintContext: Hashable {
     var screen: HintScreen
     var onboarded = true
     /// A sheet, a cover, the purchase moment or a game is up: no hint over it.
     var busy = false
-    /// The room switch is there to point at.
     var hasRoomChoice = false
     var canAffordTreat = false
     /// What the person has already done, read from the stores. A hint for a thing done is never shown.
@@ -31,7 +28,6 @@ nonisolated enum HintPlan {
         TreatHint.hintId,
     ]
     static let perSession = 2
-    /// How long a screen stays still before its hint shows.
     static let settle: Duration = .seconds(1)
 
     static func next(_ context: HintContext, seen: Set<String>, shownThisSession: Int) -> String? {
@@ -57,7 +53,6 @@ nonisolated enum HintPlan {
         order.filter { !seen.contains($0) && used($0, context) }
     }
 
-    /// The hint's own trigger.
     static func isDue(_ id: String, _ context: HintContext, seen: Set<String>) -> Bool {
         let world = context.screen == .world
         let metCat = seen.contains(PetHint.hintId)
@@ -78,6 +73,5 @@ nonisolated enum HintPlan {
 nonisolated enum HintHoldout {
     static let hold = "hold"
 
-    /// The id a pair in the holdout reports under.
     static func detail(_ id: String) -> String { id + "-hold" }
 }

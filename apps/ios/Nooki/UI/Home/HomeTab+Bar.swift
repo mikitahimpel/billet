@@ -20,7 +20,6 @@ extension HomeTab {
         }
     }
 
-    /// Its slot in the bar, counted from the leading edge.
     var order: Int { Self.allCases.firstIndex(of: self) ?? 0 }
 
     /// The tab whose slot holds `x` on a row of slots `width` wide, `x` from the row's leading edge; past the ends

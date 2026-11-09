@@ -2,11 +2,9 @@ import Foundation
 import Transport
 import Wire
 
-/// Onboarding answers waiting for the server, kept in a file so a closed app or a phone without signal loses none.
-///
-/// Sent oldest first. An answer the server refuses as invalid (a step or option its catalogue no longer has) is
-/// dropped; any other failure stops the round and keeps the rest for the next `flush`. The server keeps the answer
-/// with the latest `answeredAt`, so sending one twice is harmless.
+/// Onboarding answers waiting for the server, kept in a file so a closed app or no signal loses none. Sent oldest
+/// first; an answer refused as invalid (step or option gone from the catalogue) is dropped, any other failure keeps
+/// the rest for the next `flush`. The server keeps the latest `answeredAt`, so a resend is harmless.
 @MainActor
 final class AnswerQueue {
     private(set) var pending: [SaveOnboardingAnswerRequest]

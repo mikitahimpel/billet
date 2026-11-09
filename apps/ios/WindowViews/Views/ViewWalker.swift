@@ -3,15 +3,12 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// Someone crossing a view now and then: walking, with a backpack, on a phone whose screen lights
-/// their face after dark, or rolling past on a skateboard.
 struct ViewWalker: Sendable {
   enum Kind: Sendable {
     case walker
     case backpack
     case phone
     case skater
-    /// Walking a small dog on a lead, the dog trotting ahead.
     case dog
   }
 
@@ -22,7 +19,6 @@ struct ViewWalker: Sendable {
   var to: CGPoint
   var height: CGFloat = 7
   var plane = ViewPlane.street
-  /// What each pass may be, picked by the pass.
   var kinds: [Kind] = [.walker]
   /// Coat colours, picked per pass and mixed into the plane's shadow.
   var coats: [UInt32] = [0x3A5A8A, 0x8A3A4A, 0x4A6A3A, 0xC8A050]
@@ -54,7 +50,6 @@ struct ViewWalker: Sendable {
       moment: moment, walking: true)
   }
 
-  /// One person with their feet at `point`, walking or standing still.
   static func figure(
     _ context: GraphicsContext, at point: CGPoint, height: CGFloat, facing: CGFloat, kind: Kind,
     coat coatColour: UInt32, plane: ViewPlane, moment: ViewMoment, walking: Bool
@@ -109,7 +104,6 @@ struct ViewWalker: Sendable {
         ViewKit.glow(person, CGPoint(x: 0.6, y: -5.6), 1.6, screen, 0.5)
       }
     case .dog:
-      // The dog ahead, at the end of a slack lead.
       let trot = walking ? CGFloat(sin(moment.now * 13)) * 0.3 : 0
       person.fill(
         Path(ellipseIn: CGRect(x: 2.6, y: -1.9, width: 2.6, height: 1.2)),

@@ -1,11 +1,8 @@
 import SwiftUI
 import Design
 
-/// What the avatars open: the couple at the top, then their profile, the partner invite while they are two phones
-/// apart, and the settings.
 struct ProfileHub: View {
     let state: HomeState
-    /// Wipes everything saved on this phone and starts the app over.
     var erase: () -> Void
 
     @Environment(\.dismiss) private var dismiss
@@ -60,7 +57,6 @@ struct ProfileHub: View {
                 Monogram(partner: state.partners.1, profile: state.profile, size: 88)
             }
             .overlay(alignment: .bottom) {
-                // The honey link between the two.
                 Image(systemName: "heart.fill")
                     .font(.ourioMicro)
                     .foregroundStyle(Ink.heroInk)

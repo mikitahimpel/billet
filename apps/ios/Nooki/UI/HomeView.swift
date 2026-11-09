@@ -10,7 +10,6 @@ import Wire
 struct HomeView: View {
     /// Owned by OurioApp: a `@State` default here would read every store again on each pass of the app's `body`.
     @Binding var state: HomeState
-    /// The room and the cat in it: the scenes, the games, her status. Nothing here reads them.
     @State var room = RoomController()
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
@@ -26,9 +25,8 @@ struct HomeView: View {
     @State private var worldLeaving: UIView?
     /// A room switch is under way; another waits for it.
     @State private var switchingRoom = false
-    /// The Coins sheet's packs, once there is a server to buy them through.
+    /// Nil without a server to buy packs through.
     @State private var coinPacks: CoinPacksModel?
-    /// The Coins sheet on screen, a moment after the shop asked for it.
     @State private var coinsShown: CoinsAsk?
     /// The header and the tab bar as a perf run wants them drawn; glass, as shipped, otherwise.
     @State private var hud = HUDArm.launch
@@ -37,15 +35,12 @@ struct HomeView: View {
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
-    /// Whether this pair has both rooms to switch between.
     var hasRoomChoice: Bool { state.rooms.variant.hasRoomChoice }
     @State private var height: CGFloat = 0
     /// The rooms already counted as opened since the app came to the front, so each is reported once.
     @State var reportedRooms: Set<RoomKind> = []
 
-    /// The board room behind the Moments tab, when it shows the board rather than the feed.
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
-    /// The World tab and the board show a room; the others get their own screens over the backdrop.
     private var showsRoom: Bool { state.tab == .world || showsBoard }
     /// Something hides the room whole, or near enough: the canvas, the Inbox, the composer, the profile with its
     /// Settings, the Coins sheet, or the app not in front. The sheets that open at their content's height (the pet,
@@ -54,17 +49,15 @@ struct HomeView: View {
         state.drawing || state.showsInbox || state.composingNote != nil || state.showsProfile || coinsShown != nil
             || scenePhase != .active
     }
-    /// The room is mounted only while it can be seen.
     private var roomOnScreen: Bool { showsRoom && !roomCovered }
     /// The World's room can be seen; when it can't, its last frame is kept to show on the way back.
     private var worldOnScreen: Bool { state.tab == .world && !roomCovered }
 
-    /// In three parts: as one chain of modifiers, `body` takes the Release type-checker past its time limit on Xcode 26.
+    /// In three parts: as one modifier chain, `body` takes the Release type-checker past its time limit on Xcode 26.
     var body: some View {
         presenting(following(layout))
     }
 
-    /// The room's tasks and what it follows in the state.
     private func following(_ content: some View) -> some View {
         content
         .task {
@@ -147,7 +140,6 @@ struct HomeView: View {
         .onChange(of: scenePhase, initial: true) { old, phase in phaseChanged(from: old, to: phase) }
     }
 
-    /// The sheets and the canvas over Home, and what the app hears from outside.
     private func presenting(_ content: some View) -> some View {
         content
         .sheet(item: $state.composingNote) { mode in
@@ -312,7 +304,6 @@ struct HomeView: View {
         }
     }
 
-    /// The pet button and the hints over it.
     private var petControls: some View {
         VStack(alignment: .leading, spacing: 12) {
             // Above the portrait, with the arrow down at it, so the hint never covers her.
@@ -436,7 +427,6 @@ struct HomeView: View {
             .flatMap(\.windows).first(where: \.isKeyWindow)
     }
 
-    /// What the room is told to show, from the shell's coarse state.
     private var roomInput: RoomInput {
         let visibility: RoomVisibility =
             roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
@@ -452,11 +442,9 @@ struct HomeView: View {
         }
     }
 
-    /// The moments on the room's wall, nil until the room exists.
     private var wallPins: [Moment]? { room.hasHome ? state.moments.pinned : nil }
 }
 
-/// Names the animation of the showcase that is playing.
 private struct ShowcaseLabel: View {
     let label: String
 

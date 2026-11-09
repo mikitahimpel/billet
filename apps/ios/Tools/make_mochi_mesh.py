@@ -887,7 +887,6 @@ def main():
     Image.fromarray(quantize(alpha, [t for _, t in SHELLS] + [FIN[1]])).save(
         os.path.join(work, "MochiFur.png"), optimize=True)
 
-    # Assemble: body, shells, fins, eyes, collar, bell.
     def rigid(count, joint):
         return np.tile([joint, 0, 0, 0], (count, 1)), np.tile([1.0, 0, 0, 0], (count, 1))
 

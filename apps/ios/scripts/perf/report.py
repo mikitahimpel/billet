@@ -52,12 +52,9 @@ def first_room(marks):
     return min(rooms) if rooms else None
 
 
-# A phase whose frames run half a second or more while the process spends under a quarter of that
-# on the CPU is waiting for drawables the GPU never gives back: the Simulator's Metal host has stopped
-# running the app's GPU work, which a busy CI runner does. It lasts until the app quits, so that
-# phase and every later one of the run stay out of the medians. The numbers alone can't tell it from
-# a wait in the app, so the header names each such phase with its frame and CPU, and the job's
-# simmetalhost.log is what confirms it.
+# A phase with frames >= 0.5 s while the CPU spends under a quarter of that waits on a GPU the Simulator's Metal host
+# stopped serving (busy CI runners) until the app quits: it and later phases stay out of the medians. The header
+# names each; the job's simmetalhost.log confirms it.
 GPU_LOST_FRAME_MS = 500
 GPU_LOST_CPU_SHARE = 0.25
 # Each run left out that way, for the report's header.

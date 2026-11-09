@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// Mochi on the desk, drawn flat: her ears over the top edge of the paper, a paw that pats it while you write, and
-/// the loaf she settles into on a corner when you wait.
 struct MochiOnDesk: View {
     /// Changes with every edit; she pats the paper, and gets up when she was sitting.
     let activity: Int

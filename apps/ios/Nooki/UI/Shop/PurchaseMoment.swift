@@ -2,9 +2,8 @@ import AudioToolbox
 import SwiftUI
 import Design
 
-/// What plays over the app after a buy: coins burst where it happened, the pieces fly down into a card where Mochi
-/// hops at the news, a tink and a success haptic, and Undo for five seconds. Under Reduce Motion only the card shows.
-/// A buy the server then refuses is taken back with a gentle line in the same place.
+/// Under Reduce Motion only the card shows. A buy the server then refuses is taken back with a gentle line in the
+/// same place.
 struct PurchaseMoment: View {
     let state: HomeState
 
@@ -129,7 +128,6 @@ struct PurchaseMoment: View {
     }
 }
 
-/// Mochi's round avatar, hopping once per buy.
 private struct MochiHop: View {
     let trigger: Int
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -159,7 +157,6 @@ private struct MochiHop: View {
     }
 }
 
-/// One piece's art lifting a little, then arcing down into the card and shrinking away.
 private struct FlyingPiece: View {
     let id: String
     let from: CGPoint
@@ -214,7 +211,6 @@ private struct Flight {
     var opacity: Double = 0
 }
 
-/// Coins that spray out of the spot where the buy happened.
 private struct CoinBurst: View {
     let trigger: Int
 

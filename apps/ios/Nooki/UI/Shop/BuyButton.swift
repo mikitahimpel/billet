@@ -1,17 +1,12 @@
 import SwiftUI
 import Design
 
-/// The buy on every offer: a tap buys right away and the purchase moment plays, with Undo for a few seconds. Short of
-/// coins it shakes and opens the Coins sheet; once everything is owned it reads "Owned" with a separate Place button that takes the
-/// couple to the room.
 struct BuyButton: View {
     let state: HomeState
     /// What the missing pieces cost and what they'd cost one by one; nil once everything is owned.
     let quote: (price: Int, sum: Int)?
-    /// What the buy is called, for VoiceOver.
     let name: String
     var buy: () -> Bool
-    /// Stretches the owned button to the card's width.
     var fills = false
 
     @State private var shakes = 0

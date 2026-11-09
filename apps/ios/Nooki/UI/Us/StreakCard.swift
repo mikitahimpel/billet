@@ -1,7 +1,6 @@
 import SwiftUI
 import Design
 
-/// The love streak on the Us tab: flame and day count, today's state, best streak and the milestone badge.
 struct StreakCard: View {
     let store: StreakStore
 
@@ -114,7 +113,6 @@ private struct StatusPill: View {
         }
     }
 
-    /// Time until midnight, when an at-risk streak goes out.
     private var hoursLeft: String {
         let midnight = Calendar.current.startOfDay(for: now).addingTimeInterval(86_400)
         let hours = Int(midnight.timeIntervalSince(now) / 3600)

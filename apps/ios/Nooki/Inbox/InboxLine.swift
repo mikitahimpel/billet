@@ -8,7 +8,6 @@ struct InboxLine: Equatable {
     let text: String
     var mood: PartnerMood?
 
-    /// The names the lines use.
     struct Names {
         /// The partner's name, as the profile has it.
         let partner: String

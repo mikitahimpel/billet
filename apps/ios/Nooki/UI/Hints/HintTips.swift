@@ -1,9 +1,8 @@
 import SwiftUI
 import TipKit
 
-/// The hints after the onboarding. `HintPlan` picks which one a screen visit shows and puts its id in
-/// `HintStage.current`; each tip's rule only matches that id, so TipKit draws exactly the planned one. Copy is short
-/// and warm, at most two lines.
+/// `HintPlan` puts the planned hint's id in `HintStage.current` and each tip's rule matches only that id, so
+/// TipKit draws exactly the planned one. Copy is short and warm, at most two lines.
 nonisolated protocol HintTip: Tip {
     /// The id sent with the hint's analytics events and used as the TipKit id.
     static var hintId: String { get }
@@ -20,7 +19,6 @@ nonisolated extension HintTip {
     var options: [any TipOption] { [Tips.MaxDisplayCount(1)] }
 }
 
-/// Mochi herself, on her portrait in the room's corner.
 nonisolated struct PetHint: HintTip {
     static let hintId = "pet"
 
@@ -30,7 +28,6 @@ nonisolated struct PetHint: HintTip {
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "pet" }] }
 }
 
-/// The "+" beside the tab bar.
 nonisolated struct AddHint: HintTip {
     static let hintId = "add"
 
@@ -40,7 +37,6 @@ nonisolated struct AddHint: HintTip {
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "add" }] }
 }
 
-/// The Moments tab.
 nonisolated struct MomentsHint: HintTip {
     static let hintId = "moments"
 
@@ -50,7 +46,6 @@ nonisolated struct MomentsHint: HintTip {
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "moments" }] }
 }
 
-/// The Shop tab.
 nonisolated struct ShopHint: HintTip {
     static let hintId = "shop"
 
@@ -60,7 +55,6 @@ nonisolated struct ShopHint: HintTip {
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "shop" }] }
 }
 
-/// The Room/City switch.
 nonisolated struct RoomsHint: HintTip {
     static let hintId = "rooms"
 
@@ -70,7 +64,7 @@ nonisolated struct RoomsHint: HintTip {
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "rooms" }] }
 }
 
-/// Treats, on her portrait again: the Treat button lives in the card it opens.
+/// On her portrait again: the Treat button lives in the card it opens.
 nonisolated struct TreatHint: HintTip {
     static let hintId = "treat"
 

@@ -194,7 +194,6 @@ struct DateIdeaCard: View {
     }
 }
 
-/// A date scene filling its frame, darkened at the bottom so white text on it stays readable.
 struct DateScenePicture: View {
     /// An idea's picture, fetched from the server; nil for the Plans backdrop, which ships with the app.
     var art: DateIdea.Art?

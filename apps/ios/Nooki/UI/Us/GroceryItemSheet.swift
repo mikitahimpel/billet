@@ -2,7 +2,6 @@ import SwiftUI
 import Design
 import Wire
 
-/// A long press on a grocery: its quantity or a note, another aisle, or delete. Saved when it closes.
 struct GroceryItemSheet: View {
     let state: HomeState
     let listID: UUID

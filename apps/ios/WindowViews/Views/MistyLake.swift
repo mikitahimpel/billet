@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 14: a lake at sunrise with mist on the water. Far: soft blue hills and a line of pines,
-/// both mirrored in the still water, the sun just up and its glitter on the lake. Middle: the
-/// near water with ripples, a small pine island, mist drifting across. Street: a wooden jetty
-/// with a little boathouse and a moored rowboat, a grassy bank where a heron fishes. Near: reeds
-/// and cattails swaying. A canoe paddles across now and then, ducks glide by in a line, and a
-/// fish jumps.
 struct MistyLake: ViewRecipe {
   /// Where the far shore meets the water.
   static let shore: CGFloat = 34
@@ -49,7 +43,6 @@ struct MistyLake: ViewRecipe {
     }
   }
 
-  /// The colour of open water: the sky caught in it, darkened towards the plane's own colour.
   static func water(_ palette: ViewPalette, plane colour: ViewColour, isDark: Bool) -> ViewColour {
     palette.skyMiddle.mixed(with: palette.horizon, by: 0.4).mixed(
       with: colour, by: isDark ? 0.55 : 0.4)
@@ -85,7 +78,6 @@ struct MistyLake: ViewRecipe {
   private func paintFar(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let plate = ViewStage.plate
     farShore(context, colour: colour, look: look)
-    // The water from the far shore down, lighter at the shore where it holds the horizon.
     let water = Self.water(look.palette, plane: colour, isDark: look.isDark)
     let lake = CGRect(
       x: plate.minX, y: Self.shore, width: plate.width, height: plate.maxY - Self.shore)
@@ -95,14 +87,12 @@ struct MistyLake: ViewRecipe {
         Gradient(colors: [
           look.palette.horizon.mixed(with: water, by: 0.45).color(), water.color(),
         ]), startPoint: CGPoint(x: 0, y: Self.shore), endPoint: CGPoint(x: 0, y: Self.shore + 12)))
-    // The shore mirrored in the still water, paler than itself.
     var mirror = context
     mirror.clip(to: Path(lake))
     mirror.opacity = 0.45
     mirror.translateBy(x: 0, y: 2 * Self.shore)
     mirror.scaleBy(x: 1, y: -1)
     farShore(mirror, colour: colour.mixed(with: water, by: 0.35), look: look)
-    // Fine ripple lines break the reflection up.
     for index in 0..<22 {
       let y = Self.shore + 0.6 + 9 * CGFloat(ViewRhythm.hash(index, seed: 1243))
       let x = -40 + 180 * CGFloat(ViewRhythm.hash(index, seed: 1244))
@@ -122,7 +112,6 @@ struct MistyLake: ViewRecipe {
       with: .linearGradient(
         Gradient(colors: [water.color(0), water.color(0.9), water.color()]),
         startPoint: CGPoint(x: 0, y: 37), endPoint: CGPoint(x: 0, y: 46)))
-    // A small island of pines on the left, and its reflection.
     var island = Path()
     island.move(to: CGPoint(x: -14, y: 38.6))
     island.addQuadCurve(to: CGPoint(x: 22, y: 38.6), control: CGPoint(x: 4, y: 35.4))
@@ -151,13 +140,11 @@ struct MistyLake: ViewRecipe {
   private func paintStreet(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let deck = Self.deck
     let wood = colour.mixed(with: ViewColour(0x8A5A3A), by: look.isDark ? 0.2 : 0.45)
-    // The boathouse on the jetty.
     ViewKit.house(
       context, x: 78, base: deck, width: 18, wall: 8, roof: 4, colour: wood.lit(-0.04),
       look: look)
     ViewKit.windowFrame(context, Self.boathouseWindow.rect, wood)
     ViewKit.rect(context, CGRect(x: 90, y: 39.4, width: 4.4, height: 5.2), wood.lit(-0.3))
-    // The jetty: planks on posts, its shadow on the water.
     ViewKit.rect(context, CGRect(x: 56, y: deck + 1.6, width: 90, height: 3), colour.lit(-0.3), 0.3)
     ViewKit.rect(context, CGRect(x: 56, y: deck, width: 90, height: 1), wood.lit(0.06))
     var x: CGFloat = 57
@@ -170,7 +157,6 @@ struct MistyLake: ViewRecipe {
       ViewKit.rect(
         context, CGRect(x: 56, y: deck - 0.3, width: 90, height: 0.4), ViewKit.snow(look), 0.85)
     }
-    // A bollard and the rowboat moored to it.
     ViewKit.rect(context, CGRect(x: 66, y: deck - 1.2, width: 0.9, height: 1.2), wood.lit(-0.2))
     let paint = ViewColour(0x4F8FA8).mixed(with: colour, by: look.isDark ? 0.6 : 0.3)
     var boat = Path()
@@ -186,7 +172,6 @@ struct MistyLake: ViewRecipe {
     ViewKit.streetLampPost(
       context, x: Self.lamp.head.x + 5, top: Self.lamp.head.y - 0.6, base: deck,
       colour: wood.lit(-0.25))
-    // The grassy bank on the left where the heron fishes.
     var bank = Path()
     bank.move(to: CGPoint(x: -45, y: 45.6))
     bank.addQuadCurve(to: CGPoint(x: 22, y: 49.4), control: CGPoint(x: 6, y: 44.8))

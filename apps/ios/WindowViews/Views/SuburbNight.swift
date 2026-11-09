@@ -3,10 +3,7 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 1, the pilot: a US suburb at night. Far: low hills, the water tower, a radio mast and a
-/// scatter of far-off windows. Middle: the row of roofs behind the street under the power lines.
-/// Street: the houses across the road, a car on a driveway, the street lamp. Near: a fence and a
-/// branch just outside. The note is taped over the middle, so the hero shapes stand to its sides.
+/// The note is taped over the middle, so the hero shapes stand to its sides.
 struct SuburbNight: ViewRecipe {
   /// The road the cars drive along, in stage units.
   static let road: CGFloat = 51.9
@@ -38,7 +35,6 @@ struct SuburbNight: ViewRecipe {
 
   private func paintFar(_ context: GraphicsContext, colour: ViewColour, look: ViewLook) {
     let palette = look.palette
-    // The city, far off past the hills: a cluster of towers in the haze, lit floors after dark.
     let city = colour.mixed(with: palette.horizon, by: 0.35)
     for (index, tower) in Self.cityTowers.enumerated() {
       let top = 36 - tower.height
@@ -63,7 +59,6 @@ struct SuburbNight: ViewRecipe {
       context, base: 37, waves: [3, 5, 2.5, 6, 3.5, 4.5, 2, 5],
       colour: colour.lit(look.isDark ? 0.05 : 0.08))
     ViewKit.ground(context, top: 37, colour: colour)
-    // A far-off town: little blocks along the foot of the hills, a few lit.
     for index in 0..<46 {
       let x = -40 + CGFloat(index) * 4 + CGFloat(ViewRhythm.hash(index, seed: 5)) * 2
       let height = 1 + CGFloat(ViewRhythm.hash(index, seed: 6)) * 2.2
@@ -81,7 +76,6 @@ struct SuburbNight: ViewRecipe {
     ViewKit.waterTower(
       context, x: Self.tower.x, top: Self.tower.y, base: 38, size: 13, colour: colour.lit(-0.24),
       look: look)
-    // A radio mast: a thin lattice with a red light on top, drawn by the life.
     var mast = Path()
     mast.move(to: CGPoint(x: 68.4, y: 37))
     mast.addLine(to: CGPoint(x: 69.5, y: 9))
@@ -102,7 +96,6 @@ struct SuburbNight: ViewRecipe {
     (47, 3.4, 8), (51, 2.4, 10.5), (54, 3, 6.5),
   ]
 
-  /// The row of houses behind the street, with their lit windows.
   static let middleHouses:
     [(x: CGFloat, width: CGFloat, wall: CGFloat, roof: CGFloat, shade: Double)] = [
       (-36, 18, 8, 5.5, 0.02), (-14, 17, 9, 6.5, -0.03), (8, 20, 7.5, 5.2, 0.03),
@@ -168,7 +161,6 @@ struct SuburbNight: ViewRecipe {
           context, from: from, to: to, sag: index < 3 ? 2.6 : 3.4, colour: wireColour, width: 0.18)
       }
     }
-    // Three birds asleep on the top wire.
     let (from, to) = (hangers[1][0], hangers[2][0])
     for share in [0.22, 0.26, 0.71] as [CGFloat] {
       let point = ViewKit.onWire(from: from, to: to, sag: 2.6, share: share)
@@ -210,7 +202,6 @@ struct SuburbNight: ViewRecipe {
     ViewKit.house(
       context, x: 61, base: base, width: 22, wall: 15, roof: 9.5, colour: colour.lit(0.02),
       look: look)
-    // The garage beside the right-hand house, its door a shade lighter.
     ViewKit.rect(context, CGRect(x: 83, y: base - 9.5, width: 11, height: 9.5), colour.lit(0.01))
     ViewKit.rect(
       context, CGRect(x: 84, y: base - 8, width: 9, height: 8),
@@ -224,7 +215,6 @@ struct SuburbNight: ViewRecipe {
       context, x: 113, base: base, width: 24, wall: 14, roof: 8.5, colour: colour.lit(0.03),
       look: look)
     for window in Self.streetWindows { ViewKit.windowFrame(context, window.rect, colour) }
-    // Doors under their porch lights.
     for door in [
       CGRect(x: 10, y: base - 6.6, width: 3, height: 6.6),
       CGRect(x: 70.6, y: base - 7, width: 3, height: 7),
@@ -232,7 +222,6 @@ struct SuburbNight: ViewRecipe {
       ViewKit.rect(context, door, colour.lit(-0.3))
     }
     ViewKit.car(context, x: 50, base: base, length: 13, body: colour.lit(-0.12))
-    // Mailbox by the kerb.
     ViewKit.rect(
       context, CGRect(x: 58.2, y: base - 4.4, width: 0.6, height: 4.4), colour.lit(-0.25))
     context.fill(
@@ -240,7 +229,6 @@ struct SuburbNight: ViewRecipe {
       with: .color(colour.lit(-0.2).color()))
     ViewKit.fence(
       context, from: 22, to: 38, base: base, height: 3.6, colour: colour.lit(-0.1), look: look)
-    // Sidewalk, kerb and road, with a dashed middle line.
     ViewKit.rect(
       context, CGRect(x: -45, y: base, width: 190, height: 1.4),
       colour.lit(look.isDark ? 0.05 : 0.15))
@@ -271,7 +259,6 @@ struct SuburbNight: ViewRecipe {
     ViewKit.rect(
       context, CGRect(x: 21.1, y: 46.3, width: 0.4, height: 1.8), ViewPalette.porchRed,
       look.isDark ? 0.55 : 0.85)
-    // A hedge along the bottom right, round tops.
     for index in 0..<9 {
       let x = 58 + CGFloat(index) * 9.5
       ViewKit.circle(
@@ -290,8 +277,6 @@ struct SuburbNight: ViewRecipe {
     from: CGPoint(x: 60.5, y: streetBase - 14.4), to: CGPoint(x: 83.5, y: streetBase - 14.4))
   static let roofCatWalk = ViewRoofCat(
     rhythm: roofCat, left: roofPath.left, ridge: roofPath.ridge, right: roofPath.right)
-  /// A cat on the picket fence across the street: there most of the time, now and then hopping
-  /// along it. Its eyes catch the cars' lights.
   static let fenceCat = ViewRoofCat(
     rhythm: ViewRhythm(seed: 37, slot: 120, chance: 0.8, length: 80...110),
     left: CGPoint(x: 22.6, y: streetBase - 3.5), ridge: CGPoint(x: 31, y: streetBase - 3.5),
@@ -324,7 +309,6 @@ struct SuburbNight: ViewRecipe {
   }
 
   private func farLife(_ context: GraphicsContext, moment: ViewMoment) {
-    // The mast's red light, slow and steady, and the tower's own small lamp.
     let blink = (moment.now / 1.7).truncatingRemainder(dividingBy: 1) < 0.22
     if moment.look.isDark, blink {
       ViewKit.glow(context, CGPoint(x: 69.5, y: 8.6), 2.2, ViewColour(0xFF3B3B), 0.9)
@@ -340,7 +324,6 @@ struct SuburbNight: ViewRecipe {
   private func streetLife(_ context: GraphicsContext, moment: ViewMoment) {
     let lamps = moment.lamps
     ViewWindows.draw(Self.streetWindows, context, moment: moment)
-    // Porch lights by the doors, always on at night.
     for porch in Self.porches {
       ViewKit.circle(context, porch, 0.4, ViewPalette.lampCore, lamps)
       ViewKit.glow(context, porch, 3.4, ViewPalette.lamp, 0.4 * lamps)

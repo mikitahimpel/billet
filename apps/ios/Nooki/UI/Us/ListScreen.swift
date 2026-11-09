@@ -152,10 +152,8 @@ struct ListScreen: View {
 
     private static let top = "top"
 
-    /// Groceries show suggestions and "You often buy" while the field is in use.
     private func adding(to list: UsList) -> Bool { list.kind.isChecklist && focused }
 
-    /// To watch and Places to go add through a search sheet rather than a field.
     private func usesSheetToAdd(_ list: UsList) -> Bool { list.kind == .watch || list.kind == .travel }
 
     private func subtitle(of list: UsList) -> String {

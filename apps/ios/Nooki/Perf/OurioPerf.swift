@@ -4,9 +4,8 @@ import RealityKit
 import Synchronization
 import UIKit
 
-/// The header and the tab bar as a perf run shows them: the glass they ship with, the same controls opaque with a
-/// shadow, flat with none, or no bars at all. `-perf.hud opaque|flat|hidden` picks one for a whole run; a `cost` run
-/// switches from that one to the others.
+/// Header and tab bar: shipped glass, opaque with a shadow, flat, or none. `-perf.hud opaque|flat|hidden` picks one
+/// for a whole run; a `cost` run switches from it to the others.
 enum HUDArm: String {
     case glass
     case opaque
@@ -24,14 +23,11 @@ enum HUDArm: String {
     }
 }
 
-/// Ourio's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh): the room on screen
-/// is the scene a run drives, and the tabs are the ones it switches. Silent without the launch argument.
-///
-/// A run orbits by turning the room the way a drag does. It has no zoom: the pinch lives inside `DioramaView`.
-/// Ourio has one lighting and one cat, so those steps are skipped.
+/// Ourio's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh). Silent without the
+/// launch argument. Orbits turn the room as a drag does; no zoom, since the pinch lives inside `DioramaView`.
 @MainActor
 enum OurioPerf {
-    /// Starts the frame recorder and the script, and says how to switch tabs. Once, at launch.
+    /// Once, at launch.
     static func start(state: HomeState, hud: @escaping (HUDArm) -> Void,
                       sheetGround: @escaping (SheetGroundStyle) -> Void) {
         guard ScenePerf.isOn else { return }
@@ -50,8 +46,8 @@ enum OurioPerf {
             }
         }
         host.scroll = { y in scrolls[state.tab]?(y) }
-        // The profile sheet is Settings' way in: today's opaque sheet over the live room, the same with the room
-        // paused under it, and a glass one, so the room's cost under a sheet and the glass's come apart.
+        // Opaque sheet over the live room, over the paused room, and a glass one, so the room's cost and the glass's
+        // come apart.
         host.covers = ["sheet", "sheet.paused", "sheet.glass", "drawing", "inbox"]
         host.setCover = { name in
             state.drawing = name == "drawing"
@@ -64,16 +60,14 @@ enum OurioPerf {
         ScenePerf.start()
     }
 
-    /// Scrolls each tab's page that a run can scroll (the Shop, the Moments feed), while it is on screen; a run
-    /// scrolls the one shown to measure its frames.
+    /// A run scrolls the shown tab's page to measure its frames.
     static var scrolls: [HomeTab: (Double) -> Void] = [:]
 
     private static var setHUD: (HUDArm) -> Void = { _ in }
-    /// The room on screen, for the covers and switches that pause it.
+    /// For the covers and switches that pause it.
     private static weak var current: CatRoom?
 
-    /// Photos a run's Moments feed scrolls through, made once on a phone that has fewer. The first run after an
-    /// install (measure.sh's warm-up) pays for them, so every measured run starts with the same feed.
+    /// Made once on a phone with fewer; measure.sh's warm-up run pays for it, so every measured run has the same feed.
     private static func seedMoments(_ moments: MomentStore) {
         let wanted = 14
         guard moments.moments.count < wanted else { return }
@@ -95,11 +89,8 @@ enum OurioPerf {
         }
     }
 
-    /// `room` is on screen: the Room (`room on screen`) or the City (`city room on screen`), so a run that waits for
-    /// "room on screen" finds either.
-    ///
-    /// The mark waits for the room's next update, so a room that has to start drawing again (coming back from another
-    /// tab) counts the wait for its first live frame.
+    /// Marks "room on screen" for the Room and the City alike. Waits for the room's next update, so a room that must
+    /// start drawing again counts the wait for its first live frame.
     static func shown(_ room: CatRoom, kind: RoomKind) {
         guard ScenePerf.isOn else { return }
         ScenePerf.host.shotPrefix = kind == .city ? "city" : "world"
@@ -125,10 +116,8 @@ enum OurioPerf {
                     return "kind=\(kind == .city ? "city" : "room") skin_passes=\(skin.passes) skin_skipped=\(skin.skipped)"
                         + " skin_ms=\(String(format: "%.2f", skin.milliseconds)) pieces=\(PerfPieces.arm ?? "none")"
                 },
-                // The arms of the glass-over-the-room comparison, each off against the run's launch arm: "glass hud"
-                // off is the opaque header and tab bar, "hud shadow" off the flat one, "hud" off none, and "room
-                // paused" off stops the room drawing under them. "pieces" off takes away the shop pieces a
-                // `-perf.pieces` run stood in the room.
+                // Each off against the launch arm: "glass hud" off = opaque bars, "hud shadow" off = flat, "hud" off
+                // = none, "room paused" stops the room under them; "pieces" removes a `-perf.pieces` run's shop pieces.
                 switches: ["cat shadow", "room shadows", "sun shadow", "point lights", "particles", "bloom",
                            "glass hud", "hud shadow", "hud", "room paused", "pieces"],
                 setSwitch: { name, isOn in
@@ -145,7 +134,6 @@ enum OurioPerf {
             ))
     }
 
-    /// Mochi stands in a room, posed and ready to draw.
     static func catPlaced() {
         ScenePerf.trace("styled cat placed")
     }
@@ -162,8 +150,8 @@ enum OurioPerf {
     }
 }
 
-/// A `cost` run's switches that need nothing from the rooms: each finds its part by component under the room's root
-/// and takes it away, or puts back what it took. The cat's own shadow stays with `CatRoom.setCatShadow`.
+/// `cost` run switches needing nothing from the rooms: each finds its part by component under the root and
+/// removes or restores it. The cat's own shadow stays with `CatRoom.setCatShadow`.
 @MainActor
 private enum RoomSwitches {
     private static var taken: [String: [(entity: Entity, component: any Component)]] = [:]
@@ -208,10 +196,9 @@ private enum RoomSwitches {
     }
 }
 
-/// `-perf.pieces today|sand3d`: three shop pieces stood on the Room's floor for a run, so a `cost` run's "pieces"
-/// switch measures what bought furniture costs to draw. `today` is the bundle's Blender-made armchair, bookcase and
-/// monstera, `sand3d` the Sand3D armchair, chest of drawers and monstera (tools/sand3d). Each is scaled the way the
-/// shop fits it and lit like `DioramaScene`'s own furniture. The app never places shop pieces otherwise.
+/// `-perf.pieces today|sand3d`: three shop pieces on the Room's floor, so a `cost` run's "pieces" switch measures
+/// furniture's draw cost. Scaled as the shop fits them, lit like `DioramaScene`'s furniture. The app never
+/// places shop pieces otherwise.
 @MainActor
 enum PerfPieces {
     static let arm = UserDefaults.standard.string(forKey: "perf.pieces")

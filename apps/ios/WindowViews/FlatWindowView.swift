@@ -5,29 +5,21 @@ import QuartzCore
 import SwiftUI
 import UIKit
 
-/// A window view drawn flat at the screen's own pixels, as the old room drew its views: put it
-/// behind a 3D room whose window is a hole, and feed it where the window lands on screen each frame.
-///
-/// The sky, each plane's plate (with the old grain), the haze between the planes, each live plane's
-/// life, the weather in the air and the glass are layers of their own. A camera move only moves
-/// them, each plane following the window by its own share (`ViewPlane.follow`), which is the
-/// parallax; nothing is repainted for it. The plates are painted once per look and size, one per
-/// turn of the main actor. The life, the sky's slow changes and the haze's breathing are
-/// repainted `lifeRate` times a second, only while `tick` is called and only if the view moves.
+/// Drawn flat at the screen's pixels behind a 3D room whose window is a hole; `place` feeds the window each frame.
+/// Plates paint once per look and size; a camera move only shifts layers, each by `ViewPlane.follow` (the parallax).
+/// Life, sky and haze repaint `lifeRate` times a second, only while `tick` is called and the view moves.
 @MainActor
 public final class FlatWindowView: UIView {
-  /// How often a moving view's life is repainted, per second.
+  /// Repaints per second while the view moves.
   public static let lifeRate: Double = 8
-  /// How often the sky is repainted for its stars, clouds and planes, in seconds.
+  /// Seconds.
   static let skyInterval: Double = 20
-  /// How far the window may move on screen in a frame, in points, before the room counts as being
-  /// turned or zoomed and the life holds still: the room's slow idle sway stays under it.
+  /// Points per frame the window may move before the room counts as turned or zoomed and life holds still;
+  /// the idle sway stays under it.
   static let still: CGFloat = 1.5
-  /// What a live plane's life covers, in stage units: the window and a margin for parallax.
+  /// Stage units: the window and a margin for parallax.
   static let lifeArea = CGRect(x: -20, y: -16, width: 140, height: 80)
-  /// The widest plate painted, in pixels, whatever the zoom.
   static let maxPlatePixels = 4096
-  /// The widest life or sky picture painted, in pixels.
   static let maxLifePixels = 2048
 
   private let opening = CALayer()
@@ -44,7 +36,7 @@ public final class FlatWindowView: UIView {
   private var live: ViewStage.Frame?
   private var home: ViewStage.Frame?
   private var outline: [CGPoint] = []
-  /// The sky frame and the box it was last painted for, so the picture can be slid in between.
+  /// Kept so the picture can be slid between repaints.
   private var skyPainted: (frame: ViewStage.Frame, box: CGRect)?
   private var plateKeys: [ViewPlane: PlateKey] = [:]
   private var waiting: [PlateKey] = []
@@ -56,7 +48,6 @@ public final class FlatWindowView: UIView {
   private var glassPainted = false
   private let started = Date().timeIntervalSince1970
 
-  /// True once every plate of the current look is showing.
   public private(set) var isReady = false
 
   struct PlateKey: Hashable {
@@ -95,8 +86,7 @@ public final class FlatWindowView: UIView {
   @available(*, unavailable)
   required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
 
-  /// Shows `view` at `hour` in `weather`. Its plates are painted over the next few turns; the old
-  /// look stays up until each new plate is ready.
+  /// Plates paint over the next few turns; the old look stays up until each new plate is ready.
   public func show(_ view: WindowView, hour: ViewHour, weather: ViewWeather, lampOn: Bool) {
     let look = ViewLook(view: view, hour: hour, weather: weather)
     let lampChanged = lampOn != self.lampOn
@@ -113,9 +103,8 @@ public final class FlatWindowView: UIView {
     layOut()
   }
 
-  /// Where the window is on screen this frame (`window`, in this view's points) and where it would be
-  /// with the room unturned (`home`), each as its outline; `hole` is the outline of the hole in the
-  /// wall, which the view is clipped to. An empty outline hides the view.
+  /// Outlines in this view's points: `window` this frame, `home` with the room unturned, `hole` the wall's
+  /// hole the view is clipped to. An empty outline hides the view.
   public func place(window: [CGPoint], home: [CGPoint], hole: [CGPoint]) {
     let live = ViewStage.Frame(window: window)
     let homeFrame = ViewStage.Frame(window: home) ?? live
@@ -132,15 +121,13 @@ public final class FlatWindowView: UIView {
     layOut()
   }
 
-  /// Advances the view's own clock by `dt` seconds: its life, its sky and its haze move on a few
-  /// times a second. Call it only while the view is on screen.
+  /// `dt` in seconds. Call only while the view is on screen.
   public func tick(_ dt: Double) {
     guard let look else { return }
     lifeAge += dt
     skyAge += dt
     restingFor += dt
-    // While a finger turns or zooms the room the eye follows the room, not the street: the life
-    // waits, and only the layers move.
+    // While a finger turns or zooms the room, the life waits and only the layers move.
     guard lifeAge >= 1 / Self.lifeRate, restingFor > 0.3 else { return }
     guard Self.moves(look) || !glassPainted || skyAge > Self.skyInterval else { return }
     lifeAge = 0
@@ -204,7 +191,7 @@ public final class FlatWindowView: UIView {
       x: origin.x, y: origin.y, width: area.width * frame.unit, height: area.height * frame.unit)
   }
 
-  /// The outline as a path, grown about its middle so its edges hide behind the wall.
+  /// Grown about its middle so its edges hide behind the wall.
   static func path(_ points: [CGPoint], grownBy factor: CGFloat) -> CGPath {
     let count = CGFloat(points.count)
     let centre = CGPoint(
@@ -223,9 +210,7 @@ public final class FlatWindowView: UIView {
 
   // MARK: - Plates
 
-  /// A plate's width in pixels for a window `unit` points per stage unit: the screen's own pixels,
-  /// rounded up to a step of a quarter more, so a pinch repaints a few times rather than every
-  /// frame.
+  /// Screen pixels rounded up to a step of a quarter more, so a pinch repaints a few times, not every frame.
   static func platePixels(unit: CGFloat, scale: CGFloat) -> Int {
     let exact = ViewStage.plate.width * unit * scale
     guard exact > 64 else { return 64 }
@@ -273,7 +258,7 @@ public final class FlatWindowView: UIView {
       var context = context
       context.translateBy(x: -plate.minX, y: -plate.minY)
       recipe.paint(key.plane, context, look: key.look)
-      // The old room's fine grain, a pixel to a grain, so flat shapes read as made, not filled.
+      // A pixel to a grain, so flat shapes read as made, not filled.
       if let grain = ViewGrain.tile {
         var grained = context
         grained.blendMode = .sourceAtop
@@ -287,7 +272,6 @@ public final class FlatWindowView: UIView {
 
   // MARK: - What moves
 
-  /// Whether anything in `look` moves: life on a plane, or rain or snow in the air and on the glass.
   static func moves(_ look: ViewLook) -> Bool {
     !recipe(look).livePlanes.isEmpty || look.weather == .rain || look.weather == .snow
   }
@@ -329,16 +313,15 @@ public final class FlatWindowView: UIView {
     if skyAge > Self.skyInterval { paintSky(look, moment: moment) }
   }
 
-  /// Paints the life area at `unit` pixels per stage unit, drawn in stage units.
+  /// `unit` is pixels per stage unit; `draw` works in stage units.
   private static func paintLife(unit: CGFloat, _ draw: @escaping (GraphicsContext) -> Void)
     -> CGImage?
   {
     paintLife(unit: unit, frame: false) { context, _ in draw(context) }
   }
 
-  /// Paints the life area at `unit` pixels per stage unit. With `frame`, `draw` gets the context in
-  /// pixels and the stage's frame in it, for painters that place themselves; otherwise the context
-  /// is in stage units.
+  /// `unit` is pixels per stage unit. With `frame`, `draw` gets a pixel context and the stage's frame in it;
+  /// otherwise the context is in stage units.
   private static func paintLife(
     unit: CGFloat, frame: Bool, _ draw: @escaping (GraphicsContext, ViewStage.Frame) -> Void
   ) -> CGImage? {
@@ -365,8 +348,7 @@ public final class FlatWindowView: UIView {
     let now = Date().timeIntervalSince1970
     let moment = moment ?? ViewMoment(look: look, now: now, time: now - started + 30)
     let frame = ViewStage.Frame.blend(home: home, live: live, follow: ViewSky.follow)
-    // Painted a margin around the hole, so the room's sway and a drag slide it before it must be
-    // painted again.
+    // A margin around the hole, so sway and a drag slide it before it must be repainted.
     let box = path.boundingBox.insetBy(dx: -40, dy: -30).intersection(bounds.insetBy(dx: -40, dy: -30))
     guard box.width > 1, box.height > 1 else { return }
     // The sky is soft: half the screen's pixels are plenty, and stars stay round.
@@ -387,8 +369,7 @@ public final class FlatWindowView: UIView {
     skyAge = 0
   }
 
-  /// Air between the planes, as the old room laid it: haze always far off, thicker in rain, snow
-  /// and fog, slowly thickening and thinning so fog seems to move.
+  /// Haze always far off, thicker in rain, snow and fog, slowly thickening and thinning so fog seems to move.
   static func shade(_ layer: CAGradientLayer, after plane: ViewPlane, moment: ViewMoment) {
     let depth: Double =
       switch plane {

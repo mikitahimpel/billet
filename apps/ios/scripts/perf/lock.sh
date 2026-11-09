@@ -1,10 +1,6 @@
-# Sourced by measure.sh and ab.sh. One measurement at a time on this Mac: every agent's runs share
-# the GPU and only one Simulator may be booted, so a second run would refuse or skew the first.
-#
-# The lock is a directory, made atomically; its `owner` file names the process, label and start.
-# A lock whose process has gone is taken over. A caller that already holds it (ab.sh, around
-# several measure.sh runs) sets PERF_LOCK_HELD=1 so the runs inside do not wait on it. Callers
-# give the lock back from their EXIT trap with perf_lock_give.
+# Sourced by measure.sh and ab.sh: one measurement at a time on this Mac (shared GPU, one booted Simulator).
+# The lock is a directory made atomically, its `owner` file naming process, label and start; a dead owner's lock is
+# taken over. A holder sets PERF_LOCK_HELD=1 for the runs inside; callers release it with perf_lock_give on EXIT.
 
 perf_lock=${PERF_LOCK:-$HOME/.billet-manager/pet-concept/perf/sim.lock}
 

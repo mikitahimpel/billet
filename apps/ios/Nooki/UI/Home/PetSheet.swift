@@ -4,7 +4,6 @@ import SwiftUI
 import Design
 import TipKit
 
-/// Mochi's avatar in the room's corner: her face inside a ring that fills toward the next level. A tap opens her sheet.
 struct PetButton: View {
     let state: HomeState
     /// Mochi's needs, once her brain is running in the room.
@@ -38,7 +37,6 @@ struct PetButton: View {
                         .contentTransition(.numericText())
                         .offset(y: 8)
                 }
-                // A little hop each time she is cared for.
                 .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
                     view.scaleEffect(scale)
                 } keyframes: { _ in
@@ -63,8 +61,7 @@ struct PetButton: View {
     }
 }
 
-/// Mochi up close: her face big on a warm stage, her name, mood and level, her four needs, and the things to do for
-/// her. It scrolls only when its content is taller than the screen allows.
+/// Scrolls only when its content is taller than the screen allows.
 private struct PetSheet: View {
     let state: HomeState
     var needs: () -> PetNeedsSource?
@@ -137,7 +134,6 @@ private struct PetSheet: View {
     }
 }
 
-/// The level bar: honey on a raised groove.
 private struct LevelTrack: View {
     let value: Double
 

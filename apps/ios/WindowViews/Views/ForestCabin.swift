@@ -3,12 +3,6 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// View 9: a cabin in the forest at night. Far: a mountain ridge furred with small pines, and
-/// now and then a shooting star over it. Middle: a dense line of tall pines. Street: a clearing
-/// with a log cabin, its windows warm and smoke curling from the chimney, a lantern on the porch,
-/// a campfire between two stumps, an owl on a dead snag that blinks and turns its head, and a
-/// deer stepping across now and then. Fireflies drift over the clearing. Near: a pine bough
-/// swaying in from the top left and ferns along the bottom.
 struct ForestCabin: ViewRecipe {
   static let clearing: CGFloat = 45
   static let cabin = CGRect(x: 20, y: 34.4, width: 30, height: 10.6)
@@ -29,7 +23,6 @@ struct ForestCabin: ViewRecipe {
   var moon: CGPoint { CGPoint(x: 70, y: -12) }
   var livePlanes: Set<ViewPlane> { [.far, .street, .near] }
 
-  /// The forest's own colours: cool blue-green pines, a deep clear sky far from any town.
   static func grade(_ palette: inout ViewPalette, hour: ViewHour, share: Double) {
     let colours: [UInt32]
     switch hour {
@@ -40,7 +33,6 @@ struct ForestCabin: ViewRecipe {
       colours = [0x6E8CC0, 0xC0C4DC, 0xFFD6B0, 0x9AA0B4, 0x6A7A80, 0x4A5A54, 0x34403A]
     }
     palette.grade(colours, share: share)
-    // Far from any town the stars come out thicker.
     palette.stars *= 1.4
     if palette.haze == 0, hour == .morning {
       palette.hazeColour = palette.horizon
@@ -64,7 +56,6 @@ struct ForestCabin: ViewRecipe {
     ViewKit.hills(
       context, base: 30, waves: [6, 9, 4, 11, 7, 5, 8, 10, 4], colour: colour.lit(0.04))
     if look.weather == .snow || look.hour == .night {
-      // Snow, or moonlight, on the highest tops.
       let top = look.weather == .snow ? ViewKit.snow(look) : colour.lit(0.12)
       for (x, y) in [(-13.3, 21.0), (29, 19), (92.3, 22), (113.4, 20)] as [(CGFloat, CGFloat)] {
         var cap = Path()
@@ -104,12 +95,10 @@ struct ForestCabin: ViewRecipe {
       look.weather == .snow
       ? ViewKit.snow(look).mixed(with: colour, by: 0.35)
       : colour.mixed(with: ViewColour(0x4A6A3A), by: look.isDark ? 0.12 : 0.3)
-    // Two big pines flanking the clearing.
     for (x, height) in [(-10.0, 34.0), (106, 38), (126, 30)] as [(CGFloat, CGFloat)] {
       ViewKit.pine(
         context, x: x, base: base + 1, height: height, colour: colour.lit(-0.06), look: look)
     }
-    // The dead snag the owl sits on.
     let snag = colour.lit(-0.1)
     ViewKit.rect(
       context,
@@ -122,7 +111,6 @@ struct ForestCabin: ViewRecipe {
     context.stroke(limb, with: .color(snag.color()), lineWidth: 0.6)
     ViewKit.ground(context, top: base, colour: grass)
     paintCabin(context, colour: colour, look: look)
-    // The campfire's ring of stones and logs, and two stumps to sit on.
     let fire = Self.fire
     let stone = colour.lit(look.isDark ? 0.08 : 0.18)
     for index in 0..<7 {
@@ -143,7 +131,6 @@ struct ForestCabin: ViewRecipe {
         Path(ellipseIn: CGRect(x: x, y: fire.y - 2.1, width: 2.2, height: 1)),
         with: .color(bark.lit(0.15).color()))
     }
-    // A woodpile against the cabin.
     for row in 0..<3 {
       for column in 0..<(4 - row) {
         let centre = CGPoint(
@@ -158,7 +145,6 @@ struct ForestCabin: ViewRecipe {
     let cabin = Self.cabin
     let logs = colour.mixed(with: ViewColour(0x8A5A3A), by: look.isDark ? 0.22 : 0.45)
     ViewKit.rect(context, cabin, logs)
-    // Log courses, each a round-ended band, and the ends crossing at the corners.
     var course = cabin.minY + 0.5
     while course < cabin.maxY {
       ViewKit.rect(
@@ -173,7 +159,6 @@ struct ForestCabin: ViewRecipe {
       context, CGRect(x: cabin.minX, y: cabin.minY, width: cabin.width, height: 0.8),
       logs.lit(-0.2), 0.8)
     for window in Self.windows { ViewKit.windowFrame(context, window.rect, logs) }
-    // The door, and the porch roof over it on two posts.
     ViewKit.rect(context, CGRect(x: 32.6, y: 37.8, width: 3.6, height: 7.2), logs.lit(-0.3))
     ViewKit.circle(context, CGPoint(x: 35.6, y: 41.6), 0.18, logs.lit(0.25))
     var porch = Path()
@@ -186,7 +171,6 @@ struct ForestCabin: ViewRecipe {
     for x in [29.4, 39.2] as [CGFloat] {
       ViewKit.rect(context, CGRect(x: x, y: 37.4, width: 0.5, height: 7.6), logs.lit(-0.1))
     }
-    // The chimney, then the steep roof over everything.
     let stone = colour.lit(look.isDark ? 0.06 : 0.15)
     ViewKit.rect(context, Self.chimney, stone)
     ViewKit.rect(
@@ -208,7 +192,6 @@ struct ForestCabin: ViewRecipe {
     lit.addLine(to: CGPoint(x: cabin.midX + 1, y: cabin.minY + 0.6))
     lit.closeSubpath()
     context.fill(lit, with: .color(roofColour.lit(look.isDark ? 0.06 : 0.12).color()))
-    // The chimney's part above the roof slope.
     ViewKit.rect(
       context,
       CGRect(x: Self.chimney.minX, y: Self.chimney.minY, width: Self.chimney.width, height: 2.6),
@@ -224,7 +207,6 @@ struct ForestCabin: ViewRecipe {
       cap.closeSubpath()
       context.fill(cap, with: .color(ViewKit.snow(look).color()))
     }
-    // The lantern's hook under the porch roof.
     ViewKit.rect(
       context, CGRect(x: Self.lantern.x - 0.08, y: 37.4, width: 0.16, height: 0.6), logs.lit(-0.3))
   }
