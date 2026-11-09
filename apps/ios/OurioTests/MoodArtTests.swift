@@ -1,3 +1,4 @@
+import FeatureInbox
 import Testing
 import UIKit
 import Wire
@@ -20,7 +21,7 @@ import Wire
     }
 
     @Test func aSharedMoodShowsItsFaceInTheInbox() {
-        let names = InboxLine.Names(partner: "Anya", cat: "Mochi")
+        let names = InboxLine.Names.app(partner: "Anya", cat: "Mochi")
         let item = ActivityItem(id: "x", at: 0, actor: .partner, event: .moodShared(mood: .missing))
         let line = InboxLine(item, names: names)
         #expect(line.text == "Anya feels missing you")
