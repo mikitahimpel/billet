@@ -2,9 +2,10 @@ import SwiftUI
 
 /// The app's one motion scale: two durations and one spring. Screens never pick a raw curve or time.
 public enum Motion {
-  /// Seconds: a control's own change (a selection moving, a fade out of what leaves).
+  /// Seconds: a control's own change and a page swapped in place (a selection moving, a tab's page, a fade
+  /// out of what leaves).
   public static let quick: Double = 0.2
-  /// Seconds: a page arriving.
+  /// Seconds: a larger move that brings in something new, such as a panel or a card opening.
   public static let standard: Double = 0.35
   /// Points a page travels on its way in, along the order of the control it was picked from.
   public static let shift: CGFloat = 10
@@ -41,14 +42,29 @@ public enum Motion {
 }
 
 extension AnyTransition {
-  /// A page swapped for another in place: the new one fades in on the spring from `Motion.entryOffset`, the old
-  /// one fades out quick. Transforms and opacity only, so neither page lays out again on the way.
+  /// A page swapped for another in place: the new one fades in on the quick spring from `Motion.entryOffset`,
+  /// the old one fades out quick. Opacity and a drawn offset only: neither page's frame moves, so nothing in it
+  /// lays out again on the way.
   public static func page(_ direction: Motion.Direction, reduceMotion: Bool) -> AnyTransition {
     .asymmetric(
-      insertion: .opacity
-        .combined(with: .offset(x: Motion.entryOffset(direction, reduceMotion: reduceMotion)))
-        .animation(Motion.spring()),
+      insertion: AnyTransition(
+        PageEntry(offset: Motion.entryOffset(direction, reduceMotion: reduceMotion))
+      )
+      .animation(Motion.spring(Motion.quick)),
       removal: .opacity.animation(Motion.fade()))
+  }
+}
+
+/// Fades in from `offset` points to the side. The offset is applied when drawing (`visualEffect`), not to the
+/// frame, as `.offset` would: a moving frame updates the geometry of everything inside it every frame.
+private struct PageEntry: Transition {
+  let offset: CGFloat
+
+  func body(content: Content, phase: TransitionPhase) -> some View {
+    let x = phase.isIdentity ? 0 : offset
+    content
+      .opacity(phase.isIdentity ? 1 : 0)
+      .visualEffect { view, _ in view.offset(x: x) }
   }
 }
 
