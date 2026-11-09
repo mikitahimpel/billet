@@ -20,9 +20,12 @@ struct HomeView: View {
     @State private var worldSnapshot: UIView?
     /// Whether the room has drawn since the World came back; until then `worldSnapshot` stands in for it.
     @State private var roomLive = true
-    /// The World's room may be mounted: false off the World, and on the way back until the switch has played (see
-    /// `returnRoom`).
+    /// The World's room may be mounted: false off the World, and on the way back until the switch has played. The
+    /// mount holds the main thread for one long frame, which would freeze the switch halfway; under the snapshot it
+    /// freezes a still screen.
     @State private var roomInWorld = true
+    /// Counts the World coming on screen; a return's task acts only while it is still the latest one.
+    @State private var worldShows = 0
     /// The World as it was when a tab switch left it, fading out under the page coming in.
     @State private var worldLeaving: UIView?
     /// The tab the last switch came from, which sets the side the new page comes in from.
@@ -122,15 +125,23 @@ struct HomeView: View {
                     worldLeaving = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
                 }
             }
+            if new { worldShows += 1 }
             if new, room.hasHome, worldSnapshot != nil {
                 roomLive = false
                 let held = !roomInWorld
+                let show = worldShows
+                let current = { show == worldShows && worldOnScreen }
                 Task {
-                    if held, !(await returnRoom()) { return }
+                    if held {
+                        try? await Task.sleep(for: .seconds(Motion.quick))
+                        guard current() else { return }
+                        roomInWorld = true
+                    }
                     await room.nextFrame()
+                    guard current() else { return }
                     withAnimation(Motion.fade()) { roomLive = true }
                     try? await Task.sleep(for: .milliseconds(250))
-                    if roomLive { worldSnapshot = nil }
+                    if current(), roomLive { worldSnapshot = nil }
                 }
             }
         }
@@ -441,16 +452,6 @@ struct HomeView: View {
             if roomLive { worldSnapshot = nil }
             switchingRoom = false
         }
-    }
-
-    /// Mounts the World's room once the switch back to it has played: the mount holds the main thread for one long
-    /// frame, which would freeze the switch halfway; under the snapshot it freezes a still screen. False when the
-    /// World was left again meanwhile.
-    private func returnRoom() async -> Bool {
-        try? await Task.sleep(for: .seconds(Motion.quick))
-        guard state.tab == .world else { return false }
-        roomInWorld = true
-        return true
     }
 
     private static var keyWindow: UIWindow? {
