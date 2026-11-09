@@ -61,6 +61,8 @@ for _ in $(seq 1 300); do
     "  ") log "no checks yet"; sleep "$poll"; continue ;;
     *" fail "* | *" cancel "*) log "a check failed"; gh pr checks "$n" | grep -iv coderabbit; exit 1 ;;
     *" pending "*) log "checks pending"; sleep "$poll"; continue ;;
+    *" pass "*) ;;
+    *) log "no check passed (only skipped: did the jobs start?)"; sleep "$poll"; continue ;;
   esac
 
   git fetch -q origin main "+pull/$n/head:refs/merge-pr/$n"
