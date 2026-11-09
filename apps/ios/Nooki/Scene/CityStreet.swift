@@ -14,15 +14,16 @@ final class CityStreet {
     }
 
     /// Room units: length along the street, height to the roof, width across it.
-    static let size: SIMD3<Float> = [0.12, 0.052, 0.056]
-    /// The street, level with the room's floor.
-    static let ground: Float = 0
+    static let size: SIMD3<Float> = [0.1, 0.044, 0.048]
+    /// The street's height and its lanes' depth put the cars just above the sill on screen, where the window view's
+    /// own street is, from the room's usual angle round to facing the window.
+    static let ground: Float = 0.1
     static let plan = CityTraffic.Plan(
-        lanes: [.init(z: -0.8, direction: -1), .init(z: -0.92, direction: 1)],
+        lanes: [.init(z: -0.9, direction: -1), .init(z: -1.0, direction: 1)],
         span: -1.7...0.9, speeds: 0.09...0.17, waits: 2.5...7, gap: 0.19, capacity: 4,
         colours: Tone.paints.count)
     /// Where Reduce Motion parks its one car: in the window at the room's usual angle.
-    static let parking = (lane: 0, x: Float(-0.42), colour: 1)
+    static let parking = (lane: 0, x: Float(-0.3), colour: 1)
 
     private let root: Entity
     private var traffic = CityTraffic(plan: plan, seed: 0xC17_CA25)
@@ -76,7 +77,7 @@ final class CityStreet {
             let body = car.box(s.x, s.y * 0.46, s.z, r: 0.012, paints[0], at: [0, s.y * 0.36, 0])
             car.box(s.x * 0.52, s.y * 0.42, s.z * 0.86, r: 0.01, cabin, at: [-s.x * 0.06, s.y * 0.76, 0])
             for x in [-s.x * 0.3, s.x * 0.3] {
-                car.cylinder(s.z * 1.02, 0.012, tyre, at: [x, 0.012, 0], rotation: .x(.pi / 2))
+                car.cylinder(s.z * 1.02, 0.011, tyre, at: [x, 0.011, 0], rotation: .x(.pi / 2))
             }
             let lamps = car.box(0.006, 0.008, s.z * 0.8, r: 0.003, lampsOff, at: [s.x / 2, s.y * 0.4, 0])
             let tails = car.box(0.006, 0.008, s.z * 0.8, r: 0.003, tailsOff, at: [-s.x / 2, s.y * 0.4, 0])
