@@ -159,7 +159,8 @@ private struct PosterPeek: View {
             .overlay(alignment: .topLeading) {
                 if both {
                     Text("♥")
-                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .ourioScaledFont(size: 10, weight: .bold, design: .rounded, relativeTo: .caption2)
+                        .dynamicTypeSize(...DynamicTypeSize.xLarge)
                         .foregroundStyle(Ink.heroInk)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 1)

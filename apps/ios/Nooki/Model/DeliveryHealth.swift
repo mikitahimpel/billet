@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 import UserNotifications
 import WidgetKit
 
@@ -12,6 +13,12 @@ struct DeliveryHealth: Equatable {
 
     /// A push can arrive only with the permission and a token the server knows to send to.
     var pushesWork: Bool { notificationsAllowed && hasPushToken }
+
+    /// The line shown where a missed alert costs most, the Inbox and a new pair; nil while alerts are on. A missing
+    /// token is left to Settings: the phone registers again by itself, and there is nothing to tap.
+    func notice(partner: String) -> String? {
+        notificationsAllowed ? nil : "You won't hear when \(partner) sends something."
+    }
 
     var pushDetail: String {
         if !notificationsAllowed { return "Off: you won't hear when your partner sends something" }
@@ -29,6 +36,17 @@ struct DeliveryHealth: Equatable {
         case 0: "None on your Home Screen"
         case 1: "1 on your Home Screen"
         default: "\(widgetCount) on your Home Screen"
+        }
+    }
+
+    /// Asks for alerts the first time; once asked, only the system's Settings can turn them back on.
+    @MainActor
+    static func turnOn() async {
+        let center = UNUserNotificationCenter.current()
+        if await center.notificationSettings().authorizationStatus == .notDetermined {
+            await DrawingSync.requestPushes(asking: true)
+        } else if let url = URL(string: UIApplication.openSettingsURLString) {
+            await UIApplication.shared.open(url)
         }
     }
 
