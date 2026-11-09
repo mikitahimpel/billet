@@ -422,4 +422,17 @@ struct AnswerQueueTests {
         #expect(script.started(at: script.duration).count == script.cues.count)
         #expect(script.duration < 3.5)
     }
+
+    @Test func theTitleSpringRisesWithoutOvershootAndSettlesByItsCue() throws {
+        let script = WelcomeScript.standard
+        let cue = try #require(script.cues.first { $0.beat == .title })
+        #expect(script.spring(.title, at: cue.start - 1) == 0)
+        var last = 0.0
+        for step in 0...60 {
+            let now = script.spring(.title, at: cue.start + cue.length * 2 * Double(step) / 60)
+            #expect(now >= last && now <= 1)
+            last = now
+        }
+        #expect(script.spring(.title, at: cue.start + cue.length) > 0.97)
+    }
 }
