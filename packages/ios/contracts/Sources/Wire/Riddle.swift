@@ -1,4 +1,4 @@
-/// A draw-guess riddle's id: a UUID the drawer makes once and repeats on every retry of the send.
+/// Made once by the drawer and repeated on every retry of the send.
 public typealias RiddleId = IdempotencyKey
 
 /// How a riddle's round stands. `at` is epoch milliseconds.
@@ -52,10 +52,9 @@ public struct RevealedLetter: Codable, Hashable, Sendable {
   }
 }
 
-/// One riddle as this user sees it. `shape` is the letters of each word ("north pole" is
-/// `[5, 4]`). `tiles` are shuffled single letters, 12 unless a word of 11 or 12 letters needs its
-/// two decoys; `removed` are the indexes of the tiles the first hint took away. `word` is set for
-/// the drawer, and for both once the round has ended: the guesser never has it while it is open.
+/// `shape` is each word's letter count ("north pole" is `[5, 4]`); `removed` are the tiles the
+/// first hint took. `tiles` are 12 unless an 11- or 12-letter word needs its two decoys. `word`
+/// is set for the drawer, and for both once ended; the guesser never has it while open.
 public struct Riddle: Codable, Hashable, Sendable {
   public let id: RiddleId
   public let drawer: UserId
@@ -69,7 +68,7 @@ public struct Riddle: Codable, Hashable, Sendable {
   public let word: String?
   public let compact: CompactStrokes
   public let image: MediaKey
-  /// When it was sent, epoch milliseconds.
+  /// Epoch milliseconds.
   public let at: Int
 
   public init(
@@ -114,9 +113,8 @@ public struct Riddle: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/riddles`: `open` holds at most one riddle per member; `ended` the last 20 that ended,
-/// newest first, for the board. `series` counts solves in a row since the last give-up; `best`
-/// is the longest it has been.
+/// `GET /v1/riddles`: `open` holds at most one per member; `ended` the last 20, newest first.
+/// `series` counts solves since the last give-up; `best` is its record.
 public struct RiddlesResponse: Codable, Hashable, Sendable {
   public let open: [Riddle]
   public let ended: [Riddle]
@@ -131,10 +129,9 @@ public struct RiddlesResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/riddles`. `image` is the PNG uploaded through `POST /v1/media` first. `word` is
-/// trimmed and lowercased by the server, then must be lowercase a to z, single-spaced, at most 24
-/// characters and 12 letters, or the answer is `.api(.invalidRequest)` with status 400. A second
-/// riddle while this user's last one is open is 409; the same `id` again answers with the first.
+/// `image` is uploaded through `POST /v1/media` first. `word`, trimmed and lowercased by the
+/// server, is a-z single-spaced, at most 24 characters and 12 letters, else 400. A second riddle
+/// while one is open is 409; the same `id` again answers with the first.
 public struct SendRiddleRequest: Codable, Hashable, Sendable {
   public let id: RiddleId
   public let word: String
@@ -161,7 +158,6 @@ public struct GuessRiddleRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The riddle after a try, and whether the try was the word.
 public struct GuessRiddleResponse: Codable, Hashable, Sendable {
   public let riddle: Riddle
   public let right: Bool

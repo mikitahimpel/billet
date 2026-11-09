@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Paints a scene at any size, keeping its proportions.
 public struct SceneCanvas: View {
   private let art: SceneArt
 

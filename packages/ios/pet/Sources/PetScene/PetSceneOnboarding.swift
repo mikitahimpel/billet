@@ -50,7 +50,6 @@ public struct OnboardingSceneState: Equatable, Sendable {
   }
 }
 
-/// What the first-launch scene reports to its host.
 public enum OnboardingSceneEvent: Hashable, Sendable {
   /// The camera reached its place, at the end of the flight or soon after it was cut short.
   case arrived
@@ -58,6 +57,5 @@ public enum OnboardingSceneEvent: Hashable, Sendable {
   case heartTapped
   /// The halves met: the moment for a burst of haptics.
   case joined
-  /// The tag with the code was tapped.
   case codeTapped
 }

@@ -2,11 +2,8 @@ import Foundation
 import Security
 
 extension KeychainClient {
-  /// The live Keychain.
-  ///
-  /// Items are generic passwords in the data protection keychain, readable after the first unlock
-  /// so a widget or extension can read them while the device is locked. A synchronizable item goes
-  /// to the iCloud Keychain; any other never leaves this device, not even in a backup.
+  /// Readable after the first unlock so a widget or extension can read items while locked. A
+  /// non-synchronizable item never leaves this device, not even in a backup.
   public static let security = KeychainClient(
     add: { key, data in
       var query = baseQuery(key)

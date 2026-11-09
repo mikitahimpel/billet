@@ -1,5 +1,4 @@
-/// `GET /v1/onboarding`: the questions, in order, and which edition they are. The app ships a copy
-/// for offline use and sends `version` back with each answer.
+/// The app ships a copy for offline use and sends `version` back with each answer.
 public struct OnboardingResponse: Codable, Hashable, Sendable {
   public let version: String
   public let steps: [OnboardingStep]

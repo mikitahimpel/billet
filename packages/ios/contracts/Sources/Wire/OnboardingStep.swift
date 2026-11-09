@@ -1,13 +1,10 @@
-/// One screen of onboarding, as `GET /v1/onboarding` serves it. Every step can be skipped today
-/// (`skippable`); a skip is sent as ``OnboardingAnswer/skipped``.
+/// A skip is sent as ``OnboardingAnswer/skipped``.
 public enum OnboardingStep: Codable, Hashable, Sendable {
-  /// Pick one of `options`. An age is one of these, over buckets.
+  /// An age is one of these, over buckets.
   case single(OnboardingChoiceStep)
-  /// Pick any of `options`; an `exclusive` one goes alone.
+  /// An `exclusive` option goes alone.
   case multi(OnboardingChoiceStep)
-  /// Pick a whole number from `min` to `max` in steps of `step`.
   case range(OnboardingRangeStep)
-  /// Type up to `maxLength` characters.
   case text(OnboardingTextStep)
 
   public var id: OnboardingStepId {
@@ -55,7 +52,6 @@ public enum OnboardingStep: Codable, Hashable, Sendable {
   }
 }
 
-/// A `Single` or `Multi` step.
 public struct OnboardingChoiceStep: Codable, Hashable, Sendable {
   public let id: OnboardingStepId
   public let title: LocalizedText
@@ -96,7 +92,6 @@ public struct OnboardingChoiceStep: Codable, Hashable, Sendable {
   }
 }
 
-/// A `Range` step.
 public struct OnboardingRangeStep: Codable, Hashable, Sendable {
   public let id: OnboardingStepId
   public let title: LocalizedText
@@ -149,14 +144,13 @@ public struct OnboardingRangeStep: Codable, Hashable, Sendable {
   }
 }
 
-/// A `Text` step.
 public struct OnboardingTextStep: Codable, Hashable, Sendable {
   public let id: OnboardingStepId
   public let title: LocalizedText
   public let subtitle: LocalizedText?
   public let skippable: Bool
   public let placeholder: LocalizedText?
-  /// The most characters (Swift's `String.count`) the answer may have.
+  /// Counted as Swift's `String.count`.
   public let maxLength: Int
 
   public init(

@@ -4,13 +4,9 @@ import Foundation
 /// clock alone: no location is involved, so sunrise and sunset are the same everywhere.
 public struct DayLight: Hashable, Sendable {
   public enum Phase: String, CaseIterable, Hashable, Sendable {
-    /// 5:00 to 10:00.
     case morning
-    /// 10:00 to 17:00.
     case day
-    /// 17:00 to 21:00.
     case goldenHour
-    /// 21:00 to 5:00.
     case night
   }
 
@@ -59,7 +55,6 @@ public struct DayLight: Hashable, Sendable {
     return date.addingTimeInterval(Double(hour - now) * 3600)
   }
 
-  /// The light at `date` in `zone`.
   public static func at(_ date: Date, in zone: TimeZone) -> DayLight {
     var calendar = Calendar(identifier: .gregorian)
     calendar.timeZone = zone

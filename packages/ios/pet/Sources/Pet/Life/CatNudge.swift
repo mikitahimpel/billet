@@ -1,9 +1,8 @@
 import Foundation
 
-/// When to nudge the pair about the cat, and in what words: the first time in the next day that
-/// the cat would be hangry or lonely if nobody does anything, outside quiet hours, and no more than
-/// twice a day. Worked out from the events alone, so care from either partner moves or cancels it
-/// on both phones as soon as the event arrives.
+/// When and in what words to nudge the pair: the first time in the next day the cat would be
+/// hangry or lonely if nobody acts, outside quiet hours, at most twice a day. Worked out from the
+/// events alone, so care from either partner moves or cancels it on both phones at once.
 public enum CatNudge {
   public struct Plan: Hashable, Sendable {
     public var at: Date

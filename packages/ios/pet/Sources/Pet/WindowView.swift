@@ -1,40 +1,23 @@
 import Foundation
 
-/// What a styled room's window looks out on. Each view is a flag in Labs and later a shop item;
-/// the raw value is what gets stored, so it stays stable across releases.
+/// The raw value is what gets stored, so it stays stable across releases.
 public enum WindowView: String, CaseIterable, Codable, Hashable, Sendable {
-  /// A US suburb at night: roofs, power lines, a water tower, the street lamp.
   case suburbNight
-  /// The suburb in the rain: a corner store's window, a bus shelter, puddles, lightning.
   case rainySuburb
-  /// A snowy December street with Christmas lights on the houses.
   case snowyDecember
-  /// A summer cul-de-sac with fireflies, a sprinkler and a trampoline.
   case summerCulDeSac
-  /// A college quad at night: a brick dorm's windows, globe lamps, students crossing.
   case dormQuad
-  /// A New York walk-up's fire escape over a street of yellow cabs and steam.
   case fireEscape
-  /// Los Angeles at pink dusk: tall palms, a taco truck, parrots and planes lining up to land.
   case pinkDusk
-  /// A beach at sunset: gentle waves, a sailboat on the horizon, gulls and a lifeguard tower.
   case sunsetBeach
-  /// A cabin in a pine forest at night, its window lit and smoke from the chimney, fireflies.
   case forestCabin
-  /// Snowy mountains under the moon, a lit chalet and a gondola crossing on its cable.
   case moonlitPeaks
-  /// A narrow city street in the rain: neon signs, umbrellas and a train on the line above.
   case neonStreet
-  /// Old city rooftops at dusk: chimney pots, zinc roofs, a dome and balconies with flowers.
   case rooftopsDusk
-  /// An autumn park: leaves falling from orange trees, a pond, joggers and dogs.
   case autumnPark
-  /// A lake at sunrise with mist on the water, a canoe and ducks.
   case mistyLake
-  /// A desert at night under a huge starry sky, a camper van glowing by the mesas.
   case desertStars
 
-  /// What a window shows before anyone chooses.
   public static let standard = WindowView.suburbNight
 
   /// The views that have a 3D version, behind Labs' "3D view" switch.
@@ -141,7 +124,6 @@ public enum ViewHour: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// The light of a typical hour of this part of the day.
   public var light: DayLight {
     switch self {
     case .morning: .at(hour: 7.5)
@@ -207,12 +189,10 @@ public struct WindowViewChoice: Codable, Hashable, Sendable {
   }
 }
 
-/// Something small that happens now and then in a view, such as a car passing: at most one pass
-/// in each slot of `slot` seconds, at a place in the slot and with a variant drawn from a hash of
-/// the slot's number. Gaps, order and variants never settle into a loop, and any moment is found
-/// without stepping through the ones before it.
+/// Something that happens now and then in a view, such as a car passing: at most one pass per
+/// `slot` seconds, placed and varied by a hash of the slot's number, so it never settles into
+/// a loop and any moment is found without stepping through the ones before it.
 public struct ViewRhythm: Hashable, Sendable {
-  /// One pass of the event.
   public struct Pass: Hashable, Sendable {
     /// Which slot it is in, the same for every frame of the pass.
     public var index: Int64
@@ -246,7 +226,6 @@ public struct ViewRhythm: Hashable, Sendable {
     self.length = min(length.lowerBound, self.slot)...min(length.upperBound, self.slot)
   }
 
-  /// The pass under way at `time`, or `nil` between passes.
   public func pass(at time: Double) -> Pass? {
     let index = Int64((time / slot).rounded(.down))
     for candidate in [index, index - 1] {

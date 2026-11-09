@@ -1,4 +1,3 @@
-/// A point in a live stroke.
 public struct Point: Codable, Hashable, Sendable {
   public let x: Double
   public let y: Double

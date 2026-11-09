@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The one primary action of a screen: a honey capsule with `Ink.heroInk` text (white on honey is too faint to
-/// read). Disabled it turns into a raised neutral capsule whose label stays readable.
+/// `Ink.heroInk` text, since white on honey is too faint to read.
 public struct PrimaryButtonStyle: ButtonStyle {
   var fullWidth: Bool
   @Environment(\.isEnabled) private var isEnabled
@@ -20,7 +19,6 @@ public struct PrimaryButtonStyle: ButtonStyle {
   }
 }
 
-/// The quieter of two buttons: honey words on a raised capsule.
 public struct SecondaryButtonStyle: ButtonStyle {
   var fullWidth: Bool
   @Environment(\.isEnabled) private var isEnabled
@@ -96,10 +94,7 @@ private struct ButtonLabel: View {
   }
 }
 
-/// A round `control` glass button for a header: one size, the same as the avatars and the coin pill. Its symbol
-/// is a plain SF Symbol, or any view of the same size through `init(label:action:content:)`.
 public struct GlassIconButton<Content: View>: View {
-  /// What sits on the corner of a header button.
   public enum Badge: Equatable, Sendable {
     case none
     case dot
@@ -171,7 +166,7 @@ extension GlassIconButton where Content == GlassSymbol {
   }
 }
 
-/// A crisp SF Symbol for glass: a text style, not a drawn size, so it is rasterised at the screen's scale.
+/// A text style, not a drawn size, so it is rasterised at the screen's scale.
 public struct GlassSymbol: View {
   let name: String
 
@@ -185,8 +180,7 @@ public struct GlassSymbol: View {
   }
 }
 
-/// A price in coins on a honey capsule. A deal shows the old price struck through after the new one, on the same
-/// baseline inside the capsule.
+/// A deal shows the old price struck through after the new one.
 public struct PriceButton: View {
   let price: Int
   let was: Int?

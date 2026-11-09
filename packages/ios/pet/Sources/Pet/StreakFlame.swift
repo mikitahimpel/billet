@@ -1,30 +1,19 @@
 import Foundation
 
-/// How big the pair's shared flame has grown. A broken streak rests as an ember, which still
-/// glows: the flame never goes out.
-///
-/// The stages are the flame's own and do not follow ``HouseStage``.
+/// How big the pair's shared flame has grown. A broken streak rests as an ember: the flame
+/// never goes out. The stages are the flame's own and do not follow ``HouseStage``.
 public enum FlameStage: Int, CaseIterable, Comparable, Sendable {
   /// No streak today: a warm coal that one day together lights again.
   case ember
-  /// 1–2 days.
   case spark
-  /// 3–6 days.
   case candle
-  /// 7–13 days.
   case steady
-  /// 14–29 days.
   case lantern
-  /// 30–59 days.
   case hearth
-  /// 60–99 days.
   case fire
-  /// 100–364 days.
   case beacon
-  /// 365 days and on.
   case everglow
 
-  /// The day each stage begins.
   public var firstDay: Int {
     switch self {
     case .ember: 0
@@ -68,8 +57,6 @@ public enum FlameStage: Int, CaseIterable, Comparable, Sendable {
   }
 }
 
-/// The flame for one streak: its stage, how far it has grown towards the next, and the soft
-/// words that go with it.
 public struct StreakFlame: Equatable, Sendable {
   public let streak: Int
 
@@ -79,10 +66,8 @@ public struct StreakFlame: Equatable, Sendable {
 
   public var stage: FlameStage { FlameStage(streak: streak) }
 
-  /// True when there is no streak today, so the flame rests as an ember.
   public var isEmber: Bool { stage == .ember }
 
-  /// The day the next stage begins, or `nil` past the last.
   public var nextMilestone: Int? { stage.next?.firstDay }
 
   /// How grown the flame is, from 0 (an ember) to 1 (the last stage), rising evenly through each
@@ -130,7 +115,6 @@ public struct FlameContributions: Equatable, Sendable {
   }
 }
 
-/// What opening the flame should show this time.
 public struct FlameVisit: Equatable, Sendable {
   /// A stage reached since the last visit, celebrated once with sparks.
   public var milestone: FlameStage?
@@ -145,7 +129,6 @@ public struct FlameVisit: Equatable, Sendable {
     self.pulse = pulse
   }
 
-  /// Nothing new since the last visit.
   public static let quiet = FlameVisit()
 }
 
@@ -157,7 +140,6 @@ public struct FlameMemory: Codable, Equatable, Sendable {
   /// The highest stage celebrated in the current run. A run that ends starts this over, so the
   /// next run's stages are celebrated too.
   public private(set) var celebrated: Int
-  /// The newest note seen at the last visit.
   public private(set) var lastNote: UUID?
 
   public init() {

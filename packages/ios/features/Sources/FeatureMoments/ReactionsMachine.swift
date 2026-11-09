@@ -2,13 +2,9 @@ import BilletKit
 import Transport
 import Wire
 
-/// The couple's reactions to each other's photos on this phone, as an explicit state machine.
-///
-/// A tap shows at once and goes to the server; the server's answer confirms it, and a failure
-/// puts back what was there. One request per photo is in flight at a time: a tap while one is
-/// out only changes what is wanted, and the answer sends the latest wish if it differs.
-/// Changes from either phone arrive in `rev` order, over the room's socket or a page, and one at
-/// or below `lastRev` is already held.
+/// The couple's reactions to each other's photos. A tap shows at once; a failure puts back what was
+/// there. One request per photo is out at a time; its answer sends the latest wish if it differs.
+/// Changes arrive in `rev` order, and one at or below `lastRev` is already held.
 public enum ReactionsMachine: Machine {
   /// What is kept across launches.
   public struct Saved: Equatable, Sendable, Codable {

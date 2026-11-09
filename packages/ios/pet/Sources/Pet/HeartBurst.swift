@@ -1,9 +1,8 @@
 import DesignSystem
 import SwiftUI
 
-/// A small mark, a heart unless told otherwise, that floats up and fades each time `trigger` changes.
-///
-/// A SwiftUI overlay, so it works over any scene.
+/// A small mark, a heart unless told otherwise, that floats up and fades each time `trigger`
+/// changes. A SwiftUI overlay, so it works over any scene.
 public struct HeartBurst: View {
   private let trigger: Int
   private let tint: Color

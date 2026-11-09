@@ -50,8 +50,7 @@ import Testing
     }
   }
 
-  /// On honey the ring does the work; on a dark surface or the dark room the gold face does. On cream the ring
-  /// outlines it.
+  /// On honey the ring does the work; on a dark surface or the dark room the gold face does.
   @Test func coinStandsOutFromEveryBackgroundItSitsOn() {
     #expect(Palette.coinRing.contrast(over: Palette.honey) >= 3)
     #expect(Palette.coinFace.contrast(over: Palette.coinRing) >= 3)

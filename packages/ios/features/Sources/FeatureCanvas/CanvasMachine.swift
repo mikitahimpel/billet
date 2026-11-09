@@ -25,7 +25,6 @@ public enum CanvasMachine: Machine {
       self.inProgress = inProgress
     }
 
-    /// The committed strokes.
     public var drawing: [Stroke] { history.strokes }
 
     /// The committed strokes plus the one being drawn, for rendering.

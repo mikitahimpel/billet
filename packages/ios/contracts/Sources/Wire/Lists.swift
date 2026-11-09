@@ -64,10 +64,9 @@ public struct ListMedia: Codable, Hashable, Sendable {
   }
 }
 
-/// What a partner says about an item apart from its tick. `quantity` is up to 40 characters,
-/// `note` up to 500; `icon` and `aisle` are lowercase slugs; `country` is ISO 3166-1 alpha-2.
-/// On a travel list an item with a `country` is that country, or with `place` a city or place in
-/// it; `visitedIn` is a month such as `2026-10` and `moments` up to 10 moment ids.
+/// `quantity` up to 40 characters, `note` up to 500; `icon` and `aisle` are lowercase slugs;
+/// `country` is ISO 3166-1 alpha-2. On a travel list `place` is a city in `country`;
+/// `visitedIn` is a month such as `2026-10`; `moments` up to 10 moment ids.
 public struct ListItemDetails: Hashable, Sendable {
   public var quantity: String?
   public var note: String?
@@ -126,8 +125,7 @@ public struct ListItemDetails: Hashable, Sendable {
   }
 }
 
-/// Wire form of the contracts `ListItem`. `author` and `addedAt` are the room's; `doneBy` and
-/// `doneAt` are both present once it is ticked. Times are epoch milliseconds.
+/// `doneBy` and `doneAt` are both present once ticked. Times are epoch milliseconds.
 public struct ListItem: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let text: String
@@ -136,7 +134,7 @@ public struct ListItem: Codable, Hashable, Sendable {
   public let doneBy: UserId?
   public let doneAt: Int?
   public let details: ListItemDetails
-  /// The members who want it, in the order they said so.
+  /// In the order they said so.
   public let wants: [UserId]
 
   public init(
@@ -197,7 +195,7 @@ public struct ListItem: Codable, Hashable, Sendable {
   }
 }
 
-/// A list both partners see and edit. `items` are in the order they were added, oldest first.
+/// `items` oldest first.
 public struct SharedList: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let kind: ListKind
@@ -234,7 +232,6 @@ public enum ListCommand: Codable, Hashable, Sendable {
   case tickItem(key: IdempotencyKey, list: IdempotencyKey, item: IdempotencyKey)
   case untickItem(key: IdempotencyKey, list: IdempotencyKey, item: IdempotencyKey)
   case deleteItem(key: IdempotencyKey, list: IdempotencyKey, item: IdempotencyKey)
-  /// The caller wants the item, or no longer does.
   case wantItem(key: IdempotencyKey, list: IdempotencyKey, item: IdempotencyKey, wants: Bool)
 
   public var key: IdempotencyKey {

@@ -1,9 +1,8 @@
 import Foundation
 
-/// What the cat has learned from how the two of you treat it: habits on top of its temperament,
-/// which never changes. Each is a small counter from 0 to 1, worked out at each day start from the
-/// events of the last days, the newer weighing more, so a habit fades when the care behind it
-/// stops. Both phones fold the same events, so both raise the same cat with nothing else synced.
+/// What the cat has learned from how the pair treats it, on top of its fixed temperament. Each
+/// habit is a 0–1 counter worked out at each day start from recent events, the newer weighing more,
+/// so it fades when the care stops. Both phones fold the same events and raise the same cat.
 public struct CatUpbringing: Hashable, Sendable {
   /// Petted often: it seeks you out more and comes right up to a finger.
   public var affection = 0.0
@@ -30,7 +29,6 @@ public struct CatUpbringing: Hashable, Sendable {
     self.petHour = petHour
   }
 
-  /// A cat that has learned nothing yet.
   public static let none = CatUpbringing()
 
   /// Where a double tap on the cat shoos it off instead of asking for a trick.
@@ -59,7 +57,6 @@ public struct CatUpbringing: Hashable, Sendable {
     return known
   }
 
-  /// What the cat has learned by `t` from `events`.
   public static func learned(
     from events: some Sequence<LifeEvent>, at t: Double, utcOffset: Int
   ) -> CatUpbringing {

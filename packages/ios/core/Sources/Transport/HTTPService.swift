@@ -1,7 +1,6 @@
 import Foundation
 import Wire
 
-/// The HTTP dependency: one closure that performs a request. Tests pass a fake.
 public struct HTTPService: Sendable {
   public var send: @Sendable (HTTPRequest) async throws(TransportError) -> HTTPResponse
 
@@ -11,11 +10,8 @@ public struct HTTPService: Sendable {
     self.send = send
   }
 
-  /// Sends `request` and decodes a successful body as `Response`.
-  ///
-  /// A non-2xx answer becomes ``TransportError/maintenance(_:)`` when it is the maintenance 503,
-  /// ``TransportError/api(_:)`` when the body is a contract `ApiError`, and
-  /// ``TransportError/status(_:)`` otherwise.
+  /// A non-2xx answer becomes ``TransportError/maintenance(_:)`` for the maintenance 503,
+  /// ``TransportError/api(_:)`` for a contract `ApiError` body, else ``TransportError/status(_:)``.
   public func perform<Response: Decodable & Sendable>(
     _ request: HTTPRequest, as type: Response.Type
   ) async throws(TransportError) -> Response {
@@ -27,12 +23,12 @@ public struct HTTPService: Sendable {
     }
   }
 
-  /// Sends `request` and ignores a successful body, for the routes that answer 204.
+  /// For the routes that answer 204.
   public func performEmpty(_ request: HTTPRequest) async throws(TransportError) {
     _ = try await performRaw(request)
   }
 
-  /// Sends `request` and returns a successful body as it came, for the routes that answer bytes.
+  /// For the routes that answer bytes.
   public func performRaw(_ request: HTTPRequest) async throws(TransportError) -> Data {
     let response = try await send(request)
     if (200..<300).contains(response.status) {
@@ -49,8 +45,8 @@ public struct HTTPService: Sendable {
 }
 
 extension HTTPService {
-  /// This service, telling `report` the status each maintenance 503 carries before the caller
-  /// sees the failure, so one place learns of maintenance whichever request met it.
+  /// Tells `report` of each maintenance 503 before the caller sees the failure, so one place
+  /// learns of maintenance whichever request met it.
   public func reportingMaintenance(
     to report: @escaping @Sendable (AppStatus) async -> Void
   ) -> HTTPService {
@@ -72,8 +68,7 @@ extension HTTPResponse {
 }
 
 extension HTTPService {
-  /// The live service over `URLSession`, resolving each path against `baseURL`. `headers` go on
-  /// every request; a header the request sets itself wins.
+  /// `headers` go on every request; a header the request sets itself wins.
   public static func urlSession(
     baseURL: URL, session: URLSession, headers: [String: String] = [:]
   ) -> HTTPService {

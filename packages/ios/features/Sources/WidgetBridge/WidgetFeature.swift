@@ -82,7 +82,6 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     }
   }
 
-  /// Whether the feature is on until the owner turns it off.
   public var defaultOn: Bool {
     switch self {
     case .doodleCard: false

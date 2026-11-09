@@ -26,7 +26,6 @@ public enum CatMind: String, CaseIterable, Codable, Hashable, Sendable {
   /// Local hours a sleeping cat counts as deep asleep in: the night, `from` to `until`.
   public static let night: (from: Double, until: Double) = (22, 6)
 
-  /// The state for `stack` at local `hour`.
   public init(_ stack: CatBrainStack, hour: Double) {
     if let interaction = stack.interaction {
       self = Self.social(interaction, step: stack.step)

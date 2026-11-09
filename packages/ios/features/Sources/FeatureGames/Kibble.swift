@@ -1,7 +1,7 @@
 import Foundation
 
-/// A kitchen scale with the cat's bowl: the bowl weighs `bowlGrams` on its own, TARE zeroes whatever is on the
-/// platform, and the display shows whole grams of the load less the tare, negative once a tared bowl comes off.
+/// A kitchen scale with the cat's bowl: TARE zeroes whatever is on the platform, and the display
+/// shows whole grams of the load less the tare, negative once a tared bowl comes off.
 public struct KibbleScale: Equatable, Sendable {
   public static let bowlGrams: Double = 118
   /// One kibble, as the pinch moves them.
@@ -80,8 +80,8 @@ public struct FeedTask: Equatable, Sendable {
 
 /// The four ways kibble goes into the bowl, and the one it comes back out.
 public enum KibblePour {
-  /// Grams a second from the bag tipped `angle` radians: nothing until the kibble reaches the mouth, then more the
-  /// further it goes.
+  /// Grams a second from the bag tipped `angle` radians: nothing until the kibble reaches the
+  /// mouth, then more the further it goes.
   public static func flow(angle: Double) -> Double {
     20 * smoothstep(angle, 0.6, 1.9)
   }
@@ -99,7 +99,6 @@ public enum KibblePour {
     Double.random(in: 8...14, using: &rng)
   }
 
-  /// One pinch, in or out.
   public static let pinch = KibbleScale.kibbleGrams
 
   /// A shake of `strength` (0...1) loosens one to three kibbles.

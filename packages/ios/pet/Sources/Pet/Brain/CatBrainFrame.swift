@@ -18,9 +18,7 @@ public struct CatBrainFrame: Hashable, Sendable {
   public var amplitude: Double
   /// How far it keeps from a finger, from 0 (right up to it) to 1 (well back).
   public var personalSpace: Double
-  /// The tricks care has taught it.
   public var tricks: Set<CatLearnedTrick>
-  /// How it feels, from its needs and temperament.
   public var feeling: CatFeeling
   /// The sound it makes as the step starts, if any, and how often again while the step lasts.
   public var voice: CatVoice?

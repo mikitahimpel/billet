@@ -1,11 +1,8 @@
 import Foundation
 
-/// Which need, if any, the pet acts on now: a hungry pet goes to its bowl, a sleepy one curls up.
-///
-/// A need turns low below ``LifeConfig/lowBelow`` and stays low until it is back above
-/// ``LifeConfig/lowUntil``, so a value hovering at the line never flickers. Among the low needs
-/// one is drawn by softmax over urgency `(1 − n)²`, and it is kept until it stops being low.
-/// Deterministic for a given seed.
+/// Which need, if any, the pet acts on now. A need is low below ``LifeConfig/lowBelow`` until it is
+/// back above ``LifeConfig/lowUntil``, so a value at the line never flickers. One low need is drawn
+/// by softmax over urgency `(1 − n)²` and kept while low; deterministic for a given seed.
 public struct NeedFocus: Sendable {
   public private(set) var low: Set<PetNeed> = []
   public private(set) var focus: PetNeed?
@@ -17,7 +14,6 @@ public struct NeedFocus: Sendable {
     random = SplitMix64(seed: seed)
   }
 
-  /// Takes the needs as they are now and returns the need to act on.
   @discardableResult
   public mutating func update(_ needs: PetNeeds) -> PetNeed? {
     for need in PetNeed.allCases {
@@ -33,7 +29,6 @@ public struct NeedFocus: Sendable {
     return focus
   }
 
-  /// How urgent a need at `value` is.
   public static func urgency(_ value: Double) -> Double {
     let gap = 1 - value
     return gap * gap

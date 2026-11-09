@@ -1,5 +1,4 @@
-/// The couple's cat now: `GET /v1/cat` and `PUT /v1/cat`. `cat` is `nil` until one of them
-/// adopts it; `lastSeq` is the journal's last entry, 0 when it is empty.
+/// `cat` is `nil` until adopted; `lastSeq` is the journal's last entry, 0 when empty.
 public struct CatResponse: Codable, Hashable, Sendable {
   public let cat: CatProfile?
   public let temper: CatTemper
@@ -29,8 +28,7 @@ public struct CatResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `PUT /v1/cat`: the first save adopts the cat; later ones change its name, look and the
-/// pair's clock.
+/// The first save adopts the cat; later ones change its name, look and the pair's clock.
 public struct SaveCatRequest: Codable, Hashable, Sendable {
   public let name: String
   public let look: CatLook
@@ -43,7 +41,7 @@ public struct SaveCatRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/cat/events`. `id` is made once and repeated on every retry of the same event.
+/// `id` is made once and repeated on every retry of the same event.
 public struct RecordCatEventRequest: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let event: CatEvent
@@ -54,7 +52,7 @@ public struct RecordCatEventRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The stored entry, or the first one under the same `id`, with the cat as it now is.
+/// The stored entry, or the first one under the same `id`.
 public struct RecordCatEventResponse: Codable, Hashable, Sendable {
   public let entry: CatEntry
   public let temper: CatTemper

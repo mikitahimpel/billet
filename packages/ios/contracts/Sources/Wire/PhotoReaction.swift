@@ -1,5 +1,4 @@
-/// Wire form of the contracts `Reaction`: what a partner can answer a photo with. The app owns
-/// the emoji; the wire carries only the id.
+/// The app owns the emoji; the wire carries only the id.
 public enum PhotoReaction: String, Codable, Hashable, Sendable, CaseIterable {
   case heart
   case laugh
@@ -8,8 +7,8 @@ public enum PhotoReaction: String, Codable, Hashable, Sendable, CaseIterable {
   case fire
 }
 
-/// One partner's reaction to one note, at its latest. `reaction` is `nil` once they took it back;
-/// `rev` orders every change in the room and is what a reconnect resumes from.
+/// `reaction` is `nil` once taken back; `rev` orders every change in the room and is what a
+/// reconnect resumes from.
 public struct NoteReaction: Codable, Hashable, Sendable {
   public let rev: Int
   public let note: NoteId
@@ -39,7 +38,7 @@ public struct NoteReaction: Codable, Hashable, Sendable {
   }
 }
 
-/// Sets the caller's reaction to the partner's photo, or takes it back when `reaction` is `nil`.
+/// A `nil` `reaction` takes it back.
 public struct ReactRequest: Codable, Hashable, Sendable {
   public let note: NoteId
   public let reaction: PhotoReaction?

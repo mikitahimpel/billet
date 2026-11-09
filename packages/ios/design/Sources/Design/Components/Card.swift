@@ -1,9 +1,8 @@
 import SwiftUI
 
 extension View {
-  /// The app's one card surface: a flat solid fill, like the cell of a grouped list. `warm` lays a breath of
-  /// honey over it, for a screen's hero card. `radius` is `Radius.card`, or `Radius.inner` for a tile nested in
-  /// a card's padding. It is also the container shape, so a `ConcentricRectangle` inside follows its corners.
+  /// `warm` is for a screen's hero card. Also the container shape, so a `ConcentricRectangle`
+  /// inside follows its corners.
   public func cardSurface(radius: CGFloat = Radius.card, warm: Bool = false) -> some View {
     let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
     return background {
@@ -14,7 +13,6 @@ extension View {
   }
 }
 
-/// Content on the app's card, padded by `CardMetrics.padding`.
 public struct Card<Content: View>: View {
   let warm: Bool
   let content: Content
@@ -32,8 +30,7 @@ public struct Card<Content: View>: View {
   }
 }
 
-/// The one header of a card: a leading mark at `Size.cardMark`, the title over a quiet line, and a trailing
-/// accessory (usually `RowChevron`). Every card that opens something starts with it.
+/// Every card that opens something starts with it.
 public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
   let title: String
   let leading: Leading
@@ -70,7 +67,6 @@ public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
 }
 
 extension CardHeader where Leading == RowIcon, Detail == Text?, Trailing == RowChevron? {
-  /// A header with an icon tile, an optional line under the title and a chevron when it opens something.
   public init(
     _ title: String, detail: String? = nil, symbol: String, tint: Color? = nil, opens: Bool = true
   ) {
@@ -84,7 +80,6 @@ extension CardHeader where Leading == RowIcon, Detail == Text?, Trailing == RowC
   }
 }
 
-/// Art in a card header's leading slot, clipped concentric with the card.
 public struct CardArt: View {
   let image: Image
 
@@ -100,16 +95,13 @@ public struct CardArt: View {
   }
 }
 
-/// A group of rows on one card with hairlines between them, an optional caption above and a footer below: the
-/// native inset-grouped list in the app's colours.
 public struct GroupedSection<Content: View, Footer: View>: View {
   let header: String?
   let inset: CGFloat
   let content: Content
   let footer: Footer
 
-  /// - Parameter inset: Where the hairlines start: under the title of a row with an icon, or at the edge
-  ///   without one.
+  /// - Parameter inset: Where the hairlines start; 0 for rows without an icon.
   public init(
     header: String? = nil, inset: CGFloat = RowMetrics.iconInset,
     @ViewBuilder content: () -> Content, @ViewBuilder footer: () -> Footer
@@ -163,8 +155,6 @@ public enum RowMetrics {
   public static let iconInset: CGFloat = Space.l + 34 + 14
 }
 
-/// A row of a `GroupedSection`: an optional icon in a tinted circle, the title with an optional line under it,
-/// and whatever goes on the right.
 public struct Row<Trailing: View>: View {
   let title: String
   let detail: String?
@@ -221,8 +211,8 @@ extension Row where Trailing == EmptyView {
   }
 }
 
-/// The icon of a row: a full-tint SF Symbol on a soft wash of the same tint, one opacity for every tile. No
-/// tint means the accent, whose glyph is `Ink.accentText` so it reads on the wash in both themes.
+/// No tint means the accent, whose glyph is `Ink.accentText` so it reads on the wash in both
+/// themes.
 public struct RowIcon: View {
   static let washOpacity = 0.16
 
@@ -246,7 +236,6 @@ public struct RowIcon: View {
   }
 }
 
-/// The chevron of a row that opens another screen.
 public struct RowChevron: View {
   public init() {}
 
@@ -258,7 +247,6 @@ public struct RowChevron: View {
   }
 }
 
-/// A row that switches something on and off.
 public struct ToggleRow: View {
   let title: String
   let detail: String?
@@ -285,7 +273,6 @@ public struct ToggleRow: View {
   }
 }
 
-/// A row that picks one of a few values from a menu, the current one shown on the right.
 public struct PickerRow<Value: Hashable, Options: View>: View {
   let title: String
   let symbol: String?
@@ -333,14 +320,12 @@ public struct PickerRow<Value: Hashable, Options: View>: View {
 }
 
 extension View {
-  /// A plain control or line as a row of a `GroupedSection`, for content that is not a `Row`.
   public func rowCell() -> some View {
     padding(.horizontal, Space.l)
       .padding(.vertical, Space.s + 2)
       .frame(maxWidth: .infinity, minHeight: Size.row, alignment: .leading)
   }
 
-  /// A row of a `List` on `Ink.screen`.
   public func listRowSurface() -> some View {
     listRowBackground(Ink.surface)
       .listRowSeparatorTint(Ink.separator)

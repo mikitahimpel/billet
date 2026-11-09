@@ -1,7 +1,7 @@
 import Foundation
 
-/// The cat's water bowl: held, the jug pours and the water rises; past the brim it spills into a puddle. A bowl
-/// filled to the line's band can be served; too much can be poured back out, and the puddle wiped up.
+/// The cat's water bowl: past the brim the jug spills into a puddle. A bowl filled to the line's
+/// band can be served; too much can be poured back out, and the puddle wiped up.
 public struct WaterBowl: Equatable, Sendable {
   public enum Rating: Equatable, Sendable {
     case perfect, good

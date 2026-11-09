@@ -1,4 +1,4 @@
-/// Wire form of the contracts `MediaKey`: a non-empty string.
+/// Non-empty.
 public struct MediaKey: Codable, Hashable, Sendable {
   public let rawValue: String
 

@@ -1,4 +1,4 @@
-/// Wire form of the contracts `RoomItemId`: one piece for the cat's room, such as `lamp`.
+/// One piece for the cat's room, such as `lamp`.
 public struct RoomItemId: Codable, Hashable, Sendable {
   public let rawValue: String
 
@@ -16,7 +16,7 @@ public struct RoomItemId: Codable, Hashable, Sendable {
   }
 }
 
-/// Wire form of the contracts `PieceSetId`: a bundle or a week's featured set.
+/// A bundle or a week's featured set.
 public struct PieceSetId: Codable, Hashable, Sendable {
   public let rawValue: String
 
@@ -34,7 +34,7 @@ public struct PieceSetId: Codable, Hashable, Sendable {
   }
 }
 
-/// What one order in the shop buys. The server prices it; the app's price is only shown.
+/// The server prices it; the app's price is only shown.
 public enum ShopOffer: Codable, Hashable, Sendable {
   case ink(InkId)
   case item(RoomItemId)
@@ -84,9 +84,8 @@ public enum ShopOffer: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/shop`: what the pair has. `inks` starts with the free ink and `items` with the starter
-/// pieces; `wishlist` is in the order it was wished. `giftDay` is the pair's local day it last
-/// opened the daily gift on (`nil` before the first), and `bonuses` the collections paid.
+/// `GET /v1/shop`. `inks` starts with the free ink, `items` with the starter pieces. `giftDay`
+/// is the pair's local day it last opened the daily gift (`nil` before the first).
 public struct ShopResponse: Codable, Hashable, Sendable {
   public let balance: Int
   public let inks: [InkId]
@@ -159,7 +158,6 @@ public struct OrderRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The spend, and the pair after it.
 public struct OrderResponse: Codable, Hashable, Sendable {
   public let entry: CoinEntry
   public let shop: ShopResponse
@@ -170,7 +168,7 @@ public struct OrderResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `PUT /v1/shop/wishlist`: adds a piece to the pair's wishlist, or takes it off.
+/// `PUT /v1/shop/wishlist`.
 public struct WishRequest: Codable, Hashable, Sendable {
   public let item: RoomItemId
   public let wished: Bool
@@ -181,7 +179,6 @@ public struct WishRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The day's free gift: coins, or a piece the pair didn't own.
 public enum GiftReward: Codable, Hashable, Sendable {
   case coins(Int)
   case item(RoomItemId)
@@ -236,7 +233,7 @@ public struct OpenGiftRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The gift's entry (amount 0 for a piece, which `ref` names), what it gave, and the pair after.
+/// `amount` is 0 for a piece, which `ref` names.
 public struct OpenGiftResponse: Codable, Hashable, Sendable {
   public let entry: CoinEntry
   public let reward: GiftReward
@@ -258,7 +255,6 @@ public struct ClaimBonusRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The bonus entry, and the pair after it.
 public struct ClaimBonusResponse: Codable, Hashable, Sendable {
   public let entry: CoinEntry
   public let shop: ShopResponse

@@ -3,13 +3,9 @@ import Foundation
 import Transport
 import Wire
 
-/// Draw & guess as this user plays it. One partner draws a word, the other builds it from letter
-/// tiles while the drawing replays; each has at most one open riddle at a time. The room's socket
-/// sends each change too, so a riddle can arrive, move on or end at any moment.
-///
-/// What this phone does with a riddle (the tiles placed, a try on its way, a send that didn't
-/// reach the room) lives in the `Turn` for that riddle, so it can't outlive the riddle or show on
-/// another screen.
+/// Draw & guess: one partner draws a word, the other builds it from tiles; one open riddle each.
+/// The socket can move a riddle on at any moment, so this phone's work on a riddle lives in its
+/// `Turn` and can't outlive it.
 public enum DrawGuessMachine: Machine {
 
   /// Why the room didn't take a request.

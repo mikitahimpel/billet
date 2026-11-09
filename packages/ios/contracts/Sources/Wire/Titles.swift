@@ -1,5 +1,5 @@
-/// A film or a show as search shows it. `runtime` is minutes, for a film; `seasons` for a show;
-/// `rating` is TMDB's audience score, 0 to 10.
+/// `runtime` is minutes, for a film; `seasons` for a show; `rating` is TMDB's audience score,
+/// 0 to 10.
 public struct TitleSummary: Codable, Hashable, Sendable {
   public let kind: ListMediaKind
   public let tmdb: Int
@@ -41,7 +41,7 @@ public struct TitleSummary: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/titles/search?q=&lang=`: the best matches first, films and shows only.
+/// Best matches first, films and shows only.
 public struct TitleSearchResponse: Codable, Hashable, Sendable {
   public let results: [TitleSummary]
 
@@ -50,7 +50,6 @@ public struct TitleSearchResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// A streaming service, a shop or a rental, as JustWatch names it.
 public struct WatchProvider: Codable, Hashable, Sendable {
   public let id: Int
   public let name: String
@@ -74,8 +73,8 @@ public struct WatchProvider: Codable, Hashable, Sendable {
   }
 }
 
-/// Where the title can be watched in `country`, from JustWatch through TMDB. `stream` is part of a
-/// subscription; `rentOrBuy` costs extra. `link` is TMDB's page that lists them.
+/// From JustWatch through TMDB. `stream` is part of a subscription; `rentOrBuy` costs extra.
+/// `link` is TMDB's page that lists them.
 public struct WatchOptions: Codable, Hashable, Sendable {
   public let country: String
   public let link: String?
@@ -105,7 +104,6 @@ public struct WatchOptions: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/titles/:kind/:tmdb?country=&lang=`: the card's details.
 public struct TitleDetails: Codable, Hashable, Sendable {
   public let summary: TitleSummary
   public let backdropPath: String?

@@ -1,6 +1,5 @@
 import Foundation
 
-/// A picture a widget can show.
 public enum PictureMode: String, CaseIterable, Sendable {
   case nudge
   case partnerDrawing
@@ -9,7 +8,6 @@ public enum PictureMode: String, CaseIterable, Sendable {
   case daysTogether
   case timeOfDay
 
-  /// The flag that switches this picture on.
   public var feature: WidgetFeature {
     switch self {
     case .nudge: .nudge
@@ -76,7 +74,6 @@ public enum PicturePlan {
   /// What a widget has to show at one moment.
   public enum Choice: Equatable, Sendable {
     case picture(PictureMode)
-    /// Every picture is switched off.
     case allOff
     /// Some are on, but none has anything to show yet.
     case nothingYet

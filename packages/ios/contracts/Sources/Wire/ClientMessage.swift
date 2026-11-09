@@ -1,25 +1,19 @@
-/// A frame this device sends the room.
 public enum ClientMessage: Codable, Hashable, Sendable {
-  /// Reconnect, asking for every note after `lastSeq`, and every cat journal entry after
-  /// `lastCatSeq`. Leaving `lastCatSeq` out sends no cat frames. `activity: true` asks for the
-  /// Inbox's unread count now and whenever it changes. `lastReactionRev` asks for every reaction
-  /// change after it, and each one after; left out, none. `shop: true` asks for the pair's shop
-  /// now and whenever it changes, and `lists: true` the pair's lists. `moods: true` asks for each member's latest check-in now, and
-  /// each new one. `guess: true` asks for `guessProgress` and `guessRevealed` as the pair plays.
-  /// `riddle: true` asks for each open draw-guess riddle now, and `riddleChanged` on every change.
+  /// Each flag or cursor asks for its frames now and on every change; left out, none. Notes come
+  /// after `lastSeq`, cat entries after `lastCatSeq`, reactions after `lastReactionRev`;
+  /// `guess` asks for `guessProgress` and `guessRevealed`.
   case resume(
     lastSeq: Int, lastCatSeq: Int? = nil, activity: Bool? = nil, lastReactionRev: Int? = nil,
     shop: Bool? = nil, lists: Bool? = nil, moods: Bool? = nil, guess: Bool? = nil,
     riddle: Bool? = nil)
-  /// A whole stroke at once, from a client that does not stream.
+  /// From a client that does not stream.
   case stroke(Stroke)
   case presence(PresenceState)
-  /// A stroke starts on the shared canvas; its points follow in `strokePoints`.
+  /// Its points follow in `strokePoints`.
   case strokeBegin(LiveStrokeStart)
-  /// The next points of an open stroke, at most ``LiveStrokeStart/maxPoints``.
+  /// At most ``LiveStrokeStart/maxPoints``.
   case strokePoints(id: Int, points: [Point])
   case strokeEnd(id: Int)
-  /// Wipes the shared canvas for both partners.
   case clear
 
   private enum CodingKeys: String, CodingKey {

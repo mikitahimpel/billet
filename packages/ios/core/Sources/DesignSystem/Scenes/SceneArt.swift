@@ -65,7 +65,6 @@ enum Draw {
     ScenePath.parse(data)
   }
 
-  /// A round-capped line.
   static func line(
     _ data: String,
     _ swatch: Swatch,

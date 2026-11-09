@@ -1,11 +1,8 @@
 import Foundation
 
-/// What kind of cat this one is at heart: picked once when the couple adopts it and never changed.
-/// It sets the cat's nature (the traits experience later moves a little), which activities it
-/// leans to, how lively it moves, how close it comes to a finger and how it answers a touch.
-///
-/// Five types, each a corner of the trait axes bold–shy, energetic–lazy, cuddly–independent,
-/// curious–cautious and vocal–quiet. They differ enough to tell apart within half a minute.
+/// What kind of cat this one is at heart: picked once at adoption and never changed. It sets the
+/// nature, activity leanings, tempo, personal space and the answer to a touch. Five types, each a
+/// corner of the trait axes, different enough to tell apart within half a minute.
 public enum CatTemperament: String, CaseIterable, Codable, Hashable, Sendable {
   /// Cuddly, vocal, easy-going: comes to the camera, rubs, slow-blinks, purrs at a look.
   case cuddler
@@ -28,7 +25,6 @@ public enum CatTemperament: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// One short line for choosing a cat.
   public var line: String {
     switch self {
     case .cuddler: "Always on your lap, purring at a look."
@@ -55,10 +51,9 @@ public enum CatTemperament: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// The type `personality` leans towards most, measured from an even cat along the way each
-  /// type's heart lies. A cat adopted before temperaments existed gets the one that fits the
-  /// traits it already had. Leaning, rather than nearness, keeps the types about equally common:
-  /// the Cuddler's heart lies nearest an even cat and would take nearly half of them.
+  /// The type `personality` leans towards most, measured from an even cat towards each type's
+  /// heart. Leaning, rather than nearness, keeps the types about equally common: the Cuddler's
+  /// heart lies nearest an even cat and would take nearly half of them.
   public static func fitting(_ personality: CatPersonality) -> CatTemperament {
     func lean(_ type: CatTemperament) -> Double {
       var along = 0.0

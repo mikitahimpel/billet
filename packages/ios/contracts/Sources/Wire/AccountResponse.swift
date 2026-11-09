@@ -1,6 +1,5 @@
-/// The caller's account. `linked` is true once it can be recovered with Sign in with Apple.
-/// `partnerLeft` is there while the caller is unpaired because their partner left; only
-/// `GET /v1/account` fills it.
+/// `linked` is true once it can be recovered with Sign in with Apple. `partnerLeft` is set while
+/// unpaired because the partner left; only `GET /v1/account` fills it.
 public struct AccountResponse: Codable, Hashable, Sendable {
   public let userId: UserId
   public let linked: Bool
@@ -13,7 +12,7 @@ public struct AccountResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// The caller's last pair ended because the partner left, at `at` (epoch milliseconds).
+/// `at` is epoch milliseconds.
 public struct PartnerLeft: Codable, Hashable, Sendable {
   public enum Reason: String, Codable, Hashable, Sendable {
     case accountDeleted = "account-deleted"

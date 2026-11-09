@@ -53,10 +53,8 @@ import Wire
     #expect(request.body.map { String(decoding: $0, as: UTF8.self) } == #"{"code":"abc"}"#)
   }
 
-  /// A service whose requests `RecordingProtocol` records, and the token that marks them.
-  ///
   /// The protocol's log is shared by every test in the process, so each test finds its own
-  /// requests by the token in their `Authorization` header instead of resetting the log.
+  /// requests by the token in their `Authorization` header.
   static func recordingService(headers: [String: String] = [:]) throws -> (
     service: HTTPService, token: String
   ) {

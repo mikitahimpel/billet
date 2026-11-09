@@ -3,55 +3,31 @@ import Foundation
 /// Which cat lives in the room. The raw value is what gets stored, so it stays stable. A stored
 /// value that is no longer a case (a removed cat) decodes as the standard choice.
 public enum CatModel: String, CaseIterable, Codable, Hashable, Sendable {
-  /// A soft-matte ginger tabby, the room's own cat, by Idol from a FLUX.2-klein picture of the
-  /// c1B concept. The standard cat, first so the picker lists it at the top.
+  /// The standard cat, first so the picker lists it at the top.
   case marmalade
-  /// A round ginger tabby in the room's style, by Idol from a FLUX.2-klein picture.
   case gingerChonk
-  /// A grey tabby made by Idol from an illustration, used with its author's permission.
+  /// Made from an illustration, used with its author's permission.
   case illustratedTabby
-  /// A ginger tabby sculpted in detail: painted fur, eyelids, whiskers, toes and toe beans.
   case detailed
-  /// The detailed tabby as a kitten: a bigger head, big blue eyes, stubby legs, fluffier fur.
   case detailedKitten
-  /// The detailed tabby long-haired: a mane, britches, a plume tail and lynx tips on the ears.
   case detailedFluffy
-  /// The hero: a stylised, chunky ginger tabby with a big round head, big glossy eyes and plush
-  /// fur, made to read at room size and to move well. In Labs until it wins a side-by-side.
   case hero
-  /// The detailed ginger tabby remade by Idol from one picture of it: a softer, plush-like body with
-  /// the coat baked into one texture, on the shared skeleton with every clip.
   case idolGinger
-  /// Idol's ginger tabby as the Gaussian splat Idol made, skinned to the shared skeleton. Where
-  /// splats can't be drawn (before iOS 27, or on an older GPU) it is the Idol ginger mesh.
+  /// Where splats can't be drawn (before iOS 27, or on an older GPU) it is the Idol ginger mesh.
   case splatGinger
-  /// A black-and-white cow-patched cat in the room's style, by Idol from a FLUX.2-klein picture.
   case mooCat
-  /// A long-haired white cat in the room's style, by Idol from a FLUX.2-klein picture.
   case fluffyWhite
-  /// A blue British shorthair in the room's style, by Idol from a FLUX.2-klein picture.
   case britishGrey
-  /// A grey tabby in the room's style, by Idol from a FLUX.2-klein picture.
   case greyTabby
-  /// A black-and-white tuxedo in the room's style, by Idol from a FLUX.2-klein picture.
   case tuxedoTom
-  /// A tortoiseshell in the room's style, by Idol from a FLUX.2-klein picture.
   case tortie
-  /// A Bengal in the room's style, by Idol from a FLUX.2-klein picture.
   case bengal
-  /// A calico in the room's style, by Idol from a FLUX.2-klein picture.
   case calico
-  /// A ragdoll in the room's style, by Idol from a FLUX.2-klein picture.
   case ragdoll
-  /// A Maine Coon in the room's style, by Idol from a FLUX.2-klein picture.
   case maineCoon
-  /// A black cat in the room's style, by Idol from a FLUX.2-klein picture.
   case voidCat
-  /// A Siamese in the room's style, by Idol from a FLUX.2-klein picture.
   case siamese
-  /// The detailed tabby painted calico, remade by Idol: plush body, baked coat, every clip.
   case idolCalico
-  /// The detailed tabby in its grey-and-white coat, remade by Idol: plush body, baked coat, every clip.
   case idolGreyTabby
 
   public var title: String {
@@ -189,7 +165,6 @@ public enum CatCoat: String, CaseIterable, Codable, Hashable, Sendable {
   }
 }
 
-/// The cat a room shows: a model and the coat it wears.
 public struct CatChoice: Codable, Hashable, Sendable {
   public var model: CatModel
   public var coat: CatCoat

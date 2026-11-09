@@ -22,7 +22,6 @@ public struct ClientInfo: Equatable, Sendable {
     os = "\(platform) \(system.majorVersion).\(system.minorVersion)\(patch)"
   }
 
-  /// This process: the main bundle and the running system.
   public static func current() -> ClientInfo {
     ClientInfo(
       info: Bundle.main.infoDictionary ?? [:],

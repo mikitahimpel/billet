@@ -3,7 +3,7 @@ import Foundation
 /// Which set of furniture fills the styled rooms, so sets can be compared in Labs. The raw value
 /// is what gets stored, so it stays stable across releases.
 public enum RoomFurniture: String, CaseIterable, Codable, Hashable, Sendable {
-  /// The first pieces the rooms were made with: simple blocks.
+  /// Simple blocks.
   case original
   /// Soft and handmade: a quilted daybed under a knitted throw, books in a crate, leafy plants,
   /// polaroids, mugs, a jumper over a chair.
@@ -11,7 +11,6 @@ public enum RoomFurniture: String, CaseIterable, Codable, Hashable, Sendable {
   /// Dark wood and mustard: a record player and speaker, posters, a patterned rug.
   case retroDen
 
-  /// What the rooms show before anyone chooses.
   public static let standard = RoomFurniture.cosyNook
 
   public var title: String {

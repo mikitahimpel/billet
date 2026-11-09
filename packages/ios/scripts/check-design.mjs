@@ -1,9 +1,6 @@
-// Fails when feature code gains a raw `Color(red:` or `.font(.system(size:`, or a corner radius written as a
-// number, outside the design package: colours, type and corners come from `Ink`, the `.ourio*` fonts and `Radius`
-// (docs/design-system.md). Run from anywhere in the repository.
-//
-// Files that already had raw values when a guard was added are listed in its baseline with their counts, and may
-// only shrink. `node check-design.mjs --update` rewrites the baselines after a cleanup.
+// Fails when feature code outside the design package gains a raw `Color(red:`,
+// `.font(.system(size:` or numeric corner radius (docs/design-system.md). Baseline counts may only
+// shrink; `--update` rewrites them after a cleanup. Run from anywhere in the repository.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";

@@ -1,12 +1,10 @@
 import Foundation
 
-/// A wall or the floor of the room.
 public enum RoomSurface: String, Codable, Hashable, Sendable, CaseIterable {
   case wall
   case floor
 }
 
-/// One thing the shop sells.
 public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
   public typealias ID = String
 
@@ -18,7 +16,6 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     /// so the catalog's shelves hold none; ``RoomStyleItem/shopItem`` makes each one.
     case style
 
-    /// The categories the shop and the closet show as shelves.
     public static let shelves: [Category] = [.materials, .furniture, .treats]
   }
 
@@ -28,7 +25,6 @@ public struct ShopItem: Codable, Hashable, Sendable, Identifiable {
     case furniture
     /// Small things for a table top or the seat, and things hung on a wall.
     case decor
-    /// Views through the window.
     case views
     /// Treats, toys, beds and climbing things for the cat.
     case cat

@@ -1,9 +1,7 @@
-/// The start of a stroke drawn live on the shared canvas: its id and its ink.
-///
 /// `id` names the stroke among its sender's open strokes. Decoding enforces the contract's colour
 /// pattern; building one in code does not.
 public struct LiveStrokeStart: Codable, Hashable, Sendable {
-  /// The most points one `strokePoints` frame may carry, as the contract's `maxLivePoints`.
+  /// The contract's `maxLivePoints`.
   public static let maxPoints = 64
 
   public let id: Int
@@ -33,7 +31,7 @@ public struct LiveStrokeStart: Codable, Hashable, Sendable {
     width = try container.decode(Double.self, forKey: .width)
   }
 
-  /// Decodes a points batch, refusing an empty one or one over ``maxPoints``.
+  /// Refuses an empty batch or one over ``maxPoints``.
   static func decodePoints<Key: CodingKey>(
     _ container: KeyedDecodingContainer<Key>, forKey key: Key
   ) throws -> [Point] {

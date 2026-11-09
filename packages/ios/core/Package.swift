@@ -1,7 +1,6 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Shared building blocks over the contracts: networking, storage, delivery, ink and the design system.
 let library: [(name: String, dependencies: [Target.Dependency])] = [
   ("BilletKit", []),
   ("DesignSystem", []),

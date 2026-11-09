@@ -7,13 +7,12 @@ public struct ShopClient: Sendable {
   public var fetch: @Sendable () async throws(TransportError) -> ShopResponse
   public var order: @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse
   public var wish: @Sendable (WishRequest) async throws(TransportError) -> ShopResponse
-  /// The inks on sale.
   public var inks: @Sendable () async throws(TransportError) -> InksResponse
   public var openGift: @Sendable (OpenGiftRequest) async throws(TransportError) -> OpenGiftResponse
   public var claimBonus:
     @Sendable (ClaimBonusRequest) async throws(TransportError) -> ClaimBonusResponse
   public var earn: @Sendable (EarnRequest) async throws(TransportError) -> EarnResponse
-  /// The balance and the wallet's entries after an entry id (from the first with nil), oldest first.
+  /// The balance and the wallet's entries after an entry id (nil: from the first), oldest first.
   public var coins: @Sendable (_ after: String?) async throws(TransportError) -> CoinsResponse
 
   public init(

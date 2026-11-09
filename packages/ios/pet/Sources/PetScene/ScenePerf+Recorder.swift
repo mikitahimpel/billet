@@ -77,8 +77,8 @@ extension ScenePerf {
       let seconds = max(Self.now() - phaseStart, 0.001)
       let cpuPerSecond = (Self.processCPU() - processCPUAtStart) / seconds
       let fps = intervals.isEmpty ? 0 : 1000 * Double(intervals.count) / intervals.reduce(0, +)
-      // A slow frame the main thread spent busy is our own work; one it spent idle waited on the
-      // renderer or on the rest of the machine.
+      // A slow frame the main thread spent busy is the app's own work; one it spent idle waited
+      // on the renderer or on the rest of the machine.
       let slowLength = slow.reduce(0) { $0 + $1.length }
       let slowBusy = slow.reduce(0) { $0 + $1.busy }
       return
@@ -109,7 +109,7 @@ extension ScenePerf {
           let length = (now - lastFrame) * 1000
           intervals.append(length)
           if length > Self.slowFrame { slow.append((length, cpu - lastFrameCPU)) }
-          // A frame of half a second or more, where in the phase it fell and how much of it the main thread worked.
+          // Frames of 0.5 s or more: when in the phase, and how much the main thread worked.
           if length > 500 {
             ScenePerf.emit(
               "frame long ms=\(ScenePerf.format(length)) at=\(frame)"

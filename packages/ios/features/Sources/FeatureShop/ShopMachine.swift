@@ -3,13 +3,9 @@ import Foundation
 import ShopInterface
 import Wire
 
-/// The pair's shop as the server keeps it, and the buys it hasn't heard of yet.
-///
-/// Only the server changes coins. Every buy, treat, gift, bonus and earn is a request to it, and
-/// the balance shown is the one in its last answer, less the buys it hasn't been sent yet. A buy
-/// shows at once and waits out its Undo window on the phone; only then is it ordered, under one id
-/// for every retry. One the server refuses, or that never reaches it, is taken back and the room
-/// read again.
+/// Only the server changes coins; the balance is its last answer less buys not yet sent. A buy
+/// shows at once, waits out its Undo window, then is ordered under one id for every retry. One
+/// refused or never delivered is taken back and the room read again.
 public enum ShopMachine: Machine {
   public static let treatPrice = 10
 

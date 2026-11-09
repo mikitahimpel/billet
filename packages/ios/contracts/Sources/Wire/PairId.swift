@@ -1,4 +1,4 @@
-/// Wire form of the contracts `PairId`: a non-empty string.
+/// Non-empty.
 public struct PairId: Codable, Hashable, Sendable {
   public let rawValue: String
 

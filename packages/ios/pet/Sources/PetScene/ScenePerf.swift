@@ -6,22 +6,10 @@ import Pet
   import UIKit
 #endif
 
-/// A measuring run of the scenes, switched on by a launch argument and silent otherwise.
-///
-/// `-perf.script launch` measures a cold launch and the idle room, then quits. `-perf.script full`
-/// also orbits, zooms, switches lighting and tabs, scrolls the Shop and the Moments feed, opens
-/// each cover over the room, then idles and orbits again once settled, and
-/// last switches the cat through four models and back, as `-perf.script cats` does alone.
-/// `-perf.script steady` leaves Home alone for 20 seconds and then records it for a minute, untouched:
-/// what a phone lying on a table with the app open spends. `-perf.script sweep` holds each camera pose and lighting preset still and asks for a screenshot
-/// of it. `-perf.script views` shows each window view from the room's own camera and asks for a
-/// screenshot of each. `-perf.script cost` orbits and holds the room
-/// with everything, then with each of its switches off, in pairs, to show what each part costs to
-/// draw; `-perf.switches a,b` keeps it to those switches. Every result is one line on standard error that starts with `PERF`, read by
-/// `apps/ios/scripts/perf/measure.sh`.
+/// A measuring run of the scenes, set by `-perf.script <name>` and silent otherwise. Each result
+/// is one line on standard error starting with `PERF`, read by `apps/ios/scripts/perf/measure.sh`.
 @MainActor
 public enum ScenePerf {
-  /// The script to run, or `nil` when the app runs as usual.
   public nonisolated static let script: String? = UserDefaults.standard.string(
     forKey: "perf.script")
   public nonisolated static var isOn: Bool { script != nil }
@@ -30,7 +18,6 @@ public enum ScenePerf {
     forKey: "perf.switches"
   ).map { Set($0.split(separator: ",").map(String.init)) }
 
-  /// What the shown room or tab scene lets a run do with it.
   public struct Scene {
     public var name: String
     public var orbit: @MainActor (_ deltaX: Float, _ deltaY: Float) -> Void
@@ -61,19 +48,17 @@ public enum ScenePerf {
     }
   }
 
-  /// What the app's shell lets a run change.
   public struct Host {
     public var selectTab: @MainActor (String) -> Void = { _ in }
     public var setLighting: @MainActor (RoomLighting) -> Void = { _ in }
     public var setWindowView: @MainActor (WindowViewChoice) -> Void = { _ in }
-    /// The cat model shown now, and how to show another.
     public var cat: @MainActor () -> CatModel = { CatChoice.standard.model }
     public var setCat: @MainActor (CatModel) -> Void = { _ in }
     /// The lighting presets a run steps through; empty for an app whose rooms have none.
     public var lightings: [RoomLighting] = RoomLighting.allCases
     /// The cat models a `cats` step shows; empty for an app with one cat.
     public var cats: [CatModel] = ScenePerf.catModels
-    /// The first part of every screenshot's name, so the shots of two rooms never overwrite each other.
+    /// Prefix of every screenshot's name, so the shots of two rooms never overwrite each other.
     public var shotPrefix = "windowSeat"
     /// Scrolls the tab on screen to `y` points from its top; a `full` run scrolls the Shop with it. An
     /// app that cannot leaves it doing nothing, and the run records a Shop held still.
@@ -81,7 +66,6 @@ public enum ScenePerf {
     /// Screens that cover the room whole, such as a full-screen canvas; a `full` run opens each and
     /// records the frames under it.
     public var covers: [String] = []
-    /// Shows the named cover, or none for `nil`.
     public var setCover: @MainActor (_ name: String?) -> Void = { _ in }
     public init() {}
   }
@@ -102,7 +86,6 @@ public enum ScenePerf {
     Task { await run(script) }
   }
 
-  /// A moment of a run, such as a room drawing its first frame.
   public static func mark(_ name: String) {
     guard let recorder else { return }
     let at = recorder.sinceLaunch

@@ -1,4 +1,4 @@
-/// Wire form of the contracts `InkId`: one ink colour, `ink-` and a kebab-case word.
+/// `ink-` and a kebab-case word.
 public struct InkId: Codable, Hashable, Sendable {
   public let rawValue: String
 

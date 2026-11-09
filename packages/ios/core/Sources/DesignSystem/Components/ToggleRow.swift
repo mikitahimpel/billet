@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// A list row with a switch at its trailing edge.
 public struct ToggleRow: View {
   private let title: String
   private let subtitle: String?

@@ -1,13 +1,6 @@
-/// Decides when to draw each of the partner's live frames (#326).
-///
-/// The relay sometimes delivers several frames at once after a pause. Drawn as they arrive, the
-/// stroke stalls and then jumps. A clump is instead replayed at the pace the room relayed it
-/// (`StrokePoints.relayedAt`), a little faster than real time so the lag it adds drains away.
-/// A steady stream passes straight through. No frame is ever held more than ``maxLag`` past its
-/// arrival.
-///
-/// Frames keep their order: one without `relayedAt` (a begin, an end, a clear, or any frame
-/// from an older room) waits for the frames before it.
+/// When to draw each of the partner's live frames (#326). A clump the relay delivers at once is
+/// replayed at its `relayedAt` pace, a little faster than real time, never over ``maxLag`` late.
+/// Order holds: a frame without `relayedAt` waits for the frames before it.
 public struct LivePacer: Equatable, Sendable {
   /// The most a frame is held past its arrival, in seconds.
   public static let maxLag = 0.2

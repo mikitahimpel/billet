@@ -1,8 +1,6 @@
 import Foundation
 import Wire
 
-/// The purchase routes: credit a StoreKit transaction, credit or refund a mock one (dev server
-/// only), and read the pair's stamp ledger. Tests pass fakes.
 public struct PurchasesClient: Sendable {
   /// Who the caller is on these routes: a signed-in session, or (dev server only) a demo room.
   public enum Caller: Sendable {

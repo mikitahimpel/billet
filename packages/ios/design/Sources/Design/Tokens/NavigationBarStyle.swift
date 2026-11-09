@@ -2,10 +2,9 @@
   import SwiftUI
   import UIKit
 
-  /// SF Rounded navigation titles in `Ink.text`, for every navigation bar in the app. Only the title text
-  /// changes; the bars keep the system's own backgrounds (glass on iOS 26).
+  /// Only the title text changes; the bars keep the system's own backgrounds.
   public enum NavigationBarStyle {
-    /// The two title fonts, about 20 ms to make on a cold launch.
+    /// About 20 ms to make on a cold launch.
     public struct Fonts: Sendable {
       public let large: UIFont
       public let inline: UIFont
@@ -18,8 +17,8 @@
 
     @MainActor private static var applied = false
 
-    /// Once, at launch: makes the fonts off the main thread and sets them when they are ready. No bar is on the
-    /// first screen; the first comes with a sheet, which calls `apply()` in case it opens before they are.
+    /// Once, at launch, off the main thread. The first bar comes with a sheet, which calls
+    /// `apply()` in case it opens before the fonts are ready.
     @MainActor public static func prepare() {
       Task.detached(priority: .userInitiated) {
         let fonts = Fonts()
@@ -27,8 +26,7 @@
       }
     }
 
-    /// Sets the fonts now if they are not set yet. Call before a navigation bar is made: a bar takes the
-    /// appearance it finds then.
+    /// Call before a navigation bar is made: a bar takes the appearance it finds then.
     @MainActor public static func apply() {
       if !applied { apply(Fonts()) }
     }
@@ -42,7 +40,6 @@
       bar.titleTextAttributes = [.font: fonts.inline, .foregroundColor: text]
     }
 
-    /// SF Rounded at the text style's default size, scaled by Dynamic Type.
     nonisolated static func rounded(size: CGFloat, weight: UIFont.Weight, style: UIFont.TextStyle)
       -> UIFont
     {

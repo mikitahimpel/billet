@@ -9,7 +9,6 @@ public enum CatBase: String, Codable, Hashable, Sendable {
   case loaf
 }
 
-/// What one model's clip is like, read from its clip table.
 public struct CatClipInfo: Hashable, Sendable {
   public var duration: Double
   public var loops: Bool
@@ -28,7 +27,6 @@ public struct CatClipInfo: Hashable, Sendable {
   }
 }
 
-/// Something the people did to the cat.
 public enum CatReaction: Hashable, Sendable {
   /// A stroke on the head or back: eyes close and it purrs.
   case pet
@@ -42,7 +40,6 @@ public enum CatReaction: Hashable, Sendable {
   case bat
 }
 
-/// What the room should show now.
 public struct CatBeat: Hashable, Sendable {
   public var action: CatAction
   /// How much the head may turn to look at the viewer, from 0 to 1.
@@ -54,10 +51,9 @@ public struct CatBeat: Hashable, Sendable {
   }
 }
 
-/// Chooses the cat's clips over time so it seems to live on its own: it naps, wakes for a while,
-/// yawns, grooms, looks at you, kneads and settles again. Weighted picks with cooldowns keep it
-/// from repeating, and reactions to touch cut in. Pure and deterministic for a given seed; the
-/// room calls `beat(at:mode:)` each frame, which costs a few comparisons unless the beat changes.
+/// Chooses the cat's clips over time so it seems to live on its own. Weighted picks with
+/// cooldowns keep it from repeating; reactions to touch cut in. Deterministic per seed, and
+/// `beat(at:mode:)` is cheap enough to call every frame.
 public struct CatBehaviour: Sendable {
   /// How much say the room gives the cat.
   public enum Mode: Hashable, Sendable {
@@ -152,7 +148,6 @@ public struct CatBehaviour: Sendable {
     asleepUntil == nil && (awakeUntil.map { now < $0 } ?? false)
   }
 
-  /// Whether this model has a clip for `action`.
   public func has(_ action: CatAction) -> Bool { clips[action] != nil }
 
   /// `action`, or the first stand-in this model has, or its resting loop.

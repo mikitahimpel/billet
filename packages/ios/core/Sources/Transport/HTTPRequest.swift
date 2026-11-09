@@ -25,7 +25,6 @@ public struct HTTPRequest: Equatable, Sendable {
     self.body = body
   }
 
-  /// A request whose body is `body` encoded as JSON.
   public static func json<Body: Encodable>(
     _ method: HTTPMethod, path: String, body: Body, headers: [String: String] = [:]
   ) throws(TransportError) -> HTTPRequest {

@@ -1,10 +1,9 @@
-/// Wire form of the contracts `CoinEntryKind`: where a wallet entry came from.
 public enum CoinEntryKind: String, Codable, Hashable, Sendable {
   case earn, buy, spend, refund, gift, bonus
 }
 
-/// Wire form of the contracts `CoinEntry`: one line of the pair's wallet. `amount` is signed, so a
-/// spend is negative. `id` is `<kind>:<source>`; `ref` names the cat entry, item or transaction.
+/// `amount` is signed, so a spend is negative. `id` is `<kind>:<source>`; `ref` names the cat
+/// entry, item or transaction.
 public struct CoinEntry: Codable, Hashable, Sendable {
   public let id: String
   public let kind: CoinEntryKind
@@ -21,8 +20,8 @@ public struct CoinEntry: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/coins`: the pair's balance and its wallet entries after `after`, oldest first. Coins
-/// are earned on the server from the cat journal, within daily caps; the app never adds any.
+/// Entries after `after`, oldest first. Coins are earned on the server from the cat journal,
+/// within daily caps; the app never adds any.
 public struct CoinsResponse: Codable, Hashable, Sendable {
   public let balance: Int
   public let entries: [CoinEntry]
@@ -33,12 +32,11 @@ public struct CoinsResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/shop/buy`: one item at its catalog price. Repeat `id` on every retry of the same buy.
+/// Repeat `id` on every retry of the same buy.
 public struct BuyRequest: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let item: InkId
-  /// The price the buyer saw. A server price above it is refused with `priceChanged`; a lower one
-  /// is charged.
+  /// A server price above it is refused with `priceChanged`; a lower one is charged.
   public let expectedPrice: Int?
 
   public init(id: IdempotencyKey, item: InkId, expectedPrice: Int? = nil) {
@@ -48,7 +46,6 @@ public struct BuyRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The spend, the balance after it, what it granted, and every ink the pair now owns.
 public struct BuyResponse: Codable, Hashable, Sendable {
   public let entry: CoinEntry
   public let balance: Int
@@ -63,14 +60,13 @@ public struct BuyResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// Something the couple did in the app that earns coins, once per ref.
+/// Earns once per ref.
 public enum EarnEvent: Codable, Hashable, Sendable {
   case wishReceived(wish: String)
   case dateMatched(idea: String)
-  /// A right guess in Who knows who, on `question` of the round of `round` (`YYYY-MM-DD`). The
-  /// room pays it at the reveal; the server refuses it from the app.
+  /// `round` is `YYYY-MM-DD`. The room pays it at the reveal; the server refuses it from the app.
   case guessHit(round: String, question: Int)
-  /// Both partners finished the round of `round`. Paid by the room, like a hit.
+  /// Paid by the room, like a hit.
   case roundPlayed(round: String)
   case dateRated(plan: String)
   case listTicked(item: String)
@@ -145,8 +141,7 @@ public enum EarnEvent: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/coins/earn`: pays an earn within its daily cap. The same event again answers with the
-/// first entry.
+/// Paid within its daily cap. The same event again answers with the first entry.
 public struct EarnRequest: Codable, Hashable, Sendable {
   public let event: EarnEvent
   public let utcOffsetSeconds: Int?
@@ -168,7 +163,7 @@ public struct EarnRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The balance, and the entry: `nil` when the day's cap was already met.
+/// `entry` is `nil` when the day's cap was already met.
 public struct EarnResponse: Codable, Hashable, Sendable {
   public let balance: Int
   public let entry: CoinEntry?

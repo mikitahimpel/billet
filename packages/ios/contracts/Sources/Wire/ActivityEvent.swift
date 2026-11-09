@@ -1,5 +1,5 @@
-/// What happened, for one Inbox item. The phone writes the line in its own language from the kind
-/// and these few values, and localises shop items, collections, games and plants by id.
+/// The phone writes the line in its own language from the kind and these values, and localises
+/// shop items, collections, games and plants by id.
 public enum ActivityEvent: Codable, Hashable, Sendable {
   case catFed(grams: Int)
   case catPetted
@@ -12,13 +12,10 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
   case plantWatered(plant: String?)
   case catAdopted(name: String)
   case catRenamed(name: String)
-  /// The partner claimed the invite: the pair formed.
   case partnerJoined
   /// `kind` is the note's `_tag`: `Drawing`, `Photo` or `Text`.
   case noteSent(note: NoteId, kind: String)
-  /// The partner reacted to a photo.
   case reacted(note: NoteId, reaction: PhotoReaction)
-  /// A partner checked in with how they feel.
   case moodShared(mood: CheckInMood)
   /// `offer` is set when the buy was a bundle or a deal; `items` is never empty.
   case purchased(offer: String?, items: [String], coins: Int)

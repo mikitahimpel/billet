@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// What a partner can send back to a note. The raw value is the room's name for it.
+/// The raw value is the room's name for it.
 public enum Reaction: String, CaseIterable, Codable, Hashable, Sendable {
   case heart
   case stamp
@@ -27,7 +27,7 @@ public enum Reaction: String, CaseIterable, Codable, Hashable, Sendable {
   }
 }
 
-/// The reactions to choose from. The one already sent stays selected.
+/// The one already sent stays selected.
 public struct ReactionBar: View {
   private let chosen: Reaction?
   private let onReact: (Reaction) -> Void

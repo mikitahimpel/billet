@@ -1,4 +1,4 @@
-/// Wire form of the contracts `PushToken`: hex, as APNs issues it.
+/// Hex, as APNs issues it.
 public struct PushToken: Codable, Hashable, Sendable {
   public let rawValue: String
 

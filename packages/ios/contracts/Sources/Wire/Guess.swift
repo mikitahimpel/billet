@@ -1,11 +1,9 @@
-/// What a Who knows who question is about.
 public enum GuessTag: String, Codable, Hashable, Sendable, CaseIterable {
   case food, habits, past, music, money, us, dreams, quirks
 }
 
-/// One question of the Who knows who catalog. `guess` is what the guesser reads, with `{name}` for
-/// the subject's name; `selfText` (`self` on the wire) is the same question as the subject reads
-/// it. `options` are always four, picked by index.
+/// `guess` is what the guesser reads, with `{name}` for the subject; `selfText` (`self` on the
+/// wire) is the question as the subject reads it. `options` are always four, picked by index.
 public struct GuessQuestion: Codable, Hashable, Sendable {
   public let id: Int
   public let guess: String
@@ -27,8 +25,7 @@ public struct GuessQuestion: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/guess/catalog`: every question. `version` changes with the questions and is the
-/// response's ETag.
+/// `version` changes with the questions and is the response's ETag.
 public struct GuessCatalogResponse: Codable, Hashable, Sendable {
   public let version: String
   public let questions: [GuessQuestion]
@@ -39,9 +36,8 @@ public struct GuessCatalogResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// The pair's round of one room day: `id` is that day, `YYYY-MM-DD`. `subject` answers about
-/// themselves and the other member guesses. `closesAt` (epoch milliseconds) is when the day ends;
-/// a round not finished by then is never scored.
+/// `id` is the room day, `YYYY-MM-DD`. `subject` answers about themselves, the other guesses.
+/// A round not finished by `closesAt` (epoch milliseconds) is never scored.
 public struct GuessRound: Codable, Hashable, Sendable {
   public let id: String
   public let subject: UserId
@@ -56,7 +52,7 @@ public struct GuessRound: Codable, Hashable, Sendable {
   }
 }
 
-/// One locked answer: the subject's truth, or the guesser's guess. `option` is 0 to 3.
+/// The subject's truth, or the guesser's guess. `option` is 0 to 3.
 public struct GuessAnswer: Codable, Hashable, Sendable {
   public let question: Int
   public let option: Int
@@ -67,7 +63,6 @@ public struct GuessAnswer: Codable, Hashable, Sendable {
   }
 }
 
-/// One question opened after both members answered the whole round.
 public struct GuessReveal: Codable, Hashable, Sendable {
   public let question: Int
   public let truth: Int
@@ -82,7 +77,7 @@ public struct GuessReveal: Codable, Hashable, Sendable {
   }
 }
 
-/// Points of this user and of the partner. A point is a hit while guessing.
+/// A point is a hit while guessing.
 public struct GuessTally: Codable, Hashable, Sendable {
   public let mine: Int
   public let partner: Int
@@ -112,9 +107,8 @@ public struct GuessScore: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/guess`, and the answer to an answer: today's round as this user sees it. `answers`
-/// are this user's own; the partner's stay hidden, counted in `partnerAnswered`, until both have
-/// answered every question. Then `reveal` holds each question in round order.
+/// The partner's answers stay hidden, counted in `partnerAnswered`, until both have answered
+/// every question; then `reveal` holds each question in round order.
 public struct GuessResponse: Codable, Hashable, Sendable {
   public let round: GuessRound
   public let answers: [GuessAnswer]
@@ -147,8 +141,7 @@ public struct GuessResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/guess/answers`: one answer to a question of today's round. It locks: the same
-/// option again changes nothing, another one is `.api(.invalidRequest)` with status 409.
+/// Locks: the same option again changes nothing, another one is 409.
 public struct GuessAnswerRequest: Codable, Hashable, Sendable {
   public let round: String
   public let question: Int

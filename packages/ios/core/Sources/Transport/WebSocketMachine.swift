@@ -1,25 +1,9 @@
 import BilletKit
 import Wire
 
-/// The connection to the pair's room as an explicit state machine.
-///
-/// `Store` neither correlates a result with its output nor cancels work, so this machine does both
-/// itself. Every connection attempt has an `attempt` number, and every event from a socket or timer
-/// carries the number it belongs to. An event whose number is not the current one is stale and
-/// changes nothing; a stale `opened` closes its socket so none is left open.
-///
-/// A connect that never answers cannot wedge the machine: entering `connecting` starts a timeout
-/// that moves it to `backingOff` and closes the attempt, and the late result, if any, is stale.
-///
-/// A server that accepts a connection and then drops it at once must not be retried every second
-/// for ever. `failures` therefore survives an opening and is only cleared once the connection has
-/// stayed up for ``stableAfter``, reported by the `stable` event.
-///
-/// `lastSeq` is the highest `seq` seen from the server. It survives drops, so a reconnect sends
-/// `Resume(lastSeq:)`; the first connection resumes from zero. The `open` output carries it, and
-/// the runner queues the `Resume` as soon as the socket is up, so it goes before anything the
-/// caller sends. `lastSeq` cannot change while connecting, as messages only arrive once connected. `failures` counts consecutive failed attempts and sets the
-/// back-off delay.
+/// Every event carries its `attempt`; one that is not current is stale and changes nothing, and a
+/// stale `opened` closes its socket. `failures` survives an opening until ``stableAfter``, so a
+/// server that drops at once is not retried every second. Every connect resumes from `lastSeq`.
 public enum WebSocketMachine: Machine {
   public struct State: Equatable, Sendable {
     public enum Phase: Equatable, Sendable {
@@ -31,7 +15,7 @@ public enum WebSocketMachine: Machine {
 
     public var phase: Phase
     public var lastSeq: Int?
-    /// The number of the most recent attempt. Zero before the first.
+    /// Zero before the first attempt.
     public var attempt: Int
 
     public init(phase: Phase, lastSeq: Int?, attempt: Int) {
@@ -51,7 +35,6 @@ public enum WebSocketMachine: Machine {
     case connectRequested
     case disconnectRequested
     case sendRequested(ClientMessage)
-    /// The socket of this attempt finished its handshake.
     case opened(attempt: Int)
     /// The attempt's socket failed or closed, or opening it failed.
     case dropped(attempt: Int)
@@ -61,7 +44,7 @@ public enum WebSocketMachine: Machine {
     /// The attempt's connection has stayed up for ``WebSocketMachine/stableAfter``.
     case stable(attempt: Int)
 
-    /// The attempt this event reports on, or `nil` for a request from the caller.
+    /// `nil` for a request from the caller.
     var attempt: Int? {
       switch self {
       case .connectRequested, .disconnectRequested, .sendRequested:

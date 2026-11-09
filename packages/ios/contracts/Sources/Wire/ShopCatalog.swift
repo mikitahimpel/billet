@@ -1,7 +1,7 @@
 import Foundation
 
-/// What draws a shop item: a model or image the app bundles under `id`, or a picture the admin
-/// uploaded, served at `/v1/shop/art/<key>`.
+/// A model or image the app bundles under `id`, or an admin upload served at
+/// `/v1/shop/art/<key>`.
 public enum ShopAsset: Codable, Hashable, Sendable {
   case bundled(id: String)
   case picture(key: String)
@@ -37,7 +37,7 @@ public enum ShopAsset: Codable, Hashable, Sendable {
   }
 }
 
-/// A price that holds from `from` up to, not including, `until` (epoch milliseconds).
+/// Holds from `from` up to, not including, `until` (epoch milliseconds).
 public struct ShopSale: Codable, Hashable, Sendable {
   public let price: Int
   public let from: Int
@@ -50,8 +50,7 @@ public struct ShopSale: Codable, Hashable, Sendable {
   }
 }
 
-/// An item's place in the daily-deals draw: `discount` 0.25 is 25% off, `order` its place in the
-/// pool the draw takes from.
+/// `discount` 0.25 is 25% off; `order` is its place in the pool the daily-deals draw takes from.
 public struct ShopDeal: Codable, Hashable, Sendable {
   public let discount: Double
   public let order: Int
@@ -62,8 +61,8 @@ public struct ShopDeal: Codable, Hashable, Sendable {
   }
 }
 
-/// Wire form of the contracts `ShopCatalogItem`. `kind` and `section` are open strings: an app skips
-/// a kind it does not know. `name` and `blurb` may hold `{cat}`.
+/// `kind` and `section` are open strings: an app skips a kind it does not know. `name` and
+/// `blurb` may hold `{cat}`.
 public struct ShopCatalogItem: Codable, Hashable, Sendable {
   public enum Rarity: String, Codable, Hashable, Sendable, CaseIterable {
     case common, rare, epic, legendary
@@ -131,7 +130,7 @@ public struct ShopCatalogItem: Codable, Hashable, Sendable {
     minBuild = try container.decodeOptionalKey(Int.self, forKey: .minBuild)
   }
 
-  /// What the item costs at `date`: its sale price inside the sale's window, else its price.
+  /// The sale price inside the sale's window, else the price.
   public func effectivePrice(at date: Date) -> Int {
     let millis = Int(date.timeIntervalSince1970 * 1000)
     guard let sale, millis >= sale.from, millis < sale.until else { return price }
@@ -139,8 +138,8 @@ public struct ShopCatalogItem: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/shop/catalog`: the active items, in shelf order. `version` is the response's ETag. An
-/// item that does not decode (a rarity this app does not know) is left out, not an error.
+/// Active items in shelf order; `version` is the ETag. An item that does not decode (an unknown
+/// rarity) is left out, not an error.
 public struct ShopCatalogResponse: Codable, Hashable, Sendable {
   public let version: String
   public let items: [ShopCatalogItem]

@@ -17,8 +17,7 @@ struct GreetingDependencies: Sendable {
   var activity: ActivityService
 }
 
-/// The composition root: the only place that names live services. Tests build
-/// ``GreetingDependencies`` from fakes instead.
+/// The only place that names live services.
 enum Live {
   static func greetingDependencies() -> GreetingDependencies {
     let logger = Logger(subsystem: "com.mikitahimpel.billet", category: "greeting")

@@ -1,4 +1,4 @@
-/// Wire form of the contracts `NoteId`: a non-empty string.
+/// Non-empty.
 public struct NoteId: Codable, Hashable, Sendable {
   public let rawValue: String
 

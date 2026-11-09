@@ -4,12 +4,9 @@ import Persistence
 import Transport
 import Wire
 
-/// From launch to a saved session with no question asked: read the account key from the iCloud
-/// Keychain (making it the first time), trade it for a session and save the session.
-///
-/// The same key on a new phone returns to the same account, so there is nothing to choose. The
-/// only way to stop here is the network: `failed` waits for a retry. `request` counts the backend
-/// calls so a late answer changes nothing.
+/// From launch to a saved session with no question asked: read (or make) the iCloud Keychain
+/// account key and trade it for a session. Only the network stops it: `failed` waits for a retry.
+/// `request` counts the backend calls so a late answer changes nothing.
 public enum AnonymousSignInMachine: Machine {
   public enum State: Equatable, Sendable {
     case idle
@@ -73,8 +70,8 @@ extension AnonymousSignInMachine {
       } catch {
         return .failed(SignInFailure(error), request: request)
       }
-      // Each launch signs in again; the same account keeps the pair this phone saved for it. A record
-      // that cannot be read is not replaced, or a passing read failure would forget the pair.
+      // Each launch signs in again. An unreadable record is not replaced, or a passing read
+      // failure would forget the pair this phone saved.
       let saved: AccountRecord?
       do {
         saved = try accounts.load()?.record

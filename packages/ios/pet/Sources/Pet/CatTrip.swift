@@ -1,11 +1,9 @@
 import Foundation
 import simd
 
-/// A short trip away from the cat's place and back: walks across its floor and moves held in
-/// between, as a pure function of time, so a room only has to put the cat where it says.
-///
-/// Positions are on the floor plane, as (x, z) in the room's metres. A heading is a yaw in
-/// radians, with 0 facing -z, the way the cats are made.
+/// A short trip from the cat's place and back, as a pure function of time. Positions are on the
+/// floor plane as (x, z) in the room's metres; a heading is a yaw in radians, 0 facing -z, the
+/// way the cats are made.
 public struct CatTrip: Sendable {
   public enum Leg: Sendable {
     /// Walks (or runs, at a higher speed) in a straight line to `to`, in metres per second.
@@ -119,7 +117,6 @@ public struct CatTrip: Sendable {
       progress: progress, isDone: now >= endsAt)
   }
 
-  /// The heading that faces from `a` to `b`.
   public static func heading(from a: SIMD2<Float>, to b: SIMD2<Float>) -> Float {
     let offset = b - a
     return atan2(-offset.x, -offset.y)

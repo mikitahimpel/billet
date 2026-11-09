@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// The ground every screen stands on. Ember dusk is the app's own; the others are a Labs switch.
-/// Each keeps its middle dark enough that panels (`Palette.raised`) still lift off it and text in
-/// `paper`, `paperTurned` and `muted` clears AA at its top, middle and foot (see
-/// `ContrastTests`).
+/// Ember dusk is the app's own; the others are a Labs switch. Each keeps `paper`, `paperTurned`
+/// and `muted` text at AA on its top, middle and foot (`ContrastTests`).
 public enum EveningGround: String, CaseIterable, Codable, Hashable, Sendable {
   /// Deep plum falling to an ember glow, with sparks rising off it.
   case ember
@@ -11,7 +9,7 @@ public enum EveningGround: String, CaseIterable, Codable, Hashable, Sendable {
   case rose
   /// Warm cocoa with soft out-of-focus lights drifting in it.
   case cocoa
-  /// The first ground: evening green to green-black with gold sparkles.
+  /// Evening green to green-black with gold sparkles.
   case meadow
 
   public static let standard = EveningGround.ember
@@ -34,7 +32,6 @@ public enum EveningGround: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// The sky at the top of the screen.
   public var top: Swatch {
     switch self {
     case .ember: Swatch(0x2E1838)
@@ -54,7 +51,6 @@ public enum EveningGround: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// The foot of the screen.
   public var foot: Swatch {
     switch self {
     case .ember: Swatch(0x4A1C1A)
@@ -76,6 +72,6 @@ public enum EveningGround: String, CaseIterable, Codable, Hashable, Sendable {
 }
 
 extension EnvironmentValues {
-  /// Which ground `EveningBackground` paints. The app sets it from Labs.
+  /// The app sets it from Labs.
   @Entry public var eveningGround: EveningGround = .standard
 }

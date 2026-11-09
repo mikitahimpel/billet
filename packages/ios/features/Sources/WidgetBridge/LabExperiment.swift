@@ -1,11 +1,8 @@
 import Foundation
 
-/// One experiment the owner can switch on or off in Settings. The raw value is the key it is
-/// stored under, beside the widget features.
-///
-/// An experiment that cannot get in the way of drawing, sending and reading notes starts on. The
-/// ones that stand in for the partner, or change what the cat does, start off. What the cat does
-/// is not an experiment: its needs, its brain and its moments are always on.
+/// One experiment the owner switches in Settings; the raw value is its key beside the widget
+/// features. One that can't get in the way of notes starts on; ones that stand in for the partner
+/// or change what the cat does start off.
 public enum LabExperiment: String, CaseIterable, Codable, Sendable, FeatureFlag {
   case fakePartner
   case todaysWord

@@ -2,10 +2,8 @@ import Foundation
 import Persistence
 import Pet
 
-/// What the app last knew about the pair, written for surfaces that cannot ask the room.
-///
-/// It is only a picture of a moment: read it through ``current(now:calendar:)``, which drops what a
-/// later day has made untrue.
+/// What the app last knew about the pair, for surfaces that cannot ask the room. Read it through
+/// ``current(now:calendar:)``, which drops what a later day has made untrue.
 public struct WidgetSnapshot: Codable, Equatable, Sendable {
   public enum Treat: String, Codable, Sendable {
     case neither

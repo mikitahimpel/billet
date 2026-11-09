@@ -1,4 +1,4 @@
-/// Compact vector rendition that travels inside a push.
+/// Travels inside a push.
 public struct CompactStrokes: Codable, Hashable, Sendable {
   public let strokes: [CompactStroke]
 

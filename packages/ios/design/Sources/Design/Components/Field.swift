@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// The app's one text field: a raised fill in the shape of the buttons, so a field and the button under it read
-/// as one family. One line is a capsule; a vertical field grows and keeps the round ends. `.focused`, `.onSubmit`,
-/// `.submitLabel` and the input traits go on the `Field` itself.
+/// `.focused`, `.onSubmit`, `.submitLabel` and the input traits go on the `Field` itself.
 public struct Field: View {
   let placeholder: String
   @Binding var text: String
@@ -36,8 +34,7 @@ public struct Field: View {
 }
 
 extension View {
-  /// The surface of a `Field`, for an input the package can't build itself (a code entry, a search bar with a
-  /// leading icon). `failed` draws the error state; put an `ErrorLine` under it.
+  /// For an input the package can't build itself. With `failed`, put an `ErrorLine` under it.
   public func fieldSurface(failed: Bool = false) -> some View {
     let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
     return

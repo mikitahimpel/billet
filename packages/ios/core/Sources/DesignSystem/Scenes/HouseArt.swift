@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The house in cross-section on its night hill: the full scene, for large surfaces only.
-/// Small surfaces get `RoomArt`, a separate composition.
+/// For large surfaces only; small ones get `RoomArt`, a separate composition.
 public enum HouseArt {
   public static let size = CGSize(width: 1030, height: 704)
 

@@ -3,11 +3,9 @@ import Observation
 import Transport
 import Wire
 
-/// The room socket for the app while it is open: the partner's presence and live strokes in, this
-/// phone's presence and strokes out. Runs ``LiveRoomMachine`` on the socket's messages.
-///
-/// The socket reconnects by itself and asks the server for the notes it has not seen, so a drop
-/// loses live strokes (they are not stored) but no note and shows no note twice.
+/// The room socket while the app is open: presence and live strokes both ways, run through
+/// ``LiveRoomMachine``. It reconnects and asks for unseen notes, so a drop loses live strokes
+/// (never stored) but no note, and shows none twice.
 @MainActor
 @Observable
 public final class LiveRoom {
@@ -26,12 +24,8 @@ public final class LiveRoom {
   @ObservationIgnored private let now: @Sendable () -> Double
   @ObservationIgnored private let wait: @Sendable (Double) async -> Void
 
-  /// - Parameters:
-  ///   - makeDependencies: Builds the socket's services around the closure that receives each
-  ///     server message.
-  ///   - lastSeq: The last note `seq` this phone already holds.
-  ///   - onNote: Called once for each note that arrives over the socket.
-  ///   - now: A monotonic clock in seconds, and `wait` sleeps on it; both are for the pacer.
+  /// `lastSeq` is the last note `seq` this phone holds. `now` (a monotonic clock in seconds) and
+  /// `wait`, which sleeps on it, drive the pacer.
   public init(
     makeDependencies: (@escaping @Sendable (ServerMessage) async -> Void) -> WebSocketDependencies,
     lastSeq: Int?,
@@ -56,7 +50,6 @@ public final class LiveRoom {
     syncLink()
   }
 
-  /// Whether the socket is up now.
   public var isOnline: Bool {
     guard let phase = client?.state.phase else { return false }
     switch phase {

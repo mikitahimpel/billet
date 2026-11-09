@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The one error style: an icon and a short line in `Ink.destructive`. Put it under a `Field(failed: true)`.
+/// Put it under a `Field(failed: true)`.
 public struct ErrorLine: View {
   let text: String
 
@@ -18,7 +18,6 @@ public struct ErrorLine: View {
   }
 }
 
-/// A quiet action: honey words, no capsule.
 public struct QuietButtonStyle: ButtonStyle {
   public init() {}
 

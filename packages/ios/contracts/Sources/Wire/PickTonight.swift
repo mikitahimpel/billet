@@ -3,8 +3,7 @@ public enum PickChoice: String, Codable, Hashable, Sendable {
   case pass, seen, want
 }
 
-/// A card of the Pick tonight deck: an item on the pair's To watch list, or a TMDB title that is
-/// not on it.
+/// An item on the pair's To watch list, or a TMDB title that is not on it.
 public enum PickTitle: Codable, Hashable, Sendable {
   case item(IdempotencyKey)
   case title(kind: ListMediaKind, tmdb: Int)
@@ -44,7 +43,6 @@ public enum PickTitle: Codable, Hashable, Sendable {
   }
 }
 
-/// One of this user's own swipes in the current session.
 public struct PickSwipe: Codable, Hashable, Sendable {
   public let title: PickTitle
   public let choice: PickChoice
@@ -58,8 +56,8 @@ public struct PickSwipe: Codable, Hashable, Sendable {
   }
 }
 
-/// A title both partners swiped ♥ within one session. `name` and `posterPath` are what the second
-/// swipe sent; `at` (epoch milliseconds) is when it made the match.
+/// `name` and `posterPath` are what the second swipe sent; `at` (epoch milliseconds) is when it
+/// made the match.
 public struct PickMatch: Codable, Hashable, Sendable {
   public let title: PickTitle
   public let name: String
@@ -86,9 +84,8 @@ public struct PickMatch: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/pick-tonight`, and the answer to a swipe: the last 24 hours as this user sees them.
-/// `partnerPicked` is how many cards the partner swiped; `matches` are newest first; `match` is on
-/// the answer to the swipe that just made one.
+/// The last 24 hours as this user sees them. `partnerPicked` counts the partner's swipes;
+/// `matches` are newest first; `match` is set on the answer to the swipe that made one.
 public struct PickTonightResponse: Codable, Hashable, Sendable {
   public let swipes: [PickSwipe]
   public let partnerPicked: Int
@@ -118,8 +115,7 @@ public struct PickTonightResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/pick-tonight/swipes`. The same choice on a card again within the session changes
-/// nothing; another choice replaces the swipe.
+/// The same choice on a card again within the session changes nothing; another replaces it.
 public struct PickSwipeRequest: Codable, Hashable, Sendable {
   public let title: PickTitle
   public let choice: PickChoice

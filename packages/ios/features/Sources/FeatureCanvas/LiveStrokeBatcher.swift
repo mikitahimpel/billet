@@ -1,9 +1,7 @@
 import Wire
 
-/// Turns one finger's stroke into the frames the room streams: a begin, then the points in
-/// batches every ``interval`` (or as soon as a batch is full), then an end.
-///
-/// Pure: the caller passes the time, in seconds, with each event.
+/// Turns one finger's stroke into frames: a begin, the points in batches every ``interval`` (or
+/// when full), then an end. Pure: the caller passes the time, in seconds, with each event.
 public struct LiveStrokeBatcher: Sendable {
   /// How long points wait before they are sent, so the partner sees them within a frame or two.
   public static let interval = 0.04

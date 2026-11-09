@@ -1,6 +1,5 @@
-/// Wire form of the contracts `LoveStreak`: the couple's one streak, as the pair's room counts it.
-/// `days` is the run up to `lastDay` and stays after the streak breaks, so a restore can bring it
-/// back; `restoredOn` is the pair's last restore. Days are local, `YYYY-MM-DD`.
+/// `days` is the run up to `lastDay` and stays after a break, so a restore can bring it back.
+/// Days are local, `YYYY-MM-DD`.
 public struct PairStreak: Codable, Hashable, Sendable {
   public let days: Int
   public let best: Int
@@ -35,7 +34,6 @@ public struct PairStreak: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/streak`, and the answer to a day or a restore.
 public struct StreakResponse: Codable, Hashable, Sendable {
   public let streak: PairStreak
 
@@ -44,8 +42,7 @@ public struct StreakResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/streak/days`: the caller did something together. `at` is when, in epoch
-/// milliseconds by the phone's clock; the room counts it at most a day back.
+/// `at` is epoch milliseconds by the phone's clock; the room counts it at most a day back.
 public struct RecordStreakDayRequest: Codable, Hashable, Sendable {
   public let at: Int
   public let utcOffsetSeconds: Int
@@ -56,7 +53,6 @@ public struct RecordStreakDayRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/streak/restore`. A streak that can't be restored is `.api(.streakNotRestorable)`.
 public struct RestoreStreakRequest: Codable, Hashable, Sendable {
   public let utcOffsetSeconds: Int
 

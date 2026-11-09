@@ -1,9 +1,7 @@
 import Foundation
 import Wire
 
-/// What the app asks of the backend, one closure per route. Tests pass fakes.
-///
-/// ``live(http:token:)`` builds the requests from ``Routes`` and signs them with the session token.
+/// One closure per backend route, so tests pass fakes.
 public struct APIClient: Sendable {
   public var authChallenge: @Sendable () async throws(TransportError) -> AuthChallengeResponse
   /// Signs in with the account key, opening the account the first time the key is seen.
@@ -38,8 +36,7 @@ public struct APIClient: Sendable {
   public var flags: @Sendable () async throws(TransportError) -> FlagsResponse
   /// Maintenance, the oldest build that may run, and a notice. Needs no session.
   public var status: @Sendable () async throws(TransportError) -> StatusResponse
-  /// Counts a few things the app did: names, with a catalogue id or a price for some. The server
-  /// stamps the time.
+  /// The server stamps the time.
   public var reportEvents: @Sendable (_ events: [ClientEvent]) async throws(TransportError) -> Void
   /// One page of the pair's activity, newest first, from `before` (the previous page's `next`).
   public var listActivity:
@@ -54,8 +51,7 @@ public struct APIClient: Sendable {
     @Sendable (_ after: Int) async throws(TransportError) -> ListReactionsResponse
   /// Every ink the shop sells and the ones the pair owns.
   public var listInks: @Sendable () async throws(TransportError) -> InksResponse
-  /// The pair's coin balance, as the server keeps it, and its wallet entries after the entry id
-  /// `after` (from the first when nil), oldest first, a page at a time.
+  /// The balance and the wallet entries after entry id `after` (all when nil), oldest first.
   public var getCoins: @Sendable (_ after: String?) async throws(TransportError) -> CoinsResponse
   /// Buys one ink at its catalog price: `.api(.notEnoughCoins)` when the balance is short,
   /// `.api(.alreadyOwned)` when the pair has it. A retry with the same `id` buys nothing twice.
@@ -121,8 +117,8 @@ public struct APIClient: Sendable {
   public var guessCatalog: @Sendable () async throws(TransportError) -> GuessCatalogResponse
   /// The pair's draw-guess riddles as this user sees them. `.api(.notFound)` while unpaired.
   public var riddles: @Sendable () async throws(TransportError) -> RiddlesResponse
-  /// Sends a riddle to the partner; the same `id` again answers with the first. `.api(.invalidRequest)`
-  /// for a word that is no riddle word (400) or while this user's last riddle is open (409).
+  /// The same `id` again answers with the first. `.api(.invalidRequest)` for a word that is no
+  /// riddle word (400) or while this user's last riddle is open (409).
   public var sendRiddle: @Sendable (SendRiddleRequest) async throws(TransportError) -> Riddle
   /// One try at the partner's riddle `id`, under the try's own `key`. `.api(.notFound)` for no
   /// such riddle; `.api(.invalidRequest)` (409) for the drawer's own or one that has ended.
@@ -403,8 +399,7 @@ public struct APIClient: Sendable {
 }
 
 extension APIClient {
-  /// A client whose every call fails as offline. Tests start from it and replace the calls they
-  /// care about.
+  /// Every call fails as offline; tests replace the calls they need.
   public static let offline = APIClient(
     authChallenge: { () async throws(TransportError) in throw .network("offline") },
     signInWithApple: { (_) async throws(TransportError) in throw .network("offline") },

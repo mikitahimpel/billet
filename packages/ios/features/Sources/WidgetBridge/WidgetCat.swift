@@ -2,9 +2,8 @@ import Foundation
 import Persistence
 import Pet
 
-/// The cat in the corner of the note widget: how it sits, and the one thing it asks for.
-///
-/// Never stored. The same snapshot read at another hour can give another pose and another ask.
+/// The note widget's cat: how it sits and the one thing it asks for. Never stored; the same
+/// snapshot read at another hour can give another pose and ask.
 public struct WidgetCat: Equatable, Sendable {
   public enum Pose: String, Equatable, Sendable {
     case sleeping

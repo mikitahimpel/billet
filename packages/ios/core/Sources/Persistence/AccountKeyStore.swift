@@ -1,11 +1,10 @@
 import Foundation
 import Security
 
-/// The account key: 32 random bytes that are the anonymous account. It is made once, on the first
-/// launch, and kept in the iCloud Keychain, so the user's other and future phones sign in to the
-/// same account with no prompt. Only the server's hash of it exists anywhere else.
+/// 32 random bytes that are the anonymous account, kept in the iCloud Keychain so the user's other
+/// phones sign in with no prompt. Only the server's hash of it exists anywhere else.
 public struct AccountKeyStore: Sendable {
-  /// The key, made and saved the first time it is asked for.
+  /// Made and saved the first time it is asked for.
   public var loadOrCreate: @Sendable () throws(PersistenceError) -> String
   /// Forgets the key on every phone, for account deletion.
   public var clear: @Sendable () throws(PersistenceError) -> Void

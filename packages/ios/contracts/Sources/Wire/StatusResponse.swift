@@ -1,4 +1,4 @@
-/// `GET /v1/status`, which needs no session.
+/// Needs no session.
 public struct StatusResponse: Codable, Hashable, Sendable {
   public let status: AppStatus
 

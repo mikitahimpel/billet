@@ -43,7 +43,7 @@ public struct WidgetAction: Codable, Equatable, Identifiable, Sendable {
   }
 }
 
-/// Actions waiting for the app, one file each so the widget and the app never rewrite the same file.
+/// Actions waiting for the app, one file each so the widget and app never rewrite one file.
 public struct ActionQueue: Sendable {
   private static let directoryName = "WidgetActions"
 

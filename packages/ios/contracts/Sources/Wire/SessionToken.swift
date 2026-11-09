@@ -1,8 +1,6 @@
-/// Wire form of the contracts `SessionToken`: an opaque credential.
 public struct SessionToken: Codable, Hashable, Sendable, CustomStringConvertible {
   public let rawValue: String
 
-  /// Keeps the credential out of logs and string interpolation.
   public var description: String { "<redacted>" }
 
   public init(_ rawValue: String) {

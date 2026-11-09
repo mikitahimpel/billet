@@ -1,7 +1,7 @@
 import Foundation
 import SwiftUI
 
-/// Preferences kept in UserDefaults; only this phone's, never shared with the widgets.
+/// Only this phone's, never shared with the widgets.
 public enum AppSettings {
   public static let hapticsKey = "haptics"
 
@@ -11,21 +11,16 @@ public enum AppSettings {
 }
 
 extension View {
-  /// Haptic feedback, unless it is switched off in Settings.
   public func haptic(_ feedback: SensoryFeedback, trigger: some Equatable) -> some View {
     sensoryFeedback(feedback, trigger: trigger) { _, _ in AppSettings.haptics }
   }
 }
 
-/// The app's haptic vocabulary: one name per moment, so screens never pick a raw feedback style.
+/// One name per moment, so screens never pick a raw feedback style.
 public enum Haptic: Sendable {
-  /// A button was tapped.
   case tap
-  /// The screen changed step.
   case step
-  /// Something worked out: a pairing, a save.
   case confirmed
-  /// Something was refused: a code that didn't work.
   case rejected
 
   var feedback: SensoryFeedback {
@@ -39,7 +34,6 @@ public enum Haptic: Sendable {
 }
 
 extension View {
-  /// A haptic from the vocabulary when `trigger` changes.
   public func haptic(_ haptic: Haptic, trigger: some Equatable) -> some View {
     self.haptic(haptic.feedback, trigger: trigger)
   }

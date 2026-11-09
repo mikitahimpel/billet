@@ -1,14 +1,8 @@
 import Foundation
 
-/// The shape of the cat's brain: its regions, the scripts inside each activity group, how long
-/// each step lasts, what it plays, and which moves are legal. The brain runs on it, the tests
-/// check every move against it, and `docs/cat-brain.md` is drawn from it.
-///
-/// Four regions run side by side. Vitality is slow: awake, drowsy, asleep, one neighbour at a
-/// time. Activity is the big one: groups of steps, each group played as a short script, with
-/// utility choosing the next group when a script ends. Interaction overrides activity while a
-/// person is busy with the cat, and activity comes back from its history afterwards. Reflexes
-/// (blinks, ears, tail, breath, the head following things) never stop.
+/// The shape of the cat's brain: regions, group scripts, step lengths, clips and legal moves. The
+/// brain runs on it, tests check every move against it, and `docs/cat-brain.md` is drawn from it.
+/// Vitality, activity and interaction run side by side; reflexes (blinks, ears, tail) never stop.
 public enum CatStatechart {
   /// The scripts a group can play, each a list of steps run in order. Entering a group picks one.
   public static func scripts(_ group: CatActivityGroup) -> [[CatActivityStep]] {
@@ -55,7 +49,6 @@ public enum CatStatechart {
     [.wake, .curiousTilt], [.wake, .carryNote], [.wake, .stalk, .pounce],
   ]
 
-  /// The steps a group can be entered at.
   public static func entries(_ group: CatActivityGroup) -> Set<CatActivityStep> {
     Set(scripts(group).compactMap(\.first))
   }
@@ -107,7 +100,7 @@ public enum CatStatechart {
     }
   }
 
-  /// The least time vitality stays put before it moves again, in seconds.
+  /// In seconds.
   public static let vitalityDwell = 12.0
 
   /// How long a step lasts, in seconds; the brain draws a length in this range on entry.
@@ -248,7 +241,6 @@ public enum CatStatechart {
     }
   }
 
-  /// Where the head points during `step`.
   public static func gaze(_ step: CatActivityStep, roll: Double) -> CatGaze {
     switch step {
     case .lookAround: .around((roll - 0.5) * 2.2)

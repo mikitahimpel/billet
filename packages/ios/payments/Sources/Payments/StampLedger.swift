@@ -1,4 +1,3 @@
-/// The pair's bought stamps as the server keeps them: purchases in, refunds out.
 public struct StampLedger: Hashable, Sendable {
   public enum Kind: String, Hashable, Sendable {
     case purchase

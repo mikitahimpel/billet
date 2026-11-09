@@ -1,5 +1,5 @@
-/// How the rooms' static walls, floor and furniture are made: built from boxes at launch (`live`, today's
-/// rooms), or loaded as one baked, lightmapped model per room (`baked`, an experiment).
+/// How the rooms' static walls, floor and furniture are made: built from boxes at launch
+/// (`live`), or loaded as one baked, lightmapped model per room (`baked`).
 public enum RoomShell: String, CaseIterable, Sendable, RemoteChoice {
   case live
   case baked

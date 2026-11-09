@@ -15,12 +15,12 @@ public enum ShopRotation {
     Int((Double(day(of: date) + 3) / 7).rounded(.down))
   }
 
-  /// When the day after `date` begins: the next daily change.
+  /// The next daily change.
   public static func nextDay(after date: Date) -> Date {
     Date(timeIntervalSince1970: Double(day(of: date) + 1) * secondsADay)
   }
 
-  /// When the week after `date` begins: the next weekly change.
+  /// The next weekly change.
   public static func nextWeek(after date: Date) -> Date {
     Date(timeIntervalSince1970: (Double((week(of: date) + 1) * 7) - 3) * secondsADay)
   }
@@ -76,7 +76,7 @@ public struct ShopBundle: Identifiable, Hashable, Sendable {
     self.isStarter = isStarter
   }
 
-  /// The bundles the shop sells, the starter first.
+  /// The starter first.
   public static let all: [ShopBundle] = [
     ShopBundle(
       id: "bundle-starter", name: "Make it yours",
@@ -111,12 +111,10 @@ public struct ShopBundle: Identifiable, Hashable, Sendable {
   ]
 }
 
-/// One of the day's deals: an item for less than usual.
 public struct ShopDeal: Identifiable, Hashable, Sendable {
   public let item: ShopItem
-  /// Its price today.
   public let price: Int
-  /// How much less than usual, in percent.
+  /// In percent.
   public let discount: Int
 
   public var id: ShopItem.ID { item.id }
@@ -141,16 +139,13 @@ public struct DailyGift: Identifiable, Hashable, Sendable {
 /// of it follows from the pair's room, the date and the catalogue, so both phones show the same
 /// without asking a server, and each timer runs to a real change.
 public struct ShopOffers: Hashable, Sendable {
-  /// How many deals there are a day.
   public static let dealCount = 3
-  /// The discounts a deal can have, in percent.
+  /// In percent.
   static let dealDiscounts = [20, 25, 30]
   /// The cheapest item a deal is worth making of.
   static let dealFloor = 8
 
-  /// The bundle of the week.
   public let featured: ShopBundle?
-  /// When the featured bundle changes.
   public let featuredEnds: Date
   public let deals: [ShopDeal]
   /// When the deals and the gift change.
@@ -197,7 +192,6 @@ public struct ShopOffers: Hashable, Sendable {
 }
 
 extension ShopBundle {
-  /// What is in it that `catalog` sells.
   public func items(in catalog: ShopCatalog) -> [ShopItem] {
     itemIDs.compactMap(catalog.anyItem)
   }
@@ -208,12 +202,10 @@ extension ShopBundle {
     items(in: catalog).filter { !($0.ownsAtMostOne && owns($0)) }
   }
 
-  /// What `items` would cost one by one.
   public static func sum(of items: [ShopItem]) -> Int {
     items.reduce(0) { $0 + $1.price }
   }
 
-  /// What `items` cost together, as this bundle.
   public func price(of items: [ShopItem]) -> Int {
     Self.sum(of: items) * (100 - discount) / 100
   }

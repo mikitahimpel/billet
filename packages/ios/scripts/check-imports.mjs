@@ -1,9 +1,6 @@
-// Run from one of the Swift packages in packages/ios. Fails when a Swift file under its Sources
-// imports a graphics engine (the packages stay engine-free, so the widget never links one), when a
-// Feature target imports another Feature, or when an Interface target imports a feature, views or
-// the network. A plain `swift build` does not enforce the first (see the PR for #3), and the other
-// two are visible in the diff here where a Package.swift edit would hide them; ios:build and
-// ios:test run it.
+// Run from a Swift package in packages/ios. Fails when Sources import a graphics engine (the widget
+// must never link one), a Feature imports another Feature, or an Interface imports a feature, views
+// or the network. `swift build` enforces none of these.
 import { readdirSync, readFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
@@ -21,7 +18,7 @@ function swiftFiles(dir) {
   });
 }
 
-// Blank out comments, keeping newlines so reported line numbers stay right.
+// Keeps newlines so reported line numbers stay right.
 function stripComments(text) {
   return text
     .replace(/\/\*[\s\S]*?\*\//g, (match) => match.replace(/[^\n]/g, " "))
@@ -49,7 +46,6 @@ const engines = new Set(["RiveRuntime", "RealityKit"]);
 // An interface target holds value types and protocols only: no views, no network, no feature.
 const notInInterfaces = new Set(["Design", "DesignSystem", "Transport", "SwiftUI"]);
 
-// The target a file belongs to: the first folder under Sources.
 function targetOf(file) {
   return relative(sources, file).split("/")[0];
 }

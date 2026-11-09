@@ -1,14 +1,14 @@
-/// Something one of the couple did for the cat. `noteShared` is written by the room when a note
-/// is stored, never sent by a phone; `kind` is the note's `_tag` (`Drawing`, `Photo`, `Text`).
+/// `noteShared` is written by the room when a note is stored, never sent by a phone; `kind` is
+/// the note's `_tag`.
 public enum CatEvent: Codable, Hashable, Sendable {
-  /// A meal, 1 to 500 grams.
+  /// 1 to 500 grams.
   case fed(grams: Int)
   case petted
   case played
-  /// The plant by the window. It fills no need.
+  /// The plant by the window; it fills no need.
   case watered
   case noteShared(note: NoteId, kind: String)
-  /// One of the app's mini-games, such as `laser`: `[a-z0-9-]{1,32}`.
+  /// `game` matches `[a-z0-9-]{1,32}`, such as `laser`.
   case gamePlayed(game: String, score: Int, won: Bool)
   case slept
   case shooed

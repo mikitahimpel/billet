@@ -3,21 +3,18 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// What a scene reports back to the pet. Each event names the delivery it belongs to.
 public enum PetSceneEvent: Hashable, Sendable {
   case deliveryFinished(delivery: Int)
   case settled(delivery: Int)
   /// The user petted the pet in the scene. Same meaning as a pet given from any other control, so
   /// the host tells the partner the same way.
   case petted
-  /// The user played with the pet in the scene, such as by moving a finger it batted at.
   case played
   /// The user shooed the cat off the desk or the cardigan, so it learns to stay off.
   case shooed
   /// The user fed the pet in the scene, from its bowl or a treat held out. Scenes space these
   /// out to one a meal.
   case fed
-  /// The user opened the hanging note of `delivery`.
   case noteOpened(delivery: Int)
   /// What the room offers the cat, and the weather outside, for its brain. Sent when built and
   /// when either changes.
@@ -40,7 +37,6 @@ public enum PetSceneEvent: Hashable, Sendable {
 public struct PetSceneNoteWall: Hashable, Sendable {
   public var artboard: CGSize
   public var paper: CGRect
-  /// The point the paper swings from.
   public var peg: CGPoint
   /// How long into a delivery the scene's note first shows.
   public var revealDelay: Duration
@@ -53,11 +49,8 @@ public struct PetSceneNoteWall: Hashable, Sendable {
   }
 }
 
-/// One way of showing the pet, usually backed by a graphics engine.
-///
-/// A scene only shows ``PetWorld`` and reports events; it never decides what happens next. It has
-/// to cope with appearing at any point of a delivery, because the user can switch scenes during
-/// one. Implementations live in their own packages, and only the App target links them.
+/// A scene only shows ``PetWorld`` and reports events; it never decides what happens next. It
+/// must cope with appearing mid-delivery, since the user can switch scenes during one.
 @MainActor
 public protocol PetScene {
   /// Stable across releases: it is what gets stored as the user's choice.

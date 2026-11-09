@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The streak, as the number on the house. It is the only way a streak is shown, so it always
-/// brings its own dark ground and clears contrast on any wall.
+/// The only way a streak is shown, so it brings its own dark ground to clear contrast on any wall.
 public struct HousePlate: View {
   private let number: Int
   private let scale: CGFloat

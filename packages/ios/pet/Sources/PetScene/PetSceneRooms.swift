@@ -3,8 +3,7 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// One flat layer of a styled room. Each is drawn natively today; an artist's Rive file can take
-/// any one over through ``RoomLayerArt`` without the room changing.
+/// One flat layer of a styled room, drawn natively unless ``RoomLayerArt`` takes it over.
 public enum RoomLayerSlot: String, CaseIterable, Hashable, Sendable {
   /// Window Seat, behind the room and filling the screen: sky, suburb, street lamp, power lines.
   case windowNight
@@ -17,7 +16,6 @@ public enum RoomLayerSlot: String, CaseIterable, Hashable, Sendable {
 
 }
 
-/// What a room layer is drawn from at one moment.
 public struct RoomLayerState: Equatable, Sendable {
   /// Seconds since the room started opening.
   public var time: Double

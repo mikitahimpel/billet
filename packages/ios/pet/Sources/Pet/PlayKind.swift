@@ -5,7 +5,6 @@ public enum PlayKind: String, Hashable, Sendable {
   case treat
   /// Any other food, such as a treat from the closet. Only the pet's life counts it.
   case feed
-  /// A game with the cat.
   case play
   /// The cat was put to bed.
   case sleep

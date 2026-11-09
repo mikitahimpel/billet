@@ -1,5 +1,4 @@
-/// Wire form of the contracts `AuthNonce`: a one-time value issued by the server.
-/// Pass it unchanged as `ASAuthorizationAppleIDRequest.nonce`.
+/// Issued by the server; pass it unchanged as `ASAuthorizationAppleIDRequest.nonce`.
 public struct AuthNonce: Codable, Hashable, Sendable {
   public let rawValue: String
 

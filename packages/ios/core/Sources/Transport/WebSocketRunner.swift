@@ -1,19 +1,8 @@
 import Wire
 
-/// The interpreter for ``WebSocketMachine``: the one place its outputs reach services.
-///
-/// Events that come from the socket rather than from an output's result (`opened`, `received`,
-/// `dropped`) go through `events`, one pipe, so they reach the machine in the order they happened.
-/// Every event carries its attempt number; the machine discards the stale ones.
-///
-/// Outputs are not ordered: `Store` runs each in its own task, so a `deliver` may overtake an
-/// earlier one. A caller that needs strokes in `seq` order must sort them. Sends are the
-/// exception: every message goes through one outbox and one writer, so they leave in the order
-/// they were enqueued. A live stroke's points must never overtake its begin. `Resume` is enqueued
-/// when the socket is installed, before `opened` is reported, so it goes first.
-///
-/// A `close` also stops what the attempt has in flight: a connect that is still opening is
-/// cancelled, and its timers are stopped.
+/// Socket events share one pipe, so they reach the machine in order. Outputs are not ordered (a
+/// `deliver` may overtake an earlier one), but sends go through one outbox and writer, so `Resume`
+/// and a stroke's begin leave first. A `close` cancels the attempt's opening and timers.
 final class WebSocketRunner: Sendable {
   let events: AsyncStream<WebSocketMachine.Event>
   private let continuation: AsyncStream<WebSocketMachine.Event>.Continuation
@@ -47,13 +36,12 @@ final class WebSocketRunner: Sendable {
     }
   }
 
-  /// Queues `message` for the socket of `attempt`, behind everything queued before it. Never
-  /// waits, so a caller on the main actor keeps its order.
+  /// Never waits, so a caller on the main actor keeps its order.
   func enqueue(_ message: ClientMessage, attempt: Int) {
     outbox.yield(Outgoing(message: message, attempt: attempt))
   }
 
-  /// Closes every socket and stops all work in flight. The client calls it when it goes away.
+  /// Closes every socket and stops all work in flight.
   func shutdown() async {
     outbox.finish()
     writer.cancel()
@@ -136,7 +124,7 @@ final class WebSocketRunner: Sendable {
   }
 }
 
-/// The open sockets, their readers and the work still in flight, by attempt number.
+/// By attempt number.
 actor ConnectionSlot {
   private struct Entry {
     var connection: WebSocketConnection

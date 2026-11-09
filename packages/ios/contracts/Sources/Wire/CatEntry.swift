@@ -1,5 +1,4 @@
-/// One entry of the couple's cat journal: an event with who did it and when, by the server's
-/// clock in epoch milliseconds. `id` is the UUID the phone made for it, and is also the
+/// `at` is the server's clock in epoch milliseconds. `id` is the phone's UUID and also the
 /// `LifeEvent` id; `seq` orders the journal and is what a reconnect resumes from.
 public struct CatEntry: Codable, Hashable, Sendable {
   public let seq: Int

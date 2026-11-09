@@ -1,7 +1,6 @@
 import BilletKit
 import Wire
 
-/// Undo and redo over the strokes of one drawing.
 public enum UndoMachine: Machine {
   public struct State: Hashable, Sendable {
     public var strokes: [Stroke]

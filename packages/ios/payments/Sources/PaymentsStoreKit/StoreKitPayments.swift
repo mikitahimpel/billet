@@ -3,13 +3,8 @@ import Payments
 import StoreKit
 import Synchronization
 
-/// Payments through the App Store with StoreKit 2. A transaction is sent to the server as Apple
-/// signed it, and finished only after the server has credited it, so a crash or a lost network in
-/// between leaves it unfinished and it is sent again from ``Transaction/updates`` or
-/// ``restore()``.
-///
-/// Refunds reach the server from Apple (App Store Server Notifications), not from the device; the
-/// device only learns of them as a changed ledger.
+/// A transaction is finished only after the server has credited it, so a crash in between leaves
+/// it unfinished and it is sent again. Refunds reach the server from Apple, not from the device.
 public final class StoreKitPayments: Payments {
   private struct State {
     var subscribers: [UUID: AsyncStream<PaymentsUpdate>.Continuation] = [:]
@@ -29,8 +24,7 @@ public final class StoreKitPayments: Payments {
     state.withLock { $0.listener?.cancel() }
   }
 
-  /// Starts listening to ``Transaction/updates``. Call once at launch, so purchases approved or
-  /// finished elsewhere are credited.
+  /// Call once at launch, so purchases approved or finished elsewhere are credited.
   public func start() {
     state.withLock { state in
       guard state.listener == nil else { return }
@@ -116,8 +110,7 @@ public final class StoreKitPayments: Payments {
     if let credit = try? await credit(result) { publish(.credited(credit)) }
   }
 
-  /// Sends the transaction as Apple signed it and finishes it once the server has answered. The
-  /// device's own verification is not trusted for money; the server checks the signature again.
+  /// The device's own verification is not trusted for money; the server checks the signature.
   private func credit(_ result: VerificationResult<Transaction>) async throws(PaymentsError)
     -> StampCredit
   {
@@ -143,8 +136,7 @@ public final class StoreKitPayments: Payments {
       case .userCancelled: return .failed("cancelled")
       case .networkError: return .unavailable
       case .notAvailableInStorefront, .notEntitled: return .notAllowed
-      // Newer SDKs add cases (iOS 27: invalidPresentationContext); they all fail with the
-      // error's description.
+      // Newer SDKs add cases; they all fail with the error's description.
       default: return .failed(String(describing: error))
       }
     }

@@ -1,11 +1,8 @@
 import Foundation
 
-/// How the pair has done up the Window Seat: what covers the walls and the floor, the curtains
-/// and how far they are drawn, the view through the window, and the colour of the fairy lights.
-/// Both partners see the same room; the last change from either of them wins.
-///
-/// Each part decodes on its own, so a choice from a later release reads as that part's standard
-/// look and leaves the others as they were.
+/// How the pair has done up the Window Seat. Both partners see the same room; the last change
+/// from either wins. Each part decodes on its own, so a choice from a later release reads as
+/// that part's standard look and leaves the others as they were.
 public struct RoomStyle: Codable, Hashable, Sendable {
   public var wall: RoomWall
   public var floor: RoomFloor
@@ -15,7 +12,6 @@ public struct RoomStyle: Codable, Hashable, Sendable {
   public var view: WindowView?
   public var fairy: FairyColour
 
-  /// The room as it comes: night-blue walls, a plain floor, bare window, warm fairy lights.
   public static let standard = RoomStyle()
 
   public init(
@@ -45,7 +41,6 @@ public struct RoomStyle: Codable, Hashable, Sendable {
     fairy = part(.fairy) ?? .standard
   }
 
-  /// The choice `item` makes, put into this style.
   public func with(_ item: RoomStyleItem) -> RoomStyle {
     var style = self
     switch item {
@@ -58,7 +53,6 @@ public struct RoomStyle: Codable, Hashable, Sendable {
     return style
   }
 
-  /// Whether `item` is what this style shows now.
   public func shows(_ item: RoomStyleItem) -> Bool {
     switch item {
     case .wall(let wall): self.wall == wall
@@ -126,7 +120,6 @@ public enum RoomWall: String, CaseIterable, Codable, Hashable, Sendable {
   }
 }
 
-/// What covers the floor.
 public enum RoomFloor: String, CaseIterable, Codable, Hashable, Sendable {
   /// The room's own dark floor.
   case plain
@@ -156,7 +149,6 @@ public enum RoomFloor: String, CaseIterable, Codable, Hashable, Sendable {
   }
 }
 
-/// What hangs at the window, if anything.
 public enum CurtainFabric: String, CaseIterable, Codable, Hashable, Sendable {
   case none, linen, sheer, rose, forest, gingham
 
@@ -186,7 +178,6 @@ public enum CurtainFabric: String, CaseIterable, Codable, Hashable, Sendable {
   }
 }
 
-/// How far the curtains are drawn across the window.
 public enum CurtainDrape: String, CaseIterable, Codable, Hashable, Sendable {
   case open, half, closed
 
@@ -210,7 +201,6 @@ public enum CurtainDrape: String, CaseIterable, Codable, Hashable, Sendable {
   }
 }
 
-/// The colour the fairy lights glow.
 public enum FairyColour: String, CaseIterable, Codable, Hashable, Sendable {
   /// Whatever the lighting preset gives them, a warm white.
   case warm
@@ -333,7 +323,6 @@ public enum RoomStyleItem: Codable, Hashable, Sendable {
     + ([nil] + WindowView.allCases).map(RoomStyleItem.view)
     + FairyColour.allCases.map(RoomStyleItem.fairy)
 
-  /// The choice as the shop sells it, or `nil` when it is free.
   public var shopItem: ShopItem? {
     price.map { ShopItem(id: shopID, name: title, price: $0, look: .style(self)) }
   }

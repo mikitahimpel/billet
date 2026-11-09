@@ -103,7 +103,7 @@ public struct Purchase: Identifiable, Hashable, Sendable {
 }
 
 /// Why the Coins sheet is open: `missing` is what a buy needed beyond the balance, 0 when the
-/// header's coins opened it, and `retry` is that buy, to finish in one tap once the coins are there.
+/// header's coins opened it; `retry` is that buy, finished in one tap once the coins are there.
 public struct CoinsAsk: Identifiable, Hashable, Sendable {
   public let id: UUID
   public let missing: Int

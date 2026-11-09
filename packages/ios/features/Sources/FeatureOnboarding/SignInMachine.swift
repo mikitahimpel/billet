@@ -31,10 +31,8 @@ public enum SignInFailure: Equatable, Sendable {
 }
 
 /// From launch to a saved session: fetch a nonce, let Apple sign it into an identity token, and
-/// trade the token for a session.
-///
-/// Each state holds only what it needs, so there is no "signed in without a session" or "asking
-/// Apple without a nonce". `request` counts the backend calls so a late answer changes nothing.
+/// trade the token for a session. `request` counts the backend calls so a late answer changes
+/// nothing.
 public enum SignInMachine: Machine {
   public enum State: Equatable, Sendable {
     case idle

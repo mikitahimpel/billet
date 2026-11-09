@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Labs → Payments: how the mock store answers, and the Ask to Buy and refund actions.
 public struct MockPaymentsLabsView: View {
   private let payments: MockPayments
   private let switches: MockSwitches
