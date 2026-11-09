@@ -23,19 +23,14 @@ struct MoodHeaderButton: View {
 
     var body: some View {
         GlassIconButton(label: "How are you?", action: action) {
-            if let mine {
-                Text(mine.mood.emoji).font(.title3)
-            } else {
-                GlassSymbol(name: "face.smiling")
-            }
+            MoodArt(mood: mine?.mood, size: 30)
         }
         .overlay(alignment: .topTrailing) {
             if let theirs {
-                Text(theirs.mood.emoji)
-                    .font(.caption2)
-                    .frame(width: 20, height: 20)
+                MoodArt(mood: theirs.mood, size: 18)
+                    .frame(width: 22, height: 22)
                     .glassBadge(Ink.surface)
-                    .offset(x: 4, y: -4)
+                    .offset(x: 5, y: -5)
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }

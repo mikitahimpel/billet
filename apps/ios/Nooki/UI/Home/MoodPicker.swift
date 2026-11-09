@@ -58,22 +58,18 @@ private struct MoodChip: View {
 
     var body: some View {
         Button(action: pick) {
-            VStack(spacing: Space.xs) {
-                Text(mood.emoji)
-                    .font(.largeTitle)
-                    .frame(width: 52, height: 52)
-                    .background(Circle().fill(Ink.surfaceRaised))
+            VStack(spacing: Space.s) {
+                MoodArt(mood: mood, size: 48)
                 Text(mood.title.capitalized)
                     .font(.nookiCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
             }
-            .frame(maxWidth: .infinity, minHeight: 96)
-            .cardSurface(warm: picked)
-            .overlay {
-                if picked {
-                    RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                        .strokeBorder(Color.honey, lineWidth: 2)
-                }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Space.l)
+            .background {
+                let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                shape.fill(picked ? Ink.surfaceRaised : Ink.surface)
+                if picked { shape.strokeBorder(Color.honey, lineWidth: 2) }
             }
         }
         .buttonStyle(PressScaleStyle())
@@ -90,7 +86,7 @@ private struct PartnerLine: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Space.s) {
-            Text(check.mood.emoji).font(.title2)
+            MoodArt(mood: check.mood, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(name) feels \(check.mood.title)")
                     .font(.nookiCallout.weight(.semibold))
