@@ -2050,7 +2050,7 @@ describe("payments in the Worker", () => {
     return Schema.decodeUnknownSync(PurchasesResponse)(await response.json());
   };
   const mockBody = (kind: "purchase" | "refund", transactionId: string) => ({
-    productId: "com.mikitahimpel.billet.coins.550",
+    productId: "com.ourio.app.coins.550",
     transactionId,
     kind,
   });
@@ -2084,7 +2084,7 @@ describe("payments in the Worker", () => {
     // The wallet's balance: the welcome coins (560) and the pack.
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await bought.json())).toEqual({
       transactionId,
-      productId: "com.mikitahimpel.billet.coins.550",
+      productId: "com.ourio.app.coins.550",
       coins: 550,
       balance: 1110,
       duplicate: false,

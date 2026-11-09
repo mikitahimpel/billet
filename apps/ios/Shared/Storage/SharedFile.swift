@@ -6,7 +6,7 @@ import Foundation
 nonisolated enum SharedFile {
     static let delay: DispatchTimeInterval = .milliseconds(400)
 
-    private static let queue = DispatchQueue(label: "com.mikitahimpel.billet.shared-file", qos: .utility)
+    private static let queue = DispatchQueue(label: "com.ourio.app.shared-file", qos: .utility)
     /// Latest unwritten value per path. Only touched on `queue`.
     nonisolated(unsafe) private static var pending: [String: (id: UUID, write: @Sendable () -> Void)] = [:]
 

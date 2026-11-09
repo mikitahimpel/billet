@@ -35,8 +35,8 @@ check_bundle() {
   echo "$id $got_version ($got_build), team $got_team, signature verified"
 }
 
-check_bundle "$app" com.mikitahimpel.billet
-check_bundle "$app/PlugIns/OurioWidgets.appex" com.mikitahimpel.billet.widget
+check_bundle "$app" com.ourio.app
+check_bundle "$app/PlugIns/OurioWidgets.appex" com.ourio.app.widget
 
 payments=$(plist "$app" BilletPayments)
 labs=$(plist "$app" BilletLabs)

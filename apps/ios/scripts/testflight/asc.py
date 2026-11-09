@@ -11,7 +11,7 @@
     asc.py certificates                lists the team's certificates: type, serial, expiry, name
 
 The API key comes from ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH (the .p8 file). The app is
-found by BUNDLE_ID (default com.mikitahimpel.billet). Nothing secret is printed.
+found by BUNDLE_ID (default com.ourio.app). Nothing secret is printed.
 """
 
 from __future__ import annotations
@@ -211,7 +211,7 @@ def main() -> None:
             a = c["attributes"]
             print(a["certificateType"], a["serialNumber"], a.get("expirationDate", "")[:10], a.get("name", ""))
         return
-    app = client.app_id(os.environ.get("BUNDLE_ID", "com.mikitahimpel.billet"))
+    app = client.app_id(os.environ.get("BUNDLE_ID", "com.ourio.app"))
     if args.command == "next-build":
         print(next_build(client, app, args.floor))
     else:

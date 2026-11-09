@@ -10,7 +10,7 @@ repo=${here:h:h:h:h}
 derived=${PERF_DERIVED:-$repo/build-perf}
 out=${PERF_OUT:-$HOME/.billet-manager/pet-concept/perf/runs}/$label
 device_name=${PERF_DEVICE:-billet-perf}
-bundle=com.mikitahimpel.billet
+bundle=com.ourio.app
 app=$derived/Build/Products/Release-iphonesimulator/Billet.app
 [[ -d $app ]] || { echo "no app at $app" >&2; exit 1; }
 
