@@ -1,4 +1,5 @@
 import Design
+import GamesInterface
 import OurioShared
 import PetScene
 import RealityKit
@@ -67,6 +68,16 @@ enum OurioPerf {
         ScenePerf.host = host
         ScenePerf.start()
     }
+
+    /// `-perf.game feed|water|laser|brush`: the game Home opens the first time the Room is on screen, so a run
+    /// measures that game instead of Home. Once per launch: a game the run ends doesn't open again.
+    static func game() -> MiniGame? {
+        guard !gameOpened, let name = UserDefaults.standard.string(forKey: "perf.game") else { return nil }
+        gameOpened = true
+        return MiniGame(rawValue: name)
+    }
+
+    private static var gameOpened = false
 
     /// A run scrolls the shown tab's page to measure its frames.
     static var scrolls: [HomeTab: (Double) -> Void] = [:]
