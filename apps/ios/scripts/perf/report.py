@@ -55,7 +55,9 @@ def first_room(marks):
 # A phase whose frames run half a second or more while the process spends under a quarter of that
 # on the CPU is waiting for drawables the GPU never gives back: the Simulator's Metal host has stopped
 # running the app's GPU work, which a busy CI runner does. It lasts until the app quits, so that
-# phase and every later one of the run say nothing about the app and stay out of the medians.
+# phase and every later one of the run stay out of the medians. The numbers alone can't tell it from
+# a wait in the app, so the header names each such phase with its frame and CPU, and the job's
+# simmetalhost.log is what confirms it.
 GPU_LOST_FRAME_MS = 500
 GPU_LOST_CPU_SHARE = 0.25
 # Each run left out that way, for the report's header.
@@ -103,7 +105,9 @@ def collect(run_dir):
         lost = next((phase for phase, values in run["phases"].items() if gpu_lost(values)), None)
         if lost:
             add("gpu lost runs", 1)
-            lost_runs.append(f"{run_dir.name}/{log.name}: gpu lost from {kind}.{lost} on")
+            values = run["phases"][lost]
+            lost_runs.append(f"{run_dir.name}/{log.name}: gpu lost (suspected) from {kind}.{lost} on,"
+                             f" p50 {values.get('p50')} ms with {values.get('procCPU')} ms of CPU a frame")
         for phase, values in run["phases"].items():
             if phase == lost:
                 break
@@ -180,8 +184,7 @@ def main(args):
         print(f"| Metric | {header} |\n|---|---|")
     for name in names:
         # A count of runs is a sum, not a median of ones.
-        cells = [(str(len(m[name])) if name.endswith(" runs") and m.get(name) else show(m.get(name, [])))
-                 for m in collected]
+        cells = [str(len(m.get(name, []))) if name.endswith(" runs") else show(m.get(name, [])) for m in collected]
         if len(runs) == 2:
             a, b = (collected[0].get(name), collected[1].get(name))
             ratio = "-"
