@@ -27,11 +27,8 @@ const parse = (version: string): ParsedVersion | undefined => {
   };
 };
 
-/**
- * Orders two app versions: negative, zero or positive. Missing parts count as 0 (`1.2` is
- * `1.2.0`). The build is compared only when both name one, so a bound of `1.2` covers every
- * build of 1.2. `undefined` when either is not a version.
- */
+/** Missing parts count as 0; the build is compared only when both name one, so a bound of `1.2`
+ * covers every build of 1.2. `undefined` when either is not a version. */
 export const compareAppVersions = (a: string, b: string): number | undefined => {
   const left = parse(a);
   const right = parse(b);

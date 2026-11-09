@@ -51,7 +51,6 @@ export const ShopItemRow = Schema.Struct({
 });
 type Row = typeof ShopItemRow.Type;
 
-/** A `shop_item_changes` row as stored. */
 export const ShopChangeRow = Schema.Struct({
   id: Schema.Int,
   itemId: Schema.String,
@@ -101,7 +100,6 @@ const adminOf = (row: Row): AdminShopItem[] =>
     updatedBy: row.updatedBy,
   }));
 
-/** The row's columns for a catalog entry. */
 const columnsOf = (item: ShopCatalogItem) => ({
   kind: item.kind,
   name: item.name,
@@ -307,6 +305,6 @@ const makeStore = (db: DirectoryDatabase): ShopStore["Service"] => {
   );
 };
 
-/** `ShopStore` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const ShopStoreLive = (binding: D1Database): Layer.Layer<ShopStore> =>
   Layer.effect(ShopStore, Effect.map(openDirectoryDatabase(binding), makeStore));

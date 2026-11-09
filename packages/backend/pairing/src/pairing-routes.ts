@@ -47,7 +47,6 @@ const respondPairingFailures = <R>(
     respondFailures,
   );
 
-/** The pairing routes of the API. Needs `AuthService` and `PairingService`. */
 export const PairingRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const pairing = yield* PairingService;

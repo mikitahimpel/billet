@@ -94,7 +94,7 @@ const severance = {
   number_of_seasons: 2,
 };
 
-// Severance and an Arrival-like film for Arrival; Arrival, a new show and Severance again for Severance.
+// Each seed's list shares titles with the other, so the merge must drop repeats.
 const recommended: Readonly<Record<string, unknown>> = {
   "/movie/329865/recommendations": {
     page: 1,

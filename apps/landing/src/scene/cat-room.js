@@ -1,4 +1,4 @@
-// What every room shares: the turning pivot, the wall group, Mochi with her rig and pet bounce, and the dust motes.
+// What every room shares: the turning pivot, the walls, Mochi with her rig, and the dust motes.
 import * as THREE from "three";
 import { SplatMesh } from "@sparkjsdev/spark";
 import { quat, group } from "./kit.js";
@@ -40,8 +40,6 @@ export class CatRoom {
     this.targetYaw = 0;
     this.purrStart = -10;
   }
-
-  // MARK: - Interaction
 
   setYaw(value) {
     this.targetYaw = Math.min(Math.max(value, -0.75), 0.75);
@@ -92,10 +90,8 @@ export class CatRoom {
     this.catShadow.update();
   }
 
-  /**
-   * Mochi on her skeleton, sitting at `at` facing `yaw`; with a route she walks between its two ends instead (see
-   * CatWalker), `yaw` then being her yaws at its start and end.
-   */
+  /** With a route she walks between its two ends instead (see CatWalker), `yaw` then being her
+   * yaws at its start and end. */
   buildCat(at, yaw, route = null) {
     this.catGroup = group(this.pivot, at);
     this.catBody = group(this.catGroup);
@@ -128,10 +124,8 @@ export class CatRoom {
     });
   }
 
-  /**
-   * Sets each tinted splat's recolor to the light at it: the room's lights summed the way three.js shades a matte
-   * surface, plus the image-based light (`environment` color times `environmentIntensity`). Call once per frame.
-   */
+  /** Recolors each tinted splat to the light at it, as three.js shades a matte surface, plus the
+   * image-based light (`environment` color times `environmentIntensity`). Call once per frame. */
   tintSplats(environment, environmentIntensity) {
     this.lights ??= collectLights(this.root);
     const light = tintLight,
@@ -218,7 +212,7 @@ const scaled = new THREE.Color();
 const tintLight = new THREE.Color();
 const tintPoint = new THREE.Vector3();
 
-/** Irradiance at `point` from directional and point lights, averaged over a sphere's normals (half face any light). */
+/** Irradiance at `point`, averaged over a sphere's normals (half face any light). */
 function lightAt(lights, point, out) {
   out.setRGB(0, 0, 0);
   for (const light of lights) {

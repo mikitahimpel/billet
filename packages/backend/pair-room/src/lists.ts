@@ -9,10 +9,7 @@ import {
 } from "@billet/contracts-domain/list";
 import { RoomRejection } from "./room-decision.ts";
 
-/**
- * Why a list change was refused. `NotOpen`: the room has no members yet, or the caller is not one
- * of them. The others: the list, or the item, is gone, so the change can never apply.
- */
+/** `NotOpen`: the caller is not a member of an open room. The others: the target is gone. */
 export const ListRefusal = Schema.Literals(["NotOpen", "ListNotFound", "ListItemNotFound"]);
 export type ListRefusal = typeof ListRefusal.Type;
 
@@ -32,10 +29,7 @@ export const listRefusalOf = (rejection: RoomRejection): ListRefusal =>
 /** The Inbox counts a partner's adds to one list within this window as one item. */
 export const listActivityWindowMillis = 10 * 60_000;
 
-/**
- * What one change does to the list it names. `added` and `ticked` are the item the change added or
- * ticked, for the Inbox and the coins.
- */
+/** One change to its list; `added` and `ticked` name the item, for the Inbox and the coins. */
 export type ListOutcome =
   | { readonly _tag: "Unchanged" }
   | {
@@ -92,9 +86,7 @@ const onItem = (
 };
 
 /**
- * What `by` does to `list` (the stored list `change` names, absent when there is none) at `at`.
- * Pure. Making a list or an item under an id the room holds, or deleting one it doesn't, changes
- * nothing: a repeat after the key was forgotten, or both partners deleting at once.
+ * Pure. Making an id the room holds, or deleting one it lacks, is a repeat and changes nothing.
  */
 export const changeList = (
   list: SharedList | undefined,

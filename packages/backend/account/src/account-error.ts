@@ -1,9 +1,6 @@
 import { Data } from "effect";
 
-/**
- * A step of deleting the account failed. Whatever was deleted stays deleted, and repeating the
- * request finishes the rest. `reason` is a fixed label.
- */
+/** Whatever was deleted stays deleted; repeating the request finishes the rest. */
 export class AccountUnavailable extends Data.TaggedError("AccountUnavailable")<{
   readonly reason: string;
   /** What failed underneath, for the one log line at the edge. Never sent to the client. */

@@ -21,7 +21,7 @@ import { PairingObserver } from "./pairing-observer.ts";
 import { PairingRepository } from "./pairing-repository.ts";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
-/** Long enough to send a code to someone who is asleep, short enough that a leaked one goes stale. */
+/** Long enough to reach someone asleep, short enough that a leaked code goes stale. */
 export const inviteLifetime = Duration.hours(24);
 
 const decodeInviteCode = Schema.decodeSync(InviteCode);
@@ -29,11 +29,11 @@ const decodePairId = Schema.decodeSync(PairId);
 
 const encoder = new TextEncoder();
 
-/** Invites and the pair lookup go through here; routes never see the repository. */
+/** Routes never see the repository. */
 export class PairingService extends Context.Service<
   PairingService,
   {
-    /** Issues a new code, which replaces the caller's earlier one. */
+    /** Replaces the caller's earlier code. */
     readonly createInvite: (
       userId: UserId,
     ) => Effect.Effect<CreateInviteResponse, AlreadyPaired | PairingUnavailable>;
@@ -42,14 +42,14 @@ export class PairingService extends Context.Service<
       code: InviteCode,
     ) => Effect.Effect<PairId, InvalidInvite | AlreadyPaired | PairingUnavailable>;
     readonly unpair: (userId: UserId) => Effect.Effect<void, PairingUnavailable>;
-    /** Unpairs the caller from their partner for good: the two can't pair again. */
+    /** For good: the two can't pair again. */
     readonly blockPartner: (userId: UserId) => Effect.Effect<void, NotPaired | PairingUnavailable>;
-    /** Keeps a report about the caller's partner for the team. The pair stays. */
+    /** The pair stays. */
     readonly reportPartner: (
       userId: UserId,
       request: ReportPartnerRequest,
     ) => Effect.Effect<void, NotPaired | PairingUnavailable>;
-    /** The caller's pair and both members, the caller first, with their latest check-ins. */
+    /** The caller first. */
     readonly pair: (userId: UserId) => Effect.Effect<PairResponse, NotPaired | PairingUnavailable>;
   }
 >()("@billet/backend-pairing/PairingService") {

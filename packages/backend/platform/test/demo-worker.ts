@@ -2,7 +2,7 @@ import { DemoRoom as LiveDemoRoom } from "../src/demo-room-durable-object.ts";
 import { testNowOf } from "./test-now.ts";
 
 // The demo tests run in their own Worker so they do not load Effect and Drizzle, which only the
-// PairRoom tests need. Loading those dominated the cold start of the first test of a file.
+// PairRoom tests need and which slow every file's cold start.
 /** DemoRoom at the test instant, so nothing it does depends on when the suite runs. */
 export class DemoRoom extends LiveDemoRoom {
   protected override clock(): number {

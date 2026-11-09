@@ -11,7 +11,7 @@ import { spanMethods } from "@billet/backend-observability/span-methods";
 import { type DirectoryDatabase, openDirectoryDatabase } from "./directory-database.ts";
 import { onboardingAnswers } from "./directory-schema.ts";
 
-/** What an `onboarding_answers` row holds. A test fails if the table's columns differ. */
+/** A test fails if the table's columns differ. */
 export const OnboardingAnswerRow = Schema.Struct({
   userId: Schema.String,
   stepId: Schema.String,
@@ -30,7 +30,7 @@ const unavailable = (cause: unknown) =>
 
 const guarded = <A, E>(effect: Effect.Effect<A, E>) => Effect.mapError(effect, unavailable);
 
-/** The answer's columns: a kind, then the picks, the value or the text, the others null. */
+/** Only the column for the answer's kind is set; the others are null. */
 const columnsOf = (answer: OnboardingAnswer) => {
   switch (answer._tag) {
     case "Skipped":
@@ -120,7 +120,7 @@ const makeOnboardingRepository = (db: DirectoryDatabase): OnboardingRepository["
     }),
   );
 
-/** `OnboardingRepository` on the D1 directory. Build it once per request. */
+/** Build it once per request. */
 export const OnboardingRepositoryLive = (binding: D1Database): Layer.Layer<OnboardingRepository> =>
   Layer.effect(
     OnboardingRepository,

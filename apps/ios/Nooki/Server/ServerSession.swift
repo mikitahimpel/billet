@@ -1,4 +1,5 @@
 import FeatureCanvas
+import FeatureInbox
 import Foundation
 import FeatureMoments
 import FeatureOnboarding

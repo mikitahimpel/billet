@@ -58,12 +58,8 @@ const respondPaymentsFailures = <R>(
     respondFailures,
   );
 
-/**
- * The purchase routes of the API. Needs `AuthService`, `PaymentsService`, `PaymentsSwitch` and
- * `PaymentsConfig`. The mock purchase route exists only with the dev extras on; elsewhere it is
- * the router's 404 for a path it doesn't know. While the `payments` flag is off for the caller,
- * every `/v1/purchases*` route answers 404 too, before it reads the body.
- */
+/** The mock purchase route exists only with the dev extras on. While the `payments` flag is off
+ * for the caller, every `/v1/purchases*` route answers 404, before it reads the body. */
 export const PaymentsRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {
     const payments = yield* PaymentsService;

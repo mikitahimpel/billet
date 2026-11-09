@@ -823,6 +823,10 @@ open.
 | 11 | `arch/onboarding` | OnboardingFlow, OnboardingView, CoatPicker, AnswerQueue, OnboardingClient, PairingSheet into the packages | OnboardingInterface | `invitedCode` | FeatureOnboarding and FeaturePairing exist; this is the app side |
 | 12 | `arch/shell` | ShellMachine, AppDependencies, the root; HomeState and HomeStores deleted; ServerSession split into per-feature clients | | everything | HomeView is the shell's view; the end state of section 6 |
 
+PR 7 went in two parts. `InboxMachine`, `InboxModel` and `InboxDay` are in `FeatureInbox` with their
+tests. `InboxView` and `InboxLine` stay in the app until `PartnerMood`, `ListKind` and `MoodArt` leave
+`apps/ios/Shared`.
+
 PRs 3 to 11 can be reordered around other agents' work; 1 and 2 cannot. Where a PR would touch
 more than about 25 files of UI that others are editing, it splits: the store and interface first
 (the views keep reading the old property through a one-line forward for a day), the views next.

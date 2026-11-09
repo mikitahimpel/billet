@@ -145,7 +145,7 @@ function toast(message, tone = "") {
 
 const dialog = document.getElementById("confirm");
 const dialogOk = document.getElementById("confirm-ok");
-/** A modal yes/no. `danger` paints the confirm button red; Cancel has the focus. */
+/** `danger` paints the confirm button red; Cancel has the focus. */
 function confirmDialog({ title, body, confirm, danger = true }) {
   document.getElementById("confirm-title").textContent = title;
   document.getElementById("confirm-body").replaceChildren(...[body].flat());
@@ -219,7 +219,6 @@ const pageHead = (title, lede, tools, crumbs) => [
   ),
 ];
 
-/** An empty state that says what is missing and, where it helps, where it comes from. */
 const empty = (title, ...body) =>
   h("div", { class: "empty" }, h("h3", { text: title }), body.length && h("p", null, body));
 
@@ -236,12 +235,8 @@ const section = (title, sub, ...kids) =>
     kids,
   );
 
-/* ---------- Data table ---------- */
-
 /**
- * A GitHub-style table: a search box, optional filter buttons, sortable headers and rows that open
- * their detail page. Each column is { label, value(row) for sorting, cell(row), num }. The first
- * column's cell should hold a real link so the row is reachable by keyboard.
+ * Column: { label, value(row) to sort, cell(row), num }; the first cell needs a link for keyboards.
  */
 function dataTable({
   caption,
@@ -396,8 +391,6 @@ function dataTable({
   );
 }
 
-/* ---------- Charts ---------- */
-
 function sparkline(values, label) {
   const W = 96;
   const H = 32;
@@ -433,8 +426,7 @@ function intervalMark(sh) {
 }
 
 /**
- * Time-series chart over `days`. Each series is { label, values, mark: "line" | "area" | "bar", cls }.
- * One keyboard stop: arrow keys move a cursor, and the readout below says the day.
+ * Each series is { label, values, mark: "line" | "area" | "bar", cls }; arrow keys move a cursor.
  */
 function timeChart({ title, days, series }) {
   const H = 220;
@@ -609,8 +601,6 @@ function timeChart({ title, days, series }) {
     h("details", { class: "data" }, h("summary", { text: "Show as table" }), table),
   ];
 }
-
-/* ---------- Overview ---------- */
 
 const RANGES = [7, 30, 90];
 const rangeFrom = (arg) => (RANGES.includes(Number(arg)) ? Number(arg) : 30);
@@ -792,8 +782,6 @@ function funnel(stepsIn) {
   );
 }
 
-/* ---------- In the app ---------- */
-
 const TOP_TITLES = {
   CatChosen: "Cats chosen",
   ShopItemBought: "Items bought",
@@ -808,7 +796,6 @@ const TOP_TITLES = {
   WidgetAdded: "Widgets added",
 };
 
-/** The most chosen cats, items, toys and the like, one box per event that has any. */
 function mostChosen(top, range) {
   const shown = (top || []).filter((t) => t.items && t.items.length);
   const box = (t) =>
@@ -1071,8 +1058,6 @@ async function renderEvent(name, days) {
   ];
 }
 
-/* ---------- Experiments ---------- */
-
 const ACTIONS = {
   start: {
     label: "Start",
@@ -1302,7 +1287,6 @@ const fmtMetricDiff = (unit, v) => {
 };
 const CHANGE_TONE = { better: "good", worse: "bad", unclear: "" };
 
-/** Secondary and guardrail metrics: a row each, a column per variant, against the baseline. */
 function moreMetrics(r) {
   const variants = r.metrics[0].variants.map((v) => v.variant);
   const cell = (m, v) => {
@@ -1502,8 +1486,6 @@ async function renderExperiment(key) {
     section("History", null, h("div", { class: "box" }, historyList(changes, { showKey: false }))),
   ];
 }
-
-/* ---------- Flags ---------- */
 
 const showValue = (v) =>
   v === undefined || v === null ? "none" : Array.isArray(v) ? v.join(", ") || "none" : String(v);
@@ -1992,8 +1974,6 @@ async function renderFlag(key) {
   ];
 }
 
-/* ---------- Pairs ---------- */
-
 const REASONS = {
   killed: "Killed, so everyone gets the default",
   override: "An admin override is set",
@@ -2242,8 +2222,6 @@ async function renderPairs([pairId]) {
   ];
 }
 
-/* ---------- Maintenance ---------- */
-
 const MESSAGE_KEY_PATTERN = "^[a-z0-9]+(?:[.\\-][a-z0-9]+){0,7}$";
 const NORMAL_STATUS = { maintenance: { active: false } };
 const localZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -2266,7 +2244,6 @@ function fromLocalInput(value) {
 
 const clip = (text, n = 60) => (text.length > n ? `${text.slice(0, n - 1)}…` : text);
 const sameMessage = (a, b) => (a?.key ?? null) === (b?.key ?? null) && a?.text === b?.text;
-/** Product analytics is on unless the status says `analytics.enabled: false`. */
 const analyticsOn = (status) => status.analytics?.enabled !== false;
 
 /** What one saved status changed against the one before it, or the whole state without one. */
@@ -2290,10 +2267,7 @@ function statusSummary(status, prev) {
 
 const backAroundFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-/**
- * Roughly how the app shows this status (MaintenanceView in the iOS app): the sleeping room with a
- * card of the message, "Back around …" and the safe-notes line; or the room with the notice.
- */
+/** Roughly how the iOS app's MaintenanceView shows this status. */
 function phonePreview(status) {
   const m = status.maintenance;
   const screen = m.active
@@ -2675,8 +2649,6 @@ async function renderMaintenance() {
   ];
 }
 
-/* ---------- Audit log ---------- */
-
 async function renderAudit() {
   const [{ changes: flagChanges }, { changes: statusChanges }] = await Promise.all([
     api("/history?limit=500"),
@@ -2744,8 +2716,6 @@ async function renderAudit() {
   ];
 }
 
-/* ---------- Reports ---------- */
-
 async function renderReports() {
   const { reports, total } = await api("/reports?limit=500");
   const onNote = reports.filter((r) => r.noteId).length;
@@ -2795,8 +2765,6 @@ async function renderReports() {
     ),
   ];
 }
-
-/* ---------- App Review ---------- */
 
 async function reviewAction(path, { title, body, confirm, done }) {
   if (!(await confirmDialog({ title, body, confirm }))) return;
@@ -2938,8 +2906,6 @@ async function renderReview() {
     ),
   ];
 }
-
-/* ---------- Purchases ---------- */
 
 const PURCHASE_TONE = { credited: "good", refunded: "warn" };
 const signed = (n) => (n > 0 ? `+${n}` : String(n));
@@ -3084,8 +3050,6 @@ async function renderPurchases() {
   ];
 }
 
-/* ---------- Onboarding ---------- */
-
 const KIND_LABEL = {
   Single: "one choice",
   Multi: "several choices",
@@ -3094,7 +3058,6 @@ const KIND_LABEL = {
   OpenChoice: "one choice (app's list)",
 };
 
-/** One bar per option or value: how many picked it, and its share of the step's answers. */
 function answerBars(label, rows, answered) {
   const top = Math.max(1, ...rows.map((r) => r.count));
   if (!rows.some((r) => r.count)) return empty("No picks yet");
@@ -3219,8 +3182,6 @@ async function renderOnboarding() {
       ),
   ];
 }
-
-/* ---------- Retention ---------- */
 
 const RETENTION_MODES = [
   ["both", "Both active", "Both partners opened the app or sent a note on day N."],
@@ -3386,8 +3347,6 @@ async function renderRetention([modeArg, variantArg, versionArg]) {
         ),
   ];
 }
-
-/* ---------- Funnels ---------- */
 
 const FUNNEL_WINDOWS = [
   ["day", "Same day"],
@@ -3699,8 +3658,6 @@ async function renderFunnels(args) {
   ];
 }
 
-/* ---------- Trends ---------- */
-
 const TREND_METRICS = [
   ["count", "Count"],
   ["people", "Unique people"],
@@ -3746,8 +3703,7 @@ const fmtTrend = (v, metric) =>
   v == null ? "too few" : metric === "perPair" ? v.toFixed(2) : fmtNum(v, 0);
 
 /**
- * A line per group over time, with gaps where a point is "too few". With one group the period
- * before is a dashed line behind it. Hover or arrow keys read a point.
+ * With one group, the period before is a dashed line behind it; "too few" points are gaps.
  */
 function trendChart(result, colourOf) {
   const { groups } = result;
@@ -4049,8 +4005,6 @@ async function renderTrends(args) {
   ];
 }
 
-/* ---------- Feature usage ---------- */
-
 const featuresHref = (split) => `#/features/${enc(split || "-")}`;
 
 function usageCell(u, groupLabel, windowLabel) {
@@ -4165,10 +4119,6 @@ async function renderFeatures([splitArg]) {
     table,
   ];
 }
-
-/* ---------- Router ---------- */
-
-/* ---------- Shop ---------- */
 
 const RARITIES = ["common", "rare", "epic", "legendary"];
 const SHOP_KINDS = ["furniture", "decor", "mochi", "room", "ink", "coat", "accessory"];

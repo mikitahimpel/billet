@@ -243,7 +243,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
   );
 };
 
-/** `PaymentsRepository` on the D1 directory. Build it once per request, as `openDirectoryDatabase` asks. */
+/** Build it once per request, as `openDirectoryDatabase` asks. */
 export const PaymentsRepositoryLive = (binding: D1Database): Layer.Layer<PaymentsRepository> =>
   Layer.effect(
     PaymentsRepository,

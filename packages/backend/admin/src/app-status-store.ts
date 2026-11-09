@@ -29,10 +29,7 @@ export class AppStatusUnavailable extends Data.TaggedError("AppStatusUnavailable
   readonly cause?: unknown;
 }> {}
 
-/**
- * Where the service status lives. Not in the database: maintenance has to be switched on, and
- * read, while the database is down (Workers KV in the platform package).
- */
+/** Not in the database: maintenance must work while it is down (KV in the platform package). */
 export class AppStatusStore extends Context.Service<
   AppStatusStore,
   {

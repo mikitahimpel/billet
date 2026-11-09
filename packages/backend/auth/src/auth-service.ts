@@ -20,10 +20,7 @@ import { annotateRefs } from "@billet/backend-observability/opaque-ref";
 
 /** Long enough to fetch a nonce, show the Apple sheet and post the result. */
 export const challengeLifetime = Duration.minutes(10);
-/**
- * Sliding: widgets and extensions can't show a prompt, so an active device stays signed in and one
- * idle this long signs in again, with its account key or Apple ID.
- */
+/** Sliding: widgets and extensions can't show a sign-in prompt, so active devices stay in. */
 export const sessionLifetime = Duration.days(90);
 /** Limits writes to one per session per day. */
 export const sessionRenewalInterval = Duration.days(1);
@@ -61,7 +58,6 @@ export class AuthService extends Context.Service<
     readonly signInWithApple: (
       identityToken: Redacted.Redacted<string>,
     ) => Effect.Effect<SessionResponse, AuthRejected | AuthUnavailable>;
-    /** Links the caller's account to the Apple ID in the token. */
     readonly linkApple: (
       sessionToken: Redacted.Redacted<string>,
       identityToken: Redacted.Redacted<string>,
@@ -99,9 +95,7 @@ export class AuthService extends Context.Service<
       const random = yield* SecureRandom.SecureRandom;
 
       /**
-       * Plain SHA-256 is right here: every input is 256 random bits, so there is nothing to guess
-       * and a slow hash or salt adds no protection. Lookups go through this hash, so an attacker
-       * can't steer a comparison byte by byte; no code here compares a secret directly.
+       * Plain SHA-256: inputs are 256 random bits, so a salt or slow hash adds nothing.
        */
       const hash = (value: string): Effect.Effect<TokenHash> =>
         digest.digestHex(Digest.sha256, encoder.encode(value));

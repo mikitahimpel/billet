@@ -4,24 +4,9 @@ import { Base64, Base64Url } from "effect/encoding";
 import { InvalidPurchase } from "./payments-error.ts";
 import { type Certificate, ecdsaRawSignature, oids, parseCertificate, sameBytes } from "./x509.ts";
 
-/**
- * Verifies the JWS Apple signs App Store data with (StoreKit 2 transactions, server notifications),
- * the way Apple's App Store Server Library does without its online (OCSP) checks:
- *
- * 1. The header is ES256 and carries the chain in `x5c`: leaf, intermediate, root.
- * 2. The root is byte for byte one of `roots` (Apple Root CA - G3 in production).
- * 3. The intermediate is a CA signed by the root, the leaf is signed by the intermediate, and
- *    each issuer name is its parent's subject.
- * 4. The leaf has Apple's App Store marker (1.2.840.113635.100.6.11.1) and the intermediate the
- *    WWDR one (1.2.840.113635.100.6.2.1).
- * 5. Every certificate is valid at the payload's `signedDate`, which the leaf signs, as Apple's
- *    library does when it is not checking online.
- * 6. The leaf's P-256 key verifies the JWS signature.
- *
- * With `allowXcode`, a JWS with a single certificate is Xcode's StoreKit testing, which signs with
- * a key of its own: it is verified against that certificate alone, and reported as `xcode` so the
- * caller can insist the payload says `Xcode`. Without it, such a JWS is refused.
- */
+/** Checks as Apple's App Store Server Library does without OCSP; validity is judged at the
+ * payload's `signedDate`. With `allowXcode`, a single-certificate JWS (Xcode's StoreKit testing)
+ * is verified alone and reported as `xcode`, so the caller can insist on `Xcode`. */
 export interface SignedDataOptions {
   readonly roots: ReadonlyArray<Uint8Array>;
   readonly allowXcode: boolean;

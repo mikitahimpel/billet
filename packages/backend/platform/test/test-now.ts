@@ -1,8 +1,5 @@
 /**
- * The instant the test rooms live at: 22:42 UTC on a month end. Run the suite at another with
- * `TEST_NOW=<ISO instant> pnpm test`, for example on either side of midnight. Keep it far in the
- * future: workerd fires a Durable Object's alarm on the real clock, so an alarm a room sets on a
- * clock behind the real one goes off by itself, in the middle of the test.
+ * Override with `TEST_NOW=<ISO instant>`. Keep it in the future: workerd fires alarms on real time.
  */
 export const defaultTestNow = "2099-10-31T22:42:00.000Z";
 

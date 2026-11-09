@@ -11,10 +11,7 @@ const day1 = Date.UTC(2026, 10, 2, 9, 0, 0);
 const day1Later = Date.UTC(2026, 10, 2, 23, 59, 59);
 const day2 = Date.UTC(2026, 10, 3, 0, 0, 0);
 
-/**
- * The behaviour every `MetricsRepository` must have. Run it against each implementation, so the
- * in-memory fake can't drift from the real one. `make` must return an empty repository.
- */
+/** Run against each implementation so the fake can't drift. `make` returns an empty repository. */
 export const describeMetricsRepositoryContract = (
   name: string,
   make: () => Promise<MetricsRepository["Service"]>,

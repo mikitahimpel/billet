@@ -11,10 +11,7 @@ const templates: ReadonlyArray<{ readonly method: string; readonly path: string 
   { method: socketRoute.method, path: socketRoute.path },
 ];
 
-/**
- * `GET /v1/media/*` for a media request, `POST /v1/notes` for a note, `GET /admin/*` for the
- * panel (whose paths can hold a pair id), and so on.
- */
+/** Templates the path (for example `GET /v1/media/*`); admin paths can hold a pair id. */
 export const routeLabel = (method: string, pathname: string): string => {
   for (const template of templates) {
     const prefix = template.path.endsWith("*") ? template.path.slice(0, -1) : undefined;
@@ -25,7 +22,7 @@ export const routeLabel = (method: string, pathname: string): string => {
   return "unmatched";
 };
 
-/** The console, split by level so Workers Logs keeps each line's level. */
+/** Split by level so Workers Logs keeps each line's level. */
 export const consoleSink: LogSink = (level, line) => {
   switch (level) {
     case "error":
@@ -43,10 +40,7 @@ export const consoleSink: LogSink = (level, line) => {
   }
 };
 
-/**
- * One JSON line from code that runs outside Effect, in the logger's shape: `level`, `message` and
- * the fields, each through `redactField`. Prefer `Effect.log*`, which also carries the trace ids.
- */
+/** For code outside Effect; prefer `Effect.log*`, which also carries the trace ids. */
 export const logLine = (
   level: SinkLevel,
   message: string,
@@ -57,29 +51,14 @@ export const logLine = (
   consoleSink(level, JSON.stringify(line));
 };
 
-/**
- * The JSON logger and the span-writing tracer for this isolate (docs/observability.md). One
- * instance, shared by the Worker and the Durable Objects that run in the isolate.
- */
+/** Shared by the Worker and the Durable Objects in the isolate (docs/observability.md). */
 export const Observability = observabilityLayer(consoleSink);
 
-/**
- * Cloudflare's ray id, which the client also sees as the `cf-ray` response header. Without one
- * (local dev, tests), 16 random hex digits: short enough not to look like a token to `redact`.
- */
+/** Cloudflare's ray id; otherwise 16 random hex digits, short enough not to look like a token. */
 export const requestIdOf = (request: Request): string =>
   request.headers.get("cf-ray") ?? crypto.randomUUID().replaceAll("-", "").slice(0, 16);
 
-/**
- * Runs a request inside an `http.request` root span: method, route template (never the real path:
- * a media key or a query could hold something personal), request id and status. Every log line
- * under it carries `requestId`, `traceId` and `spanId`.
- *
- * `run` receives the context to hand the HTTP router (`handler(request, context)`), so the
- * routes' spans become children of this one and their logs use the JSON logger. A handler that
- * throws is logged once with its redacted cause and answers 500, so a bug shows in the logs
- * without leaking its message to the caller.
- */
+/** Spans carry the route template, never the real path; a throw answers 500 without leaking. */
 export const withRequestSpan = (
   request: Request,
   run: (context: Context.Context<never>) => Promise<Response>,
@@ -89,7 +68,7 @@ export const withRequestSpan = (
   return Effect.runPromise(
     Effect.context<never>().pipe(
       Effect.flatMap((context) => Effect.tryPromise(() => run(context))),
-      // The router would open its own server span, named by method and carrying the raw URL.
+      // The router would open its own server span carrying the raw URL.
       Effect.provideService(HttpMiddleware.TracerDisabledWhen, () => true),
       // The router sets `http.route` to its path template; the label adds the method.
       Effect.tap((response) =>
@@ -121,11 +100,7 @@ export const withRequestSpan = (
   );
 };
 
-/**
- * Runs plain async work (a Durable Object call, an alarm) inside a root span named `name`, so it
- * writes a `trace` line like a request does. A throw is logged with its redacted cause and
- * rethrown.
- */
+/** A throw is logged with its redacted cause and rethrown. */
 export const traced = <A>(
   name: string,
   attributes: Readonly<Record<string, unknown>>,

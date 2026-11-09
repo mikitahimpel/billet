@@ -1,16 +1,7 @@
 #!/bin/zsh
-# Bakes the Room and City shells: Room_shell.usdz and City_shell.usdz in apps/ios/Nooki/Resources/Room.
-#
 #   scripts/bake-room/bake.sh [room|city ...] [--skip-export] [--samples N] [--size N]
-#
-# 1. The app's BakedShellTests.export builds each room with its static parts tagged and writes their shapes,
-#    transforms and materials to shells/*.shapes (xcodebuild test on a Simulator; skipped with --skip-export).
-# 2. Blender (Cycles, headless) merges them, unwraps one atlas, bakes the light and writes the USDZ.
-# 3. scripts/bake-room/sources.json records what each shell was baked from; BakedShellTests fails when a room's
-#    static boxes no longer match it.
-#
-# Xcode and Blender each run under the shared build lock (~/.billet-manager/build.lock), Blender for at most
-# ten minutes a room. Needs XcodeGen, Xcode and Blender.app.
+# BakedShellTests.export writes the shapes, Blender bakes them; sources.json records what each shell
+# was baked from, and BakedShellTests fails when a room's static boxes no longer match it.
 set -euo pipefail
 
 here=${0:A:h}

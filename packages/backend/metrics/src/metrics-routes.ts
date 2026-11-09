@@ -11,9 +11,7 @@ import { EventSink, pairHashOf, PairVariants, variantsLabel } from "./analytics.
 import { Metrics } from "./metrics.ts";
 
 /**
- * The route the app reports its named events to. Each accepted event is counted in D1, its detail
- * apart from the person, and written to Analytics Engine. Needs `AuthService`, `Metrics`, `PairingRepository`, `EventSink`,
- * `PairVariants` and `Digest`.
+ * Counts each event in D1 (its detail apart from the person) and writes it to Analytics Engine.
  */
 export const MetricsRoutes = HttpRouter.use((router) =>
   Effect.gen(function* () {

@@ -1,5 +1,6 @@
 import SwiftUI
 import Design
+import FeatureInbox
 import Wire
 
 /// The Inbox: what happened in the pair lately, grouped by day, newest first. Opening it marks everything read
@@ -13,7 +14,7 @@ struct InboxView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        let layout = InboxLayout(phase: model.phase, hasItems: !model.items.isEmpty)
+        let layout = InboxLayout(model.sheet)
         BilletSheet("Inbox", size: layout.size, scrolls: layout.scrolls) {
             content
         }
@@ -21,7 +22,7 @@ struct InboxView: View {
     }
 
     @ViewBuilder private var content: some View {
-        switch model.phase {
+        switch model.sheet {
         case .idle, .loading:
             ProgressView()
                 .frame(maxWidth: .infinity)
@@ -30,13 +31,13 @@ struct InboxView: View {
             EmptyState(
                 symbol: "tray", title: "Nothing here yet",
                 text: "Once your partner joins, what you both do with \(state.petName) shows up here.")
-        case .failed where model.items.isEmpty:
+        case .failed:
             EmptyState(
                 symbol: "wifi.exclamationmark", title: "Couldn't load the Inbox",
                 text: "Check your connection and try again.") {
                     SecondaryButton("Try Again", fullWidth: false) { Task { await model.open() } }
                 }
-        case .loaded where model.items.isEmpty:
+        case .loaded(let page) where page.items.isEmpty:
             VStack(spacing: 0) {
                 DeliveryNotice(
                     partner: partnerName, insets: EdgeInsets(top: 0, leading: 0, bottom: Space.l, trailing: 0))
@@ -44,19 +45,19 @@ struct InboxView: View {
                     symbol: "tray", title: "All quiet",
                     text: "Feeding \(state.petName), notes and gifts from you two will show up here.")
             }
-        case .loaded, .failed:
-            list
+        case .loaded(let page), .refreshing(let page), .stale(let page):
+            list(page)
         }
     }
 
-    private var list: some View {
+    private func list(_ page: InboxMachine.Page) -> some View {
         List {
-            ForEach(InboxDay.group(model.items), id: \.day) { day in
+            ForEach(InboxDay.group(page.items), id: \.day) { day in
                 Section(day.title) {
                     ForEach(day.items, id: \.id) { item in
-                        row(item)
+                        row(item, isNew: page.fresh.contains(item.id))
                             .onAppear {
-                                if item.id == model.items.last?.id { Task { await model.loadMore() } }
+                                if item.id == page.items.last?.id { model.loadMore() }
                             }
                     }
                 }
@@ -74,8 +75,8 @@ struct InboxView: View {
 
     private var partnerName: String { state.profile.name(of: state.otherPartner) }
 
-    @ViewBuilder private func row(_ item: ActivityItem) -> some View {
-        let rowView = InboxRow(item: item, state: state, isNew: model.fresh.contains(item.id))
+    @ViewBuilder private func row(_ item: ActivityItem, isNew: Bool) -> some View {
+        let rowView = InboxRow(item: item, state: state, isNew: isNew)
         if let target = item.target {
             Button {
                 dismiss()
@@ -101,10 +102,10 @@ enum InboxLayout: Equatable {
     case short
     case list
 
-    init(phase: InboxModel.Phase, hasItems: Bool) {
-        switch phase {
-        case .loaded, .failed: self = hasItems ? .list : .short
-        case .idle, .loading, .unpaired: self = .short
+    init(_ sheet: InboxMachine.Sheet) {
+        switch sheet {
+        case .loaded(let page), .refreshing(let page), .stale(let page): self = page.items.isEmpty ? .short : .list
+        case .idle, .loading, .unpaired, .failed: self = .short
         }
     }
 
@@ -212,35 +213,5 @@ private struct InboxRow: View {
                 .frame(width: 40, height: 40)
                 .background(Ink.surfaceRaised, in: .circle)
         }
-    }
-}
-
-/// The items of one calendar day, titled "Today", "Yesterday" or the date.
-struct InboxDay {
-    let day: Date
-    let title: String
-    let items: [ActivityItem]
-
-    static func group(_ items: [ActivityItem], now: Date = .now, calendar: Calendar = .current) -> [InboxDay] {
-        var days: [InboxDay] = []
-        for item in items {
-            let start = calendar.startOfDay(for: Date(timeIntervalSince1970: TimeInterval(item.at) / 1000))
-            if let last = days.last, last.day == start {
-                days[days.count - 1] = InboxDay(day: start, title: last.title, items: last.items + [item])
-            } else {
-                days.append(InboxDay(day: start, title: title(start, now: now, calendar: calendar), items: [item]))
-            }
-        }
-        return days
-    }
-
-    static func title(_ day: Date, now: Date, calendar: Calendar) -> String {
-        if calendar.isDate(day, inSameDayAs: now) { return "Today" }
-        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
-           calendar.isDate(day, inSameDayAs: yesterday) {
-            return "Yesterday"
-        }
-        let sameYear = calendar.component(.year, from: day) == calendar.component(.year, from: now)
-        return day.formatted(sameYear ? .dateTime.weekday(.wide).day().month(.wide) : .dateTime.day().month(.wide).year())
     }
 }

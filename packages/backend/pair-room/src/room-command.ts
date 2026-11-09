@@ -33,10 +33,7 @@ export const RoomCommand = Schema.TaggedUnion({
   },
   SendNote: { note: Note, key: IdempotencyKey },
   SetPresence: { user: UserId, state: PresenceState },
-  /**
-   * Sets `by`'s reaction to `note`, or takes it back when `reaction` is absent. `current` is the
-   * reaction the room holds for them on that note, if any.
-   */
+  /** Sets `by`'s reaction to `note`, or takes it back when `reaction` is absent. */
   React: {
     by: UserId,
     note: Note,
@@ -67,9 +64,7 @@ export const RoomCommand = Schema.TaggedUnion({
     terms: Schema.optionalKey(PriceTerms),
   },
   /**
-   * Buys one offer with the pair's coins, at the catalog's price: a piece at its deal price when it
-   * is a deal of the pair's local day, counted `utcOffsetSeconds` from UTC (else the cat's clock,
-   * else UTC). `id` is the buyer's, once.
+   * Buys an offer with coins; a deal is priced on the pair's local day. `id` is the buyer's, once.
    */
   Order: {
     id: IdempotencyKey,
@@ -95,8 +90,7 @@ export const RoomCommand = Schema.TaggedUnion({
   /** Pays something the couple did in the app, within its daily cap and once per ref. */
   Earn: { by: UserId, at: EpochMillis, utcOffsetSeconds: UtcOffsetSeconds, event: EarnEvent },
   /**
-   * Counts a day in the pair's love streak: the local day, `utcOffsetSeconds` from UTC, that
-   * `happenedAt` falls on, held within the day before `at`, the room's clock.
+   * Counts the local day `happenedAt` falls on, held within the day before `at`, the room's clock.
    */
   RecordStreakDay: {
     by: UserId,
@@ -109,12 +103,7 @@ export const RoomCommand = Schema.TaggedUnion({
   /** Replaces `by`'s check-in. `note` is as the caller sent it: the room trims and bounds it. */
   SetMood: { by: UserId, mood: Mood, note: Schema.optionalKey(Schema.String), at: EpochMillis },
   /**
-   * Coins bought with money: `buy` pays `coins` in, `refund` takes them back. `id` is the payments
-   * ledger's entry id, written once; `ref` is the pack.
-   */
-  /**
-   * One change to the pair's lists. `list` is the stored list the change names, absent when there
-   * is none; `paid` is whether the item it names already earned its tick, under any earlier tick.
+   * `list` is the stored list it names, if any; `paid` is whether its item already earned a tick.
    */
   ChangeList: {
     by: UserId,
@@ -125,8 +114,7 @@ export const RoomCommand = Schema.TaggedUnion({
     paid: Schema.Boolean,
   },
   /**
-   * Stores one draw-guess change, decided by the riddle rules. `reward` is set for the change that
-   * ended the round: the room journals it as `by`'s `GamePlayed`, in the same write.
+   * One draw-guess change; `reward`, set when it ends the round, is journaled as `GamePlayed`.
    */
   SaveRiddle: {
     by: UserId,
@@ -134,6 +122,7 @@ export const RoomCommand = Schema.TaggedUnion({
     write: RiddleWrite,
     reward: Schema.optionalKey(RiddleReward),
   },
+  /** Coins bought with money; `id` is the payments ledger's entry id, written once. */
   CreditPurchase: {
     id: CoinEntryId,
     kind: Schema.Literals(["buy", "refund"]),

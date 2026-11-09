@@ -1,9 +1,5 @@
-/**
- * Just enough DER and X.509 to check an App Store certificate chain in a Worker, where Node's
- * `X509Certificate` does not exist. It reads what the checks need and nothing else: the signed
- * bytes, the signature and its algorithm, names, validity, the public key and extension ids.
- * Every malformed input throws `MalformedCertificate`.
- */
+/** Just enough DER and X.509 to check an App Store chain in a Worker, where Node's
+ * `X509Certificate` does not exist. Every malformed input throws `MalformedCertificate`. */
 
 export class MalformedCertificate extends Error {
   override readonly name = "MalformedCertificate";
@@ -156,7 +152,6 @@ const basicConstraintsCa = (value: Uint8Array): boolean => {
   return first?.tag === tags.boolean && first.content[0] !== 0;
 };
 
-/** Reads one DER certificate. */
 export const parseCertificate = (der: Uint8Array): Certificate => {
   const [tbs, algorithm, signature] = childrenOf(only(der, tags.sequence, "certificate"));
   const tbsNode = expect(tbs, tags.sequence, "to-be-signed");
@@ -216,10 +211,8 @@ const unsigned = (node: Node | undefined, size: number): Uint8Array => {
   return out;
 };
 
-/**
- * An ECDSA signature from its DER form (`SEQUENCE { r, s }`) to the fixed-size `r‖s` that Web
- * Crypto verifies. `size` is the curve's byte length: 32 for P-256, 48 for P-384.
- */
+/** DER `SEQUENCE { r, s }` to the fixed-size `r‖s` that Web Crypto verifies. `size` is the
+ * curve's byte length: 32 for P-256, 48 for P-384. */
 export const ecdsaRawSignature = (der: Uint8Array, size: number): Uint8Array => {
   const [r, s, extra] = childrenOf(only(der, tags.sequence, "ecdsa signature"));
   if (extra !== undefined) malformed("ecdsa signature fields");

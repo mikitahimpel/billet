@@ -23,12 +23,8 @@ export interface Assignment {
   readonly exposed: boolean;
 }
 
-/**
- * The variant of `pairId` in `experiment`, from `hash(pairId + experimentKey)`. It depends on
- * nothing else, so every call (either partner, any server, any time) gives the same answer for the
- * same weights. Exposure and variant use two separate hashes, so being early in the exposure
- * order says nothing about which variant a pair gets.
- */
+/** From `hash(pairId + experimentKey)` alone, so every call gives the same answer for the same
+ * weights. Exposure and variant use separate hashes, so exposure order says nothing of variant. */
 export const assign = (
   experiment: Experiment,
   pairId: PairId,

@@ -6,11 +6,7 @@ import { Jwks, Jwt } from "effect/jose";
 export const accessJwtHeader = "cf-access-jwt-assertion";
 
 /**
- * Which Access applications may reach the admin panel: the team domain
- * (`<team>.cloudflareaccess.com`), the panel application's audience (AUD) tag, and optionally the
- * AUD tag of the application that lets agents' service tokens read `/admin/api/agent`. All come
- * from the Worker's configuration, never from the request. Without `agentAudience` no service
- * token is accepted.
+ * From the Worker's config, never the request. Without `agentAudience`, no service token passes.
  */
 export interface AccessConfig {
   readonly teamDomain: string;
@@ -22,9 +18,7 @@ const teamDomainPattern = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.cloudflareacce
 const audiencePattern = /^[a-f0-9]{64}$/;
 
 /**
- * The configuration, or `undefined` when the team domain or the panel's AUD is missing or
- * malformed. The admin panel then refuses every request: it fails closed, never open. A missing or
- * malformed agent AUD only closes the agent routes.
+ * `undefined` when the team domain or panel AUD is missing or malformed: the panel fails closed.
  */
 export const accessConfigOf = (
   teamDomain: string | undefined,
@@ -51,10 +45,7 @@ export interface AdminIdentity {
   readonly email: string;
 }
 
-/**
- * Who Access let in: a person (an email, for the panel's audience), or an agent (a service token's
- * `common_name`, for the agent audience), which may only read `/admin/api/agent`.
- */
+/** A person may use the panel; an agent (service token) may only read `/admin/api/agent`. */
 export type AccessIdentity =
   | ({ readonly kind: "person" } & AdminIdentity)
   | { readonly kind: "agent"; readonly commonName: string };
@@ -94,11 +85,7 @@ export class AccessVerifier extends Context.Service<
 >()("@billet/backend-admin/AccessVerifier") {}
 
 /**
- * Verifies the Access JWT against the team's signing keys (`Jwks`): RS256 only, issued by the
- * team domain, for a configured audience, not expired, not used before `nbf`. A token with an
- * email is a person and must carry the panel's audience; one with only a `common_name` is a
- * service token and must carry the agent audience. Anything else, including a missing header or
- * keys that can't be read, is `AccessDenied`.
+ * RS256 only. A token with an email needs the panel audience; a `common_name` one, the agents'.
  */
 export const accessVerifierLayer = (
   config: AccessConfig,

@@ -12,8 +12,7 @@ import {
 import { IdempotencyKey } from "@billet/contracts-domain/ids";
 
 /**
- * The couple's cat now. `cat` is absent until one of them adopts it; `temper` and `needs` are then
- * those of a cat just born. `lastSeq` is the journal's last entry, 0 when it is empty.
+ * `cat` is absent until adopted, then a newborn's `temper` and `needs`. `lastSeq` is 0 when empty.
  */
 export const CatResponse = Schema.Struct({
   cat: Schema.optionalKey(CatProfile),

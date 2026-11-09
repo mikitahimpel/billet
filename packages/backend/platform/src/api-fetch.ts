@@ -91,12 +91,9 @@ import type { WorkerEnv } from "./worker-env.ts";
 import { type Now, systemNow } from "./wall-clock.ts";
 
 const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, status: AppStatus) => {
-  // The stage decides which App Store environments count, and whether the dev extras (Xcode
-  // transactions, mock purchases, demo-room callers, demo partners) exist at all.
+  // The stage decides which App Store environments count, and whether the dev extras exist at all.
   const settings = settingsForStage(env.STAGE);
   const payments = PaymentsConfig.with(settings);
-  // A new pair gets its experiment variants, and the funnel is counted, as part of pairing.
-  // The pair snapshot carries the members' check-ins from the room.
   const pairing = PairingService.layer.pipe(
     Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
     Layer.provide(PairMoodsLive.pipe(Layer.provide(MoodService.layer))),
@@ -137,7 +134,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
             Layer.mergeAll(pairing, AccountDeletion.layer, DemoBotsLive(env.PAIR_ROOM)),
           ),
         ),
-        // The App Review pair, on every stage: its partner's bot is keyed on the one review user.
+        // Its partner's bot is keyed on the one review user.
         ReviewService.layer.pipe(
           Layer.provide(Layer.mergeAll(pairing, DemoBotsLive(env.PAIR_ROOM))),
         ),
@@ -163,7 +160,6 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         FlagsService.layer,
         PairVariantsLive,
         ServiceStatus.with(status),
-        // Bought coins go to the pair's wallet in its room, as well as to the payments ledger.
         PaymentsService.layer.pipe(
           Layer.provide(PairWalletLive.pipe(Layer.provide(NotesService.layer))),
         ),
@@ -205,12 +201,8 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
   );
 };
 
-/**
- * The `Api` Worker's `fetch`. The router is built per request, because the services under it hold
- * I/O that a Worker can't share between requests. `/admin` is the admin panel, behind Cloudflare
- * Access (admin-fetch.ts). Universal Links for invites are app-links.ts. Anything else outside
- * `/v1/` is the placeholder, which the deploy smoke test reads. `experiments` is the registry and `now` the wall clock; only tests pass others.
- */
+// Per request: its services hold I/O a Worker can't share.
+// The deploy smoke test reads the placeholder.
 export const respondApi = (
   request: Request,
   env: WorkerEnv,
@@ -253,8 +245,8 @@ const routeApi = async (
   context: Context.Context<never>,
   now: Now,
 ): Promise<Response> => {
-  // The service status comes first, from KV: `/v1/status` and the maintenance 503 must answer
-  // while D1 or the rest of the API is down, so nothing before this may touch the database.
+  // `/v1/status` and the maintenance 503 must answer while D1 is down, so nothing before this may
+  // touch the database.
   const status = await readServedStatus(env.STATUS);
   const gated = gateRequest(request, status, now());
   if (gated !== undefined) return gated;

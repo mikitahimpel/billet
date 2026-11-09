@@ -15,7 +15,7 @@ const code = (hash: string, createdAt: number, expiresAt = createdAt + 1_000): N
   expiresAt,
 });
 
-/** The behaviour every `ReviewRepository` must have. `make` must return an empty repository. */
+/** `make` must return an empty repository. */
 export const describeReviewRepositoryContract = (
   name: string,
   make: () => Promise<ReviewRepository["Service"]>,

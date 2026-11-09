@@ -1,20 +1,17 @@
-// How a cat's body moves, independent of any one splat: a two-bone leg solver, a walking gait and a springy tail.
+// A two-bone leg solver, a walking gait and a springy tail, independent of any one splat.
 // Model space: front toward -Z, up +Y, paws on y = 0.
 import * as THREE from "three";
 
-/** Angle of a vector in the side (y, z) plane, measured the way a rotation about +X turns it. */
+/** Angle in the side (y, z) plane, as a rotation about +X turns it. */
 const sideAngle = (y, z) => Math.atan2(z, y);
-/** Angle of a vector in the front (x, y) plane, measured the way a rotation about +Z turns a leg hanging down. */
+/** Angle in the front (x, y) plane, as a rotation about +Z turns a leg hanging down. */
 const frontAngle = (x, y) => Math.atan2(x, -y);
 const up = new THREE.Vector3(0, 1, 0);
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 
-/**
- * Bends a leg so its paw reaches `foot`. `hip`, `knee` and `paw` are the rest joints in the leg's parent frame,
- * `foot` the target in that frame. The leg swings out about +Z at the hip to the target's side, then bends in its rest
- * plane, folding the way it does at rest (back for a cat's elbow, forward for the knee). Returns the upper bone's turn
- * about the hip and the lower bone's turn about the knee relative to the upper, both about +X, and the swing out.
- */
+/** In the leg's parent frame: swings out about +Z at the hip, then bends in the rest plane the way
+ * it folds at rest. Returns [upper turn about the hip, lower turn relative to the upper (both
+ * about +X), swing out]. */
 export function solveLeg(hip, knee, paw, target) {
   const splay = wrap(
     frontAngle(target.x - hip.x, target.y - hip.y) - frontAngle(paw.x - hip.x, paw.y - hip.y),
@@ -52,16 +49,13 @@ export function solveLeg(hip, knee, paw, target) {
   return [turnUpper, wrap(lowerAngle - restLower - turnUpper), splay];
 }
 
-// A walk: each paw on the ground for 60% of the cycle, set down in the order left hind, left fore, right hind,
-// right fore, a quarter cycle apart.
+// A walk: each paw down for 60% of the cycle, set down in `legOrder` a quarter cycle apart.
 const duty = 0.6;
 export const legOrder = ["leftHind", "leftFore", "rightHind", "rightFore"];
 const phaseOffset = { leftHind: 0, leftFore: 0.25, rightHind: 0.5, rightFore: 0.75 };
 
-/**
- * Where the body stands in the room: `at` its origin and `yaw` about +Y, `scale` room units per model unit, and
- * `velocity` (room units/s) and `yawRate` (rad/s) to tell where it will be a moment later.
- */
+/** `frame`: `at` and `yaw` (about +Y) place the body in the room, `scale` is room units per model
+ * unit, `velocity` (room units/s) and `yawRate` (rad/s) predict it a moment later. */
 const toRoom = (frame, p, out = new THREE.Vector3()) =>
   out.copy(p).multiplyScalar(frame.scale).applyAxisAngle(up, frame.yaw).add(frame.at);
 const toModel = (frame, p, out = new THREE.Vector3()) =>
@@ -72,17 +66,11 @@ const ahead = (frame, seconds) => ({
   yaw: frame.yaw + frame.yawRate * seconds,
 });
 
-/**
- * A walk that keeps each paw where it was set down: a paw in stance holds its spot in the room whatever the body does,
- * and a swing carries it to where its stance spot will be halfway through its next stance. Walking, that spot is
- * halfway from the rest paw to under the hip, so the stride stays within the leg's reach. The cycle runs slower at a
- * slow walk and stops once every paw has stepped back to its rest spot.
- */
+/** A paw in stance holds its spot in the room; a swing carries it to its spot halfway through
+ * the next stance, set halfway from the rest paw to under the hip so it stays within reach. */
 export class Gait {
-  /**
-   * `legs` maps each leg to its `hip` and rest `paw` in model space; `speed` (model units/s) is where the cycle takes
-   * `period`.
-   */
+  /** `legs`: each leg's `hip` and rest `paw` in model space; at `speed` (model units/s) the
+   * cycle takes `period`. */
   constructor(legs, { period = 0.55, speed = 0.26, lift = 0.022 } = {}) {
     this.basePeriod = this.period = period;
     this.speed = speed;
@@ -104,10 +92,8 @@ export class Gait {
     );
   }
 
-  /**
-   * Advances the cycle and the paws. `stepping` keeps the paws moving even without ground speed (turning on the spot);
-   * without `planted` the paws ride with the body (in the air) and are set down again where they are.
-   */
+  /** `stepping` keeps the paws moving without ground speed (turning on the spot); without
+   * `planted` the paws ride with the body (in the air) and are set down where they are. */
   update(dt, frame, stepping, planted = true) {
     const pace = Math.max(frame.velocity.length() / frame.scale, Math.abs(frame.yawRate) * 0.12);
     const moving = planted && (stepping || pace > 1e-3);
@@ -146,7 +132,7 @@ export class Gait {
     this.moving = moving;
   }
 
-  /** Where a swinging paw lands, `w` of the way through its swing; once stopping, back at its rest spot. */
+  /** Where a paw lands, `w` of the way through its swing; once stopping, at its rest spot. */
   touchdown(frame, leg, w, moving = this.moving) {
     const swing = (1 - duty) * this.period;
     return toRoom(
@@ -169,10 +155,8 @@ export class Gait {
     return out;
   }
 
-  /**
-   * The body walks a little low and dips as each paw takes its weight, twice per side per cycle, rocks nose down as the
-   * weight passes to the fore paws, and rolls toward the planted side.
-   */
+  /** Walks a little low, dipping as each paw takes weight, rocking nose down as weight passes to
+   * the fore paws and rolling toward the planted side. */
   body() {
     const a = this.phase * Math.PI * 2;
     const m = this.amount;
@@ -181,11 +165,8 @@ export class Gait {
   }
 }
 
-/**
- * The tail as a chain of damped springs on top of whatever the motion poses: the body's accelerations push each joint
- * off its posed angle, and each is pulled back toward its parent's swing, so the tip lags most and overshoots last.
- * `bones` are the joints' rest directions in model space.
- */
+/** Damped springs over the posed tail: accelerations push each joint off its pose and each is
+ * pulled toward its parent's swing, so the tip lags most. `bones`: rest directions, model space. */
 export class TailSpring {
   constructor(bones, { frequency = [11, 8, 6], damping = 0.3, gain = 3, limit = 0.7 } = {}) {
     this.joints = bones.map((dir, i) => ({
@@ -201,7 +182,7 @@ export class TailSpring {
     this.limit = limit;
   }
 
-  /** `force` is the inertial push on the tail per unit mass, model units/s² in the body's frame: minus its acceleration. */
+  /** `force`: inertial push per unit mass (minus acceleration), model units/s², body frame. */
   update(dt, force) {
     const steps = Math.ceil(dt * 240);
     const h = dt / steps;

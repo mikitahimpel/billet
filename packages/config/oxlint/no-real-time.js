@@ -1,6 +1,6 @@
 // A lint rule for test files: no reading of the real clock. A test that reads it passes or fails by
-// the hour it runs (main went red at 22:42 UTC on 2026-11-04 that way). Tests use a fixed clock:
-// Effect's TestClock, a `now` they pass in, or a fixed instant written out.
+// the hour it runs. Tests use a fixed clock: Effect's TestClock, a `now` they pass in, or a fixed
+// instant written out.
 
 const isMember = (node, object, property) =>
   node?.type === "MemberExpression" &&

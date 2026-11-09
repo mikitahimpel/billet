@@ -10,10 +10,7 @@ import { PairRooms } from "./pair-rooms.ts";
 
 const directoryUnavailable = () => new NotesUnavailable({ reason: "directory-unavailable" });
 
-/**
- * The pair's Who knows who round, for the caller's own pair: like notes, every call starts from the
- * pair D1 says the caller belongs to. No partner is `NotesNotFound`.
- */
+/** Every call starts from the caller's pair in D1. No partner is `NotesNotFound`. */
 export class GuessService extends Context.Service<
   GuessService,
   {

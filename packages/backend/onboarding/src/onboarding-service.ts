@@ -9,15 +9,12 @@ import { OnboardingCatalogue } from "./catalogue.ts";
 import { InvalidAnswer, type OnboardingUnavailable } from "./onboarding-error.ts";
 import { OnboardingRepository } from "./onboarding-repository.ts";
 
-/** The onboarding questions, and each account's answers to them. */
 export class OnboardingService extends Context.Service<
   OnboardingService,
   {
     readonly catalogue: OnboardingResponse;
     /**
-     * Checks the answer against the current catalogue, or the app's own steps, and stores it.
-     * `answeredAt` past the server's now is taken as now, so a phone clock running ahead can't pin
-     * an answer for good.
+     * A future `answeredAt` is taken as now, so a phone clock running ahead can't pin an answer.
      */
     readonly save: (
       userId: UserId,

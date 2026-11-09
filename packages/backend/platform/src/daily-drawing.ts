@@ -1,6 +1,4 @@
-// The drawing of the day: one prompt a pair shares each day, each partner's drawing of it, and the
-// rule that a partner's drawing stays hidden until you have drawn your own. Pure, so the room only
-// stores and sends what these functions decide.
+// Pure, so the room only stores and sends what these functions decide.
 
 export type Season = "winter" | "spring" | "summer" | "autumn";
 
@@ -10,7 +8,7 @@ export interface DailyPrompt {
 }
 
 interface PromptEntry extends DailyPrompt {
-  /** The season a prompt belongs to; without one it fits any day. */
+  /** Without one the prompt fits any day. */
   readonly season?: Season;
 }
 
@@ -95,7 +93,6 @@ export const PROMPTS: readonly PromptEntry[] = [
 const DAY = /^(\d{4})-(\d{2})-(\d{2})$/;
 const DAY_MS = 86_400_000;
 
-/** True for a calendar day (`YYYY-MM-DD`) that exists. */
 export const isDay = (value: unknown): value is string => {
   if (typeof value !== "string") return false;
   const match = DAY.exec(value);
@@ -104,14 +101,12 @@ export const isDay = (value: unknown): value is string => {
   return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
 };
 
-/** Days since 1970-01-01 for a calendar day. */
 const dayNumber = (day: string): number => Math.floor(Date.parse(`${day}T00:00:00Z`) / DAY_MS);
 
-/** The calendar day `delta` days from `day`. */
 export const addDays = (day: string, delta: number): string =>
   new Date(Date.parse(`${day}T00:00:00Z`) + delta * DAY_MS).toISOString().slice(0, 10);
 
-/** Meteorological seasons of the northern hemisphere, where both of the app's first pairs live. */
+/** Meteorological seasons of the northern hemisphere. */
 export const seasonOf = (day: string): Season => {
   const month = Number(day.slice(5, 7));
   if (month === 12 || month <= 2) return "winter";
@@ -120,7 +115,7 @@ export const seasonOf = (day: string): Season => {
   return "autumn";
 };
 
-/** FNV-1a, 32 bits: a stable seed from text. */
+/** FNV-1a, 32 bits. */
 const hash = (text: string): number => {
   let value = 0x811c9dc5;
   for (let index = 0; index < text.length; index += 1) {
@@ -130,7 +125,7 @@ const hash = (text: string): number => {
   return value >>> 0;
 };
 
-/** mulberry32: a small seeded generator, so a pair's order is the same on every call. */
+/** mulberry32, so a pair's order is the same on every call. */
 const generator = (seed: number): (() => number) => {
   let state = seed;
   return () => {
@@ -152,10 +147,7 @@ const shuffled = <T>(items: readonly T[], seed: number): T[] => {
   return out;
 };
 
-/**
- * The pair's prompt for `day`. Each pair walks its own shuffled order of the prompts that fit the
- * season, one a day, so no prompt comes back until the season's whole set has had its turn.
- */
+/** Each pair walks its own shuffled order, so no prompt repeats until the season's set is used. */
 export const promptFor = (pair: string, day: string): DailyPrompt => {
   const season = seasonOf(day);
   const pool = PROMPTS.filter((p) => p.season === undefined || p.season === season);
@@ -164,27 +156,25 @@ export const promptFor = (pair: string, day: string): DailyPrompt => {
   return { id: chosen.id, text: chosen.text };
 };
 
-/** The days any phone on Earth may be living now: UTC−12 to UTC+14 spans three dates. */
+/** UTC−12 to UTC+14 spans three dates. */
 export const liveDays = (nowMs: number): readonly string[] => {
   const today = new Date(nowMs).toISOString().slice(0, 10);
   return [addDays(today, -1), today, addDays(today, 1)];
 };
 
-/** One partner's drawing of one day's prompt. */
 export interface DailyDrawing {
   readonly id: string;
   readonly ink: string;
   readonly at: string;
 }
 
-/** Calendar day mapped to the devices that drew that day. */
 export type DailyDays = Readonly<Record<string, readonly string[]>>;
 
 export const MAX_DAILY_DAYS = 60;
-/** The largest ink a daily drawing may carry, well over a full canvas of strokes. */
+/** Well over a full canvas of strokes. */
 export const MAX_DAILY_INK = 120_000;
 
-/** Records that `device` drew `day`; the newest `MAX_DAILY_DAYS` days stay. */
+/** The newest `MAX_DAILY_DAYS` days stay. */
 export const recordDaily = (days: DailyDays, device: string, day: string): DailyDays => {
   const drew = days[day] ?? [];
   if (drew.includes(device)) return days;
@@ -193,14 +183,10 @@ export const recordDaily = (days: DailyDays, device: string, day: string): Daily
   return Object.fromEntries(keep.map((d) => [d, next[d] ?? []]));
 };
 
-/** The days dropped by the last `recordDaily`, whose drawings can be deleted. */
 export const droppedDays = (before: DailyDays, after: DailyDays): readonly string[] =>
   Object.keys(before).filter((day) => !(day in after));
 
-/**
- * What `device` may see of `day`. The reveal rule: the partner's drawing comes only once this
- * device has drawn its own. Until then the device learns only that the partner has drawn.
- */
+/** The partner's drawing comes only once this device has drawn its own. */
 export const dailyView = (
   pair: string,
   day: string,
@@ -220,18 +206,17 @@ export const dailyView = (
   };
 };
 
-/** The frame that tells a phone the prompts for every day it may be living now. */
 export const promptsFrame = (pair: string, nowMs: number): Readonly<Record<string, unknown>> => ({
   type: "daily-prompts",
   prompts: Object.fromEntries(liveDays(nowMs).map((day) => [day, promptFor(pair, day)])),
 });
 
-/** A drawing whose `at` is far from the room's clock is refused, so a day cannot be backdated. */
+/** Refuses a far-off `at`, so a day cannot be backdated. */
 export const MAX_CLOCK_SKEW_MS = 36 * 3_600_000;
 
 const OFFSET = /(Z|([+-])(\d{2}):(\d{2}))$/;
 
-/** The UTC offset in minutes that an ISO time with an offset was written in. */
+/** In minutes. */
 export const offsetOf = (at: string): number | undefined => {
   const match = OFFSET.exec(at);
   if (match === null) return undefined;
@@ -240,9 +225,9 @@ export const offsetOf = (at: string): number | undefined => {
   return match[2] === "-" ? -minutes : minutes;
 };
 
-/** The evening reminder goes between these local times, minutes after midnight. */
+/** Local minutes after midnight. */
 export const EVENING_START = 19 * 60;
-/** Quiet hours start here and run to `QUIET_END`: no reminder is sent inside them. */
+/** No reminder is sent from here to `QUIET_END`. */
 export const QUIET_START = 22 * 60;
 export const QUIET_END = 8 * 60;
 
@@ -256,7 +241,7 @@ const localParts = (nowMs: number, offset: number) => {
 
 export const isQuiet = (minutes: number): boolean => minutes >= QUIET_START || minutes < QUIET_END;
 
-/** Device mapped to the last local day it was reminded, so it is reminded at most once a day. */
+/** Device to the last local day it was reminded, so it is reminded at most once a day. */
 export type Reminded = Readonly<Record<string, string>>;
 
 export interface ReminderInputs {
@@ -266,7 +251,6 @@ export interface ReminderInputs {
   readonly days: DailyDays;
 }
 
-/** A reminder due now: who gets it, for which of their days, and whether the partner has drawn. */
 export interface DueReminder {
   readonly device: string;
   readonly day: string;
@@ -276,10 +260,7 @@ export interface DueReminder {
 const hasDrawn = (days: DailyDays, day: string, device: string): boolean =>
   (days[day] ?? []).includes(device);
 
-/**
- * The reminders due at `nowMs`: a paired device that has not drawn its local day, in its evening
- * and outside quiet hours, not reminded that day yet.
- */
+/** A paired device that has not drawn its local day, in its evening, not reminded that day yet. */
 export const dueReminders = (nowMs: number, inputs: ReminderInputs): readonly DueReminder[] => {
   const { devices, offsets, reminded, days } = inputs;
   if (devices.length < 2) return [];
@@ -294,10 +275,7 @@ export const dueReminders = (nowMs: number, inputs: ReminderInputs): readonly Du
   });
 };
 
-/**
- * When the next reminder could fall due: the soonest evening start of a device's local day that
- * it has neither drawn nor been reminded on. Undefined when no device can be reminded.
- */
+/** The soonest evening start of a local day not drawn nor reminded on; undefined when none. */
 export const nextReminderAt = (nowMs: number, inputs: ReminderInputs): number | undefined => {
   const { devices, offsets, reminded, days } = inputs;
   if (devices.length < 2) return undefined;
@@ -305,7 +283,6 @@ export const nextReminderAt = (nowMs: number, inputs: ReminderInputs): number | 
     const offset = offsets[device];
     if (offset === undefined) return [];
     const { day } = localParts(nowMs, offset);
-    // Today's evening, or else tomorrow's: the first one this device still has open.
     for (const candidate of [day, addDays(day, 1)]) {
       if (reminded[device] === candidate || hasDrawn(days, candidate, device)) continue;
       const start = Date.parse(`${candidate}T00:00:00Z`) + EVENING_START * 60_000;
@@ -318,7 +295,6 @@ export const nextReminderAt = (nowMs: number, inputs: ReminderInputs): number | 
   return times.length === 0 ? undefined : Math.min(...times);
 };
 
-/** The reminder's words, in the cat's voice. */
 export const reminderText = (
   catName: string | undefined,
   prompt: DailyPrompt,

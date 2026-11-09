@@ -47,7 +47,7 @@ const NoteJson = Schema.fromJsonString(Note);
 const encodeNote = Schema.encodeSync(NoteJson);
 const decodeNoteOption = Schema.decodeOption(NoteJson);
 
-/** The most notes one call returns. A smaller, zero or negative `limit` is honoured, never unbounded. */
+/** A smaller, zero or negative `limit` is honoured; a page is never unbounded. */
 export const MAX_NOTES_PER_PAGE = 100;
 const pageSize = (limit: number): number =>
   Math.max(0, Math.min(Math.trunc(limit), MAX_NOTES_PER_PAGE));
@@ -230,7 +230,7 @@ const listItemFrom = (row: ListItemRow): Option.Option<ListItem> =>
     }),
   );
 
-/** The lists with their items, each in its stored order. A list this code cannot read is left out. */
+/** Each in its stored order. A list this code cannot read is left out. */
 const listsFrom = (
   rows: ReadonlyArray<ListRow>,
   items: ReadonlyArray<ListItemRow>,
@@ -249,7 +249,6 @@ const listsFrom = (
     ),
   );
 
-/** How long a list change's key is kept, behind the newest. */
 const listKeyRetentionMillis = activityRetentionMillis;
 
 const catFrom = (row: CatRow | undefined) =>
@@ -362,8 +361,7 @@ const roomValues = (state: ActiveRoom): typeof room.$inferInsert => {
 };
 
 /**
- * `RoomStore` on the object's own SQLite database. A storage failure is a defect: the object's
- * state is unknown, and the lock around commands keeps it from being half-written.
+ * A storage failure is a defect: the state is unknown, and the command lock prevents half-writes.
  */
 export const SqliteRoomStore = Layer.effect(
   RoomStore,

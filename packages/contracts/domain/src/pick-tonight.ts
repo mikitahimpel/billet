@@ -6,17 +6,14 @@ import { ListItemId, ListItemText, MediaKind, TmdbId, TmdbImagePath } from "./li
 export const PickChoice = Schema.Literals(["pass", "seen", "want"]);
 export type PickChoice = typeof PickChoice.Type;
 
-/** A card of the deck: an item on the pair's To watch list, or a TMDB title that is not on it. */
+/** `Title` is a TMDB title not on the pair's To watch list. */
 export const PickTitle = Schema.TaggedUnion({
   Item: { item: ListItemId },
   Title: { kind: MediaKind, tmdb: TmdbId },
 });
 export type PickTitle = typeof PickTitle.Type;
 
-/**
- * A title both partners swiped ♥ within one session. `name` and `posterPath` are what the second
- * swipe sent; `at` is when it made the match.
- */
+/** Both swiped ♥ within one session. `name`, `posterPath` and `at` come from the second swipe. */
 export const PickMatch = Schema.Struct({
   title: PickTitle,
   name: ListItemText,

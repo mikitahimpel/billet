@@ -4,12 +4,7 @@ import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import type { CheckedStep } from "./answer-check.ts";
 
 /**
- * The onboarding questions as they ship, in the order of the design. "Together since" is not here: it is a date the app keeps on the phone. The app's
- * own steps that follow are in `nativeSteps`.
- *
- * Changing the wording is safe. Changing what an id means is not: add a new id instead, and bump
- * `version`. An option that goes away makes a queued answer to it a 400, which the app drops.
- * The admin panel will edit this later; until then it changes with a deploy, not an app release.
+ * Never change what an id means: add a new id and bump `version`. A removed option is a 400.
  */
 export const seedCatalogue: OnboardingResponse = Schema.decodeUnknownSync(OnboardingResponse)({
   version: "2026-11-04",
@@ -23,8 +18,7 @@ export const seedCatalogue: OnboardingResponse = Schema.decodeUnknownSync(Onboar
         ru: "Billet — для тех, кому 13 и больше. Это видишь только ты.",
       },
       skippable: true,
-      // Buckets only: the server never learns a date of birth. The app stops on `age-under-13` and
-      // never sends it.
+      // Buckets only: the server never learns a date of birth. The app never sends `age-under-13`.
       options: [
         { id: "age-under-13", label: { en: "Under 13", ru: "Меньше 13" } },
         { id: "age-13-17", label: { en: "13–17", ru: "13–17" } },
@@ -89,9 +83,7 @@ export const seedCatalogue: OnboardingResponse = Schema.decodeUnknownSync(Onboar
 const nativeStep = Schema.decodeUnknownSync(OnboardingStep);
 
 /**
- * The steps the app draws itself after the served ones, in its order: the cat's coat, its name and
- * the invite. They are not in `GET /v1/onboarding`, but their answers are stored and counted the
- * same way. A skipped name means the default, Mochi; a skipped invite means "later".
+ * Drawn by the app after the served steps, not in `GET /v1/onboarding`, but answers are stored.
  */
 export const nativeSteps: ReadonlyArray<CheckedStep> = [
   {
@@ -116,10 +108,6 @@ export const nativeSteps: ReadonlyArray<CheckedStep> = [
   }),
 ];
 
-/**
- * The questions the server answers with today, and the app's own steps it takes answers to. Tests,
- * and later the admin panel, give others.
- */
 export class OnboardingCatalogue extends Context.Service<
   OnboardingCatalogue,
   { readonly current: OnboardingResponse; readonly native: ReadonlyArray<CheckedStep> }

@@ -4,14 +4,7 @@ import { addDays, type FlagRow, wilson } from "@billet/backend-metrics/funnel";
 import { minimumGroup, type BuildEventRow } from "./admin-retention.ts";
 
 /**
- * The funnel builder: 2 to 6 named steps from the closed event list, done in order within a window
- * of the first, counted per pair or per person, split by an experiment's variants. Pure, from the
- * same D1 rows as the Overview.
- *
- * The rows hold, per person, name and UTC day, the first and last moment it happened that day, not
- * every moment. So "the first time step k happened after step k-1" is the row's first moment when
- * that is not earlier, else its last moment when that is not earlier (it did happen then). This
- * can place a step later than it really was, never earlier, so a conversion is never overstated.
+ * Rows keep only a day's first and last moment, so a step may be placed late, never early.
  */
 
 /** Every name `pair_events` can hold. `AccountDeleted` goes to Analytics Engine only. */
@@ -26,7 +19,6 @@ export type FunnelWindow = typeof FunnelWindow.Type;
 export const FunnelUnit = Schema.Literals(["pair", "person"]);
 export type FunnelUnit = typeof FunnelUnit.Type;
 
-/** How far back step 1 may be: 7, 30 or 90 days, or `all`. */
 export const FunnelRange = Schema.Literals(["7", "30", "90", "all"]);
 export type FunnelRange = typeof FunnelRange.Type;
 
@@ -34,7 +26,6 @@ const StepName = Schema.String.check(
   Schema.makeFilter((name) => funnelEventNames.includes(name) || `${name} is not an event`),
 );
 
-/** A funnel as the owner defines and saves it. */
 export const FunnelDefinition = Schema.Struct({
   steps: Schema.Array(StepName).check(
     Schema.makeFilter(
@@ -116,10 +107,7 @@ const median = (values: ReadonlyArray<number>): number | null => {
     : ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2;
 };
 
-/**
- * For each unit that did step 1 in the range, the moment of each step it reached, in order. A
- * unit is a pair (its rows after pairing) or a person (all their rows).
- */
+/** A unit is a pair (its rows after pairing) or a person (all their rows). */
 export const funnelTimes = (
   events: ReadonlyArray<BuildEventRow>,
   definition: FunnelDefinition,
