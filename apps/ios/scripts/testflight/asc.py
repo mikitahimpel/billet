@@ -5,6 +5,10 @@
                                        above the highest build App Store Connect has for the app
     asc.py state --build N [--wait S]  prints "build N: <processing state>", waiting up to S
                                        seconds for the build to appear and leave PROCESSING
+    asc.py revoke-run-certificates --keychain PATH
+                                       revokes the development certificates in the run's own
+                                       keychain, the ones Xcode made through the key this run
+    asc.py certificates                lists the team's certificates: type, serial, expiry, name
 
 The API key comes from ASC_KEY_ID, ASC_ISSUER_ID and ASC_KEY_PATH (the .p8 file). The app is
 found by BUNDLE_ID (default com.mikitahimpel.billet). Nothing secret is printed.
@@ -14,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import re
 import json
 import os
 import subprocess
@@ -24,6 +29,10 @@ import urllib.parse
 import urllib.request
 
 API = "https://api.appstoreconnect.apple.com/v1"
+
+# Certificate types a CI run may revoke. Distribution certificates sign what testers and the App
+# Store install and are never touched here.
+DEVELOPMENT = {"DEVELOPMENT", "IOS_DEVELOPMENT", "MAC_APP_DEVELOPMENT"}
 
 
 def b64url(data: bytes) -> str:
@@ -70,11 +79,19 @@ class Client:
         self.key = (os.environ["ASC_KEY_ID"], os.environ["ASC_ISSUER_ID"], os.environ["ASC_KEY_PATH"])
 
     def get(self, path: str, query: dict[str, str]) -> dict:
-        url = f"{API}/{path}?{urllib.parse.urlencode(query)}"
-        request = urllib.request.Request(url, headers={"Authorization": f"Bearer {token(*self.key)}"})
+        return self.call("GET", f"{path}?{urllib.parse.urlencode(query)}")
+
+    def delete(self, path: str) -> None:
+        self.call("DELETE", path)
+
+    def call(self, method: str, path: str) -> dict:
+        request = urllib.request.Request(
+            f"{API}/{path}", method=method, headers={"Authorization": f"Bearer {token(*self.key)}"}
+        )
         try:
             with urllib.request.urlopen(request, timeout=60) as response:
-                return json.load(response)
+                body = response.read()
+                return json.loads(body) if body else {}
         except urllib.error.HTTPError as error:
             try:
                 detail = json.load(error)["errors"][0]
@@ -117,6 +134,60 @@ def state(client: Client, app: str, build: int, wait: int) -> str:
         time.sleep(30)
 
 
+def normalize_serial(serial: str) -> str:
+    """A serial as App Store Connect and openssl both write it: upper-case hex, no separators or
+    leading zeros."""
+    return re.sub(r"[^0-9A-F]", "", serial.upper()).lstrip("0") or "0"
+
+
+def pem_blocks(text: str) -> list[str]:
+    return re.findall(r"-----BEGIN CERTIFICATE-----.+?-----END CERTIFICATE-----", text, re.S)
+
+
+def keychain_serials(keychain: str) -> set[str]:
+    pems = subprocess.run(
+        ["security", "find-certificate", "-a", "-p", keychain], capture_output=True, text=True
+    ).stdout
+    return pem_serials(pems)
+
+
+def pem_serials(pems: str) -> set[str]:
+    serials = set()
+    for pem in pem_blocks(pems):
+        line = subprocess.run(
+            ["openssl", "x509", "-noout", "-serial"], input=pem, capture_output=True, text=True, check=True
+        ).stdout
+        serials.add(normalize_serial(line.split("=", 1)[1]))
+    return serials
+
+
+def to_revoke(certificates: list[dict], serials: set[str]) -> list[dict]:
+    """The development certificates among `certificates` whose serial is one of `serials`."""
+    return [
+        c
+        for c in certificates
+        if c["attributes"].get("certificateType") in DEVELOPMENT
+        and normalize_serial(c["attributes"].get("serialNumber", "")) in serials
+    ]
+
+
+def certificates(client: Client, **filters: str) -> list[dict]:
+    query = {"fields[certificates]": "certificateType,serialNumber,name,displayName,expirationDate", "limit": "200"}
+    query.update({f"filter[{k}]": v for k, v in filters.items()})
+    return client.get("certificates", query)["data"]
+
+
+def revoke_run_certificates(client: Client, keychain: str) -> list[str]:
+    serials = keychain_serials(keychain)
+    found = [c for serial in sorted(serials) for c in certificates(client, serialNumber=serial)]
+    revoked = []
+    for cert in to_revoke(found, serials):
+        client.delete(f"certificates/{cert['id']}")
+        attributes = cert["attributes"]
+        revoked.append(f"{attributes['certificateType']} {attributes.get('name', '')} {attributes['serialNumber']}")
+    return revoked
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     commands = parser.add_subparsers(dest="command", required=True)
@@ -125,9 +196,21 @@ def main() -> None:
     st = commands.add_parser("state")
     st.add_argument("--build", type=int, required=True)
     st.add_argument("--wait", type=int, default=0)
+    rv = commands.add_parser("revoke-run-certificates")
+    rv.add_argument("--keychain", required=True)
+    commands.add_parser("certificates")
     args = parser.parse_args()
 
     client = Client()
+    if args.command == "revoke-run-certificates":
+        revoked = revoke_run_certificates(client, args.keychain)
+        print("\n".join(f"revoked {line}" for line in revoked) or "no development certificate in the run's keychain")
+        return
+    if args.command == "certificates":
+        for c in certificates(client):
+            a = c["attributes"]
+            print(a["certificateType"], a["serialNumber"], a.get("expirationDate", "")[:10], a.get("name", ""))
+        return
     app = client.app_id(os.environ.get("BUNDLE_ID", "com.mikitahimpel.billet"))
     if args.command == "next-build":
         print(next_build(client, app, args.floor))
