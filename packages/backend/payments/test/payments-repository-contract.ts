@@ -18,7 +18,7 @@ const purchaseOf = (ownerId: CoinOwner, coins = 100): NewPurchase => {
     originalTransactionId: id,
     transactionId: id,
     ownerId,
-    productId: "com.mikitahimpel.billet.coins.100",
+    productId: "com.ourio.app.coins.100",
     coins,
     environment: "Sandbox",
     purchasedAt: 1_700_000_000_000,

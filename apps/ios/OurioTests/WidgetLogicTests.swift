@@ -1,4 +1,5 @@
 import Foundation
+import MoodInterface
 import Testing
 import Wire
 @testable import Billet

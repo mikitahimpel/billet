@@ -68,7 +68,8 @@ struct WidgetGalleryTests {
                 guard let folder = ProcessInfo.processInfo.environment["BILLET_SAMPLES"] else { continue }
                 let directory = URL(fileURLWithPath: folder, isDirectory: true).appending(path: "widgets")
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                try #require(image.pngData()).write(to: directory.appending(path: "\(name)-\(look).png"))
+                let png = try #require(SamplePNG.encode(image), "\(name)-\(look): no PNG for a \(image.size) image")
+                try png.write(to: directory.appending(path: "\(name)-\(look).png"))
             }
         }
         #expect(rendered == pieces.count * 3)

@@ -55,7 +55,7 @@ public struct ActionQueue: Sendable {
 
   public static func appGroup() -> ActionQueue? {
     FileManager.default
-      .containerURL(forSecurityApplicationGroupIdentifier: "group.com.mikitahimpel.billet")
+      .containerURL(forSecurityApplicationGroupIdentifier: "group.com.ourio.app")
       .map {
         ActionQueue(directory: $0.appending(path: directoryName, directoryHint: .isDirectory))
       }

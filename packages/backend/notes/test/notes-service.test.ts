@@ -537,7 +537,7 @@ describe("history", () => {
 
 describe("coins bought with money", () => {
   const entryId = Schema.decodeSync(CoinEntryId);
-  const pack = "com.mikitahimpel.billet.coins.550";
+  const pack = "com.ourio.app.coins.550";
   const purchase = entryId("purchase:2000");
 
   it("opens the room and pays the pack into the wallet the pair reads, once", async () => {
