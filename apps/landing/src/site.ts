@@ -159,4 +159,4 @@ export const pages: SitePage[] = [
   },
 ];
 
-export const supportEmail = "gimpelllll@gmail.com";
+export const supportEmail = "support@ourio.app";
