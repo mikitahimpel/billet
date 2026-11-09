@@ -129,8 +129,9 @@ jobs:
         run: .github/scripts/install-xcodegen.sh
 
       - name: App tests (Simulator)
-        # A hung UI test must not hold a runner for an hour; each test is also capped below.
-        timeout-minutes: 30
+        # A hung UI test must not hold a runner for an hour; each test is also capped below. On main the build
+        # takes about 22 minutes without the compilation cache and the UI tests about 10 more.
+        timeout-minutes: 40
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           udid="$TEST_SIMULATOR"
