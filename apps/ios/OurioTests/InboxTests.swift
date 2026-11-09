@@ -1,8 +1,7 @@
 import Design
+import FeatureInbox
 import Foundation
-import Synchronization
 import Testing
-import Transport
 import Wire
 @testable import Billet
 
@@ -40,58 +39,6 @@ private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .
 
     @Test func unknownIdsReadAsWords() {
         #expect(InboxLine.readable("rainy-evening") == "Rainy evening")
-    }
-}
-
-@Suite struct InboxDayTests {
-    @Test func itemsAreGroupedByDayWithTodayAndYesterday() {
-        // 08:00 UTC: the first five items fall on that day, the rest on the day before.
-        let now = Date(timeIntervalSince1970: 1_800_000_000)
-        var utc = Calendar(identifier: .gregorian)
-        utc.timeZone = TimeZone(identifier: "UTC")!
-        let items = InboxFixture.items(now: now)
-        let days = InboxDay.group(items, now: now, calendar: utc)
-        #expect(days.count == 2)
-        #expect(days.first?.title == "Today")
-        #expect(days.map(\.items.count).reduce(0, +) == items.count)
-        #expect(days.dropFirst().first?.title == "Yesterday")
-    }
-}
-
-@MainActor @Suite struct InboxModelTests {
-    @Test func theNewestOthersItemsAreTheUnreadOnes() {
-        let items = [
-            item(.catFed(grams: 1), .me, id: "a"), item(.catPetted, id: "b"), item(.catSlept, .cat, id: "c"),
-            item(.catPlayed, id: "d"),
-        ]
-        #expect(InboxModel.unreadIDs(in: items, count: 2) == ["b", "c"])
-        #expect(InboxModel.unreadIDs(in: items, count: 0).isEmpty)
-    }
-
-    @Test func openingMarksReadUpToTheNewestItem() async {
-        let marked = Mutex<[String]>([])
-        let newest = item(.catPetted, id: "cat:1", at: 1_700_000_101_000)
-        let model = InboxModel(
-            list: { (_) async throws(TransportError) in
-                ActivityResponse(items: [newest, item(.catPlayed, id: "cat:0", at: 1)], unread: 1)
-            },
-            markRead: { (request) async throws(TransportError) in
-                marked.withLock { $0.append(request.upTo) }
-                return ActivityUnreadResponse(unread: 0)
-            })
-        await model.open()
-        #expect(model.phase == .loaded)
-        #expect(model.fresh == ["cat:1"])
-        #expect(model.unread == 0)
-        #expect(marked.withLock { $0 } == ["0001700000101000~cat:1"])
-    }
-
-    @Test func withoutAPartnerTheInboxSaysSo() async {
-        let model = InboxModel(
-            list: { (_) async throws(TransportError) in throw .api(.notFound) },
-            markRead: { (_) async throws(TransportError) in ActivityUnreadResponse(unread: 0) })
-        await model.open()
-        #expect(model.phase == .unpaired)
     }
 }
 
@@ -138,12 +85,13 @@ private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .
 }
 
 @Suite struct InboxLayoutTests {
+    private static let page = InboxMachine.Page(items: [ActivityItem(id: "x", at: 0, actor: .partner, event: .catPetted)])
+
     @Test func shortStatesFitTheirContent() {
-        let short: [(InboxModel.Phase, Bool)] = [
-            (.idle, false), (.loading, false), (.unpaired, false), (.failed, false), (.loaded, false),
-        ]
-        for (phase, hasItems) in short {
-            let layout = InboxLayout(phase: phase, hasItems: hasItems)
+        let empty = InboxMachine.Page(items: [])
+        let short: [InboxMachine.Sheet] = [.idle, .loading, .unpaired, .failed, .loaded(empty), .stale(empty)]
+        for sheet in short {
+            let layout = InboxLayout(sheet)
             #expect(layout == .short)
             #expect(layout.size == .fit)
             #expect(layout.scrolls, "a fitted sheet measures its content through its own scroll view")
@@ -151,16 +99,11 @@ private nonisolated func item(_ event: ActivityEvent, _ actor: ActivityActor = .
     }
 
     @Test func itemsTakeTheWholeSheet() {
-        for phase: InboxModel.Phase in [.loaded, .failed] {
-            let layout = InboxLayout(phase: phase, hasItems: true)
+        for sheet: InboxMachine.Sheet in [.loaded(Self.page), .refreshing(Self.page), .stale(Self.page)] {
+            let layout = InboxLayout(sheet)
             #expect(layout == .list)
             #expect(layout.size == .large)
             #expect(!layout.scrolls)
         }
-    }
-
-    @Test func loadingKeepsTheShortSheet() {
-        #expect(InboxLayout(phase: .loading, hasItems: true) == .short)
-        #expect(InboxLayout(phase: .idle, hasItems: true) == .short)
     }
 }

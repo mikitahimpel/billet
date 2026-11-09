@@ -348,7 +348,7 @@ struct MomentPrint: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if moment.unsent == true, session?.isPaired == true {
+            if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
                 UnsentMark(size: max(10, width * 0.05)).padding(width * 0.06)
             }
         }
