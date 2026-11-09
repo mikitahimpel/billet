@@ -35,9 +35,7 @@ struct AddPlaceSheet: View {
                     .submitLabel(.search)
                     .autocorrectionDisabled()
             }
-            .padding(.horizontal, Space.l)
-            .frame(minHeight: 50)
-            .cardSurface(radius: Radius.control)
+            .fieldSurface()
             .padding(.horizontal, Space.gutter)
             .padding(.top, 14)
 
@@ -303,10 +301,10 @@ struct BeenSheet: View {
                     .scrollIndicators(.hidden)
                 }
             }
-            .padding(.horizontal, Space.l)
+            .padding(.horizontal, CardMetrics.padding)
             .padding(.vertical, Space.m)
             .frame(minHeight: 50)
-            .cardSurface(radius: Radius.control)
+            .cardSurface()
             .contentShape(.rect)
         }
         .buttonStyle(.plain)
@@ -368,9 +366,7 @@ private struct MonthField: View {
         }
         .pickerStyle(.menu)
         .tint(Ink.text)
-        .padding(.horizontal, Space.l)
-        .frame(minHeight: 50)
-        .cardSurface(radius: Radius.control)
+        .fieldSurface()
     }
 }
 
@@ -384,10 +380,9 @@ private struct MomentsPicker: View {
     private static let limit = 10
 
     var body: some View {
-        BilletSheet("Photos from Moments", scrolls: false, onConfirm: { dismiss() }) {
+        BilletSheet("Photos from Moments", subtitle: "\(selection.count) of \(Self.limit)", scrolls: false,
+                    onConfirm: { dismiss() }) {
         VStack(spacing: 0) {
-            SheetSubtitle(text: "\(selection.count) of \(Self.limit)")
-                .padding(.horizontal, Space.gutter)
             if moments.moments.isEmpty {
                 EmptyState(icon: UsGlyph(symbol: "photo.fill", tint: .lilac), title: "No moments yet",
                            text: "Photos you share in Moments can go with a trip.")
@@ -400,7 +395,7 @@ private struct MomentsPicker: View {
                                 Color.clear
                                     .aspectRatio(1, contentMode: .fit)
                                     .overlay { MomentThumb(moments: moments, id: moment.id, size: nil) }
-                                    .clipShape(.rect(cornerRadius: 6))
+                                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
                                     .overlay(alignment: .topTrailing) {
                                         UsCheck(done: picked)
                                             .background(Circle().fill(.black.opacity(picked ? 0 : 0.25)))
@@ -449,7 +444,7 @@ private struct MomentThumb: View {
             }
         }
         .frame(width: size, height: size)
-        .clipShape(.rect(cornerRadius: size == nil ? 0 : 10, style: .continuous))
+        .clipShape(.rect(cornerRadius: size == nil ? 0 : Radius.inner, style: .continuous))
         .task(id: id) {
             guard let moment = moments.moments.first(where: { $0.id == id }) else { return }
             image = await moments.thumbnail(for: moment, maxPixels: 256)

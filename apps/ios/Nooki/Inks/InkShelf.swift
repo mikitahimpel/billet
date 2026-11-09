@@ -41,7 +41,7 @@ struct InkShelf: View {
                 Design.PriceButton(ink.price) { state.shop.buy(ink) }
             }
         }
-        .padding(Space.m)
+        .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity)
         .cardSurface()
         .overlay {

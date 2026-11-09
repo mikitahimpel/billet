@@ -18,12 +18,7 @@ struct MoodPicker: View {
                     }
                 }
 
-                TextField("A few words (optional)", text: $note, axis: .vertical)
-                    .lineLimit(1...3)
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.text)
-                    .padding(Space.m)
-                    .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.control, style: .continuous))
+                Field("A few words (optional)", text: $note, axis: .vertical, lines: 1...3)
                     .onChange(of: note) { _, new in
                         if new.utf16.count > MoodCheckIn.noteLimit { note = MoodCheckIn.clean(new) ?? "" }
                     }
@@ -58,22 +53,18 @@ private struct MoodChip: View {
 
     var body: some View {
         Button(action: pick) {
-            VStack(spacing: Space.xs) {
-                Text(mood.emoji)
-                    .font(.largeTitle)
-                    .frame(width: 52, height: 52)
-                    .background(Circle().fill(Ink.surfaceRaised))
+            VStack(spacing: Space.s) {
+                MoodArt(mood: mood, size: 48)
                 Text(mood.title.capitalized)
                     .font(.nookiCallout.weight(.semibold))
                     .foregroundStyle(Ink.text)
             }
-            .frame(maxWidth: .infinity, minHeight: 96)
-            .cardSurface(warm: picked)
-            .overlay {
-                if picked {
-                    RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                        .strokeBorder(Color.honey, lineWidth: 2)
-                }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, Space.l)
+            .background {
+                let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+                shape.fill(picked ? Ink.surfaceRaised : Ink.surface)
+                if picked { shape.strokeBorder(Color.honey, lineWidth: 2) }
             }
         }
         .buttonStyle(PressScaleStyle())
@@ -90,7 +81,7 @@ private struct PartnerLine: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: Space.s) {
-            Text(check.mood.emoji).font(.title2)
+            MoodArt(mood: check.mood, size: 36)
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(name) feels \(check.mood.title)")
                     .font(.nookiCallout.weight(.semibold))
@@ -106,7 +97,7 @@ private struct PartnerLine: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(Space.l)
+        .padding(CardMetrics.padding)
         .cardSurface()
         .accessibilityElement(children: .combine)
     }

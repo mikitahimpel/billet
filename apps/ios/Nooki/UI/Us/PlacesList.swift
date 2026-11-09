@@ -64,8 +64,8 @@ struct PlacesListBody: View {
                 }
             }
         }
-        .padding(Space.l)
-        .cardSurface(radius: Radius.hero, warm: true)
+        .padding(CardMetrics.padding)
+        .cardSurface(warm: true)
     }
 
     private func legend(_ title: String, @ViewBuilder mark: () -> some View) -> some View {

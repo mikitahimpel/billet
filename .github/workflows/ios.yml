@@ -13,6 +13,12 @@ on:
       - .swift-format
       - .github/workflows/ios.yml
       - .github/scripts/metal-toolchain.sh
+      - .github/scripts/install-xcodegen.sh
+      # Read by the app's bundle or the Swift tests.
+      - packages/backend/flags/src/experiments.ts
+      - packages/backend/dates/src/date-catalog.json
+      - packages/backend/guess/src/question-catalog.json
+      - "!**/*.md"
   push:
     branches: [main]
     paths: *paths
@@ -25,18 +31,19 @@ on:
 
 concurrency:
   group: ios-${{ github.ref }}
-  # Pushes to main run to completion; only superseded pull request runs are cancelled.
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  # A newer commit supersedes a running check on main too: main moves faster than a run, and
+  # finished runs that nobody waits for hold the few macOS runners.
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
-  check:
+  # The Swift packages. No Simulator boots here: on one runner a first boot starves every other step.
+  packages:
     if: inputs.shots == ''
     runs-on: xcode-27
-    # About 45 min of lint, package tests and Release builds, then the app tests' own 30 min cap.
-    timeout-minutes: 80
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -50,47 +57,13 @@ jobs:
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
 
-      - name: Metal Toolchain
-        run: .github/scripts/metal-toolchain.sh
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      # A fresh runner's first Simulator boot takes minutes; it runs in the background while the
-      # Swift packages build and test. Started after the Metal Toolchain install, which it slows down.
-      - name: Boot the test Simulator
-        run: |
-          udid=$(xcrun simctl list -j devices available | python3 -c '
-          import json, sys
-          devices = json.load(sys.stdin)["devices"]
-          ios = sorted((k for k in devices if ".iOS-" in k and devices[k]),
-                       key=lambda k: [int(x) for x in k.split(".iOS-")[1].split("-")[:2] if x.isdigit()])
-          phones = [d for d in devices[ios[-1]] if d["name"].startswith("iPhone")] if ios else []
-          print(phones[0]["udid"] if phones else "")')
-          if [ -z "$udid" ]; then
-            echo "::error::no available iPhone Simulator on this runner"
-            xcrun simctl list devices available
-            exit 1
-          fi
-          echo "TEST_SIMULATOR=$udid" >> "$GITHUB_ENV"
-          nohup xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
-
-      # Pinned release, verified by checksum, so project generation cannot drift.
-      - name: Install XcodeGen
-        env:
-          XCODEGEN_VERSION: 2.46.0
-          XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
-        run: |
-          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
-            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
-          echo "${XCODEGEN_SHA256}  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
-          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
 
       # As in ci.yml: the newest cache from an earlier commit lets Turbo skip the Swift package
       # tasks whose inputs did not change.
       - name: Restore Turbo cache
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: .turbo
           key: turbo-ios-${{ runner.os }}-${{ github.sha }}
@@ -107,33 +80,54 @@ jobs:
       - name: Xcode build
         run: pnpm turbo run ios:build -- --disable-index-store
 
-      # The app in apps/ios builds, shaders included. Pull requests skip it: the app tests below
-      # build the app too (Debug), and main and TestFlight still build Release.
-      - name: App Release build (Simulator, unsigned)
-        if: github.event_name != 'pull_request'
-        run: |
-          (cd apps/ios && xcodegen generate --quiet)
-          set -o pipefail
-          xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
-            -destination 'generic/platform=iOS Simulator' -derivedDataPath "$RUNNER_TEMP/app" \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$RUNNER_TEMP/app.log" \
-            | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
+      # Saved even when a step failed: the tasks that passed are still worth replaying, and the
+      # cache action's own post step saves only after a fully green job.
+      - name: Save Turbo cache
+        if: always()
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: .turbo
+          key: turbo-ios-${{ runner.os }}-${{ github.sha }}
 
-      # The Simulator SDK has no splat API, so the cat's splat code (under `#if !targetEnvironment(simulator)`)
-      # compiles only for a device. On main and by hand; pull requests skip it to keep the Mac queue short.
-      - name: App Release build (device, unsigned)
-        if: github.event_name != 'pull_request'
-        run: |
-          # Generated here too: the Simulator Release build above, which also generates it, is skipped on pull requests.
-          (cd apps/ios && xcodegen generate --quiet)
-          set -o pipefail
-          xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
-            -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/app-device" \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tee "$RUNNER_TEMP/app-device.log" \
-            | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
+  # The app's own tests on a Simulator of the newest iOS this Xcode has. Pull requests run the unit tests
+  # (NookiTests, NookiWidgetsTests); the UI tests (NookiUITests) run on main and by hand.
+  app:
+    if: inputs.shots == ''
+    runs-on: xcode-27
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # The app's own tests on a Simulator of the newest iOS this Xcode has. Pull requests run the unit tests
-      # (NookiTests, NookiWidgetsTests); the UI tests (NookiUITests) run on main and by hand.
+      - name: Select Xcode from .xcode-version
+        run: .github/scripts/select-xcode.sh .xcode-version
+
+      - name: Metal Toolchain
+        run: .github/scripts/metal-toolchain.sh
+
+      # A fresh runner's first Simulator boot takes minutes; it runs in the background while the app builds.
+      # Started after the Metal Toolchain install, which it slows down.
+      # Only plain iOS runtimes (iOS-27-2): a device-specific one (iOS-27-2-iPhone19-4) holds a single
+      # resizable-scene iPhone whose window is wider than the app's layout, so taps and frames miss.
+      - name: Boot the test Simulator
+        run: |
+          udid=$(xcrun simctl list -j devices available | python3 -c '
+          import json, re, sys
+          devices = json.load(sys.stdin)["devices"]
+          ios = sorted((k for k in devices if re.search(r"\.iOS-[0-9]+(-[0-9]+)*$", k) and devices[k]),
+                       key=lambda k: [int(x) for x in k.split(".iOS-")[1].split("-")[:2] if x.isdigit()])
+          phones = [d for d in devices[ios[-1]] if d["name"].startswith("iPhone")] if ios else []
+          print(phones[0]["udid"] if phones else "")')
+          if [ -z "$udid" ]; then
+            echo "::error::no available iPhone Simulator on this runner"
+            xcrun simctl list devices available
+            exit 1
+          fi
+          echo "TEST_SIMULATOR=$udid" >> "$GITHUB_ENV"
+          nohup xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
+
+      - name: Install XcodeGen
+        run: .github/scripts/install-xcodegen.sh
+
       - name: App tests (Simulator)
         # A hung UI test must not hold a runner for an hour; each test is also capped below.
         timeout-minutes: 30
@@ -213,15 +207,7 @@ jobs:
         run: .github/scripts/metal-toolchain.sh
 
       - name: Install XcodeGen
-        env:
-          XCODEGEN_VERSION: 2.46.0
-          XCODEGEN_SHA256: 4d9e34b62172d645eed6457cac13fc222569974098ef4ee9c3368bedf0196806
-        run: |
-          curl -fsSL -o "$RUNNER_TEMP/xcodegen.zip" \
-            "https://github.com/yonaskolb/XcodeGen/releases/download/${XCODEGEN_VERSION}/xcodegen.zip"
-          echo "${XCODEGEN_SHA256}  $RUNNER_TEMP/xcodegen.zip" | shasum -a 256 -c -
-          unzip -q "$RUNNER_TEMP/xcodegen.zip" -d "$RUNNER_TEMP"
-          echo "$RUNNER_TEMP/xcodegen/bin" >> "$GITHUB_PATH"
+        run: .github/scripts/install-xcodegen.sh
 
       - name: UI tests and screenshots
         env:

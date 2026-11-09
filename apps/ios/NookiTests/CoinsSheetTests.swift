@@ -5,16 +5,11 @@ import Wire
 @testable import Billet
 
 @Suite struct CoinsSheetTests {
-    @Test func aMockBuildSellsPacksWhateverTheFlagSays() {
-        #expect(CoinPacksModel.sells(RemoteFlags(), mockStore: true))
-        #expect(CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "off"]), mockStore: true))
-    }
-
-    @Test func aStoreKitBuildSellsPacksOnlyWhenTheServerDoes() {
-        #expect(!CoinPacksModel.sells(RemoteFlags(), mockStore: false))
-        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "off"]), mockStore: false))
-        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "maybe"]), mockStore: false))
-        #expect(CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "on"]), mockStore: false))
+    @Test func everyBuildSellsPacksOnlyWhenTheServerDoes() {
+        #expect(!CoinPacksModel.sells(RemoteFlags()))
+        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "off"])))
+        #expect(!CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "maybe"])))
+        #expect(CoinPacksModel.sells(RemoteFlags(assignments: ["payments": "on"])))
     }
 
     @Test @MainActor func aBoughtPackReadsTheWalletAgain() async throws {
@@ -54,6 +49,22 @@ import Wire
         await buying.value
         #expect(model.status == .bought(coins: 100))
         #expect(store.purchases == 1)
+    }
+
+    @Test @MainActor func aStoreThatCantBeReachedShowsAnEmptyShelfAndCanTryAgain() async {
+        let down = CoinPacksModel(payments: FakePayments(result: .succeed, shelf: .fail(.unavailable))) {}
+        #expect(down.shelf == .loading)
+        await down.load()
+        #expect(down.shelf == .unavailable)
+        #expect(down.packs.isEmpty)
+
+        let empty = CoinPacksModel(payments: FakePayments(result: .succeed, shelf: .empty)) {}
+        await empty.load()
+        #expect(empty.shelf == .unavailable)
+
+        let none = CoinPacksModel(payments: nil) {}
+        await none.load()
+        #expect(none.shelf == .unavailable)
     }
 
     @Test func theSmallestPackThatCoversTheGapIsTheOneShown() {
@@ -103,11 +114,22 @@ nonisolated private struct FakePayments: Payments {
         case fail(PaymentsError)
     }
 
+    enum Shelf: Sendable {
+        case standard
+        case empty
+        case fail(PaymentsError)
+    }
+
     let result: Outcome
+    var shelf = Shelf.standard
     var held: HeldStore?
 
     func products() async throws(PaymentsError) -> [StampPack] {
-        StampPackCatalog.standard.packs.map(StampPackCatalog.standard.pack)
+        switch shelf {
+        case .standard: StampPackCatalog.standard.packs.map(StampPackCatalog.standard.pack)
+        case .empty: []
+        case .fail(let error): throw error
+        }
     }
 
     func purchase(_ pack: StampPack) async throws(PaymentsError) -> PurchaseResult {

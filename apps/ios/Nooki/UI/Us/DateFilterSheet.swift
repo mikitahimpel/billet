@@ -23,10 +23,8 @@ struct DateFilterSheet: View {
 
     var body: some View {
         let fits = count(filter)
-        BilletSheet("Filters", scrolls: false) {
+        BilletSheet("Filters", subtitle: fits == 1 ? "1 idea fits" : "\(fits) ideas fit", scrolls: false) {
         VStack(spacing: 0) {
-            SheetSubtitle(text: fits == 1 ? "1 idea fits" : "\(fits) ideas fit")
-                .padding(.horizontal, Space.gutter)
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     group("Quick picks") {

@@ -78,12 +78,12 @@ struct OnboardingView: View {
     }
 
     @ViewBuilder private var probeLabel: some View {
-        if let probe {
-            Text(probe.summary)
+        if let summary = probe?.summary {
+            Text(summary)
                 .font(.nookiMicro)
                 .foregroundStyle(.clear)
                 .accessibilityIdentifier("welcome.probe")
-                .accessibilityLabel(probe.summary)
+                .accessibilityLabel(summary)
         }
     }
 
@@ -199,12 +199,8 @@ struct OnboardingView: View {
             }
         case .text(let field):
             form(subtitle: field.subtitle?.text(for: language)) {
-                GroupedSection(inset: Space.l) {
-                    TextField(field.placeholder?.text(for: language) ?? "", text: textBinding(field))
-                        .font(.nookiBody)
-                        .submitLabel(.done)
-                        .rowCell()
-                }
+                Field(field.placeholder?.text(for: language) ?? "", text: textBinding(field))
+                    .submitLabel(.done)
             }
         }
     }
@@ -233,15 +229,11 @@ struct OnboardingView: View {
 
     private var catName: some View {
         form(say: "What should we call me?", subtitle: String(localized: "You can change it later. Skip and she stays Mochi.")) {
-            GroupedSection(inset: Space.l) {
-                TextField(CatProfile.defaultName, text: $flow.catName)
-                    .font(.nookiHeadline)
-                    .submitLabel(.done)
-                    .onChange(of: flow.catName) { _, new in
-                        if new.count > CatProfile.nameLimit { flow.catName = String(new.prefix(CatProfile.nameLimit)) }
-                    }
-                    .rowCell()
-            }
+            Field(CatProfile.defaultName, text: $flow.catName, font: .nookiHeadline)
+                .submitLabel(.done)
+                .onChange(of: flow.catName) { _, new in
+                    if new.count > CatProfile.nameLimit { flow.catName = String(new.prefix(CatProfile.nameLimit)) }
+                }
             GroupedSection(header: String(localized: "Ideas"), inset: Space.l) {
                 ForEach(Self.nameIdeas, id: \.self) { idea in
                     optionRow(OnboardingOption(id: OnboardingOptionId(idea), label: LocalizedText(en: idea, ru: idea)),
@@ -275,7 +267,7 @@ struct OnboardingView: View {
                                 .scaledToFit()
                                 .frame(width: 160, height: 160)
                                 .padding(Space.s)
-                                .background(.white, in: .rect(cornerRadius: Radius.control))
+                                .background(.white, in: .rect(cornerRadius: Radius.inner))
                                 .frame(maxWidth: .infinity)
                                 .rowCell()
                                 .accessibilityLabel("QR code of your invite")
@@ -311,19 +303,14 @@ struct OnboardingView: View {
         return form(say: "Who's waiting for me?",
              subtitle: String(localized: "It's in the message your partner sent, or on their screen.")) {
             VStack(spacing: Space.s) {
-                TextField("K7QM 4R2X HP", text: Binding { flow.joinCode } set: { typed in
+                Field("K7QM 4R2X HP", text: Binding { flow.joinCode } set: { typed in
                     flow.joinCode = Self.code(from: typed)
                     clearFailure()
-                })
-                    .font(.system(.title2, design: .monospaced, weight: .bold))
+                }, font: .system(.title2, design: .monospaced, weight: .bold), failed: failure != nil)
                     .textInputAutocapitalization(.characters)
                     .autocorrectionDisabled()
                     .textContentType(.oneTimeCode)
                     .accessibilityLabel("Invite code")
-                    .foregroundStyle(failure == nil ? Ink.text : Ink.destructive)
-                    .padding(Space.l)
-                    .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
-                    .errorField(failure != nil)
                 if failure != nil {
                     ErrorLine(String(localized: "This code didn't work. Check it or ask for a new one."))
                 }
@@ -372,9 +359,9 @@ struct OnboardingView: View {
         inviteBase?.appending(path: "i/\(code)").absoluteString ?? code
     }
 
-    /// What was typed or pasted, kept to the symbols a code has.
+    /// What was typed or pasted, kept to the symbols a code has, up to the App Review pair's longer code.
     static func code(from typed: String) -> String {
-        String(InviteCode.normalized(typed).filter { InviteCode.alphabet.contains($0) }.prefix(InviteCode.length))
+        String(InviteCode.normalized(typed).filter { InviteCode.alphabet.contains($0) }.prefix(InviteCode.reviewLength))
     }
 
     private var stopped: some View {
@@ -493,7 +480,7 @@ struct MochiSays: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
-                .background(Ink.surface, in: .rect(cornerRadius: Radius.control))
+                .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
         }
     }
 }

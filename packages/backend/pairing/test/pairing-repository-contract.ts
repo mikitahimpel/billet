@@ -327,6 +327,7 @@ export const describePairingRepositoryContract = (
             pairId: pair("pair-user-b-user-a"),
             reason: "spam",
             details: undefined,
+            noteId: undefined,
             at: 1_600,
           });
           return yield* repository.findPair(ana);

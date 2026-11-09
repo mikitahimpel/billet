@@ -56,10 +56,10 @@ struct GameView: View {
                     .labelStyle(.iconOnly)
                     .buttonStyle(.plain)
                     .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Ink.text)
+                    .foregroundStyle(Ink.glassGlyph)
                     .frame(width: 44, height: 44)
                     .contentShape(.circle)
-                    .background { Color.clear.glass(.circle).allowsHitTesting(false) }
+                    .background { Color.clear.glass(.circle, role: .bar).allowsHitTesting(false) }
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, 60)
@@ -145,7 +145,7 @@ private struct GameBar: View {
         }
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.m)
-        .glass(.capsule)
+        .glass(.capsule, role: .bar)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(label)
         .accessibilityValue("\(Int((value * 100).rounded())) percent")

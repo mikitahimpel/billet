@@ -273,7 +273,7 @@ struct DrawGuessScreen: View {
                                     .foregroundStyle(Ink.textSecondary)
                             }
                         }
-                        .padding(Space.l)
+                        .padding(CardMetrics.padding)
                         .cardSurface()
                         .accessibilityElement(children: .combine)
                     }
@@ -448,7 +448,7 @@ private struct RiddleTiles: View {
                 .font(.nookiTitle)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity, minHeight: 48)
-                .cardSurface(radius: Radius.control)
+                .cardSurface(radius: Radius.inner)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(tile.letter)

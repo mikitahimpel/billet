@@ -211,7 +211,7 @@ struct DatesScreen: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: DateIdeaCard.height, alignment: .bottom)
                 .background { DateScenePicture() }
-                .clipShape(.rect(cornerRadius: Radius.hero, style: .continuous))
+                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
 
                 PrimaryButton("Surprise us", symbol: "dice") { roll() }
                     .opacity(rolling ? 0.6 : 1)

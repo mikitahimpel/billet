@@ -47,9 +47,7 @@ struct AddTitleSheet: View {
                     .autocorrectionDisabled()
                 if case .searching = search { ProgressView() }
             }
-            .padding(.horizontal, Space.l)
-            .frame(minHeight: 50)
-            .cardSurface(radius: Radius.control)
+            .fieldSurface()
             .padding(.horizontal, Space.gutter)
             .padding(.top, 14)
 
@@ -113,7 +111,7 @@ struct AddTitleSheet: View {
             HStack(spacing: Space.m) {
                 PosterImage(path: title.posterPath, title: title.title, size: .small, showsTitle: false)
                     .frame(width: 44, height: 64)
-                    .clipShape(.rect(cornerRadius: Radius.tag, style: .continuous))
+                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title.title)
                         .font(.nookiHeadline)

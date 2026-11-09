@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The one error style: an icon and a short line in `Ink.destructive`. Put it under a field that wears `.errorField()`.
+/// The one error style: an icon and a short line in `Ink.destructive`. Put it under a `Field(failed: true)`.
 public struct ErrorLine: View {
   let text: String
 
@@ -15,19 +15,6 @@ public struct ErrorLine: View {
     .foregroundStyle(Ink.destructive)
     .frame(maxWidth: .infinity, alignment: .leading)
     .accessibilityElement(children: .combine)
-  }
-}
-
-extension View {
-  /// The error state of a field: a tinted fill and a border in `Ink.destructive`.
-  public func errorField(_ failed: Bool) -> some View {
-    background(
-      failed ? Ink.destructive.opacity(0.12) : .clear, in: .rect(cornerRadius: Radius.card)
-    )
-    .overlay {
-      RoundedRectangle(cornerRadius: Radius.card)
-        .strokeBorder(failed ? Ink.destructive : .clear, lineWidth: 1.5)
-    }
   }
 }
 

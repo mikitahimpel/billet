@@ -20,7 +20,7 @@ struct DateDoneSheet: View {
     }
 
     var body: some View {
-        BilletSheet("How was it?") {
+        BilletSheet("How was it?", size: .fit) {
                 VStack(spacing: 14) {
                     if let title = DateIdea.idea(plan.ideaID)?.title { SheetSubtitle(text: title) }
                     HStack(spacing: 18) {
@@ -152,9 +152,7 @@ struct DatePlannerSheet: View {
                         .tint(.honey)
                         .font(.nookiBody)
                         .foregroundStyle(Ink.text)
-                        .padding(.horizontal, 16)
-                        .frame(height: 50)
-                        .cardSurface(radius: Radius.control)
+                        .fieldSurface()
 
                     UsField(placeholder: "Place, e.g. our kitchen", text: $place)
 
@@ -175,9 +173,7 @@ struct DatePlannerSheet: View {
                         .font(.nookiBody)
                         .foregroundStyle(Ink.text)
                         .tint(.honey)
-                        .padding(.horizontal, 16)
-                        .frame(height: 50)
-                        .cardSurface(radius: Radius.control)
+                        .fieldSurface()
 
                     if surprise {
                         UsField(placeholder: "Hint, e.g. dress warm", text: $hint)
@@ -187,9 +183,7 @@ struct DatePlannerSheet: View {
                         .font(.nookiBody)
                         .foregroundStyle(Ink.text)
                         .tint(.honey)
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 50)
-                        .cardSurface(radius: Radius.control)
+                        .fieldSurface()
 
                 }
         }

@@ -4,8 +4,9 @@ import Design
 import WidgetBridge
 import Wire
 
-/// What the header's coins open, on any tab, as a store: the balance, Billet Plus on top, the coin packs as cards, then
-/// how the couple earns coins and where the latest went. The one place that sells coins; Home itself never does.
+/// What the header's coins open, on any tab: the balance on top, the buy that was short, the coin packs (or why there
+/// are none), Billet Plus, then how the couple earns coins and where the latest went. The one place that sells coins;
+/// Home itself never does.
 struct CoinsSheet: View {
     let state: HomeState
     /// Nil in a build without a server: then nothing is sold.
@@ -14,17 +15,21 @@ struct CoinsSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     private var sellsPacks: Bool {
-        packs != nil && CoinPacksModel.sells(state.rooms.remote, mockStore: AppPayments.isMock)
+        packs != nil && CoinPacksModel.sells(state.rooms.remote)
     }
 
     var body: some View {
         BilletSheet("Coins", size: .large) {
             VStack(alignment: .leading, spacing: Space.section) {
                 balance
-                if let retry = ask.retry { ShortBanner(state: state, retry: retry) { dismiss() } }
-                if packs != nil, sellsPacks { PlusHero(mockStore: AppPayments.isMock) }
+                if let retry = ask.retry {
+                    ShortBanner(state: state, retry: retry, canBuy: sellsPacks) { dismiss() }
+                }
                 if let packs, sellsPacks {
                     PackStore(model: packs, fit: CoinPacksModel.fit(for: missing, in: packs.packs))
+                    PlusHero(mockStore: AppPayments.isMock)
+                } else {
+                    EarnedOnly()
                 }
                 waysCard
                 recent
@@ -39,22 +44,22 @@ struct CoinsSheet: View {
     private var missing: Int { ask.retry.map { max(0, $0.cost - state.shop.coins) } ?? 0 }
 
     private var balance: some View {
-        HStack(spacing: Space.l) {
-            CoinIcon(size: 56)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(state.shop.coins)")
-                    .font(.nookiLargeTitle.monospacedDigit())
-                    .foregroundStyle(Ink.text)
-                    .contentTransition(.numericText())
-                    .animation(.snappy, value: state.shop.coins)
-                Text("coins for the two of you")
-                    .font(.nookiCallout)
-                    .foregroundStyle(Ink.textSecondary)
+        Card(warm: true) {
+            HStack(spacing: Space.l) {
+                CoinIcon(size: 56)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(state.shop.coins)")
+                        .font(.nookiLargeTitle.monospacedDigit())
+                        .foregroundStyle(Ink.text)
+                        .contentTransition(.numericText())
+                        .animation(.snappy, value: state.shop.coins)
+                    Text("coins for the two of you")
+                        .font(.nookiCallout)
+                        .foregroundStyle(Ink.textSecondary)
+                }
+                Spacer(minLength: 0)
             }
-            Spacer(minLength: 0)
         }
-        .padding(Space.l)
-        .cardSurface(warm: true)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("coinBalance")
     }
@@ -173,10 +178,24 @@ struct CoinLine: Hashable {
     }
 }
 
+/// Where packs would be in a build that sells none: coins are earned, and that is how it is meant to be.
+private struct EarnedOnly: View {
+    var body: some View {
+        Card {
+            CardHeader("Every coin is earned", detail: "Nothing is for sale. Coins come from what you two do together.",
+                       symbol: "sparkles", opens: false)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("coinsEarnedOnly")
+    }
+}
+
 /// The buy the balance didn't cover: how many coins it still needs, and, once they're there, finishing it in one tap.
 private struct ShortBanner: View {
     let state: HomeState
     let retry: CoinsAsk.Retry
+    /// Whether packs are on sale below; without them the coins can only be earned.
+    let canBuy: Bool
     let done: () -> Void
 
     private var missing: Int { max(0, retry.cost - state.shop.coins) }
@@ -185,13 +204,16 @@ private struct ShortBanner: View {
         Card {
             VStack(alignment: .leading, spacing: Space.s) {
                 if missing > 0 {
-                    Text("You need \(missing) more")
-                        .font(.nookiHeadline.monospacedDigit())
-                        .foregroundStyle(Ink.text)
-                        .contentTransition(.numericText())
-                    Text("for \(retry.title), \(retry.cost) coins.")
-                        .font(.nookiCallout)
-                        .foregroundStyle(Ink.textSecondary)
+                    CardHeader("You need \(missing) more") {
+                        CoinIcon(size: Size.cardMark * 0.8)
+                    } detail: {
+                        Text(canBuy ? "for \(retry.title), \(retry.cost) coins."
+                            : "for \(retry.title), \(retry.cost) coins. Earn them together, the ways are below.")
+                    } trailing: {
+                        EmptyView()
+                    }
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
                 } else {
                     Text("You have enough now")
                         .font(.nookiHeadline)

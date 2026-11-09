@@ -52,6 +52,23 @@ def first_room(marks):
     return min(rooms) if rooms else None
 
 
+# A phase whose frames run half a second or more while the process spends under a quarter of that
+# on the CPU is waiting for drawables the GPU never gives back: the Simulator's Metal host has stopped
+# running the app's GPU work, which a busy CI runner does. It lasts until the app quits, so that
+# phase and every later one of the run stay out of the medians. The numbers alone can't tell it from
+# a wait in the app, so the header names each such phase with its frame and CPU, and the job's
+# simmetalhost.log is what confirms it.
+GPU_LOST_FRAME_MS = 500
+GPU_LOST_CPU_SHARE = 0.25
+# Each run left out that way, for the report's header.
+lost_runs = []
+
+
+def gpu_lost(values):
+    p50, cpu = number(values.get("p50")), number(values.get("procCPU"))
+    return p50 is not None and cpu is not None and p50 >= GPU_LOST_FRAME_MS and cpu < p50 * GPU_LOST_CPU_SHARE
+
+
 def collect(run_dir):
     """Every metric of a run directory, as name -> list of samples."""
     metrics = {}
@@ -64,7 +81,8 @@ def collect(run_dir):
     fulls = sorted(run_dir.glob("full-*.log"))
     costs = sorted(run_dir.glob("cost-*.log"))
     steadies = sorted(run_dir.glob("steady-*.log"))
-    for log in launches + fulls + costs + steadies:
+    welcomes = sorted(run_dir.glob("welcome-*.log"))
+    for log in launches + fulls + costs + steadies + welcomes:
         run = parse(log)
         if not run["done"]:
             add("failed runs", 1)
@@ -85,11 +103,19 @@ def collect(run_dir):
             add("launch: memory peak (MB)", run["memory"])
         else:
             add(f"{kind}: memory peak (MB)", run["memory"])
+        lost = next((phase for phase, values in run["phases"].items() if gpu_lost(values)), None)
+        if lost:
+            add("gpu lost runs", 1)
+            values = run["phases"][lost]
+            lost_runs.append(f"{run_dir.name}/{log.name}: gpu lost (suspected) from {kind}.{lost} on,"
+                             f" p50 {values.get('p50')} ms with {values.get('procCPU')} ms of CPU a frame")
         for phase, values in run["phases"].items():
+            if phase == lost:
+                break
             if kind == "launch" and phase != "idle":
                 continue
             for key in ("p50", "p95", "p99", "max", "hitches", "mainCPU", "procCPU", "fps", "slow",
-                        "slowMs", "slowBusyMs", "cpuMsPerS", "steps", "renders"):
+                        "slowMs", "slowBusyMs", "cpuMsPerS", "steps", "renders", "frames", "firstFrameMs"):
                 add(f"{kind}.{phase}: {key}", number(values.get(key)))
         for timing, samples in run["timings"].items():
             for values in samples:
@@ -149,6 +175,8 @@ def main(args):
         load = run / "load.txt"
         if load.exists():
             print(f"- {run.name} load: {' / '.join(load.read_text().split(chr(10))[:2])}")
+    for note in lost_runs:
+        print(f"- {note}; that phase and the later ones are left out (see simmetalhost.log)")
     print()
     header = " | ".join(r.name for r in runs)
     if len(runs) == 2:
@@ -156,11 +184,14 @@ def main(args):
     else:
         print(f"| Metric | {header} |\n|---|---|")
     for name in names:
-        cells = [show(m.get(name, [])) for m in collected]
+        # A count of runs is a sum, not a median of ones.
+        cells = [str(len(m.get(name, []))) if name.endswith(" runs") else show(m.get(name, [])) for m in collected]
         if len(runs) == 2:
             a, b = (collected[0].get(name), collected[1].get(name))
             ratio = "-"
-            if a and b and statistics.median(b) > 0:
+            if name.endswith(" runs"):
+                ratio = "-"
+            elif a and b and statistics.median(b) > 0:
                 ratio = f"{statistics.median(a) / statistics.median(b):.2f}x"
             print(f"| {name} | {cells[0]} | {cells[1]} | {ratio} |")
         else:

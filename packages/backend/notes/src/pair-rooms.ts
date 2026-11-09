@@ -20,6 +20,11 @@ import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
+import type { LoveStreak } from "@billet/contracts-domain/streak";
+import type {
+  RecordStreakDayRequest,
+  RestoreStreakRequest,
+} from "@billet/contracts-http-api/streak";
 import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { PickTonightCommand, PickTonightResult } from "@billet/backend-pair-room/pick-tonight";
 import type { GuessCommand, GuessResult } from "@billet/backend-pair-room/guess";
@@ -192,6 +197,20 @@ export class PairRooms extends Context.Service<
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Each member's latest check-in. A room not opened yet has none. */
     readonly moods: (pairId: PairId) => Effect.Effect<ReadonlyArray<MoodCheckIn>, NotesUnavailable>;
+    /** Counts `by`'s day in the pair's love streak. */
+    readonly recordStreakDay: (
+      pairId: PairId,
+      by: UserId,
+      request: RecordStreakDayRequest,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Brings back the pair's streak after one missed day. */
+    readonly restoreStreak: (
+      pairId: PairId,
+      by: UserId,
+      request: RestoreStreakRequest,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** The pair's streak; null while the room is not open. */
+    readonly streak: (pairId: PairId) => Effect.Effect<LoveStreak | null, NotesUnavailable>;
     /** Runs one gift command for `by`: see `GiftsRoom`. */
     readonly gifts: (
       pairId: PairId,

@@ -2,7 +2,7 @@ import SwiftUI
 import Design
 
 /// The Us tab: the couple's plans. Countdown hero, love streak, three feature tiles, the games, then shared lists;
-/// today's mood is in its header. Every card is a `Card` or `cardSurface`, every icon a `UsIcon`.
+/// today's mood is in its header. Every card is a `Card` that starts with a `CardHeader`; only the hero is warm.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -27,13 +27,13 @@ struct UsView: View {
         }
     }
 
-    private let hMargin: CGFloat = 16
+    private let hMargin: CGFloat = Space.l
     private var us: UsStore { state.us }
 
     var body: some View {
         let upcoming = us.upcoming(togetherSince: state.togetherSince)
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: Space.m) {
                 header
                 CountdownHero(next: upcoming.first, days: state.daysTogether) { state.usRoute = .calendar }
                 StreakCard(store: state.streak)
@@ -145,14 +145,12 @@ struct UsView: View {
             }
 
             if !layout.rows.isEmpty {
-                VStack(spacing: 0) {
-                    ForEach(Array(layout.rows.enumerated()), id: \.element.id) { index, list in
-                        if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 58) }
+                GroupedSection {
+                    ForEach(layout.rows) { list in
                         Button { state.usRoute = .list(list.id) } label: { ListRow(list: list) }
                             .buttonStyle(.plain)
                     }
                 }
-                .cardSurface()
             }
 
             Button { state.usRoute = .newList } label: { StartListCard() }
@@ -178,34 +176,15 @@ private struct CountdownHero: View {
 
     var body: some View {
         Button(action: onTap) {
-            HStack(spacing: 14) {
-                if let next { UsIcon(glyph: next.icon, size: 48) }
-                VStack(alignment: .leading, spacing: 4) {
-                    if let next {
-                        Text(next.title)
-                            .font(.nookiTitle)
-                            .foregroundStyle(Ink.text)
-                            .lineLimit(2)
-                        // The one line about time: when it is and how far away, and no second count beside it.
-                        Text("\(when(next)) · \(next.date.formatted(.dateTime.weekday(.wide).day().month(.wide)))")
-                            .font(.nookiCallout)
-                            .foregroundStyle(Ink.textSecondary)
-                    } else {
-                        Text("Nothing planned yet")
-                            .font(.nookiTitle)
-                            .foregroundStyle(Ink.text)
-                        Text("Day \(days) together")
-                            .font(.nookiCallout)
-                            .foregroundStyle(Ink.textSecondary)
-                    }
+            Card(warm: true) {
+                if let next {
+                    // The one line about time: when it is and how far away, and no second count beside it.
+                    CardHeader(next.title, detail: "\(when(next)) · \(next.date.formatted(.dateTime.weekday(.wide).day().month(.wide)))",
+                               symbol: next.icon.symbol, tint: next.icon.tint.color)
+                } else {
+                    CardHeader("Nothing planned yet", detail: "Day \(days) together", symbol: "calendar.badge.plus")
                 }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.right")
-                    .font(.nookiCaption.weight(.semibold))
-                    .foregroundStyle(Ink.textTertiary)
             }
-            .padding(18)
-            .cardSurface(radius: Radius.hero, warm: true)
         }
         .buttonStyle(.plain)
     }
@@ -216,24 +195,9 @@ private struct DatesTile: View {
     let next: PlannedDate?
 
     var body: some View {
-        HStack(spacing: 14) {
-            UsIcon(glyph: .init(symbol: "dice.fill", tint: .blush), size: 52)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Date night")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                Text(detail)
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.textTertiary)
+        Card {
+            CardHeader("Date night", detail: detail, symbol: "dice.fill", tint: UsTint.blush.color)
         }
-        .padding(14)
-        .cardSurface()
     }
 
     private var detail: String {
@@ -251,35 +215,24 @@ private struct WhoKnowsTile: View {
     let partner: String
 
     var body: some View {
-        HStack(spacing: 14) {
-            Image("WhoKnows-card")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 64, height: 64)
-                .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Who knows who")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                Text(WhoKnowsModel.status(model.phase, remaining: model.remaining, partner: partner))
-                    .font(.nookiCaption)
-                    .foregroundStyle(model.phase == .revealed ? Ink.accentText : Ink.textSecondary)
-                if model.phase != .unpaired, let week = model.score?.week {
-                    Text(WhoKnowsModel.scoreLine(week, me: me, partner: partner))
-                        .font(.nookiMicro.monospacedDigit())
-                        .foregroundStyle(Ink.textSecondary)
-                        .contentTransition(.numericText())
-                        .accessibilityLabel("This week: \(me) \(week.mine), \(partner) \(week.partner)")
+        Card {
+            CardHeader("Who knows who") {
+                CardArt(Image("WhoKnows-card"))
+            } detail: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(WhoKnowsModel.status(model.phase, remaining: model.remaining, partner: partner))
+                        .foregroundStyle(model.phase == .revealed ? Ink.accentText : Ink.textSecondary)
+                    if model.phase != .unpaired, let week = model.score?.week {
+                        Text(WhoKnowsModel.scoreLine(week, me: me, partner: partner))
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                            .accessibilityLabel("This week: \(me) \(week.mine), \(partner) \(week.partner)")
+                    }
                 }
+            } trailing: {
+                RowChevron()
             }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.textTertiary)
         }
-        .padding(14)
-        .cardSurface()
         .accessibilityElement(children: .combine)
     }
 }
@@ -290,36 +243,25 @@ private struct DrawGuessTile: View {
 
     var body: some View {
         let phase = model.phase
-        HStack(spacing: 14) {
-            Image("DrawGuess-card")
-                .resizable()
-                .scaledToFill()
-                .frame(width: 64, height: 64)
-                .clipShape(.rect(cornerRadius: Radius.control, style: .continuous))
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 3) {
-                Text("Draw & guess")
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                Text(DrawGuessModel.status(phase, partner: partner, letters: model.theirs?.shape.reduce(0, +) ?? 0,
-                                           lastEnded: model.lastEnded,
-                                           endedMine: model.lastEnded.map(model.isMine) ?? false))
-                    .font(.nookiCaption)
-                    .foregroundStyle(phase == .guess ? Ink.accentText : Ink.textSecondary)
-                if phase != .unpaired, model.series > 0 {
-                    Text(DrawGuessModel.seriesLine(model.series))
-                        .font(.nookiMicro.monospacedDigit())
-                        .foregroundStyle(Ink.textSecondary)
-                        .contentTransition(.numericText())
+        Card {
+            CardHeader("Draw & guess") {
+                CardArt(Image("DrawGuess-card"))
+            } detail: {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(DrawGuessModel.status(phase, partner: partner, letters: model.theirs?.shape.reduce(0, +) ?? 0,
+                                               lastEnded: model.lastEnded,
+                                               endedMine: model.lastEnded.map(model.isMine) ?? false))
+                        .foregroundStyle(phase == .guess ? Ink.accentText : Ink.textSecondary)
+                    if phase != .unpaired, model.series > 0 {
+                        Text(DrawGuessModel.seriesLine(model.series))
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                    }
                 }
+            } trailing: {
+                RowChevron()
             }
-            Spacer(minLength: 0)
-            Image(systemName: "chevron.right")
-                .font(.nookiCaption.weight(.semibold))
-                .foregroundStyle(Ink.textTertiary)
         }
-        .padding(14)
-        .cardSurface()
         .accessibilityElement(children: .combine)
     }
 }
@@ -330,19 +272,8 @@ private struct SmallTile: View {
     let detail: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            UsIcon(glyph: icon, size: 40)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.nookiHeadline)
-                    .foregroundStyle(Ink.text)
-                Text(detail)
-                    .font(.nookiCaption)
-                    .foregroundStyle(Ink.textSecondary)
-            }
+        Card {
+            CardHeader(title, detail: detail, symbol: icon.symbol, tint: icon.tint.color)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(14)
-        .cardSurface()
     }
 }

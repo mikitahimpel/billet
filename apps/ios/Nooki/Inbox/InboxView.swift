@@ -13,26 +13,19 @@ struct InboxView: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        BilletSheet("Inbox", size: size, scrolls: false) {
+        let layout = InboxLayout(phase: model.phase, hasItems: !model.items.isEmpty)
+        BilletSheet("Inbox", size: layout.size, scrolls: layout.scrolls) {
             content
         }
         .task { await model.open() }
-    }
-
-    /// Short states hug their content; the list takes the whole sheet.
-    private var size: SheetSize {
-        switch model.phase {
-        case .loaded where !model.items.isEmpty: .large
-        case .failed where !model.items.isEmpty: .large
-        case .idle, .loading, .unpaired, .failed, .loaded: .medium
-        }
     }
 
     @ViewBuilder private var content: some View {
         switch model.phase {
         case .idle, .loading:
             ProgressView()
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, Space.xl)
         case .unpaired:
             EmptyState(
                 symbol: "tray", title: "Nothing here yet",
@@ -92,12 +85,42 @@ struct InboxView: View {
     }
 }
 
+/// How tall the Inbox opens: a short state hugs its content like every other short sheet, the list takes the whole
+/// sheet and scrolls itself.
+enum InboxLayout: Equatable {
+    case short
+    case list
+
+    init(phase: InboxModel.Phase, hasItems: Bool) {
+        switch phase {
+        case .loaded, .failed: self = hasItems ? .list : .short
+        case .idle, .loading, .unpaired: self = .short
+        }
+    }
+
+    var size: SheetSize {
+        switch self {
+        case .short: .fit
+        case .list: .large
+        }
+    }
+
+    /// The list is a `List`, so the sheet must not wrap it in a second scroll view; a fitted sheet measures its
+    /// content through that scroll view.
+    var scrolls: Bool {
+        switch self {
+        case .short: true
+        case .list: false
+        }
+    }
+}
+
 /// The Inbox on a phone that isn't connected to the server: nothing can arrive yet, and that is all it says.
 struct InboxSignedOut: View {
     let petName: String
 
     var body: some View {
-        BilletSheet("Inbox", size: .medium) {
+        BilletSheet("Inbox", size: InboxLayout.short.size) {
             EmptyState(
                 symbol: "tray", title: "Nothing here yet",
                 text: "Once you're connected and your partner joins, what you both do with \(petName) shows up here.")
@@ -116,13 +139,18 @@ private struct InboxRow: View {
         HStack(spacing: 12) {
             avatar
                 .overlay(alignment: .bottomTrailing) {
-                    Image(systemName: line.symbol)
-                        .font(.nookiMicro)
-                        .foregroundStyle(Ink.heroInk)
-                        .frame(width: 20, height: 20)
-                        .background(Color.honey, in: .circle)
-                        .overlay(Circle().stroke(Ink.surface, lineWidth: 1.5))
-                        .offset(x: 4, y: 4)
+                    if let mood = line.mood {
+                        MoodArt(mood: mood, size: 24)
+                            .offset(x: 5, y: 5)
+                    } else {
+                        Image(systemName: line.symbol)
+                            .font(.nookiMicro)
+                            .foregroundStyle(Ink.heroInk)
+                            .frame(width: 20, height: 20)
+                            .background(Color.honey, in: .circle)
+                            .overlay(Circle().stroke(Ink.surface, lineWidth: 1.5))
+                            .offset(x: 4, y: 4)
+                    }
                 }
             VStack(alignment: .leading, spacing: 2) {
                 Text(line.text)

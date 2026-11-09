@@ -2,17 +2,19 @@ import SwiftUI
 
 extension View {
   /// The app's one card surface: a flat solid fill, like the cell of a grouped list. `warm` lays a breath of
-  /// honey over it, for a screen's hero card. Give a plain control's field `radius: Radius.control`.
+  /// honey over it, for a screen's hero card. `radius` is `Radius.card`, or `Radius.inner` for a tile nested in
+  /// a card's padding. It is also the container shape, so a `ConcentricRectangle` inside follows its corners.
   public func cardSurface(radius: CGFloat = Radius.card, warm: Bool = false) -> some View {
     let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
     return background {
       shape.fill(Ink.surface)
       if warm { shape.fill(Color.honey.opacity(0.14)) }
     }
+    .containerShape(shape)
   }
 }
 
-/// Content on the app's card, padded by `Space.l`.
+/// Content on the app's card, padded by `CardMetrics.padding`.
 public struct Card<Content: View>: View {
   let warm: Bool
   let content: Content
@@ -24,9 +26,77 @@ public struct Card<Content: View>: View {
 
   public var body: some View {
     content
-      .padding(Space.l)
+      .padding(CardMetrics.padding)
       .frame(maxWidth: .infinity, alignment: .leading)
       .cardSurface(warm: warm)
+  }
+}
+
+/// The one header of a card: a leading mark at `Size.cardMark`, the title over a quiet line, and a trailing
+/// accessory (usually `RowChevron`). Every card that opens something starts with it.
+public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
+  let title: String
+  let leading: Leading
+  let detail: Detail
+  let trailing: Trailing
+
+  public init(
+    _ title: String, @ViewBuilder leading: () -> Leading, @ViewBuilder detail: () -> Detail,
+    @ViewBuilder trailing: () -> Trailing
+  ) {
+    self.title = title
+    self.leading = leading()
+    self.detail = detail()
+    self.trailing = trailing()
+  }
+
+  public var body: some View {
+    HStack(spacing: Space.m) {
+      leading
+        .frame(width: Size.cardMark, height: Size.cardMark)
+      VStack(alignment: .leading, spacing: 2) {
+        Text(title)
+          .font(.nookiHeadline)
+          .foregroundStyle(Ink.text)
+          .lineLimit(2)
+        detail
+          .font(.nookiCaption)
+          .foregroundStyle(Ink.textSecondary)
+      }
+      Spacer(minLength: 0)
+      trailing
+    }
+  }
+}
+
+extension CardHeader where Leading == RowIcon, Detail == Text?, Trailing == RowChevron? {
+  /// A header with an icon tile, an optional line under the title and a chevron when it opens something.
+  public init(
+    _ title: String, detail: String? = nil, symbol: String, tint: Color? = nil, opens: Bool = true
+  ) {
+    self.init(title) {
+      RowIcon(symbol: symbol, tint: tint, size: Size.cardMark)
+    } detail: {
+      detail.map { Text($0) }
+    } trailing: {
+      opens ? RowChevron() : nil
+    }
+  }
+}
+
+/// Art in a card header's leading slot, clipped concentric with the card.
+public struct CardArt: View {
+  let image: Image
+
+  public init(_ image: Image) { self.image = image }
+
+  public var body: some View {
+    image
+      .resizable()
+      .scaledToFill()
+      .frame(width: Size.cardMark, height: Size.cardMark)
+      .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+      .accessibilityHidden(true)
   }
 }
 
@@ -252,7 +322,12 @@ public struct PickerRow<Value: Hashable, Options: View>: View {
         ToggleRow("Haptics", symbol: "hand.tap.fill", tint: .blushPink, isOn: .constant(true))
         Row("Erase all data", symbol: "trash.fill", destructive: true)
       }
-      Card(warm: true) { Text("A hero card").font(.nookiHeadline).foregroundStyle(Ink.text) }
+      Card(warm: true) {
+        CardHeader("Anniversary", detail: "In 12 days · Friday 21 November", symbol: "heart.fill")
+      }
+      Card {
+        CardHeader("Date night", detail: "3 matches waiting", symbol: "dice.fill", tint: .pink)
+      }
     }
   }
 }

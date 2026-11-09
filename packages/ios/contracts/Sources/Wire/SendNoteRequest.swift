@@ -2,14 +2,17 @@
 /// instead of storing another.
 public enum SendNoteRequest: Codable, Hashable, Sendable {
   case drawing(
-    key: IdempotencyKey, compact: CompactStrokes, image: MediaKey, paper: PaperColor? = nil)
+    key: IdempotencyKey, compact: CompactStrokes, image: MediaKey, paper: PaperColor? = nil,
+    stamp: NoteStamp? = nil, seal: NoteSeal? = nil)
   /// A photo already uploaded to `POST /v1/media`, with its pixel size (1 to 8192 a side), a
   /// BlurHash `preview` for the partner to show while it loads, and an optional `caption`.
   case photo(
     key: IdempotencyKey, image: MediaKey, width: Int, height: Int, preview: String,
     caption: NoteText? = nil)
   /// `ink` must be one the pair owns, or the server answers `ApiError.inkNotOwned`.
-  case text(key: IdempotencyKey, text: NoteText, paper: PaperColor? = nil, ink: InkId = .free)
+  case text(
+    key: IdempotencyKey, text: NoteText, paper: PaperColor? = nil, stamp: NoteStamp? = nil,
+    seal: NoteSeal? = nil, ink: InkId = .free)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -18,6 +21,8 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
     case image
     case text
     case paper
+    case stamp
+    case seal
     case width
     case height
     case preview
@@ -34,7 +39,9 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
         key: try container.decode(IdempotencyKey.self, forKey: .key),
         compact: try container.decode(CompactStrokes.self, forKey: .compact),
         image: try container.decode(MediaKey.self, forKey: .image),
-        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper))
+        paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper),
+        stamp: try container.decodeOptionalKey(NoteStamp.self, forKey: .stamp),
+        seal: try container.decodeOptionalKey(NoteSeal.self, forKey: .seal))
     case "Photo":
       self = .photo(
         key: try container.decode(IdempotencyKey.self, forKey: .key),
@@ -48,6 +55,8 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
         key: try container.decode(IdempotencyKey.self, forKey: .key),
         text: try container.decode(NoteText.self, forKey: .text),
         paper: try container.decodeOptionalKey(PaperColor.self, forKey: .paper),
+        stamp: try container.decodeOptionalKey(NoteStamp.self, forKey: .stamp),
+        seal: try container.decodeOptionalKey(NoteSeal.self, forKey: .seal),
         ink: try container.decodeOptionalKey(InkId.self, forKey: .ink) ?? .free)
     default:
       throw DecodingError.dataCorruptedError(
@@ -58,12 +67,14 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
   public func encode(to encoder: any Encoder) throws {
     var container = encoder.container(keyedBy: CodingKeys.self)
     switch self {
-    case .drawing(let key, let compact, let image, let paper):
+    case .drawing(let key, let compact, let image, let paper, let stamp, let seal):
       try container.encode("Drawing", forKey: .tag)
       try container.encode(key, forKey: .key)
       try container.encode(compact, forKey: .compact)
       try container.encode(image, forKey: .image)
       try container.encodeIfPresent(paper, forKey: .paper)
+      try container.encodeIfPresent(stamp, forKey: .stamp)
+      try container.encodeIfPresent(seal, forKey: .seal)
     case .photo(let key, let image, let width, let height, let preview, let caption):
       try container.encode("Photo", forKey: .tag)
       try container.encode(key, forKey: .key)
@@ -72,11 +83,13 @@ public enum SendNoteRequest: Codable, Hashable, Sendable {
       try container.encode(height, forKey: .height)
       try container.encode(preview, forKey: .preview)
       try container.encodeIfPresent(caption, forKey: .caption)
-    case .text(let key, let text, let paper, let ink):
+    case .text(let key, let text, let paper, let stamp, let seal, let ink):
       try container.encode("Text", forKey: .tag)
       try container.encode(key, forKey: .key)
       try container.encode(text, forKey: .text)
       try container.encodeIfPresent(paper, forKey: .paper)
+      try container.encodeIfPresent(stamp, forKey: .stamp)
+      try container.encodeIfPresent(seal, forKey: .seal)
       try container.encode(ink, forKey: .ink)
     }
   }

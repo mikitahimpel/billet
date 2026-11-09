@@ -215,7 +215,13 @@ const sendPhoto = (token: string, image: string, key: string = crypto.randomUUID
 
 const sendText = (
   token: string,
-  note: { readonly text: string; readonly paper?: string; readonly ink?: string },
+  note: {
+    readonly text: string;
+    readonly paper?: string;
+    readonly stamp?: string;
+    readonly seal?: string;
+    readonly ink?: string;
+  },
   key: string = crypto.randomUUID(),
 ) => call("/v1/notes", json({ _tag: "Text", key, ...note }, "POST", token));
 
@@ -1039,6 +1045,39 @@ describe("notes", () => {
     expect(await historyFor(owner)).toEqual(history);
   });
 
+  it("stores a note's stamp and seal, and gives them to the partner as chosen", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const stamped = await sendText(owner, { text: "sealed", stamp: "moon", seal: "rose" });
+    expect(stamped.status).toBe(200);
+    expect((await sendText(owner, { text: "plain" })).status).toBe(200);
+
+    const image = await uploaded(owner);
+    const compact = { version: 1, strokes: [{ color: "#2A1A1C", width: 3, points: [1, 2] }] };
+    const drawing = await call(
+      "/v1/notes",
+      json(
+        { _tag: "Drawing", key: crypto.randomUUID(), image, compact, seal: "night" },
+        "POST",
+        owner,
+      ),
+    );
+    expect(drawing.status).toBe(200);
+
+    const history = await historyFor(claimer);
+    expect(history[0]).toMatchObject({ _tag: "Text", text: "sealed", stamp: "moon", seal: "rose" });
+    expect(history[1]).not.toHaveProperty("stamp");
+    expect(history[1]).not.toHaveProperty("seal");
+    expect(history[2]).toMatchObject({ _tag: "Drawing", seal: "night" });
+    expect(history[2]).not.toHaveProperty("stamp");
+  });
+
+  it("refuses a stamp or a seal it doesn't know", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    expect((await sendText(owner, { text: "hi", stamp: "dragon" })).status).toBe(400);
+    expect((await sendText(owner, { text: "hi", seal: "glitter" })).status).toBe(400);
+    expect(await historyFor(owner)).toHaveLength(0);
+  });
+
   it("writes a text note in the free ink, and refuses an ink the pair has not bought", async () => {
     const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
     const bare = await sendText(owner, { text: "hi" });
@@ -1119,6 +1158,39 @@ describe("notes", () => {
     expect(moods).toContainEqual(checkIn);
     expect(moods).toContainEqual(expect.objectContaining({ user: members[0], mood: "happy" }));
     expect((await setMood(owner, { mood: "happy", note: "a".repeat(81) })).status).toBe(400);
+  });
+
+  it("keeps one love streak for the pair, counted from either partner's day", async () => {
+    const { owner, claimer } = await pairOf("subject-streak-owner", "subject-streak-claimer");
+    const post = (token: string, path: string, body: unknown) =>
+      call(path, {
+        method: "POST",
+        headers: { ...bearer(token), "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const streakOf = async (token: string) =>
+      (await (await call("/v1/streak", { method: "GET", headers: bearer(token) })).json()) as {
+        streak: { days: number; best: number; lastDay?: string };
+      };
+    expect(await streakOf(owner)).toEqual({ streak: { days: 0, best: 0 } });
+    // A day long past counts as the oldest the room takes: a day before its clock.
+    const day = await post(claimer, "/v1/streak/days", {
+      at: 1_700_000_000_000,
+      utcOffsetSeconds: 0,
+    });
+    expect(day.status).toBe(200);
+    expect(await day.json()).toMatchObject({ streak: { days: 1, best: 1 } });
+    // The partner's phone reads the same streak, and the same day counts once.
+    expect(
+      (await post(owner, "/v1/streak/days", { at: 1_700_000_000_000, utcOffsetSeconds: 0 })).status,
+    ).toBe(200);
+    expect(await streakOf(owner)).toMatchObject({ streak: { days: 1, best: 1 } });
+    const restore = await post(owner, "/v1/streak/restore", { utcOffsetSeconds: 0 });
+    expect(restore.status).toBe(409);
+    expect(await restore.json()).toEqual({ _tag: "StreakNotRestorable" });
+    expect((await post(owner, "/v1/streak/days", { at: "soon", utcOffsetSeconds: 0 })).status).toBe(
+      400,
+    );
   });
 
   it("opens the day's gift once for the pair, and pays an app earn once per ref", async () => {

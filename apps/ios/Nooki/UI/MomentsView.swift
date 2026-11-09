@@ -155,10 +155,10 @@ struct MomentsView: View {
             if notes.isEmpty, store.pinned.isEmpty {
                 Text("Leave a note or doodle for the board")
                     .font(.nookiCallout.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Ink.glassGlyph)
                     .padding(.horizontal, 18)
                     .frame(height: 42)
-                    .glass(.capsule)
+                    .glass(.capsule, role: .bar)
                     .padding(.bottom, Space.l)
             }
         }
@@ -351,6 +351,11 @@ struct MomentPrint: View {
                     .padding(width * 0.09)
             }
         }
+        .overlay(alignment: .bottomTrailing) {
+            if moment.unsent == true, session?.isPaired == true {
+                UnsentMark(size: max(10, width * 0.05)).padding(width * 0.06)
+            }
+        }
         .overlay(alignment: .top) {
             if moment.pinned {
                 WashiTape(tone: moment.id.tapeTone, width: width * 0.34)
@@ -388,9 +393,9 @@ private struct WallStrip: View {
                 }
             }
         }
-        .padding(.horizontal, Space.l)
+        .padding(.horizontal, CardMetrics.padding)
         .frame(height: 50)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.control, style: .continuous))
+        .cardSurface()
     }
 }
 
