@@ -13,7 +13,7 @@ import Testing
     /// Tuesday 10 November 2026, 18:00.
     private static let now = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 18))!
 
-    static func event(_ kind: LifeEvent.Kind, day: Int = 10, hour: Int, minute: Int = 0) -> LifeEvent {
+    private static func event(_ kind: LifeEvent.Kind, day: Int = 10, hour: Int, minute: Int = 0) -> LifeEvent {
         let at = calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute))!
         return LifeEvent(id: UUID(), kind: kind, by: "user-them", at: at)
     }
@@ -36,8 +36,8 @@ import Testing
         #expect(Self.line([Self.event(.sleep, day: 8, hour: 23)]) == "Ilya put Mochi to bed on Sunday")
     }
 
-    @Test(arguments: [[LifeEvent](), [HomecomingLineTests.event(.shoo, hour: 9)]])
-    func nothingWorthTellingIsNoLine(care: [LifeEvent]) {
-        #expect(Self.line(care) == nil)
+    @Test(arguments: [[LifeEvent.Kind](), [.shoo]])
+    func nothingWorthTellingIsNoLine(kinds: [LifeEvent.Kind]) {
+        #expect(Self.line(kinds.map { Self.event($0, hour: 9) }) == nil)
     }
 }
