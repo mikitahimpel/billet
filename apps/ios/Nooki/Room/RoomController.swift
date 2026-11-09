@@ -36,7 +36,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private lazy var standIn = CatRoom()
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var pins: [BoardPin] = []
-    @ObservationIgnored private var statusTask: Task<Void, Never>?
 
     /// `usesStandIn` leaves the real room out (UI tests, where RealityKit can't draw) and gives games a bare one.
     init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife) {
@@ -45,23 +44,20 @@ final class RoomController: RoomControlling, CatStatusProviding {
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
     }
 
-    deinit { statusTask?.cancel() }
-
     // MARK: Loading
 
-    /// Builds Mochi's room and starts reading her status. Called after the first frame, so launch shows the backdrop.
+    /// Builds Mochi's room. Called after the first frame, so launch shows the backdrop.
     func load() {
         guard home == nil, !usesStandIn else { return }
         let room = DioramaScene()
         home = room
         wire(room)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }
-        statusTask = Task { [weak self] in
-            while !Task.isCancelled {
-                self?.refreshStatus()
-                try? await Task.sleep(for: .seconds(1))
-            }
-        }
+    }
+
+    /// Returns once the room looks finished, or after `timeout`.
+    func ready(timeout: Duration) async {
+        await ScreenFrames.until(timeout: timeout) { [weak self] in self?.isReady != false }
     }
 
     var isStandIn: Bool { usesStandIn }
@@ -122,10 +118,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     func nextFrame(timeout: Duration = .seconds(2)) async {
         guard let room = current else { return }
         let start = room.frame
-        let deadline = ContinuousClock.now + timeout
-        while room.frame == start, ContinuousClock.now < deadline {
-            try? await Task.sleep(for: .milliseconds(8))
-        }
+        await ScreenFrames.until(timeout: timeout) { room.frame != start }
     }
 
     func stop() { current?.stop() }
@@ -152,6 +145,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func petted() { emit.yield(.catPetted) }
+
+    func careAsked() { emit.yield(.careAsked) }
 
     // MARK: The pair's cat
 
@@ -203,6 +198,14 @@ final class RoomController: RoomControlling, CatStatusProviding {
     var gameRoom: CatRoom? { current ?? (usesStandIn ? standIn : nil) }
 
     // MARK: Status
+
+    /// Reads her status now and then once a second, until cancelled.
+    func watchStatus() async {
+        while !Task.isCancelled {
+            refreshStatus()
+            try? await Task.sleep(for: .seconds(1))
+        }
+    }
 
     func refreshStatus() {
         let director = current?.director

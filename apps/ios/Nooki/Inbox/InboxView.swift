@@ -37,9 +37,13 @@ struct InboxView: View {
                     SecondaryButton("Try Again", fullWidth: false) { Task { await model.open() } }
                 }
         case .loaded where model.items.isEmpty:
-            EmptyState(
-                symbol: "tray", title: "All quiet",
-                text: "Feeding \(state.petName), notes and gifts from you two will show up here.")
+            VStack(spacing: 0) {
+                DeliveryNotice(
+                    partner: partnerName, insets: EdgeInsets(top: 0, leading: 0, bottom: Space.l, trailing: 0))
+                EmptyState(
+                    symbol: "tray", title: "All quiet",
+                    text: "Feeding \(state.petName), notes and gifts from you two will show up here.")
+            }
         case .loaded, .failed:
             list
         }
@@ -62,7 +66,13 @@ struct InboxView: View {
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
         .refreshable { await model.open() }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            DeliveryNotice(
+                partner: partnerName, insets: EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
+        }
     }
+
+    private var partnerName: String { state.profile.name(of: state.otherPartner) }
 
     @ViewBuilder private func row(_ item: ActivityItem) -> some View {
         let rowView = InboxRow(item: item, state: state, isNew: model.fresh.contains(item.id))

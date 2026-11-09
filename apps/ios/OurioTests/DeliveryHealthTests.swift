@@ -36,4 +36,10 @@ import Testing
         withPush.lastPush = .now
         #expect(withPush.lastPushDetail != "None yet")
     }
+
+    @Test func names_the_partner_only_while_alerts_are_off() {
+        #expect(health(allowed: false).notice(partner: "Ilya") == "You won't hear when Ilya sends something.")
+        #expect(health().notice(partner: "Ilya") == nil)
+        #expect(health(token: false).notice(partner: "Ilya") == nil)
+    }
 }
