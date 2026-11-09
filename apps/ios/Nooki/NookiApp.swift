@@ -12,7 +12,7 @@ struct NookiApp: App {
     @State private var home: HomeState
 
     init() {
-        NavigationBarStyle.apply()
+        NavigationBarStyle.prepare()
         // Mochi's welcome clips are made before the first screen, so it starts on a still and plays without a stall.
         WelcomeClips.shared.preload()
         // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.

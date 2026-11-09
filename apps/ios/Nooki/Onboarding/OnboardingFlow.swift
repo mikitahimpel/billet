@@ -40,7 +40,21 @@ final class OnboardingFlow {
     static let inviteStep: OnboardingStepId = "invite_partner"
     static let inviteSent: OnboardingOptionId = "sent"
 
-    private(set) var catalogue: OnboardingResponse
+    /// The questions: the server's once `load()` has them, else the set this onboarding was saved with, else the
+    /// bundled set. Decoded on first use, not at launch: most launches never show onboarding, and on the welcome
+    /// `load()` decodes them off the main thread.
+    var catalogue: OnboardingResponse {
+        if let served { return served }
+        if let decoded { return decoded }
+        let value = Self.decodeCatalogue(saved: savedCatalogue, bundled: bundled)
+        decoded = value
+        return value
+    }
+    private var served: OnboardingResponse?
+    @ObservationIgnored private var decoded: OnboardingResponse?
+    @ObservationIgnored private let bundled: @Sendable () -> OnboardingResponse
+    /// As saved when this flow was made; decoded with the bundled set, on first use.
+    @ObservationIgnored private let savedCatalogue: Data?
     private(set) var index = 0
     private(set) var isFinished: Bool
 
@@ -87,7 +101,7 @@ final class OnboardingFlow {
         asksTogetherSince: Bool = false,
         togetherSinceChosen: @escaping (Date) -> Void = { _ in },
         requestPushes: @escaping () async -> Void = {},
-        bundled: OnboardingResponse = BundledOnboarding.load(),
+        bundled: @escaping @Sendable () -> OnboardingResponse = { BundledOnboarding.load() },
         now: @escaping () -> Date = Date.init,
         coatChanged: @escaping () -> Void = {}
     ) {
@@ -105,14 +119,14 @@ final class OnboardingFlow {
         self.togetherSinceChosen = togetherSinceChosen
         self.requestPushes = requestPushes
         self.now = now
-        catalogue = bundled
+        self.bundled = bundled
+        savedCatalogue = defaults.data(forKey: Self.catalogueKey)
         isFinished = defaults.bool(forKey: Self.doneKey)
         joining = defaults.bool(forKey: Self.joiningKey)
         stopped = defaults.bool(forKey: Self.stoppedKey)
         // A closed app opens again on the page it was on, with the questions and picks it had; `-onboardingPage 3`
         // opens that page, for screenshots.
         index = max(defaults.integer(forKey: Self.pageKey), 0)
-        if let saved = Self.saved(OnboardingResponse.self, Self.catalogueKey, in: defaults) { catalogue = saved }
         picks = Self.saved([OnboardingStepId: [OnboardingOptionId]].self, Self.picksKey, in: defaults) ?? [:]
         #if DEBUG
         // `-onboardingOpen catCoat` opens the coat step, for screenshots; `-catCoat <coat>` picks the coat it shows.
@@ -130,7 +144,8 @@ final class OnboardingFlow {
             + (goals.isDisjoint(with: Self.widgetGoals) ? [] : [.widget])
     }
 
-    var page: Page { stopped ? .stopped : pages[min(index, pages.count - 1)] }
+    /// The welcome is always the first page, so showing it needs no questions.
+    var page: Page { stopped ? .stopped : index == 0 ? .welcome : pages[min(index, pages.count - 1)] }
 
     /// How far along the steps after the welcome, from 0 to 1.
     var progress: Double { Double(index) / Double(max(pages.count - 1, 1)) }
@@ -138,9 +153,21 @@ final class OnboardingFlow {
     /// The server's questions replace the bundled ones until the first question is shown; after that the person
     /// keeps the set they started with. Also sends whatever is still queued from an earlier launch.
     func load() async {
+        if served == nil, decoded == nil {
+            let saved = savedCatalogue, bundled = bundled
+            let value = await Task.detached(priority: .userInitiated) {
+                Self.decodeCatalogue(saved: saved, bundled: bundled)
+            }.value
+            if decoded == nil { decoded = value }
+        }
         await send()
         guard let response = try? await client.fetch(), index == 0 else { return }
-        catalogue = response
+        served = response
+    }
+
+    private nonisolated static func decodeCatalogue(saved: Data?,
+                                                    bundled: () -> OnboardingResponse) -> OnboardingResponse {
+        saved.flatMap { try? JSONDecoder().decode(OnboardingResponse.self, from: $0) } ?? bundled()
     }
 
     // MARK: Answering

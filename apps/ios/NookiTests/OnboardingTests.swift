@@ -55,9 +55,29 @@ private func makeFlow(
         report: { [sent] (events) async throws(TransportError) in sent.events.withLock { $0.append(contentsOf: events) } },
         queue: AnswerQueue(file: file), defaults: defaults, catNames: defaults, canInvite: canInvite,
         hasServer: hasServer, asksTogetherSince: asksTogetherSince, togetherSinceChosen: togetherSinceChosen,
-        bundled: catalogue,
+        bundled: { [catalogue] in catalogue },
         now: { Date(timeIntervalSince1970: 1_000) })
     return (flow, defaults, file)
+}
+
+/// How often a flow decoded its bundled questions, and whether any of those was on the main thread.
+private final class Decodes: Sendable {
+    let count = Mutex(0)
+    let onMain = Mutex(false)
+}
+
+@MainActor
+private func decodingFlow(_ decodes: Decodes, defaults: UserDefaults? = nil) -> OnboardingFlow {
+    let defaults = defaults ?? UserDefaults(suiteName: "onboarding-\(UUID().uuidString)")!
+    return OnboardingFlow(
+        client: .offline, report: { (_) async throws(TransportError) in },
+        queue: AnswerQueue(file: URL.temporaryDirectory.appending(path: "decode-\(UUID().uuidString)/a.json")),
+        defaults: defaults, catNames: defaults, canInvite: false,
+        bundled: { [decodes, catalogue] in
+            decodes.count.withLock { $0 += 1 }
+            if Thread.isMainThread { decodes.onMain.withLock { $0 = true } }
+            return catalogue
+        })
 }
 
 /// Lets the flow's background sends run until `done`, or gives up after a while.
@@ -153,6 +173,35 @@ struct OnboardingFlowTests {
         #expect(started.catalogue == catalogue)
     }
 
+    @Test func theQuestionsAreDecodedOnFirstUseNotAtLaunch() {
+        let decodes = Decodes()
+        let flow = decodingFlow(decodes)
+        #expect(flow.page == .welcome)
+        #expect(decodes.count.withLock { $0 } == 0)
+        #expect(flow.catalogue == catalogue)
+        #expect(flow.pages.contains(.question(goals)))
+        #expect(decodes.count.withLock { $0 } == 1)
+    }
+
+    @Test func loadDecodesTheQuestionsOnceOffTheMainThread() async {
+        let decodes = Decodes()
+        let flow = decodingFlow(decodes)
+        await flow.load()
+        #expect(decodes.count.withLock { $0 } == 1)
+        #expect(decodes.onMain.withLock { $0 } == false)
+        #expect(flow.catalogue == catalogue)
+        #expect(decodes.count.withLock { $0 } == 1)
+    }
+
+    @Test func aSavedSetOfQuestionsWinsOverTheBundledOne() {
+        let defaults = UserDefaults(suiteName: "onboarding-\(UUID().uuidString)")!
+        let saved = OnboardingResponse(version: "saved", steps: [age])
+        defaults.set(try? JSONEncoder().encode(saved), forKey: OnboardingFlow.catalogueKey)
+        let decodes = Decodes()
+        #expect(decodingFlow(decodes, defaults: defaults).catalogue == saved)
+        #expect(decodes.count.withLock { $0 } == 0)
+    }
+
     @Test func aPickedCoatIsWornAndSentAndASkippedOneIsGrey() async {
         let sent = Sent()
         let (flow, defaults, _) = makeFlow(sent: sent)
@@ -161,7 +210,7 @@ struct OnboardingFlowTests {
             client: .offline, report: { (_) async throws(TransportError) in }, queue: AnswerQueue(
                 file: URL.temporaryDirectory.appending(path: "coat-\(UUID().uuidString)/a.json")),
             defaults: defaults, catNames: defaults, canInvite: false,
-            bundled: OnboardingResponse(version: "v1", steps: []),
+            bundled: { OnboardingResponse(version: "v1", steps: []) },
             coatChanged: { changes += 1 })
         coated.start()
         #expect(coated.page == .catCoat)
