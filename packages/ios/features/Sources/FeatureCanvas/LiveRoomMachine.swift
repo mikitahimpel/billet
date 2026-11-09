@@ -1,12 +1,9 @@
 import BilletKit
 import Wire
 
-/// What the partner is doing in the room, from the app's side of the socket.
-///
-/// Live strokes are never stored or replayed by the server, so they exist only while the socket
-/// is up: a drop forgets them, and a reconnect starts the partner's drawing again from nothing.
-/// Notes are the other way round. The server replays those after the last `seq` the client holds,
-/// and `lastNoteSeq` drops any it sends twice.
+/// What the partner is doing in the room. Live strokes are never stored, so a socket drop forgets
+/// them. The server replays notes after the last `seq` the client holds, and `lastNoteSeq` drops
+/// any it sends twice.
 public enum LiveRoomMachine: Machine {
   /// More strokes than this in one live drawing are dropped from the front, so a stuck sender
   /// cannot grow the screen without bound.

@@ -8,7 +8,6 @@ public enum PetNeed: String, CaseIterable, Codable, Hashable, Sendable {
   case rested
   /// Cared for: petting by each partner, and notes most of all.
   case loved
-  /// Played with.
   case playful
 
   public var title: String {
@@ -67,7 +66,6 @@ public struct PetNeeds: Codable, Hashable, Sendable {
     return exp(log / total)
   }
 
-  /// The lowest need and its value.
   public var lowest: (need: PetNeed, value: Double) {
     PetNeed.allCases.map { ($0, self[$0]) }.min { $0.1 < $1.1 } ?? (.full, full)
   }

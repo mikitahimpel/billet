@@ -16,7 +16,6 @@ public enum RoomLighting: String, CaseIterable, Codable, Hashable, Sendable {
   /// Very dim, the lamp flickering like a candle.
   case candle
 
-  /// What the rooms show before anyone chooses.
   public static let standard = RoomLighting.amberLantern
 
   public var title: String {

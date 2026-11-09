@@ -1,6 +1,5 @@
 extension KeyedDecodingContainer {
-  /// Decodes a schema `optionalKey`: absent is `nil`, and an explicit `null` is refused, as the
-  /// server refuses it.
+  /// A schema `optionalKey`: absent is `nil`; an explicit `null` is refused, as the server does.
   func decodeOptionalKey<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> T? {
     guard contains(key) else { return nil }
     guard try !decodeNil(forKey: key) else {
@@ -12,8 +11,8 @@ extension KeyedDecodingContainer {
 }
 
 extension KeyedDecodingContainer {
-  /// Decodes a schema `optionalKey` of literals that may grow: an id this build doesn't know is
-  /// `nil`, so a note decorated by a newer app still arrives, only without the decoration.
+  /// An id this build doesn't know is `nil`, so a note from a newer app arrives without the
+  /// decoration.
   func decodeKnownKey<T: RawRepresentable & Decodable>(_ type: T.Type, forKey key: Key) throws -> T?
   where T.RawValue == String {
     try decodeOptionalKey(String.self, forKey: key).flatMap(T.init(rawValue:))

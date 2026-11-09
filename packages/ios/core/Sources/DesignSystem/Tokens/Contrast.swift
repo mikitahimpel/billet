@@ -8,7 +8,7 @@ public enum ContrastFloor: Double, CaseIterable, Sendable {
   case rung = 1.15
 }
 
-/// WCAG 2.2 contrast.
+/// WCAG 2.2.
 public enum Contrast {
   public static func relativeLuminance(of swatch: Swatch) -> Double {
     func linear(_ channel: UInt8) -> Double {

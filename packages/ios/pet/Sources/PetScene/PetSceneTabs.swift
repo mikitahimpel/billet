@@ -2,7 +2,6 @@ import CoreGraphics
 import Foundation
 import Pet
 
-/// A note pinned on the desk's board.
 public struct DeskNote: Identifiable, Equatable, @unchecked Sendable {
   public let id: UUID
   /// The drawing on its paper. `CGImage` is immutable, so sharing it is safe.
@@ -29,11 +28,9 @@ public struct DeskSceneState: Equatable, Sendable {
   }
 }
 
-/// What the desk scene reports to its host.
 public enum DeskSceneEvent: Hashable, Sendable {
   /// The blank paper on the desk was tapped: time to draw.
   case paperTapped
-  /// A note on the board was tapped.
   case noteTapped(UUID)
 }
 
@@ -51,7 +48,6 @@ public struct FlameSceneState: Equatable, Sendable {
   }
 }
 
-/// What the flame scene reports to its host.
 public enum FlameSceneEvent: Hashable, Sendable {
   /// A finger came down on the flame, for a soft tap of feedback.
   case touched

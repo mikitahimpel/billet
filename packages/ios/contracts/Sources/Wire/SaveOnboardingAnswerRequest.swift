@@ -1,10 +1,6 @@
-/// `POST /v1/onboarding/answers`, answered with 204. The server keeps one answer per account and
-/// step, the one with the later `answeredAt` (epoch milliseconds), so a queued retry is safe to
-/// send again. A 400 means the step or option is gone: drop the answer. A 503 means retry.
-///
-/// Besides the served steps it takes the app's own: `cat_coat` (`single`, any coat id),
-/// `cat_name` (`text`, at most 24 characters; skipped means Mochi) and `invite_partner`
-/// (`single` with `sent`, or skipped).
+/// Answered with 204. The server keeps the later `answeredAt` per account and step, so a retry is
+/// safe. 400: the step or option is gone, drop it; 503: retry. Also takes `cat_coat`, `cat_name`
+/// (at most 24 characters; skipped means Mochi) and `invite_partner` (`sent`, or skipped).
 public struct SaveOnboardingAnswerRequest: Codable, Hashable, Sendable {
   public let version: String
   public let stepId: OnboardingStepId

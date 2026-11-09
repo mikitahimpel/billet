@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// What a `BilletSheet` stands on: the app's screen colour, or glass over whatever is behind, the arm a perf run
-/// measures a sheet over the live room with.
+/// What a `BilletSheet` stands on: the screen colour, or glass over whatever is behind.
 public enum SheetGroundStyle: Sendable {
   case opaque
   case glass
@@ -11,7 +10,6 @@ extension EnvironmentValues {
   @Entry public var sheetGround: SheetGroundStyle = .opaque
 }
 
-/// How tall a `BilletSheet` opens.
 public enum SheetSize: Sendable {
   /// As tall as its content, and `.large` too when the content outgrows the screen.
   case fit
@@ -21,19 +19,10 @@ public enum SheetSize: Sendable {
   case mediumLarge
 }
 
-/// The one scaffold of every sheet: a navigation stack on `Ink.screen` with an inline, centred title.
-///
-/// Close is a glass `xmark` at the top trailing edge. A sheet that confirms something gets a glass honey
-/// `checkmark` there instead, and its close moves to the leading edge. Pushed screens get the system's back
-/// chevron. There are no "Done" or "Cancel" text pills.
-///
-/// The system draws both buttons as toolbar items. With `hasChanges` the confirm button stays disabled until
-/// something changed, closing asks "Discard changes?" and a swipe down is blocked while there are changes.
-///
-/// A sheet's own toolbar items go on the content, inside the closure: a `.toolbar` on the `BilletSheet` itself
-/// sits outside its navigation stack and is never drawn.
+/// Close sits trailing; with `onConfirm` a honey checkmark takes that edge and close moves leading.
+/// A sheet's own toolbar items go on the content: a `.toolbar` on the `BilletSheet` itself sits
+/// outside its navigation stack and is never drawn.
 public struct BilletSheet<Content: View>: View {
-  /// Which edge of the toolbar the close button sits on.
   enum ClosePlacement: Equatable {
     case leading
     case trailing
@@ -55,11 +44,8 @@ public struct BilletSheet<Content: View>: View {
   @State private var askingToDiscard = false
 
   /// - Parameters:
-  ///   - scrolls: Wraps the content in a scroll view with the side insets. Pass false for content that is a
-  ///     `List` or a scroll view itself; it then keeps the same insets through `Page` or its own rows.
-  ///   - subtitle: A count or a short line under the title, in the same toolbar slot.
-  ///   - hasChanges: For a sheet that edits something: false disables confirm, true makes close ask first.
-  ///   - onConfirm: Shows the confirm button and runs this when it is tapped.
+  ///   - scrolls: Pass false for content that is a `List` or a scroll view itself.
+  ///   - hasChanges: False disables confirm; true makes close ask first and blocks swipe-down.
   public init(
     _ title: String, subtitle: String? = nil, size: SheetSize = .large, scrolls: Bool = true,
     hasChanges: Bool? = nil, onConfirm: (() -> Void)? = nil, canConfirm: Bool = true,
@@ -165,7 +151,6 @@ public struct BilletSheet<Content: View>: View {
   }
 }
 
-/// The glass `xmark` of a sheet.
 public struct CloseButton: View {
   let action: () -> Void
 
@@ -181,7 +166,6 @@ public struct CloseButton: View {
   }
 }
 
-/// The glass honey `checkmark` that confirms a sheet.
 public struct ConfirmButton: View {
   let action: () -> Void
 
@@ -198,7 +182,6 @@ public struct ConfirmButton: View {
   }
 }
 
-/// The title of a sheet with a count or a line under it, in the toolbar's one title slot.
 struct SheetSubtitle: View {
   let title: String
   let subtitle: String
@@ -213,8 +196,7 @@ struct SheetSubtitle: View {
   }
 }
 
-/// A screen of sections on `Ink.screen` that scrolls as one page, for a pushed screen or the content of a sheet
-/// that is not a `BilletSheet`'s own scroll view.
+/// A pushed screen, or a sheet's content that is not a `BilletSheet`'s own scroll view.
 public struct Page<Content: View>: View {
   let content: Content
 
@@ -235,8 +217,7 @@ public struct Page<Content: View>: View {
 }
 
 extension View {
-  /// Content scrolling out under a bar, the header or the tab bar fades out instead of being cut off hard
-  /// (iOS 26's scroll edge effect); every scroll view of the app uses this, `Page` and `BilletSheet` already do.
+  /// iOS 26 soft scroll edges; every scroll view uses this, `Page` and `BilletSheet` already do.
   @ViewBuilder public func softScrollEdges() -> some View {
     if #available(iOS 26, macOS 26, *) {
       scrollEdgeEffectStyle(.soft, for: .top).scrollEdgeEffectStyle(.soft, for: .bottom)

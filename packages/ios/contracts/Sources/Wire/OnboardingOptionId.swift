@@ -1,5 +1,4 @@
-/// Wire form of the contracts `OnboardingOptionId`: a stable catalogue id. The server checks its
-/// format; the client checks only that it is not empty.
+/// The server checks its format; the client checks only that it is not empty.
 public struct OnboardingOptionId: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
   public let rawValue: String
 

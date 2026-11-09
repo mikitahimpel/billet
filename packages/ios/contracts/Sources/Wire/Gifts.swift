@@ -1,5 +1,5 @@
-/// The day a wish is for, as the owner's phone named it: a title of 1 to 60 characters and the day
-/// in epoch milliseconds. Each phone keeps its own calendar, so the wish carries both.
+/// `title` is 1 to 60 characters; the day is epoch milliseconds. Each phone keeps its own
+/// calendar, so the wish carries both.
 public struct GiftOccasion: Codable, Hashable, Sendable {
   public let title: String
   public let date: Int
@@ -10,8 +10,8 @@ public struct GiftOccasion: Codable, Hashable, Sendable {
   }
 }
 
-/// Wire form of the contracts `GiftWish`: one partner's wish, as both partners see it. Who plans
-/// to gift it is never here; `giftedBy` appears only once it arrived. Times are epoch milliseconds.
+/// Who plans to gift it is never here; `giftedBy` appears only once it arrived. Times are epoch
+/// milliseconds.
 public struct GiftWish: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let owner: UserId
@@ -68,7 +68,7 @@ public enum GiftStage: String, Codable, Hashable, Sendable {
   case bought
 }
 
-/// The caller's own secret promise to gift one of the partner's wishes.
+/// Secret: only the caller sees it.
 public struct GiftPlan: Codable, Hashable, Sendable {
   public let wish: IdempotencyKey
   public let stage: GiftStage
@@ -79,7 +79,7 @@ public struct GiftPlan: Codable, Hashable, Sendable {
   }
 }
 
-/// What a partner likes, filled in by that partner. Each field is up to 200 characters.
+/// Filled in by that partner. Each field is up to 200 characters.
 public struct GiftLoves: Codable, Hashable, Sendable {
   public let sizes: String
   public let flowers: String
@@ -111,8 +111,8 @@ public struct PartnerLoves: Codable, Hashable, Sendable {
   }
 }
 
-/// The pair's gifts as the caller may see them: every wish, only the caller's own plans, and
-/// `surprise` while the partner plans one of the caller's open wishes, without saying which.
+/// Only the caller's own plans; `surprise` while the partner plans one of the caller's open
+/// wishes, without saying which.
 public struct GiftsResponse: Codable, Hashable, Sendable {
   public let wishes: [GiftWish]
   public let plans: [GiftPlan]
@@ -127,8 +127,7 @@ public struct GiftsResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// Makes the caller's wish, or changes one they made. The title is 1 to 200 characters, the link
-/// up to 2048, the price up to 40 and the note up to 500.
+/// Title 1 to 200 characters, link up to 2048, price up to 40, note up to 500.
 public struct SaveGiftWishRequest: Codable, Hashable, Sendable {
   public let id: IdempotencyKey
   public let title: String
@@ -176,7 +175,7 @@ public struct DeleteGiftWishRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// Plans, moves on or, with no `stage`, lets go the caller's plan for one of the partner's wishes.
+/// With no `stage`, lets go of the plan.
 public struct SetGiftPlanRequest: Codable, Hashable, Sendable {
   public let wish: IdempotencyKey
   public let stage: GiftStage?

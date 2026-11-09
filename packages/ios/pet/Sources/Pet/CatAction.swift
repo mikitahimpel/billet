@@ -34,14 +34,12 @@ public enum CatAction: String, CaseIterable, Codable, Hashable, Sendable {
   case grab
   /// Standing, nose forward, it sniffs at something held out.
   case sniff
-  /// Sitting, one forepaw lifts and waves.
   case wave
   /// Held up under the forelegs, the hind legs and tail hang loose.
   case dangle
   /// Lying like a loaf: paws tucked under, eyes open, breathing slowly. A loop in its own base.
   case loaf
-  /// A gallop in place, for chases and zoomies. Travel at `NookiClip.runningSpeed` keeps the paws
-  /// planted.
+  /// A gallop in place, for chases and zoomies.
   case run
   /// From standing, noses round to pick a spot and settles into the sleeping curl. Starts in
   /// `stand` and ends in `sleep` (`CatClipInfo.ends`).

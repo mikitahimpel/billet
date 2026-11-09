@@ -1,4 +1,4 @@
-/// A stored note with its place in the couple's history, the same `seq` `NoteReceived` carries.
+/// `seq` is the same one `NoteReceived` carries.
 public struct NoteEntry: Codable, Hashable, Sendable {
   public let seq: Int
   public let note: Note
@@ -11,10 +11,9 @@ public struct NoteEntry: Codable, Hashable, Sendable {
 
 /// Oldest first. The next page starts after `lastSeq`.
 public struct ListNotesResponse: Codable, Hashable, Sendable {
-  /// The entries this build can read.
+  /// Only the entries this build can read.
   public let notes: [NoteEntry]
-  /// The last entry's `seq`, counting one this build can't read, so a cursor moves past it; `nil`
-  /// for an empty page.
+  /// Counts an entry this build can't read, so a cursor moves past it; `nil` for an empty page.
   public let lastSeq: Int?
 
   public init(notes: [NoteEntry], lastSeq: Int? = nil) {

@@ -75,12 +75,10 @@ public struct AppEvents: Sendable {
     record(event)
   }
 
-  /// Records nothing.
   public static let none = AppEvents { _ in }
 }
 
 extension EnvironmentValues {
-  /// Where the views under it report what the user did. Records nothing unless a host sets it.
   @Entry public var appEvents: AppEvents = .none
 }
 

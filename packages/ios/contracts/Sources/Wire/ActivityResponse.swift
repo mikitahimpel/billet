@@ -1,8 +1,6 @@
-/// One page of the Inbox, newest first: `GET /v1/activity?before=&limit=`, without the items this
-/// build can't read. `next` is the cursor
-/// for the page after this one, `nil` on the last page. `head` is the newest item's cursor in the
-/// whole list, on every page, `nil` while it is empty: send it as `upTo` to mark all read.
-/// `unread` counts the partner's, the cat's and the store's items above the caller's read mark.
+/// Newest first, without items this build can't read. `next` is `nil` on the last page. `head` is
+/// the newest cursor of the whole list (`nil` while empty): send it as `upTo` to mark all read.
+/// `unread` counts the partner's, the cat's and the store's items above the read mark.
 public struct ActivityResponse: Codable, Hashable, Sendable {
   public let items: [ActivityItem]
   public let next: String?
@@ -32,8 +30,7 @@ public struct ActivityResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/activity/read`: everything up to `upTo`, an opaque cursor, is read. The mark only
-/// moves forward.
+/// `upTo` is an opaque cursor. The mark only moves forward.
 public struct MarkActivityReadRequest: Codable, Hashable, Sendable {
   public let upTo: String
 
@@ -42,7 +39,6 @@ public struct MarkActivityReadRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// The caller's unread count after marking read.
 public struct ActivityUnreadResponse: Codable, Hashable, Sendable {
   public let unread: Int
 

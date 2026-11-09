@@ -52,7 +52,6 @@ public enum IconStyle {
   public static let font = Font.system(.body, weight: .medium)
 }
 
-/// Interaction sizes.
 public enum Target {
   /// The smallest thing a thumb is asked to hit.
   public static let minimum: CGFloat = 44

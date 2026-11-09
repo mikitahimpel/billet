@@ -1,8 +1,6 @@
-/// What the shop has put into the room, on top of the room a scene builds itself.
-///
-/// A scene reads this and draws it; only the shop's rules change it. Positions are metres on the
-/// floor plane of the room, with the floor's top at height 0 and the walls along x = -0.6 and
-/// z = -0.6. A wall piece uses the back wall, so its `z` is ignored.
+/// What the shop has put into the room, drawn by a scene and changed only by the shop's rules.
+/// Positions are metres on the floor plane, the floor's top at height 0 and the walls along
+/// x = -0.6 and z = -0.6. A wall piece uses the back wall, so its `z` is ignored.
 public struct RoomLayout: Codable, Hashable, Sendable {
   public struct Placement: Codable, Hashable, Sendable, Identifiable {
     public let id: String

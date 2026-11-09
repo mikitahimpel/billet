@@ -39,7 +39,7 @@ public struct WindowViewState: Equatable, Sendable {
 }
 
 /// Art for a window view, filling the scene behind the room. Return `nil` to keep the native
-/// drawing of that view; a Rive file plugs in here one view at a time.
+/// drawing of that view.
 @MainActor
 public protocol WindowViewArt {
   func view(_ view: WindowView, state: WindowViewState) -> AnyView?

@@ -4,7 +4,6 @@ import SwiftUI
   import UIKit
 #endif
 
-/// The pair code, large enough to read aloud, with ways to pass it on.
 public struct PairCodeCard: View {
   private let code: String
 

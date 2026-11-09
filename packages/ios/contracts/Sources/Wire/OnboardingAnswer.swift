@@ -1,4 +1,4 @@
-/// What the person did on an onboarding step. A skip is an answer too.
+/// A skip is an answer too.
 public enum OnboardingAnswer: Codable, Hashable, Sendable {
   case skipped
   case single(option: OnboardingOptionId)

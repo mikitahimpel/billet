@@ -142,9 +142,9 @@ extension CatBrain {
     return day * 86400 + config.dayStartHour * 3600 - Double(utcOffset)
   }
 
-  /// What a day starting at `t` begins with: the personality moved by the days before it, what
-  /// the cat has learned from them, and the memory of a rehearsal of the day before from its own canonical start. The rehearsal starts
-  /// with no memory, so it reaches back one day only, and both phones work out the same.
+  /// What a day starting at `t` begins with: the personality moved by the days before, what the
+  /// cat learned from them, and the memory of a rehearsal of the day before from its canonical
+  /// start. The rehearsal starts with no memory, so it reaches back one day only.
   public static func opening(
     at t: Double, seed: UInt64, temperament: CatTemperament? = nil, nature: CatPersonality,
     room: RoomAffordances,

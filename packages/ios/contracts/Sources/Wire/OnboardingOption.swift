@@ -1,4 +1,3 @@
-/// One choice of a `Single` or `Multi` onboarding step.
 public struct OnboardingOption: Codable, Hashable, Sendable {
   public let id: OnboardingOptionId
   public let label: LocalizedText

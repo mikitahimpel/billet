@@ -1,6 +1,5 @@
-/// A line of text the service asks the app to show. `key` names a localized string the app may
-/// carry, and `text` is what it shows when it has none. The server checks their format; the client
-/// only needs both to be non-empty.
+/// `key` names a localized string; `text` is shown when the app has none. The server checks the
+/// format; the client only needs both non-empty.
 public struct StatusMessage: Codable, Hashable, Sendable {
   public let key: String
   public let text: String

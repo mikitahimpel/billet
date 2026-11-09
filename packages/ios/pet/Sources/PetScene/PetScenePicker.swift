@@ -1,9 +1,7 @@
 import DesignSystem
 import SwiftUI
 
-/// The list of linked scenes, with the attribution their assets require.
-///
-/// It brings no navigation or presentation of its own, so a sheet or a settings screen can host it.
+/// Brings no navigation or presentation of its own, so a sheet or a settings screen can host it.
 public struct PetScenePicker: View {
   private let scenes: [any PetScene]
   @Binding private var selectedSceneID: String?

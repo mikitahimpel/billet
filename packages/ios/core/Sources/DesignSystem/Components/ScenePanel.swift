@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The big rounded frame a scene stands in.
 public struct ScenePanel<Scene: View>: View {
   private let scene: Scene
 

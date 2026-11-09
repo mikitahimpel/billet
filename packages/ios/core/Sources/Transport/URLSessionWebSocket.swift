@@ -3,9 +3,7 @@ import Synchronization
 import Wire
 
 extension WebSocketConnection {
-  /// Opens a socket over `URLSession` and returns once the server has answered a ping.
-  ///
-  /// A frame that does not decode as a ``ServerMessage`` is skipped.
+  /// Returns once the server has answered a ping. A frame that does not decode is skipped.
   public static func urlSession(
     _ request: URLRequest, session: URLSession
   ) async throws(TransportError) -> WebSocketConnection {

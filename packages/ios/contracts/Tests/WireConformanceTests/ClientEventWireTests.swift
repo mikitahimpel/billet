@@ -3,8 +3,6 @@ import Testing
 
 @testable import Wire
 
-/// The detailed events: both forms a request may hold, the rules each name keeps, and that those
-/// rules are the contract's.
 @Suite struct ClientEventWireTests {
   private func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
     try JSONDecoder().decode(T.self, from: Data(json.utf8))
@@ -104,7 +102,6 @@ import Testing
 
   // MARK: the contract
 
-  /// The `ClientEventName` literals and the `clientEventRules` entries in the contract.
   static func contract() throws -> (names: [String], rules: [String: ClientEventRule]) {
     let file = fixturesDirectory.deletingLastPathComponent().deletingLastPathComponent()
       .appending(path: "domain/src/metrics.ts")

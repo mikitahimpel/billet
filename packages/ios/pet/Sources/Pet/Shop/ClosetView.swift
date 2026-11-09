@@ -1,10 +1,9 @@
 import DesignSystem
 import SwiftUI
 
-/// The closet: what the pair owns, by category, and what to do with each thing.
-///
-/// Furniture and materials go to the room through ``RoomRenovating``. A treat is used up here, and
-/// the store counts the use so the scene can react.
+/// The closet: what the pair owns, by category, and what to do with each thing. Furniture and
+/// materials go to the room through ``RoomRenovating``; a treat is used up here, and the store
+/// counts the use so the scene can react.
 public struct ClosetView: View {
   private let store: ShopStore
   private let renovator: any RoomRenovating

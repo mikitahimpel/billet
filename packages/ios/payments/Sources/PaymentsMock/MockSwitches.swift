@@ -1,12 +1,11 @@
 import Foundation
 
-/// How the mock store answers the next purchase, set in Labs → Payments and kept on the device.
 public struct MockSwitches: Sendable {
   public enum Outcome: String, CaseIterable, Hashable, Sendable {
     case succeed
     case cancel
     case fail
-    /// Ask to Buy: the purchase waits until it is approved or declined in Labs.
+    /// Waits until approved or declined in Labs.
     case pending
 
     public var title: String {
@@ -44,7 +43,6 @@ public struct MockSwitches: Sendable {
       write: { defaults.set($0.rawValue, forKey: outcomeKey) })
   }
 
-  /// Switches held in memory, for tests.
   public static func fixed(_ outcome: Outcome) -> MockSwitches {
     MockSwitches(read: { outcome }, write: { _ in })
   }

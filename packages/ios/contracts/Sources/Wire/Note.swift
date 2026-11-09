@@ -1,9 +1,6 @@
-/// A drawing has two renditions: compact strokes for pushes, and a full PNG in R2. A photo has
-/// its image (PNG, JPEG or HEIC) with its pixel size, a BlurHash `preview` and an optional
-/// `caption`; photos stored before those existed carry only the image, so each is `nil` there. A
-/// text note carries its words and no image. `paper`, `stamp` and `seal` are `nil` when the sender
-/// chose none, and a stamp or seal this build doesn't know reads as `nil`. A text note's `ink` is
-/// the colour it is written in; one stored before inks reads as `InkId.free`.
+/// A drawing is compact strokes for pushes and a PNG in R2. A photo's size, `preview` and
+/// `caption` are `nil` on photos stored before them. An unknown stamp or seal reads as `nil`; a
+/// text note stored before inks reads as `InkId.free`.
 public enum Note: Codable, Hashable, Sendable {
   case drawing(
     id: NoteId, author: UserId, sentAt: Int, compact: CompactStrokes, image: MediaKey,
@@ -33,7 +30,7 @@ public enum Note: Codable, Hashable, Sendable {
     case ink
   }
 
-  /// `sentAt` is epoch milliseconds, which the contract requires to be zero or more.
+  /// The contract requires `sentAt` (epoch milliseconds) to be zero or more.
   private static func sentAt(
     _ container: KeyedDecodingContainer<CodingKeys>
   ) throws -> Int {

@@ -1,6 +1,5 @@
-/// The variant one experiment gives this pair. Both partners always get the same one. The server
-/// checks that `key` and `variant` are lowercase hyphenated words; the client only needs them to be
-/// non-empty and looks them up in the variants its own build contains.
+/// Both partners always get the same variant. The server checks the format; the client only
+/// needs non-empty values, looked up in the variants its own build contains.
 public struct FlagAssignment: Codable, Hashable, Sendable {
   public let key: String
   public let variant: String
@@ -33,10 +32,8 @@ public struct FlagAssignment: Codable, Hashable, Sendable {
   }
 }
 
-/// Every running experiment and the variant the pair is in. One that is not listed is off, and the
-/// client uses its built-in default. A client replaces its stored copy with this list, never merges.
-///
-/// `status` is the service's status, the same as `GET /v1/status` answers, when the server sends it.
+/// An experiment not listed is off and uses the built-in default. Replaces the stored copy,
+/// never merged. `status` matches `GET /v1/status`, when the server sends it.
 public struct FlagsResponse: Codable, Hashable, Sendable {
   public let flags: [FlagAssignment]
   public let status: AppStatus?

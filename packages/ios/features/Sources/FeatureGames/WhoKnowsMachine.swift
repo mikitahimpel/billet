@@ -3,10 +3,9 @@ import Foundation
 import Transport
 import Wire
 
-/// Today's Who knows who round as this user plays it. One partner, the subject, answers five
-/// questions about themselves while the other guesses; the room keeps each side's answers hidden
-/// until both are done, then opens them together. The partner's progress and the reveal also
-/// arrive over the room socket.
+/// Today's Who knows who round: the subject answers five questions about themselves while the
+/// other guesses; the room hides each side's answers until both are done. Progress and the reveal
+/// also arrive over the room socket.
 public enum WhoKnowsMachine: Machine {
 
   /// Why the room didn't take an answer.

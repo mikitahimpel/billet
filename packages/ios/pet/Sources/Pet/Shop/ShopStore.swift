@@ -50,7 +50,7 @@ public final class ShopStore {
     }
   }
 
-  /// Takes back the purchase made under `transaction`. See ``ShopState/undoBuy(_:transaction:placement:)``.
+  /// See ``ShopState/undoBuy(_:transaction:placement:)``.
   @discardableResult
   public func undoBuy(
     _ item: ShopItem, transaction: String, placement: RoomLayout.Placement.ID? = nil
@@ -70,8 +70,7 @@ public final class ShopStore {
     }
   }
 
-  /// Takes back a purchase of several items. See
-  /// ``ShopState/undoBuy(_:transaction:placements:bundle:)``.
+  /// See ``ShopState/undoBuy(_:transaction:placements:bundle:)``.
   @discardableResult
   public func undoBuy(
     _ items: [ShopItem], transaction: String, placements: [RoomLayout.Placement.ID],

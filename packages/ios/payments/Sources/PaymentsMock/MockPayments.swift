@@ -2,12 +2,8 @@ import Foundation
 import Payments
 import Synchronization
 
-/// Payments without the App Store: the packs and prices come from the bundled list, a purchase
-/// succeeds at once, and the dev server credits it through its mock route
-/// (`POST /v1/purchases/mock`). Nothing here talks to Apple.
-///
-/// ``MockSwitches`` (Labs → Payments) makes the next purchase cancel, fail or wait for Ask to Buy,
-/// and can refund the last one.
+/// Nothing here talks to Apple: the dev server credits through `POST /v1/purchases/mock`.
+/// ``MockSwitches`` makes the next purchase cancel, fail or wait for Ask to Buy.
 public final class MockPayments: Payments {
   private struct State {
     var subscribers: [UUID: AsyncStream<PaymentsUpdate>.Continuation] = [:]
@@ -67,11 +63,9 @@ public final class MockPayments: Payments {
     return stream
   }
 
-  /// Purchases waiting on Ask to Buy.
   public var pendingCount: Int { state.withLock { $0.pending.count } }
 
-  /// Approves every purchase waiting on Ask to Buy: each is credited and announced on
-  /// ``updates()``.
+  /// Each is credited and announced on ``updates()``.
   public func approvePending() async throws(PaymentsError) {
     let waiting = state.withLock {
       let waiting = $0.pending
@@ -84,13 +78,11 @@ public final class MockPayments: Payments {
     }
   }
 
-  /// Declines every purchase waiting on Ask to Buy. Nothing is charged.
   public func declinePending() {
     state.withLock { $0.pending = [:] }
   }
 
-  /// Refunds the last purchase on the server, as Apple would after a refund request, and
-  /// announces the new ledger.
+  /// Refunds on the server, as Apple would, and announces the new ledger.
   @discardableResult
   public func refundLast() async throws(PaymentsError) -> Bool {
     guard let last = state.withLock({ $0.lastPurchase }) else { return false }

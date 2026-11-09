@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// The medium widget's picture: the partner's note on the wall of one room.
 public struct RoomScene<Note: View>: View {
   private let name: String
   private let streak: Int

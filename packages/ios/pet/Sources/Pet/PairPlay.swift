@@ -1,19 +1,16 @@
 import DesignSystem
 import Foundation
 
-/// The play between two partners, kept apart from any scene so every scene can show it the same way.
-///
-/// Scenes read this and draw; they never decide who is waited on or what the streak is.
+/// The pair's play, kept apart from any scene: scenes read it and draw, and never decide who is
+/// waited on or what the streak is.
 public struct PairPlay: Equatable, Sendable {
   public let device: String
   public private(set) var ledger = TreatLedger()
   /// Counts up each time this device pets the cat. A view reacts to each change.
   public private(set) var petsGiven = 0
-  /// Counts up each time the partner's pet arrives.
   public private(set) var petsReceived = 0
-  /// The reaction each note has received, by note ID. Both phones hold the same table.
+  /// By note ID. Both phones hold the same table.
   public private(set) var reactions: [UUID: Reaction] = [:]
-  /// The name the pair gave the cat, once either of them has chosen one.
   public private(set) var catName: String?
   /// Where the room's light switch stands. The room keeps the last press from either partner.
   public private(set) var roomLight = RoomLight.standard
@@ -78,7 +75,6 @@ public struct PairPlay: Equatable, Sendable {
     return true
   }
 
-  /// Records the reaction this device sent to `note`.
   public mutating func reactionGiven(to note: UUID, _ reaction: Reaction) {
     reactions[note] = reaction
   }

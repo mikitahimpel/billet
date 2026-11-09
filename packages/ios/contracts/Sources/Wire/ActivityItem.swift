@@ -1,5 +1,4 @@
-/// Who did it, as the caller sees it: themselves, their partner, the cat on its own, or the App
-/// Store (a refund names no user).
+/// `store` is the App Store: a refund names no user.
 public enum ActivityActor: String, Codable, Hashable, Sendable {
   case me = "Me"
   case partner = "Partner"
@@ -9,18 +8,16 @@ public enum ActivityActor: String, Codable, Hashable, Sendable {
 
 /// Where tapping an Inbox item goes.
 public enum ActivityTarget: Codable, Hashable, Sendable {
-  /// A text note.
   case note(NoteId)
-  /// A drawing or a photo, in Moments.
   case moments(NoteId)
   case cat
-  /// A plant's card, such as `monstera`.
+  /// Such as `monstera`.
   case plant(String)
-  /// A shop item, such as `armchair`.
+  /// Such as `armchair`.
   case shopItem(String)
-  /// A shop offer with several items, such as `bundle:starter-ink`.
+  /// Such as `bundle:starter-ink`.
   case shopOffer(String)
-  /// A shared list, on the Us tab.
+  /// On the Us tab.
   case list(IdempotencyKey)
 
   private enum CodingKeys: String, CodingKey {
@@ -82,9 +79,9 @@ public enum ActivityTarget: Codable, Hashable, Sendable {
   }
 }
 
-/// One Inbox item. `id` is its source's own, such as `cat:<entry id>` or `note:<note id>`, so the
-/// same item never shows twice; `at` is the server's time in epoch milliseconds. `cursor` is its
-/// opaque place in the list: send it back as `upTo` to mark it read, never build one.
+/// `id` is its source's own, such as `note:<note id>`, so an item never shows twice; `at` is
+/// server epoch milliseconds. `cursor` is opaque: send it back as `upTo` to mark it read,
+/// never build one.
 public struct ActivityItem: Codable, Hashable, Sendable {
   public let id: String
   public let at: Int

@@ -1,12 +1,10 @@
 import Foundation
 
-/// The laser dot on the floor and what the cat does about it: she runs after it when it is far or moving, and when
-/// it stops close to her she pounces. Chasing and pouncing fill the play bar; full, the game is over.
+/// The laser dot and the cat: she chases it when it is far or moving and pounces when it stops
+/// close. Chasing and pouncing fill the play bar; full, the game is over.
 public struct LaserPlay: Equatable, Sendable {
   public enum Cue: Equatable, Sendable {
-    /// Run to the dot.
     case chase(SIMD2<Double>)
-    /// Pounce on it.
     case pounce(SIMD2<Double>)
   }
 
@@ -41,7 +39,7 @@ public struct LaserPlay: Equatable, Sendable {
     dot = clamped
   }
 
-  /// What the cat at `cat` should do now, if she is free to: nothing while the game is over or there is no dot.
+  /// What the cat at `cat` should do now, if free to; nil when the game is over or there's no dot.
   public func cue(cat: SIMD2<Double>) -> Cue? {
     guard let dot, !isDone else { return nil }
     let away = distance(cat, dot)

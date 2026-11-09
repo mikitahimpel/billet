@@ -1,15 +1,11 @@
 import Foundation
 
-/// Who gave a treat on which day, and what that means for the cat and the streak.
-///
-/// The room keeps the same table, so two phones that have both read it agree on every answer.
+/// Who gave a treat on which day. The room keeps the same table, so two phones that have both
+/// read it agree on every answer.
 public struct TreatLedger: Codable, Hashable, Sendable {
-  /// Where the pair stands on one day's treat.
   public enum Status: Hashable, Sendable {
     case neither
-    /// This device gave; the partner has not.
     case waitingOnPartner
-    /// The partner gave; this device has not.
     case waitingOnMe
     /// Both gave, so the cat gets the treat.
     case fed
@@ -45,11 +41,8 @@ public struct TreatLedger: Codable, Hashable, Sendable {
     }
   }
 
-  /// Consecutive days on which both gave a treat. ``streak(today:calendar:paused:alsoShared:)``
-  /// also counts the days both drew the drawing of the day.
-  ///
-  /// Today counts once both have given. Until then it is still open, so the run that ended
-  /// yesterday stands. A day with a missing treat ends the run, and the count starts again at zero.
+  /// Consecutive days on which both gave a treat. Today counts once both have given; until then
+  /// yesterday's run stands. A day with a missing treat ends the run.
   public func streak(today: String, calendar: Calendar) -> Int {
     var count = 0
     var day: String? = today
@@ -61,11 +54,8 @@ public struct TreatLedger: Codable, Hashable, Sendable {
     return count
   }
 
-  /// As ``streak(today:calendar:)``, except that a day in `paused` does not end the run. It adds
-  /// nothing to the count either: it only lets the run reach back past it.
-  ///
-  /// A day in `alsoShared` counts as if both had given a treat: the days both partners drew the
-  /// drawing of the day.
+  /// As ``streak(today:calendar:)``, except a day in `paused` neither ends the run nor counts.
+  /// A day in `alsoShared` (both partners drew the drawing of the day) counts as shared.
   public func streak(
     today: String, calendar: Calendar, paused: Set<String>, alsoShared: Set<String> = []
   ) -> Int {

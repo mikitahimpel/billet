@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// How the glass controls are drawn: Liquid Glass; an opaque surface of the same shape with a
-/// stroke and a shadow; or that surface flat, with no shadow. The arms a perf run measures the
-/// glass against (`-perf.hud opaque|flat`); neither opaque arm uses a `GlassEffectContainer`.
+/// Perf-run arms (`-perf.hud opaque|flat`): `opaque` adds a shadow, `flat` none; neither uses
+/// a `GlassEffectContainer`.
 public enum GlassRendering: Sendable {
   case liquid
   case opaque
@@ -13,53 +12,38 @@ extension EnvironmentValues {
   @Entry public var glassRendering: GlassRendering = .liquid
 }
 
-/// The one glass of the app. Every floating surface picks a role; the role fixes everything else.
-///
-/// | Role | Glass | Tint | Rim | Shadow | Ink |
-/// | --- | --- | --- | --- | --- | --- |
-/// | `control` | regular, interactive | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `Ink.glassGlyph` |
-/// | `bar` | regular | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `Ink.glassGlyph`, unselected `glassGlyphSecondary`, selected on `Ink.glassSelection` |
-/// | `accent` | prominent, interactive | honey | the system's own | the system's own | `Ink.heroInk` |
-///
-/// A badge on a glass surface is not glass (`glassBadge`). With Reduce Transparency the tint is drawn
-/// solid as `Ink.surface`; the system frosts native glass the same way.
+/// Every floating surface picks a role; the role fixes the rest. With Reduce Transparency the
+/// tint is drawn solid as `Ink.surface`.
 public enum GlassRole: Sendable {
-  /// One control: a round header button, the coin pill, the pet, a label over the scene.
   case control
-  /// A surface holding several controls that respond themselves: the tab bar, the Room | City switch.
+  /// Holds several controls that respond themselves, so the glass is not interactive.
   case bar
 }
 
-/// The distance under which shapes in one `GlassGroup` melt into each other. Every group uses it and every
-/// row of glass keeps a wider gap, so neighbours morph when they appear but never merge at rest.
+/// `blend` < `gap`, so neighbours morph when they appear but never merge at rest.
 public enum GlassMetrics {
   public static let blend: CGFloat = Space.s
-  /// The gap between two glass surfaces in a row.
   public static let gap: CGFloat = Space.s + 2
   public static let rim: CGFloat = 1
 }
 
 extension View {
-  /// The app's glass in `shape` for `role`. Apply it after the content's other modifiers: it captures them.
+  /// Apply after the content's other modifiers: it captures them.
   public func glass<S: InsettableShape>(_ shape: S, role: GlassRole) -> some View {
     modifier(RoleGlass(shape: shape, role: role))
   }
 
-  /// Liquid Glass from iOS 26, tinted when given one; earlier systems get a frosted material in the same shape.
-  /// `clear` is the more see-through variant. For art inside content and full-screen canvases; chrome uses
-  /// `glass(_:role:)`.
+  /// For art inside content and full-screen canvases; chrome uses `glass(_:role:)`.
   public func glass<S: Shape>(
     _ shape: S, tint: Color? = nil, clear: Bool = false, interactive: Bool = false
   ) -> some View {
     modifier(GlassModifier(shape: shape, tint: tint, clear: clear, interactive: interactive))
   }
 
-  /// The see-through, honey-tinted glass of a full-screen canvas's tools.
   public func warmGlass<S: Shape>(_ shape: S, interactive: Bool = false) -> some View {
     glass(shape, tint: Ink.glassTint, clear: true, interactive: interactive)
   }
 
-  /// The `accent` role on a button or menu: the one main action beside a bar, honey prominent glass.
   @ViewBuilder public func accentGlass() -> some View {
     if #available(iOS 26, macOS 26, *) {
       foregroundStyle(Ink.heroInk)
@@ -74,8 +58,7 @@ extension View {
     }
   }
 
-  /// A badge on the corner of a glass surface: a solid capsule ringed in the glass's own colour, so it never
-  /// melts into the glass or the room. Never glass itself.
+  /// Solid, never glass, so it does not melt into the glass or the room.
   public func glassBadge(_ fill: Color = .honey) -> some View {
     foregroundStyle(Ink.heroInk)
       .background(fill, in: .capsule)
@@ -137,8 +120,7 @@ private struct GlassModifier<S: Shape>: ViewModifier {
   }
 }
 
-/// `GlassEffectContainer` from iOS 26; earlier systems show the content as is. One per bar: the glass in it is
-/// sampled together and morphs as one.
+/// One per bar: the glass in it is sampled together and morphs as one.
 public struct GlassGroup<Content: View>: View {
   let spacing: CGFloat
   let content: Content

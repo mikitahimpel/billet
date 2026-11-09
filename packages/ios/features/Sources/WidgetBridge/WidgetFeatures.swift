@@ -4,10 +4,9 @@ import Observation
 import Persistence
 import Pet
 
-/// Something the owner can switch on or off: a widget feature or a lab experiment. The raw value is
-/// the key it is stored under, so the two kinds share one file without clashing.
+/// A widget feature or lab experiment. The raw value is its stored key, so both kinds share one
+/// file without clashing.
 public protocol FeatureFlag: RawRepresentable, CaseIterable, Sendable where RawValue == String {
-  /// Whether the flag is on until the owner turns it off.
   var defaultOn: Bool { get }
 }
 
@@ -103,7 +102,6 @@ public struct WidgetFeaturesStore: Sendable {
   /// Where Labs kept the room style while there was more than one room.
   public static let roomStyleFileName = "room-style.json"
 
-  /// Removes the room style Labs saved while there was more than one room.
   public func removeRoomStyle() throws(PersistenceError) {
     try storage.remove(Self.roomStyleFileName)
   }
@@ -263,23 +261,20 @@ public final class WidgetFeaturesModel {
   public private(set) var features: WidgetFeatures
   /// What the server last said about the tests this pair is in. A Labs choice beats it.
   public private(set) var remote: RemoteFlags
-  /// Which cat the rooms show, and its coat. Kept beside the flags, in its own file.
   public private(set) var cat: CatChoice
-  /// The window view chosen in Labs, or `nil` to follow the pair's flag. In its own file.
+  /// The window view chosen in Labs, or `nil` to follow the pair's flag.
   public private(set) var windowViewOverride: WindowViewChoice?
-  /// The layout of Home chosen in Labs, or `nil` to follow the pair's flag. In its own file.
+  /// The layout of Home chosen in Labs, or `nil` to follow the pair's flag.
   public private(set) var homeVariantOverride: HomeVariant?
-  /// The ground behind every screen. Kept beside the flags, in its own file.
+  /// The ground behind every screen.
   public private(set) var eveningGround: EveningGround
   /// The hour Home pretends it is, so the light of any hour can be tried. `nil` follows the clock.
   public private(set) var pretendHour: Int?
-  /// The lighting chosen in Labs, or `nil` to follow the pair's flag. In its own file.
+  /// The lighting chosen in Labs, or `nil` to follow the pair's flag.
   public private(set) var lightingOverride: RoomLighting?
-  /// Which furniture fills the styled rooms. Kept beside the flags, in its own file.
   public private(set) var furniture: RoomFurniture
-  /// Which room Home shows. Kept beside the flags, in its own file.
   public private(set) var homeRoom: HomeRoom
-  /// The temperament saved for the cat, in its own file. See ``temperament(forSeed:)``.
+  /// See ``temperament(forSeed:)``.
   public private(set) var temperamentRecord: CatTemperamentRecord?
 
   @ObservationIgnored private let store: WidgetFeaturesStore?
@@ -301,10 +296,8 @@ public final class WidgetFeaturesModel {
     temperamentRecord = store?.loadTemperament()
   }
 
-  /// The temperament of the cat with `seed`, fixed for life: the one saved for it, or else the
-  /// one its seed was born with, saved now. A cat adopted before temperaments existed gets the
-  /// one that fits the traits it already had. Both phones work out the same from the shared seed,
-  /// so nothing needs syncing; the file only keeps it from changing if that rule ever does.
+  /// Fixed for life: the one saved for `seed`, else the one the seed was born with, saved now.
+  /// Both phones derive it from the shared seed; the file keeps it stable if that rule changes.
   public func temperament(forSeed seed: UInt64) -> CatTemperament {
     if let record = temperamentRecord, record.seed == seed { return record.temperament }
     let record = CatTemperamentRecord(seed: seed, temperament: .born(seed: seed))
@@ -316,13 +309,11 @@ public final class WidgetFeaturesModel {
   // Each Labs setting the server can also set reads the same way: the choice made in Labs on this
   // phone, else the pair's variant if the server gave one this build has, else the standard value.
 
-  /// How the rooms are lit.
   public var lighting: RoomLighting {
     lightingOverride ?? remote.choice(of: Experiments.roomLighting) ?? .standard
   }
 
-  /// What the styled rooms' window looks out on. The server sets only the view, never its weather
-  /// or hour.
+  /// The server sets only the view, never its weather or hour.
   public var windowView: WindowViewChoice {
     windowViewOverride
       ?? remote.choice(of: Experiments.windowView, as: WindowView.self).map {
@@ -331,7 +322,6 @@ public final class WidgetFeaturesModel {
       ?? .standard
   }
 
-  /// How Home is laid out around the room.
   public var homeVariant: HomeVariant {
     homeVariantOverride ?? remote.choice(of: Experiments.homeLayout) ?? .standard
   }

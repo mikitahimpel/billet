@@ -1,8 +1,8 @@
 import Observation
 import SwiftUI
 
-/// How many of the app's sheets show now, each counted by ``SwiftUI/View/billetSheet(_:)`` while
-/// it is up. A scene under a sheet is mostly hidden, so it can draw at a gentler pace.
+/// Counted by ``SwiftUI/View/billetSheet(_:)``. A scene under a sheet is mostly hidden, so it can
+/// draw at a gentler pace.
 @MainActor @Observable
 public final class SheetsShowing {
   public static let shared = SheetsShowing()
@@ -13,7 +13,6 @@ public final class SheetsShowing {
   fileprivate func change(by delta: Int) { count = max(count + delta, 0) }
 }
 
-/// Counts its content as a sheet that shows, from when it appears until it disappears.
 struct CountsAsSheet: ViewModifier {
   @State private var isCounted = false
 

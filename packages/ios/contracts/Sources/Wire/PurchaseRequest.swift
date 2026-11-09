@@ -1,4 +1,4 @@
-/// `POST /v1/purchases`: a StoreKit 2 transaction as Apple signed it (its JWS).
+/// A StoreKit 2 transaction as Apple signed it (its JWS).
 public struct PurchaseRequest: Codable, Hashable, Sendable {
   public let signedTransaction: String
 
@@ -7,8 +7,7 @@ public struct PurchaseRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/purchases/mock`, on the dev server only: a fake purchase or refund from the mock
-/// store.
+/// Dev server only: a fake purchase or refund from the mock store.
 public struct MockPurchaseRequest: Codable, Hashable, Sendable {
   public enum Kind: String, Codable, Hashable, Sendable {
     case purchase
@@ -26,9 +25,8 @@ public struct MockPurchaseRequest: Codable, Hashable, Sendable {
   }
 }
 
-/// What the server credited (or, for a mock refund, took back) for one transaction, and the
-/// pair's wallet balance after it (`GET /v1/coins`), or a demo room's bought coins. `stamps` is
-/// the contract's `coins`.
+/// `balance` is the pair's wallet after it, or a demo room's bought coins. `stamps` is the
+/// contract's `coins`.
 public struct PurchaseResponse: Codable, Hashable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case transactionId, productId, balance, duplicate
@@ -39,7 +37,7 @@ public struct PurchaseResponse: Codable, Hashable, Sendable {
   public let productId: String
   public let stamps: Int
   public let balance: Int
-  /// True when this transaction had already been applied: the balance did not change.
+  /// Already applied: the balance did not change.
   public let duplicate: Bool
 
   public init(
@@ -53,8 +51,7 @@ public struct PurchaseResponse: Codable, Hashable, Sendable {
   }
 }
 
-/// `POST /v1/appstore/notifications`: an App Store Server Notification V2, as Apple sends it. The
-/// app never sends this; it is here so the contract's every payload has a Swift twin.
+/// Sent by Apple, never by the app; here so every contract payload has a Swift twin.
 public struct AppStoreNotificationRequest: Codable, Hashable, Sendable {
   public let signedPayload: String
 

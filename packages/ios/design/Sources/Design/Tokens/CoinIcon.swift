@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The gold coin. A dark ring keeps it apart from honey buttons and the coin pill, and from any dark surface.
+/// The dark ring keeps it apart from honey buttons and from any dark surface.
 public struct CoinIcon: View {
   var size: CGFloat
 

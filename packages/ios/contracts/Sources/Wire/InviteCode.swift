@@ -1,5 +1,4 @@
-/// Wire form of the contracts `InviteCode`. The server checks its format; the client checks only
-/// that it is not empty.
+/// The server checks its format; the client checks only that it is not empty.
 public struct InviteCode: Codable, Hashable, Sendable {
   public let rawValue: String
 
@@ -9,14 +8,14 @@ public struct InviteCode: Codable, Hashable, Sendable {
   /// The contract's `reviewCodeLength`: the App Review pair's code, typed in the same field.
   public static let reviewLength = 26
 
-  /// Whether this is the App Review pair's longer code, claimed on its own route.
+  /// Claimed on its own route.
   public var isReview: Bool { rawValue.count == Self.reviewLength }
 
   public init(_ rawValue: String) {
     self.rawValue = rawValue
   }
 
-  /// What a person typed or pasted, without case, spaces or dashes.
+  /// Drops case, spaces and dashes.
   public static func normalized(_ typed: String) -> String {
     String(typed.uppercased().filter { !$0.isWhitespace && $0 != "-" })
   }

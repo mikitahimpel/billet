@@ -1,6 +1,5 @@
-/// Wire form of the contracts `NoteText`: what a text note says. 1 to 120 characters as a person
-/// counts them (Swift's `String.count`, the same grapheme clusters the server counts), not only
-/// whitespace, and at most 2048 UTF-16 units.
+/// 1 to 120 grapheme clusters (`String.count`, as the server counts), not only whitespace, and at
+/// most 2048 UTF-16 units.
 public struct NoteText: Codable, Hashable, Sendable {
   public static let maxCharacters = 120
   public static let maxUnits = 2048
@@ -13,13 +12,12 @@ public struct NoteText: Codable, Hashable, Sendable {
     ([0x9, 0xA, 0xB, 0xC, 0xD, 0x20, 0xA0, 0x1680, 0x2028, 0x2029, 0x202F, 0x205F, 0x3000, 0xFEFF]
       + Array(0x2000...0x200A)).compactMap { Unicode.Scalar(UInt32($0)) })
 
-  /// Whether the server would take `text` as a text note.
   public static func accepts(_ text: String) -> Bool {
     !text.unicodeScalars.allSatisfy(blank.contains) && text.utf16.count <= maxUnits
       && text.count <= maxCharacters
   }
 
-  /// `nil` for text the server would refuse, so a composer can't send one.
+  /// `nil` for text the server would refuse.
   public init?(validating text: String) {
     guard Self.accepts(text) else { return nil }
     rawValue = text

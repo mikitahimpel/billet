@@ -1,6 +1,5 @@
-/// `GET /v1/pair`: the caller's pair and both members, the caller first. 404 while unpaired.
-/// `moods` holds each member's latest check-in, for those who have checked in; a server before
-/// moods sends none, and a check-in this build can't read is left out.
+/// The caller first; 404 while unpaired. `moods` holds members who have checked in; a server
+/// before moods sends none, and a check-in this build can't read is left out.
 public struct PairResponse: Codable, Hashable, Sendable {
   public let pairId: PairId
   public let members: [UserId]

@@ -1,7 +1,5 @@
-/// A full-precision stroke, used while drawing live.
-///
-/// Decoding enforces the contract's colour pattern. Building one in code does not, so the drawing
-/// code that makes strokes stays free of throws.
+/// Decoding enforces the contract's colour pattern; building one in code does not, so drawing
+/// code stays free of throws.
 public struct Stroke: Codable, Hashable, Sendable {
   public let color: String
   public let width: Double

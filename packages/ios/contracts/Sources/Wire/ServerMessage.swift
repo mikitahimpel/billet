@@ -5,39 +5,34 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   case presence(PresenceState)
   case noteReceived(seq: Int, note: Note)
   case strokeBegin(LiveStrokeStart)
-  /// `relayedAt`: the room's clock in ms when the frame reached it, when the room sends it.
+  /// `relayedAt`: the room's clock in ms when the frame reached it.
   case strokePoints(id: Int, points: [Point], relayedAt: Int? = nil)
   case strokeEnd(id: Int)
-  /// The partner's device left with this stroke still open: discard it, it will not end.
+  /// The partner's device left with this stroke open: discard it, it will not end.
   case strokeDropped(id: Int)
   case clear
-  /// One cat journal entry, either partner's, sent to a socket that resumed with `lastCatSeq`.
+  /// Sent to a socket that resumed with `lastCatSeq`.
   case catEntryAdded(CatEntry)
-  /// The cat was adopted, renamed or given a new look.
   case catSaved(CatProfile)
-  /// The Inbox's unread count for this user, sent to a socket that resumed with `activity: true`.
+  /// Sent to a socket that resumed with `activity: true`.
   case activityUnread(unread: Int)
-  /// A reaction was set or taken back, sent to a socket that resumed with `lastReactionRev`.
+  /// Sent to a socket that resumed with `lastReactionRev`.
   case reactionChanged(NoteReaction)
-  /// The pair's shop now, sent to a socket that resumed with `shop: true` and after each change.
+  /// Sent to a socket that resumed with `shop: true`, and after each change.
   case shopChanged(ShopResponse)
-  /// The pair's lists now, sent to a socket that resumed with `lists: true` and after each change.
+  /// Sent to a socket that resumed with `lists: true`, and after each change.
   case listsChanged([SharedList])
-  /// A member's latest check-in, sent to a socket that resumed with `moods: true`: each one the
-  /// room holds on the resume, then every new one.
+  /// Sent to a socket that resumed with `moods: true`: each held check-in, then every new one.
   case moodChanged(PartnerCheckIn)
-  /// Both partners swiped ♥ on one Pick tonight card, sent to a socket that resumed with
-  /// `lists: true`, the swiper's own included.
+  /// Both swiped ♥ on one card; sent to a socket that resumed with `lists: true`, swiper too.
   case matchFound(PickMatch)
-  /// The partner answered another question of the Who knows who round of `round` (`YYYY-MM-DD`):
-  /// `answered` is how many they have now, never which option. Sent to a socket that resumed with
-  /// `guess: true`.
+  /// `answered` is how many the partner has now, never which option. `round` is `YYYY-MM-DD`.
+  /// Sent to a socket that resumed with `guess: true`.
   case guessProgress(round: String, answered: Int)
-  /// Both members answered the whole round of `round`: every question opened, in round order, and
-  /// the score after it as this user sees it. Sent to every socket that resumed with `guess: true`.
+  /// Every question opened in round order, and the score as this user sees it. Sent to every
+  /// socket that resumed with `guess: true`.
   case guessRevealed(round: String, reveal: [GuessReveal], score: GuessScore)
-  /// A draw-guess riddle was sent, tried, hinted or ended, as this user sees it. Sent to a socket
-  /// that resumed with `riddle: true`: each open riddle on the resume, then every change.
+  /// Sent to a socket that resumed with `riddle: true`: each open riddle, then every change.
   case riddleChanged(Riddle)
 
   private enum CodingKeys: String, CodingKey {

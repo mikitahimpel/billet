@@ -5,28 +5,20 @@ public enum ApiError: Codable, Hashable, Sendable {
   case notFound
   case invalidInvite
   case alreadyPaired
-  /// The Apple ID is already linked to another account.
   case appleIdInUse
-  /// The server would not credit a purchase: its signature, bundle, environment or product.
+  /// Its signature, bundle, environment or product was refused.
   case invalidPurchase
-  /// A text note in an ink colour the pair has not bought.
   case inkNotOwned(ink: InkId)
-  /// A buy that costs more than the pair's balance.
   case notEnoughCoins(needed: Int, have: Int)
-  /// A buy of an item the pair already owns.
   case alreadyOwned(itemId: String)
-  /// A bonus for a collection with a piece still missing.
   case collectionIncomplete(collection: String)
-  /// The day's gift is already open. Come back tomorrow.
   case giftTaken(day: String)
-  /// A collection's bonus already paid.
   case bonusTaken(collection: String)
-  /// A buy for the cat, such as a treat, before the couple adopted one.
+  /// Before the couple adopted a cat.
   case catNotAdopted
-  /// A restore of a streak that is alive, too short, out for longer than a day, or in cooldown.
+  /// Alive, too short, out for longer than a day, or in cooldown.
   case streakNotRestorable
-  /// An order whose price is now above the `expectedPrice` sent; nothing was charged. `price` is
-  /// the price now.
+  /// Nothing was charged; `price` is the price now.
   case priceChanged(price: Int)
 
   private enum CodingKeys: String, CodingKey {

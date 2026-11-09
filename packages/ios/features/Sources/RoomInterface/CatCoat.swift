@@ -1,8 +1,7 @@
 import Foundation
 
-/// Mochi's coat, picked in onboarding. Grey is the original cat as it was made; every other coat is a
-/// recolour of it. The app's own extensions dress her in one; the id, the name and the pictures
-/// are here, where every feature can name a coat.
+/// Mochi's coat, picked in onboarding. Grey is the original; every other coat recolours it. The
+/// id, name and pictures live here so every feature can name a coat.
 public enum CatCoat: String, CaseIterable, Sendable {
   case grey, ginger, cream, tuxedo, black, calico
 

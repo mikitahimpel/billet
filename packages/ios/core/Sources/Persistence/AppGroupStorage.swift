@@ -1,6 +1,5 @@
 import Foundation
 
-/// Named files in a directory shared by the app and its extensions.
 public struct AppGroupStorage: Sendable {
   /// The App Group shared by the app, the widget and the notification service.
   public static let billetIdentifier = "group.com.mikitahimpel.billet"

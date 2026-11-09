@@ -1,7 +1,5 @@
-/// The server half of a purchase, as closures over plain values so this module needs no
-/// networking. The app builds it from its API client; tests pass fakes.
+/// Closures over plain values, so this module needs no networking.
 public struct PaymentsServer: Sendable {
-  /// What the server answered for one transaction.
   public struct Answer: Hashable, Sendable {
     public let transactionID: String
     public let productID: String
@@ -19,7 +17,7 @@ public struct PaymentsServer: Sendable {
       self.duplicate = duplicate
     }
 
-    /// The credit this answer stands for, under the entry ID the server's ledger uses.
+    /// Under the entry ID the server's ledger uses.
     public var credit: StampCredit {
       StampCredit(
         entryID: "purchase:\(transactionID)", transactionID: transactionID, productID: productID,
@@ -32,9 +30,9 @@ public struct PaymentsServer: Sendable {
     case refund
   }
 
-  /// Sends a StoreKit 2 signed transaction (JWS) to be verified and credited.
+  /// Takes a StoreKit 2 signed transaction (JWS).
   public var verify: @Sendable (_ signedTransaction: String) async throws(PaymentsError) -> Answer
-  /// Credits or reverses a fake transaction. Only the dev server has this route.
+  /// Only the dev server has this route.
   public var mock:
     @Sendable (_ productID: String, _ transactionID: String, _ kind: MockKind)
       async throws(PaymentsError) -> Answer
@@ -50,7 +48,6 @@ public struct PaymentsServer: Sendable {
     self.ledger = ledger
   }
 
-  /// A server that is never reached.
   public static let unreachable = PaymentsServer(
     verify: { (_) async throws(PaymentsError) in throw .unavailable },
     mock: { (_, _, _) async throws(PaymentsError) in throw .unavailable },

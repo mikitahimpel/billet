@@ -8,7 +8,6 @@ public enum CatTouchTarget: Hashable, Sendable {
   case bowl
   /// The jar a treat is taken from.
   case treats
-  /// Open floor the cat can walk on.
   case floor
   /// Anything else a room reacts to itself: the lamp, the note, furniture.
   case scenery
@@ -16,7 +15,6 @@ public enum CatTouchTarget: Hashable, Sendable {
   case nothing
 }
 
-/// The kind of touch, once it is known.
 public enum CatTouchGesture: Hashable, Sendable {
   case tap
   case doubleTap
@@ -83,12 +81,9 @@ public enum CatTouchRouter {
   /// How far a quick drag goes before its direction is read, in points.
   public static let readingDistance: Double = 12
 
-  /// Where a drag goes, from what its first point is on and how it began. `target` is what the
-  /// finger landed on itself, not what is near it. The cat, a toy or the treat jar takes the
-  /// drag when the finger rested on it first, or when it sets off along what that thing does: a
-  /// stroke along the cat's body, a flick of a ball up or down the floor, a toy carried any way.
-  /// A quick mostly sideways swipe always turns the room. Nil until a quick drag has gone far
-  /// enough to tell.
+  /// The cat, a toy or the treat jar under the finger takes the drag when the finger rested on it
+  /// first, or when it sets off along what that thing does (a stroke along the body, any toy move);
+  /// a quick mostly sideways swipe turns the room. Nil until a quick drag has gone far enough.
   public static func routeDrag(
     on target: CatTouchTarget, start: CatDragStart, isHoldingCat: Bool = false
   ) -> CatTouchRoute? {
@@ -112,7 +107,6 @@ public enum CatTouchRouter {
   }
 }
 
-/// How a drag began.
 public struct CatDragStart: Hashable, Sendable {
   /// How long the finger rested before it began to move, in seconds.
   public var rested: TimeInterval

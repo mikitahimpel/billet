@@ -23,11 +23,9 @@ public enum CatActivityGroup: String, CaseIterable, Codable, Hashable, Sendable 
 
   public var title: String { rawValue.prefix(1).uppercased() + rawValue.dropFirst() }
 
-  /// The groups utility chooses among.
   public static let chosen: [CatActivityGroup] = allCases.filter { $0 != .react }
 }
 
-/// The leaf states of the activity region. Each belongs to one group.
 public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   case sit, loaf, lookAround
   /// Happy and full: it rolls onto its back, belly up, and purrs.
@@ -138,7 +136,6 @@ public enum CatInteraction: Hashable, Sendable {
 
 /// Where the body goes for a step, as something in the room. A scene finds the spot itself.
 public enum CatTarget: Hashable, Sendable {
-  /// Wherever it is now.
   case stay
   /// Its own resting place.
   case home
@@ -149,7 +146,6 @@ public enum CatTarget: Hashable, Sendable {
   case roam(Double, Double)
 }
 
-/// Where the head points for a step.
 public enum CatGaze: Hashable, Sendable {
   case ahead
   case camera
@@ -186,7 +182,6 @@ public struct CatBrainStack: Hashable, Sendable {
   }
 }
 
-/// Why a transition happened.
 public enum CatTransitionCause: String, Codable, Hashable, Sendable {
   /// The day began: the brain starts again from its canonical state.
   case dayStart
@@ -200,7 +195,6 @@ public enum CatTransitionCause: String, Codable, Hashable, Sendable {
   case vitality
   /// A life event, such as a note or a meal, interrupted the activity.
   case event
-  /// An interaction began or ended.
   case interaction
   /// After an interaction the activity came back to where it was.
   case history

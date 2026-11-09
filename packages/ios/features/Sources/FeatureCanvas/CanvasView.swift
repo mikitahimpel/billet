@@ -70,7 +70,7 @@ public struct CanvasView: View {
           .gesture(
             DragGesture(minimumDistance: 0)
               .onChanged { value in
-                // A drag that runs off the paper stays on its edge, so no ink lands under the tools.
+                // A drag off the paper stays on its edge, so no ink lands under the tools.
                 let point = Point(
                   x: min(max(value.location.x, 0), width) / width,
                   y: min(max(value.location.y, 0), height) / width)

@@ -80,7 +80,6 @@ public enum BilletType: CaseIterable, Sendable {
 }
 
 extension View {
-  /// Sets face, weight, tracking and line height together.
   public func billetType(_ type: BilletType) -> some View {
     font(type.font)
       .tracking(type.tracking)

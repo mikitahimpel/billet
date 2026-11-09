@@ -1,29 +1,8 @@
 import Observation
 
-/// Holds a machine's state and runs its outputs, feeding each result back in as an event.
-///
-/// `run` is the interpreter: it maps an output to calls on injected services, and returns the event
-/// to send next, or `nil` when the output has no result. It is `@Sendable`, so services run off the
-/// main actor.
-///
-/// Outputs run concurrently, so their results arrive in completion order. Machines must treat a
-/// late result as a legal event in every state.
-///
-/// The store does not match a result to the output that produced it. A machine whose outputs can
-/// overlap, such as two fetches for the same screen, carries a request ID in its state, puts it in
-/// the output, and has the result bring it back; `GreetingMachine` shows the pattern, and
-/// `WebSocketMachine` does the same with its attempt number. A result with an old ID changes
-/// nothing.
-///
-/// The store does not cancel a running output, and that is a decision, not an omission. An output
-/// is a call into a service, and a service that must be stoppable owns that: it takes the
-/// cancellation of the task it runs in, or its own timeout, and reports the outcome as a result
-/// the machine handles. A machine therefore models "stop waiting" as an event, such as a timeout
-/// output that comes back as a result, and uses the request ID to drop whatever answers later.
-/// Cancelling from the store would make every output cancellable without any of them being
-/// written to cope, and would hide a hung call instead of bounding it.
-///
-/// A result that arrives after the store has been released is dropped.
+/// Runs a machine's outputs concurrently and feeds each result back, in completion order. It
+/// neither matches results to outputs nor cancels them: a machine carries a request ID and models
+/// timeouts as events. A result that arrives after the store is released is dropped.
 @MainActor
 @Observable
 public final class Store<M: Machine> {
@@ -51,8 +30,7 @@ public final class Store<M: Machine> {
     }
   }
 
-  /// Returns once `done` holds, looking again at each change of what it read. Unlike `settled`, it
-  /// waits only for the work `done` is about, so a caller isn't held by an unrelated output.
+  /// Unlike `settled`, waits only for the work `done` reads, not for unrelated outputs.
   public func until(_ done: @escaping () -> Bool) async {
     while !done() {
       await withCheckedContinuation { (continuation: CheckedContinuation<Void, Never>) in

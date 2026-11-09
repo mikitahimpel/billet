@@ -19,7 +19,6 @@ public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
     }
   }
 
-  /// What a room that has these spots offers the brain.
   public static func affordances(_ spots: Set<NookiSpot>) -> RoomAffordances {
     RoomAffordances(
       spots.compactMap { spot -> RoomAffordance? in
@@ -88,11 +87,9 @@ public enum NookiCatIntent: Hashable, Sendable {
   case drowse(Double)
 }
 
-/// Turns the brain's frames into what Nooki's cat can do: the rig's sit, loaf and sleep bodies,
-/// its walks and jumps between the room's spots, and its small habits. The brain already keeps
-/// its own dwell times; the script adds the body's, so a cat is never sent off again within a
-/// few seconds of arriving or cut from one rest pose to another sooner than the pose's dwell,
-/// and only changes its body while it stands still.
+/// Turns the brain's frames into what Nooki's cat can do: sit, loaf and sleep bodies, walks and
+/// jumps between spots, small habits. It adds the body's dwell to the brain's: no resend soon after
+/// arriving, no pose cut before its dwell, and body changes only while the cat stands still.
 public struct NookiCatScript: Sendable {
   /// Seconds the cat stays at a spot after arriving before it is sent elsewhere.
   public static let spotDwell = 8.0

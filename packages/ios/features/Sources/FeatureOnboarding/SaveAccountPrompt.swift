@@ -1,12 +1,9 @@
 import Foundation
 import Persistence
 
-/// When to offer "Save your cat and notes" (Sign in with Apple) to an anonymous account. It never
-/// blocks anything: it is a card the user can close.
-///
-/// It appears once the account has been used for about a week, or after a few notes, and only
-/// while the account isn't linked. Closing it hides it for a month; the "Us" screen always keeps
-/// the Sign in with Apple row.
+/// When to offer "Save your cat and notes" (Sign in with Apple) to an unlinked anonymous account:
+/// after about a week of use or a few notes. Closing the card hides it for a month; the "Us"
+/// screen always keeps the Sign in with Apple row.
 public struct SaveAccountPrompt: Codable, Equatable, Sendable {
   /// When this phone first used the account.
   public var startedAt: Date

@@ -1,5 +1,4 @@
-/// Wire form of the contracts `DateIdea`: one card of the Date Night deck. `title` and `pitch` may
-/// hold `{cat}`, which the app replaces with the cat's name.
+/// One Date Night card. `title` and `pitch` may hold `{cat}`, replaced with the cat's name.
 public struct DateIdea: Codable, Hashable, Sendable {
   public enum Place: String, Codable, Hashable, Sendable, CaseIterable {
     case home, city, nature, apart
@@ -20,8 +19,8 @@ public struct DateIdea: Codable, Hashable, Sendable {
     case any, spring, summer, autumn, winter
   }
 
-  /// The card's picture: `path` on the API's host, whose name carries a content hash so it is
-  /// cached for good, and `color`, its average colour as `#RRGGBB`, shown while it loads.
+  /// `path` names a content hash, so it is cached for good; `color` (`#RRGGBB`) is its average,
+  /// shown while it loads.
   public struct Art: Codable, Hashable, Sendable {
     public let path: String
     public let color: String
@@ -56,8 +55,7 @@ public struct DateIdea: Codable, Hashable, Sendable {
   }
 }
 
-/// `GET /v1/dates/catalog`: every date idea. `version` changes with the ideas and is the
-/// response's ETag.
+/// `version` changes with the ideas and is the response's ETag.
 public struct DateCatalogResponse: Codable, Hashable, Sendable {
   public let version: String
   public let ideas: [DateIdea]

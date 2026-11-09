@@ -36,7 +36,6 @@ public struct KeychainReadResult: Equatable, Sendable {
   }
 }
 
-/// The Keychain as four closures that return an `OSStatus`. Tests pass an in-memory fake;
 /// ``KeychainClient/security`` is the live one.
 public struct KeychainClient: Sendable {
   public var add: @Sendable (KeychainItemKey, Data) -> Int32

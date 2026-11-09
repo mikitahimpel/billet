@@ -1,11 +1,8 @@
 import Foundation
 
-/// Where the cat likes to be: the seconds it rested at each kind of spot, with a minute added for
-/// each pet there.
-///
-/// A day starts with what the cat did yesterday, half as strong. Yesterday is worked out again by
-/// a rehearsal from its canonical start, so a phone that just launched remembers the same as one
-/// that ran all week, and what is older than two days is gone.
+/// Where the cat likes to be: seconds rested at each kind of spot, a minute more per pet there. A
+/// day starts with yesterday at half strength, rehearsed from its canonical start, so a phone just
+/// launched remembers the same as one run all week; anything older than two days is gone.
 public struct CatMemory: Hashable, Sendable {
   public private(set) var spots: [RoomAffordance.Kind: Double] = [:]
 

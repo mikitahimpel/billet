@@ -35,14 +35,9 @@ public struct LifeState: Hashable, Sendable {
   public var missing: String?
 }
 
-/// The pet's life as a pure function of what happened and the time: the same events and `now`
-/// give the same state on every phone and in the widget, with no clock ticking anywhere.
-///
-/// Between events each need decays toward the floor, `n(t) = f + (n₀ − f)·e^(−Δt/τ)`, and each
-/// event adds a diminishing gain, `n ← n + g·(1 − n)^k`. Sleep follows the pair's day rhythm and
-/// how long the pet has been up. The fold starts a week back, or at the pet's birth if that is
-/// later, and walks a fixed grid of absolute times, so the result does not depend on when it is
-/// asked.
+/// The pet's life as a pure function of events and time, the same on every phone and the widget.
+/// Needs decay toward a floor, `n(t) = f + (n₀ − f)·e^(−Δt/τ)`; events add `g·(1 − n)^k`. The fold
+/// walks a fixed grid of absolute times from a week back, or from the pet's birth if later.
 public enum PetLife {
   public static func state(
     events: some Sequence<LifeEvent>, now: Date, context: LifeContext,
@@ -68,7 +63,6 @@ public enum PetLife {
     return fold.state
   }
 
-  /// The state at each of `times`, for a widget timeline or a chart.
   public static func forecast(
     events: [LifeEvent], at times: [Date], context: LifeContext, config: LifeConfig = .standard
   ) -> [LifeState] {
@@ -103,7 +97,6 @@ public enum PetLife {
   }
 }
 
-/// The running state of one fold.
 private struct Fold {
   let config: LifeConfig
   let context: LifeContext
@@ -113,7 +106,7 @@ private struct Fold {
   var playful: Double
   var love: [String: Double]
   var asleep = false
-  /// When something last woke the pet, in seconds since 1970.
+  /// Seconds since 1970.
   var wokeAt = -Double.infinity
 
   init(config: LifeConfig, context: LifeContext) {
@@ -133,7 +126,6 @@ private struct Fold {
     asleep = pressure(at: t) > config.sleepAbove
   }
 
-  /// Moves from `t` to `end` along the grid and returns `end`.
   mutating func advance(from t: Double, to end: Double, step: Double) -> Double {
     var t = t
     while t < end {

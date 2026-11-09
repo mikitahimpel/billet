@@ -1,7 +1,7 @@
 import Foundation
 
-/// Brushing the cat: strokes along her fur, head to tail, fill the groom bar and make her content (eyes closing,
-/// purring, leaning in); a stroke against the grain makes her flinch, and the hint says which way.
+/// Brushing the cat: strokes head to tail fill the groom bar and make her content; a stroke
+/// against the grain makes her flinch, and the hint says which way.
 public struct BrushStrokes: Equatable, Sendable {
   public enum Reaction: Equatable, Sendable {
     /// A good stroke; `purrs` when it is the first in a while, for her to start purring.
@@ -31,8 +31,8 @@ public struct BrushStrokes: Equatable, Sendable {
   /// Purring while strokes keep coming.
   public var isPurring: Bool { sinceGood < 0.6 }
 
-  /// One step of a stroke, `distance` meters across her fur, with `fit` the cosine between the stroke and her
-  /// grain (1 head to tail, -1 tail to head).
+  /// One step of a stroke, `distance` meters across her fur; `fit` is the cosine between the
+  /// stroke and her grain (1 head to tail, -1 tail to head).
   public mutating func stroke(distance: Double, fit: Double) -> Reaction? {
     guard distance >= 0.0008 else { return nil }
     if fit > 0.35 {

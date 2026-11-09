@@ -9,7 +9,6 @@ public enum AdoptionCat: String, CaseIterable, Codable, Hashable, Sendable {
   case kitten
   case fluffy
 
-  /// The cat the rooms show once this one is adopted.
   public var choice: CatChoice {
     switch self {
     case .ginger: CatChoice(model: .detailed, coat: .natural)
@@ -33,7 +32,6 @@ public enum AdoptionCat: String, CaseIterable, Codable, Hashable, Sendable {
 
 /// What one phone tells the other while the pair chooses its cat.
 public enum AdoptionMove: Hashable, Sendable {
-  /// This phone's pick, or `nil` for none.
   case pick(AdoptionCat?)
   /// A finger went down on the picked cat, or came up.
   case hold(Bool)
@@ -41,13 +39,9 @@ public enum AdoptionMove: Hashable, Sendable {
   case adopt(AdoptionCat)
 }
 
-/// Choosing the cat together: each partner picks a cat, and the pick shows on both phones. When
-/// the picks match, each presses and holds the cat until a ring fills. Once both rings have
-/// filled since the picks matched, at the same time or one after the other, the cat is adopted.
-/// While the picks differ the two candidates make a small bid; there is no timer.
-///
-/// Each phone runs one of these, fed its own touches and the partner's moves, and returns the
-/// moves to send. Both reach the same adoption, and an `adopt` from either side settles it.
+/// Choosing the cat together. When the picks match, each partner holds the cat until a ring
+/// fills; once both rings have filled since the match, at once or in turn, the cat is adopted.
+/// No timer. Both phones reach the same adoption, and an `adopt` from either side settles it.
 public struct JointCatChoice: Equatable, Sendable {
   /// How long a finger stays down to fill a ring.
   public static let holdLength: TimeInterval = 1.2

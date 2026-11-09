@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// Wraps its one text into lines of about the same length, as CSS's `text-wrap: balance` does: the
-/// narrowest width that keeps the number of lines it has at the full width. A short last line
-/// under a long one reads as a stray word.
+/// CSS's `text-wrap: balance`: the narrowest width that keeps the line count it has at full width,
+/// so a short last line does not read as a stray word.
 public struct BalancedLines: Layout {
   public init() {}
 

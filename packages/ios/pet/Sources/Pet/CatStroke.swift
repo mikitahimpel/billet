@@ -1,7 +1,6 @@
 import Foundation
 import simd
 
-/// Where on the cat a finger lands.
 public enum PetZone: String, CaseIterable, Hashable, Sendable {
   case head
   case chin
@@ -14,7 +13,6 @@ public enum PetZone: String, CaseIterable, Hashable, Sendable {
 public enum StrokeDirection: Hashable, Sendable {
   /// From the head towards the tail, the way cats like it.
   case withFur
-  /// From the tail towards the head.
   case againstFur
   /// Side to side, or too short to tell.
   case across

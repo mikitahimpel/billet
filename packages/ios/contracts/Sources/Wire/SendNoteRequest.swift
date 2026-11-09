@@ -1,11 +1,9 @@
-/// The server assigns id, author and time. Sending the same `key` again returns the first note
-/// instead of storing another.
+/// The server assigns id, author and time. The same `key` again returns the first note.
 public enum SendNoteRequest: Codable, Hashable, Sendable {
   case drawing(
     key: IdempotencyKey, compact: CompactStrokes, image: MediaKey, paper: PaperColor? = nil,
     stamp: NoteStamp? = nil, seal: NoteSeal? = nil)
-  /// A photo already uploaded to `POST /v1/media`, with its pixel size (1 to 8192 a side), a
-  /// BlurHash `preview` for the partner to show while it loads, and an optional `caption`.
+  /// Already uploaded to `POST /v1/media`; 1 to 8192 pixels a side.
   case photo(
     key: IdempotencyKey, image: MediaKey, width: Int, height: Int, preview: String,
     caption: NoteText? = nil)

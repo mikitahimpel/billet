@@ -16,7 +16,7 @@ public struct SessionTokenStore: Sendable {
     self.clear = clear
   }
 
-  /// A store backed by the Keychain. Pass the shared `accessGroup` so extensions see the item.
+  /// Pass the shared `accessGroup` so extensions see the item.
   public static func keychain(
     client: KeychainClient,
     service: String,

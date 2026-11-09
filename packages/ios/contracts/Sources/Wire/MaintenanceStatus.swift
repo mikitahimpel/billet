@@ -1,12 +1,11 @@
 import Foundation
 
-/// Maintenance: while `active`, the server refuses every write with a 503 that carries this block,
-/// and the app shows its calm maintenance screen. `until` is when it should be over, a hint for
-/// "back around …"; it does not end maintenance by itself.
+/// While `active`, the server refuses every write with a 503 carrying this block. `until` is a
+/// hint for "back around …"; it does not end maintenance by itself.
 public struct MaintenanceStatus: Codable, Hashable, Sendable {
   public let active: Bool
   public let message: StatusMessage?
-  /// An instant in UTC as the server sent it, such as `2026-11-03T22:30:00Z`. See ``untilDate``.
+  /// UTC as the server sent it, such as `2026-11-03T22:30:00Z`. See ``untilDate``.
   public let until: String?
 
   public init(active: Bool, message: StatusMessage? = nil, until: String? = nil) {
@@ -15,7 +14,6 @@ public struct MaintenanceStatus: Codable, Hashable, Sendable {
     self.until = until
   }
 
-  /// `until` as a date.
   public var untilDate: Date? { until.flatMap(Self.instant) }
 
   private enum CodingKeys: String, CodingKey {

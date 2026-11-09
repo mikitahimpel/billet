@@ -44,7 +44,6 @@ public struct AdoptionSceneState: Equatable, Sendable {
   }
 }
 
-/// What the choose-your-cat scene reports to its host.
 public enum AdoptionSceneEvent: Hashable, Sendable {
   /// A quick tap on the cat at this place.
   case tapped(Int)

@@ -1,9 +1,8 @@
 import Foundation
 
-/// Everything the shop keeps, and the only place its rules live.
-///
-/// Every change names a transaction ID. The same ID applied twice changes nothing the second time,
-/// so a tap delivered again after a reconnect, or a reward seen on two launches, counts once.
+/// Everything the shop keeps, and the only place its rules live. Every change names a transaction
+/// ID, and the same ID applied twice changes nothing the second time, so a tap redelivered after a
+/// reconnect, or a reward seen on two launches, counts once.
 public struct ShopState: Codable, Hashable, Sendable {
   public private(set) var wallet: StampWallet
   public private(set) var closet: Closet
@@ -33,7 +32,6 @@ public struct ShopState: Codable, Hashable, Sendable {
     wallet.credit(amount, as: credit, id: id)
   }
 
-  /// The ledger ID of the entry a purchase transaction writes.
   /// Takes back bought stamps after an App Store refund. See ``StampWallet/revoke(_:id:)``.
   public mutating func revoke(_ amount: Int, id: String) -> Int? {
     wallet.revoke(amount, id: id)
@@ -64,7 +62,6 @@ public struct ShopState: Codable, Hashable, Sendable {
     return .applied
   }
 
-  /// Whether the bundle `id` was bought and not taken back.
   public func hasBought(bundle id: String) -> Bool {
     applied.contains(Self.bundleID(id))
   }
@@ -119,7 +116,6 @@ public struct ShopState: Codable, Hashable, Sendable {
     }
   }
 
-  /// Whether the day's gift has been taken.
   public func hasClaimed(_ gift: DailyGift) -> Bool {
     wallet.hasEntry(gift.id) || applied.contains(gift.id)
   }
@@ -143,7 +139,6 @@ public struct ShopState: Codable, Hashable, Sendable {
     return .applied
   }
 
-  /// Takes a placed piece out of the room and back into the closet.
   public mutating func remove(
     placement id: RoomLayout.Placement.ID, transaction: String
   ) throws(ShopError) -> ShopOutcome {
@@ -154,14 +149,14 @@ public struct ShopState: Codable, Hashable, Sendable {
     return .applied
   }
 
-  /// Moves a placed piece. Moving costs nothing and asks nothing of the closet.
+  /// Costs nothing and asks nothing of the closet.
   public mutating func move(
     placement id: RoomLayout.Placement.ID, x: Double, z: Double, yaw: Double
   ) throws(ShopError) {
     try layout.move(id, x: x, z: z, yaw: yaw)
   }
 
-  /// Puts an owned material on a wall or the floor. The material stays owned.
+  /// The material stays owned.
   public mutating func paint(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome
   {
     guard !applied.contains(transaction) else { return .duplicate }
@@ -177,7 +172,6 @@ public struct ShopState: Codable, Hashable, Sendable {
     layout.paint(surface, with: nil)
   }
 
-  /// Uses one treat up.
   public mutating func use(_ item: ShopItem, transaction: String) throws(ShopError) -> ShopOutcome {
     guard !applied.contains(transaction) else { return .duplicate }
     guard item.isConsumable else { throw .wrongKind }

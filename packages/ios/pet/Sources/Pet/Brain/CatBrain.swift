@@ -1,29 +1,25 @@
 import Foundation
 
-/// The cat's brain: a hierarchical state machine with vitality, activity and interaction regions,
-/// utility choosing the activity, and a seeded personality.
-///
-/// It is a pure function of the life events, the time and the seed. Every decision falls on a
-/// fixed grid of absolute times and draws its randomness from ``BrainDice`` at that instant, so
-/// the same events give the same cat on both phones and in the widget, with no server tick. A
-/// fold advances only at decision times; between them `advance(to:)` is one comparison.
+/// The cat's brain: a hierarchical state machine of vitality, activity and interaction, with
+/// utility choosing the activity. Pure in the events, time and seed: decisions fall on a fixed time
+/// grid with dice from ``BrainDice``, so both phones and the widget fold the same cat untended.
 public struct CatBrain: Sendable {
   public let seed: UInt64
   public let config: CatBrainConfig
-  /// What kind of cat it is at heart, fixed for life; nil for a cat with none, as in tests.
+  /// Fixed for life; nil for a cat with none, as in tests.
   public let temperament: CatTemperament?
-  /// The personality the cat was born with: its temperament's, with its seed's own touch.
+  /// Its temperament's personality, with its seed's own touch.
   public let nature: CatPersonality
-  /// Today's personality: the one it was born with, moved by the last few days.
+  /// The nature, moved by the last few days.
   public private(set) var personality: CatPersonality
   /// Where it likes to rest, from yesterday and today.
   public private(set) var memory: CatMemory
-  /// What it has learned from how the two of you treat it, as of today's start.
+  /// Learned from how the partners treat it, as of today's start.
   public private(set) var upbringing: CatUpbringing
   public private(set) var room: RoomAffordances
   public private(set) var weather: ViewWeather
 
-  /// The last decision time processed, in seconds since 1970.
+  /// Seconds since 1970.
   public private(set) var time: Double
   public private(set) var vitality: CatVitality = .awake
   private var vitalitySince: Double
@@ -93,7 +89,6 @@ public struct CatBrain: Sendable {
     startDay(at: start, record: false)
   }
 
-  /// The nature a cat with `seed` and `temperament` is born with.
   public static func nature(seed: UInt64, temperament: CatTemperament?) -> CatPersonality {
     let seeded = CatPersonality.seeded(seed)
     return temperament?.nature(from: seeded) ?? seeded
@@ -124,7 +119,6 @@ public struct CatBrain: Sendable {
     self.weather = weather
   }
 
-  /// Folds every decision up to `now` in order. Cheap when nothing is due.
   public mutating func advance(to now: Double, life sampler: inout CatLifeSampler) {
     while true {
       let next = nextDecision
@@ -297,7 +291,6 @@ public struct CatBrain: Sendable {
 
   // MARK: - Steps
 
-  /// The kind of spot the cat is at, or headed for.
   private var spot: RoomAffordance.Kind? {
     if activity.step.group == .rest, let napSpot = activity.napSpot { return napSpot }
     switch activity.target {

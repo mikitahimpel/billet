@@ -8,10 +8,8 @@ import UniformTypeIdentifiers
 
 @testable import DesignSystem
 
-/// Renders a view to pixels. `BILLET_SNAPSHOT_DIR` keeps a PNG for review.
-///
-/// A busy CI runner now and then hands back a blank image (one colour) for a large view; a blank
-/// first render is drawn once more before the tests look at it.
+/// `BILLET_SNAPSHOT_DIR` keeps a PNG for review. A busy CI runner can hand back a blank image for
+/// a large view, so a blank first render is drawn once more.
 @MainActor
 func render(_ view: some View, named name: String, scale: CGFloat = 2) throws -> CGImage {
   func draw() throws -> CGImage {

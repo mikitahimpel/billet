@@ -1,11 +1,8 @@
 import Foundation
 import Wire
 
-/// Turns full-precision strokes into the compact rendition that travels inside a push.
-///
-/// Stroke coordinates and widths are fractions of the canvas width (the unit square), so a
-/// drawing has the same shape at any size. Every tunable lives in ``Parameters`` because the
-/// grid, simplification and budget are still being decided in #13.
+/// The compact rendition of strokes that travels inside a push. Coordinates and widths are
+/// fractions of the canvas width (the unit square), so a drawing has the same shape at any size.
 public enum InkEncoder {
   public struct Parameters: Hashable, Sendable {
     /// Integer steps across the unit square.
@@ -26,7 +23,6 @@ public enum InkEncoder {
   /// the square or just past its edge; anything beyond this is not a drawing.
   public static let limit = 1_000.0
 
-  /// Simplifies and quantises `strokes` with exactly the given parameters.
   public static func encode(
     _ strokes: [Stroke], parameters: Parameters = Parameters()
   ) throws(InkError) -> CompactStrokes {
@@ -82,7 +78,7 @@ public enum InkEncoder {
     throw InkError.overBudget(budget: parameters.budget, smallest: smallest)
   }
 
-  /// The size in bytes of the JSON that goes on the wire.
+  /// The size in bytes on the wire.
   public static func byteCount(_ compact: CompactStrokes) throws(InkError) -> Int {
     let encoder = JSONEncoder()
     encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]

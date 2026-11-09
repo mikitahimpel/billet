@@ -6,7 +6,7 @@ public enum ButtonRank: Sendable {
   case secondary
 }
 
-/// The inside of a button: its words, an optional symbol, full width and at least 44pt tall.
+/// Full width and at least 44pt tall.
 public struct ButtonLabel: View {
   private let title: String
   private let rank: ButtonRank
@@ -199,7 +199,6 @@ private struct FloatingGlass: ViewModifier {
 
 /// The one surface of every control: glass on iOS 26, warm material before it, or `fill` when the
 /// control is lit. A disabled control is never lit, so its muted label stays readable on the glass.
-/// A circle is a capsule with equal sides.
 private struct ControlStyle: ButtonStyle {
   let fill: Swatch?
 

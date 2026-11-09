@@ -1,5 +1,4 @@
-/// Wire form of the contracts `OnboardingStepId`: a stable catalogue id. The server checks its
-/// format; the client checks only that it is not empty.
+/// The server checks its format; the client checks only that it is not empty.
 public struct OnboardingStepId: Codable, Hashable, Sendable, ExpressibleByStringLiteral {
   public let rawValue: String
 

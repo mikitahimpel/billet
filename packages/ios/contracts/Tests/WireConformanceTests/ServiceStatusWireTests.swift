@@ -3,7 +3,6 @@ import Testing
 
 @testable import Wire
 
-/// The service status: what decodes, what is refused, and how versions are ordered.
 @Suite struct ServiceStatusWireTests {
   private func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
     try JSONDecoder().decode(T.self, from: Data(json.utf8))

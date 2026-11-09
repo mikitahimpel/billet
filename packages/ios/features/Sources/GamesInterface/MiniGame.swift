@@ -18,10 +18,10 @@ public enum MiniGame: String, CaseIterable, Hashable, Sendable {
   public var gameId: String { rawValue }
 }
 
-/// How a finished game went, for the journal and the toast. There is no losing: a game ends when it is done.
+/// How a finished game went, for the journal and the toast. There is no losing.
 public struct GameResult: Equatable, Sendable {
   public let game: MiniGame
-  /// 0...100: how close to the target it came (the gram, the line), or 100 when there is nothing to aim at.
+  /// 0...100: how close to the target it came, or 100 when there is nothing to aim at.
   public let score: Int
   /// The meal's weight, for `feed`.
   public let grams: Int?
@@ -38,8 +38,8 @@ public struct GameResult: Equatable, Sendable {
     return GameResult(game: .feed, score: 100 - 10 * abs(grams - target), grams: grams)
   }
 
-  /// What goes into the cat's journal: the care itself where there is a need for it, and the game, which pays the
-  /// coins (the server caps them by day).
+  /// The care itself where a need calls for it, and the game, which pays the coins (the server
+  /// caps them by day).
   public var events: [CatEvent] {
     let played = CatEvent.gamePlayed(game: game.gameId, score: score, won: true)
     switch game {

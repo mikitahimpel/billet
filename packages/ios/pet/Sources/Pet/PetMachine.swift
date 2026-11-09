@@ -1,10 +1,8 @@
 import BilletKit
 
-/// The delivery scenario: a note wakes the pet, the scene plays it, the pet settles.
-///
-/// Every step that waits on a scene also starts a deadline. A deadline resolves to the same event
-/// the scene would send, so a hung scene cannot stall the pet, and a step that already finished
-/// ignores its late deadline because the delivery number or the activity no longer match.
+/// The delivery scenario: a note wakes the pet, the scene plays it, the pet settles. Each step
+/// that waits on a scene starts a deadline that sends the scene's own event, so a hung scene
+/// cannot stall the pet; a finished step ignores it, as the delivery or activity no longer match.
 public enum PetMachine: Machine {
   public struct State: Hashable, Sendable {
     public var world: PetWorld

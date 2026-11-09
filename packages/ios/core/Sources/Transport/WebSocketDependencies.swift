@@ -22,7 +22,6 @@ public struct WebSocketDependencies: Sendable {
   /// Opens a socket, returning once its handshake has finished.
   public var open: @Sendable () async throws(TransportError) -> WebSocketConnection
   public var sleep: @Sendable (Duration) async -> Void
-  /// Receives each server message while connected.
   public var deliver: @Sendable (ServerMessage) async -> Void
   /// The factor each back-off delay is multiplied by, so that many clients do not retry in step.
   public var jitter: @Sendable () -> Double
@@ -40,8 +39,7 @@ public struct WebSocketDependencies: Sendable {
   public var followsLists: Bool
   /// Each `Resume` also asks for `MoodChanged`: each member's latest check-in, then each new one.
   public var followsMoods: Bool
-  /// Each `Resume` also asks for `GuessProgress` and `GuessRevealed` as the pair plays Who knows
-  /// who.
+  /// Each `Resume` also asks for `GuessProgress` and `GuessRevealed`.
   public var followsGuess: Bool
   /// Each `Resume` also asks for `RiddleChanged`: each open draw-guess riddle, then each change.
   public var followsRiddle: Bool

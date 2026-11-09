@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The postage stamps a note can carry, as art: a glyph on a coloured field inside a perforated
-/// white edge. The ids match the contracts' `NoteStamp`.
+/// The ids match the contracts' `NoteStamp`.
 public enum StampArt: String, CaseIterable, Sendable {
   case heart, moon, bloom, paw, sun
 
@@ -36,8 +35,7 @@ public enum StampArt: String, CaseIterable, Sendable {
   }
 }
 
-/// The wax seals a note can be closed with: a colour of wax and the emblem pressed into it. The
-/// ids match the contracts' `NoteSeal`.
+/// The ids match the contracts' `NoteSeal`.
 public enum SealArt: String, CaseIterable, Sendable {
   case rose, night, meadow, honey, plum
 
@@ -72,8 +70,7 @@ public enum SealArt: String, CaseIterable, Sendable {
   }
 }
 
-/// A postage stamp `width` points wide, a little taller than wide. It is art on paper, so it looks
-/// the same in light and dark.
+/// Art on paper, so it looks the same in light and dark.
 public struct PostageStamp: View {
   let art: StampArt
   let width: CGFloat
@@ -105,7 +102,6 @@ public struct PostageStamp: View {
   }
 }
 
-/// A wax seal `size` points across: an uneven disc of wax with a pressed ring and emblem.
 public struct WaxSeal: View {
   let art: SealArt
   let size: CGFloat
@@ -143,8 +139,7 @@ public struct WaxSeal: View {
 }
 
 extension View {
-  /// Puts a note's stamp in its top trailing corner and its seal low on its leading side, both
-  /// inside the note's frame and sized to its `width`. Either may be `nil`.
+  /// Stamp top trailing, seal low leading, both inside the note's frame and sized to `width`.
   public func postage(stamp: StampArt?, seal: SealArt?, width: CGFloat) -> some View {
     overlay(alignment: .topTrailing) {
       if let stamp {
@@ -163,7 +158,7 @@ extension View {
   }
 }
 
-/// A rectangle with half-round bites along every edge, `holes` along the shorter side.
+/// `holes` counts the bites along the shorter side.
 struct Perforated: Shape {
   let holes: Int
 
@@ -195,7 +190,6 @@ struct Perforated: Shape {
   }
 }
 
-/// A disc whose edge wobbles a little, as poured wax does.
 struct WaxBlob: Shape {
   func path(in rect: CGRect) -> Path {
     let center = CGPoint(x: rect.midX, y: rect.midY)

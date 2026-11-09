@@ -1,7 +1,5 @@
-/// A quantised stroke. `points` is flat: `[x0, y0, x1, y1, ...]`.
-///
-/// Decoding enforces what the contract's schema does: a `#RRGGBB` colour and an even number of
-/// values in `points`.
+/// `points` is flat: `[x0, y0, x1, y1, ...]`. Decoding enforces the schema: a `#RRGGBB` colour
+/// and an even number of values.
 public struct CompactStroke: Codable, Hashable, Sendable {
   public let color: String
   public let width: Int

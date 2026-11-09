@@ -1,5 +1,3 @@
-/// Wire form of the contracts `LocalizedText`: a string a person reads, in each language the app
-/// ships.
 public struct LocalizedText: Codable, Hashable, Sendable {
   public let en: String
   public let ru: String
@@ -9,7 +7,7 @@ public struct LocalizedText: Codable, Hashable, Sendable {
     self.ru = ru
   }
 
-  /// The text for `languageCode` (such as `ru`), English for any other.
+  /// English for any language it lacks.
   public func text(for languageCode: String?) -> String {
     languageCode == "ru" ? ru : en
   }

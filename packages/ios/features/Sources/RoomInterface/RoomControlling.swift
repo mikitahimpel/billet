@@ -4,7 +4,6 @@ import Pet
 
 /// What happened in the room that the rest of the app acts on. The room writes to no store itself.
 public enum RoomEvent: Equatable, Sendable {
-  /// A tap landed on the cat.
   case catPetted
   /// A card on the board was tapped; it opens as a sheet.
   case pinOpened(UUID)
@@ -21,7 +20,6 @@ public protocol RoomControlling: AnyObject {
   func purr()
   /// A treat was bought: the cat ate.
   func feed()
-  /// The app came to the front.
   func appOpened()
   func play(_ game: MiniGame)
   func endGame()
@@ -40,7 +38,7 @@ public struct CatStatus: Equatable, Sendable {
     self.mind = mind
   }
 
-  /// `needs` rounded to twentieths, so a need that drifts a little changes nothing outside the room.
+  /// `needs` rounded to twentieths, so a small drift changes nothing outside the room.
   public init(rounding needs: PetNeeds?, mind: CatMind?) {
     let rounded = needs.map { needs in
       var out = needs

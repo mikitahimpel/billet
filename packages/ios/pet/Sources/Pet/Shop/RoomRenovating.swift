@@ -6,7 +6,6 @@ public enum RenovationRequest: Hashable, Sendable {
   case paint(ShopItem)
   /// Stand a piece of furniture from the closet in the room.
   case place(ShopItem)
-  /// Take a placed piece out of the room and back into the closet.
   case putAway(placement: RoomLayout.Placement.ID)
 }
 
@@ -16,12 +15,9 @@ public protocol RoomRenovating {
   func renovate(_ request: RenovationRequest) throws(ShopError)
 }
 
-/// Carries the closet's requests to the room a scene shows, and what the scene changes back to the
-/// ``ShopStore``.
-///
-/// A piece goes to an open spot at once, so nothing is lost if the user walks away, and the scene
-/// then lets them move it. A scene without renovate mode leaves ``openSpot`` unset and the store
-/// picks the spot.
+/// Carries the closet's requests to the room a scene shows, and the scene's changes back to the
+/// ``ShopStore``. A piece goes to an open spot at once, so nothing is lost if the user walks away;
+/// a scene without renovate mode leaves ``openSpot`` unset and the store picks the spot.
 @MainActor
 @Observable
 public final class RoomRenovator: RoomRenovating {
@@ -48,7 +44,6 @@ public final class RoomRenovator: RoomRenovating {
     public let number: Int
   }
 
-  /// The latest style asked to be tried on, or `nil` before any was.
   public private(set) var tryOnRequest: TryOn?
 
   /// Asks the scene to open its Style tab with `item` tried on, as a tap on its swatch would.
@@ -88,7 +83,6 @@ public final class RoomRenovator: RoomRenovating {
     try? store.move(placement: id, x: x, z: z, yaw: yaw ?? placement.yaw)
   }
 
-  /// The stamps there are to spend on unlocking styles.
   public var stamps: Int { store.stamps }
 
   /// Whether `item` can be chosen in the Style tab: it is free, or it has been unlocked.
@@ -103,15 +97,13 @@ public final class RoomRenovator: RoomRenovating {
     try store.buy(shopItem, transaction: store.newTransaction())
   }
 
-  /// The pieces of furniture waiting in the closet, in the catalog's order.
+  /// In the catalog's order.
   public var closetFurniture: [ShopItem] {
     store.catalog.items(in: .furniture).filter { store.owned($0) > 0 }
   }
 
-  /// How many of `item` the closet holds.
   public func owned(_ item: ShopItem) -> Int { store.owned(item) }
 
-  /// The placement `id`, if it is in the room.
   public func placement(_ id: RoomLayout.Placement.ID) -> RoomLayout.Placement? {
     store.state.layout.placements.first { $0.id == id }
   }
@@ -134,7 +126,6 @@ public final class RoomRenovator: RoomRenovating {
     return id
   }
 
-  /// Takes the placement `id` out of the room and back into the closet.
   public func putAway(_ id: RoomLayout.Placement.ID) throws(ShopError) {
     try store.remove(placement: id, transaction: store.newTransaction())
   }

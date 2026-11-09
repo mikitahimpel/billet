@@ -28,7 +28,6 @@ public struct CatPetting: Sendable {
 
   public var isPurring: Bool { started != nil }
 
-  /// A finger moved on the cat at `now`.
   public mutating func touch(at now: Double) -> [Event] {
     var events = tick(at: now)
     lastTouch = now

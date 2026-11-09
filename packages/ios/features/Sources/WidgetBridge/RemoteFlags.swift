@@ -1,12 +1,9 @@
 import Foundation
 import Pet
 
-/// A test the server can run on pairs, and the variants this build contains. Assignment only
-/// chooses between variants listed here: a variant the server names that is not listed is ignored,
-/// so the server can never turn on something App Review has not seen in this build.
-///
-/// Add one here only with the screens for every variant, complete and reviewable.
-/// `docs/experiments.md` has the steps.
+/// A server-run test and the variants this build has. An unlisted variant is ignored, so the
+/// server never turns on what App Review hasn't seen. Add one only with complete screens for every
+/// variant; `docs/experiments.md` has the steps.
 public struct Experiment: Hashable, Sendable {
   public let key: String
   public let variants: Set<String>
@@ -61,8 +58,8 @@ public enum Experiments {
   /// Which of Ourio's rooms a new pair gets: both, only the Room, or only the City.
   public static let rooms = Experiment(key: "rooms", choices: RoomsVariant.self)
 
-  /// How the rooms' static shell is made: built live, or loaded baked (Labs > Room shell). `live` is the
-  /// default; setting everyone to `live` is the way back.
+  /// How the rooms' static shell is made: built live or loaded baked (Labs > Room shell).
+  /// Setting everyone to `live`, the default, is the way back.
   public static let roomShell = Experiment(key: "room-shell", choices: RoomShell.self)
 
   /// Whether the pair sees the hints after the onboarding: `hold` is the holdout, 10% of pairs.
@@ -73,11 +70,8 @@ public enum Experiments {
   ]
 }
 
-/// The variants the server last gave this pair, kept for the next launch and for offline.
-///
-/// Each answer from the server replaces the whole set, never merges into it: an experiment the
-/// server stops listing (switched off, or ended) disappears here too, and the app goes back to what
-/// it did before the test.
+/// The variants the server last gave this pair, kept for the next launch and offline. Each answer
+/// replaces the whole set, so an experiment the server stops listing disappears here too.
 public struct RemoteFlags: Codable, Equatable, Sendable {
   /// The most experiments kept. The server runs a handful; this stops a bad answer filling storage.
   public static let limit = 50

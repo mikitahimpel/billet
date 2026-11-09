@@ -1,14 +1,11 @@
 import Foundation
 
-/// A toy in the room.
 public enum CatToy: String, CaseIterable, Hashable, Sendable {
-  /// A feather on a string, dragged along the cat's floor.
   case wand
-  /// A pointer whose red dot follows the finger across the floor.
   case laser
-  /// A light ball, flicked to roll. The cat chases it and sometimes brings it back.
+  /// The cat chases it and sometimes brings it back.
   case ball
-  /// A ball of yarn, flicked like the ball but slower and never brought back.
+  /// Rolls slower than the ball and is never brought back.
   case yarn
 
   /// Whether a flick sends it rolling, rather than the finger carrying it.
@@ -25,21 +22,17 @@ public enum CatTrick: String, CaseIterable, Hashable, Sendable {
   case sit
   case wave
   case spin
-  /// A paw raised to meet your finger. Only a cat that has learned it does it.
+  /// Only a cat that has learned it does it.
   case highFive
 }
 
-/// What a person did to the cat or near it, as the room tells the play machine.
 public enum CatPlayEvent: Hashable, Sendable {
   /// A finger is stroking `zone`. Rooms send it when a stroke starts and when its zone or
   /// direction changes, not on every move.
   case stroke(PetZone, StrokeDirection)
-  /// A toy started moving near the cat.
   case toyMoved(CatToy)
-  /// The cat got to a toy it was after.
   case toyCaught(CatToy)
   case bowlFilled
-  /// A treat is held out near the cat's nose.
   case treatHeldOut
   case lifted
   case placed
@@ -53,7 +46,6 @@ public enum CatPlayEvent: Hashable, Sendable {
   case partnerTreated
 }
 
-/// How the cat answers, for the room to play with the cat's own clips.
 public enum CatPlayReaction: Hashable, Sendable {
   /// Leans into the hand and purrs; eyes close when it is the head or chin.
   case lean(eyesClosed: Bool)
@@ -61,23 +53,18 @@ public enum CatPlayReaction: Hashable, Sendable {
   case flick
   /// On its back, it hugs the hand and kicks.
   case grab
-  /// Watches the toy, stalks, wiggles and pounces.
   case stalk(CatToy)
   /// Only its head follows the toy: it has played enough for now.
   case watch(CatToy)
   /// Runs after a thrown toy; with `fetch` it carries it back towards the camera.
   case chase(CatToy, fetch: Bool)
-  /// Pounced and caught it: a happy beat.
   case caught(CatToy)
-  /// Trots to the bowl and eats.
   case eat
-  /// Sniffs at the treat and takes it.
   case takeTreat
   /// Sniffs and turns away: it is full.
   case refuse
   case dangle
   case settle
-  /// Walks to where it was called.
   case come
   /// Looks over and blinks slowly, but stays.
   case ignore
@@ -86,7 +73,7 @@ public enum CatPlayReaction: Hashable, Sendable {
   case partnerLove
 }
 
-/// A haptic the room plays with a reaction. The app makes no sound; haptics and motion carry it.
+/// The app makes no sound; haptics and motion carry each reaction.
 public enum CatHaptic: Hashable, Sendable {
   /// A purr under the finger, from 0 to 1.
   case purr(strength: Double)
@@ -94,15 +81,13 @@ public enum CatHaptic: Hashable, Sendable {
   case nudge
   case grab
   case pounce
-  /// Little crunches while it eats.
   case chomp
   case lift
   case settle
   case trick
 }
 
-/// Care the cat's life counts, as a room reports it upward. Pets are reported where a stroke
-/// starts, so the machine only counts what a stroke cannot.
+/// Pets are reported where a stroke starts, so the machine only counts what a stroke cannot.
 public enum CatCare: Hashable, Sendable {
   case feed
   /// One game: counted at most once a ``CatPlay/gameGap``.
@@ -113,9 +98,8 @@ public enum CatCare: Hashable, Sendable {
 public struct CatPlayResponse: Hashable, Sendable {
   public var reaction: CatPlayReaction
   public var haptic: CatHaptic?
-  /// What the cat's life counts this time, if anything.
   public var need: CatCare?
-  /// How keen the cat is, from 0 to 1, for rooms that scale motion by it.
+  /// From 0 to 1, for rooms that scale motion by it.
   public var interest: Double
 
   public init(
@@ -129,12 +113,9 @@ public struct CatPlayResponse: Hashable, Sendable {
   }
 }
 
-/// Decides how the cat answers each thing done to it, so that the same touch again and again
-/// gets a smaller answer and nothing ever feels like a button. Each kind of play has its own
-/// tiredness, which grows with use and fades with time, and its own cooldown before the big
-/// reaction can come again. Needs are counted at most once a while per kind.
-///
-/// Pure and deterministic for a given seed: rooms pass the time, in seconds on any clock.
+/// Decides how the cat answers each touch, so the same touch again and again gets a smaller
+/// answer. Each kind of play tires the cat (growing with use, fading with time) and has a
+/// cooldown before the big reaction comes again. Deterministic per seed; time is in seconds.
 public struct CatPlay: Sendable {
   enum Kind: Hashable, Sendable {
     case petting, belly
@@ -142,7 +123,6 @@ public struct CatPlay: Sendable {
     case food, treat, lift, call, trick, partner
   }
 
-  /// How each kind tires the cat: what one go adds, how fast it fades, and the cooldown.
   struct Tiring: Sendable {
     var cost: Double
     /// Seconds for the tiredness to halve.
@@ -169,7 +149,7 @@ public struct CatPlay: Sendable {
   public static let keen = 0.4
   /// The bowl or a treat past this much tiredness is refused.
   static let full = 1.5
-  /// The shortest time between two games counted as play, in seconds, as the rooms' own bats.
+  /// The shortest time between two games counted as play, in seconds.
   public static let gameGap = 60.0
   /// The shortest time between two meals counted, in seconds.
   static let mealGap = 60.0
@@ -190,7 +170,6 @@ public struct CatPlay: Sendable {
   private var lastFull: [Kind: Double] = [:]
   private var lastNeed: [CatCare: Double] = [:]
   private var nextTrick = 0
-  /// The tricks care has taught the cat: it comes whenever called, and gives a high-five.
   public var learned: Set<CatLearnedTrick> = []
   private var random: SplitMix64
 

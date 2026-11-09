@@ -23,9 +23,8 @@ public struct Sparkle: Shape {
   }
 }
 
-/// The shared ground of every screen, in the ground chosen in Labs (``EveningGround``): a sky
-/// falling to the page's foot, the warm light it is lit by, and a little life of its own that
-/// holds still when Reduce Motion is on. Sheets have their own still ground, ``SheetGround``.
+/// The ground of every screen, in the ``EveningGround`` chosen in Labs. Its life holds still under
+/// Reduce Motion. Sheets use ``SheetGround`` instead.
 public struct EveningBackground: View {
   @Environment(\.eveningGround) private var ground
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -87,8 +86,7 @@ public struct EveningBackground: View {
   }
 }
 
-/// The small moving things on a ground at `time`: sparks, sparkles or out-of-focus lights. Each
-/// runs on its own clock, so the screen never shows the same picture twice.
+/// Each light runs on its own clock, so the screen never shows the same picture twice.
 struct EveningLife: View {
   let ground: EveningGround
   let size: CGSize
@@ -180,8 +178,7 @@ struct EveningLife: View {
 }
 
 extension View {
-  /// The app's one card: a lamp-lit ground lifting towards the top corner, a lit hairline, and a
-  /// soft shadow on the page.
+  /// The app's one card style.
   public func card() -> some View {
     let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
     return
@@ -212,10 +209,8 @@ extension View {
   }
 }
 
-/// The frame of a tab or a sheet: one title and content that scrolls. A tab has the evening behind
-/// it. In a sheet (``View/billetSheet(_:)``) the sheet's ground shows through instead, the title
-/// carries the close button, and the content fades out before it reaches the grabber rather than
-/// scrolling under it.
+/// One title and scrolling content. In a sheet (``View/billetSheet(_:)``) the sheet's ground shows
+/// through, the title carries the close button, and content fades out before the grabber.
 public struct ScreenScaffold<Content: View>: View {
   private let title: String
   private let closes: Bool
@@ -279,7 +274,7 @@ public struct ScreenScaffold<Content: View>: View {
   }
 }
 
-/// The app's one list row. `leading` and `trailing` hold whatever the row needs at its edges.
+/// The app's one list row.
 public struct ListRow<Leading: View, Trailing: View>: View {
   private let title: String
   private let subtitle: String?
@@ -340,7 +335,6 @@ public struct ListRow<Leading: View, Trailing: View>: View {
   }
 }
 
-/// The hairline between rows in one card.
 public struct ListDivider: View {
   public init() {}
 

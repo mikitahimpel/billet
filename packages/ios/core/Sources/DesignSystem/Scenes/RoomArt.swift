@@ -1,10 +1,7 @@
 import SwiftUI
 
-/// The medium widget's room: one wall, composed for this frame.
-///
-/// This is its own drawing, not `HouseArt` scaled down. At widget size the house's objects stop
-/// reading, so the room keeps the few that carry the idea: the note, two cups, and steam crossing
-/// into a heart. It has one art state; only the number on its plate changes.
+/// The medium widget's room, not `HouseArt` scaled down: at widget size the house's objects stop
+/// reading. It has one art state; only the number on its plate changes.
 public enum RoomArt {
   public static let size = CGSize(width: 338, height: 158)
 

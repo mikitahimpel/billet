@@ -1,20 +1,13 @@
 /// The worked example of the pattern: copy its shape when adding a feature machine.
-///
-/// Each state carries only the data valid in it, so a failed greeting cannot also hold a result.
-/// Results carry the number of the request they answer, so a late one is told from the current one.
 enum GreetingMachine: Machine {
-  /// `request` numbers each fetch. It is how a result is matched to the request that asked for it:
-  /// ``Store`` does not correlate them, so a machine whose outputs can overlap carries an ID in its
-  /// state, puts it in the output, and has the result bring it back. A result whose ID is not the
-  /// current one is stale and changes nothing. `idle` is request 0; each new request is the last
-  /// one plus one.
+  /// `request` numbers each fetch, and a result whose ID is not the current one is stale.
+  /// `idle` is request 0.
   enum State: Equatable, Sendable {
     case idle
     case loading(name: String, request: Int)
     case loaded(greeting: String, request: Int)
     case failed(name: String, error: GreetingError, request: Int)
 
-    /// The latest request this state knows of.
     var request: Int {
       switch self {
       case .idle: 0
@@ -29,7 +22,7 @@ enum GreetingMachine: Machine {
     case greeted(String, request: Int)
     case rejected(GreetingError, request: Int)
 
-    /// The request a result answers, or `nil` for an event that starts one.
+    /// `nil` for an event that starts a request.
     var answeredRequest: Int? {
       switch self {
       case .requested, .retried: nil
@@ -80,7 +73,7 @@ enum GreetingMachine: Machine {
     }
   }
 
-  /// The interpreter handed to a ``Store``: the one place outputs reach services.
+  /// The one place outputs reach services.
   static func run(_ output: Output, using dependencies: GreetingDependencies) async -> Event? {
     switch output {
     case .fetchGreeting(let name, let request):

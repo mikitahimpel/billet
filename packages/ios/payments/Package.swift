@@ -1,12 +1,8 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Buying stamps: the protocol and plain values, then one target per store. The app links only
-// PaymentsLive, which carries one of them. Depends on no other billet package.
-//
-// Which payments implementation the app carries: `mock` (the default) or `storekit`. Read from the
-// environment, the same variable the app target reads as a build setting (docs/payments.md), so
-// `BILLET_PAYMENTS=storekit xcodebuild ...` switches both. Only `PaymentsLive` depends on it.
+// `mock` (the default) or `storekit`. The same variable the app target reads as a build setting
+// (docs/payments.md), so `BILLET_PAYMENTS=storekit xcodebuild ...` switches both.
 let paymentsMode =
   Context.environment["BILLET_PAYMENTS"].flatMap { $0.isEmpty ? nil : $0 } ?? "mock"
 precondition(

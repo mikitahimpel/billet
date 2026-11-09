@@ -8,9 +8,8 @@ import SwiftUI
   import PaymentsMock
 #endif
 
-/// The one payments implementation this build carries. Package.swift links either
-/// `PaymentsStoreKit` or `PaymentsMock` into this target from `BILLET_PAYMENTS`, so the other is
-/// not in the app at all (docs/payments.md).
+/// Package.swift links only one of `PaymentsStoreKit` or `PaymentsMock` into this target, from
+/// `BILLET_PAYMENTS`.
 public struct LivePayments: Sendable {
   public let payments: any Payments
   /// Labs → Payments, when this build has anything to show there.
@@ -26,7 +25,7 @@ public struct LivePayments: Sendable {
     self.begin = begin
   }
 
-  /// Starts listening for transactions that arrive outside a purchase. Call once at launch.
+  /// Call once at launch.
   public func start() { begin() }
 }
 

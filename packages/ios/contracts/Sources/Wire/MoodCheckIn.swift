@@ -1,5 +1,4 @@
-/// Wire form of the contracts `Mood`: how a partner says they feel. The app owns the face and the
-/// words; the wire carries only the id.
+/// The app owns the face and words; the wire carries only the id.
 public enum CheckInMood: String, Codable, Hashable, Sendable, CaseIterable {
   case happy
   case sleepy
@@ -7,14 +6,13 @@ public enum CheckInMood: String, Codable, Hashable, Sendable, CaseIterable {
   case busy
 }
 
-/// Wire form of the contracts `MoodCheckIn`: one partner's latest "How are you". The room keeps
-/// one per member and a new one replaces it. `note` is trimmed, never empty, at most 80 UTF-16
-/// code units.
+/// The room keeps one per member; a new one replaces it. `note` is trimmed, never empty, at most
+/// 80 UTF-16 code units.
 public struct PartnerCheckIn: Codable, Hashable, Sendable {
   public let user: UserId
   public let mood: CheckInMood
   public let note: String?
-  /// Milliseconds since 1970, by the room's clock.
+  /// Epoch milliseconds, by the room's clock.
   public let at: Int
 
   public init(user: UserId, mood: CheckInMood, note: String? = nil, at: Int) {
@@ -37,8 +35,7 @@ public struct PartnerCheckIn: Codable, Hashable, Sendable {
   }
 }
 
-/// `PUT /v1/mood`: how the caller feels now. The room trims `note` and drops it when blank; one
-/// longer than 80 UTF-16 code units once trimmed is `.api(.invalidRequest)`.
+/// The room trims `note` and drops it when blank; over 80 UTF-16 code units is `invalidRequest`.
 public struct SetMoodRequest: Codable, Hashable, Sendable {
   public let mood: CheckInMood
   public let note: String?

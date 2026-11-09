@@ -3,10 +3,9 @@ import Testing
 
 @testable import Pet
 
-/// The brain never flickers: run frame by frame through needy and happy days, for every
-/// temperament, no step, clip or interaction it asks for gives way again sooner than the shortest
-/// a step may last, unless a person did something then. A state that flipped back and forth from
-/// one frame to the next would show as a twitching cat.
+/// Frame by frame through needy and happy days, for every temperament, no step, clip or
+/// interaction the brain asks for gives way sooner than the shortest a step may last, unless a
+/// person did something then: a state flipping between frames would show as a twitching cat.
 @Suite("CatBrainDwell")
 struct CatBrainDwellTests {
   typealias Day = CatBrainTests
@@ -34,11 +33,9 @@ struct CatBrainDwellTests {
     var description: String { "\(what) for \(String(format: "%.2f", end - start)) s" }
   }
 
-  /// The runs of each thing the brain asks for (its step, the clip, the touch it answers) in
-  /// one pass over the frames from `from` for `minutes`, with whether a person's event fell
-  /// inside a run or at its end. The first run started before the window and the last goes on
-  /// after it, so neither counts. `runner` is folded on from wherever it is, which equals a fresh
-  /// replay at `from`.
+  /// Runs of each step, clip and touch from `from` for `minutes`, with whether a person's event
+  /// fell inside or at the end. The first and last runs cross the window's edges, so neither
+  /// counts. Folding `runner` on from where it is equals a fresh replay at `from`.
   static func runs(
     _ runner: inout CatBrainRunner, _ events: [LifeEvent], from: Double, minutes: Double
   ) -> [String: [(run: Run, touched: Bool)]] {

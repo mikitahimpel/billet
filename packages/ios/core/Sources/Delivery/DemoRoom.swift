@@ -97,7 +97,7 @@ public struct DemoRoom: Hashable, Sendable {
     return URL(string: "\(scheme)://\(host)/demo/rooms/\(code)/plays?device=\(device)")
   }
 
-  /// Posts `plays` to the room and reports whether the room took them all.
+  /// Reports whether the room took them all.
   public func post(
     _ plays: [RoomPlay], host: String, session: URLSession = .shared
   ) async -> Bool {

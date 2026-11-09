@@ -1,6 +1,6 @@
 extension KeyedDecodingContainer {
-  /// Decodes an array, leaving out the elements this build can't read, such as a kind of note or
-  /// an activity event the server added later, so one of them never fails the whole page.
+  /// Leaves out elements this build can't read, such as a kind the server added later, so one
+  /// never fails the whole page.
   func decodeLossyArray<T: Decodable>(_ type: T.Type, forKey key: Key) throws -> [T] {
     var list = try nestedUnkeyedContainer(forKey: key)
     var values: [T] = []

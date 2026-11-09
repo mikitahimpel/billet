@@ -1,10 +1,6 @@
 import SwiftUI
 
-/// A capsule track with one segment selected, for choosing between a few views of the same screen. The track is
-/// the `bar` glass; the thumb is `Ink.glassSelection` under an `Ink.glassGlyph` label, as the tab bar's, and the
-/// unselected labels are `Ink.glassGlyphSecondary`. Thumb and track are both capsules with one inset, so the
-/// thumb's radius is the track's minus the inset. Meant to float over a room, inside the bar's `GlassGroup`; on
-/// a plain screen use a native picker.
+/// Floats over a room, inside the bar's `GlassGroup`; on a plain screen use a native picker.
 public struct GlassSegmented<Value: Hashable>: View {
   static var inset: CGFloat { Space.xs }
 

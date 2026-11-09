@@ -1,12 +1,9 @@
 import Foundation
 import simd
 
-/// The cat going after a toy that moves: it watches, stalks or runs closer, wiggles its rump,
-/// pounces, and either bats what it caught, carries it back, or tries again. The room moves the
-/// toy and tells the pursuit where it is each frame; the pursuit says where the cat is and what
-/// it plays, as a ``CatTrip/Pose``, so a room shows it the way it shows a trip.
-///
-/// Positions are on the floor plane, as (x, z), in the room's units; `length` is the cat's.
+/// The cat going after a moving toy: watch, stalk or run, wiggle, pounce, then bat, carry back
+/// or try again. The room reports the toy each frame and shows the result as a ``CatTrip/Pose``.
+/// Positions are on the floor plane as (x, z), in room units; `length` is the cat's.
 public struct CatPursuit: Sendable {
   public enum Phase: Hashable, Sendable {
     case watch
@@ -80,7 +77,6 @@ public struct CatPursuit: Sendable {
   /// True while the ball rides in the cat's mouth.
   public var holdsToy: Bool { phase == .carry }
 
-  /// The cat's place and move now, for the room to show.
   public var pose: CatTrip.Pose {
     CatTrip.Pose(
       spot: spot, heading: heading, action: action, speed: speed, leg: 0, progress: 0,

@@ -1,4 +1,4 @@
-/// Which cat the couple chose and the coat it wears: ids from the app's own catalog.
+/// Ids from the app's own catalog.
 public struct CatLook: Codable, Hashable, Sendable {
   public let model: String
   public let coat: String
@@ -9,9 +9,9 @@ public struct CatLook: Codable, Hashable, Sendable {
   }
 }
 
-/// The facts of the couple's cat. `bornAt` (epoch milliseconds) and `natureSeed` are set once,
-/// when it is adopted. `natureSeed` is a UInt64 in decimal, the seed of the cat's nature on both
-/// phones; moment-to-moment choices use a seed each phone draws at launch.
+/// `bornAt` (epoch milliseconds) and `natureSeed` are set once, at adoption. `natureSeed` is a
+/// decimal UInt64 seeding the cat's nature on both phones; moment-to-moment choices use a seed
+/// each phone draws at launch.
 public struct CatProfile: Codable, Hashable, Sendable {
   public let name: String
   public let look: CatLook
@@ -30,11 +30,10 @@ public struct CatProfile: Codable, Hashable, Sendable {
     self.utcOffsetSeconds = utcOffsetSeconds
   }
 
-  /// The nature seed as the brain takes it.
   public var seed: UInt64? { UInt64(natureSeed) }
 }
 
-/// How the couple's treatment has slowly shaped the cat, each from 0.1 to 0.9, 0.5 at adoption.
+/// Each from 0.1 to 0.9, 0.5 at adoption.
 public struct CatTemper: Codable, Hashable, Sendable {
   public let curious: Double
   public let lazy: Double
@@ -47,7 +46,7 @@ public struct CatTemper: Codable, Hashable, Sendable {
   }
 }
 
-/// The cat's needs at `at` (epoch milliseconds), folded on the server with `PetLife`'s curves.
+/// At `at` (epoch milliseconds), folded on the server with `PetLife`'s curves.
 public struct CatNeeds: Codable, Hashable, Sendable {
   public let at: Int
   public let full: Double
@@ -56,7 +55,7 @@ public struct CatNeeds: Codable, Hashable, Sendable {
   public let playful: Double
   public let mood: Double
   public let asleep: Bool
-  /// The partner the cat misses, when one has cared for it much less than the other.
+  /// Set when one partner has cared for the cat much less than the other.
   public let missing: UserId?
 
   public init(

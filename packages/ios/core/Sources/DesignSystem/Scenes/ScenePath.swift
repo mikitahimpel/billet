@@ -1,9 +1,7 @@
 import SwiftUI
 
-/// Reads the absolute subset of SVG path data the art is written in: `M L H V C Q Z`.
-///
-/// Art is compile-time data, so an unknown command is a programmer error, and every drawing is
-/// parsed by the test suite.
+/// The absolute SVG path subset `M L H V C Q Z`. Art is compile-time data, so an unknown command
+/// is a programmer error; the test suite parses every drawing.
 enum ScenePath {
   private static func arity(of command: Character) -> Int {
     switch command {

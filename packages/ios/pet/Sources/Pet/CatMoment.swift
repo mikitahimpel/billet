@@ -19,10 +19,9 @@ public enum CatEdge {
   }
 }
 
-/// A finger held still near the edge of the screen, as the cat sees it. Only a finger that has
-/// rested for ``dwell`` within ``radius`` points counts, so a quick swipe to turn the room never
-/// gets batted at. Feed it every point the finger moves to, and ``lifted()`` when it leaves. A
-/// rest lapses after ``hold``, so a touch whose end never arrives does not keep the cat batting.
+/// A finger held still near the edge, as the cat sees it. Only a finger that has rested for
+/// ``dwell`` within ``radius`` points counts, so a swipe to turn the room never gets batted at.
+/// A rest lapses after ``hold``, so a touch whose end never arrives doesn't keep the cat batting.
 public struct CatFingerRest: Equatable, Sendable {
   public static let radius = 8.0
   public static let dwell = 0.35

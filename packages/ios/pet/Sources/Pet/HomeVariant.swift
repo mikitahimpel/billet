@@ -3,7 +3,7 @@ import Foundation
 /// How the first screen is laid out around the room. The raw value is what gets stored, so it
 /// stays stable across releases.
 public enum HomeVariant: String, CaseIterable, Hashable, Sendable {
-  /// The room above its cards and the Draw button, as Home has always been.
+  /// The room above its cards and the Draw button.
   case classic
   /// The room edge to edge, one pen to draw, everything else in a sheet pulled up from the bottom.
   case immersive
@@ -13,7 +13,6 @@ public enum HomeVariant: String, CaseIterable, Hashable, Sendable {
   /// As immersive, lit for the time of day here, with the partner's sky in the window.
   case nightAndDay
 
-  /// What Home shows before anyone chooses.
   public static let standard = HomeVariant.classic
 
   public var title: String {
@@ -44,8 +43,7 @@ public enum HomeVariant: String, CaseIterable, Hashable, Sendable {
 }
 
 extension HomeVariant: Codable {
-  /// Layouts Home once had, and the one each became. The cinematic opening added the camera flying
-  /// into the room, which every Home now does on a cold launch.
+  /// Layouts Home once had, and the one each became.
   static let retired: [String: HomeVariant] = ["cinematic": .immersive]
 
   public init(from decoder: any Decoder) throws {

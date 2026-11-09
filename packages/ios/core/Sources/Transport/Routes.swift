@@ -1,6 +1,5 @@
 import Foundation
 
-/// A route of the API: the method and path the contracts name for it.
 public struct Route: Equatable, Sendable {
   public let method: HTTPMethod
   public let path: String
@@ -38,7 +37,6 @@ public enum Routes {
   public static let uploadImage = Route(.post, "/v1/media")
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")
-  /// Sets or takes back this user's reaction to one of the partner's photos.
   public static let react = Route(.put, "/v1/reactions")
   public static let listReactions = Route(.get, "/v1/reactions")
   public static let listInks = Route(.get, "/v1/inks")
@@ -70,8 +68,7 @@ public enum Routes {
   /// The pair's Pick tonight session; a swipe answers the session after it.
   public static let getPickTonight = Route(.get, "/v1/pick-tonight")
   public static let swipePickTonight = Route(.post, "/v1/pick-tonight/swipes")
-  /// Today's Who knows who round; an answer answers the round after it. The catalog needs no
-  /// session.
+  /// An answer answers the round after it. The catalog needs no session.
   public static let getGuess = Route(.get, "/v1/guess")
   public static let answerGuess = Route(.post, "/v1/guess/answers")
   public static let getGuessCatalog = Route(.get, "/v1/guess/catalog")
@@ -127,8 +124,7 @@ public enum Routes {
   public static let authorizationHeader = "Authorization"
   public static let bearerPrefix = "Bearer "
 
-  /// What the app says about its own build on every request, `clientHeaders` in `routes.ts`.
-  /// See ``ClientInfo``.
+  /// Sent on every request, `clientHeaders` in `routes.ts`.
   public static let appVersionHeader = "X-Billet-App-Version"
   public static let osHeader = "X-Billet-OS"
   /// Dev server only: names the demo room on the purchase routes when there is no session.

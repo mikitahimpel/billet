@@ -7,7 +7,6 @@ public enum InkError: Error, Hashable, Sendable {
   case nonFinite(strokeIndex: Int)
   /// A coordinate or width is finite but far outside the unit square, or a width is negative.
   case outOfRange(strokeIndex: Int)
-  /// The compact strokes could not be turned into JSON.
   case encodingFailed
 }
 

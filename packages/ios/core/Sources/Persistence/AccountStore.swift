@@ -1,7 +1,6 @@
 import Foundation
 
-/// What the app keeps about the signed-in account besides the token: who this device is, when the
-/// session ends, and who it is paired with. None of it is a credential.
+/// None of it is a credential.
 public struct AccountRecord: Codable, Equatable, Sendable {
   public var userID: String
   public var deviceID: String
@@ -26,7 +25,6 @@ public struct AccountRecord: Codable, Equatable, Sendable {
 /// The signed-in account: its token in the shared Keychain and its record in the App Group, so the
 /// app, widget and extensions all see the same one.
 public struct AccountStore: Sendable {
-  /// The record's file name in the App Group.
   public static let recordName = "account.json"
 
   /// The saved account, or `nil` when signed out. A record without a token (or a token without a

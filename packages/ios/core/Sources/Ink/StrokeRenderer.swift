@@ -28,7 +28,6 @@ public enum StrokeRenderer {
     }
   }
 
-  /// Parses `#RRGGBB`.
   static func parse(_ hex: String) throws(InkError) -> CGColor {
     guard InkColor.isValid(hex), let value = UInt32(hex.dropFirst(), radix: 16)
     else { throw InkError.invalidColor(hex) }

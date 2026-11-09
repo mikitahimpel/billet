@@ -1,8 +1,6 @@
 import SwiftUI
 
-/// The one ground of every sheet: the warm glass of the controls over the room, a blur of what is
-/// behind under a lamp-lit wash that deepens towards the foot. It stays still, so nothing redraws
-/// under a list while it scrolls.
+/// The ground of every sheet. It stays still, so nothing redraws under a list while it scrolls.
 public struct SheetGround: View {
   public init() {}
 
@@ -27,14 +25,13 @@ public struct SheetGround: View {
 }
 
 extension EnvironmentValues {
-  /// Whether this view is the content of a sheet, which ``ScreenScaffold`` and ``SheetHeader``
-  /// read to leave the ground to the sheet and to offer a way to close it.
+  /// Read by ``ScreenScaffold`` and ``SheetHeader`` to leave the ground to the sheet and to offer
+  /// a close button.
   @Entry public var isInSheet = false
 }
 
 extension View {
-  /// Presents this view as the app's one kind of sheet: the warm glass ground, the grabber, and
-  /// the evening's dark scheme. Every sheet goes through here, so none styles itself.
+  /// Every sheet goes through here, so none styles itself.
   public func billetSheet(_ detents: Set<PresentationDetent> = [.large]) -> some View {
     environment(\.isInSheet, true)
       .modifier(CountsAsSheet())
@@ -45,7 +42,6 @@ extension View {
   }
 }
 
-/// The top of a sheet: its title, whatever controls it keeps beside it, and the close button.
 /// At large text sizes the title takes a line of its own.
 public struct SheetHeader<Controls: View>: View {
   private let title: String
@@ -121,7 +117,6 @@ public struct SettingsGroup<Rows: View>: View {
   }
 }
 
-/// The name of a group of cards.
 public struct SettingsHeading: View {
   private let title: String
 
@@ -138,8 +133,7 @@ public struct SettingsHeading: View {
   }
 }
 
-/// A short sheet that does not scroll: the header, then its content, at the margins of every
-/// sheet.
+/// A short sheet that does not scroll.
 public struct SheetPanel<Content: View>: View {
   private let title: String
   private let content: Content

@@ -15,8 +15,8 @@ import Wire
     deliver: @escaping @Sendable (ServerMessage) async -> Void = { _ in },
     open: (@Sendable () async throws(TransportError) -> WebSocketConnection)? = nil
   ) -> WebSocketDependencies {
-    // `if let`, not `??`: the Xcode 27.1 compiler crashes emitting a typed-throws closure wrapped
-    // in the autoclosure `??` makes.
+    // `if let`, not `??`: the compiler crashes emitting a typed-throws closure wrapped in the
+    // autoclosure `??` makes.
     let opener: @Sendable () async throws(TransportError) -> WebSocketConnection
     if let open {
       opener = open

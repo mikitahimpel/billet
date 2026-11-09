@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Draws its content in light and in dark, one above the other, for a preview. Pick an iPhone in the Canvas.
+/// Pick an iPhone in the Canvas.
 struct BothSchemes<Content: View>: View {
   let content: Content
 
@@ -18,7 +18,6 @@ struct BothSchemes<Content: View>: View {
   }
 }
 
-/// A busy dark backdrop like the room, for controls that float over the scene.
 struct RoomBackdrop: View {
   var body: some View {
     LinearGradient(

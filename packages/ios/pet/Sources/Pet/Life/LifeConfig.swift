@@ -1,10 +1,8 @@
 import Foundation
 
-/// Every constant of the pet's life, in one place, so it can be tuned remotely or split for an A/B
-/// test. Times are in hours, values are fractions of a full need.
-///
-/// It decodes from a flat JSON object of numbers, and any key left out keeps its standard value,
-/// so a remote override names only what it changes. The owner's tuning page uses the same keys.
+/// Every constant of the pet's life, tunable remotely or per A/B test. Times are in hours, values
+/// fractions of a full need. Decodes from a flat JSON object of numbers; a key left out keeps its
+/// standard value, so an override names only what it changes.
 public struct LifeConfig: Hashable, Sendable {
   /// No need ever falls below this.
   public var floor = 0.2

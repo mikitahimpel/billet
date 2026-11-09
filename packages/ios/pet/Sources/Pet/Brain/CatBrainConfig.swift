@@ -1,6 +1,5 @@
 import Foundation
 
-/// The constants of the cat's brain.
 public struct CatBrainConfig: Hashable, Sendable {
   /// Decisions land on a grid this fine, in seconds, so both phones decide at the same instants.
   public var decisionStep = 0.25

@@ -1,10 +1,7 @@
 import BilletKit
 import Wire
 
-/// Runs ``WebSocketMachine`` against the given services.
-///
-/// Releasing the client closes its socket and stops its work, so `disconnect()` first is not
-/// required, though it is how the machine is told to stop in an orderly way.
+/// Releasing the client closes its socket and stops its work; `disconnect()` is the orderly stop.
 @MainActor
 public final class WebSocketClient {
   private let store: Store<WebSocketMachine>
@@ -45,11 +42,8 @@ public final class WebSocketClient {
     store.send(.disconnectRequested)
   }
 
-  /// Sends while connected. Otherwise the message is dropped, not queued. Messages leave in the
-  /// order they were sent.
-  ///
-  /// The message is queued here rather than as a machine output: outputs run in tasks of their
-  /// own and can overtake each other.
+  /// Dropped, not queued, while not connected. Queued here rather than as a machine output,
+  /// since outputs run in their own tasks and can overtake each other.
   public func send(_ message: ClientMessage) {
     let state = store.state
     guard case .connected = state.phase else { return }

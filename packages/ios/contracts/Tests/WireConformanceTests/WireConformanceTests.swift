@@ -3,10 +3,8 @@ import Testing
 
 @testable import Wire
 
-/// Decodes a fixture into its Wire type and encodes it back to JSON.
 typealias RoundTrip = @Sendable (Data) throws -> Data
 
-/// Decodes with `T`, then encodes the result back.
 func codec<T: Codable & Sendable>(_ type: T.Type) -> RoundTrip {
   { data in
     let encoder = JSONEncoder()
@@ -15,7 +13,6 @@ func codec<T: Codable & Sendable>(_ type: T.Type) -> RoundTrip {
   }
 }
 
-/// Maps a fixture's top-level directory name to the Wire type that must round-trip it.
 /// Every Wire type adds its entry here; a fixture without one fails.
 let roundTrips: [String: RoundTrip] = [
   "PairId": codec(PairId.self),
@@ -171,9 +168,8 @@ func roundTrip(fixture url: URL) throws {
   }
 }
 
-/// Strips whitespace outside strings and keeps every other byte, so `1`, `1.0`, `true` and key
-/// order must match the fixture exactly. Fixtures are canonical (sorted keys), so a round trip
-/// must encode with `.sortedKeys` and `.withoutEscapingSlashes`.
+/// Only whitespace outside strings is dropped, so `1` vs `1.0` and key order must match. Fixtures
+/// are canonical, so a round trip encodes with `.sortedKeys` and `.withoutEscapingSlashes`.
 func compact(_ data: Data) -> [UInt8] {
   var output: [UInt8] = []
   var inString = false

@@ -1,119 +1,82 @@
-/// The events the app may report about itself: a name, and for some a short detail from a closed
-/// set or a catalogue id. No note, no image, no text, no time: the server stamps the time and adds
-/// the pair. It records `InviteCreated`, `PairClaimed`, `NoteSent` and `AccountDeleted` itself, so
-/// those are not here and are refused if sent. ``rule`` says what each name may carry.
+/// Events the app may report about itself. No note, image, text or time: the server stamps the
+/// time and pair, and records `InviteCreated`, `PairClaimed`, `NoteSent` and `AccountDeleted`
+/// itself, so those are refused if sent.
 public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
-  /// The app came to the front. At most one per launch.
+  /// At most one per launch.
   case appOpened = "AppOpened"
-  /// This phone now has a billet widget. Reported once per widget kind (detail: the kind).
+  /// Once per widget kind.
   case widgetAdded = "WidgetAdded"
-  /// The user watched the opening to the end.
   case openingWatched = "OpeningWatched"
-  /// The user skipped the opening.
   case openingSkipped = "OpeningSkipped"
 
-  /// The cat was stroked.
   case catPetted = "CatPetted"
-  /// The cat was fed: the day's shared `treat`, or other `food`.
   case catFed = "CatFed"
-  /// A game with the cat (detail: the toy).
   case catPlayed = "CatPlayed"
-  /// The cat was called over.
   case catCalled = "CatCalled"
-  /// The cat did a trick it learned (detail: the trick).
   case trickDone = "TrickDone"
-  /// A cat was chosen in the picker (detail: the cat).
   case catChosen = "CatChosen"
-  /// The cat's temperament was shown to the user (detail: the temperament).
   case temperamentShown = "TemperamentShown"
 
-  /// A note was opened, from the `widget` or in the `app`.
   case noteOpened = "NoteOpened"
 
-  /// Decorating the room started.
   case decoratingOpened = "DecoratingOpened"
-  /// A piece was put in the room (detail: the item).
   case roomItemPlaced = "RoomItemPlaced"
-  /// A piece in the room was moved (detail: the item).
   case roomItemMoved = "RoomItemMoved"
-  /// A piece was taken out of the room (detail: the item).
   case roomItemPutAway = "RoomItemPutAway"
-  /// The room itself was changed: walls, floor, window (detail: what was changed).
   case roomCustomised = "RoomCustomised"
-  /// One of Ourio's rooms came on screen: the diorama `room` or the `city` (detail: which).
   case roomOpened = "RoomOpened"
 
-  /// The shop was opened.
   case shopOpened = "ShopOpened"
-  /// An item was looked at in the shop (detail: the item).
   case shopItemViewed = "ShopItemViewed"
-  /// An item was bought with stamps (detail: the item; value: its price in stamps).
+  /// value: its price in stamps.
   case shopItemBought = "ShopItemBought"
-  /// One of the shop's offers came on screen (detail: the bundle or deal).
   case shopOfferViewed = "ShopOfferViewed"
-  /// A bundle was bought (detail: the bundle; value: its price in stamps).
+  /// value: its price in stamps.
   case shopBundleBought = "ShopBundleBought"
-  /// A purchase was taken back (detail: the item or bundle; value: the stamps given back).
+  /// value: the stamps given back.
   case shopPurchaseUndone = "ShopPurchaseUndone"
-  /// The day's free gift was taken (detail: `stamps` or the item; value: stamps).
+  /// value: stamps.
   case shopDailyGiftClaimed = "ShopDailyGiftClaimed"
-  /// Something was bought for the partner (detail: the item; value: its price in stamps).
+  /// value: its price in stamps.
   case shopGiftSent = "ShopGiftSent"
 
-  /// The streak's flame scene was opened.
   case streakOpened = "StreakOpened"
-  /// A streak milestone was shown (detail: the milestone).
   case streakMilestoneSeen = "StreakMilestoneSeen"
 
-  /// A button on the widget was tapped: `pet` or `treat`.
   case widgetButtonTapped = "WidgetButtonTapped"
 
-  /// Pick tonight was opened: one session.
+  /// One per session.
   case pickTonightOpened = "PickTonightOpened"
-  /// A Pick tonight swipe made a match.
   case pickTonightMatched = "PickTonightMatched"
-  /// A match was planned as tonight's date.
   case pickTonightPlanned = "PickTonightPlanned"
 
-  /// The profile ("Us") was opened.
   case profileOpened = "ProfileOpened"
-  /// The app asked the user to sign in with Apple.
   case signInPromptShown = "SignInPromptShown"
-  /// The user answered that prompt: `accepted` or `dismissed`.
   case signInPromptAnswered = "SignInPromptAnswered"
 
-  /// An onboarding step came on screen (detail: the step id).
   case onboardingStepViewed = "OnboardingStepViewed"
-  /// An onboarding step was answered (detail: the step id). Never the answer itself.
+  /// Never the answer itself.
   case onboardingStepAnswered = "OnboardingStepAnswered"
-  /// An onboarding step was skipped (detail: the step id).
   case onboardingStepSkipped = "OnboardingStepSkipped"
-  /// Onboarding stopped because the person is under 13. Their age answer is never sent.
+  /// Under 13. The age answer is never sent.
   case ageGateStopped = "AgeGateStopped"
 
-  /// A hint came on screen (detail: the tip id).
   case tipShown = "TipShown"
-  /// A hint was closed with its X (detail: the tip id).
   case tipDismissed = "TipDismissed"
-  /// The hint's thing was done, or its button tapped (detail: the tip id).
+  /// The hint's thing was done, or its button tapped.
   case tipAction = "TipAction"
 }
 
-/// What a name may carry besides itself, as `clientEventRules` in the contract says.
 public struct ClientEventRule: Hashable, Sendable {
   public enum Detail: Hashable, Sendable {
-    /// No detail.
     case none
-    /// A catalogue id: see ``ClientEvent/isDetail(_:)``.
     case id
-    /// One of these words.
     case oneOf([String])
   }
 
   public let detail: Detail
-  /// The detail must be there.
   public let required: Bool
-  /// It may carry a whole number from 0 to ``ClientEvent/maxValue``.
+  /// A whole number from 0 to ``ClientEvent/maxValue``.
   public let value: Bool
 
   public init(detail: Detail, required: Bool = false, value: Bool = false) {
@@ -154,16 +117,13 @@ extension ClientEventName {
   }
 }
 
-/// One event with what it carries. Sent as an object; its name's ``ClientEventName/rule`` says
-/// what is allowed, and a decoded one that breaks it is refused.
+/// A decoded event that breaks its name's ``ClientEventName/rule`` is refused.
 public struct ClientEvent: Codable, Hashable, Sendable {
   public let name: ClientEventName
   public let detail: String?
   public let value: Int?
 
-  /// The most ``value`` may be. Only a price uses it.
   public static let maxValue = 100_000
-  /// The longest a detail may be.
   public static let maxDetailLength = 40
 
   public init(_ name: ClientEventName, detail: String? = nil, value: Int? = nil) {
@@ -172,8 +132,6 @@ public struct ClientEvent: Codable, Hashable, Sendable {
     self.value = value
   }
 
-  /// Why this event breaks its name's rule or the detail and value limits, or `nil` when it keeps
-  /// them.
   public var problem: String? {
     let rule = name.rule
     if let detail {
@@ -198,8 +156,6 @@ public struct ClientEvent: Codable, Hashable, Sendable {
     return nil
   }
 
-  /// Whether `text` may be a detail: a letter, then letters, digits and hyphens, at most
-  /// ``maxDetailLength`` in all.
   public static func isDetail(_ text: String) -> Bool {
     let scalars = Array(text.unicodeScalars)
     guard let first = scalars.first, scalars.count <= maxDetailLength, isLetter(first) else {
@@ -208,9 +164,8 @@ public struct ClientEvent: Codable, Hashable, Sendable {
     return scalars.dropFirst().allSatisfy { isLetter($0) || ("0"..."9").contains($0) || $0 == "-" }
   }
 
-  /// `raw` as a detail: every character that may not be in one becomes a hyphen and the rest is
-  /// cut to ``maxDetailLength``, so `Pet_Pose.v2` is `Pet-Pose-v2`. `nil` when it does not start
-  /// with a letter.
+  /// Disallowed characters become hyphens, cut to ``maxDetailLength``: `Pet_Pose.v2` is
+  /// `Pet-Pose-v2`. `nil` when it does not start with a letter.
   public static func detail(from raw: String) -> String? {
     let mapped = String(
       String.UnicodeScalarView(
@@ -249,9 +204,8 @@ public struct ClientEvent: Codable, Hashable, Sendable {
   }
 }
 
-/// One reported event as it travels: a bare name, as builds before the detailed events send it,
-/// or a ``ClientEvent``. Both mean the same when there is no detail. Each keeps its form when
-/// encoded again.
+/// A bare name, as older builds send it, or a ``ClientEvent``; equal when there is no detail.
+/// Each keeps its form when encoded again.
 public enum ReportedEvent: Codable, Hashable, Sendable {
   case name(ClientEventName)
   case event(ClientEvent)
@@ -282,12 +236,10 @@ public enum ReportedEvent: Codable, Hashable, Sendable {
 }
 
 public struct ReportEventsRequest: Codable, Hashable, Sendable {
-  /// At most `ReportEventsRequest.maxEvents`.
   public let events: [ReportedEvent]
 
   public static let maxEvents = 20
 
-  /// The request this build sends: every event as an object.
   public init(events: [ClientEvent]) {
     self.events = events.map(ReportedEvent.event)
   }
@@ -296,7 +248,6 @@ public struct ReportEventsRequest: Codable, Hashable, Sendable {
     self.events = events
   }
 
-  /// Every event in either form, as a ``ClientEvent``.
   public var clientEvents: [ClientEvent] { events.map(\.clientEvent) }
 
   public init(from decoder: any Decoder) throws {

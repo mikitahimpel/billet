@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// A centred empty state sized to its content: an icon, a title and a line under it. It never fills the space
-/// around it.
+/// Sized to its content; it never fills the space around it.
 public struct EmptyState<Actions: View>: View {
   let symbol: String
   let title: String
@@ -49,7 +48,6 @@ extension EmptyState where Actions == EmptyView {
   }
 }
 
-/// The title of a block on a screen: an optional icon in its tint, the title, and a quiet line on the right.
 public struct SectionHeader<Trailing: View>: View {
   let title: String
   let symbol: String?
@@ -92,15 +90,12 @@ extension SectionHeader where Trailing == EmptyView {
   }
 }
 
-/// A small label: a rarity, a discount, a count. Its text is always `Ink.text` or `Ink.heroInk`, so it reads on
-/// any tint.
+/// Its text is always `Ink.text` or `Ink.heroInk`, so it reads on any tint.
 public struct Chip: View {
   public enum Style: Sendable {
-    /// Neutral, on a raised surface.
     case quiet
-    /// A tinted wash with `Ink.text` on it.
     case tinted(Color)
-    /// Honey with `Ink.heroInk` on it, for the one thing worth noticing.
+    /// For the one thing worth noticing.
     case honey
   }
 
@@ -150,7 +145,6 @@ extension Chip.Style {
   }
 }
 
-/// A selectable capsule for filters and categories.
 public struct FilterChip: View {
   let title: String
   let isSelected: Bool

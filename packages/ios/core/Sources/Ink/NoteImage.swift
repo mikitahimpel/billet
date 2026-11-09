@@ -56,7 +56,7 @@ public enum NoteImage {
       to: CGRect(x: left, y: top, width: right - left + 1, height: bottom - top + 1)) ?? image
   }
 
-  /// Writes `strokes` as the latest note, and reports whether it did.
+  /// Reports whether it wrote.
   @discardableResult
   public static func saveLatest(_ strokes: [Stroke], to file: URL? = latestFile) -> Bool {
     guard let file, let image = cgImage(of: strokes),
@@ -72,15 +72,13 @@ public enum NoteImage {
     return CGImageSourceCreateImageAtIndex(source, 0, nil)
   }
 
-  /// Removes the latest note, so surfaces stop showing it.
   public static func removeLatest(at file: URL? = latestFile) {
     guard let file else { return }
     try? FileManager.default.removeItem(at: file)
   }
 
-  /// Scales and centres `strokes` to fill the unit square, because a drawing on the canvas can run
-  /// taller than it is wide, or sit small in one corner. Thin lines thicken so they survive at
-  /// lock-screen sizes.
+  /// A canvas drawing can run taller than wide or sit small in a corner. Thin lines thicken so
+  /// they survive at lock-screen sizes.
   public static func fitted(_ strokes: [Stroke]) -> [Stroke] {
     let points = strokes.flatMap(\.points)
     guard let minX = points.map(\.x).min(), let maxX = points.map(\.x).max(),

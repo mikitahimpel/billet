@@ -3,8 +3,8 @@ import Testing
 
 @testable import Wire
 
-/// What Wire refuses to decode. The schema in packages/contracts says each of these is invalid, so
-/// a server that sent one has broken the contract and the client says so instead of passing it on.
+/// What Wire refuses to decode: the schema in packages/contracts calls each invalid, so the
+/// client reports a server that sends one instead of passing it on.
 @Suite struct WireValidationTests {
   private func decode<T: Decodable>(_ type: T.Type, _ json: String) throws -> T {
     try JSONDecoder().decode(T.self, from: Data(json.utf8))
@@ -81,7 +81,7 @@ import Testing
 
   // MARK: idempotency key and invite expiry
 
-  /// A photo send with the size and preview it must carry, so these cases test only the key.
+  /// Carries the size and preview a photo send needs, so these cases test only the key.
   private func photoSend(key: String?) -> String {
     let keyField = key.map { #","key":"\#($0)""# } ?? ""
     return #"{"_tag":"Photo","image":"k1""# + keyField

@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Every core component on the page ground, for previews and snapshots.
 public struct ComponentGallery: View {
   public init() {}
 

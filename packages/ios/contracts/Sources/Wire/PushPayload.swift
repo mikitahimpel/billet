@@ -1,6 +1,5 @@
-/// Custom data carried by a push, not the whole APNs envelope.
-/// `compact` is present for drawings only, `text` for text notes only, and `paper` when the sender
-/// chose one.
+/// Custom data of a push, not the whole APNs envelope. `compact` is for drawings only, `text`
+/// for text notes only, `paper` when the sender chose one.
 public enum PushPayload: Codable, Hashable, Sendable {
   case widget(
     noteId: NoteId, author: UserId, compact: CompactStrokes?, text: NoteText? = nil,
@@ -8,9 +7,9 @@ public enum PushPayload: Codable, Hashable, Sendable {
   case alert(
     noteId: NoteId, author: UserId, compact: CompactStrokes?, text: NoteText? = nil,
     paper: PaperColor? = nil)
-  /// An alert to a photo's author: `by` reacted to their note `noteId`.
+  /// To a photo's author.
   case reaction(noteId: NoteId, by: UserId, reaction: PhotoReaction)
-  /// The `content-state` of a drawing's Live Activity: always the strokes, as it has no network.
+  /// Always carries the strokes: a Live Activity has no network.
   case liveActivity(
     noteId: NoteId, author: UserId, compact: CompactStrokes, paper: PaperColor? = nil)
 
