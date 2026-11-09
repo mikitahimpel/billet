@@ -105,6 +105,17 @@ struct UnsentMark: View {
             .accessibilityLabel("Not sent yet")
             .accessibilityIdentifier("unsent-mark")
     }
+
+    /// Before pairing there is no one to send to, so nothing is waiting.
+    static func shows(_ unsent: Bool?, paired: Bool) -> Bool { unsent == true && paired }
+}
+
+/// The unsent mark spelled out, under an opened print or note.
+struct UnsentLabel: View {
+    var body: some View {
+        Chip("Not sent yet", symbol: "icloud.slash")
+            .accessibilityIdentifier("unsent-label")
+    }
 }
 
 /// The grain is baked into a tile of the paper's own color and the shadow is cast by the sheet's shape, so a feed of

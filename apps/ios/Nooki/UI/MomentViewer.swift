@@ -40,6 +40,10 @@ struct MomentViewer: View {
 
                 Spacer(minLength: 12)
 
+                if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
+                    UnsentLabel().padding(.bottom, 10)
+                }
+
                 if let note = moment.noteID, moment.author == state.otherPartner, let reactions = session?.reactions {
                     ReactionPicker(selected: reactions.mine(note)) { reactions.tap($0, on: NoteId(note)) }
                         .padding(.horizontal, 20)
