@@ -24,7 +24,8 @@ struct WelcomeView: View {
             TimelineView(.animation(paused: reduceMotion)) { context in
                 let time = reduceMotion ? script.duration : context.date.timeIntervalSince(start)
                 content(proxy.size, time: time)
-                    .onChange(of: context.date) { probe?.frame(context.date) }
+                    // Only while the script plays: the frames after it are the UI test's, reading the probe.
+                    .onChange(of: context.date) { if time <= script.duration { probe?.frame(context.date) } }
             }
         }
         .background { WelcomeBackdrop() }
