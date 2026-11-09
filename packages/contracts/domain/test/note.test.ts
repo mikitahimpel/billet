@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest";
 import {
   characterCount,
   Note,
+  NoteSeal,
+  NoteStamp,
   NoteText,
   noteTextMaxCharacters,
   noteTextMaxUnits,
@@ -76,6 +78,14 @@ describe("PaperColor", () => {
   });
 });
 
+describe("NoteStamp and NoteSeal", () => {
+  // The app keeps art for each id, and a note stored with one must keep decoding.
+  it("keeps every id it has had", () => {
+    expect(NoteStamp.literals).toEqual(["heart", "moon", "bloom", "paw", "sun"]);
+    expect(NoteSeal.literals).toEqual(["rose", "night", "meadow", "honey", "plum"]);
+  });
+});
+
 describe("Note", () => {
   const decode = Schema.decodeUnknownSync(Note);
   const base = { id: "n", author: "u", sentAt: 0 };
@@ -110,5 +120,21 @@ describe("Note", () => {
   it("refuses an unknown paper and a null one", () => {
     expect(() => decode({ _tag: "Text", ...base, text: "hi", paper: "mint" })).toThrow();
     expect(() => decode({ _tag: "Text", ...base, text: "hi", paper: null })).toThrow();
+  });
+
+  it("keeps a stamp and a seal on a text note or a drawing, and refuses unknown ones", () => {
+    const text = { _tag: "Text", ...base, text: "hi", stamp: "moon", seal: "rose" };
+    expect(decode(text)).toMatchObject({ stamp: "moon", seal: "rose" });
+    const drawing = {
+      _tag: "Drawing",
+      ...base,
+      compact: { version: 1, strokes: [] },
+      image: "pairs/p/notes/n.png",
+      seal: "night",
+    };
+    expect(decode(drawing)).toMatchObject({ seal: "night" });
+    expect(decode(drawing)).not.toHaveProperty("stamp");
+    expect(() => decode({ ...text, stamp: "dragon" })).toThrow();
+    expect(() => decode({ ...text, seal: null })).toThrow();
   });
 });

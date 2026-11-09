@@ -215,7 +215,13 @@ const sendPhoto = (token: string, image: string, key: string = crypto.randomUUID
 
 const sendText = (
   token: string,
-  note: { readonly text: string; readonly paper?: string; readonly ink?: string },
+  note: {
+    readonly text: string;
+    readonly paper?: string;
+    readonly stamp?: string;
+    readonly seal?: string;
+    readonly ink?: string;
+  },
   key: string = crypto.randomUUID(),
 ) => call("/v1/notes", json({ _tag: "Text", key, ...note }, "POST", token));
 
@@ -1037,6 +1043,39 @@ describe("notes", () => {
     expect(history[0]).toEqual(note);
     expect(history[1]).not.toHaveProperty("paper");
     expect(await historyFor(owner)).toEqual(history);
+  });
+
+  it("stores a note's stamp and seal, and gives them to the partner as chosen", async () => {
+    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const stamped = await sendText(owner, { text: "sealed", stamp: "moon", seal: "rose" });
+    expect(stamped.status).toBe(200);
+    expect((await sendText(owner, { text: "plain" })).status).toBe(200);
+
+    const image = await uploaded(owner);
+    const compact = { version: 1, strokes: [{ color: "#2A1A1C", width: 3, points: [1, 2] }] };
+    const drawing = await call(
+      "/v1/notes",
+      json(
+        { _tag: "Drawing", key: crypto.randomUUID(), image, compact, seal: "night" },
+        "POST",
+        owner,
+      ),
+    );
+    expect(drawing.status).toBe(200);
+
+    const history = await historyFor(claimer);
+    expect(history[0]).toMatchObject({ _tag: "Text", text: "sealed", stamp: "moon", seal: "rose" });
+    expect(history[1]).not.toHaveProperty("stamp");
+    expect(history[1]).not.toHaveProperty("seal");
+    expect(history[2]).toMatchObject({ _tag: "Drawing", seal: "night" });
+    expect(history[2]).not.toHaveProperty("stamp");
+  });
+
+  it("refuses a stamp or a seal it doesn't know", async () => {
+    const { owner } = await pairOf("subject-owner", "subject-claimer");
+    expect((await sendText(owner, { text: "hi", stamp: "dragon" })).status).toBe(400);
+    expect((await sendText(owner, { text: "hi", seal: "glitter" })).status).toBe(400);
+    expect(await historyFor(owner)).toHaveLength(0);
   });
 
   it("writes a text note in the free ink, and refuses an ink the pair has not bought", async () => {
