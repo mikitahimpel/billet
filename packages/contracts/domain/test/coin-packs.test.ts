@@ -9,14 +9,21 @@ describe("coin packs", () => {
   });
 
   it("finds a pack by product id", () => {
-    expect(coinPackOf("com.mikitahimpel.billet.coins.550")?.coins).toBe(550);
+    expect(coinPackOf("com.ourio.app.coins.550")?.coins).toBe(550);
+    expect(coinPackOf("com.ourio.app.coins.5")).toBeUndefined();
+  });
+
+  it("resolves the first app's product ids to the same packs", () => {
+    for (const pack of coinPacks) {
+      expect(coinPackOf(pack.id.replace("com.ourio.app", "com.mikitahimpel.billet"))).toBe(pack);
+    }
     expect(coinPackOf("com.mikitahimpel.billet.coins.5")).toBeUndefined();
   });
 
   it("decodes only known product ids", () => {
     for (const { id } of coinPacks) expect(Schema.decodeUnknownSync(CoinPackId)(id)).toBe(id);
-    expect(Schema.decodeUnknownSync(CoinPackId)("com.mikitahimpel.billet.coins.100")).toBe(
-      "com.mikitahimpel.billet.coins.100",
+    expect(Schema.decodeUnknownSync(CoinPackId)("com.ourio.app.coins.100")).toBe(
+      "com.ourio.app.coins.100",
     );
     expect(() => Schema.decodeUnknownSync(CoinPackId)("com.other.coins.100")).toThrow();
   });

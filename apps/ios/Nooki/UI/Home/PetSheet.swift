@@ -1,5 +1,6 @@
 import FeatureGames
 import GamesInterface
+import OurioShared
 import SwiftUI
 import Design
 import TipKit

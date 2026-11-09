@@ -37,7 +37,7 @@ extension PairingFailure {
     case .signedOut:
       "You've been signed out. Open the app again to sign in."
     case .unavailable:
-      "Billet can't be reached right now. Try again in a moment."
+      "Ourio can't be reached right now. Try again in a moment."
     }
   }
 }

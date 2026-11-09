@@ -4,8 +4,8 @@ import UIKit
 
 /// The light instant-film grade every polaroid gets when it is drawn: lifted, warm blacks, creamy highlights, a little
 /// less contrast and saturation, and a faint vignette. The stored JPEG is never changed. Safe off the main thread.
-nonisolated enum InstantFilm {
-    static func develop(_ image: UIImage) -> UIImage? {
+public nonisolated enum InstantFilm {
+    public static func develop(_ image: UIImage) -> UIImage? {
         guard let cg = image.cgImage else { return nil }
         let input = CIImage(cgImage: cg)
 

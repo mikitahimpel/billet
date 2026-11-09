@@ -58,7 +58,7 @@ final class HitchProbe {
     /// Posted by the UI test once `XCUIApplication.launch()` has returned. Until then XCUITest waits for the app to
     /// idle and snapshots its accessibility tree on the app's main thread: frames of 120-360 ms of its own, for up to
     /// a second on a CI runner.
-    static let harnessDone = "com.mikitahimpel.billet.uitest.launched"
+    static let harnessDone = "com.ourio.app.uitest.launched"
 
     /// Without the UI test (measure.sh's plain launches): seconds after launch before late frames count.
     static let harnessSettle: TimeInterval = 0.5

@@ -1,4 +1,5 @@
 import Observation
+import OurioShared
 import RealityKit
 import SwiftUI
 import Design

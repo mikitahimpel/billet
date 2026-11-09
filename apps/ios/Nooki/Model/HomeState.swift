@@ -1,5 +1,7 @@
 import FeatureGames
+import FeatureMood
 import Observation
+import OurioShared
 import Persistence
 import RoomInterface
 import SwiftUI

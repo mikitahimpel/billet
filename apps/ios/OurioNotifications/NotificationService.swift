@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import UserNotifications
 import WidgetKit
 import Wire

@@ -48,7 +48,7 @@ public struct PairCodeCard: View {
     .billetButton(.secondary)
     .accessibilityLabel(copied ? "Code copied" : "Copy code")
 
-    ShareLink(item: "Pair with me on billet: \(code)") {
+    ShareLink(item: "Pair with me on Ourio: \(code)") {
       ButtonLabel("Share", rank: .secondary, systemImage: "square.and.arrow.up")
     }
     .billetButton(.secondary)

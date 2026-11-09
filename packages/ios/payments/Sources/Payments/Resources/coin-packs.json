@@ -1,21 +1,21 @@
 {
   "packs": [
     {
-      "id": "com.mikitahimpel.billet.coins.100",
+      "id": "com.ourio.app.coins.100",
       "coins": 100,
       "price": "0.99",
       "displayName": "100 coins",
       "description": "A handful of coins for the shop."
     },
     {
-      "id": "com.mikitahimpel.billet.coins.550",
+      "id": "com.ourio.app.coins.550",
       "coins": 550,
       "price": "4.99",
       "displayName": "550 coins",
       "description": "A pouch of coins for the shop."
     },
     {
-      "id": "com.mikitahimpel.billet.coins.1200",
+      "id": "com.ourio.app.coins.1200",
       "coins": 1200,
       "price": "9.99",
       "displayName": "1,200 coins",

@@ -1,3 +1,4 @@
+import OurioShared
 import Payments
 import SwiftUI
 import Design
@@ -27,7 +28,7 @@ struct PlusHero: View {
                 HStack(spacing: Space.l) {
                     mochi
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Billet Plus")
+                        Text("Ourio Plus")
                             .font(.ourioTitle)
                             .foregroundStyle(Ink.text)
                         Text(on ? "On for the two of you (test)" : "For the two of you, every month")
@@ -77,7 +78,7 @@ struct PlusHero: View {
 
     @ViewBuilder private var action: some View {
         if mockStore {
-            PrimaryButton(on ? "Turn off (test)" : "Try Billet Plus · \(PlusPass.price) / month") { on.toggle() }
+            PrimaryButton(on ? "Turn off (test)" : "Try Ourio Plus · \(PlusPass.price) / month") { on.toggle() }
                 .accessibilityIdentifier("plusMock")
         } else {
             Text("\(PlusPass.price) / month · coming soon")

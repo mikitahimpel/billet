@@ -1,4 +1,5 @@
 import Design
+import OurioShared
 import PetScene
 import RealityKit
 import Synchronization
