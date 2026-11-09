@@ -2,6 +2,7 @@
 import BilletKit
 import Design
 import Foundation
+import OurioShared
 import Payments
 import SwiftUI
 import Transport
