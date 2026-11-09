@@ -24,6 +24,8 @@ export function Diorama(props: Props) {
       dpr={[1, 2]}
       camera={{ fov: 22, near: 0.01, far: 60 }}
       gl={{ alpha: true, antialias: true }}
+      // The canvas fades in from scale 0.94 (hero-stage.tsx); size it from the layout box, not the transformed one.
+      resize={{ offsetSize: true }}
     >
       <Stage diorama={diorama} {...props} />
     </Canvas>
