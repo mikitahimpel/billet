@@ -103,6 +103,32 @@ private final class FakeStreakRoom {
         #expect(store.streak.status(on: day(1)) == .done)
     }
 
+    @Test func thePartnersDayPushedOverTheSocketShowsAtOnceWithTheDaysStillWaitingOnTop() async {
+        let room = FakeStreakRoom()
+        room.shared.record(on: day(0))
+        let store = StreakStore(file: file)
+        await store.follow(room.remote)
+        room.online = false
+        store.record(at: day(2))
+
+        var pushed = room.shared
+        pushed.record(on: day(1))
+        store.received(pushed)
+        #expect(store.streak.count == 3)
+        #expect(store.streak.lastDay == cal.startOfDay(for: day(2)))
+        #expect(store.unsent == [day(2)])
+    }
+
+    @Test func aPushBeforePairingLeavesThisPhonesOwnStreak() async {
+        let store = StreakStore(file: file)
+        await store.follow(nil)
+        store.record(at: day(0))
+        var pushed = LoveStreak()
+        for d in 0..<5 { pushed.record(on: day(d)) }
+        store.received(pushed)
+        #expect(store.streak.count == 1)
+    }
+
     @Test func aDayOfflineCountsHereAndGoesWhenTheRoomIsBack() async {
         let room = FakeStreakRoom()
         room.shared.record(on: day(0))

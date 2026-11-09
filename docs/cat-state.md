@@ -139,6 +139,11 @@ paired, `RoomController.connectCat` points it at the pair's room:
   (connect, or the app coming to the front); a request the room refuses is dropped.
 - A new seed, birth or pair resets the brain from the events (`CatLifeChange.reset`). Unpairing gives the phone a
   fresh cat of its own.
+- Coming back after 3 hours or more away (the greeting's `CatDirector.greetAfter`, from the room's last-seen mark)
+  is a homecoming. Once the journal brings what the partner did meanwhile, within 30 seconds of opening,
+  `RoomController` sends `RoomEvent.partnerCared` once, and Home shows one line over the room for 6 seconds, the
+  most telling deed and when: "Ilya fed Mochi at 09:05" (`HomecomingLine`). A meal outranks a game, a pet, bedtime
+  and a note; shooing is never told.
 
 Everything is kept in the user defaults (`cat.life`), so offline the cat is the one last seen. A phone that kept
 `LocalCatEvents` before carries its seed and events over until it is paired.

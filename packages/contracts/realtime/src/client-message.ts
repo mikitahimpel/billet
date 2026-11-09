@@ -32,6 +32,8 @@ export const ClientMessage = Schema.TaggedUnion({
     moods: Schema.optionalKey(Schema.Boolean),
     guess: Schema.optionalKey(Schema.Boolean),
     riddle: Schema.optionalKey(Schema.Boolean),
+    /** Asks for `StreakChanged` with the pair's love streak now, and after each change to it. */
+    streak: Schema.optionalKey(Schema.Boolean),
   },
   /** From a client that does not stream. */
   Stroke: { stroke: Stroke },

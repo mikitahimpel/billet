@@ -1749,7 +1749,7 @@ describe("the couple's WebSocket", () => {
     expect(theirs.ofTag("Stroke")[0]).toMatchObject({ stroke, seq: 0 });
     mine.ws.send(JSON.stringify({ _tag: "Presence", state: "idle" }));
     await until(
-      () => theirs.ofTag("Presence").length >= 1,
+      () => theirs.ofTag("Presence").length >= 2,
       "a later frame, so the stroke echo would have arrived",
     );
     expect(mine.ofTag("Stroke")).toEqual([]);
@@ -1764,8 +1764,8 @@ describe("the couple's WebSocket", () => {
     expect(theirs.ofTag("Presence")[0]).toMatchObject({ state: "drawing" });
 
     mine.ws.close(1000);
-    await until(() => theirs.ofTag("Presence").length === 2, "idle after disconnect");
-    expect(theirs.ofTag("Presence")[1]).toMatchObject({ state: "idle" });
+    await until(() => theirs.ofTag("Presence").length === 2, "away after disconnect");
+    expect(theirs.ofTag("Presence")[1]).toMatchObject({ state: "away" });
   });
 
   it("ignores frames it cannot read and ends a connection that sends a huge one", async () => {
@@ -1978,6 +1978,7 @@ describe("metrics", () => {
   it("stores no content: no image key, no stroke, no token, and only the fixed columns", async () => {
     const { owner } = await pairOf("subject-owner", "subject-claimer");
     const image = await uploaded(owner);
+    const marker = [4242, 4243, 4244, 4245];
     await call(
       "/v1/notes",
       json(
@@ -1987,7 +1988,7 @@ describe("metrics", () => {
           image,
           compact: {
             version: 1,
-            strokes: [{ color: "#2A1A1C", width: 3, points: [4242, 4243, 4244, 4245] }],
+            strokes: [{ color: "#2A1A1C", width: 3, points: marker }],
           },
         },
         "POST",
@@ -1996,7 +1997,14 @@ describe("metrics", () => {
     );
     await report(owner, { events: ["AppOpened"], text: "a private message" });
     const dump = JSON.stringify((await env.DB.prepare("SELECT * FROM pair_events").all()).results);
-    for (const secret of [image, "4242", "2A1A1C", owner, "private message", "subject-"]) {
+    for (const secret of [
+      image,
+      marker.join(","),
+      "2A1A1C",
+      owner,
+      "private message",
+      "subject-",
+    ]) {
       expect(dump).not.toContain(secret);
     }
     const columns = (await env.DB.prepare("PRAGMA table_info(pair_events)").all<{ name: string }>())

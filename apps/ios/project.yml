@@ -76,7 +76,7 @@ targets:
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
-        products: [Ink, Persistence, Transport]
+        products: [BilletKit, Ink, Persistence, Transport]
       - package: BilletDesign
         products: [Design]
       - package: BilletPet

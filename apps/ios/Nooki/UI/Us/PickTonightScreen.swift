@@ -114,7 +114,7 @@ struct PickTonightScreen: View {
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(card.name)
-                        .font(.system(size: 26, weight: .bold, design: .rounded))
+                        .ourioScaledFont(size: 26, weight: .bold, design: .rounded, relativeTo: .title)
                         .foregroundStyle(.white)
                         .lineLimit(3)
                     Text(caption(card))
@@ -149,7 +149,8 @@ struct PickTonightScreen: View {
     private func round(_ symbol: String, label: String, honey: Bool, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
-                .font(.system(size: 24, weight: .bold))
+                .ourioScaledFont(size: 24, weight: .bold)
+                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
                 .foregroundStyle(honey ? Ink.heroInk : Ink.text)
                 .frame(width: 64, height: 64)
                 .background(Circle().fill(honey ? AnyShapeStyle(.honeyGradient) : AnyShapeStyle(Ink.surfaceRaised)))

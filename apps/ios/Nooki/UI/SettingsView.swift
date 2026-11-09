@@ -1,5 +1,6 @@
 import FeatureOnboarding
 import Pet
+import RoomInterface
 import StoreKit
 import SwiftUI
 import Design
@@ -18,7 +19,9 @@ struct SettingsView: View {
     @AppStorage(WindowChoice.key) private var windowView = WindowChoice.suburbia
     @AppStorage(WindowChoice.weatherKey) private var windowWeather = ViewWeather.clear
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    @AppStorage(AppSettings.quietRoomKey) private var quietRoom = QuietChrome.dim
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
+    @AppStorage(AppSettings.streakNudgeKey) private var streakNudge = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
@@ -50,6 +53,11 @@ struct SettingsView: View {
                 }
                 .buttonStyle(PressScaleStyle())
                 .disabled(hintsReset)
+            }
+
+            GroupedSection(header: "Reminders",
+                         footer: "One note at 8 pm on a day your love streak would go out at midnight.") {
+                ToggleRow("Streak at risk", symbol: "flame.fill", tint: UsTint.coral.color, isOn: $streakNudge)
             }
 
             if let session {
@@ -115,7 +123,8 @@ struct SettingsView: View {
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
                              + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
-                             + "them baked, from the next launch. Composer style is how a new note looks.") {
+                             + "them baked, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
+                             + "the controls over the room after a few seconds without a touch.") {
                 ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
                 ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
                 ToggleRow("Show all hints now", symbol: "lightbulb.max.fill", tint: UsTint.sun.color,
@@ -127,6 +136,9 @@ struct SettingsView: View {
                 PickerRow("Composer style", symbol: "square.and.pencil", tint: UsTint.sun.color,
                           selection: $composerStyle) {
                     ForEach(ComposerStyle.allCases) { Text($0.title).tag($0) }
+                }
+                PickerRow("Quiet room", symbol: "moon.zzz.fill", tint: UsTint.lilac.color, selection: $quietRoom) {
+                    ForEach(QuietChrome.allCases, id: \.self) { Text($0.title).tag($0) }
                 }
                 PickerRow("Rooms", symbol: "square.split.2x1", tint: UsTint.lilac.color, selection: roomsOverride) {
                     Text("Follow the test").tag(RoomsVariant?.none)

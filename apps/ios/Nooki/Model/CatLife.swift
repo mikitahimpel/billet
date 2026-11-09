@@ -72,6 +72,12 @@ final class CatLife: CatEventSource {
     /// pair's, so a socket that opens before the room is reached follows her too.
     var lastSeq: Int? { isPaired ? saved.lastSeq : nil }
     private var isPaired: Bool { saved.me != Self.solo }
+    /// What the partner did for her after `since`, oldest first; nothing before pairing.
+    func partnerCare(since: Date) -> [LifeEvent] {
+        guard isPaired else { return [] }
+        return saved.events.filter { $0.by != saved.me && $0.at > since }.sorted { $0.at < $1.at }
+    }
+
     /// What this phone did that the room has not stored yet.
     var unsent: [RecordCatEventRequest] { saved.outbox }
 

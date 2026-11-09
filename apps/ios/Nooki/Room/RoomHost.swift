@@ -13,6 +13,20 @@ struct RoomHost: View, Equatable {
     var body: some View {
         let _ = controller.probe.hostBody()
         RoomStage(input: input, controller: controller)
+            .onChange(of: PartnerSight(input), initial: true) { _, sight in
+                controller.partnerSeen(here: sight.here, visible: sight.visible)
+            }
+    }
+}
+
+/// The part of the input the cat's notice of the partner reads.
+private struct PartnerSight: Equatable {
+    let here: Bool
+    let visible: Bool
+
+    init(_ input: RoomInput) {
+        here = input.partnerHere
+        visible = input.visibility == .visible
     }
 }
 
@@ -49,10 +63,40 @@ private struct RoomStage: View {
                     controller.petted()
                 }
                 .allowsHitTesting(controller.game == nil)
+                .accessibilityHidden(true)
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
+
+                if controller.game == nil { CatVoice(name: input.catName, controller: controller) }
             }
         }
+        // Her status is read once a second only while she can be seen; under a cover or a sheet that hides her it
+        // waits, and the first look back reads it at once.
+        .task(id: input.visibility == .visible && controller.hasHome) {
+            guard input.visibility == .visible, controller.hasHome else { return }
+            await controller.watchStatus()
+        }
+    }
+}
+
+/// The room as VoiceOver meets it: one element named for her, saying what she does, that pets her on a double tap.
+/// Its own view, so her status changing re-evaluates only this and never the stage.
+private struct CatVoice: View {
+    let name: String
+    let controller: RoomController
+
+    var body: some View {
+        Color.clear
+            .contentShape(.rect)
+            .allowsHitTesting(false)
+            .accessibilityElement()
+            .accessibilityLabel(name)
+            .accessibilityValue(controller.status.spoken)
+            .accessibilityHint("Double tap to pet her.")
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction { controller.petted() }
+            .accessibilityAction(named: "Treat or play") { controller.careAsked() }
+            .accessibilityIdentifier("cat")
     }
 }
 
