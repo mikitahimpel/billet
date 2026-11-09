@@ -63,8 +63,8 @@ for _ in $(seq 1 300); do
     *" pending "*) log "checks pending"; sleep "$poll"; continue ;;
   esac
 
-  git fetch -q origin main "pull/$n/head"
-  pr=$(git rev-parse FETCH_HEAD)
+  git fetch -q origin main "+pull/$n/head:refs/merge-pr/$n"
+  pr=$(git rev-parse "refs/merge-pr/$n")
   [ "$pr" = "$head" ] || { sleep 5; continue; }
   fork=$(git merge-base origin/main "$pr")
   behind=$(git rev-list --count "$pr..origin/main")
