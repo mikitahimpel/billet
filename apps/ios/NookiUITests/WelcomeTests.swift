@@ -45,7 +45,10 @@ final class WelcomeTests: XCTestCase {
         // snapshots the app's accessibility tree on its main thread, which is itself a late frame.
         Thread.sleep(forTimeInterval: 5)
         XCTAssertTrue(app.buttons["Let's go"].waitForExistence(timeout: 20))
-        let summary = app.staticTexts["welcome.probe"].label
+        // The probe shows its summary once the timeline has played.
+        let probe = app.staticTexts["welcome.probe"]
+        XCTAssertTrue(probe.waitForExistence(timeout: 5))
+        let summary = probe.label
         print("welcome probe: \(summary)")
         XCTContext.runActivity(named: summary) { _ in }
         func value(_ key: String) -> Int {
