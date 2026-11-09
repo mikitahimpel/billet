@@ -39,7 +39,7 @@ final class NoCatAnalytics: CatAnalytics {
 }
 
 /// Mochi's brain in a room: steps a ``CatBrainRunner`` on the wall clock, reads it as the owner's
-/// ``CatMind`` and plays it through ``NookiCatScript`` with Ilya's walker and habits. It publishes
+/// ``CatMind`` and plays it through ``NookiCatScript`` with the original walker and habits. It publishes
 /// what the Labs card shows only when it changes.
 @Observable
 final class CatDirector {
@@ -217,7 +217,7 @@ final class CatDirector {
         if walker.directed { walker.behavior.focus = focus() }
     }
 
-    /// Hands her to the brain or back to Ilya's own timers, sitting and wide awake. Returns whether the brain drives.
+    /// Hands her to the brain or back to its original timers, sitting and wide awake. Returns whether the brain drives.
     private func drive(_ on: Bool) -> Bool {
         guard on != walker.directed else { return on }
         if !on {

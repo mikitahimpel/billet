@@ -4,7 +4,7 @@ import Wire
 
 // MARK: - Store
 
-/// Everything on the Us tab, as JSON in the app group shared with the widgets (docs/together-concept.md, section 6).
+/// Everything on the Us tab, as JSON in the app group shared with the widgets.
 /// Once paired, the gifts mirror the pair's room through `GiftsModel` and the lists through `ListsModel`; the rest
 /// stays on this phone.
 @Observable

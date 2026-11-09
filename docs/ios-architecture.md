@@ -678,7 +678,7 @@ only.
 
 ### 5.5 What moves into `Nooki/Room`
 
-The Scene folder as it is (Ilya's files untouched, see 5.7), plus the code that reaches into it
+The Scene folder as it is (the original author's files untouched, see 5.7), plus the code that reaches into it
 today: `Games/*` (stages, `GameSession`, `GameCamera`, `GameView`), `Model/CatCare.swift`,
 `UI/Home/PetSheet`, `NeedBars`, `BrainCard`, `HeartBubble`, `PetButton`, `Perf/OurioPerf.swift`
 (the scene part), the room's part of `HomeView` (building the scenes, the room switch's scene
@@ -704,7 +704,7 @@ Leaks today, from the census: `CatRoom` is named in 11 files outside Scene, `Boa
   `header_bodies`, `tabbar_bodies` for the steady and full runs; `report.py` already turns every
   census key into an A/B metric. A regression shows as a count, next to the frame times.
 
-### 5.7 Ilya's files
+### 5.7 The original author's files
 
 The boundary sits around `DioramaView` and what it uses: `CatRoom.swift`, `CityRoomScene.swift`,
 `DioramaScene.swift`, `DioramaView.swift` are not changed by the sealing. `RoomHost` wraps
@@ -713,7 +713,7 @@ The boundary sits around `DioramaView` and what it uses: `CatRoom.swift`, `CityR
 `paused` flag and its unmounting when hidden are what `HomeView` does today.
 
 If the sealing turns out to need a change inside one of the four files, the PR lists the exact
-change and asks the manager first; the owner and Ilya decide. Candidates known now: none. A
+change and asks the manager first; the owner and the original author decide. Candidates known now: none. A
 possible one later: `BubbleSpot` in `DioramaView` is already private to the view, so it stays.
 
 ### 5.8 Enforcement
@@ -726,7 +726,7 @@ possible one later: `BubbleSpot` in `DioramaView` is already private to the view
 ### 5.9 Later: a library target
 
 Once sealed, `Nooki/Room` can become a static library target `OurioRoom` in `project.yml`, like
-`WindowViews`: then `internal` means internal and the grep is redundant. That moves Ilya's files
+`WindowViews`: then `internal` means internal and the grep is redundant. That moves the original author's files
 (a rename, no content change) and needs the owner's OK; it is not part of the sealing PR.
 
 ## 6. The shell, and the end of HomeState
@@ -811,7 +811,7 @@ open.
 | --- | --- | --- | --- | --- | --- |
 | 0 | `arch/plan` | this doc, AGENTS.md, the skill, the two script rules (no code moves) | | | docs only |
 | 1 | `arch/shop` | ShopModel → ShopMachine + ShopStore; Shop, ShopOffers, ShopPurchase, CoinPacksModel, ShopSync → ShopClient, ShopFixture, PaletteInk, Inks catalog; ShopView, UI/Shop/*, ItemSheet, CoinsSheet; `Wallet` → ShopInterface; WalletStore deleted | CoinsBalanceProviding, CoinEarning, ShopOpening, TreatBuying | `shop`, `wallet`, `shopFocus`, `openedShopItem`, `openShop`, the `-shopCoins` args | the 19 readers switch from `state.shop` to `@Environment(ShopStore.self)` or a protocol; CatCare stays in the app and is passed as closures; ShopModelTests port; ShopBuyTests unchanged |
-| 2 | `arch/room` | section 5.5 into `Nooki/Room`; RoomInterface; RoomHost, RoomController, RoomModel, RoomProbe; the probe tests; the perf census keys; the boundary script | RoomControlling, CatStatusProviding | `care`, `game`, `showsPetSheet`, `room` (to the shell's state) | HomeView keeps its layout, swaps the DioramaView block for RoomHost; Ilya's four files untouched; the games' UI tests unchanged |
+| 2 | `arch/room` | section 5.5 into `Nooki/Room`; RoomInterface; RoomHost, RoomController, RoomModel, RoomProbe; the probe tests; the perf census keys; the boundary script | RoomControlling, CatStatusProviding | `care`, `game`, `showsPetSheet`, `room` (to the shell's state) | HomeView keeps its layout, swaps the DioramaView block for RoomHost; the original author's four files untouched; the games' UI tests unchanged |
 | 3 | `arch/moments` | MomentStore, NoteStore, Journal, PhotoSync, TextNoteSync, BoardFaces, Moments views, NoteComposer, NoteSheet, NotesHistory, ComposeSheet; joins FeatureMoments (reactions) | WallMomentsProviding, MomentAdding, JournalRecording | `moments`, `notes`, `journal`, `openedPin`, `momentsMode`, `composingNote` | `RoomInput.polaroids` and `pins` come from the interface; Us and Draw add through MomentAdding |
 | 4 | `arch/us-lists` | UsStore (lists, wishlist, grocery), GiftsModel, ListsModel, ListSync, GiftSync, ListActivity, GroceryCatalog, UI/Us list screens, share extension's write | UsInterface: ListsProviding (widgets, intents) | `us` (part), `gifts`, `lists` | UsStore stays whole behind the store until PR 5; the widgets read the Us file through the interface |
 | 5 | `arch/us-dates` | calendar, dates, Pick tonight, DateReminders, PickTonightSync, TitleSource, StreakStore, the rest of UI/Us | StreakRecording | `us`, `streak`, `usRoute` | `UsRoute` becomes a shell route |

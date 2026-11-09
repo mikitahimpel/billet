@@ -1,6 +1,6 @@
 #!/bin/zsh
-# Renders Shared/Resources/MochiPortrait-<coat>.png, the round avatar in each coat, with Ilya's own
-# Tools/make_portrait.py, run unchanged on a copy of Cat.usdz that holds the coat's colour atlas instead of his.
+# Renders Shared/Resources/MochiPortrait-<coat>.png, the round avatar in each coat, with the original
+# Tools/make_portrait.py, run unchanged on a copy of Cat.usdz that holds the coat's colour atlas instead of the original.
 # Grey is his MochiPortrait.png and is not rendered. Needs Blender (BLENDER=/path/to/blender to override).
 set -e
 IOS=${0:a:h:h:h}

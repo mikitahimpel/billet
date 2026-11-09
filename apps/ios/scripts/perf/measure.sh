@@ -1,7 +1,7 @@
 #!/bin/zsh
 # Measures Ourio's rooms on a Release build in the Simulator, the same way every time.
 #
-# Onboarding is skipped (`-onboardingDone YES`) and Home opens on PERF_ROOM: `room` (the default, Ilya's
+# Onboarding is skipped (`-onboardingDone YES`) and Home opens on PERF_ROOM: `room` (the default, the original
 # diorama) or `city`. A Simulator without an Apple7 GPU, such as a CI VM, draws Mochi as the mesh cat instead of
 # the splats, so the cat in CI shots and numbers is not the one a phone shows.
 #

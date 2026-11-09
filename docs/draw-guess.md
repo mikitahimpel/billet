@@ -1,8 +1,7 @@
 # Draw-guess
 
-One partner draws a word, the other guesses it from a set of letter tiles. The concept, with the
-screens, is [apps/ios/docs/draw-guess-concept.md](../apps/ios/docs/draw-guess-concept.md). This page
-is what the server and the contracts do.
+One partner draws a word, the other guesses it from a set of letter tiles. This page is what the
+server and the contracts do.
 
 ## The riddle
 

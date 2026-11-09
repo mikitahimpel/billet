@@ -21,7 +21,7 @@ import Testing
     let request = try JSONDecoder().decode(ReportEventsRequest.self, from: Data(contentsOf: url))
     #expect(
       request.clientEvents == [
-        ClientEvent(.appOpened), ClientEvent(.catChosen, detail: "idolIlya"),
+        ClientEvent(.appOpened), ClientEvent(.catChosen, detail: "marmalade"),
         ClientEvent(.noteOpened, detail: "widget"),
         ClientEvent(.shopItemBought, detail: "fairy-lights", value: 40), ClientEvent(.catPetted),
       ])
@@ -66,7 +66,7 @@ import Testing
     #"{"name":"TrickDone"}"#,
     #"{"name":"NoteOpened","detail":"push"}"#,
     #"{"name":"CatChosen","detail":"9lives"}"#,
-    #"{"name":"CatChosen","detail":"idol_ilya"}"#,
+    #"{"name":"CatChosen","detail":"grey_tabby"}"#,
     #"{"name":"CatChosen","detail":"a.b"}"#,
     #"{"name":"CatChosen","detail":""}"#,
     #"{"name":"CatChosen","detail":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}"#,

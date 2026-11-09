@@ -1,6 +1,6 @@
 import Foundation
 
-/// Mochi's coat, picked in onboarding. Grey is Ilya's cat as he made it; every other coat is a
+/// Mochi's coat, picked in onboarding. Grey is the original cat as it was made; every other coat is a
 /// recolour of it. The app's own extensions dress her in one; the id, the name and the pictures
 /// are here, where every feature can name a coat.
 public enum CatCoat: String, CaseIterable, Sendable {
@@ -26,7 +26,7 @@ public enum CatCoat: String, CaseIterable, Sendable {
   /// The card in the onboarding carousel: the seated cat in this coat, on transparency.
   public var portrait: String { "Coat-\(rawValue)" }
 
-  /// Her round avatar in this coat: Ilya's for grey, the others rendered the same way.
+  /// Her round avatar in this coat: the original for grey, the others rendered the same way.
   public var avatar: String { self == .grey ? "MochiPortrait" : "MochiPortrait-\(rawValue)" }
 
   /// The poses that have coats; each is `<pose>.ply` with its `.skin` and `.rig.json` beside it.
