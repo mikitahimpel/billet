@@ -18,8 +18,6 @@ struct MomentsView: View {
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
-    /// Where the feed is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
-    @State private var position = ScrollPosition(edge: .top)
 
     private let hMargin: CGFloat = 16
     private let columnGap: CGFloat = 14
@@ -53,13 +51,7 @@ struct MomentsView: View {
                     .padding(.bottom, Space.l)
                 }
                 .scrollIndicators(.hidden)
-                .scrollPosition($position)
                 .softScrollEdges()
-                .onAppear {
-                    guard ScenePerf.isOn else { return }
-                    OurioPerf.scrolls[.moments] = { position.scrollTo(y: $0) }
-                }
-                .onDisappear { OurioPerf.scrolls[.moments] = nil }
             }
         }
         .onChange(of: pick) { _, item in

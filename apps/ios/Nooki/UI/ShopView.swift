@@ -13,8 +13,6 @@ struct ShopView: View {
     @State private var sheetSet: SetChoice?
     /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
     @State private var highlightedInk: String?
-    /// Where the page is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
-    @State private var position = ScrollPosition(edge: .top)
     @State private var scrolling = ShopScrolling()
 
     private let columns = [
@@ -39,17 +37,11 @@ struct ShopView: View {
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
-            .scrollPosition($position)
             .onScrollPhaseChange { _, phase in
                 if scrolling.isScrolling != phase.isScrolling { scrolling.isScrolling = phase.isScrolling }
             }
             .environment(scrolling)
             .softScrollEdges()
-            .onAppear {
-                guard ScenePerf.isOn else { return }
-                OurioPerf.scrolls[.shop] = { position.scrollTo(y: $0) }
-            }
-            .onDisappear { OurioPerf.scrolls[.shop] = nil }
             .onChange(of: state.shopFocus, initial: true) { _, focus in
                 guard let focus else { return }
                 selected = .today
