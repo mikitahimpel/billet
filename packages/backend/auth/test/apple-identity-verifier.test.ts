@@ -10,6 +10,7 @@ import {
   appleIssuer,
   appleKeysUrl,
   AppleIdentityVerifier,
+  legacyAppleAudience,
 } from "../src/apple-identity-verifier.ts";
 import { AuthRejected, AuthUnavailable } from "../src/auth-error.ts";
 import { IdentityVerifier } from "../src/identity-verifier.ts";
@@ -133,6 +134,13 @@ describe("AppleIdentityVerifier", () => {
     expect(calls.urls).toEqual([appleKeysUrl]);
   });
 
+  it("accepts a token for the first app's bundle id", async () => {
+    const { client } = fakeApple(() => keySet(apple));
+    const claims = { ...validClaims(), aud: legacyAppleAudience };
+    const exit = await run(client, verify(await sign(claims)));
+    expect(exit).toEqual(Exit.succeed({ subject: "001234.apple-subject", nonce: "nonce-1" }));
+  });
+
   describe("rejects", () => {
     it("an expired token", async () => {
       const claims = { ...validClaims(), exp: nowSeconds - 1 };
@@ -156,6 +164,11 @@ describe("AppleIdentityVerifier", () => {
 
     it("an audience list that merely contains the bundle id", async () => {
       const claims = { ...validClaims(), aud: ["com.example.other", appleAudience] };
+      await expectRejected(await sign(claims), "claims-invalid");
+    });
+
+    it("an audience list of both bundle ids", async () => {
+      const claims = { ...validClaims(), aud: [appleAudience, legacyAppleAudience] };
       await expectRejected(await sign(claims), "claims-invalid");
     });
 

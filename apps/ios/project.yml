@@ -40,7 +40,11 @@ targets:
     # Shared: stores, palette and intents the widget extension compiles too.
     sources:
       - path: Nooki
+      # Shared's code is the OurioShared library; its images and map stay here. PerTarget holds the intents and the
+      # Live Activity, whose metadata each target extracts from its own sources.
       - path: Shared
+        excludes: ["**/*.swift"]
+      - path: PerTarget
       # The date ideas the build ships with: the server's own catalog file (Shared/Model/DateCatalog.swift).
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
@@ -66,13 +70,14 @@ targets:
         # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename
         # (Shared/Widget/DeepLink.swift).
         CFBundleURLTypes:
-          - CFBundleURLName: com.mikitahimpel.billet
+          - CFBundleURLName: com.ourio.app
             CFBundleURLSchemes: [ourio, nooki]
     dependencies:
       - target: OurioWidgets
       - target: OurioNotifications
       - target: OurioShare
       - target: WindowViews
+      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
@@ -82,21 +87,21 @@ targets:
       - package: BilletPet
         products: [Pet, PetScene]
       - package: BilletFeatures
-        products: [FeatureCanvas, FeatureGames, FeatureInbox, FeatureMoments, FeatureOnboarding, FeaturePairing, FeatureShop, GamesInterface, RoomInterface, ShopInterface, WidgetBridge]
+        products: [FeatureCanvas, FeatureGames, FeatureInbox, FeatureMood, FeatureMoments, FeatureOnboarding, FeaturePairing, FeatureShop, GamesInterface, MoodInterface, RoomInterface, ShopInterface, WidgetBridge]
       - package: BilletPayments
         products: [Payments, PaymentsLive]
     entitlements:
       path: Nooki/Ourio.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
-        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
+        keychain-access-groups: [$(AppIdentifierPrefix)com.ourio.app]
         # Alert pushes for drawings; automatic signing switches it to production for TestFlight.
         aps-environment: development
         # Invite links, https://<server>/i/<code> (the Worker's app-links.ts).
         com.apple.developer.associated-domains: [applinks:$(BILLET_API_HOST)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: >-
           $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) LABS_$(BILLET_LABS_MODE:upper)
         # The application preset sets "1,2" per target, over the project's base; a portrait-only iPad build is rejected.
@@ -105,7 +110,7 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_CFBundleDisplayName: Ourio
         INFOPLIST_KEY_ITSAppUsesNonExemptEncryption: NO
-        # The partner's drawing as a Live Activity, started by a push (Shared/Draw/DrawingActivity.swift).
+        # The partner's drawing as a Live Activity, started by a push (PerTarget/DrawingActivity.swift).
         INFOPLIST_KEY_NSSupportsLiveActivities: YES
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
@@ -119,12 +124,36 @@ targets:
     dependencies:
       - package: BilletPet
         product: Pet
+  # Shared's code, built once for the app, its extensions and the tests. Extensions keep Swift's default isolation,
+  # so this does too; the app reaches it through its public API.
+  OurioShared:
+    type: library.static
+    platform: iOS
+    sources:
+      - path: Shared
+        includes: ["**/*.swift"]
+    dependencies:
+      - package: BilletContracts
+        products: [Wire]
+      - package: BilletCore
+        products: [Ink]
+      - package: BilletDesign
+        products: [Design]
+      - package: BilletFeatures
+        products: [MoodInterface]
+    settings:
+      base:
+        APPLICATION_EXTENSION_API_ONLY: YES
   OurioWidgets:
     type: app-extension
     platform: iOS
     sources:
       - path: OurioWidgets
+      # Shared's code is the OurioShared library; its images and map stay here. PerTarget holds the intents and the
+      # Live Activity, whose metadata each target extracts from its own sources.
       - path: Shared
+        excludes: ["**/*.swift"]
+      - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
     info:
@@ -138,17 +167,20 @@ targets:
     entitlements:
       path: OurioWidgets/OurioWidgets.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
+      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
         products: [Ink]
       - package: BilletDesign
         products: [Design]
+      - package: BilletFeatures
+        products: [MoodInterface]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
         # Extensions keep Swift's default isolation; Shared types that cross into App Intents are marked nonisolated.
         SKIP_INSTALL: YES
   # Writes the drawing a push carries to the App Group and reloads the drawing widgets, before the alert shows.
@@ -159,8 +191,10 @@ targets:
       - path: OurioNotifications
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
-        # Places' flags and map are for the app and its widgets.
-        excludes: [Draw/DrawingActivity.swift, Places/Flags.xcassets, Places/WorldMap.txt]
+        # Shared's code is the OurioShared library; Places' flags and map are for the app and its widgets.
+        excludes: ["**/*.swift", Places/Flags.xcassets, Places/WorldMap.txt]
+      - path: PerTarget
+        excludes: [DrawingActivity.swift]
     info:
       path: OurioNotifications/Info.plist
       properties:
@@ -173,18 +207,21 @@ targets:
     entitlements:
       path: OurioNotifications/OurioNotifications.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
+      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
         products: [Ink]
       - package: BilletDesign
         products: [Design]
+      - package: BilletFeatures
+        products: [MoodInterface]
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.notification-service
         SKIP_INSTALL: YES
   # The share sheet's "Ourio" action: a page shared from Safari or another app becomes a wish.
   OurioShare:
@@ -193,8 +230,10 @@ targets:
     sources:
       - path: OurioShare
       - path: Shared
-        # Places' flags and map are for the app and its widgets.
-        excludes: [Draw/DrawingActivity.swift, Places/Flags.xcassets, Places/WorldMap.txt]
+        # Shared's code is the OurioShared library; Places' flags and map are for the app and its widgets.
+        excludes: ["**/*.swift", Places/Flags.xcassets, Places/WorldMap.txt]
+      - path: PerTarget
+        excludes: [DrawingActivity.swift]
       - path: Nooki/UI/Us/UsKit.swift
     info:
       path: OurioShare/Info.plist
@@ -212,17 +251,20 @@ targets:
     entitlements:
       path: OurioShare/OurioShare.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
+      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
         products: [Ink]
       - package: BilletDesign
         products: [Design]
+      - package: BilletFeatures
+        products: [MoodInterface]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.share
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.share
         SKIP_INSTALL: YES
   # The widgets' views rendered into BILLET_SAMPLES for review (WidgetGalleryTests). An extension can't host tests, so
   # the widget sources are compiled in, without their @main bundle; the app hosts it so their images load.
@@ -233,14 +275,16 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
-      - path: Shared
-    # Wire and Ink come from the app it is loaded into, as for OurioTests: linking them here as well makes Xcode
-    # build them as frameworks, and OurioTests then finds none of their symbols.
+      - path: PerTarget
+    # Wire, Ink and OurioShared come from the app it is loaded into, as for OurioTests: linking them here as well
+    # makes Xcode build them as frameworks, and OurioTests then finds none of their symbols.
     dependencies:
       - target: Billet
+      - target: OurioShared
+        link: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget-tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget-tests
         GENERATE_INFOPLIST_FILE: YES
   OurioTests:
     type: bundle.unit-test
@@ -248,9 +292,12 @@ targets:
     sources: [OurioTests]
     dependencies:
       - target: Billet
+      # Its code comes from the app, as Wire's does.
+      - target: OurioShared
+        link: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.tests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
   OurioUITests:
@@ -261,7 +308,7 @@ targets:
       - target: Billet
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.uitests
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: Billet
 schemes:

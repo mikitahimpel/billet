@@ -20,7 +20,7 @@ struct GreetingDependencies: Sendable {
 /// The only place that names live services.
 enum Live {
   static func greetingDependencies() -> GreetingDependencies {
-    let logger = Logger(subsystem: "com.mikitahimpel.billet", category: "greeting")
+    let logger = Logger(subsystem: "com.ourio.app", category: "greeting")
     return GreetingDependencies(
       greetings: GreetingService { name throws(GreetingError) in
         guard !name.isEmpty else { throw .emptyName }

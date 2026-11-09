@@ -62,6 +62,31 @@ Enforced by `Package.swift` (SwiftPM already builds with
 `packages/ios/scripts/check-imports.mjs` (section 7). The widgets and extensions link the
 `*Interface` targets they need (value types and file formats) and never a `Feature*`.
 
+### 1.1.1 `OurioShared`, for now
+
+The code the app and its extensions both need (models, App Group files, the widget snapshot, a few
+views the widgets draw) was `apps/ios/Shared`, compiled into five targets. It is now one static
+library, `OurioShared` (`project.yml`), built once and linked into the app and its three extensions;
+the test bundles get it from the app. Its images and the world map stay in each target's resources,
+and `apps/ios/PerTarget` holds what each target compiles itself: the App Intents and the Live Activity,
+whose metadata a target extracts from its own sources, and the names where `Wire` has a type of the
+same name.
+
+It is a step, not the end: nothing new goes into it. Each feature PR moves its part out, and the
+library goes when it is empty:
+
+| To | From `OurioShared` |
+| --- | --- |
+| `core/AppGroup` (new) | `SharedFile`, `AppGroup` |
+| `ProfileInterface` | `Couple`, `PairMembers`, `CoupleStore`, `CatProfile` |
+| `UsInterface` | the Us model, `UsStore`, `PendingListChange`, `WishMedia` |
+| `MomentsInterface` | `Moment`, `Note` and their stores |
+| `DrawInterface` | `LatestDrawing`, `PushTokens`, `PushReceipt` |
+| `MoodInterface` | `MoodStore` |
+| `WidgetBridge` | `OurioSnapshot`, `WidgetTimeline`, `WidgetActivity`, `DeepLink` |
+| `WidgetUI` (new; SwiftUI, with the mood faces) | `MoodArt`, `DrawingCard`, `InkLayer`, `LockWallpaper` |
+| the feature that uses it, or the app | Places, `BlurHash`, `InstantFilm`, `DateCatalog`, `GroceryWords`, `Streak`, `Wallet` |
+
 ### 1.2 What a feature owns
 
 ```
@@ -108,7 +133,7 @@ protocol property re-renders when it changes; Observation tracks through an exis
 | `MomentAdding` | MomentsInterface | `add(image:caption:)`, `addNote(…)` | Us (dates, places), Draw |
 | `JournalRecording` | MomentsInterface | `record(JournalEntry)` | Draw, Us, Games |
 | `StreakRecording` | UsInterface | `record()` | Mood, Room (pets, treats) |
-| `MoodChecking` | MoodInterface | `latest: [String: MoodCheck]`, `set(PartnerMood, note:)` | header, widgets |
+| `MoodChecking` | MoodInterface | `latest: [String: MoodCheckIn]`, `take(_:for:replacing:)` | header, widgets |
 | `InboxCounting` | InboxInterface | `unread: Int` | header badge |
 | `RoomControlling` | RoomInterface | section 5.3 | the shell, Games, Shop (through the shell) |
 | `CatStatusProviding` | RoomInterface | `status: CatStatus` (coarse, throttled) | header badge, Pet sheet |
@@ -824,13 +849,22 @@ open.
 | 11 | `arch/onboarding` | OnboardingFlow, OnboardingView, CoatPicker, AnswerQueue, OnboardingClient, PairingSheet into the packages | OnboardingInterface | `invitedCode` | FeatureOnboarding and FeaturePairing exist; this is the app side |
 | 12 | `arch/shell` | ShellMachine, AppDependencies, the root; HomeState and HomeStores deleted; ServerSession split into per-feature clients | | everything | HomeView is the shell's view; the end state of section 6 |
 
-PR 7 went in two parts. `InboxMachine`, `InboxModel` and `InboxDay` are in `FeatureInbox` with their
-tests. `InboxView` and `InboxLine` stay in the app until `PartnerMood`, `ListKind` and `MoodArt` leave
-`apps/ios/Shared`.
+PR 7 went in two parts, and `FeatureInbox` now holds the whole Inbox: the machine, the store, the
+day grouping, `InboxLine` and the sheet. The feature uses `Wire`'s `CheckInMood` and `ListKind`, not
+the app's `PartnerMood` and `ListKind` in `apps/ios/Shared`. What only the app knows is passed in by
+`InboxSheet` in the app: names, catalogue titles, mood names, list symbols, reaction emoji, the
+avatars, a mood's face and the delivery notice. The next features do the same, and don't move
+`Shared`'s copies of `Wire` types into a package.
 
 PRs 3 to 11 can be reordered around other agents' work; 1 and 2 cannot. Where a PR would touch
 more than about 25 files of UI that others are editing, it splits: the store and interface first
 (the views keep reading the old property through a one-line forward for a day), the views next.
+
+PR 6 moved the logic first. `MoodCheckIn`, its merge rule and `MoodChecking` are in `MoodInterface`,
+which the widget, notification and share extensions link; `MoodSync` is in `FeatureMood`, with its
+tests. `PartnerMood` is `Wire.CheckInMood` under the app's name. `MoodStore` stays in
+`apps/ios/Shared`, since it writes the App Group file the extensions read, and conforms to
+`MoodChecking`; MoodPicker and the header stay in the app with `MoodArt`.
 
 ### 8.3 Each PR, the same checklist
 

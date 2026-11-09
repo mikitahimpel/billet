@@ -1,3 +1,4 @@
+import OurioShared
 import PetScene
 import PhotosUI
 import SwiftUI
@@ -310,7 +311,7 @@ struct MomentPrint: View {
     let profile: CoupleStore
     let width: CGFloat
     var undeveloped = false
-    var maxPixels = MomentStore.feedPixels
+    var maxPixels = PrintSizes.feed
     var captionEditor: Binding<String>?
     var captionFocus: FocusState<Bool>.Binding?
     @Environment(ServerSession.self) private var session: ServerSession?

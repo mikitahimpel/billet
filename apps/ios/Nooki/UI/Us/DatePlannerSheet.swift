@@ -1,3 +1,4 @@
+import OurioShared
 import PhotosUI
 import SwiftUI
 import Design

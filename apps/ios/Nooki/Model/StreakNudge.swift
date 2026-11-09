@@ -1,5 +1,6 @@
 import Design
 import Foundation
+import OurioShared
 import UserNotifications
 
 extension AppSettings {

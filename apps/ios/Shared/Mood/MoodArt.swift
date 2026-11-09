@@ -3,7 +3,7 @@ import SwiftUI
 
 extension PartnerMood {
     /// The mood's cat face in `Moods.xcassets`.
-    var artName: String {
+    public var artName: String {
         switch self {
         case .happy: "mood-happy"
         case .sleepy: "mood-sleepy"
@@ -15,13 +15,18 @@ extension PartnerMood {
 
 /// A mood as the app draws it: a clay cat face, or the plain one when nobody has shared a mood.
 /// Decorative: the words beside it, or the control holding it, say the mood to VoiceOver.
-struct MoodArt: View {
-    static let neutralName = "mood-none"
+public struct MoodArt: View {
+    public static let neutralName = "mood-none"
 
-    let mood: PartnerMood?
-    var size: CGFloat = 40
+    public let mood: PartnerMood?
+    public var size: CGFloat = 40
 
-    var body: some View {
+    public init(mood: PartnerMood? = nil, size: CGFloat = 40) {
+        self.mood = mood
+        self.size = size
+    }
+
+    public var body: some View {
         Image(mood?.artName ?? Self.neutralName)
             .resizable()
             .interpolation(.high)

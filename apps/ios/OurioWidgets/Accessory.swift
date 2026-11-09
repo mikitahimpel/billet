@@ -1,3 +1,4 @@
+import OurioShared
 import SwiftUI
 import Design
 import WidgetKit
@@ -5,7 +6,7 @@ import WidgetKit
 /// Lock Screen: the day counter above the clock, a round countdown and a line from the smart slot.
 struct UsAccessoryWidget: Widget {
     var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "com.mikitahimpel.billet.accessory", intent: AccessoryConfiguration.self,
+        AppIntentConfiguration(kind: "com.ourio.app.accessory", intent: AccessoryConfiguration.self,
                                provider: OurioProvider<AccessoryConfiguration>()) { entry in
             AccessoryView(entry: entry)
         }

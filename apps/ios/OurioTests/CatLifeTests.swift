@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import Pet
 import RoomInterface
 import Synchronization

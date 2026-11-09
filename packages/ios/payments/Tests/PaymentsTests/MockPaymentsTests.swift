@@ -56,8 +56,8 @@ private final class FakeServer: Sendable {
   @Test func theBundledListHasThreePacksInOrder() {
     #expect(
       StampPackCatalog.standard.productIDs == [
-        "com.mikitahimpel.billet.coins.100", "com.mikitahimpel.billet.coins.550",
-        "com.mikitahimpel.billet.coins.1200",
+        "com.ourio.app.coins.100", "com.ourio.app.coins.550",
+        "com.ourio.app.coins.1200",
       ])
     #expect(StampPackCatalog.standard.packs.map(\.stamps) == [100, 550, 1200])
   }
@@ -74,7 +74,7 @@ private final class FakeServer: Sendable {
     #expect(credit.entryID == "purchase:t1")
     #expect(credit.stamps == 550)
     #expect(credit.serverBalance == 550)
-    #expect(server.calls.withLock { $0 } == ["purchase com.mikitahimpel.billet.coins.550"])
+    #expect(server.calls.withLock { $0 } == ["purchase com.ourio.app.coins.550"])
   }
 
   @Test func cancelAndFailNeverReachTheServer() async throws {

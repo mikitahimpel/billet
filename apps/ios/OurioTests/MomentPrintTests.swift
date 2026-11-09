@@ -1,3 +1,4 @@
+import OurioShared
 import Testing
 @testable import Billet
 
@@ -5,13 +6,13 @@ import Testing
 @MainActor
 @Suite struct MomentPrintTests {
     @Test func theViewerStandsInWithTheFeedPrintThenTheWallPrint() {
-        #expect(MomentStore.standIns(for: MomentStore.storedPixels)
-            == [MomentStore.storedPixels, MomentStore.feedPixels, MomentStore.wallPixels])
+        #expect(PrintSizes.standIns(for: MomentStore.storedPixels)
+            == [MomentStore.storedPixels, PrintSizes.feed, MomentStore.wallPixels])
     }
 
     @Test(arguments: [2048, 1024, 512, 384, 100])
     func theSizeAskedForComesFirstAndNothingLarger(maxPixels: Int) {
-        let sizes = MomentStore.standIns(for: maxPixels)
+        let sizes = PrintSizes.standIns(for: maxPixels)
         #expect(sizes.first == maxPixels)
         #expect(sizes.allSatisfy { $0 <= maxPixels })
         #expect(sizes == [maxPixels] + sizes.dropFirst().sorted(by: >))
@@ -19,6 +20,6 @@ import Testing
     }
 
     @Test func theWallPrintHasNothingSmallerToStandIn() {
-        #expect(MomentStore.standIns(for: MomentStore.wallPixels) == [MomentStore.wallPixels])
+        #expect(PrintSizes.standIns(for: MomentStore.wallPixels) == [MomentStore.wallPixels])
     }
 }
