@@ -83,6 +83,7 @@ struct ShareWishView: View {
             .padding(.top, 18)
             .padding(.bottom, 40)
         }
+        .softScrollEdges()
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
     }

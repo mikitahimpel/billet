@@ -52,8 +52,7 @@ struct FeaturedCard: View {
 
                 SetBuyButton(state: state, set: offer)
             }
-            .padding(Space.m)
-            .glass(.rect(cornerRadius: Radius.inner, style: .continuous), tint: Ink.heroInk.opacity(0.3))
+            .padding(.top, Space.s)
         }
         .padding(CardMetrics.padding)
         .background {

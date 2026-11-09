@@ -60,8 +60,7 @@ struct WhoKnowsScreen: View {
             VStack(spacing: Space.l) {
                 EmptyState(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach today's round",
                         text: "Answers stay hidden in your room on the server, so the game needs a connection.")
-                Button("Try again") { Task { await model.load() } }
-                    .buttonStyle(SecondaryButtonStyle())
+                RetryButton { Task { await model.load() } }
             }
         case .answerAboutYou, .guessAboutPartner:
             if let round = model.response?.round, model.answers.isEmpty, introRound != round.id {
@@ -74,8 +73,7 @@ struct WhoKnowsScreen: View {
                     EmptyState(icon: UsGlyph(symbol: "questionmark.bubble.fill", tint: .honey),
                             title: "Can't load today's questions",
                             text: "Check your connection and try again.")
-                    Button("Try again") { Task { await refresh() } }
-                        .buttonStyle(SecondaryButtonStyle())
+                    RetryButton { Task { await refresh() } }
                 }
             } else {
                 ProgressView()
@@ -85,12 +83,10 @@ struct WhoKnowsScreen: View {
         case .revealed:
             VStack(spacing: Space.m) {
                 if model.lacksQuestions {
-                    Button { Task { await refresh() } } label: {
-                        Label("Some questions didn't load. Try again", systemImage: "arrow.clockwise")
-                            .font(.ourioCallout)
-                            .foregroundStyle(Ink.accentText)
+                    VStack(spacing: Space.s) {
+                        ErrorLine("Some questions didn't load.")
+                        RetryButton(compact: true) { Task { await refresh() } }
                     }
-                    .buttonStyle(.plain)
                     .padding(.top, Space.s)
                 }
                 WhoKnowsReveal(state: state, model: model, openDates: openDates)
@@ -164,6 +160,7 @@ struct WhoKnowsScreen: View {
             .transition(reduceMotion ? .opacity : .asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
                                                                removal: .move(edge: .leading).combined(with: .opacity)))
         }
+        .softScrollEdges()
         .animation(reduceMotion ? .easeOut(duration: 0.2) : .snappy(duration: 0.3), value: question.id)
     }
 
@@ -228,9 +225,10 @@ private struct WhoKnowsReveal: View {
                         .id(step)
                         .transition(reduceMotion ? .opacity : .push(from: .trailing))
                 }
+                .softScrollEdges()
                 PrimaryButton(step + 1 < reveal.count ? "Next" : "See the score") { advance() }
             } else {
-                ScrollView { summary }
+                ScrollView { summary }.softScrollEdges()
                 PrimaryButton("See them again") { withAnimation(animation) { step = 0 } }
             }
         }

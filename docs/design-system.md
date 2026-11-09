@@ -20,7 +20,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
    until something changed, closing asks "Discard changes?" and a swipe down is blocked meanwhile. A count under
    the title is `subtitle:`, in the same slot.
 4. **One card, one inset.** Cards and grouped sections use `Radius.card` on `Ink.surface`, padded by
-   `CardMetrics.padding`; screens and sheets keep `Space.gutter` (20) at the sides, 16 over the room. A card that opens
+   `CardMetrics.padding` (`check-design.mjs` fails on a `.cardSurface()` padded by anything else on every side); screens and sheets keep `Space.gutter` (20) at the sides, 16 over the room. A card that opens
    something starts with `CardHeader`. No gradients, rims or shadows on a card; the hero is only `warm`.
 5. **One shape language** (see [Shape](#shape)): corners come from `Radius`, fields from `Field`, and nothing in
    feature code writes a radius as a number. CI fails on a new one (`check-design.mjs`, `radius-baseline.json`).
@@ -43,8 +43,10 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
     `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
     `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
-    glass is tinted enough that nothing ghosts through it. `check-design.mjs` fails on a tab's scroll view
-    without it and on any `.hard` edge.
+    glass is tinted enough that nothing ghosts through it. Chips, a search field or a subtitle pinned over a
+    sheet's list go in `.scrollHeader { }`, which pins them over the scroll view so the rows fade under them on
+    the sheet's ground instead of being cut at their edge. `check-design.mjs` fails on a scroll view without
+    either in a file on the design package, and on any `.hard` edge.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
@@ -64,10 +66,12 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A control that is not a `TextField` but sits with fields (a search bar with an icon, a picker or toggle row in an editor) | `.fieldSurface()` |
 | The main action | `PrimaryButton` (or `PrimaryButtonStyle` on a custom label) |
 | A quieter action | `SecondaryButton` |
+| Try a failed load or send again | `RetryButton` under an `EmptyState` or in a card; `RetryButton(compact: true)` in a row |
 | A round control in a header | `GlassIconButton(symbol:label:badge:action:)` |
 | Any other surface that floats | `glass(_:role:)` inside the bar's `GlassGroup`; the main action `accentGlass()` |
 | A badge on glass | `glassBadge(_:)` |
 | Nothing here yet | `EmptyState`, sized to its content |
+| Chips or a search field over a sheet's list | `.scrollHeader { ... }` on the list's `ScrollView` (`BilletSheet(scrolls: false)`) |
 | The title of a block | `SectionHeader` |
 | A tag: rarity, discount, count | `Chip(style: .tinted / .honey / .quiet)` |
 | A filter or category | `FilterChip` |
@@ -84,6 +88,9 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't force `.colorScheme(.light)` on a card to make it pop; use `Ink.surface`.
 - Don't write a radius as a number, or pick one by eye; see [Shape](#shape).
 - Don't draw a field with `TextField` + `.background(...)`; use `Field` or `.fieldSurface()`.
+- Don't make a "Try again" `Button` of your own; `check-design.mjs` fails on one (`retry-baseline.json`).
+- Don't stack chips or a field above a sheet's `ScrollView` in a `VStack`; the rows cut hard under them. Use
+  `.scrollHeader`.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
 - Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
   `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
@@ -144,7 +151,8 @@ relations, so a redesign changes a token, not the screens.
 - Buttons, chips, pills and price tags are capsules (`PrimaryButton`, `SecondaryButton`, `Chip`, `PriceButton`).
   A `Field` has their height and, at one line, their shape; a taller one keeps the round ends.
 - A card is the container shape for what is inside it, so an iOS 26 `ConcentricRectangle` there follows its
-  corners. Prefer `Radius.inner` where the inset is the card padding.
+  corners. Prefer `Radius.inner` where the inset is the card padding, which is why a card's content always
+  sits at `CardMetrics.padding`: art in a tile padded tighter has corners squarer than the card's.
 - One card family: `Card`, `CardMetrics.padding`, `CardHeader` with a `Size.cardMark` icon (`RowIcon`) or
   `CardArt`, the title in `.ourioHeadline` over a `.ourioCaption` line, a `RowChevron` when it opens something.
   The screen's hero differs only by `warm`.

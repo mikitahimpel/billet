@@ -234,9 +234,7 @@ private struct AccountRow: View {
     var body: some View {
         Row(title, detail: detail, symbol: symbol, tint: tint.color) {
             if case .failed = state {
-                Button("Try Again", action: retry)
-                    .font(.ourioCallout.weight(.semibold))
-                    .foregroundStyle(Ink.accentText)
+                RetryButton(compact: true, action: retry)
             } else if case .signingIn = state {
                 ProgressView()
             }

@@ -227,6 +227,37 @@ extension View {
   }
 }
 
+extension View {
+  /// Pins `header` (a sheet's chips, search field or subtitle) over the top of this scroll view. The
+  /// content scrolls under it and fades out there as it does under the bars, on the sheet's own
+  /// ground, instead of being cut at the header's lower edge. Applies `softScrollEdges()`.
+  public func scrollHeader<Header: View>(@ViewBuilder _ header: () -> Header) -> some View {
+    modifier(ScrollHeader(header: header()))
+  }
+}
+
+private struct ScrollHeader<Header: View>: ViewModifier {
+  let header: Header
+  @Environment(\.sheetGround) private var ground
+
+  func body(content: Content) -> some View {
+    if #available(iOS 26, macOS 26, *) {
+      content
+        .safeAreaBar(edge: .top, spacing: 0) { header }
+        .softScrollEdges()
+    } else {
+      content.safeAreaInset(edge: .top, spacing: 0) { header.background { groundView } }
+    }
+  }
+
+  @ViewBuilder private var groundView: some View {
+    switch ground {
+    case .opaque: Ink.screen
+    case .glass: Rectangle().fill(.ultraThinMaterial)
+    }
+  }
+}
+
 /// What a sheet looks like inside, drawn inline: the Canvas cannot show a presented sheet.
 private struct InlineSheet<Content: View>: View {
   let title: String
@@ -267,6 +298,38 @@ private struct InlineSheet<Content: View>: View {
         Row("Mikita", symbol: "person.fill")
         Row("Partner", symbol: "heart.fill", tint: .blushPink)
       }
+    }
+  }
+}
+
+#Preview("Sheet with a pinned header") {
+  BothSchemes {
+    NavigationStack {
+      ScrollView {
+        VStack(spacing: Space.m) {
+          ForEach(0..<12, id: \.self) { index in
+            Card {
+              CardHeader("Event \(index + 1)", detail: "In \(index) days", symbol: "calendar")
+            }
+          }
+        }
+        .padding(.horizontal, Space.gutter)
+        .padding(.vertical, Space.s)
+      }
+      .scrollHeader {
+        HStack(spacing: Space.s) {
+          FilterChip("Soon", isSelected: true) {}
+          FilterChip("Month", isSelected: false) {}
+          Spacer(minLength: 0)
+        }
+        .padding(.horizontal, Space.gutter)
+        .padding(.bottom, Space.s)
+      }
+      .background(Ink.screen)
+      .navigationTitle("Calendar")
+      #if os(iOS)
+        .navigationBarTitleDisplayMode(.inline)
+      #endif
     }
   }
 }

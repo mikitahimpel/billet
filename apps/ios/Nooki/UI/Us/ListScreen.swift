@@ -41,60 +41,61 @@ struct ListScreen: View {
 
     private func content(_ list: UsList) -> some View {
         BilletSheet(list.title, subtitle: subtitle(of: list), scrolls: false) {
-        VStack(spacing: 0) {
-            if !usesSheetToAdd(list) {
-                UsField(placeholder: placeholder(for: list.kind), text: $draft)
-                    .focused($focused)
-                    .submitLabel(.done)
-                    .onSubmit { addItem(list) }
-                    .onAppear { if focusesField { focused = true } }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-            }
-
-            ScrollViewReader { scroll in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if adding(to: list) {
-                            GrocerySuggestions(draft: draft, list: list, history: state.us.groceries) {
-                                add($0, to: list)
-                            }
-                        }
-                        if list.kind == .watch {
-                            WatchListBody(state: state, list: list, details: watchDetails) {
-                                openedTitle = OpenedTitle(id: $0.id)
-                            }
-                        } else if list.kind == .travel {
-                            PlacesListBody(state: state, list: list) { markingBeen = $0 }
-                        } else if list.items.isEmpty {
-                            if !adding(to: list) {
-                                EmptyState(icon: list.icon,
-                                        title: "Nothing here yet",
-                                        text: "Add the first one above. You both see this list.")
-                            }
-                        } else if list.kind.isChecklist {
-                            // While a name is typed, its suggestions take the screen, as the list would push them away.
-                            if draft.isEmpty {
-                                GroceryList(list: list, state: state,
-                                            onTap: { toggle($0, in: list) },
-                                            onEdit: { editing = $0 },
-                                            onClear: {
-                                                withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
-                                            })
-                            }
-                        } else {
-                            openCard(list)
-                            finishedSection(list)
+        ScrollViewReader { scroll in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 12) {
+                    if adding(to: list) {
+                        GrocerySuggestions(draft: draft, list: list, history: state.us.groceries) {
+                            add($0, to: list)
                         }
                     }
-                    .id(Self.top)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 14)
-                    .padding(.bottom, 40)
+                    if list.kind == .watch {
+                        WatchListBody(state: state, list: list, details: watchDetails) {
+                            openedTitle = OpenedTitle(id: $0.id)
+                        }
+                    } else if list.kind == .travel {
+                        PlacesListBody(state: state, list: list) { markingBeen = $0 }
+                    } else if list.items.isEmpty {
+                        if !adding(to: list) {
+                            EmptyState(icon: list.icon,
+                                    title: "Nothing here yet",
+                                    text: "Add the first one above. You both see this list.")
+                        }
+                    } else if list.kind.isChecklist {
+                        // While a name is typed, its suggestions take the screen, as the list would push them away.
+                        if draft.isEmpty {
+                            GroceryList(list: list, state: state,
+                                        onTap: { toggle($0, in: list) },
+                                        onEdit: { editing = $0 },
+                                        onClear: {
+                                            withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
+                                        })
+                        }
+                    } else {
+                        openCard(list)
+                        finishedSection(list)
+                    }
                 }
-                .scrollIndicators(.hidden)
-                .onChange(of: focused) { _, focused in
-                    if focused { withAnimation(.snappy(duration: 0.25)) { scroll.scrollTo(Self.top, anchor: .top) } }
+                .id(Self.top)
+                .padding(.horizontal, 20)
+                .padding(.top, 14)
+                .padding(.bottom, 40)
+            }
+            .scrollIndicators(.hidden)
+            .onChange(of: focused) { _, focused in
+                if focused { withAnimation(.snappy(duration: 0.25)) { scroll.scrollTo(Self.top, anchor: .top) } }
+            }
+        }
+        .scrollHeader {
+            VStack(spacing: 0) {
+                if !usesSheetToAdd(list) {
+                    UsField(placeholder: placeholder(for: list.kind), text: $draft)
+                        .focused($focused)
+                        .submitLabel(.done)
+                        .onSubmit { addItem(list) }
+                        .onAppear { if focusesField { focused = true } }
+                        .padding(.horizontal, 20)
+                        .padding(.top, 14)
                 }
             }
         }

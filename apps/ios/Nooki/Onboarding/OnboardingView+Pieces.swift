@@ -27,6 +27,7 @@ extension OnboardingView {
             .padding(.top, Space.l)
             .padding(.bottom, Space.section)
         }
+        .softScrollEdges()
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)

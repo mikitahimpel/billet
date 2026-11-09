@@ -69,8 +69,7 @@ struct DrawGuessScreen: View {
             VStack(spacing: Space.l) {
                 EmptyState(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach your riddles",
                         text: "Riddles wait in your room on the server, so the game needs a connection.")
-                Button("Try again") { Task { await model.load() } }
-                    .buttonStyle(SecondaryButtonStyle())
+                RetryButton { Task { await model.load() } }
             }
         case .guess:
             if let riddle = model.theirs { guess(riddle) }
@@ -130,6 +129,7 @@ struct DrawGuessScreen: View {
             .padding(.horizontal, Space.gutter)
             .padding(.vertical, Space.l)
         }
+        .softScrollEdges()
         .confirmationDialog("Give up on this riddle?", isPresented: $givingUp, titleVisibility: .visible) {
             Button("Give up and see the word", role: .destructive) { Task { await model.giveUp() } }
         } message: {
@@ -162,6 +162,7 @@ struct DrawGuessScreen: View {
             .padding(.horizontal, Space.gutter)
             .padding(.vertical, Space.l)
         }
+        .softScrollEdges()
     }
 
     private func progress(_ riddle: Riddle) -> String {
@@ -227,6 +228,7 @@ struct DrawGuessScreen: View {
             .padding(.horizontal, Space.gutter)
             .padding(.vertical, Space.l)
         }
+        .softScrollEdges()
         .scrollDismissesKeyboard(.interactively)
     }
 
@@ -278,6 +280,7 @@ struct DrawGuessScreen: View {
                 }
                 .padding(.vertical, Space.l)
             }
+            .softScrollEdges()
             PrimaryButton("Now you draw") { model.drawNext() }
         }
         .padding(.horizontal, Space.gutter)

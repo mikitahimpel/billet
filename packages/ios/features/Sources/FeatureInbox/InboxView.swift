@@ -56,7 +56,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
         symbol: "wifi.exclamationmark", title: "Couldn't load the Inbox",
         text: "Check your connection and try again."
       ) {
-        SecondaryButton("Try Again", fullWidth: false) { Task { await model.open() } }
+        RetryButton { Task { await model.open() } }
       }
     case .loaded(let page) where page.items.isEmpty:
       VStack(spacing: 0) {

@@ -37,7 +37,7 @@ struct ShopItemCard: View {
             BuyButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
                       buy: { state.shop.buy(item) }, fills: true)
         }
-        .padding(Space.s + 2)
+        .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
     }

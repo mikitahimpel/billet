@@ -36,45 +36,46 @@ struct AddTitleSheet: View {
 
     var body: some View {
         BilletSheet("Add to watch", scrolls: false) {
-        VStack(spacing: 0) {
-            HStack(spacing: Space.s) {
-                Image(systemName: "magnifyingglass")
-                    .foregroundStyle(Ink.textSecondary)
-                TextField("", text: $query, prompt: Text("Search movies and shows").foregroundStyle(Ink.textTertiary))
-                    .font(.ourioBody)
-                    .foregroundStyle(Ink.text)
-                    .focused($focused)
-                    .submitLabel(.search)
-                    .autocorrectionDisabled()
-                if case .searching = search { ProgressView() }
-            }
-            .fieldSurface()
-            .padding(.horizontal, Space.gutter)
-            .padding(.top, 14)
-
-            ScrollView {
-                VStack(spacing: Space.m) {
-                    if !results.isEmpty {
-                        VStack(spacing: 0) {
-                            ForEach(Array(results.enumerated()), id: \.element) { index, title in
-                                if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 70) }
-                                resultRow(title)
-                            }
+        ScrollView {
+            VStack(spacing: Space.m) {
+                if !results.isEmpty {
+                    VStack(spacing: 0) {
+                        ForEach(Array(results.enumerated()), id: \.element) { index, title in
+                            if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 70) }
+                            resultRow(title)
                         }
-                        .cardSurface()
-                    } else if search == .failed {
-                        note("Search isn't reachable right now. You can still add it as text.")
-                    } else if session?.titles == nil {
-                        note("Search needs the server. You can still add it as text.")
                     }
-                    if !trimmed.isEmpty { addAsText }
+                    .cardSurface()
+                } else if search == .failed {
+                    note("Search isn't reachable right now. You can still add it as text.")
+                } else if session?.titles == nil {
+                    note("Search needs the server. You can still add it as text.")
                 }
-                .padding(.horizontal, Space.gutter)
-                .padding(.top, Space.m)
-                .padding(.bottom, 40)
+                if !trimmed.isEmpty { addAsText }
             }
-            .scrollIndicators(.hidden)
-            .scrollDismissesKeyboard(.interactively)
+            .padding(.horizontal, Space.gutter)
+            .padding(.top, Space.m)
+            .padding(.bottom, 40)
+        }
+        .scrollIndicators(.hidden)
+        .scrollDismissesKeyboard(.interactively)
+        .scrollHeader {
+            VStack(spacing: 0) {
+                HStack(spacing: Space.s) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(Ink.textSecondary)
+                    TextField("", text: $query, prompt: Text("Search movies and shows").foregroundStyle(Ink.textTertiary))
+                        .font(.ourioBody)
+                        .foregroundStyle(Ink.text)
+                        .focused($focused)
+                        .submitLabel(.search)
+                        .autocorrectionDisabled()
+                    if case .searching = search { ProgressView() }
+                }
+                .fieldSurface()
+                .padding(.horizontal, Space.gutter)
+                .padding(.top, 14)
+            }
         }
         }
         .onAppear { focused = true }
