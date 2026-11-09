@@ -77,7 +77,8 @@ jobs:
 
       - name: Say it is a Labs build
         if: inputs.labs
-        run: echo "**Labs build: do not submit for review**" >> "$GITHUB_STEP_SUMMARY"
+        run: |
+          echo "**Labs build: do not submit for review**" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
