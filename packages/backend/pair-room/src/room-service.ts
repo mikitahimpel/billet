@@ -22,6 +22,11 @@ import type { Note, PaperColor } from "@billet/contracts-domain/note";
 import type { SendNoteRequest } from "@billet/contracts-http-api/note";
 import type { ReactRequest } from "@billet/contracts-http-api/reaction";
 import type { SetMoodRequest } from "@billet/contracts-http-api/mood";
+import type {
+  RecordStreakDayRequest,
+  RestoreStreakRequest,
+} from "@billet/contracts-http-api/streak";
+import type { LoveStreak } from "@billet/contracts-domain/streak";
 import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
@@ -64,6 +69,7 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "ListItemAdded":
       case "MoodSet":
       case "RiddleSaved":
+      case "StreakChanged":
         return [];
     }
   });
@@ -506,6 +512,30 @@ export class RoomService extends Context.Service<RoomService>()(
           return yield* decideAndCommit({ _tag: "SetMood", by, at, ...request });
         }).pipe(lock.withPermits(1));
 
+      // The room's clock is read inside the lock, as for a check-in.
+      const recordStreakDay = (by: UserId, request: RecordStreakDayRequest) =>
+        Effect.gen(function* () {
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({
+            _tag: "RecordStreakDay",
+            by,
+            at,
+            happenedAt: request.at,
+            utcOffsetSeconds: request.utcOffsetSeconds,
+          });
+        }).pipe(lock.withPermits(1));
+
+      const restoreStreak = (by: UserId, request: RestoreStreakRequest) =>
+        Effect.gen(function* () {
+          const at = yield* Clock.currentTimeMillis;
+          return yield* decideAndCommit({ _tag: "RestoreStreak", by, at, ...request });
+        }).pipe(lock.withPermits(1));
+
+      /** The pair's streak; null while the room is not open. */
+      const streak: Effect.Effect<LoveStreak | null> = store.load.pipe(
+        Effect.map((state) => (state._tag === "Active" ? state.streak : null)),
+      );
+
       /** Each member's latest check-in; none while the room is not open. */
       const moods: Effect.Effect<ReadonlyArray<MoodCheckIn>> = store.load.pipe(
         Effect.map((state) => (state._tag === "Active" ? state.moods : [])),
@@ -553,6 +583,9 @@ export class RoomService extends Context.Service<RoomService>()(
         forgetLists,
         setMood,
         moods,
+        recordStreakDay,
+        restoreStreak,
+        streak,
         openGift,
         claimBonus,
         earn,

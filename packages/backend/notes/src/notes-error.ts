@@ -66,3 +66,6 @@ export class NotesUnavailable extends Data.TaggedError("NotesUnavailable")<{
   /** What failed underneath, for the one log line at the edge. Never sent to the client. */
   readonly cause?: unknown;
 }> {}
+
+/** A restore of a streak that is alive, too short, out for longer than a day, or in cooldown. */
+export class StreakNotRestorable extends Data.TaggedError("StreakNotRestorable") {}

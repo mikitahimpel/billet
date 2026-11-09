@@ -106,12 +106,14 @@ jobs:
 
       # A fresh runner's first Simulator boot takes minutes; it runs in the background while the app builds.
       # Started after the Metal Toolchain install, which it slows down.
+      # Only plain iOS runtimes (iOS-27-2): a device-specific one (iOS-27-2-iPhone19-4) holds a single
+      # resizable-scene iPhone whose window is wider than the app's layout, so taps and frames miss.
       - name: Boot the test Simulator
         run: |
           udid=$(xcrun simctl list -j devices available | python3 -c '
-          import json, sys
+          import json, re, sys
           devices = json.load(sys.stdin)["devices"]
-          ios = sorted((k for k in devices if ".iOS-" in k and devices[k]),
+          ios = sorted((k for k in devices if re.search(r"\.iOS-[0-9]+(-[0-9]+)*$", k) and devices[k]),
                        key=lambda k: [int(x) for x in k.split(".iOS-")[1].split("-")[:2] if x.isdigit()])
           phones = [d for d in devices[ios[-1]] if d["name"].startswith("iPhone")] if ios else []
           print(phones[0]["udid"] if phones else "")')

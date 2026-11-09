@@ -23,7 +23,7 @@ public enum SignInFailure: Equatable, Sendable {
     case .api(.unavailable), .api(.notFound), .api(.invalidInvite), .api(.alreadyPaired),
       .api(.invalidPurchase), .api(.inkNotOwned), .api(.notEnoughCoins), .api(.alreadyOwned),
       .api(.collectionIncomplete), .api(.giftTaken), .api(.bonusTaken), .api(.catNotAdopted),
-      .api(.priceChanged),
+      .api(.streakNotRestorable), .api(.priceChanged),
       .network, .status, .maintenance, .encoding, .decoding:
       self = .unavailable
     }

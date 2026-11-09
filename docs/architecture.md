@@ -21,7 +21,7 @@ iPhone A ── HTTPS ──► Worker ──► PairRoom DO ─────┤ 
 ### PairRoom: one Durable Object per couple
 
 The `PairRoom` Durable Object is the source of truth for one couple. It stores the ordered notes, the
-streak, presence and the couple's cat (its profile, temper and append-only journal, see
+love streak (see [love-streak.md](love-streak.md)), presence and the couple's cat (its profile, temper and append-only journal, see
 [cat-state.md](cat-state.md)) and the activity Inbox (see [activity.md](activity.md)) in its own SQLite database, relays in-progress strokes, and uses hibernatable
 WebSockets so idle rooms cost nothing. Alarms handle push retries and streak rollover. Deleting a
 couple means deleting one Durable Object and its R2 prefix.

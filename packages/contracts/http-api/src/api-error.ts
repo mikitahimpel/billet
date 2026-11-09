@@ -43,5 +43,7 @@ export const ApiError = Schema.TaggedUnion({
   PriceChanged: { price: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)) },
   /** A buy for the cat, such as a treat, before the couple adopted one. */
   CatNotAdopted: {},
+  /** A restore of a streak that is alive, too short, out for longer than a day, or in cooldown. */
+  StreakNotRestorable: {},
 });
 export type ApiError = typeof ApiError.Type;

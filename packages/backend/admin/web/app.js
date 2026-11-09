@@ -2744,6 +2744,201 @@ async function renderAudit() {
   ];
 }
 
+/* ---------- Reports ---------- */
+
+async function renderReports() {
+  const { reports, total } = await api("/reports?limit=500");
+  const onNote = reports.filter((r) => r.noteId).length;
+  return [
+    pageHead(
+      "Reports",
+      "What users told the team about their partner, newest first. Act within a day: block or delete the reported account by hand, and reply to the reporter if they gave a way to.",
+    ),
+    h(
+      "div",
+      { class: "stats" },
+      statCard({ label: "Reports", value: fmtNum(total, 0), foot: "all time" }),
+      statCard({ label: "On a note", value: fmtNum(onNote, 0), foot: "of the newest 500" }),
+    ),
+    section(
+      "Reports",
+      "The reported user, the pair and, when there is one, the note or photo it is about.",
+      dataTable({
+        caption: "Reports",
+        noun: "reports",
+        rows: reports,
+        sort: [5, "desc"],
+        search: (r) => `${r.reason} ${r.reportedId} ${r.pairId} ${r.details || ""}`,
+        columns: [
+          { label: "Reason", value: (r) => r.reason, cell: (r) => pill("warn", r.reason) },
+          {
+            label: "Reported",
+            value: (r) => r.reportedId,
+            cell: (r) => h("span", { class: "mono", text: r.reportedId }),
+          },
+          {
+            label: "Pair",
+            value: (r) => r.pairId,
+            cell: (r) =>
+              h("a", { class: "mono", href: `#/pairs/${enc(r.pairId)}`, text: r.pairId }),
+          },
+          {
+            label: "Note",
+            value: (r) => r.noteId || "",
+            cell: (r) => (r.noteId ? h("span", { class: "mono", text: r.noteId }) : "—"),
+          },
+          { label: "Details", value: (r) => r.details || "", cell: (r) => r.details || "—" },
+          { label: "When", value: (r) => r.createdAt, cell: (r) => ago(r.createdAt) },
+        ],
+        none: empty("No reports", "A report sent from the app appears here at once."),
+      }),
+    ),
+  ];
+}
+
+/* ---------- App Review ---------- */
+
+async function reviewAction(path, { title, body, confirm, done }) {
+  if (!(await confirmDialog({ title, body, confirm }))) return;
+  try {
+    await api(path, { method: "POST" });
+    toast(done);
+  } catch (err) {
+    return toast(errorText(err), "bad");
+  }
+  route();
+}
+
+async function renderReview() {
+  const status = await api("/review");
+  const live = status.codes.find((c) => c.live);
+  const daysIn = h("input", { type: "number", min: "1", max: "30", value: "7" });
+  const issued = h("div");
+  const issue = async () => {
+    try {
+      const made = await api("/review/code", {
+        method: "POST",
+        body: { days: Number(daysIn.value) },
+      });
+      issued.replaceChildren(
+        callout(
+          "good",
+          `New code, valid until ${fmtWhen(made.expiresAt)}`,
+          `${made.code} — copy it into the App Review notes now; it is not shown again. Earlier codes are revoked.`,
+        ),
+      );
+    } catch (err) {
+      toast(errorText(err), "bad");
+    }
+  };
+  return [
+    pageHead(
+      "App Review",
+      "The reviewer's pair (docs/app-review.md): a long code that pairs whoever types it with the review partner. Each claim resets the pair.",
+    ),
+    h(
+      "div",
+      { class: "stats" },
+      statCard({
+        label: "Code",
+        value: live ? `…${live.lastFour}` : "none live",
+        foot: live ? `until ${fmtWhen(live.expiresAt)}` : "make one before submitting",
+      }),
+      statCard({
+        label: "Claims",
+        value: fmtNum(live ? live.claims : 0, 0),
+        foot: live && live.lastClaimedAt ? `last ${fmtWhen(live.lastClaimedAt)}` : "never",
+      }),
+      statCard({ label: "Pair", value: status.pairId ? "paired" : "empty" }),
+    ),
+    issued,
+    h(
+      "div",
+      { class: "actions" },
+      h("label", null, "Days ", daysIn),
+      h("button", { type: "button", class: "btn primary", text: "New code", onclick: issue }),
+      h("button", {
+        type: "button",
+        class: "btn",
+        text: "Revoke",
+        onclick: () =>
+          reviewAction("/review/revoke", {
+            title: "Revoke the review code?",
+            body: "The code stops working at once. The pair stays until you wipe it.",
+            confirm: "Revoke",
+            done: "Review code revoked.",
+          }),
+      }),
+      h("button", {
+        type: "button",
+        class: "btn danger",
+        text: "Wipe the pair",
+        onclick: () =>
+          reviewAction("/review/wipe", {
+            title: "Wipe the review pair?",
+            body: "Ends the pair: its room, notes, photos and cat are deleted. The code stays as it is.",
+            confirm: "Wipe",
+            done: "Review pair wiped.",
+          }),
+      }),
+    ),
+    section(
+      "Codes",
+      "Only the last four symbols are kept for display.",
+      dataTable({
+        caption: "Review codes",
+        noun: "codes",
+        rows: status.codes,
+        sort: [1, "desc"],
+        search: (c) => `${c.lastFour} ${c.createdBy}`,
+        columns: [
+          {
+            label: "Code",
+            value: (c) => c.lastFour,
+            cell: (c) => [
+              h("span", { class: "mono", text: `…${c.lastFour}` }),
+              " ",
+              c.live ? pill("good", "live") : pill("", "off", true),
+            ],
+          },
+          { label: "Made", value: (c) => c.createdAt, cell: (c) => fmtWhen(c.createdAt) },
+          { label: "By", value: (c) => c.createdBy },
+          { label: "Expires", value: (c) => c.expiresAt, cell: (c) => fmtWhen(c.expiresAt) },
+          { label: "Claims", num: true, value: (c) => c.claims },
+          {
+            label: "Last claimed",
+            value: (c) => c.lastClaimedAt ?? 0,
+            cell: (c) => ago(c.lastClaimedAt),
+          },
+        ],
+        none: empty("No codes yet", "Make one with New code."),
+      }),
+    ),
+    section(
+      "Changes",
+      "Every action here, with who took it.",
+      dataTable({
+        caption: "Review changes",
+        noun: "changes",
+        rows: status.changes,
+        sort: [0, "desc"],
+        search: (c) => `${c.action} ${c.by}`,
+        columns: [
+          { label: "When", value: (c) => c.at, cell: (c) => fmtWhen(c.at) },
+          { label: "Action", value: (c) => c.action, cell: (c) => pill("", c.action, true) },
+          {
+            label: "Code",
+            value: (c) => c.lastFour || "",
+            cell: (c) => (c.lastFour ? `…${c.lastFour}` : "—"),
+          },
+          { label: "By", value: (c) => c.by },
+        ],
+        none: empty("Nothing changed yet"),
+      }),
+    ),
+  ];
+}
+
 /* ---------- Purchases ---------- */
 
 const PURCHASE_TONE = { credited: "good", refunded: "warn" };
@@ -4488,6 +4683,8 @@ const ROUTES = {
   pairs: renderPairs,
   maintenance: renderMaintenance,
   purchases: renderPurchases,
+  reports: renderReports,
+  review: renderReview,
   shop: renderShopPage,
   onboarding: renderOnboarding,
   audit: renderAudit,

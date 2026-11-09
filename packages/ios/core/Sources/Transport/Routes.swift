@@ -24,11 +24,17 @@ public enum Routes {
   public static let registerPushToken = Route(.put, "/v1/devices/current/push-token")
   public static let createInvite = Route(.post, "/v1/invites")
   public static let claimInvite = Route(.post, "/v1/invites/claim")
+  /// The App Review pair's longer code: the same body and answers as `claimInvite`.
+  public static let claimReviewCode = Route(.post, "/v1/review/claim")
   public static let unpair = Route(.delete, "/v1/pair")
   public static let blockPartner = Route(.post, "/v1/pair/block")
   public static let reportPartner = Route(.post, "/v1/pair/report")
   public static let getPair = Route(.get, "/v1/pair")
   public static let setMood = Route(.put, "/v1/mood")
+  /// The pair's love streak; `POST` a day the caller did something together, or a restore.
+  public static let getStreak = Route(.get, "/v1/streak")
+  public static let recordStreakDay = Route(.post, "/v1/streak/days")
+  public static let restoreStreak = Route(.post, "/v1/streak/restore")
   public static let uploadImage = Route(.post, "/v1/media")
   public static let sendNote = Route(.post, "/v1/notes")
   public static let listNotes = Route(.get, "/v1/notes")

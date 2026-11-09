@@ -4,18 +4,26 @@ import Observation
 import Pet
 import simd
 
-/// What the couple did for the cat, and who they are: the brain's input. The stub keeps this
-/// phone's own touches; the server's feed of both partners' notes, meals and pets takes its place.
+/// What the couple did for the cat, and who they are: the brain's input. Once paired it is the pair's journal from
+/// its room (``CatLife``), so both phones raise the same cat.
 protocol CatEventSource: AnyObject {
     var events: [LifeEvent] { get }
     var context: LifeContext { get }
-    /// The cat's seed: the same on both phones, so both see the same cat.
+    /// The cat's seed: the room's, the same on both phones, so both see the same cat.
     var seed: UInt64 { get }
-    /// This phone's device in `context.partners`.
+    /// This phone's account in `context.partners`.
     var me: String { get }
-    /// Calls `handler` with each new event, so a brain takes it at once, until it returns false.
-    func observe(_ handler: @escaping (LifeEvent) -> Bool)
+    /// Calls `handler` with each change, so a brain takes it at once, until it returns false.
+    func observe(_ handler: @escaping (CatLifeChange) -> Bool)
     func record(_ kind: LifeEvent.Kind)
+}
+
+enum CatLifeChange {
+    /// One new event, this phone's or the partner's.
+    case event(LifeEvent)
+    /// A different cat: the room's seed or birth arrived, or the pair changed. The brain starts over from
+    /// `events`.
+    case reset
 }
 
 /// Where the brain's changes go, for the app's analytics.
@@ -28,48 +36,6 @@ protocol CatAnalytics: AnyObject {
 final class NoCatAnalytics: CatAnalytics {
     func catChanged(from: CatMind?, to: CatMind, cause: String) {}
     func coupleEvent(_ name: String) {}
-}
-
-/// The cat's life as only this phone knows it, kept for three days in the user defaults.
-final class LocalCatEvents: CatEventSource {
-    private static let eventsKey = "cat.brain.events"
-    private static let bornKey = "cat.brain.born"
-    private static let seedKey = "cat.brain.seed"
-    private static let kept: TimeInterval = 3 * 86400
-
-    private let defaults: UserDefaults
-    private(set) var events: [LifeEvent]
-    let context: LifeContext
-    let seed: UInt64
-    let me = "me"
-    private var observers: [(LifeEvent) -> Bool] = []
-
-    init(defaults: UserDefaults = .standard, now: Date = .now) {
-        self.defaults = defaults
-        let born = defaults.object(forKey: Self.bornKey) as? Date ?? now
-        defaults.set(born, forKey: Self.bornKey)
-        if let stored = defaults.string(forKey: Self.seedKey), let seed = UInt64(stored) {
-            self.seed = seed
-        } else {
-            seed = .random(in: 1...UInt64.max)
-            defaults.set(String(seed), forKey: Self.seedKey)
-        }
-        context = LifeContext(partners: ["me", "partner"], utcOffset: TimeZone.current.secondsFromGMT(), born: born)
-        let data = defaults.data(forKey: Self.eventsKey)
-        let stored = data.flatMap { try? JSONDecoder().decode([LifeEvent].self, from: $0) } ?? []
-        events = stored.filter { now.timeIntervalSince($0.at) < Self.kept }
-    }
-
-    func record(_ kind: LifeEvent.Kind) {
-        let event = LifeEvent(kind: kind, by: me, at: .now)
-        events.append(event)
-        if let data = try? JSONEncoder().encode(events) { defaults.set(data, forKey: Self.eventsKey) }
-        observers = observers.filter { $0(event) }
-    }
-
-    func observe(_ handler: @escaping (LifeEvent) -> Bool) {
-        observers.append(handler)
-    }
 }
 
 /// Mochi's brain in a room: steps a ``CatBrainRunner`` on the wall clock, reads it as the owner's
@@ -130,9 +96,12 @@ final class CatDirector {
         runner = CatBrainRunner(events: source.events, now: Date.now.timeIntervalSince1970, context: source.context,
                                 seed: source.seed, room: NookiSpot.affordances(available))
         if defaults.bool(forKey: Self.tourKey) { startTour() }
-        source.observe { [weak self] event in
+        source.observe { [weak self] change in
             guard let self else { return false }
-            receive(event)
+            switch change {
+            case .event(let event): receive(event)
+            case .reset: restart(events: source.events, lastEvent: "the pair's cat")
+            }
             return true
         }
     }

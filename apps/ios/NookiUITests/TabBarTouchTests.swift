@@ -54,9 +54,12 @@ final class TabBarTouchTests: XCTestCase {
         app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
         app.launch()
 
-        let world = app.buttons["World"]
-        let shop = app.buttons["Shop"]
-        let us = app.buttons["Us"]
+        // The tabs inside the bar: the Moments tab's title is a "Moments" menu button too.
+        let bar = app.otherElements["tabbar"]
+        let world = bar.buttons["World"]
+        let moments = bar.buttons["Moments"]
+        let shop = bar.buttons["Shop"]
+        let us = bar.buttons["Us"]
         XCTAssertTrue(world.waitForExistence(timeout: 60))
         Thread.sleep(forTimeInterval: 8)
         snapshot("world")
@@ -69,8 +72,8 @@ final class TabBarTouchTests: XCTestCase {
         XCTAssertTrue(shop.isSelected, "the drag back should end on Shop")
         snapshot("shop")
 
-        app.buttons["Moments"].tap()
-        XCTAssertTrue(app.buttons["Moments"].isSelected)
+        moments.tap()
+        XCTAssertTrue(moments.isSelected)
         Thread.sleep(forTimeInterval: 2)
         snapshot("moments")
 

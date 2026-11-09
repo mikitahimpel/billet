@@ -4,6 +4,7 @@ import Pet
 import RoomInterface
 import SwiftUI
 import WindowViews
+import Wire
 
 /// The room's one handle for the rest of the app: it owns the scenes, the corner a game is played in and the
 /// cat's coarse status, takes commands (`RoomControlling`) and reports taps as `RoomEvent`s. The shell holds it
@@ -28,7 +29,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     private(set) var city: CityRoomScene?
     private(set) var board: BoardRoomScene?
     private(set) var shown: RoomScene = .home
-    @ObservationIgnored var catEvents: CatEventOutbox?
+    /// The cat's life the brain runs on; `connectCat` makes it the pair's.
+    @ObservationIgnored let catLife: CatLife
     @ObservationIgnored let probe = RoomProbe()
 
     @ObservationIgnored private let usesStandIn: Bool
@@ -38,8 +40,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private var statusTask: Task<Void, Never>?
 
     /// `usesStandIn` leaves the real room out (UI tests, where RealityKit can't draw) and gives games a bare one.
-    init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom")) {
+    init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife) {
         self.usesStandIn = usesStandIn
+        self.catLife = catLife
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
     }
 
@@ -151,6 +154,24 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func petted() { emit.yield(.catPetted) }
+
+    // MARK: The pair's cat
+
+    /// Raises the pair's cat from its room through `client`, or this phone's own with nil.
+    func connectCat(_ client: CatEventsClient?, pair: CatPair?) async {
+        await catLife.connect(client, pair: pair)
+    }
+
+    /// Catches up on the journal and sends what waited offline.
+    func syncCat() async { await catLife.sync() }
+
+    /// Sends what waited offline; true while something still waits on the network.
+    func flushCat() async -> Bool { await catLife.flush() }
+
+    func catEntryArrived(_ entry: CatEntry) { catLife.received(entry) }
+
+    /// The journal entry a room socket resumes after; nil follows none.
+    var lastCatSeq: Int? { catLife.lastSeq }
 
     func clearShowcase() { showcase = nil }
 

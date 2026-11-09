@@ -1121,6 +1121,39 @@ describe("notes", () => {
     expect((await setMood(owner, { mood: "happy", note: "a".repeat(81) })).status).toBe(400);
   });
 
+  it("keeps one love streak for the pair, counted from either partner's day", async () => {
+    const { owner, claimer } = await pairOf("subject-streak-owner", "subject-streak-claimer");
+    const post = (token: string, path: string, body: unknown) =>
+      call(path, {
+        method: "POST",
+        headers: { ...bearer(token), "content-type": "application/json" },
+        body: JSON.stringify(body),
+      });
+    const streakOf = async (token: string) =>
+      (await (await call("/v1/streak", { method: "GET", headers: bearer(token) })).json()) as {
+        streak: { days: number; best: number; lastDay?: string };
+      };
+    expect(await streakOf(owner)).toEqual({ streak: { days: 0, best: 0 } });
+    // A day long past counts as the oldest the room takes: a day before its clock.
+    const day = await post(claimer, "/v1/streak/days", {
+      at: 1_700_000_000_000,
+      utcOffsetSeconds: 0,
+    });
+    expect(day.status).toBe(200);
+    expect(await day.json()).toMatchObject({ streak: { days: 1, best: 1 } });
+    // The partner's phone reads the same streak, and the same day counts once.
+    expect(
+      (await post(owner, "/v1/streak/days", { at: 1_700_000_000_000, utcOffsetSeconds: 0 })).status,
+    ).toBe(200);
+    expect(await streakOf(owner)).toMatchObject({ streak: { days: 1, best: 1 } });
+    const restore = await post(owner, "/v1/streak/restore", { utcOffsetSeconds: 0 });
+    expect(restore.status).toBe(409);
+    expect(await restore.json()).toEqual({ _tag: "StreakNotRestorable" });
+    expect((await post(owner, "/v1/streak/days", { at: "soon", utcOffsetSeconds: 0 })).status).toBe(
+      400,
+    );
+  });
+
   it("opens the day's gift once for the pair, and pays an app earn once per ref", async () => {
     const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
     const post = (token: string, path: string, body: unknown) =>

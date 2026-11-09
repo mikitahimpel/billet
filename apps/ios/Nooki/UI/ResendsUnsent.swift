@@ -10,7 +10,7 @@ struct ResendsUnsent: ViewModifier {
     let notes: [UUID]
     let sendPhotos: @MainActor () async -> Bool
     let sendNotes: @MainActor () async -> Bool
-    let catEvents: CatEventOutbox?
+    let sendCatEvents: @MainActor () async -> Bool
     var resend = Resend()
 
     /// Bumped on each chance worth trying again at once; restarts every loop with a fresh backoff.
@@ -27,10 +27,7 @@ struct ResendsUnsent: ViewModifier {
         content
             .task(id: Key(round: round, paired: paired, ids: photos)) { await resend.run(sendPhotos) }
             .task(id: Key(round: round, paired: paired, ids: notes)) { await resend.run(sendNotes) }
-            .task(id: Key(round: round, ids: [])) {
-                guard let catEvents else { return }
-                await resend.run { await catEvents.flush() }
-            }
+            .task(id: Key(round: round, ids: [])) { await resend.run(sendCatEvents) }
             .task {
                 for await _ in NetworkReturns.stream() { round += 1 }
             }

@@ -13,7 +13,8 @@ final class DrawCloseTests: XCTestCase {
         wait(for: [expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: splash)], timeout: 60)
 
         app.buttons["Add"].tap()
-        app.buttons["Draw"].tap()
+        // From iOS 27 a menu item's label carries its subtitle: "Draw, On M's lock screen".
+        app.buttons.matching(NSPredicate(format: "label == 'Draw' OR label BEGINSWITH 'Draw, '")).firstMatch.tap()
         XCTAssertTrue(app.buttons["drawClose"].waitForExistence(timeout: 10), "the composer did not open")
         return app
     }
