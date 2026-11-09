@@ -32,7 +32,9 @@ final class GameCloseTests: XCTestCase {
         let close = app.buttons["Close"]
         XCTAssertTrue(close.waitForExistence(timeout: 30), "the \(game) game should open")
         if swipe {
-            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.06))
+            // Below the status bar, where the game's swipe starts (its top 140 pt): a drag from inside the status bar
+            // is the system's, pulling down Notification Center, and never reaches the app.
+            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
             from.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)))
         } else {
             close.tap()
