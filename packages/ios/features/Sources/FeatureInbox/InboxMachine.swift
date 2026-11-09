@@ -5,7 +5,9 @@ import Wire
 /// The pair's activity, newest first: pages from the server, the unread count for the header's
 /// badge, and the read mark for this person.
 ///
-/// `request` counts first-page loads, so an answer to an earlier one changes nothing.
+/// `request` counts first-page loads, so an answer to an earlier one changes nothing. Opening
+/// while the first page is loading waits for that load: each new one would drop the answer to the
+/// last, and a sheet that keeps appearing would never see one.
 public enum InboxMachine: Machine {
   /// What the sheet has loaded.
   public struct Page: Equatable, Sendable {
@@ -96,6 +98,7 @@ public enum InboxMachine: Machine {
     var next = state
     switch event {
     case .opened:
+      guard !state.sheet.isLoadingFirst else { return (state, []) }
       next.request += 1
       next.loadingAfter = nil
       if let page = state.sheet.page, !page.items.isEmpty {

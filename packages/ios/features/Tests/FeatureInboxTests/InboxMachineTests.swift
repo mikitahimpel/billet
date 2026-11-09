@@ -96,12 +96,42 @@ private func item(
 
   @Test func anEarlierOpensAnswerIsIgnored() {
     var (state, _) = M.transition(.initial, .opened)
+    (state, _) = M.transition(state, .loadFailed(.unavailable, request: 1))
     (state, _) = M.transition(state, .opened)
     let late = ActivityResponse(items: [Self.a], unread: 1)
     let (after, outputs) = M.transition(state, .loaded(late, request: 1))
     #expect(after == state)
     #expect(outputs.isEmpty)
     #expect(M.transition(state, .loadFailed(.unpaired, request: 1)).0 == state)
+  }
+
+  static let loading = M.transition(.initial, .opened).0
+  static let refreshing = M.transition(loaded([a]), .opened).0
+
+  @Test(arguments: [loading, refreshing])
+  func openingWhileTheFirstPageLoadsWaitsForIt(state: M.State) {
+    let (after, outputs) = M.transition(state, .opened)
+    #expect(after == state)
+    #expect(outputs.isEmpty)
+    let page = ActivityResponse(items: [Self.b], unread: 0)
+    #expect(
+      M.transition(after, .loaded(page, request: state.request)).0.sheet.page?.items == [Self.b])
+  }
+
+  static func sheet(_ sheet: M.Sheet) -> M.State {
+    var state = M.State.initial
+    state.sheet = sheet
+    return state
+  }
+
+  @Test(arguments: [
+    sheet(.idle), sheet(.unpaired), sheet(.failed), sheet(.loaded(M.Page(items: [a]))),
+    sheet(.stale(M.Page(items: [a]))),
+  ])
+  func openingFromARestingSheetLoadsAgain(state: M.State) {
+    let (after, outputs) = M.transition(state, .opened)
+    #expect(after.sheet.isLoadingFirst)
+    #expect(outputs == [.loadFirst(request: state.request + 1)])
   }
 
   @Test func pagesWithoutALoadAreIgnored() {
@@ -177,6 +207,38 @@ private func item(
     #expect(model.sheet.page?.fresh == ["cat:1"])
     #expect(model.unread == 0)
     #expect(marked.withLock { $0 } == ["0001700000101000~cat:1"])
+  }
+
+  @Test func aFirstPageThatNeverComesEndsInFailed() async {
+    let model = InboxModel(
+      list: { (_) async throws(TransportError) in
+        try? await Task.sleep(for: .seconds(600))
+        return ActivityResponse(items: [], unread: 0)
+      },
+      markRead: { (_) async throws(TransportError) in ActivityUnreadResponse(unread: 0) },
+      timeout: .milliseconds(50))
+    await model.open()
+    #expect(model.sheet == .failed)
+  }
+
+  @Test func aRefreshThatNeverComesKeepsTheList() async {
+    let calls = Mutex(0)
+    let shown = item(id: "cat:1", at: 1)
+    let model = InboxModel(
+      list: { (_) async throws(TransportError) in
+        if calls.withLock({
+          $0 += 1
+          return $0
+        }) > 1 {
+          try? await Task.sleep(for: .seconds(600))
+        }
+        return ActivityResponse(items: [shown], unread: 0)
+      },
+      markRead: { (_) async throws(TransportError) in ActivityUnreadResponse(unread: 0) },
+      timeout: .milliseconds(50))
+    await model.open()
+    await model.open()
+    #expect(model.sheet == .stale(InboxMachine.Page(items: [shown], head: shown.cursor)))
   }
 
   @Test func theBadgeRefreshesWithoutOpening() async {
