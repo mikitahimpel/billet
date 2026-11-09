@@ -10,6 +10,7 @@ owner's approval before it can read any secret.
 gh workflow run testflight.yml --ref main
 gh workflow run testflight.yml --ref main -f build=17   # a particular build number
 gh workflow run testflight.yml --ref main -f build=20 -f commit=4e2684c   # a hotfix from an earlier commit on main
+gh workflow run testflight.yml --ref main -f labs=true   # the owner's test build, with Settings > Labs
 gh run watch "$(gh run list --workflow testflight.yml --limit 1 --json databaseId -q '.[0].databaseId')"
 ```
 
@@ -19,6 +20,16 @@ Approve the run on its page (Review deployments → testflight), or with
 The run ends by printing one line, `build <number>: <processing state>`, also shown in the run
 summary. `VALID` means testers can install it. `PROCESSING` means App Store Connect has the build and
 is still working on it, which can take up to half an hour after the run ends.
+
+### The first run for a new app
+
+The app is `com.ourio.app` (App Store Connect record "Ourio", SKU `ourio`), with the extensions
+`com.ourio.app.widget`, `.notification-service` and `.share` and the app group
+`group.com.ourio.app`. The owner registers those App IDs and the record; no provisioning profile
+exists for them before the first run. Automatic signing creates the profiles through the API key on
+that run (`-allowProvisioningUpdates`), so the key needs its Admin role (see below). A run that
+fails with "No profiles for 'com.ourio.app…'" on a fresh app is missing an App ID or a capability
+(App Groups, Push Notifications, Sign in with Apple, Associated Domains) on one of them.
 
 ## What it does
 
@@ -37,8 +48,8 @@ is still working on it, which can take up to half an hour after the run ends.
    - the bundle IDs, version and build of the app and its widget;
    - `codesign --verify` and the team on both;
    - that the app was built with the StoreKit store (`BilletPayments` is `storekit` and the
-     binary has no `MockPaymentsBuild`) and without Labs (`BilletLabs` is `NO`): the workflow sets
-     `BILLET_PAYMENTS=storekit` and never `BILLET_LABS`, since this binary goes on to App Review;
+     binary has no `MockPaymentsBuild`) and with Labs as asked (`BilletLabs` equals `EXPECT_LABS`,
+     `NO` unless the run has `-f labs=true`), since a normal build goes on to App Review;
    - that the demo host is the app's `BilletAPIHost` and appears nowhere in git history.
 6. Exports with `apps/ios/ExportOptions-external.plist` (`method` app-store-connect,
    `destination` upload, `uploadSymbols` on), which signs with a cloud-managed Apple Distribution
@@ -47,6 +58,16 @@ is still working on it, which can take up to half an hour after the run ends.
 Nothing is exported from a Mac's keychain. The archive is signed with an Apple Development
 certificate that Xcode creates through the API key. Distribution signing happens in Apple's cloud
 when the archive is exported.
+
+## Labs builds
+
+`-f labs=true` archives with `BILLET_LABS=YES`, so Settings > Labs and Testing are in the build,
+for the owner's own testing. The archive check then expects `BilletLabs` to be `YES`, and it
+fails on a mismatch either way. The run summary says "Labs build: do not submit for review". After
+upload, the build's TestFlight "What to test" note (en-US) says the same
+(`asc.py what-to-test`).
+
+Never submit a Labs build for App Review. Ship a build from a run without `labs`.
 
 ## Secrets
 
@@ -109,7 +130,7 @@ If a key leaks, revoke it first, then do steps 1 to 4.
 To sign the archive, Xcode makes a new Apple Development certificate through the API key on every
 run ("Created via API"), with its private key in the run's keychain. The team may hold only a few.
 Once they are used up, the archive fails with "Choose a certificate to revoke. Your account has
-reached the maximum number of certificates" and "No profiles for 'com.mikitahimpel.billet.…'".
+reached the maximum number of certificates" and "No profiles for 'com.ourio.app.…'".
 
 So the step "Revoke this run's development certificate" runs at the end of every run, also after a
 failure:

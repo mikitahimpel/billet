@@ -1,4 +1,5 @@
 import FeatureGames
+import FeatureInbox
 import RoomInterface
 import SwiftUI
 import Design
@@ -158,7 +159,7 @@ struct HomeView: View {
         }
         .sheet(isPresented: $state.showsInbox) {
             if let inbox = session?.inbox {
-                InboxView(model: inbox, state: state) { target in
+                InboxSheet(model: inbox, state: state) { target in
                     withAnimation(.spring(duration: 0.4)) { state.open(target) }
                 }
             } else {

@@ -69,7 +69,7 @@ public enum WidgetFeature: String, CaseIterable, Codable, Sendable {
     case .partnerDrawing: "The newest note, drawn on the widget."
     case .streak: "Days in a row you both gave a treat."
     case .timeOfDay: "The little house under today's sky."
-    case .partnerWindow: "The window glows while your partner is in billet."
+    case .partnerWindow: "The window glows while your partner is in Ourio."
     case .daysTogether: "How long you have been paired."
     case .nudge: "Asks for a drawing when it has been a while."
     case .rotatePictures: "Take turns through the pictures that are on."

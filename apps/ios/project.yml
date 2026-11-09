@@ -66,7 +66,7 @@ targets:
         # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename
         # (Shared/Widget/DeepLink.swift).
         CFBundleURLTypes:
-          - CFBundleURLName: com.mikitahimpel.billet
+          - CFBundleURLName: com.ourio.app
             CFBundleURLSchemes: [ourio, nooki]
     dependencies:
       - target: OurioWidgets
@@ -88,15 +88,15 @@ targets:
     entitlements:
       path: Nooki/Ourio.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
-        keychain-access-groups: [$(AppIdentifierPrefix)com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
+        keychain-access-groups: [$(AppIdentifierPrefix)com.ourio.app]
         # Alert pushes for drawings; automatic signing switches it to production for TestFlight.
         aps-environment: development
         # Invite links, https://<server>/i/<code> (the Worker's app-links.ts).
         com.apple.developer.associated-domains: [applinks:$(BILLET_API_HOST)]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: >-
           $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) LABS_$(BILLET_LABS_MODE:upper)
         # The application preset sets "1,2" per target, over the project's base; a portrait-only iPad build is rejected.
@@ -138,7 +138,7 @@ targets:
     entitlements:
       path: OurioWidgets/OurioWidgets.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
       - package: BilletContracts
         products: [Wire]
@@ -150,7 +150,7 @@ targets:
         products: [MoodInterface]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
         # Extensions keep Swift's default isolation; Shared types that cross into App Intents are marked nonisolated.
         SKIP_INSTALL: YES
   # Writes the drawing a push carries to the App Group and reloads the drawing widgets, before the alert shows.
@@ -175,7 +175,7 @@ targets:
     entitlements:
       path: OurioNotifications/OurioNotifications.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
       - package: BilletContracts
         products: [Wire]
@@ -188,7 +188,7 @@ targets:
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.notification-service
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.notification-service
         SKIP_INSTALL: YES
   # The share sheet's "Ourio" action: a page shared from Safari or another app becomes a wish.
   OurioShare:
@@ -216,7 +216,7 @@ targets:
     entitlements:
       path: OurioShare/OurioShare.entitlements
       properties:
-        com.apple.security.application-groups: [group.com.mikitahimpel.billet]
+        com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
       - package: BilletContracts
         products: [Wire]
@@ -228,7 +228,7 @@ targets:
         products: [MoodInterface]
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.share
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.share
         SKIP_INSTALL: YES
   # The widgets' views rendered into BILLET_SAMPLES for review (WidgetGalleryTests). An extension can't host tests, so
   # the widget sources are compiled in, without their @main bundle; the app hosts it so their images load.
@@ -246,7 +246,7 @@ targets:
       - target: Billet
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.widget-tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget-tests
         GENERATE_INFOPLIST_FILE: YES
   OurioTests:
     type: bundle.unit-test
@@ -256,7 +256,7 @@ targets:
       - target: Billet
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.tests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
   OurioUITests:
@@ -267,7 +267,7 @@ targets:
       - target: Billet
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.mikitahimpel.billet.uitests
+        PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.uitests
         GENERATE_INFOPLIST_FILE: YES
         TEST_TARGET_NAME: Billet
 schemes:

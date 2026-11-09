@@ -6,12 +6,16 @@ import { IdentityVerifier } from "./identity-verifier.ts";
 
 export const appleIssuer = "https://appleid.apple.com";
 export const appleKeysUrl = "https://appleid.apple.com/auth/keys";
-export const appleAudience = "com.mikitahimpel.billet";
+export const appleAudience = "com.ourio.app";
+/** The first App Store app's bundle: its installed builds still sign in until the owner retires
+ * it. */
+export const legacyAppleAudience = "com.mikitahimpel.billet";
+export const appleAudiences = [appleAudience, legacyAppleAudience] as const;
 
 /** Literals are deliberate: an `aud` array that merely contains the bundle id is refused. */
 const AppleClaims = Schema.Struct({
   iss: Schema.Literal(appleIssuer),
-  aud: Schema.Literal(appleAudience),
+  aud: Schema.Literals(appleAudiences),
   sub: Schema.String.check(Schema.isNonEmpty()),
   nonce: Schema.String.check(Schema.isNonEmpty()),
 });
@@ -44,7 +48,7 @@ export const AppleIdentityVerifier: Layer.Layer<
         Jwt.verifyWithKeySet(AppleClaims, identityToken, {
           algorithms: ["RS256"],
           issuer: appleIssuer,
-          audience: appleAudience,
+          audience: appleAudiences,
           requiredClaims: ["iss", "aud", "exp", "sub"],
         }).pipe(
           Effect.provideContext(context),

@@ -22,7 +22,7 @@ struct Backend {
     static let infoKey = "BilletAPIHost"
     /// The Keychain service of the session token and the account key; the same as billet's first app, so a phone
     /// that had it signs in to the same account.
-    static let keychainService = "com.mikitahimpel.billet"
+    static let keychainService = "com.ourio.app"
 
     /// `https://<host>`, or `http` for a server on this Mac. Nil for an empty or unusable host.
     nonisolated static func baseURL(host: String?) -> URL? {
