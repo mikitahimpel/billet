@@ -128,6 +128,20 @@ jobs:
       - name: Install XcodeGen
         run: .github/scripts/install-xcodegen.sh
 
+      # Xcode's compilation cache, keyed by file contents: a run replays what an earlier one compiled.
+      # Keys only match at the same paths, which every run on these runners shares. Saved from main;
+      # it never shrinks, so a new week starts a fresh one.
+      - name: Compilation cache key
+        id: cas
+        run: echo "prefix=xcode-cas-${{ runner.os }}-$(cat .xcode-version)-$(date -u +%G-%V)-" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the compilation cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/cas
+          key: ${{ steps.cas.outputs.prefix }}${{ github.sha }}
+          restore-keys: ${{ steps.cas.outputs.prefix }}
+
       - name: App tests (Simulator)
         # A hung UI test must not hold a runner for an hour; each test is also capped below.
         timeout-minutes: 30
@@ -152,6 +166,7 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
+            COMPILATION_CACHE_ENABLE_CACHING=YES COMPILATION_CACHE_CAS_PATH="$RUNNER_TEMP/cas" \
             CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" \
             | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
@@ -165,6 +180,13 @@ jobs:
             echo "::endgroup::"
           fi
           exit "$status"
+
+      - name: Save the compilation cache
+        if: always() && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/cas
+          key: ${{ steps.cas.outputs.prefix }}${{ github.sha }}
 
       # Looks rendered by the app tests (NookiTests/PolaroidLookTests.swift), for review without a Simulator.
       - name: Keep the rendered samples

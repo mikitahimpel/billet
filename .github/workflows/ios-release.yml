@@ -52,6 +52,20 @@ jobs:
         if: steps.changed.outputs.build == 'true'
         run: .github/scripts/install-xcodegen.sh
 
+      # As in ios.yml: Xcode's compilation cache, a fresh one each week.
+      - name: Compilation cache key
+        if: steps.changed.outputs.build == 'true'
+        id: cas
+        run: echo "prefix=xcode-cas-release-${{ runner.os }}-$(cat .xcode-version)-$(date -u +%G-%V)-" >> "$GITHUB_OUTPUT"
+
+      - name: Restore the compilation cache
+        if: steps.changed.outputs.build == 'true'
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/cas
+          key: ${{ steps.cas.outputs.prefix }}${{ github.sha }}
+          restore-keys: ${{ steps.cas.outputs.prefix }}
+
       - name: App Release build (device, unsigned)
         if: steps.changed.outputs.build == 'true'
         run: |
@@ -59,5 +73,13 @@ jobs:
           set -o pipefail
           xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet -configuration Release \
             -destination 'generic/platform=iOS' -derivedDataPath "$RUNNER_TEMP/app-device" \
+            COMPILATION_CACHE_ENABLE_CACHING=YES COMPILATION_CACHE_CAS_PATH="$RUNNER_TEMP/cas" \
             CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 | tee "$RUNNER_TEMP/app-device.log" \
             | grep -E 'error:|\*\* BUILD (SUCCEEDED|FAILED)'
+
+      - name: Save the compilation cache
+        if: always() && steps.changed.outputs.build == 'true' && github.ref == 'refs/heads/main'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ${{ runner.temp }}/cas
+          key: ${{ steps.cas.outputs.prefix }}${{ github.sha }}
