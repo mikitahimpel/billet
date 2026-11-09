@@ -2,22 +2,38 @@
 import { appStoreUrl } from "../config";
 import { features, pages } from "../site";
 
+const page = (path: string) => pages.find((candidate) => candidate.path === path)!;
+const feature = (slug: string) => page(`/features/${slug}/`);
+const planner = ["us", "date-night", "wishlists", "shared-lists", "movie-night", "calendar-and-countdown"];
 const groups = [
   {
     title: "Features",
-    links: [{ path: "/features/", label: "All features" }, ...features, ...pages.filter((page) => page.group === "product" && page.path !== "/" && page.path !== "/features/")],
+    links: [
+      page("/features/"),
+      ...features.filter((link) => !planner.some((slug) => link.path === `/features/${slug}/`)),
+    ],
   },
-  { title: "Help", links: pages.filter((page) => page.group === "help") },
-  { title: "Compare", links: pages.filter((page) => page.group === "compare") },
+  { title: "Planner", links: planner.map(feature) },
   {
-    title: "Ourio",
-    links: [...pages.filter((page) => page.group === "legal"), { path: "/llms.txt", label: "llms.txt" }],
+    title: "Compare",
+    links: [
+      page("/long-distance-relationship-app/"),
+      page("/free-couples-app/"),
+      ...pages.filter((link) => link.group === "compare"),
+    ],
+  },
+  {
+    title: "Help",
+    links: [
+      ...pages.filter((link) => link.group === "help" || link.group === "legal"),
+      { path: "/llms.txt", label: "llms.txt" },
+    ],
   },
 ];
 ---
 
 <footer class="border-t border-paper/10">
-  <div class="container-page grid gap-10 pt-14 pb-28 md:grid-cols-[minmax(0,4fr)_minmax(0,8fr)] md:pb-14">
+  <div class="container-page grid gap-10 pt-14 pb-28 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)] lg:pb-14">
     <div>
       <a href="/" class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</a>
       <p class="mt-2 max-w-[24rem] text-small text-muted">
@@ -28,12 +44,12 @@ const groups = [
         >Get Ourio for iPhone</a
       >
     </div>
-    <nav class="grid grid-cols-2 gap-8 lg:grid-cols-4" aria-label="Footer">
+    <nav class="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4" aria-label="Footer">
       {
         groups.map((group) => (
           <div>
             <p class="eyebrow">{group.title}</p>
-            <ul class="mt-4 space-y-2.5 text-small text-muted">
+            <ul class="mt-3 space-y-1.5 text-small text-muted">
               {group.links.map((link) => (
                 <li>
                   <a href={link.path} class="underline-offset-4 hover:text-paper hover:underline">

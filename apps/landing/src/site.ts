@@ -13,7 +13,7 @@ export type SitePage = {
 export const features: SitePage[] = [
   {
     path: "/features/room-and-mochi/",
-    label: "Virtual pet: Mochi and the room",
+    label: "Virtual pet",
     summary:
       "A shared cozy room and a cat you both look after: pet, feed and play with her, pick her coat.",
     group: "features",
@@ -34,7 +34,7 @@ export const features: SitePage[] = [
   },
   {
     path: "/features/us/",
-    label: "The Us tab: planner for two",
+    label: "The Us tab",
     summary:
       "Everything that is yours as a couple in one tab: dates, wishlists, lists, calendar and streak.",
     group: "features",
@@ -61,7 +61,7 @@ export const features: SitePage[] = [
   },
   {
     path: "/features/movie-night/",
-    label: "Movie night: Pick tonight",
+    label: "Movie night",
     summary: "Swipe movies and shows together until you both want the same one.",
     group: "features",
   },
@@ -117,7 +117,7 @@ export const pages: SitePage[] = [
   ...features,
   {
     path: "/long-distance-relationship-app/",
-    label: "For long-distance couples",
+    label: "Long distance",
     summary:
       "How Ourio keeps two people close apart: Lock Screen drawings, a shared cat, daily games and countdowns.",
     group: "product",
@@ -131,7 +131,7 @@ export const pages: SitePage[] = [
   },
   {
     path: "/compare/",
-    label: "Couples apps compared",
+    label: "Compare apps",
     summary:
       "Ourio, Paired, Between, Locket Widget, Widgetable, Agapé, Lovewick, Cupla and SumOne: prices and features.",
     group: "compare",
