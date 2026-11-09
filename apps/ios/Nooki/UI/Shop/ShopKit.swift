@@ -67,13 +67,26 @@ struct RarityFrame<Content: View>: View {
     }
 }
 
-/// Crosses once per period, only while on screen; still under Reduce Motion. An animated effect, not a timeline:
-/// SwiftUI moves it each frame without building the view again, and a card scrolled out of sight stops it.
+/// Whether the page under the shop's cards is being scrolled. Its own object, read only by the sweeps, so a scroll
+/// starting or ending re-evaluates them and not the page.
+@MainActor
+@Observable
+final class ShopScrolling {
+    var isScrolling = false
+}
+
+/// Crosses once per period, only while on screen and the page holds still; still under Reduce Motion. An animated
+/// effect, not a timeline: SwiftUI moves it each frame without building the view again, and a card scrolled out of
+/// sight stops it. Each frame of it is still the main thread's work, so it waits while the page scrolls.
 private struct ShineSweep: View {
     let period: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    /// 0 to 1 through each period, animated forever while the frame is on screen.
+    @Environment(ShopScrolling.self) private var scrolling: ShopScrolling?
+    /// 0 to 1 through each period, animated forever while the sweep runs.
     @State private var progress = 0.0
+    @State private var visible = false
+
+    private var runs: Bool { visible && scrolling?.isScrolling != true }
 
     var body: some View {
         if !reduceMotion {
@@ -84,8 +97,9 @@ private struct ShineSweep: View {
                     .rotationEffect(.degrees(12))
                     .modifier(SweepEffect(progress: progress, frameWidth: proxy.size.width, bandWidth: width))
             }
-            .onScrollVisibilityChange(threshold: 0.01) { visible in
-                if visible {
+            .onScrollVisibilityChange(threshold: 0.01) { visible = $0 }
+            .onChange(of: runs) { _, runs in
+                if runs {
                     withAnimation(.linear(duration: period).repeatForever(autoreverses: false)) { progress = 1 }
                 } else {
                     var still = Transaction(animation: nil)
@@ -146,16 +160,27 @@ extension View {
     }
 }
 
+/// A card springs up as it comes into view while the page scrolls. Set once as it crosses in, not a scroll transition
+/// worked out for every card on every scrolled frame: the Shop's sections are not lazy, so that was each card's work
+/// on the main thread through a whole scroll.
 private struct ShopAppear: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(ShopScrolling.self) private var scrolling: ShopScrolling?
+    @State private var shown = true
 
     func body(content: Content) -> some View {
-        // `.animated` springs once when the card crosses into view rather than following every scrolled point.
-        content.scrollTransition(.animated(.spring(duration: 0.5, bounce: 0.25))) { content, phase in
-            content
-                .opacity(phase.isIdentity ? 1 : 0.3)
-                .offset(y: phase.isIdentity || reduceMotion ? 0 : 10)
-        }
+        content
+            .opacity(shown ? 1 : 0.3)
+            .offset(y: shown || reduceMotion ? 0 : 10)
+            .onScrollVisibilityChange(threshold: 0.2) { visible in
+                // A card already there when the page opens shows at once.
+                guard scrolling?.isScrolling == true else { return shown = true }
+                if visible {
+                    withAnimation(.spring(duration: 0.5, bounce: 0.25)) { shown = true }
+                } else {
+                    shown = false
+                }
+            }
     }
 }
 

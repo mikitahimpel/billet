@@ -67,6 +67,10 @@ public enum ScenePerf {
     /// records the frames under it.
     public var covers: [String] = []
     public var setCover: @MainActor (_ name: String?) -> Void = { _ in }
+    /// The rooms Home switches between, by the name each is marked on screen with, first the one on
+    /// screen when asked; a `full` run goes to each and back, twice. Empty for an app with one room.
+    public var rooms: @MainActor () -> [String] = { [] }
+    public var selectRoom: @MainActor (_ name: String) -> Void = { _ in }
     public init() {}
   }
 
@@ -167,7 +171,9 @@ public enum ScenePerf {
     }
     await scroll("shop")
     await scroll("notes")
+    await scroll("us")
     await timed("tab.home.scroll", until: "room on screen") { host.selectTab("home") }
+    await rooms()
     await covers()
     // Home again, long after launch and the switches, when nothing started earlier still runs:
     // what the room costs for good.
@@ -190,6 +196,20 @@ public enum ScenePerf {
       host.scroll(t <= 1 ? t * 2400 : (2 - t) * 2400)
     }
     host.scroll(0)
+  }
+
+  /// Each other room and back to the first, twice: the first visit builds a room, the second shows
+  /// what a switch costs once it has been made.
+  private static func rooms() async {
+    let rooms = host.rooms()
+    guard let first = rooms.first else { return }
+    for round in 1...2 {
+      for name in rooms.dropFirst() + [first] {
+        await pause(1.5)
+        let label = name.replacingOccurrences(of: " ", with: "-")
+        await timed("room.\(label).\(round)", until: "\(name) on screen") { host.selectRoom(name) }
+      }
+    }
   }
 
   /// Each cover over the room, held open, then closed again; with the room on screen underneath,

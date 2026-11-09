@@ -30,7 +30,7 @@ enum HUDArm: String {
 enum OurioPerf {
     /// Once, at launch.
     static func start(state: HomeState, hud: @escaping (HUDArm) -> Void,
-                      sheetGround: @escaping (SheetGroundStyle) -> Void) {
+                      sheetGround: @escaping (SheetGroundStyle) -> Void, selectRoom: @escaping (RoomKind) -> Void) {
         guard ScenePerf.isOn else { return }
         setHUD = hud
         seedMoments(state.moments)
@@ -47,6 +47,13 @@ enum OurioPerf {
             }
         }
         host.scroll = { y in scrolls[state.tab]?(y) }
+        if state.rooms.variant.hasRoomChoice {
+            let kinds = state.rooms.variant.kinds
+            host.rooms = { (kinds.filter { $0 == state.room } + kinds.filter { $0 != state.room }).map(\.perfName) }
+            host.selectRoom = { name in
+                if let kind = kinds.first(where: { $0.perfName == name }) { selectRoom(kind) }
+            }
+        }
         // Opaque sheet over the live room, over the paused room, and a glass one, so the room's cost and the glass's
         // come apart.
         host.covers = ["sheet", "sheet.paused", "sheet.glass", "drawing", "inbox"]
@@ -108,7 +115,7 @@ enum OurioPerf {
         current = room
         ScenePerf.shown(
             .init(
-                name: kind == .city ? "city room" : "room",
+                name: kind.perfName,
                 orbit: { deltaX, _ in room.setYaw(room.settledYaw - deltaX * 0.004) },
                 zoom: { _ in },
                 release: { room.setYaw(0) },
@@ -273,4 +280,9 @@ enum PerfPieces {
     static func set(_ isOn: Bool, in room: CatRoom) {
         stood[ObjectIdentifier(room)]?.isEnabled = isOn
     }
+}
+
+extension RoomKind {
+    /// What a perf run marks the room on screen as.
+    var perfName: String { self == .city ? "city room" : "room" }
 }

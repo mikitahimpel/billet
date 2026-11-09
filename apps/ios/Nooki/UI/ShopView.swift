@@ -15,6 +15,7 @@ struct ShopView: View {
     @State private var highlightedInk: String?
     /// Where the page is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
     @State private var position = ScrollPosition(edge: .top)
+    @State private var scrolling = ShopScrolling()
 
     private let columns = [
         GridItem(.flexible(), spacing: Space.m, alignment: .top),
@@ -39,6 +40,10 @@ struct ShopView: View {
             }
             .scrollIndicators(.hidden)
             .scrollPosition($position)
+            .onScrollPhaseChange { _, phase in
+                if scrolling.isScrolling != phase.isScrolling { scrolling.isScrolling = phase.isScrolling }
+            }
+            .environment(scrolling)
             .softScrollEdges()
             .onAppear {
                 guard ScenePerf.isOn else { return }
