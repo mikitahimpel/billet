@@ -3,22 +3,29 @@ import Observation
 
 /// Grows by one each day the couple does something together (docs/love-streak.md); a whole missed day puts it out,
 /// and one missed day can be restored once a month.
-nonisolated struct LoveStreak: Codable, Hashable {
+public nonisolated struct LoveStreak: Codable, Hashable, Sendable {
     /// Days in a row up to `lastDay`; kept after the streak breaks so a restore can bring it back.
-    var count = 0
+    public var count = 0
     /// Start of the last day that counted.
-    var lastDay: Date?
-    var best = 0
+    public var lastDay: Date?
+    public var best = 0
     /// Start of the day the last restore was used.
-    var lastRestore: Date?
+    public var lastRestore: Date?
 
-    static let milestones = [3, 7, 14, 30, 50, 100, 200, 365]
+    public init(count: Int = 0, lastDay: Date? = nil, best: Int = 0, lastRestore: Date? = nil) {
+        self.count = count
+        self.lastDay = lastDay
+        self.best = best
+        self.lastRestore = lastRestore
+    }
+
+    public static let milestones = [3, 7, 14, 30, 50, 100, 200, 365]
     /// In days.
-    static let restoreCooldown = 30
+    public static let restoreCooldown = 30
     /// Shorter streaks aren't worth a restore.
-    static let restoreMinimum = 3
+    public static let restoreMinimum = 3
 
-    enum Status: Equatable {
+    public enum Status: Equatable, Sendable {
         /// No streak yet, or it went out.
         case cold
         /// Today already counts.
@@ -29,7 +36,7 @@ nonisolated struct LoveStreak: Codable, Hashable {
         case restorable
     }
 
-    func status(on date: Date = .now, calendar: Calendar = .current) -> Status {
+    public func status(on date: Date = .now, calendar: Calendar = .current) -> Status {
         guard let lastDay, count > 0 else { return .cold }
         switch daysSince(lastDay, to: date, calendar: calendar) {
         case 0: return .done
@@ -40,20 +47,20 @@ nonisolated struct LoveStreak: Codable, Hashable {
     }
 
     /// The flame's number today: zero once the streak is out.
-    func current(on date: Date = .now, calendar: Calendar = .current) -> Int {
+    public func current(on date: Date = .now, calendar: Calendar = .current) -> Int {
         switch status(on: date, calendar: calendar) {
         case .done, .atRisk: count
         case .cold, .restorable: 0
         }
     }
 
-    func milestone(on date: Date = .now) -> (reached: Int?, next: Int?) {
+    public func milestone(on date: Date = .now) -> (reached: Int?, next: Int?) {
         let days = current(on: date)
         return (Self.milestones.last { $0 <= days }, Self.milestones.first { $0 > days })
     }
 
     /// A qualifying action happened; the first one each day grows the streak.
-    mutating func record(on date: Date = .now, calendar: Calendar = .current) {
+    public mutating func record(on date: Date = .now, calendar: Calendar = .current) {
         let day = calendar.startOfDay(for: date)
         if let lastDay, lastDay == day { return }
         count = lastDay.map { daysSince($0, to: date, calendar: calendar) == 1 } == true ? count + 1 : 1
@@ -62,7 +69,7 @@ nonisolated struct LoveStreak: Codable, Hashable {
     }
 
     /// Fills in the missed day, so today's first action continues the old streak.
-    mutating func restore(on date: Date = .now, calendar: Calendar = .current) {
+    public mutating func restore(on date: Date = .now, calendar: Calendar = .current) {
         guard status(on: date, calendar: calendar) == .restorable else { return }
         let today = calendar.startOfDay(for: date)
         lastDay = calendar.date(byAdding: .day, value: -1, to: today)
@@ -81,8 +88,8 @@ nonisolated struct LoveStreak: Codable, Hashable {
 }
 
 /// The room counts one streak for the couple and keeps the restore cooldown for both; each call answers it.
-nonisolated struct StreakRemote: Sendable {
-    enum Answer: Sendable, Equatable {
+public nonisolated struct StreakRemote: Sendable {
+    public enum Answer: Sendable, Equatable {
         case streak(LoveStreak)
         /// The room would not: a restore it can't make, or a pair it no longer has.
         case refused
@@ -90,9 +97,15 @@ nonisolated struct StreakRemote: Sendable {
         case offline
     }
 
-    var load: @Sendable () async -> Answer
-    var record: @Sendable (_ at: Date) async -> Answer
-    var restore: @Sendable () async -> Answer
+    public var load: @Sendable () async -> Answer
+    public var record: @Sendable (_ at: Date) async -> Answer
+    public var restore: @Sendable () async -> Answer
+
+    public init(load: @escaping @Sendable () async -> Answer, record: @escaping @Sendable (_ at: Date) async -> Answer, restore: @escaping @Sendable () async -> Answer) {
+        self.load = load
+        self.record = record
+        self.restore = restore
+    }
 }
 
 /// The streak in the app group, next to the other shared stores. Once paired it follows the pair's room: the file is
@@ -100,29 +113,29 @@ nonisolated struct StreakRemote: Sendable {
 /// flame on both phones and still counts a day done offline.
 @MainActor
 @Observable
-final class StreakStore {
-    private(set) var streak: LoveStreak
+public final class StreakStore {
+    public private(set) var streak: LoveStreak
     /// When this phone grew the streak while the room had not heard of it yet.
-    private(set) var unsent: [Date]
+    public private(set) var unsent: [Date]
 
     private let file: String
     private let unsentFile: String
     @ObservationIgnored private var remote: StreakRemote?
     @ObservationIgnored private var flushing = false
 
-    init(file: String = "Us/streak.json") {
+    public init(file: String = "Us/streak.json") {
         self.file = file
         unsentFile = file.replacingOccurrences(of: ".json", with: "-unsent.json")
         streak = SharedFile.read(LoveStreak.self, from: file) ?? LoveStreak()
         unsent = SharedFile.read([Date].self, from: unsentFile) ?? []
     }
 
-    func reload() {
+    public func reload() {
         if let saved = SharedFile.read(LoveStreak.self, from: file) { streak = saved }
     }
 
     /// Follows the pair's streak through `remote`, or keeps it on this phone with nil.
-    func follow(_ remote: StreakRemote?) async {
+    public func follow(_ remote: StreakRemote?) async {
         self.remote = remote
         if remote == nil, !unsent.isEmpty {
             unsent = []
@@ -132,7 +145,7 @@ final class StreakStore {
     }
 
     /// Sends the days that waited, then reads the room's streak. Offline it stays as kept.
-    func refresh() async {
+    public func refresh() async {
         guard let remote else { return }
         await flush()
         if case .streak(let shared) = await remote.load() { take(shared) }
@@ -140,12 +153,12 @@ final class StreakStore {
 
     /// The room's streak as the socket pushed it after either partner changed it. Ignored before pairing, when the
     /// streak is this phone's own.
-    func received(_ shared: LoveStreak) {
+    public func received(_ shared: LoveStreak) {
         guard remote != nil else { return }
         take(shared)
     }
 
-    func record(at date: Date = .now) {
+    public func record(at date: Date = .now) {
         guard update({ $0.record(on: date) }), remote != nil else { return }
         unsent.append(date)
         SharedFile.write(unsent, to: unsentFile)
@@ -155,7 +168,7 @@ final class StreakStore {
     /// Brings the streak back after one missed day: in the pair's room once paired, so the partner sees it too and the
     /// monthly restore is the couple's. Whether it came back.
     @discardableResult
-    func restore(on date: Date = .now) async -> Bool {
+    public func restore(on date: Date = .now) async -> Bool {
         guard let remote else {
             return update { $0.restore(on: date) }
         }

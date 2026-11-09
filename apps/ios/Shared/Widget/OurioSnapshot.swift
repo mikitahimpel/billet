@@ -1,91 +1,153 @@
 import Foundation
 import MoodInterface
 
-enum WidgetModule: String, Codable, CaseIterable {
+public enum WidgetModule: String, Codable, CaseIterable, Sendable {
     case mochi, us, mood, list, date, moment
 }
 
 /// Everything the widgets draw at one moment, read from the shared stores. Plain data, so it can be built for future
 /// timeline entries and tested without WidgetKit.
-struct OurioSnapshot: Hashable {
-    struct NextEvent: Hashable {
-        var title: String
-        var icon: UsGlyph
-        var date: Date
-        var daysLeft: Int
+public struct OurioSnapshot: Hashable, Sendable {
+    public struct NextEvent: Hashable, Sendable {
+        public var title: String
+        public var icon: UsGlyph
+        public var date: Date
+        public var daysLeft: Int
+
+        public init(title: String, icon: UsGlyph, date: Date, daysLeft: Int) {
+            self.title = title
+            self.icon = icon
+            self.date = date
+            self.daysLeft = daysLeft
+        }
     }
 
-    struct ListPreview: Hashable {
-        struct Item: Hashable {
-            var id: UUID
-            var text: String
-            var author: String
-            var done: Bool
+    public struct ListPreview: Hashable, Sendable {
+        public struct Item: Hashable, Sendable {
+            public var id: UUID
+            public var text: String
+            public var author: String
+            public var done: Bool
+
+            public init(id: UUID, text: String, author: String, done: Bool) {
+                self.id = id
+                self.text = text
+                self.author = author
+                self.done = done
+            }
         }
 
-        var id: UUID
-        var title: String
-        var icon: UsGlyph
+        public var id: UUID
+        public var title: String
+        public var icon: UsGlyph
         /// Open items first, then the ones ticked off today, so a tick in the widget can be undone.
-        var items: [Item]
-        var openCount: Int
+        public var items: [Item]
+        public var openCount: Int
         /// The partner added something to it today.
-        var partnerAddedToday: Bool
+        public var partnerAddedToday: Bool
+
+        public init(id: UUID, title: String, icon: UsGlyph, items: [Item], openCount: Int, partnerAddedToday: Bool) {
+            self.id = id
+            self.title = title
+            self.icon = icon
+            self.items = items
+            self.openCount = openCount
+            self.partnerAddedToday = partnerAddedToday
+        }
     }
 
-    struct PlannedPreview: Hashable {
-        var id: UUID
+    public struct PlannedPreview: Hashable, Sendable {
+        public var id: UUID
         /// "Surprise date" when the partner organizes it in surprise mode.
-        var title: String
-        var date: Date
-        var hint: String?
-        var isToday: Bool
+        public var title: String
+        public var date: Date
+        public var hint: String?
+        public var isToday: Bool
+
+        public init(id: UUID, title: String, date: Date, hint: String? = nil, isToday: Bool) {
+            self.id = id
+            self.title = title
+            self.date = date
+            self.hint = hint
+            self.isToday = isToday
+        }
     }
 
-    struct IdeaPreview: Hashable {
-        var id: Int
-        var title: String
-        var pitch: String
-        var matched: Bool
+    public struct IdeaPreview: Hashable, Sendable {
+        public var id: Int
+        public var title: String
+        public var pitch: String
+        public var matched: Bool
+
+        public init(id: Int, title: String, pitch: String, matched: Bool) {
+            self.id = id
+            self.title = title
+            self.pitch = pitch
+            self.matched = matched
+        }
     }
 
-    struct MomentPreview: Hashable {
-        var id: UUID
-        var caption: String
-        var imageURL: URL
+    public struct MomentPreview: Hashable, Sendable {
+        public var id: UUID
+        public var caption: String
+        public var imageURL: URL
+
+        public init(id: UUID, caption: String, imageURL: URL) {
+            self.id = id
+            self.caption = caption
+            self.imageURL = imageURL
+        }
     }
 
-    var date: Date
-    var viewer: String
-    var partner: String
-    var daysTogether: Int
-    var next: NextEvent?
-    var partnerMood: MoodCheckIn?
-    var myMood: MoodCheckIn?
-    var list: ListPreview?
-    var planned: PlannedPreview?
-    var idea: IdeaPreview?
-    var moment: MomentPreview?
-    var isPurring: Bool
-    var isNight: Bool
-    var catName = CatProfile.defaultName
+    public var date: Date
+    public var viewer: String
+    public var partner: String
+    public var daysTogether: Int
+    public var next: NextEvent?
+    public var partnerMood: MoodCheckIn?
+    public var myMood: MoodCheckIn?
+    public var list: ListPreview?
+    public var planned: PlannedPreview?
+    public var idea: IdeaPreview?
+    public var moment: MomentPreview?
+    public var isPurring: Bool
+    public var isNight: Bool
+    public var catName = CatProfile.defaultName
     /// In the coat picked in onboarding.
-    var catAvatar = "MochiPortrait"
+    public var catAvatar = "MochiPortrait"
+
+    public init(date: Date, viewer: String, partner: String, daysTogether: Int, next: NextEvent? = nil, partnerMood: MoodCheckIn? = nil, myMood: MoodCheckIn? = nil, list: ListPreview? = nil, planned: PlannedPreview? = nil, idea: IdeaPreview? = nil, moment: MomentPreview? = nil, isPurring: Bool, isNight: Bool, catName: String = CatProfile.defaultName, catAvatar: String = "MochiPortrait") {
+        self.date = date
+        self.viewer = viewer
+        self.partner = partner
+        self.daysTogether = daysTogether
+        self.next = next
+        self.partnerMood = partnerMood
+        self.myMood = myMood
+        self.list = list
+        self.planned = planned
+        self.idea = idea
+        self.moment = moment
+        self.isPurring = isPurring
+        self.isNight = isNight
+        self.catName = catName
+        self.catAvatar = catAvatar
+    }
 
     /// Rows a list shows at most, sized for the smallest widget.
-    static let listRows = 3
+    public static let listRows = 3
     /// How long a partner's check-in stays news.
-    static let moodNews: TimeInterval = 3 * 3600
+    public static let moodNews: TimeInterval = 3 * 3600
 
-    var smartModule: WidgetModule { SmartSlot.pick(for: self) }
+    public var smartModule: WidgetModule { SmartSlot.pick(for: self) }
 
-    var freshPartnerMood: MoodCheckIn? {
+    public var freshPartnerMood: MoodCheckIn? {
         guard let partnerMood, date >= partnerMood.date, date.timeIntervalSince(partnerMood.date) < Self.moodNews else { return nil }
         return partnerMood
     }
 
     /// Night from 20:00 to 7:00, when the room's lamps are on.
-    static func isNight(_ date: Date) -> Bool {
+    public static func isNight(_ date: Date) -> Bool {
         let hour = Calendar.current.component(.hour, from: date)
         return hour < 7 || hour >= 20
     }
@@ -93,7 +155,7 @@ struct OurioSnapshot: Hashable {
 
 extension OurioSnapshot {
     /// - Parameter listID: the list the widget was set up with; falls back to the first checklist, then the first list.
-    init(date: Date, couple: Couple, moods: [String: MoodCheckIn], activity: WidgetActivity, us: UsStore,
+    public init(date: Date, couple: Couple, moods: [String: MoodCheckIn], activity: WidgetActivity, us: UsStore,
          listID: UUID?, moment: MomentPreview?) {
         let cal = Calendar.current
         let partner = couple.other
@@ -149,8 +211,8 @@ extension OurioSnapshot {
 
 /// Picks what the smart slot shows: the first rule that holds wins.
 /// note: gifts, notes and today's question rank above the mood once those features exist; they have no data yet.
-enum SmartSlot {
-    static func pick(for s: OurioSnapshot) -> WidgetModule {
+public enum SmartSlot {
+    public static func pick(for s: OurioSnapshot) -> WidgetModule {
         if s.planned?.isToday == true { return .date }
         if s.freshPartnerMood != nil { return .mood }
         if let next = s.next, next.daysLeft <= 3 { return .us }
@@ -161,8 +223,8 @@ enum SmartSlot {
 
 /// When the widgets need a new entry without anything being saved: a purr ends, a check-in stops being news, the
 /// room turns to night or day, the day counter rolls over.
-enum WidgetTimeline {
-    static func entryDates(from now: Date, activity: WidgetActivity, moods: [String: MoodCheckIn],
+public enum WidgetTimeline {
+    public static func entryDates(from now: Date, activity: WidgetActivity, moods: [String: MoodCheckIn],
                            horizon: TimeInterval = 24 * 3600) -> [Date] {
         let cal = Calendar.current
         let end = now.addingTimeInterval(horizon)

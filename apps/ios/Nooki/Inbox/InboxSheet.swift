@@ -1,5 +1,6 @@
 import Design
 import FeatureInbox
+import OurioShared
 import SwiftUI
 import UIKit
 import Wire

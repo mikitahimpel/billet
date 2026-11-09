@@ -62,6 +62,31 @@ Enforced by `Package.swift` (SwiftPM already builds with
 `packages/ios/scripts/check-imports.mjs` (section 7). The widgets and extensions link the
 `*Interface` targets they need (value types and file formats) and never a `Feature*`.
 
+### 1.1.1 `OurioShared`, for now
+
+The code the app and its extensions both need (models, App Group files, the widget snapshot, a few
+views the widgets draw) was `apps/ios/Shared`, compiled into five targets. It is now one static
+library, `OurioShared` (`project.yml`), built once and linked into the app and its three extensions;
+the test bundles get it from the app. Its images and the world map stay in each target's resources,
+and `apps/ios/PerTarget` holds what each target compiles itself: the App Intents and the Live Activity,
+whose metadata a target extracts from its own sources, and the names where `Wire` has a type of the
+same name.
+
+It is a step, not the end: nothing new goes into it. Each feature PR moves its part out, and the
+library goes when it is empty:
+
+| To | From `OurioShared` |
+| --- | --- |
+| `core/AppGroup` (new) | `SharedFile`, `AppGroup` |
+| `ProfileInterface` | `Couple`, `PairMembers`, `CoupleStore`, `CatProfile` |
+| `UsInterface` | the Us model, `UsStore`, `PendingListChange`, `WishMedia` |
+| `MomentsInterface` | `Moment`, `Note` and their stores |
+| `DrawInterface` | `LatestDrawing`, `PushTokens`, `PushReceipt` |
+| `MoodInterface` | `MoodStore` |
+| `WidgetBridge` | `OurioSnapshot`, `WidgetTimeline`, `WidgetActivity`, `DeepLink` |
+| `WidgetUI` (new; SwiftUI, with the mood faces) | `MoodArt`, `DrawingCard`, `InkLayer`, `LockWallpaper` |
+| the feature that uses it, or the app | Places, `BlurHash`, `InstantFilm`, `DateCatalog`, `GroceryWords`, `Streak`, `Wallet` |
+
 ### 1.2 What a feature owns
 
 ```

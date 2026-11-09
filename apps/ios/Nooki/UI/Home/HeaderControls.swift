@@ -1,5 +1,6 @@
 import Design
 import MoodInterface
+import OurioShared
 import SwiftUI
 
 struct InboxButton: View {

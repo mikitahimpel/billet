@@ -5,10 +5,14 @@ import Wire
 
 /// Strokes drawn as a thick, slightly glowing marker. Coordinates and widths are fractions of the layer's width, as
 /// strokes carry them, so the same drawing fills any phone.
-struct InkLayer: View {
-    let strokes: [Stroke]
+public struct InkLayer: View {
+    public let strokes: [Stroke]
 
-    var body: some View {
+    public init(strokes: [Stroke]) {
+        self.strokes = strokes
+    }
+
+    public var body: some View {
         Canvas { context, size in
             for stroke in strokes {
                 InkLayer.draw(stroke, in: &context, width: size.width)
@@ -17,7 +21,7 @@ struct InkLayer: View {
         .allowsHitTesting(false)
     }
 
-    static func draw(_ stroke: Stroke, in context: inout GraphicsContext, width: CGFloat) {
+    public static func draw(_ stroke: Stroke, in context: inout GraphicsContext, width: CGFloat) {
         guard !stroke.points.isEmpty, let hex = UInt32(stroke.color.dropFirst(), radix: 16) else { return }
         let color = Color(hex: hex)
         let line = stroke.width * width

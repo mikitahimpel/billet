@@ -1,3 +1,4 @@
+import OurioShared
 import Payments
 import SwiftUI
 import Design

@@ -3,13 +3,19 @@ import SwiftUI
 import Wire
 
 /// A drawing on its wallpaper, scaled to fit whatever it is laid in: the widgets and their previews.
-struct DrawingCard: View {
-    let strokes: [Stroke]
-    let wallpaper: LockWallpaper
+public struct DrawingCard: View {
+    public let strokes: [Stroke]
+    public let wallpaper: LockWallpaper
     /// Space kept clear around the drawing, as a fraction of the shorter side.
-    var margin = 0.1
+    public var margin = 0.1
 
-    var body: some View {
+    public init(strokes: [Stroke], wallpaper: LockWallpaper, margin: Double = 0.1) {
+        self.strokes = strokes
+        self.wallpaper = wallpaper
+        self.margin = margin
+    }
+
+    public var body: some View {
         GeometryReader { geometry in
             InkLayer(strokes: Self.fitted(strokes, in: geometry.size, margin: margin))
         }
@@ -18,7 +24,7 @@ struct DrawingCard: View {
 
     /// Scales and centres `strokes` (fractions of the sender's canvas width) into `size`, keeping their shape, and
     /// returns them as fractions of `size.width`, as `InkLayer` draws them. Thin lines keep a readable width.
-    static func fitted(_ strokes: [Stroke], in size: CGSize, margin: Double) -> [Stroke] {
+    public static func fitted(_ strokes: [Stroke], in size: CGSize, margin: Double) -> [Stroke] {
         let points = strokes.flatMap(\.points)
         guard size.width > 0, size.height > 0,
               let minX = points.map(\.x).min(), let maxX = points.map(\.x).max(),
@@ -41,5 +47,5 @@ struct DrawingCard: View {
 
 extension LatestDrawing {
     /// The full strokes, or none if the compact rendition does not decode.
-    var strokes: [Stroke] { (try? InkDecoder.decode(compact)) ?? [] }
+    public var strokes: [Stroke] { (try? InkDecoder.decode(compact)) ?? [] }
 }

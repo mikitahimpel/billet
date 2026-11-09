@@ -75,6 +75,9 @@ macOS runners are few and shared by every agent.
   table is tested, rejected events included.
 - Stores take every dependency in `init`; views get other features as protocols. No
   `UserDefaults.standard`, `NotificationCenter`, `SharedFile` or `CatProfile` in a feature.
+- `apps/ios/Shared` is the `OurioShared` static library, built once for the app and its extensions; what
+  the app uses from it is `public`. Add nothing new there: it is moving into the `*Interface` targets
+  ([docs/ios-architecture.md](docs/ios-architecture.md) §1.1.1).
 - The Room (`apps/ios/Nooki/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
   through `RoomControlling`, events out through `RoomEvent`. No scene type is named outside it,
   and no scene tick reaches state outside it.

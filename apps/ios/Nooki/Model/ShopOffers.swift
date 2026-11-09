@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import ShopInterface
 
 /// How rare a piece is. Only a frame and a label: every item is bought directly, never drawn at random.

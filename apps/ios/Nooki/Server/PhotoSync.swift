@@ -1,4 +1,5 @@
 import Foundation
+import OurioShared
 import Persistence
 import Transport
 import UIKit
