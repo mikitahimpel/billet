@@ -76,7 +76,7 @@ export function HeroStage({ portrait, storyId }: { portrait: string; storyId: st
               />
               <div className="min-w-0 flex-1">
                 <div className="flex justify-between text-[12px] text-muted">
-                  <span className="font-semibold tracking-[0.06em] uppercase">Nooki</span>
+                  <span className="font-semibold tracking-[0.06em] uppercase">Ourio</span>
                   <span>now</span>
                 </div>
                 <p className="text-[14px] leading-snug text-paper">

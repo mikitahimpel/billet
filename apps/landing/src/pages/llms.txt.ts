@@ -5,7 +5,7 @@ import { faq } from "../faq";
 // The llms.txt convention (llmstxt.org): a plain summary that answer engines can quote without parsing the page.
 export const GET: APIRoute = ({ site }) =>
   new Response(
-    `# Nooki
+    `# Ourio
 
 > ${siteDescription}
 
