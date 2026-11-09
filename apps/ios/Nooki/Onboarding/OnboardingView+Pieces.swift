@@ -153,7 +153,8 @@ extension OnboardingView {
     private var canContinue: Bool {
         switch flow.page {
         case .question: flow.answer != nil
-        case .join: signedIn && !isClaiming && flow.joinCode.count == InviteCode.length
+        case .join:
+            signedIn && !isClaiming && [InviteCode.length, InviteCode.reviewLength].contains(flow.joinCode.count)
         case .invite: flow.invited || isChoosing
         default: true
         }

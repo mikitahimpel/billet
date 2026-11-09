@@ -24,6 +24,8 @@ public enum Routes {
   public static let registerPushToken = Route(.put, "/v1/devices/current/push-token")
   public static let createInvite = Route(.post, "/v1/invites")
   public static let claimInvite = Route(.post, "/v1/invites/claim")
+  /// The App Review pair's longer code: the same body and answers as `claimInvite`.
+  public static let claimReviewCode = Route(.post, "/v1/review/claim")
   public static let unpair = Route(.delete, "/v1/pair")
   public static let blockPartner = Route(.post, "/v1/pair/block")
   public static let reportPartner = Route(.post, "/v1/pair/report")

@@ -16,8 +16,8 @@ private typealias Build = MockPaymentsBuild
 #endif
 
 enum AppPayments {
-    /// A mock build fakes the store and the dev server credits it, so it sells coin packs whatever the `payments`
-    /// flag says; a StoreKit build sells them only once the server turned the flag on.
+    /// A mock build fakes the store and only the dev server credits it. Either build sells coin packs only once the
+    /// server turned the `payments` flag on (`CoinPacksModel.sells`).
     #if PAYMENTS_MOCK
     static let isMock = true
     #else
