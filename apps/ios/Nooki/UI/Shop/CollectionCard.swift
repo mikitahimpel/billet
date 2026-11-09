@@ -40,6 +40,7 @@ struct CollectionCard: View {
         }
         .padding(CardMetrics.padding)
         .cardSurface()
+        .perfFlattened()
         .haptic(.success, trigger: claims)
         .animation(.spring(duration: 0.35), value: have)
     }

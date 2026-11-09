@@ -31,6 +31,7 @@ struct BundleCard: View {
         .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
+        .perfFlattened()
     }
 
     private var title: some View {
