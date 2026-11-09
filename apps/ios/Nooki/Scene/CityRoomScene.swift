@@ -72,6 +72,8 @@ final class CityRoomScene: CatRoom {
     private var lampShade: ModelEntity?
     private var bulbs: [ModelEntity] = []
     private var setClock: (Float) -> Void = { _ in }
+    private var street: CityStreet?
+    private var reduceMotion = UIAccessibility.isReduceMotionEnabled
     private let ibl = Entity()
 
     override init() {
@@ -86,6 +88,7 @@ final class CityRoomScene: CatRoom {
         buildNightstand()
         buildSillProps()
         buildDecor()
+        street = CityStreet(in: pivot)
         let bedSeat = catBed.at + [0, 0.072 * catBed.scale, 0]
         buildCat(at: [0.25, sillTop, -0.44], rests: [.pi + 0.75, .pi + 0.55], route: [
             .init(at: bedSeat),
@@ -114,6 +117,7 @@ final class CityRoomScene: CatRoom {
         }
         light = Daylight.sample(hour)
         paintTown(dt)
+        street?.tick(dt, reduceMotion: reduceMotion)
         setClock(hour)
         // The room's lights change slowly; they are redone once the hour has moved on a little.
         let moved = abs(hour - appliedHour)
@@ -134,6 +138,7 @@ final class CityRoomScene: CatRoom {
 
         let lamps = smoothstep(darkness, 0.2, 0.7)
         lampsOn = lamps > 0.5
+        street?.light(lampsOn: lampsOn)
         setPoint(lampLight, color: Daylight.rgb(0xFFC27A), lumens: 2200 * lamps, radius: 1.1)
         setPoint(fairyLight, color: Daylight.rgb(0xFFC27A), lumens: 900 * lamps, radius: 1)
         setPoint(candleLight, color: Daylight.rgb(0xFFAA55), lumens: 500 * (0.3 + 0.7 * lamps), radius: 0.5)
@@ -179,6 +184,7 @@ final class CityRoomScene: CatRoom {
             choiceAge = 0
             choice = WindowChoice.current
             weather = WindowChoice.weather
+            reduceMotion = UIAccessibility.isReduceMotionEnabled
             let look = choice.look(hour: hour, weather: weather)
             windowView.show(look.view, hour: look.hour, weather: look.weather, lampOn: lampsOn)
         }
@@ -236,9 +242,14 @@ final class CityRoomScene: CatRoom {
         let window = glass.compactMap { project(pivot.convert(position: $0, to: nil)) }
         let home = glass.compactMap { project(root.convert(position: $0, to: nil)) }
         let hole = face.compactMap { project(pivot.convert(position: $0, to: nil)) }
+        street?.gate(front: wallFront, back: wallBack) { project(pivot.convert(position: $0, to: nil)) }
         guard window.count == 4, hole.count == 4 else { return windowView.place(window: [], home: [], hole: []) }
         windowView.place(window: window, home: home.count == 4 ? home : window, hole: hole)
     }
+
+    /// The back wall's faces, outer corners; the street behind it shows only where both cover it on screen.
+    private let wallFront: [SIMD3<Float>] = [[-0.555, 0, -0.5], [0.495, 0, -0.5], [0.495, 0.8, -0.5], [-0.555, 0.8, -0.5]]
+    private let wallBack: [SIMD3<Float>] = [[-0.555, 0, -0.55], [0.495, 0, -0.55], [0.495, 0.8, -0.55], [-0.555, 0.8, -0.55]]
 
     /// One material per tone and roughness, shared by every part built from it.
     private var mattes: [SIMD2<UInt32>: PhysicallyBasedMaterial] = [:]

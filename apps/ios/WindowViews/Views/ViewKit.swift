@@ -130,39 +130,54 @@ enum ViewKit {
     _ context: GraphicsContext, x: CGFloat, base: CGFloat, size: CGFloat, colour: ViewColour,
     seed: Int, look: ViewLook
   ) {
-    rect(
-      context,
-      CGRect(x: x - size * 0.06, y: base - size * 0.7, width: size * 0.12, height: size * 0.7),
-      colour.lit(-0.15))
-    let puffs = 5
-    for index in 0..<puffs {
-      let a = ViewRhythm.hash(seed * 31 + index, seed: 11)
-      let b = ViewRhythm.hash(seed * 31 + index, seed: 12)
-      let centre = CGPoint(
-        x: x + (CGFloat(a) - 0.5) * size * 0.9, y: base - size * (0.75 + CGFloat(b) * 0.45))
-      circle(context, centre, size * (0.32 + CGFloat(b) * 0.12), colour)
+    let foot = size * 0.084
+    let neck = size * 0.048
+    var trunk = Path()
+    trunk.addLines([
+      CGPoint(x: x - foot, y: base), CGPoint(x: x - neck, y: base - size * 0.75),
+      CGPoint(x: x + neck, y: base - size * 0.75), CGPoint(x: x + foot, y: base),
+    ])
+    trunk.closeSubpath()
+    context.fill(trunk, with: .color(colour.lit(-0.15).color()))
+    // The crown is a dome of puffs centred over the trunk, jittered a little so no two trees match, over a shaded
+    // underside; a crown scattered at random leans off its trunk.
+    let crown = base - size * 0.98
+    for (index, share) in [-0.3, 0, 0.3].enumerated() {
+      let jitter = CGFloat(ViewRhythm.hash(seed * 31 + index, seed: 15))
+      circle(
+        context, CGPoint(x: x + share * size, y: base - size * (0.78 + 0.04 * jitter)),
+        size * (0.24 + 0.04 * jitter), colour.lit(-0.08))
     }
+    let puffs = 6
+    for index in 0..<puffs {
+      let a = CGFloat(ViewRhythm.hash(seed * 31 + index, seed: 11))
+      let b = CGFloat(ViewRhythm.hash(seed * 31 + index, seed: 12))
+      let angle = CGFloat.pi * (CGFloat(index) + 0.5) / CGFloat(puffs)
+      let centre = CGPoint(
+        x: x + cos(angle) * size * 0.3 + (a - 0.5) * size * 0.06,
+        y: crown - sin(angle) * size * 0.2 + size * 0.08 + (b - 0.5) * size * 0.05)
+      circle(context, centre, size * (0.25 + b * 0.06), colour)
+    }
+    circle(context, CGPoint(x: x, y: crown), size * 0.3, colour)
     circle(
-      context, CGPoint(x: x + size * 0.15, y: base - size * 1.05), size * 0.22,
+      context, CGPoint(x: x + size * 0.12, y: crown - size * 0.12), size * 0.18,
       colour.lit(look.isDark ? 0.05 : 0.1))
     for index in 0..<14 {
       let a = ViewRhythm.hash(seed * 47 + index, seed: 13)
       let b = ViewRhythm.hash(seed * 47 + index, seed: 14)
+      let angle = CGFloat(a) * 2 * .pi
+      let reach = CGFloat(b).squareRoot() * size * 0.36
       let centre = CGPoint(
-        x: x + (CGFloat(a) - 0.5) * size * 1.0, y: base - size * (0.7 + CGFloat(b) * 0.55))
-      let lit = Double(centre.x - x) / Double(size) - Double(base - size - centre.y) / Double(size)
+        x: x + cos(angle) * reach, y: crown - size * 0.02 + sin(angle) * reach * 0.75)
+      let lit = (centre.x - x) - (centre.y - crown)
       circle(
         context, centre, size * 0.07, colour.lit(lit > 0 ? (look.isDark ? 0.05 : 0.09) : -0.06),
         0.9)
     }
-    rect(
-      context,
-      CGRect(x: x - size * 0.4, y: base - size * 0.72, width: size * 0.8, height: size * 0.06),
-      colour.lit(-0.12), 0.5)
     if look.weather == .snow {
       for index in 0..<3 {
         let cx = x + size * (CGFloat(index) - 1) * 0.28
-        let top = base - size * (1.28 - 0.08 * abs(CGFloat(index) - 1))
+        let top = base - size * (1.3 - 0.08 * abs(CGFloat(index) - 1))
         context.fill(
           Path(
             ellipseIn: CGRect(x: cx - size * 0.2, y: top, width: size * 0.4, height: size * 0.1)),
