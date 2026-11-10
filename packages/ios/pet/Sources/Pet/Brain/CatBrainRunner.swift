@@ -80,6 +80,11 @@ public struct CatBrainRunner: Sendable {
     advance(to: now)
   }
 
+  /// A debug nudge: plays a script of `group` now. See ``CatBrain/force(_:)``.
+  public mutating func force(_ group: CatActivityGroup) {
+    brain.force(group)
+  }
+
   /// A different room or weather from now on.
   public mutating func setRoom(_ room: RoomAffordances, weather: ViewWeather) {
     guard room != brain.room || weather != brain.weather else { return }
