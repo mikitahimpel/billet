@@ -4,7 +4,7 @@ import WindowViews
 
 /// Hosts the City room's flat window view, the same size as the room's view so the window's points match.
 struct CityWindowLayer: UIViewRepresentable {
-    let view: FlatWindowView
+    let view: CityWindowView
 
     func makeUIView(context: Context) -> UIView {
         let holder = UIView()

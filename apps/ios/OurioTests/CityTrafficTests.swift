@@ -4,9 +4,9 @@ import Testing
 
 struct CityTrafficTests {
     private let plan = CityTraffic.Plan(
-        lanes: [.init(z: -0.9, direction: -1)],
+        lanes: [.init(y: 0.5, direction: -1, stop: 0.2)],
         span: -1...1, speeds: 0.1...0.2, waits: 1...3, gap: 0.2, capacity: 3, colours: 5,
-        stop: 0.2, holds: 2...4, pace: 0.1)
+        holds: 2...4, pace: 0.1)
 
     /// Steps of `dt` for `seconds`, calling `each` after every step.
     private func run(_ traffic: inout CityTraffic, seconds: Float, dt: Float = 1 / 60,
@@ -37,11 +37,11 @@ struct CityTrafficTests {
         run(&traffic, seconds: 120) { traffic in
             for index in traffic.slots.indices {
                 if let car = traffic.slots[index], car.hold > 0 {
-                    #expect(car.x == plan.stop && car.speed == 0)
+                    #expect(car.x == plan.lanes[0].stop && car.speed == 0)
                     stood += 1 / 60
                 }
-                if previous[index] != nil, traffic.slots[index] == nil {
-                    #expect(previous[index]!.crossed)
+                if let was = previous[index], traffic.slots[index].map({ abs($0.x - was.x) > 0.5 }) ?? true {
+                    #expect(was.crossed)
                     left += 1
                 }
             }
@@ -68,7 +68,7 @@ struct CityTrafficTests {
         var traffic = CityTraffic(plan: plan, seed: 4)
         run(&traffic, seconds: 300) { traffic in
             for car in traffic.slots.compactMap({ $0 }) where !car.crossed {
-                #expect(car.x >= plan.stop - 0.0001)
+                #expect(car.x >= plan.lanes[0].stop - 0.0001)
             }
         }
     }
@@ -76,6 +76,7 @@ struct CityTrafficTests {
     @Test func speedChangesGentlyAndStaysWithinThePlan() {
         var traffic = CityTraffic(plan: plan, seed: 5)
         var last: [Int: Float] = [:]
+        var lastX: [Int: Float] = [:]
         run(&traffic, seconds: 300) { traffic in
             for (index, slot) in traffic.slots.enumerated() {
                 guard let car = slot else {
@@ -84,11 +85,12 @@ struct CityTrafficTests {
                 }
                 #expect(car.speed >= 0 && car.speed <= plan.speeds.upperBound)
                 #expect(car.x >= -1 && car.x <= 1)
-                if let was = last[index] {
+                if let was = last[index], abs(car.x - lastX[index]!) < 0.5 {
                     // The braking curve may demand more than `pace` near the stop, but never a jolt.
                     #expect(abs(car.speed - was) < 0.03)
                 }
                 last[index] = car.speed
+                lastX[index] = car.x
             }
         }
     }
@@ -117,8 +119,8 @@ struct CityTrafficTests {
 
     @Test func aFullPoolHoldsTheNextCarBack() {
         let busy = CityTraffic.Plan(
-            lanes: plan.lanes, span: -10...10, speeds: 0.1...0.1, waits: 0.1...0.1, gap: 0.2, capacity: 2, colours: 1,
-            stop: 50, holds: 1...1, pace: 0.1)
+            lanes: [.init(y: 0.5, direction: -1, stop: -50)], span: -10...10, speeds: 0.1...0.1, waits: 0.1...0.1,
+            gap: 0.2, capacity: 2, colours: 1, holds: 1...1, pace: 0.1)
         var traffic = CityTraffic(plan: busy, seed: 9)
         run(&traffic, seconds: 10)
         #expect(traffic.slots.compactMap { $0 }.count == 2)
@@ -134,23 +136,22 @@ struct CityTrafficTests {
         #expect(traffic.slots[0]!.x < -0.3)
     }
 
-    private let wall = [CGPoint(x: 0, y: 0), CGPoint(x: 100, y: 10), CGPoint(x: 100, y: 110), CGPoint(x: 0, y: 100)]
-
-    @Test(arguments: [false, true])
-    func aPointInsideTheWallsOutlineIsHidden(reversed: Bool) {
-        let outline = reversed ? Array(wall.reversed()) : wall
-        #expect(BehindWall.contains(outline, CGPoint(x: 10, y: 20)))
-        #expect(BehindWall.contains(outline, CGPoint(x: 90, y: 95)))
-        #expect(BehindWall.contains(outline, CGPoint(x: 0, y: 50)))
+    @Test func theStreetsCarsStandBeforeTheCrossingEdgeEachLaneReachesFirst() {
+        let lanes = CityDiorama.plan.lanes
+        #expect(lanes.count == 2)
+        #expect(lanes[0].direction < 0 && lanes[0].stop > CityDiorama.crossing.right)
+        #expect(lanes[1].direction > 0 && lanes[1].stop < CityDiorama.crossing.left)
     }
 
-    @Test(arguments: [CGPoint(x: 101, y: 50), CGPoint(x: 50, y: 4), CGPoint(x: -1, y: 50), CGPoint(x: 50, y: 106)])
-    func aPointOutsideTheWallIsNot(point: CGPoint) {
-        #expect(!BehindWall.contains(wall, point))
-        #expect(!BehindWall.contains(Array(wall.reversed()), point))
-    }
-
-    @Test func noOutlineHidesNothing() {
-        #expect(!BehindWall.contains([], CGPoint(x: 50, y: 50)))
+    @Test func theStreetsTrafficStaysSmallAndCrossesTheWholePicture() {
+        var traffic = CityTraffic(plan: CityDiorama.plan, seed: 0xC17_CA25)
+        var stood = false
+        var most = 0
+        run(&traffic, seconds: 400, dt: 1 / 30) { traffic in
+            most = max(most, traffic.slots.compactMap { $0 }.count)
+            stood = stood || traffic.slots.contains { ($0?.hold ?? 0) > 0 }
+        }
+        #expect(most <= 2)
+        #expect(stood)
     }
 }

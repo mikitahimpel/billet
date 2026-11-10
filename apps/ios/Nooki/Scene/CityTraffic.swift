@@ -1,15 +1,16 @@
-import CoreGraphics
 import Pet
 
 /// The cars on the street behind the City room's window, as plain numbers: a fixed pool of slots, each free or a car at
-/// some point along its lane. The scene draws them; this knows nothing of RealityKit. Lengths are room units, times
-/// seconds. A car brakes smoothly for the one ahead and for the crossing, stands there a while, and pulls away.
+/// some point along its lane. The window view draws them; this knows nothing of layers. Lengths are fractions of the
+/// street picture's width, times seconds. A car brakes smoothly for the one ahead and for the crossing, stands there a while, and pulls away.
 struct CityTraffic {
     struct Lane: Equatable {
-        /// Across the street, in the room's pivot space.
-        let z: Float
+        /// Where the lane runs across the picture, as the picture gives it.
+        let y: Float
         /// +1 drives towards +x, -1 towards -x.
         let direction: Float
+        /// Where a car's middle stands at the crossing, before the edge the lane reaches first.
+        let stop: Float
     }
 
     struct Car: Equatable {
@@ -30,7 +31,7 @@ struct CityTraffic {
 
     struct Plan: Equatable {
         var lanes: [Lane]
-        /// Where cars appear and vanish; both ends are out of sight behind the wall.
+        /// Where cars appear and vanish; both ends are out of sight beyond the window.
         var span: ClosedRange<Float>
         var speeds: ClosedRange<Float>
         /// Seconds from one car entering a lane to the next.
@@ -39,9 +40,7 @@ struct CityTraffic {
         var gap: Float
         var capacity: Int
         var colours: Int
-        /// Where a car's middle stands at the crossing.
-        var stop: Float
-        /// How long it stands.
+        /// How long it stands at the crossing.
         var holds: ClosedRange<Float>
         /// Speed gained and lost per second.
         var pace: Float
@@ -92,7 +91,8 @@ struct CityTraffic {
     private mutating func drive(_ dt: Float) {
         for index in slots.indices {
             guard var car = slots[index] else { continue }
-            let direction = plan.lanes[car.lane].direction
+            let lane = plan.lanes[car.lane]
+            let direction = lane.direction
             if car.hold > 0 {
                 car.hold -= dt
                 car.speed = 0
@@ -105,7 +105,7 @@ struct CityTraffic {
             }
             let ahead = leader(of: index)
             var room = Float.infinity
-            if !car.crossed { room = (plan.stop - car.x) * direction }
+            if !car.crossed { room = (lane.stop - car.x) * direction }
             if let ahead { room = min(room, (ahead.x - car.x) * direction - plan.gap) }
             // The speed from which the car can still stop in the room left, braking evenly.
             let allowed = (2 * plan.pace * max(room, 0)).squareRoot()
@@ -119,8 +119,8 @@ struct CityTraffic {
                     car.speed = min(car.speed, ahead.speed)
                 }
             }
-            if !car.crossed, (plan.stop - car.x) * direction <= Self.arrival {
-                car.x = plan.stop
+            if !car.crossed, (lane.stop - car.x) * direction <= Self.arrival {
+                car.x = lane.stop
                 car.speed = 0
                 car.hold = Float.random(in: plan.holds, using: &random)
             }
@@ -156,24 +156,6 @@ struct CityTraffic {
         let colour = Int.random(in: 0..<plan.colours, using: &random)
         let cruise = Float.random(in: plan.speeds, using: &random)
         slots[free] = Car(lane: lane, x: start, speed: cruise, cruise: cruise, hold: 0, crossed: false, colour: colour)
-        return true
-    }
-}
-
-/// Whether something behind the City room's back wall can be drawn without showing beside the room: every corner of
-/// it on screen must fall inside the wall's outline, which then hides all of it but what the window shows.
-enum BehindWall {
-    /// `outline` is a convex polygon in either winding; a point on its edge counts as inside.
-    static func contains(_ outline: [CGPoint], _ point: CGPoint) -> Bool {
-        guard outline.count > 2 else { return false }
-        var sign: CGFloat = 0
-        for index in outline.indices {
-            let a = outline[index], b = outline[(index + 1) % outline.count]
-            let cross = (b.x - a.x) * (point.y - a.y) - (b.y - a.y) * (point.x - a.x)
-            if cross == 0 { continue }
-            if sign == 0 { sign = cross > 0 ? 1 : -1 }
-            if cross * sign < 0 { return false }
-        }
         return true
     }
 }

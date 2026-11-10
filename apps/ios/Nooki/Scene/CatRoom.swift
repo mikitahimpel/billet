@@ -317,6 +317,22 @@ class CatRoom {
         pivot.forEachDescendant { $0.components.set(receiver) }
     }
 
+    /// The soft shadow under the furniture and along the wall feet, baked into one image (`Resources/RoomBake`) and laid
+    /// on the floor: unlit and alpha-blended, so it costs no light and no shadow pass. The rectangle is the floor it covers, the
+    /// image's top at `z0`, the back wall.
+    func addContactShadow(named name: String, x0: Float, z0: Float, x1: Float, z1: Float, y: Float) {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "webp"),
+            let image = UIImage(contentsOfFile: url.path)?.cgImage,
+            let texture = try? TextureResource(image: image, options: .init(semantic: .color))
+        else { return }
+        var material = UnlitMaterial(applyPostProcessToneMap: false)
+        material.color = .init(tint: .white, texture: .init(texture))
+        material.blending = .transparent(opacity: .init(floatLiteral: 1))
+        let decal = ModelEntity(mesh: .generatePlane(width: x1 - x0, depth: z1 - z0), materials: [material])
+        decal.position = [(x0 + x1) / 2, y, (z0 + z1) / 2]
+        pivot.addChild(decal)
+    }
+
     static func castShadow(_ sun: Entity) {
         var shadow = DirectionalLightComponent.Shadow()
         shadow.shadowProjection = .automatic(maximumDistance: 4)
