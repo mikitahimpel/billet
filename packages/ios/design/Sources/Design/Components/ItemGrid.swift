@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// A tile in an `ItemGrid`: art a little wider than tall, badges over its top corners, a one-line
-/// title and subtitle, and a footer (a price, a buy or an owned state) at the bottom. In a grid
+/// title and a subtitle that always takes two lines, and a footer (a price, a buy or an owned state) at the bottom. In a grid
 /// every tile of a row has the row's height, so the footers line up. With `open`, the art and the
 /// title are one button and the footer stays its own. The art draws its own `Radius.inner` corners
 /// (it is their container shape), so a glow around it is not cut off.
@@ -58,13 +58,14 @@ public struct ItemCard<Art: View, Leading: View, Trailing: View, Footer: View>: 
         Text(title)
           .font(.ourioHeadline)
           .foregroundStyle(Ink.text)
+          .lineLimit(1)
         if let subtitle {
           Text(subtitle)
             .font(.ourioCaption)
             .foregroundStyle(Ink.textSecondary)
+            .lineLimit(2, reservesSpace: true)
         }
       }
-      .lineLimit(1)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
   }

@@ -74,14 +74,12 @@ extension OnboardingView {
     /// on every page; a page's quiet secondary stacks above it and pushes nothing below.
     @ViewBuilder var actions: some View {
         if flow.page != .stopped {
-            VStack(spacing: Space.s) {
-                secondaryAction
+            ActionSlot {
                 primaryAction
                     .accessibilityIdentifier("onboarding.primary")
+            } secondary: {
+                secondaryAction
             }
-            .padding(.horizontal, Space.gutter)
-            .padding(.top, Space.m)
-            .padding(.bottom, Space.s)
             .modifier(WelcomeActionsReveal(start: flow.page == .welcome ? welcomeStart : nil))
         }
     }

@@ -1,8 +1,8 @@
 import SwiftUI
 import Design
 
-/// Every card has the same name line, two-line blurb and buy row under its art, so a row of cards is level whatever
-/// each one costs or whether it is owned.
+/// An `ItemCard`: the same name line, two-line blurb and buy row under every item's art, so a row of cards is level
+/// whatever each one costs or whether it is owned.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState
@@ -14,33 +14,22 @@ struct ShopItemCard: View {
 
     var body: some View {
         // The art and the name open the item's sheet; the buy under them buys it in one tap.
-        VStack(alignment: .leading, spacing: Space.s) {
-            Button(action: onTap) {
-                VStack(alignment: .leading, spacing: Space.s) {
-                    art
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(item.name)
-                            .font(.ourioHeadline)
-                            .foregroundStyle(Ink.text)
-                            .lineLimit(1)
-                        Text(item.blurb)
-                            .font(.ourioCaption)
-                            .foregroundStyle(Ink.textSecondary)
-                            .lineLimit(2, reservesSpace: true)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(.rect)
+        ItemCard(item.name, subtitle: item.blurb, open: onTap) {
+            art
+        } leadingBadge: {
+            item.rarity.chip
+        } trailingBadge: {
+            if isDeal, !owned {
+                Chip("−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%", style: .honey)
+            } else if item.isNew, !owned {
+                Chip("New", style: .honey)
+            } else if owned {
+                Chip("Owned", symbol: "checkmark")
             }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityElement(children: .combine)
-            .accessibilityHint("Opens \(item.name)")
+        } footer: {
             BuyButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
                       buy: { state.shop.buy(item) }, fills: true)
         }
-        .padding(CardMetrics.padding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSurface()
         .perfFlattened()
     }
 
@@ -52,20 +41,6 @@ struct ShopItemCard: View {
                     .padding(Space.s)
             } else {
                 Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
-            }
-        }
-        .aspectRatio(1.05, contentMode: .fit)
-        .overlay(alignment: .topLeading) {
-            item.rarity.chip.padding(Space.s)
-        }
-        .overlay(alignment: .topTrailing) {
-            if isDeal, !owned {
-                Chip("−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%", style: .honey)
-                    .padding(Space.s)
-            } else if item.isNew, !owned {
-                Chip("New", style: .honey).padding(Space.s)
-            } else if owned {
-                Chip("Owned", symbol: "checkmark").padding(Space.s)
             }
         }
     }
