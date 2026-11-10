@@ -20,7 +20,8 @@ struct ShopView: View {
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
-                VStack(alignment: .leading, spacing: Space.section) {
+                // Lazy, so a visit builds what is on screen, not every bundle and collection down the page.
+                LazyVStack(alignment: .leading, spacing: Space.section) {
                     chips
                     if selected == .today {
                         today
@@ -192,4 +193,14 @@ struct ShopView: View {
             }
         }
     }
+
+    /// Decodes the art Today shows first, the featured set and the deals, off the main thread, so the first visit to
+    /// the Shop doesn't decode it in front of the tap.
+    static func prewarm(_ offers: ShopOffers, now: Date = .now) async {
+        let featured = offers.featured(on: now).itemIDs.compactMap(Catalog.item).map(\.thumbnail)
+        let deals = offers.deals(on: now).compactMap { Catalog.item($0.itemID)?.thumbnail }
+        await Thumbnails.prefetchTrimmed(featured)
+        await Thumbnails.prefetch(deals, maxPixels: 512)
+    }
+
 }

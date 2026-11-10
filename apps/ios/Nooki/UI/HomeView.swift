@@ -39,6 +39,7 @@ struct HomeView: View {
     @State private var sheetGround = SheetGroundStyle.opaque
     /// Labs → Performance: suspects switched off while the app runs, and its frame meter.
     @State private var perfLab = PerfLab(defaults: .standard)
+    @State private var tabClock = TabSwitchClock()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
@@ -140,6 +141,7 @@ struct HomeView: View {
             }
         }
         .onChange(of: state.tab) { _, tab in
+            tabClock.began(tab.title)
             OurioPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
             // A fade cut short by a quick return never comes back over a later switch.
@@ -251,9 +253,9 @@ struct HomeView: View {
                 }
             }
             .perfLab(perfLab)
-            // Tab to tab, the page alone fades; the header and the tab bar are outside it and stay put.
-            .transition(.opacity)
-            .animation(Motion.fade(), value: state.tab)
+            // Tab to tab, the new page is all there in its first frame, as with the system's tab bar: a fade in
+            // would show it half drawn for its first tenth of a second. The header and the tab bar stay put.
+            .transition(.identity)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
@@ -305,7 +307,7 @@ struct HomeView: View {
         #if DEBUG || LABS_YES
         .overlay(alignment: .topTrailing) {
             if perfLab.state.meter {
-                PerfLabMeter(lab: perfLab, room: roomInput.visibility)
+                PerfLabMeter(lab: perfLab, room: roomInput.visibility, tabs: tabClock.times)
                     .padding(.trailing, Space.l)
                     .padding(.top, Space.xl * 2)
             }
@@ -432,6 +434,7 @@ struct HomeView: View {
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
         #endif
         reportOpened(state.room)
+        await ShopView.prewarm(state.shop.offers)
     }
 
     /// Visits another room with one crossfade: the screen as it is stands in over the swap, and fades out once the
