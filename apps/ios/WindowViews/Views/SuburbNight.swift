@@ -9,7 +9,7 @@ struct SuburbNight: ViewRecipe {
   static let road: CGFloat = 51.9
   static let lampHead = CGPoint(x: 92, y: 12)
   static let tower = CGPoint(x: 10, y: 2)
-  static let cars = ViewRhythm(seed: 21, slot: 16, chance: 0.75, length: 3.6...5.4)
+  static let cars = ViewRhythm(seed: 21, slot: 16, chance: 0, length: 3.6...5.4)
   static let roofCat = ViewRhythm(seed: 33, slot: 140, chance: 0.55, length: 40...70)
   /// The roof the cat walks: its left eave, ridge and right eave.
   static let roofPath = (

@@ -23,7 +23,11 @@ enum ShopFocus: Hashable {
 enum RoomKind: CaseIterable {
     case home, city
 
-    var title: String { self == .home ? "Room" : "City" }
+    /// The two rooms of the home: the one with the cat tree and the rug, and the one with the bed and the big window.
+    var title: String { self == .home ? "Living room" : "Bedroom" }
+
+    /// Stable suffix of the switch's accessibility identifier, whatever the room is called.
+    var identifier: String { self == .home ? "Room" : "City" }
 
     var scene: RoomScene { self == .home ? .home : .city }
 }

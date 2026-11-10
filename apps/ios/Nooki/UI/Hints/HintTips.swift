@@ -59,8 +59,8 @@ nonisolated struct ShopHint: HintTip {
 nonisolated struct RoomsHint: HintTip {
     static let hintId = "rooms"
 
-    var title: Text { Text("\(CatProfile.name()) has a city flat too") }
-    var message: Text? { Text("Switch rooms here to visit her other place.") }
+    var title: Text { Text("\(CatProfile.name()) has a bedroom too") }
+    var message: Text? { Text("Switch here between the living room and the bedroom.") }
     var image: Image? { Image(systemName: "building.2.fill") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "rooms" }] }
 }

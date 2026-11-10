@@ -73,7 +73,7 @@ struct SettingsView: View {
             }
 
             GroupedSection(header: "Window",
-                         footer: "What the City room's window looks out on. Suburbia follows the time of day.") {
+                         footer: "What the bedroom's window looks out on. Suburbia follows the time of day.") {
                 PickerRow("View", symbol: "window.horizontal", tint: UsTint.sky.color, selection: $windowView) {
                     ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
                 }
@@ -123,7 +123,7 @@ struct SettingsView: View {
             GroupedSection(header: "Labs",
                          footer: "With the brain off, \(CatProfile.name()) lives on her own original timers. The "
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
-                             + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
+                             + "heard. All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
                              + "them baked, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
                              + "the controls over the room after a few seconds without a touch. Coins come from the dev "

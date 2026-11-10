@@ -83,7 +83,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     var hasHome: Bool { home != nil }
     var hasBoard: Bool { board != nil }
     var isReady: Bool { home?.isReady == true }
-    var cityWindowView: FlatWindowView? { city?.windowView }
+    var cityWindowView: CityWindowView? { city?.windowView }
 
     var current: CatRoom? {
         guard home != nil else { return nil }
