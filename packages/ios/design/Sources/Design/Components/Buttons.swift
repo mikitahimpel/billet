@@ -268,6 +268,37 @@ private struct CompactSecondaryStyle: ButtonStyle {
   }
 }
 
+/// A button that is on or off, like Love or Pin to wall, or one of a row of choices: a capsule the
+/// height of `PrimaryButton`, washed with `tint` while on.
+public struct ToggleButtonStyle: ButtonStyle {
+  public static let washOpacity = 0.22
+
+  let isOn: Bool
+  let tint: Color
+  @Environment(\.isEnabled) private var isEnabled
+
+  public init(isOn: Bool, tint: Color = .honey) {
+    self.isOn = isOn
+    self.tint = tint
+  }
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.ourioCallout.weight(.semibold))
+      .foregroundStyle(isEnabled ? Ink.text : Ink.disabledText)
+      .padding(.horizontal, Space.m)
+      .frame(maxWidth: .infinity, minHeight: Size.button)
+      .background(
+        isEnabled ? (isOn ? tint.opacity(Self.washOpacity) : Ink.surfaceRaised) : Ink.disabledFill,
+        in: .capsule
+      )
+      .contentShape(.capsule)
+      .scaleEffect(configuration.isPressed ? 0.97 : 1)
+      .animation(.spring(duration: 0.2), value: configuration.isPressed)
+      .accessibilityAddTraits(isOn ? .isSelected : [])
+  }
+}
+
 #Preview("Buttons") {
   ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
     VStack(spacing: Space.m) {
@@ -275,6 +306,11 @@ private struct CompactSecondaryStyle: ButtonStyle {
       PrimaryButton("Pick how you feel") {}.disabled(true)
       SecondaryButton("Place", symbol: "mappin") {}
       SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
+      HStack {
+        Button("Loved", systemImage: "heart.fill") {}.buttonStyle(
+          ToggleButtonStyle(isOn: true, tint: .blushPink))
+        Button("Pin to wall", systemImage: "pin") {}.buttonStyle(ToggleButtonStyle(isOn: false))
+      }
       HStack {
         RetryButton {}
         RetryButton(compact: true) {}

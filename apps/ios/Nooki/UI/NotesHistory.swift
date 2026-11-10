@@ -14,7 +14,7 @@ struct NotesHistory: View {
 
     @State private var opened: PinRoute?
 
-    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    private let columns = [GridItem(.flexible(), spacing: Space.l), GridItem(.flexible(), spacing: Space.l)]
 
     private var months: [(title: String, notes: [Note])] {
         let calendar = Calendar.current
@@ -25,24 +25,19 @@ struct NotesHistory: View {
     }
 
     var body: some View {
-        BilletSheet("All notes") {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("\(state.notes.notes.count) \(state.notes.notes.count == 1 ? "note" : "notes")")
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
-
+        let count = state.notes.notes.count
+        BilletSheet("All notes", subtitle: "\(count) \(count == 1 ? "note" : "notes")") {
+            VStack(alignment: .leading, spacing: Space.l) {
                 ForEach(months, id: \.title) { month in
-                    Text(month.title)
-                        .font(.ourioCallout.weight(.semibold))
-                        .foregroundStyle(Ink.textSecondary)
-                        .padding(.top, 4)
-                    LazyVGrid(columns: columns, spacing: 18) {
+                    SectionHeader(month.title)
+                        .padding(.top, Space.xs)
+                    LazyVGrid(columns: columns, spacing: Space.l + Space.xs) {
                         ForEach(month.notes) { note in
                             Button { opened = PinRoute(id: note.id) } label: {
                                 NoteCard(note: note)
                                     .rotationEffect(note.id.polaroidTilt)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressScaleStyle())
                         }
                     }
                 }
