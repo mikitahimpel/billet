@@ -106,6 +106,7 @@ struct UsView: View {
                 }
                 .buttonStyle(PressScaleStyle())
             }
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -138,12 +139,7 @@ struct UsView: View {
                     .foregroundStyle(Ink.primary)
                     .accessibilityAddTraits(.isHeader)
                 Spacer(minLength: 0)
-                Button { state.usRoute = .newList } label: {
-                    Label("New list", systemImage: "plus")
-                        .font(.ourioHeadline)
-                        .foregroundStyle(Ink.accentText)
-                }
-                .buttonStyle(PressScaleStyle())
+                PillButton("New list", symbol: "plus") { state.usRoute = .newList }
             }
             .padding(.top, Space.s)
 
@@ -282,7 +278,21 @@ private struct SmallTile: View {
 
     var body: some View {
         Card {
-            CardHeader(title, detail: detail, symbol: icon.symbol, tint: icon.tint.color)
+            VStack(alignment: .leading, spacing: Space.s) {
+                RowIcon(symbol: icon.symbol, tint: icon.tint.color, size: Size.cardMark)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(title)
+                        .font(.ourioHeadline)
+                        .foregroundStyle(Ink.text)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(detail)
+                        .font(.ourioCaption)
+                        .foregroundStyle(Ink.textSecondary)
+                        .lineLimit(2)
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }
