@@ -729,5 +729,236 @@
    "seat"
   ],
   "affordance": "smallItem"
+ },
+ "wallshelf-b": {
+  "tris": 2000,
+  "fit": "width",
+  "size": 0.6,
+  "mount": "wall",
+  "title": "Wall shelf",
+  "price": 16,
+  "dims": [
+   0.6,
+   0.2,
+   0.3
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "wall"
+  ],
+  "affordance": "shelf"
+ },
+ "guitar-b": {
+  "tris": 2000,
+  "fit": "height",
+  "size": 1.0,
+  "mount": "floor",
+  "title": "Acoustic guitar",
+  "price": 30,
+  "dims": [
+   0.4,
+   0.35,
+   1.0
+  ],
+  "footprint": 0.7,
+  "sit": false,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": null
+ },
+ "mirror-b": {
+  "tris": 1500,
+  "fit": "height",
+  "size": 1.6,
+  "mount": "floor",
+  "title": "Arched mirror",
+  "price": 26,
+  "dims": [
+   0.6,
+   0.3,
+   1.6
+  ],
+  "footprint": 0.8,
+  "sit": false,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": null
+ },
+ "poster-plants-b": {
+  "tris": 800,
+  "fit": "height",
+  "size": 0.6,
+  "mount": "wall",
+  "title": "Botanical poster",
+  "price": 10,
+  "dims": [
+   0.42,
+   0.02,
+   0.6
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "wall"
+  ],
+  "affordance": null
+ },
+ "floorcushion-sage-b": {
+  "tris": 1200,
+  "fit": "width",
+  "size": 0.6,
+  "mount": "floor",
+  "title": "Sage floor cushion",
+  "price": 12,
+  "dims": [
+   0.6,
+   0.6,
+   0.15
+  ],
+  "footprint": 0.9,
+  "sit": true,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": "soft"
+ },
+ "lavalamp-b": {
+  "tris": 1200,
+  "fit": "height",
+  "size": 0.4,
+  "mount": "floor",
+  "title": "Lava lamp",
+  "price": 18,
+  "glows": true,
+  "dims": [
+   0.14,
+   0.14,
+   0.4
+  ],
+  "footprint": 0.85,
+  "sit": false,
+  "surfaces": [
+   "floor",
+   "top",
+   "seat"
+  ],
+  "affordance": null
+ },
+ "frame-cat-b": {
+  "tris": 800,
+  "fit": "height",
+  "size": 0.4,
+  "mount": "wall",
+  "title": "Sleeping cat print",
+  "price": 12,
+  "dims": [
+   0.32,
+   0.03,
+   0.4
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "wall"
+  ],
+  "affordance": null
+ },
+ "box-s1": {
+  "tris": 1500,
+  "fit": "width",
+  "size": 0.6,
+  "mount": "floor",
+  "title": "Cardboard box",
+  "price": 16,
+  "dims": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": "hide"
+ },
+ "box-s0": {
+  "tris": 1500,
+  "fit": "width",
+  "size": 0.6,
+  "mount": "floor",
+  "title": "Cardboard box",
+  "price": 16,
+  "dims": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": "hide"
+ },
+ "fishplush-s1": {
+  "tris": 1500,
+  "fit": "width",
+  "size": 0.3,
+  "mount": "floor",
+  "title": "Plush fish",
+  "price": 16,
+  "dims": [
+   0.3,
+   0.3,
+   0.3
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": "toy"
+ },
+ "tunnel-s0": {
+  "tris": 1800,
+  "fit": "width",
+  "size": 0.6,
+  "mount": "floor",
+  "title": "Cat tunnel",
+  "price": 16,
+  "dims": [
+   0.6,
+   0.6,
+   0.6
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": "hide"
+ },
+ "windowseat-s1": {
+  "tris": 2500,
+  "fit": "width",
+  "size": 0.8,
+  "mount": "floor",
+  "title": "Window seat",
+  "price": 16,
+  "dims": [
+   0.8,
+   0.8,
+   0.8
+  ],
+  "footprint": 1,
+  "sit": false,
+  "surfaces": [
+   "floor"
+  ],
+  "affordance": "sit"
  }
 }
