@@ -1,0 +1,19 @@
+{
+ "id": "cactus",
+ "name": "Little cactus",
+ "kind": "SOLID",
+ "width_m": 0.071,
+ "depth_m": 0.063,
+ "height_m": 0.09,
+ "footprint_cells": [
+  2,
+  2
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.09,
+ "anchors": [],
+ "tris": 1498,
+ "affordance": "smallItem",
+ "usdz_kb": 197
+}

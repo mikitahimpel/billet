@@ -1,0 +1,19 @@
+{
+ "id": "pothos",
+ "name": "Trailing pothos",
+ "kind": "SOLID",
+ "width_m": 0.185,
+ "depth_m": 0.17,
+ "height_m": 0.175,
+ "footprint_cells": [
+  4,
+  4
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.175,
+ "anchors": [],
+ "tris": 2500,
+ "affordance": null,
+ "usdz_kb": 308
+}

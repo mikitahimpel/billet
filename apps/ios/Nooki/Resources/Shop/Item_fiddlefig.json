@@ -1,0 +1,19 @@
+{
+ "id": "fiddlefig",
+ "name": "Fiddle leaf fig",
+ "kind": "SOLID",
+ "width_m": 0.367,
+ "depth_m": 0.36,
+ "height_m": 0.75,
+ "footprint_cells": [
+  8,
+  8
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.75,
+ "anchors": [],
+ "tris": 3000,
+ "affordance": null,
+ "usdz_kb": 356
+}
