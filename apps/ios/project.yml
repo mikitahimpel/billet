@@ -136,7 +136,7 @@ targets:
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
-        products: [Ink]
+        products: [Ink, Persistence]
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
@@ -173,7 +173,7 @@ targets:
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
-        products: [Ink]
+        products: [Ink, Persistence]
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
@@ -213,7 +213,7 @@ targets:
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
-        products: [Ink]
+        products: [Ink, Persistence]
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
@@ -257,7 +257,7 @@ targets:
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
-        products: [Ink]
+        products: [Ink, Persistence]
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures

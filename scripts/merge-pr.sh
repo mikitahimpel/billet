@@ -64,6 +64,14 @@ for _ in $(seq 1 300); do
     *" pass "*) ;;
     *) log "no check passed (only skipped: did the jobs start?)"; sleep "$poll"; continue ;;
   esac
+  # The checks list can leave out a running workflow's jobs for a moment (#620 merged so, iOS still
+  # running), so every workflow run of the head commit has to be done too.
+  runs=$(gh run list --commit "$head" --json status,conclusion \
+    -q '[.[] | if .status == "completed" then .conclusion else "pending" end] | join(" ")' || true)
+  case " $runs " in
+    *" failure "* | *" cancelled "* | *" timed_out "*) log "a run failed"; gh run list --commit "$head"; exit 1 ;;
+    *" pending "*) log "runs pending"; sleep "$poll"; continue ;;
+  esac
 
   git fetch -q origin main "+pull/$n/head:refs/merge-pr/$n"
   pr=$(git rev-parse "refs/merge-pr/$n")

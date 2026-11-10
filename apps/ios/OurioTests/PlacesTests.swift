@@ -1,5 +1,6 @@
 import Foundation
 import OurioShared
+import Persistence
 import Testing
 import UIKit
 import Wire

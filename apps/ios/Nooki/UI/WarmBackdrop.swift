@@ -10,10 +10,11 @@ struct WarmBackdrop: View {
     /// Whether the bokeh moves; when it doesn't, it stays where it was.
     var drifts = true
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// `-uitestStill YES` holds the bokeh still: redrawn under glass every frame, it keeps the app from ever idling
     /// on CI's GPU-less virtual Macs, and UI queries time out.
     private static let still = UserDefaults.standard.bool(forKey: "uitestStill")
-    private var paused: Bool { scenePhase != .active || !drifts || Self.still }
+    private var paused: Bool { scenePhase != .active || !drifts || reduceMotion || Self.still }
 
     var body: some View {
         ZStack {

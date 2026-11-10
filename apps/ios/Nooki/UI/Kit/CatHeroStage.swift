@@ -2,7 +2,7 @@ import Design
 import SwiftUI
 import UIKit
 
-/// The hero Mochi's pictures for one coat as they ship, from `Tools/bake_hero.py`: the seated splat at rest, 3:4, and
+/// The hero Mochi's pictures for one coat as they ship, from `Tools/bake_hero.py`: her splat sitting at rest, 3:4, and
 /// the patches that close her lids and flick her ear. A patch replaces its rectangle of the rest image; outside it the
 /// frames are the rest image, pixel for pixel.
 nonisolated struct HeroArt: @unchecked Sendable {
@@ -13,8 +13,8 @@ nonisolated struct HeroArt: @unchecked Sendable {
     let ear: [UIImage]
 
     /// The patches' rectangles as fractions of the rest image, printed by the bake.
-    static let blinkRect = CGRect(x: 0.32222, y: 0.20486, width: 0.44352, height: 0.22639)
-    static let earRect = CGRect(x: 0.23889, y: 0.10764, width: 0.21019, height: 0.16736)
+    static let blinkRect = CGRect(x: 0.33519, y: 0.21042, width: 0.41111, height: 0.20625)
+    static let earRect = CGRect(x: 0.25926, y: 0.11944, width: 0.18889, height: 0.15764)
 
     /// Reads and decodes; it blocks, so it runs off the main actor.
     static func read(_ coat: CatCoat, from bundle: Bundle) -> HeroArt? {
@@ -27,16 +27,20 @@ nonisolated struct HeroArt: @unchecked Sendable {
         return HeroArt(rest: images[0], blink: Array(images[1...2]), ear: Array(images[3...4]))
     }
 
+    /// `rect`, a fraction of an image of `size`, in whole pixels. The bake cut each patch on whole pixels and wrote
+    /// the fractions to 5 places, so every edge rounds back to its pixel; rounding outward would add one on each side.
+    static func pixels(_ rect: CGRect, of size: CGSize) -> CGRect {
+        let minX = (rect.minX * size.width).rounded(), maxX = (rect.maxX * size.width).rounded()
+        let minY = (rect.minY * size.height).rounded(), maxY = (rect.maxY * size.height).rounded()
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
     /// The whole cat with `blink` and `ear` frames (0 rest) laid over the rest image.
     func frame(blink: Int, ear: Int) -> UIImage {
         let size = rest.size
-        func pixels(_ rect: CGRect) -> CGRect {
-            CGRect(x: rect.minX * size.width, y: rect.minY * size.height,
-                   width: rect.width * size.width, height: rect.height * size.height).integral
-        }
         var patches: [(image: UIImage, rect: CGRect)] = []
-        if blink > 0 { patches.append((self.blink[blink - 1], pixels(Self.blinkRect))) }
-        if ear > 0 { patches.append((self.ear[ear - 1], pixels(Self.earRect))) }
+        if blink > 0 { patches.append((self.blink[blink - 1], Self.pixels(Self.blinkRect, of: size))) }
+        if ear > 0 { patches.append((self.ear[ear - 1], Self.pixels(Self.earRect, of: size))) }
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         return UIGraphicsImageRenderer(size: size, format: format).image { context in
@@ -79,8 +83,8 @@ nonisolated struct HeroImages: @unchecked Sendable {
             let extent = cat.extent
             // Core Image counts y from the bottom.
             let crop = fraction.map {
-                CGRect(x: $0.minX * extent.width, y: (1 - $0.maxY) * extent.height,
-                       width: $0.width * extent.width, height: $0.height * extent.height).integral
+                let cut = HeroArt.pixels($0, of: extent.size)
+                return CGRect(x: cut.minX, y: extent.height - cut.maxY, width: cut.width, height: cut.height)
             } ?? extent
             guard let image = context.createCGImage(Self.lighting(cat, colour: colour), from: crop) else { return nil }
             return UIImage(cgImage: image)

@@ -72,7 +72,7 @@ struct CoatPicker: View {
     }
 }
 
-/// billet-gpu's render of the seated splat Mochi: same pose, light and framing for every coat.
+/// Her splat sitting as the room has her (`Tools/bake_hero.py --cards`): same pose, light and framing for every coat.
 struct CatStage: View {
     let coat: CatCoat
     let height: CGFloat

@@ -1,4 +1,5 @@
-"""Renders MochiPortrait.png, the round avatar of Mochi on the pet button and in the widgets, from Cat.usdz.
+"""Renders MochiPortrait.png, the round avatar of Mochi on the pet button and in the widgets, from CatStanding.usdz
+sitting (sit_mesh.py).
 
 Run:
   blender -b --python Tools/make_portrait.py -- Shared/Resources/MochiPortrait.png [size]
@@ -8,6 +9,7 @@ A three-quarter close-up of her face, softly lit, on a transparent background; t
 
 import math
 import sys
+import tempfile
 
 import bpy
 from mathutils import Vector
@@ -15,10 +17,13 @@ from mathutils import Vector
 args = sys.argv[sys.argv.index("--") + 1:]
 OUT = args[0]
 SIZE = int(args[1]) if len(args) > 1 else 512
-ROOT = __file__.rsplit("/Tools/", 1)[0]
+ROOT = __file__.replace("\\", "/").rsplit("/Tools/", 1)[0]
+
+sys.path.insert(0, f"{ROOT}/Tools")
+from sit_mesh import sit  # noqa: E402
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
-bpy.ops.wm.usd_import(filepath=f"{ROOT}/Nooki/Resources/Cat.usdz")
+bpy.ops.wm.usd_import(filepath=str(sit(f"{ROOT}/Nooki/Resources/CatStanding.usdz", tempfile.mkdtemp())))
 scene = bpy.context.scene
 
 # The fur shells and fins read as grain this close; the body's baked colors carry the fur pattern on their own.
@@ -33,8 +38,8 @@ for obj in scene.objects:
     bpy.ops.mesh.delete(type="FACE")
     bpy.ops.object.mode_set(mode="OBJECT")
 
-# Cat.usdz is in the splat's model space, front -Z, which lands facing +Y here; her eyes sit about 0.195 m up.
-face = Vector((-0.01, 0.06, 0.175))
+# She sits about the origin, front -Z, which lands facing +Y here; her eyes sit about 0.215 m up.
+face = Vector((-0.01, 0.07, 0.195))
 
 
 def light(name, kind, energy, location, size=0.3, color=(1, 1, 1)):
@@ -69,7 +74,12 @@ scene.camera = cam
 
 scene.render.engine = "CYCLES"
 prefs = bpy.context.preferences.addons["cycles"].preferences
-prefs.compute_device_type = "METAL"
+for backend in ("METAL", "OPTIX", "CUDA", "HIP"):
+    try:
+        prefs.compute_device_type = backend
+        break
+    except TypeError:
+        continue
 prefs.get_devices()
 for device in prefs.devices:
     device.use = True

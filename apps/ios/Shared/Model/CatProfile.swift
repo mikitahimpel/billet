@@ -1,4 +1,5 @@
 import Foundation
+import Persistence
 
 /// Mochi until named in onboarding. In the app group so the widgets use it too; the server gets it as `cat_name`.
 public nonisolated enum CatProfile {

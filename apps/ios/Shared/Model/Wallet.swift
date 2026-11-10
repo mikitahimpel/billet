@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Persistence
 
 /// As this phone last heard it from the server. Only the server changes the coins; the phone keeps its last answer
 /// for the widgets and for offline.

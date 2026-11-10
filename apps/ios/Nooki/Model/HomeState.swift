@@ -1,5 +1,6 @@
 import FeatureGames
 import FeatureMood
+import MoodInterface
 import Observation
 import OurioShared
 import Persistence

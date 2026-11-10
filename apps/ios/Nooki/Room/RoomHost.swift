@@ -62,12 +62,13 @@ private struct RoomStage: View {
             } else if let scene = controller.scene(for: input.scene) {
                 // One view for the app's life. A RealityView that goes away takes the GPU side of what it drew with
                 // it a few seconds later, so a room moved into a new one after that draws nothing until relaunch.
-                // While no room can be seen it holds an empty one, paused and transparent: nothing to render, and no
-                // full-screen layer to composite under the Shop, Moments, Us or a cover.
+                // While no room can be seen it holds an empty one, paused and transparent. A RealityView renders every
+                // frame while it exists, so it also shrinks to one point: each of those frames is next to nothing.
                 DioramaView(scene: visible ? scene : controller.offStage, paused: !visible || controller.corner != nil,
                             petPulse: controller.petPulse) {
                     controller.petted()
                 }
+                .frame(width: visible ? nil : 1, height: visible ? nil : 1)
                 .allowsHitTesting(visible && controller.game == nil)
                 .opacity(visible ? 1 : 0)
                 .accessibilityHidden(true)
@@ -81,6 +82,7 @@ private struct RoomStage: View {
         .onChange(of: visible) { _, visible in
             if !visible { controller.stop() }
         }
+        .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         // Her status is read once a second only while she can be seen; under a cover or a sheet that hides her it
         // waits, and the first look back reads it at once.
         .task(id: input.visibility == .visible && controller.hasHome) {
