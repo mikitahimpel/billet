@@ -27,16 +27,20 @@ nonisolated struct HeroArt: @unchecked Sendable {
         return HeroArt(rest: images[0], blink: Array(images[1...2]), ear: Array(images[3...4]))
     }
 
+    /// `rect`, a fraction of an image of `size`, in whole pixels. The bake cut each patch on whole pixels and wrote
+    /// the fractions to 5 places, so every edge rounds back to its pixel; rounding outward would add one on each side.
+    static func pixels(_ rect: CGRect, of size: CGSize) -> CGRect {
+        let minX = (rect.minX * size.width).rounded(), maxX = (rect.maxX * size.width).rounded()
+        let minY = (rect.minY * size.height).rounded(), maxY = (rect.maxY * size.height).rounded()
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
     /// The whole cat with `blink` and `ear` frames (0 rest) laid over the rest image.
     func frame(blink: Int, ear: Int) -> UIImage {
         let size = rest.size
-        func pixels(_ rect: CGRect) -> CGRect {
-            CGRect(x: rect.minX * size.width, y: rect.minY * size.height,
-                   width: rect.width * size.width, height: rect.height * size.height).integral
-        }
         var patches: [(image: UIImage, rect: CGRect)] = []
-        if blink > 0 { patches.append((self.blink[blink - 1], pixels(Self.blinkRect))) }
-        if ear > 0 { patches.append((self.ear[ear - 1], pixels(Self.earRect))) }
+        if blink > 0 { patches.append((self.blink[blink - 1], Self.pixels(Self.blinkRect, of: size))) }
+        if ear > 0 { patches.append((self.ear[ear - 1], Self.pixels(Self.earRect, of: size))) }
         let format = UIGraphicsImageRendererFormat()
         format.scale = 1
         return UIGraphicsImageRenderer(size: size, format: format).image { context in
@@ -79,8 +83,8 @@ nonisolated struct HeroImages: @unchecked Sendable {
             let extent = cat.extent
             // Core Image counts y from the bottom.
             let crop = fraction.map {
-                CGRect(x: $0.minX * extent.width, y: (1 - $0.maxY) * extent.height,
-                       width: $0.width * extent.width, height: $0.height * extent.height).integral
+                let cut = HeroArt.pixels($0, of: extent.size)
+                return CGRect(x: cut.minX, y: extent.height - cut.maxY, width: cut.width, height: cut.height)
             } ?? extent
             guard let image = context.createCGImage(Self.lighting(cat, colour: colour), from: crop) else { return nil }
             return UIImage(cgImage: image)

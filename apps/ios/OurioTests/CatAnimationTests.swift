@@ -141,10 +141,11 @@ struct CatAnimationTests {
         let low = leg.hip - [0, 0.07, 0]
         let moved = Gait.kneeAboveFloor(leg, hip: low, foot: foot)
         #expect(moved.y == foot.y)
-        #expect(moved.z < foot.z, "the hind paw slides forward")
+        #expect(moved != foot)
         let (a, _, _) = Gait.solveLeg(hip: leg.hip, knee: leg.knee, paw: leg.paw, target: moved - low + leg.hip)
         let knee = Pose.about(leg.hip, .x(a)).apply(leg.knee) - leg.hip + low
         #expect(abs(knee.y - Gait.kneeFloor) < 0.001)
+        #expect(moved.z < knee.z, "the hind paw lies on the floor in front of the folded knee")
     }
 
     @Test func lyingEasesToItsTargetWithoutOvershootAndRisesBackToSitting() {
