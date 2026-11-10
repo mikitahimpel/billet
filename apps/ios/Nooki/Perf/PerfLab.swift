@@ -1,6 +1,7 @@
 import BilletKit
 import Foundation
 import Observation
+import OSLog
 import QuartzCore
 import RoomInterface
 import SwiftUI
@@ -94,11 +95,13 @@ nonisolated enum PerfLabMachine: Machine {
     }
 
     /// One line to paste into a message: what is switched and the meter's last reading.
-    static func summary(_ state: State, reading: FrameStats?, energy: EnergyStats? = nil) -> String {
+    static func summary(_ state: State, reading: FrameStats?, energy: EnergyStats? = nil,
+                        tabs: TabSwitchTimes? = nil) -> String {
         let changed = PerfSuspect.allCases.filter { state.changed.contains($0) }
             .map { "\($0.rawValue) \(state.isOn($0) ? "on" : "off")" }
         let switches = changed.isEmpty ? "as shipped" : changed.joined(separator: ", ")
-        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line].compactMap { $0 }).joined(separator: " · ")
+        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line].compactMap { $0 })
+            .joined(separator: " · ")
     }
 }
 
@@ -163,6 +166,81 @@ extension EnergyStats.Room {
         case .hidden: self = .off
         }
     }
+}
+
+/// How long the last tab switches took, from the tap to the first frame of the new tab on screen.
+nonisolated struct TabSwitchTimes: Equatable, Sendable {
+    static let kept = 20
+
+    /// Milliseconds, oldest first; at most `kept`.
+    private(set) var recent: [Double] = []
+
+    mutating func add(_ milliseconds: Double) {
+        recent.append(milliseconds)
+        if recent.count > Self.kept { recent.removeFirst(recent.count - Self.kept) }
+    }
+
+    var last: Double? { recent.last }
+    var p50: Double? { percentile(0.5) }
+    var p95: Double? { percentile(0.95) }
+
+    /// The nearest-rank percentile.
+    private func percentile(_ p: Double) -> Double? {
+        guard !recent.isEmpty else { return nil }
+        let sorted = recent.sorted()
+        return sorted[max(0, Int((Double(sorted.count) * p).rounded(.up)) - 1)]
+    }
+
+    var line: String? {
+        guard let last, let p50, let p95 else { return nil }
+        return String(format: "tab %.0f ms, p50 %.0f, p95 %.0f of %d", last, p50, p95, recent.count)
+    }
+}
+
+/// Times each tab switch to its first frame on screen: an os_signpost interval for Instruments, a log line, and
+/// ``TabSwitchTimes`` for Labs. The state change and the tap that made it run in the same turn of the main loop, and
+/// the new tab is built and committed before the display link next fires, so that fire's target time, or the moment
+/// it fires if later, is when the first frame with the new tab is shown.
+@MainActor
+@Observable
+final class TabSwitchClock {
+    private(set) var times = TabSwitchTimes()
+
+    @ObservationIgnored private let signposter = OSSignposter(subsystem: "com.ourio.app", category: "tabs")
+    @ObservationIgnored private let log = Logger(subsystem: "com.ourio.app", category: "tabs")
+    @ObservationIgnored private var link: CADisplayLink?
+    @ObservationIgnored private var target = TabSwitchLinkTarget()
+    @ObservationIgnored private var started: (at: CFTimeInterval, tab: String, interval: OSSignpostIntervalState)?
+
+    func began(_ tab: String) {
+        link?.invalidate()
+        if let started { signposter.endInterval("tab switch", started.interval, "cut short") }
+        started = (CACurrentMediaTime(), tab, signposter.beginInterval("tab switch", id: signposter.makeSignpostID(),
+                                                                       "\(tab)"))
+        target.tick = { [weak self] link in self?.shown(link) }
+        let link = CADisplayLink(target: target, selector: #selector(TabSwitchLinkTarget.frame))
+        link.add(to: .main, forMode: .common)
+        self.link = link
+    }
+
+    private func shown(_ link: CADisplayLink) {
+        link.invalidate()
+        self.link = nil
+        guard let started else { return }
+        self.started = nil
+        // A main thread held up past a frame calls the link late, with the target of the frame it missed.
+        let milliseconds = (max(link.targetTimestamp, CACurrentMediaTime()) - started.at) * 1000
+        signposter.endInterval("tab switch", started.interval)
+        log.info("tab switch \(started.tab, privacy: .public) \(milliseconds, format: .fixed(precision: 0)) ms")
+        times.add(milliseconds)
+    }
+}
+
+/// A display link holds its target strongly; this keeps that target from being the clock.
+private final class TabSwitchLinkTarget: NSObject {
+    var tick: (CADisplayLink) -> Void = { _ in }
+
+    @objc func frame(_ link: CADisplayLink) { tick(link) }
 }
 
 /// Runs ``PerfLabMachine`` and keeps its state on this phone.
