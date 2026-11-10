@@ -7,6 +7,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case labels
     case cards
     case rows
+    case status
     case fields
     case grid
     case callout
@@ -19,6 +20,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .labels: Self.labelsPage
             case .cards: Self.cardsPage
             case .rows: Self.rowsPage
+            case .status: Self.statusPage
             case .fields: Self.fieldsPage
             case .grid: Self.gridPage
             case .callout: Self.calloutPage
@@ -102,6 +104,23 @@ enum GalleryPage: String, CaseIterable, Sendable {
             }
             Row("Show hints again on the next launch", symbol: "lightbulb.fill") { RowChevron() }
             ToggleRow("Streak at risk reminders", isOn: .constant(false))
+        }
+    }
+
+    /// A raised row and a quiet one, a row with a note, and the badge on a round control.
+    @MainActor @ViewBuilder private static var statusPage: some View {
+        GroupedSection(inset: StatusRow.inset) {
+            StatusRow("Water", state: "Thirsty", symbol: "drop.fill", emphasis: .raised, action: "Water") {}
+            StatusRow("Light", state: "Plenty", symbol: "sun.max.fill", note: "Moves on its own")
+            StatusRow("Love", state: "Wants a hug", symbol: "heart.fill", tint: .blushPink, emphasis: .raised,
+                      action: "Hug") {}
+            StatusRow("Food", state: "Well fed", symbol: "fork.knife", action: "Feed") {}
+        }
+        HStack(spacing: Space.xl) {
+            GlassIconButton(symbol: "leaf.fill", label: "Plant") {}
+                .overlay(alignment: .topTrailing) { SymbolBadge(symbol: "drop.fill") }
+            GlassIconButton(symbol: "person.fill", label: "Alex") {}
+                .overlay(alignment: .topTrailing) { SymbolBadge(symbol: "heart.fill", tint: .blushPink) }
         }
     }
 

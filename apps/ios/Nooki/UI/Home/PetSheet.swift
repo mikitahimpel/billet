@@ -1,6 +1,7 @@
 import FeatureGames
 import GamesInterface
 import OurioShared
+import Pet
 import SwiftUI
 import Design
 import TipKit
@@ -13,8 +14,11 @@ struct PetButton: View {
     var onPlay: (MiniGame) -> Void
     @State private var showsSheet = false
     @Environment(Hints.self) private var hints
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let current = (FixedNeeds.fromLaunch ?? needs())?.needs
+        let cue = current.flatMap(NeedLevel.cue)
         Button {
             showsSheet = true
             hints.done(PetHint())
@@ -29,6 +33,17 @@ struct PetButton: View {
                         .animation(.spring(duration: 0.5), value: state.care.progress)
                 }
                 .glass(.circle, role: .control)
+                .overlay(alignment: .topTrailing) {
+                    // What she wants, only while she wants it; the sheet says the rest.
+                    ZStack {
+                        if let cue {
+                            SymbolBadge(symbol: cue.symbol, tint: cue.tint)
+                                .id(cue)
+                                .transition(reduceMotion ? AnyTransition.opacity : .scale.combined(with: .opacity))
+                        }
+                    }
+                    .animation(reduceMotion ? Motion.fade() : Motion.spring(), value: cue)
+                }
                 .overlay(alignment: .bottom) {
                     Text("Lv.\(state.care.level)")
                         .font(.ourioMicro)
@@ -50,6 +65,7 @@ struct PetButton: View {
         .hint(PetHint(), arrowEdge: .bottom, target: Circle())
         .hint(TreatHint(), arrowEdge: .bottom, target: Circle())
         .accessibilityLabel("\(state.petName), Lv. \(state.care.level)")
+        .accessibilityValue(cue.map { $0.word(.wants) } ?? "")
         .accessibilityIdentifier("pet")
         .onChange(of: state.showsPetSheet) { _, asked in
             guard asked else { return }
@@ -65,6 +81,7 @@ struct PetButton: View {
     }
 }
 
+/// Her face and mood, her four needs with the care each takes, the care no need offers, and one closing line.
 /// Scrolls only when its content is taller than the screen allows.
 private struct PetSheet: View {
     let state: HomeState
@@ -80,15 +97,8 @@ private struct PetSheet: View {
                 let current = (FixedNeeds.fromLaunch ?? needs())?.needs
                 VStack(spacing: Space.m) {
                     hero(mood: current?.moodLine(name: state.petName))
-                    NeedBars(name: state.petName, needs: current)
-                    PetActions(
-                        treat: {
-                            withAnimation(.spring(duration: 0.4)) { short = !state.shop.treat() }
-                            if !short { needs()?.feed() }
-                        },
-                        pet: { withAnimation(.spring(duration: 0.4)) { state.care.pet() } },
-                        play: onPlay
-                    )
+                    NeedList(name: state.petName, needs: current, care: give)
+                    moreCare
                     Text(short ? "Not enough coins for a treat" : "With you two for \(state.daysTogether) days")
                         .font(.ourioCaption)
                         .foregroundStyle(short ? Ink.accentText : Ink.textSecondary)
@@ -101,58 +111,80 @@ private struct PetSheet: View {
         .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
 
-    private func hero(mood: String?) -> some View {
-        VStack(spacing: 6) {
-            PetPortrait(size: 96)
-                .shadow(color: Color(hex: 0x8A3A1E).opacity(0.35), radius: 14, y: 8)
-                .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
-                    view.scaleEffect(scale)
-                } keyframes: { _ in
-                    SpringKeyframe(1.08, duration: 0.15)
-                    SpringKeyframe(1.0, duration: 0.35)
-                }
-            if let mood {
-                Text(mood)
-                    .font(.ourioCallout)
-                    .foregroundStyle(Ink.textSecondary)
-                    .contentTransition(.opacity)
-            }
-            HStack(spacing: Space.s) {
-                Chip("Lv. \(state.care.level)", style: .honey)
-                    .contentTransition(.numericText())
-                LevelTrack(value: state.care.progress)
-                Text("\(Int((state.care.progress * 100).rounded()))%")
-                    .font(.ourioMicro)
-                    .foregroundStyle(Ink.textSecondary)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-            }
-            .padding(.horizontal, Space.l)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("Level \(state.care.level)")
-            .accessibilityValue("\(Int((state.care.progress * 100).rounded())) percent to level \(state.care.level + 1)")
+    private func give(_ care: NeedCare) {
+        switch care {
+        case .game(let game): onPlay(game)
+        case .pet: withAnimation(Motion.spring()) { state.care.pet() }
         }
-        .padding(.vertical, Space.l)
-        .frame(maxWidth: .infinity)
-        .cardSurface(warm: true)
     }
-}
 
-private struct LevelTrack: View {
-    let value: Double
+    private func treat() {
+        withAnimation(Motion.spring()) { short = !state.shop.treat() }
+        if !short { needs()?.feed() }
+    }
 
-    var body: some View {
-        Capsule()
-            .fill(Ink.surfaceRaised)
-            .overlay(alignment: .leading) {
-                GeometryReader { proxy in
-                    Capsule()
-                        .fill(LinearGradient(colors: [Color.honey, .honeyDeep], startPoint: .top, endPoint: .bottom))
-                        .frame(width: max(proxy.size.height, proxy.size.width * min(max(value, 0), 1)))
-                }
+    /// Smaller than a need's row, so the rows stay what the eye reads first.
+    private var moreCare: some View {
+        FlowRow {
+            ForEach(NeedCare.more, id: \.self) { care in
+                PillButton(care.title, symbol: care.symbol) { give(care) }
+                    .accessibilityHint(care.hint(name: state.petName))
             }
-            .frame(height: 10)
-            .animation(.spring(duration: 0.5), value: value)
+            Button(action: treat) {
+                HStack(spacing: Space.xs) {
+                    Image(systemName: "gift.fill")
+                    Text("Treat")
+                    CoinIcon(size: 14, relativeTo: .callout)
+                    Text(ShopModel.treatPrice, format: .number).monospacedDigit()
+                }
+                .font(.ourioCallout.weight(.semibold))
+            }
+            .buttonStyle(PillButtonStyle())
+            .accessibilityLabel("Treat, \(ShopModel.treatPrice) coins")
+            .accessibilityHint("Fills \(state.petName) up more than a pet")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func hero(mood: String?) -> some View {
+        Card(warm: true) {
+            VStack(spacing: Space.s) {
+                PetPortrait(size: 96)
+                    .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
+                        view.scaleEffect(scale)
+                    } keyframes: { _ in
+                        SpringKeyframe(1.08, duration: 0.15)
+                        SpringKeyframe(1.0, duration: 0.35)
+                    }
+                Text(mood ?? "Settling in")
+                    .font(.ourioHeadline)
+                    .foregroundStyle(Ink.text)
+                    .multilineTextAlignment(.center)
+                    .contentTransition(.opacity)
+                HStack(spacing: Space.s) {
+                    Chip("Lv. \(state.care.level)", style: .honey)
+                        .contentTransition(.numericText())
+                    Text(Self.towardNext(level: state.care.level, progress: state.care.progress))
+                        .font(.ourioCaption)
+                        .foregroundStyle(Ink.textSecondary)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("Level \(state.care.level)")
+                .accessibilityValue(
+                    "\(Int((state.care.progress * 100).rounded())) percent to level \(state.care.level + 1)")
+            }
+            .frame(maxWidth: .infinity)
+        }
+    }
+
+    /// The way to her next level in words; the ring on her portrait on Home draws it.
+    static func towardNext(level: Int, progress: Double) -> String {
+        let next = "Lv. \(level + 1)"
+        switch progress {
+        case 0.75...: return "Nearly \(next)"
+        case 0.4..<0.75: return "Halfway to \(next)"
+        default: return "On the way to \(next)"
+        }
     }
 }
 

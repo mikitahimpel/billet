@@ -64,6 +64,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
 | A row | `Row(title, detail:, symbol:, tint:) { trailing }`, `ToggleRow`, `PickerRow`, `RowChevron` |
 | Any other content on a card | `Card { ... }` or `.cardSurface()` |
+| A state read at a glance that a tap acts on (the cat's needs) | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. The state is a word, never a bar or a percentage (VoiceOver gets the number through `value:`); only a state that wants something now is `.raised` |
+| What an avatar or a round control wants, while it matters | `SymbolBadge(symbol:tint:)` at its top trailing corner; nothing when nothing is wanted |
 | A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
 | Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
 | A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, open:) { art } leadingBadge: trailingBadge: footer: }` |
