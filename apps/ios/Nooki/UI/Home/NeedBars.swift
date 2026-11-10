@@ -183,10 +183,10 @@ extension PetNeed {
 
     var hue: Color {
         switch self {
-        case .full: Color(hex: 0xF2A65E)
+        case .full: .honey
         case .rested: Color(hex: 0xE8C47A)
         case .playful: Color(hex: 0xF08A5D)
-        case .loved: Color(hex: 0xFF8FA3)
+        case .loved: .blushPink
         }
     }
 

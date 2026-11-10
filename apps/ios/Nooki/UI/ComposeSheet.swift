@@ -26,7 +26,7 @@ struct ComposeSheet: View {
                         .scaledToFill()
                         .frame(width: 220, height: 220)
                         .clipped()
-                    TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(Color(hex: 0xB8957A)))
+                    TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(PolaroidPaper.byline))
                         .font(.custom("Noteworthy-Bold", size: 17))
                         .foregroundStyle(PolaroidPaper.ink)
                         .focused($focused)

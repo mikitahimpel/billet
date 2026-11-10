@@ -104,9 +104,10 @@ struct WishEditor: View {
                         .foregroundStyle(.white)
                         .frame(width: 28, height: 28)
                         .background(.black.opacity(0.45), in: .circle)
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.circle)
                 }
                 .buttonStyle(PressScaleStyle())
-                .padding(Space.s)
                 .accessibilityLabel("Remove picture")
             }
         }
