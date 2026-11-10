@@ -34,6 +34,9 @@ xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
   -destination 'platform=iOS Simulator,name=<iPhone>' CODE_SIGNING_ALLOWED=NO
 ```
 
+Debug builds in every worktree share one compilation cache, `~/Library/Caches/billet-compilation-cache`
+(project.yml); a build that fails for no reason in the code is retried after deleting it.
+
 `<iPhone>`: any from `xcrun simctl list devices available`. Swift scripts are named `ios:*`, never
 `test` or `build`, so the TypeScript commands skip them on Linux.
 

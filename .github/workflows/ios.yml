@@ -29,6 +29,10 @@ on:
         required: false
         default: ""
 
+env:
+  # The Debug builds' compilation cache (project.yml) is for a Mac's worktrees; a runner starts empty.
+  BILLET_COMPILATION_CACHE: "NO"
+
 concurrency:
   group: ios-${{ github.ref }}
   # A pull request's newer commit supersedes its running check. On main a running check finishes, or
