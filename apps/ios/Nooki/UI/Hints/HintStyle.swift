@@ -3,36 +3,32 @@ import SwiftUI
 import Design
 import TipKit
 
-/// The background is the system's (glass on iOS 26), warmed before that.
+/// A hint is a card: the same surface, type and icon tile as every card in the app, in the theme the app is in. Its
+/// popover's arrow points at the control it is about, and that control is ringed (`hint(_:arrowEdge:target:)`).
 struct HintStyle: TipViewStyle {
     let hints: Hints
 
     func makeBody(configuration: Configuration) -> some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Space.m) {
             configuration.image?
-                .font(.system(.title2, weight: .semibold))
+                .font(.ourioHeadline)
                 .symbolRenderingMode(.monochrome)
-                .foregroundStyle(Color.honey)
-                .frame(width: 30)
+                .foregroundStyle(Ink.accentText)
+                .frame(width: Size.cardMark, height: Size.cardMark)
+                .background(Color.honey.opacity(0.16), in: .circle)
+                .accessibilityHidden(true)
 
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Space.xs) {
                 configuration.title?
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Ink.primary)
+                    .font(.ourioHeadline)
+                    .foregroundStyle(Ink.text)
                 configuration.message?
-                    .font(.system(.subheadline, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
-                    .lineLimit(3)
+                    .font(.ourioCallout)
+                    .foregroundStyle(Ink.textSecondary)
                 ForEach(configuration.actions) { action in
-                    Button(action: action.handler) {
-                        action.label()
-                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .tint(.honey)
-                    .foregroundStyle(Ink.heroInk)
-                    .padding(.top, 6)
+                    Button(action: action.handler) { action.label() }
+                        .buttonStyle(PrimaryButtonStyle(fullWidth: false))
+                        .padding(.top, Space.xs)
                 }
             }
             .fixedSize(horizontal: false, vertical: true)
@@ -42,37 +38,57 @@ struct HintStyle: TipViewStyle {
                 hints.close(configuration.tip)
             } label: {
                 Image(systemName: "xmark")
-                    .ourioScaledFont(size: 13, weight: .bold)
-                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-                    .foregroundStyle(Ink.secondary)
-                    .frame(width: 28, height: 28)
+                    .font(.ourioCaption.weight(.bold))
+                    .foregroundStyle(Ink.textSecondary)
+                    .frame(width: Size.control, height: Size.control)
                     .contentShape(.rect)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
+            // The tap area reaches into the card's padding, so the glyph lines up with the title.
+            .padding([.top, .trailing], -Space.m)
             .accessibilityLabel("Close hint")
         }
-        .padding(16)
-        .environment(\.colorScheme, .dark)
+        .padding(CardMetrics.padding)
         .onAppear { hints.appeared(configuration.tip) }
     }
 }
 
 extension View {
     func hintStyle(_ hints: Hints) -> some View {
-        modifier(HintLook(hints: hints))
+        tipViewStyle(HintStyle(hints: hints))
+            .tipBackground(Ink.surface)
+    }
+
+    /// The hint's popover, with its arrow at this view, and a honey ring around `target` while it shows.
+    func hint<T: HintTip>(_ tip: T, arrowEdge: Edge, target: some InsettableShape) -> some View {
+        modifier(HintRing(tip: tip, target: target)).popoverTip(tip, arrowEdge: arrowEdge)
     }
 }
 
-private struct HintLook: ViewModifier {
-    let hints: Hints
+private struct HintRing<T: HintTip, Target: InsettableShape>: ViewModifier {
+    let tip: T
+    let target: Target
+    @State private var showing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content.tipViewStyle(HintStyle(hints: hints))
-        } else {
-            content
-                .tipViewStyle(HintStyle(hints: hints))
-                .tipBackground(Ink.screen)
-        }
+        content
+            .overlay {
+                if showing {
+                    target
+                        .strokeBorder(Color.honey, lineWidth: 2.5)
+                        .padding(-Space.xs)
+                        .phaseAnimator(reduceMotion ? [1.0] : [1.0, 0.35]) { ring, opacity in
+                            ring.opacity(opacity)
+                        } animation: { _ in Motion.fade(Motion.standard) }
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                        .transition(.opacity)
+                }
+            }
+            .animation(Motion.fade(), value: showing)
+            .task {
+                for await shows in tip.shouldDisplayUpdates { showing = shows }
+            }
     }
 }

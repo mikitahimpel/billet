@@ -41,6 +41,26 @@ const checks = [
     what: "hand-made Try again buttons",
     fix: "A failed load or send is retried with RetryButton from the design package (docs/design-system.md).",
   },
+  {
+    pattern:
+      /\.padding\((?:\.\w+,\s*)?(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\)|\bspacing:\s*(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\b/g,
+    baseline: join(here, "spacing-baseline.json"),
+    what: "paddings or spacings written as numbers",
+    fix: "Gaps and insets come from Space (xs…xl, gutter, section) or CardMetrics.padding (docs/design-system.md).",
+  },
+  {
+    pattern: /\.buttonStyle\(\s*\.plain\s*\)/g,
+    baseline: join(here, "plain-button-baseline.json"),
+    what: "buttons with no pressed state (.buttonStyle(.plain))",
+    fix: "Use a design button (PrimaryButton, SecondaryButton, ToggleButtonStyle, RetryButton) or PressScaleStyle.",
+  },
+  {
+    pattern:
+      /\.font\(\s*\.(?:title[23]?|body|headline|subheadline|caption2?|callout|footnote|largeTitle)\b/g,
+    baseline: join(here, "text-style-baseline.json"),
+    what: "system text styles instead of the .ourio* styles",
+    fix: "Type is the .ourio* text styles from the design package (docs/design-system.md).",
+  },
 ];
 
 function swiftFiles(dir) {
