@@ -1,0 +1,6 @@
+struct Good: View {
+  var body: some View {
+    PrimaryButton("Again") {}
+    Button("More") {}.buttonStyle(QuietButtonStyle())
+  }
+}

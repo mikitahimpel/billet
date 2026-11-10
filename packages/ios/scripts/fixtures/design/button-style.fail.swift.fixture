@@ -1,0 +1,6 @@
+struct Bad: View {
+  var body: some View {
+    Button("Again") {}.buttonStyle(.borderedProminent).buttonBorderShape(.capsule)
+    Button("More") {}.buttonStyle(.plain)
+  }
+}

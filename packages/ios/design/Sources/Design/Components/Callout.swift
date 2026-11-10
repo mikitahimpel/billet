@@ -1,8 +1,9 @@
 import SwiftUI
 
-/// A hint: an icon, a title, a short message and optional actions, drawn dark so it reads over
-/// the room and over a sheet alike. The arrow toward its anchor is the system's (`TipView`,
-/// `popoverTip`) or `CalloutPointer`'s.
+/// A hint: an icon on its tile, a title, a short message, optional actions and a close button, on the
+/// card surface in the app's theme. TipKit hints draw it through the app's `HintStyle`, inside a
+/// popover whose arrow points at the control; anywhere else `.calloutBubble(pointer:)` gives it the
+/// card and an arrow of its own.
 public struct Callout<Icon: View, Title: View, Message: View, Actions: View>: View {
   let icon: Icon
   let title: Title
@@ -24,14 +25,15 @@ public struct Callout<Icon: View, Title: View, Message: View, Actions: View>: Vi
   public var body: some View {
     HStack(alignment: .top, spacing: Space.m) {
       icon
-        .font(.ourioTitle)
+        .font(.ourioHeadline)
         .symbolRenderingMode(.monochrome)
-        .foregroundStyle(Color.honey)
-        .frame(width: 30)
+        .foregroundStyle(Ink.accentText)
+        .frame(width: Size.cardMark, height: Size.cardMark)
+        .background(Color.honey.opacity(RowIcon.washOpacity), in: .circle)
         .accessibilityHidden(true)
       VStack(alignment: .leading, spacing: Space.xs) {
-        title.font(.ourioHeadline).foregroundStyle(Ink.primary)
-        message.font(.ourioCallout).foregroundStyle(Ink.secondary).lineLimit(3)
+        title.font(.ourioHeadline).foregroundStyle(Ink.text)
+        message.font(.ourioCallout).foregroundStyle(Ink.textSecondary)
         actions
       }
       .fixedSize(horizontal: false, vertical: true)
@@ -39,18 +41,18 @@ public struct Callout<Icon: View, Title: View, Message: View, Actions: View>: Vi
       if let close {
         Button(action: close) {
           Image(systemName: "xmark")
-            .ourioScaledFont(size: 13, weight: .bold)
-            .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-            .foregroundStyle(Ink.secondary)
+            .font(.ourioCaption.weight(.bold))
+            .foregroundStyle(Ink.textSecondary)
             .frame(width: Size.control, height: Size.control)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
+        // The tap area reaches into the card's padding, so the glyph lines up with the title.
+        .padding([.top, .trailing], -Space.m)
         .accessibilityLabel("Close hint")
       }
     }
-    .padding(Space.l)
-    .environment(\.colorScheme, .dark)
+    .padding(CardMetrics.padding)
   }
 }
 
@@ -62,7 +64,7 @@ extension Callout where Icon == Image, Title == Text, Message == Text, Actions =
   }
 }
 
-/// The action inside a `Callout`: a small honey capsule.
+/// The action inside a `Callout`.
 public struct CalloutButton<Label: View>: View {
   let action: () -> Void
   let label: Label
@@ -74,11 +76,7 @@ public struct CalloutButton<Label: View>: View {
 
   public var body: some View {
     Button(action: action) { label }
-      .font(.ourioCallout.weight(.semibold))
-      .buttonStyle(.borderedProminent)
-      .buttonBorderShape(.capsule)
-      .tint(.honey)
-      .foregroundStyle(Ink.heroInk)
+      .buttonStyle(PrimaryButtonStyle(fullWidth: false))
       .padding(.top, Space.xs)
   }
 }
@@ -96,7 +94,7 @@ public struct CalloutPointer: Equatable, Sendable {
 }
 
 extension View {
-  /// A glass bubble with an arrow toward its anchor.
+  /// The card a `Callout` sits on outside a TipKit popover, with an arrow toward its anchor.
   public func calloutBubble(pointer: CalloutPointer? = nil) -> some View {
     modifier(CalloutBubble(pointer: pointer))
   }
@@ -107,7 +105,7 @@ private struct CalloutBubble: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .glass(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+      .cardSurface()
       .overlay { arrow }
   }
 
@@ -116,7 +114,7 @@ private struct CalloutBubble: ViewModifier {
       GeometryReader { proxy in
         let x = Radius.card + (proxy.size.width - 2 * Radius.card) * pointer.position
         ArrowShape(pointsUp: pointer.edge == .top)
-          .fill(Ink.glassFill)
+          .fill(Ink.surface)
           .frame(width: Space.l, height: Space.s)
           .position(x: x, y: pointer.edge == .top ? -Space.s / 2 : proxy.size.height + Space.s / 2)
       }

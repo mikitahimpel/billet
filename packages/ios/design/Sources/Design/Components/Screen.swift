@@ -71,14 +71,41 @@ private struct BottomActions<Primary: View, Secondary: View>: ViewModifier {
   }
 
   private var slot: some View {
+    ActionSlot {
+      primary
+    } secondary: {
+      secondary
+    }
+  }
+}
+
+/// The bottom action slot itself: what `Screen` and `.bottomActions` pin, for a full screen that
+/// lays out its own bottom edge (a page under a fixed header, an onboarding step). The primary is
+/// last, `Space.s` over the safe area; a secondary stacks above it, and nothing is reserved under it.
+public struct ActionSlot<Primary: View, Secondary: View>: View {
+  let primary: Primary
+  let secondary: Secondary
+
+  public init(@ViewBuilder primary: () -> Primary, @ViewBuilder secondary: () -> Secondary) {
+    self.primary = primary()
+    self.secondary = secondary()
+  }
+
+  public var body: some View {
     VStack(spacing: Space.s) {
       secondary
       primary
     }
     .frame(maxWidth: .infinity)
     .padding(.horizontal, Space.gutter)
-    .padding(.top, Space.s)
+    .padding(.top, Space.m)
     .padding(.bottom, Space.s)
+  }
+}
+
+extension ActionSlot where Secondary == EmptyView {
+  public init(@ViewBuilder primary: () -> Primary) {
+    self.init(primary: primary) { EmptyView() }
   }
 }
 

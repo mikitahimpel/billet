@@ -1,0 +1,7 @@
+struct Good: View {
+  var body: some View {
+    PrimaryButton("Go") {}
+    Rectangle().frame(height: Size.row)
+    Image("cat").frame(width: 120)
+  }
+}

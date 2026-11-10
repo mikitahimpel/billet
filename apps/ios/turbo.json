@@ -1,6 +1,8 @@
 {
   "$schema": "https://turborepo.com/schema.json",
-  "extends": ["//"],
+  "extends": [
+    "//"
+  ],
   "tasks": {
     "ios:format:check": {
       "inputs": [
@@ -9,7 +11,12 @@
         "$TURBO_ROOT$/packages/ios/*/Sources/**/*.swift",
         "$TURBO_ROOT$/packages/ios/scripts/check-design.mjs",
         "$TURBO_ROOT$/packages/ios/scripts/design-baseline.json",
-        "$TURBO_ROOT$/packages/ios/scripts/radius-baseline.json"
+        "$TURBO_ROOT$/packages/ios/scripts/radius-baseline.json",
+        "$TURBO_ROOT$/packages/ios/scripts/design-rules.mjs",
+        "$TURBO_ROOT$/packages/ios/scripts/design-rules.test.mjs",
+        "$TURBO_ROOT$/packages/ios/scripts/fixtures/**",
+        "$TURBO_ROOT$/packages/ios/design/lint/*.json",
+        "$TURBO_ROOT$/packages/ios/scripts/retry-baseline.json"
       ]
     }
   }

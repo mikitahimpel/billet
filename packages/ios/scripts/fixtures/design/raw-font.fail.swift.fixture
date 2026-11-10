@@ -1,0 +1,7 @@
+struct Bad: View {
+  var body: some View {
+    Text("a").font(.system(size: 13))
+    Text("b").font(.headline)
+    Text("c").font(.ourioBody).fontWeight(.bold)
+  }
+}

@@ -1,0 +1,7 @@
+struct Good: View {
+  var body: some View {
+    // Color.white in a comment and "Color(red:" in a string are not code.
+    Text("Color(red: 1)").font(.ourioBody).foregroundStyle(Ink.text)
+    Ink.surface
+  }
+}
