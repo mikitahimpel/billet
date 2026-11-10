@@ -28,6 +28,25 @@ extension Color {
   public static let blushPink = Color(hex: 0xFF8FA3)
 }
 
+/// A rarity's colours: `tint` for rings and glows, `light` and `edge` for the soft backdrop behind art. The backdrop
+/// is the light pair in either appearance, so art never sits on dark.
+public struct RarityTone: Sendable {
+  public let tint: Color
+  public let light: Color
+  public let edge: Color
+}
+
+extension Ink {
+  public static let rarityCommon = RarityTone(
+    tint: Color(hex: 0xE3BD8F), light: Color(hex: 0xFFF1DE), edge: Color(hex: 0xF3DDC2))
+  public static let rarityRare = RarityTone(
+    tint: Color(hex: 0x3CC8E0), light: Color(hex: 0xDDF6FA), edge: Color(hex: 0xB9E6EE))
+  public static let rarityEpic = RarityTone(
+    tint: Color(hex: 0xA466E8), light: Color(hex: 0xF1E3FF), edge: Color(hex: 0xDCC4F8))
+  public static let rarityLegendary = RarityTone(
+    tint: Color(hex: 0xFFB52E), light: Color(hex: 0xFFF0C4), edge: Color(hex: 0xFFDB8A))
+}
+
 extension ShapeStyle where Self == LinearGradient {
   public static var honeyGradient: LinearGradient {
     LinearGradient(

@@ -91,15 +91,10 @@ struct FeaturedCard: View {
 
     @ViewBuilder private var valueBadge: some View {
         if let quote, quote.price > 0, quote.sum > quote.price {
-            ValueBadge(multiple: valueText(quote), saves: quote.sum - quote.price)
+            DiscountRibbon(percent: Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()),
+                           saves: quote.sum - quote.price)
                 .fixedSize()
         }
-    }
-
-    /// The set against its parts, e.g. "2" for half price; one decimal when it isn't whole.
-    private func valueText(_ quote: (price: Int, sum: Int)) -> String {
-        let value = Double(quote.sum) / Double(quote.price)
-        return value.formatted(.number.precision(.fractionLength(0...1)))
     }
 
     private var art: some View {
@@ -129,15 +124,15 @@ struct FeaturedCard: View {
     }
 }
 
-private struct ValueBadge: View {
-    let multiple: String
+private struct DiscountRibbon: View {
+    let percent: Int
     let saves: Int
 
     var body: some View {
         VStack(spacing: 0) {
-            Text("×\(multiple)")
+            Text("−\(percent)%")
                 .font(.ourioTitle.monospacedDigit())
-            Text("value · save \(saves)")
+            Text("save \(saves)")
                 .font(.ourioMicro.monospacedDigit())
         }
         .foregroundStyle(Ink.heroInk)
@@ -145,6 +140,6 @@ private struct ValueBadge: View {
         .padding(.vertical, Space.xs + 2)
         .cornerFill(.inner, ShopInk.gold)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(multiple) times the value, saves \(saves) coins")
+        .accessibilityLabel("\(percent) percent off, saves \(saves) coins")
     }
 }
