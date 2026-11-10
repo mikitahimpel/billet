@@ -42,7 +42,7 @@ WALLS = [0xF6E4C8, 0xE8D2B2, 0xF2C79A, 0xE9A98A, 0xD8653F, 0xB9C9A2, 0xF0B7B0, 0
 ROOFS = [0xB46C3C, 0x8C4F2B, 0xA85A3A, 0x7A5A4A, 0xC8653F]
 WOOD = 0xB46C3C
 LEAF = [0x93A86A, 0x6F8A4E, 0x7FA35F, 0xA3B56F]
-ROAD_C, SIDEWALK_C, CURB_C, STRIPE_C = 0x8A7F78, 0xE6D4B8, 0xCDB89A, 0xFAF1DF
+ROAD_C, SIDEWALK_C, CURB_C, STRIPE_C = 0x8A7F78, 0xE6D4B8, 0xCDB89A, 0xE6D6BA
 CAR_PAINTS = [0xE0554A, 0xE3B45C, 0x6F8FB0, 0x7C9A7E, 0xF2E6D2, 0xD8653F]
 
 # Per time of day: sky top / horizon, sun colour / strength / elevation / azimuth (degrees), ambient, share of lit
@@ -52,7 +52,7 @@ LOOKS = {
                 lit=0.0, lamps=False, glow=0, haze=0.5),
     "dusk": dict(top=0x6C6FB4, horizon=0xF7A872, sun=0xFFB27A, sun_strength=2.0, elev=9, azim=-70, ambient=0.8,
                  lit=0.4, lamps=True, glow=5, haze=0.5),
-    "night": dict(top=0x141A3E, horizon=0x3A3C78, sun=0xA9B9FF, sun_strength=0.35, elev=38, azim=-55, ambient=0.28,
+    "night": dict(top=0x2A2352, horizon=0x6A4F7E, sun=0xC9B9FF, sun_strength=0.5, elev=38, azim=-55, ambient=0.4,
                   lit=0.62, lamps=True, glow=8, haze=0.45),
 }
 LOOK = LOOKS[TIME]
@@ -165,7 +165,7 @@ def blob(layer, radius, at, mat, scale=(1, 1, 1)):
 def window_glass(haze, lit):
     if lit and LOOK["glow"] > 0:
         warm = LIT.random() < 0.8
-        return material(0xFFD27A if warm else 0xCFE6FF, haze=haze * 0.5, glow=LOOK["glow"] * LIT.uniform(0.6, 1.0),
+        return material(0xFFD27A if warm else 0xCFE6FF, haze=haze * 0.5, glow=LOOK["glow"] * 0.6 * LIT.uniform(0.6, 1.0),
                         glow_color=0xFFC070 if warm else 0xBFD8FF, key=("lit", warm, LIT.randint(0, 3)))
     sky = 0x9DB4C8 if TIME == "day" else (0x6F7396 if TIME == "dusk" else 0x1E2447)
     return material(sky, rough=0.25, haze=haze, key=("glass", TIME))
@@ -283,19 +283,19 @@ def fence(layer, x0, x1, y, haze=0.0):
 
 
 def mailbox(layer, x, y):
-    cyl(layer, 0.05, 1.0, (x, y, 0.18), material(0x4A3A33, key="post"), verts=5)
-    box(layer, (0.5, 0.25, 0.28), (x, y, 1.15), material(0xE0554A, key="mail"), bevel=0.06)
+    cyl(layer, 0.08, 1.5, (x, y, 0.18), material(0x4A3A33, key="post"), verts=5)
+    box(layer, (0.85, 0.42, 0.45), (x, y, 1.65), material(0xE0554A, key="mail"), bevel=0.06)
 
 
 def lamp(layer, x, y, haze=0.0):
     post = material(0x4A3A33, haze=haze)
     cyl(layer, 0.09, 5.0, (x, y, 0.15), post, verts=6)
     box(layer, (0.9, 0.08, 0.08), (x + 0.35, y, 5.0), post, bevel=0.02)
-    bulb = material(0xFFE3A8, glow=12 if LOOK["lamps"] else 0.0, glow_color=0xFFC27A, key="bulb")
-    blob(layer, 0.2, (x + 0.8, y, 5.0), bulb)
+    bulb = material(0xFFE3A8, glow=6 if LOOK["lamps"] else 0.0, glow_color=0xFFC27A, key="bulb")
+    blob(layer, 0.28, (x + 0.8, y, 5.0), bulb)
     if LOOK["lamps"]:
         light = bpy.data.lights.new(f"l{x}", "POINT")
-        light.energy = 450
+        light.energy = 900
         light.color = rgb(0xFFC27A)
         light.shadow_soft_size = 0.4
         o = bpy.data.objects.new(f"l{x}", light)
@@ -319,10 +319,10 @@ def build_far():
         blob("far", 38, (x, 120 + (i % 2) * 15, -2), material(hill[i % 3], haze=0.8), (1.3, 1, 0.55))
     for x in range(-80, 90, 9):
         tree("far", x + random.uniform(-2, 2), random.choice([80, 88]), random.choice([0.9, 1.1, 1.3]), haze=0.85)
-    box("far", (4, 4, 9), (-24, 92, 0), material(0xF6E4C8, haze=0.85, key="church"), bevel=0.2)
-    prism("far", (4, 4, 5), (-24, 92, 9), material(0xA85A3A, haze=0.85, key="spire"), ridge="x", overhang=0.1)
-    box("far", (2.6, 2.6, 7), (-24, 92, 14), material(0xF6E4C8, haze=0.85, key="church"), bevel=0.1)
-    prism("far", (2.6, 2.6, 6), (-24, 92, 21), material(0xA85A3A, haze=0.85, key="spire"), ridge="x", overhang=0.2)
+    box("far", (6, 6, 9), (-24, 92, 0), material(0xF6E4C8, haze=0.85, key="church"), bevel=0.2)
+    prism("far", (6, 6, 4), (-24, 92, 9), material(0xA85A3A, haze=0.85, key="spire"), ridge="x", overhang=0.1)
+    box("far", (3.4, 3.4, 7), (-24, 92, 13), material(0xF6E4C8, haze=0.85, key="church"), bevel=0.1)
+    prism("far", (3.4, 3.4, 9), (-24, 92, 20), material(0xA85A3A, haze=0.85, key="spire"), ridge="x", overhang=0.2)
     for x in (-60, -40, 6, 28, 52, 70):
         house("far", x, 62, random.choice(["colonial", "bungalow"]), haze=0.75)
     ground("far", 40, 160, 0xB5C48A, haze=0.8, key="farground")
@@ -362,8 +362,8 @@ def build_street():
     cut = material(ROAD_C, key="cross")
     box("street", (gx1 - gx0, 4.5, 0.3), ((gx0 + gx1) / 2, r1 + 2.1, 0.0), cut, bevel=0)
     stripe = material(STRIPE_C)
-    for i in range(-3, 4):
-        box("street", (0.7, r1 - r0 - 0.8, 0.03), (GAP_X + i * 1.15, (r0 + r1) / 2, 0.0), stripe, bevel=0.02)
+    for i in range(-2, 3):
+        box("street", (0.55, r1 - r0 - 1.6, 0.03), (GAP_X + i * 1.15, (r0 + r1) / 2, 0.0), stripe, bevel=0.02)
     for x in range(-90, 100, 6):
         if abs(x - GAP_X) > 6:
             box("street", (2.4, 0.18, 0.03), (x, (r0 + r1) / 2, 0.0), stripe, bevel=0.02)
