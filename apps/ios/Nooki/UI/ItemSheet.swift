@@ -17,10 +17,17 @@ struct ItemSheet: View {
     /// Still frame stays up until the 3D preview has really had a chance to draw.
     @State private var showsPlaceholder = true
     @State private var celebrating = false
+    @State private var phase: ItemSheetMachine.State
+
+    init(item: ShopItem, state: HomeState) {
+        self.item = item
+        self.state = state
+        _phase = State(initialValue: ItemSheetMachine.initial(owned: state.shop.owned.contains(item.id)))
+    }
 
     private var cost: Int { state.shop.price(of: item) }
     private var affordable: Bool { state.shop.coins >= cost }
-    private var owned: Bool { state.shop.owned.contains(item.id) }
+    private var owned: Bool { phase == .bought }
     private var isDeal: Bool { cost < item.price }
 
     var body: some View {
@@ -51,7 +58,7 @@ struct ItemSheet: View {
             }
         }
         // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
-        .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
+        .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { send(.coinsAsked) } }
     }
 
     // MARK: Stage
@@ -124,11 +131,8 @@ struct ItemSheet: View {
                 .accessibilityHint("Drag the item to turn it")
 
                 if owned {
-                    Button {
-                        state.tab = .world
-                        dismiss()
-                    } label: {
-                        Label("Place in your room", systemImage: "house.fill")
+                    Button { send(.placeNowTapped) } label: {
+                        Label("Place now", systemImage: "house.fill")
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                             .frame(maxWidth: .infinity)
@@ -140,9 +144,11 @@ struct ItemSheet: View {
                 }
             }
             if owned {
-                Label("In your closet", systemImage: "checkmark.circle.fill")
-                    .font(.ourioCaption)
+                Button("Not now") { send(.notNowTapped) }
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
+                    .frame(minHeight: Size.control)
+                    .accessibilityHint("Keeps it in your closet and closes this")
             } else if !affordable {
                 Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
                     .font(.ourioCaption)
@@ -170,16 +176,23 @@ struct ItemSheet: View {
         .minimumScaleFactor(0.8)
     }
 
+    private func send(_ event: ItemSheetMachine.Event) {
+        let (next, outputs) = ItemSheetMachine.transition(phase, event)
+        phase = next
+        for output in outputs {
+            switch output {
+            case .openRoom: state.tab = .world
+            case .close: dismiss()
+            }
+        }
+    }
+
     private func buy() {
         guard state.shop.buy(item) else { return }
+        send(.bought)
         turntable.celebrate()
         withAnimation(.spring(duration: 0.3, bounce: 0.5)) { celebrating = true }
         withAnimation(.spring(duration: 0.4).delay(0.3)) { celebrating = false }
-        // The purchase moment plays over the app once the sheet is out of the way.
-        Task {
-            try? await Task.sleep(for: .milliseconds(350))
-            dismiss()
-        }
     }
 }
 

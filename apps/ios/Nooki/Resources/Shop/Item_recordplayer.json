@@ -1,0 +1,19 @@
+{
+ "id": "recordplayer",
+ "name": "Record player",
+ "kind": "SOLID",
+ "width_m": 0.209,
+ "depth_m": 0.206,
+ "height_m": 0.106,
+ "footprint_cells": [
+  5,
+  5
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.209,
+ "anchors": [],
+ "tris": 2000,
+ "affordance": null,
+ "usdz_kb": 250
+}

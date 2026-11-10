@@ -1,0 +1,19 @@
+{
+ "id": "books",
+ "name": "Pile of books",
+ "kind": "SOLID",
+ "width_m": 0.14,
+ "depth_m": 0.134,
+ "height_m": 0.063,
+ "footprint_cells": [
+  3,
+  3
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.14,
+ "anchors": [],
+ "tris": 1200,
+ "affordance": "soft",
+ "usdz_kb": 156
+}

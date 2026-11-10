@@ -41,7 +41,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 12. **Icon tiles have one rule:** a full-tint glyph on the same tint at 16%, for every row. No tint is the
     accent (`Ink.accentText` glyph); destructive is `Ink.destructive` only.
 13. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
-    content; `GlassSegmented` is only the Living room | Bedroom switch.
+    content; `GlassSegmented` is only the Living room | Bedroom switch. The Shop's category row is navigation, not a
+    switch: pinned `FilterChip`s with an icon each.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
     `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
     `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the

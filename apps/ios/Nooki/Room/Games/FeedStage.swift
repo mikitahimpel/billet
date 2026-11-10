@@ -241,6 +241,8 @@ final class FeedStage: GameStage {
         shakeCheck()
         fly(dt)
         updateDisplay(dt)
+        let grams = Int(scale.food.rounded())
+        deck.show(min(scale.food / Double(max(task.target, 1)), 1), "Bowl", detail: "\(grams) / \(task.target) g")
         if let time = eating {
             eat(time: time + dt)
         }

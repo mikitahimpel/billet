@@ -1,0 +1,19 @@
+{
+ "id": "throwblanket",
+ "name": "Knitted throw",
+ "kind": "FLAT",
+ "width_m": 0.251,
+ "depth_m": 0.221,
+ "height_m": 0.131,
+ "footprint_cells": [
+  6,
+  5
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.251,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": "soft",
+ "usdz_kb": 204
+}

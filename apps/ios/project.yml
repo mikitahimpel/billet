@@ -20,6 +20,13 @@ settings:
     # uploads is the one App Review and the App Store get (check-archive.sh checks BilletLabs).
     BILLET_LABS_MODE: $(BILLET_LABS:default=NO)
     CURRENT_PROJECT_VERSION: "23"
+  configs:
+    Debug:
+      # One compilation cache for every worktree on the Mac: a fresh checkout reuses what another one compiled from
+      # the same source. CI sets BILLET_COMPILATION_CACHE=NO; on a runner it was slower than building. A broken
+      # cache is fixed by deleting the folder; scripts/trim-compilation-cache.sh keeps it under 10 GB.
+      COMPILATION_CACHE_ENABLE_CACHING: $(BILLET_COMPILATION_CACHE:default=YES)
+      COMPILATION_CACHE_CAS_PATH: $(HOME)/Library/Caches/billet-compilation-cache
 packages:
   BilletContracts:
     path: ../../packages/ios/contracts
@@ -332,6 +339,10 @@ schemes:
     build:
       targets:
         Billet: all
+      preActions:
+        - name: Trim the compilation cache
+          settingsTarget: Billet
+          script: '"$SRCROOT/scripts/trim-compilation-cache.sh"'
     run:
       config: Debug
     test:

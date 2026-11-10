@@ -13,8 +13,6 @@ struct ShopView: View {
     @State private var sheetSet: SetChoice?
     /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
     @State private var highlightedInk: String?
-    /// Where the page is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
-    @State private var position = ScrollPosition(edge: .top)
     @State private var scrolling = ShopScrolling()
 
     var body: some View {
@@ -22,9 +20,12 @@ struct ShopView: View {
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: Space.section, pinnedViews: [.sectionHeaders]) {
                     Section {
-                        if selected == .today {
+                        switch selected {
+                        case .today:
                             today
-                        } else {
+                        case .inks:
+                            InkShelf(state: state, highlighted: highlightedInk)
+                        case .furniture, .decor, .mochi, .room:
                             grid(Catalog.items(in: selected))
                                 .padding(.horizontal, Space.l)
                         }
@@ -39,32 +40,24 @@ struct ShopView: View {
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
-            .scrollPosition($position)
             .onScrollPhaseChange { _, phase in
                 if scrolling.isScrolling != phase.isScrolling { scrolling.isScrolling = phase.isScrolling }
             }
             .environment(scrolling)
             .softScrollEdges()
-            .onAppear {
-                guard ScenePerf.isOn else { return }
-                OurioPerf.scrolls[.shop] = { position.scrollTo(y: $0) }
-            }
-            .onDisappear { OurioPerf.scrolls[.shop] = nil }
             .onChange(of: state.shopFocus, initial: true) { _, focus in
                 guard let focus else { return }
-                selected = .today
                 switch focus {
                 case .ink(let id):
-                    // After Today has laid out, so the Inks block is there to scroll to.
+                    selected = .inks
                     Task {
-                        try? await Task.sleep(for: .milliseconds(100))
-                        withAnimation(.spring(duration: 0.45)) { reader.scrollTo("inks", anchor: .top) }
                         highlightedInk = id
                         state.shopFocus = nil
                         try? await Task.sleep(for: .seconds(3))
                         withAnimation(.easeOut(duration: 0.4)) { if highlightedInk == id { highlightedInk = nil } }
                     }
                 case .item(let id):
+                    selected = .today
                     sheetItem = Catalog.item(id)
                     state.shopFocus = nil
                 }
@@ -160,15 +153,6 @@ struct ShopView: View {
         }
         .padding(.horizontal, Space.l)
         .id("bundles")
-
-        VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeader("Inks", symbol: "paintpalette.fill", tint: .honey) {
-                Text("For notes and drawings")
-            }
-            .padding(.horizontal, Space.l)
-            InkShelf(state: state, highlighted: highlightedInk)
-        }
-        .id("inks")
 
         VStack(alignment: .leading, spacing: Space.m) {
             SectionHeader("Collections", symbol: "square.grid.2x2.fill", tint: ShopInk.teal) {

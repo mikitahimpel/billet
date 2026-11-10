@@ -1,0 +1,19 @@
+{
+ "id": "fishplush",
+ "name": "Plush fish",
+ "kind": "SOLID",
+ "width_m": 0.129,
+ "depth_m": 0.15,
+ "height_m": 0.086,
+ "footprint_cells": [
+  3,
+  4
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.15,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": "toy",
+ "usdz_kb": 202
+}

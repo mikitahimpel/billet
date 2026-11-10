@@ -127,6 +127,7 @@ final class WaterStage: GameStage {
     }
 
     func update(_ dt: Float) {
+        deck.show(min(bowl.level / WaterBowl.line, 1), "Water level")
         sinceTap += dt
         flow += ((grip == .pour && !served ? 1 : 0) - flow) * min(1, dt * 6)
         if flow < 0.01 { flow = 0 }

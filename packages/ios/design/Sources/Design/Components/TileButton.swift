@@ -41,7 +41,7 @@ public struct TileButton: View {
         .background(Color.honey, in: .capsule)
         .contentShape(.capsule)
       }
-      .buttonStyle(PressScaleStyle())
+      .buttonStyle(LipButtonStyle())
       .accessibilityLabel("\(name), price \(price) coins")
       .accessibilityAddTraits(.isButton)
     case .short(let missing):
@@ -90,4 +90,24 @@ public struct TileButton: View {
     }
     .padding(Space.gutter)
   }
+}
+
+/// A chunky button: a `honeyDeep` lip under the face that the face sinks onto while pressed. A flat fill and a
+/// shape-only lip, so there is no blur or shadow to draw.
+public struct LipButtonStyle: ButtonStyle {
+  public init() {}
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .offset(y: configuration.isPressed ? Lip.depth : 0)
+      .background(alignment: .bottom) {
+        Capsule().fill(Color.honeyDeep).offset(y: Lip.depth)
+      }
+      .padding(.bottom, Lip.depth)
+      .animation(.snappy(duration: 0.12), value: configuration.isPressed)
+  }
+}
+
+enum Lip {
+  static let depth: CGFloat = 3
 }
