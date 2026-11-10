@@ -32,7 +32,7 @@ struct DateMatchOverlay: View {
                             .font(.ourioHeadline)
                             .foregroundStyle(Ink.text)
                             .frame(maxWidth: .infinity)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Size.control)
                             .background(Ink.surfaceRaised, in: .capsule)
                     }
                     .buttonStyle(PressScaleStyle())
@@ -42,7 +42,7 @@ struct DateMatchOverlay: View {
                             .font(.ourioHeadline)
                             .foregroundStyle(Ink.heroInk)
                             .frame(maxWidth: .infinity)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Size.control)
                             .background(Capsule().fill(.honeyGradient))
                     }
                     .buttonStyle(PressScaleStyle())
@@ -51,7 +51,7 @@ struct DateMatchOverlay: View {
             }
             .padding(Space.section)
             .frame(maxWidth: 330)
-            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+            .cornerFill(.card, Ink.surface)
             .shadow(color: .black.opacity(0.3), radius: 24, y: 10)
         }
     }
@@ -111,7 +111,7 @@ struct DatePlanCard: View {
                         .resizable()
                         .scaledToFill()
                         .frame(width: 42, height: 42)
-                        .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                        .corners(.inner)
                         .accessibilityHidden(true)
                 } else {
                     Monogram(partner: plan.organizer, profile: profile, size: 26)

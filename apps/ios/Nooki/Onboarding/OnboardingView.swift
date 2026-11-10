@@ -303,7 +303,7 @@ struct OnboardingView: View {
                             .scaledToFit()
                             .frame(width: Self.qrSide, height: Self.qrSide)
                             .padding(Space.s)
-                            .background(.white, in: .rect(cornerRadius: Radius.inner))
+                            .cornerFill(.inner, .white)
                             .accessibilityLabel("QR code of your invite")
                         Text("Next to you? They can scan this with their camera.")
                             .font(.ourioCallout)
@@ -497,7 +497,7 @@ struct MochiSays: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
-                .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
+                .cornerFill(.card, Ink.surface)
         }
     }
 }

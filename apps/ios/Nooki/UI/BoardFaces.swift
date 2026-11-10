@@ -76,7 +76,7 @@ private struct NoteFace: View {
             PaperSheet(color: Color(hex: note.paper.hex), cornerRadius: 0)
 
             if let doodle {
-                Image(uiImage: doodle).resizable().scaledToFit().padding(12)
+                Image(uiImage: doodle).resizable().scaledToFit().padding(Space.m)
             } else {
                 Text(note.text)
                     .font(.custom("Noteworthy-Bold", size: 26))

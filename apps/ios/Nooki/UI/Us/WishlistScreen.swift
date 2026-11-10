@@ -262,7 +262,7 @@ struct WishlistScreen: View {
                     .foregroundStyle(Ink.textSecondary)
                     .padding(Space.l)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+                    .cornerFill(.card, Ink.surface)
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.label) { index, row in
@@ -287,7 +287,7 @@ struct WishlistScreen: View {
                 }
                 .padding(.horizontal, Space.l)
                 .padding(.vertical, 2)
-                .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+                .cornerFill(.card, Ink.surface)
                 .contentShape(.rect)
                 .onTapGesture { if mine { editingLoves = true } }
             }
@@ -312,7 +312,7 @@ private struct WishCard<Actions: View>: View {
                         .resizable()
                         .scaledToFill()
                         .frame(width: 64, height: 64)
-                        .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                        .corners(.inner)
                         .accessibilityHidden(true)
                 }
                 VStack(alignment: .leading, spacing: Space.xs) {
@@ -342,7 +342,7 @@ private struct WishCard<Actions: View>: View {
         }
         .padding(Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+        .cornerFill(.card, Ink.surface)
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .task(id: wish) { await loadImage() }
     }

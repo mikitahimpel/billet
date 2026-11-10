@@ -61,10 +61,10 @@ extension View {
         if #available(iOS 26, *) {
             scrollEdgeEffectStyle(.soft, for: .vertical)
                 .scrollEdgeEffectHidden(!softEdges, for: .vertical)
-                .safeAreaBar(edge: .top, spacing: 12, content: top)
+                .safeAreaBar(edge: .top, spacing: Space.m, content: top)
                 .safeAreaBar(edge: .bottom, content: bottom)
         } else {
-            safeAreaInset(edge: .top, spacing: 12) {
+            safeAreaInset(edge: .top, spacing: Space.m) {
                 top().background { if fades { EdgeFade(edge: .top) } }
             }
             .safeAreaInset(edge: .bottom) {

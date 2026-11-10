@@ -84,7 +84,7 @@ struct UsView: View {
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: 0)
         }
-        .frame(height: 44)
+        .frame(height: Size.control)
     }
 
     private func tiles(upcoming: Int) -> some View {

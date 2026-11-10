@@ -11,22 +11,17 @@ struct FeaturedCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: Space.s) {
-                Label {
-                    (Text("New in ") + Text(offer.endsAt, style: .relative))
-                        .monospacedDigit()
-                } icon: {
-                    Image(systemName: "clock")
+            // Side by side while both fit; at large text sizes the badge goes under the countdown instead of the
+            // countdown wrapping into a column of single words.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Space.s) {
+                    countdown
+                    Spacer(minLength: 0)
+                    valueBadge
                 }
-                .font(.ourioMicro)
-                .foregroundStyle(.white)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
-                .glass(.capsule, tint: Ink.heroInk.opacity(0.25))
-
-                Spacer(minLength: 0)
-                if let quote, quote.price > 0, quote.sum > quote.price {
-                    ValueBadge(multiple: valueText(quote), saves: quote.sum - quote.price)
+                VStack(alignment: .leading, spacing: Space.s) {
+                    countdown
+                    valueBadge
                 }
             }
 
@@ -79,6 +74,28 @@ struct FeaturedCard: View {
         }
     }
 
+    private var countdown: some View {
+        Label {
+            (Text("New in ") + Text(offer.endsAt, style: .relative))
+                .monospacedDigit()
+        } icon: {
+            Image(systemName: "clock")
+        }
+        .font(.ourioMicro)
+        .foregroundStyle(.white)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
+        .glass(.capsule, tint: Ink.heroInk.opacity(0.25))
+        .fixedSize()
+    }
+
+    @ViewBuilder private var valueBadge: some View {
+        if let quote, quote.price > 0, quote.sum > quote.price {
+            ValueBadge(multiple: valueText(quote), saves: quote.sum - quote.price)
+                .fixedSize()
+        }
+    }
+
     /// The set against its parts, e.g. "2" for half price; one decimal when it isn't whole.
     private func valueText(_ quote: (price: Int, sum: Int)) -> String {
         let value = Double(quote.sum) / Double(quote.price)
@@ -126,7 +143,7 @@ private struct ValueBadge: View {
         .foregroundStyle(Ink.heroInk)
         .padding(.horizontal, Space.m)
         .padding(.vertical, Space.xs + 2)
-        .background(ShopInk.gold, in: .rect(cornerRadius: Radius.inner, style: .continuous))
+        .cornerFill(.inner, ShopInk.gold)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(multiple) times the value, saves \(saves) coins")
     }

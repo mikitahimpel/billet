@@ -146,7 +146,7 @@ struct CoatChip: View {
         VStack(spacing: Space.s) {
             CoatSwatchShape(swatch: coat.swatch)
                 .frame(width: size, height: size)
-                .padding(4)
+                .padding(Space.xs)
                 .overlay(Circle().stroke(picked ? Color.honey : .clear, lineWidth: 2.5))
                 .scaleEffect(picked ? 1.06 : 1)
             Text(coat.title)
@@ -155,7 +155,7 @@ struct CoatChip: View {
                 .lineLimit(2)
                 .multilineTextAlignment(.center)
         }
-        .frame(maxWidth: .infinity, minHeight: 44)
+        .frame(maxWidth: .infinity, minHeight: Size.control)
         .contentShape(.rect)
     }
 }

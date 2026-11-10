@@ -245,7 +245,7 @@ struct ListScreen: View {
             Monogram(partner: item.author, profile: state.profile, size: 20)
         }
         .padding(.horizontal, Space.l)
-        .frame(minHeight: 52)
+        .frame(minHeight: Size.button)
         .contentShape(.rect)
         .contextMenu {
             Button("Delete", role: .destructive) {

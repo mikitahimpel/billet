@@ -163,7 +163,7 @@ struct AddPlaceSheet: View {
             Text("Popular with couples")
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
-            WrapLayout(spacing: Space.s) {
+            FlowRow(spacing: Space.s) {
                 ForEach(PopularPlace.all, id: \.self) { popular in
                     let added = popular.place == nil && onList(popular.country)
                     Button { add(popular) } label: {
@@ -248,7 +248,7 @@ struct BeenSheet: View {
                     if been {
                         Button("Not been yet", role: .destructive) { unmark() }
                             .font(.ourioCallout.weight(.semibold))
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Size.control)
                     }
                 }
         }
@@ -395,7 +395,7 @@ private struct MomentsPicker: View {
                                 Color.clear
                                     .aspectRatio(1, contentMode: .fit)
                                     .overlay { MomentThumb(moments: moments, id: moment.id, size: nil) }
-                                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                                    .corners(.inner)
                                     .overlay(alignment: .topTrailing) {
                                         UsCheck(done: picked)
                                             .background(Circle().fill(.black.opacity(picked ? 0 : 0.25)))

@@ -107,7 +107,7 @@ struct GroceryRow: View {
             }
         }
         .padding(.horizontal, Space.l)
-        .frame(minHeight: 52)
+        .frame(minHeight: Size.button)
         .opacity(done ? 0.55 : 1)
         .contentShape(.rect)
         .accessibilityElement(children: .ignore)

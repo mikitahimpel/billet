@@ -90,7 +90,7 @@ struct ItemSheet: View {
             )
         }
                 .frame(height: CGFloat(ItemTurntable.stageHeight))
-        .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+        .corners(.card)
         .overlay {
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .strokeBorder(item.rarity == .common ? Ink.separator : item.rarity.tint.opacity(0.7), lineWidth: 1.5)

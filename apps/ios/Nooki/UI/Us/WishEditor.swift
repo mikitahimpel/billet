@@ -90,7 +90,7 @@ struct WishEditor: View {
         }
         .frame(height: 160)
         .frame(maxWidth: .infinity)
-        .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+        .corners(.card)
         .overlay(alignment: .topTrailing) {
             if image != nil {
                 Button {

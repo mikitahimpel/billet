@@ -62,7 +62,7 @@ private struct PenButton: View {
         let owned = ink.isOwned(state.shop.owned)
         Button { tap(ink) } label: {
             Pen(ink: ink, owned: owned, selected: selected, length: owned ? length : length - 14)
-                .frame(minWidth: 30, minHeight: 44, alignment: .bottom)
+                .frame(minWidth: 30, minHeight: Size.control, alignment: .bottom)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(owned ? "\(ink.name) ink" : "Buy \(ink.name) ink, \(ink.price) coins")
