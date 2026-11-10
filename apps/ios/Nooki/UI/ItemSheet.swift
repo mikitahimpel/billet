@@ -128,7 +128,7 @@ struct ItemSheet: View {
                         state.tab = .world
                         dismiss()
                     } label: {
-                        Label("Place in your room", systemImage: "house.fill")
+                        Label("Place now", systemImage: "house.fill")
                             .lineLimit(1)
                             .minimumScaleFactor(0.8)
                             .frame(maxWidth: .infinity)
@@ -140,9 +140,11 @@ struct ItemSheet: View {
                 }
             }
             if owned {
-                Label("In your closet", systemImage: "checkmark.circle.fill")
-                    .font(.ourioCaption)
+                Button("Not now") { dismiss() }
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
+                    .frame(minHeight: Size.control)
+                    .accessibilityHint("Keeps it in your closet and closes this")
             } else if !affordable {
                 Text("Earn coins by answering today's question, keeping your streak and opening the daily gift.")
                     .font(.ourioCaption)
@@ -175,11 +177,6 @@ struct ItemSheet: View {
         turntable.celebrate()
         withAnimation(.spring(duration: 0.3, bounce: 0.5)) { celebrating = true }
         withAnimation(.spring(duration: 0.4).delay(0.3)) { celebrating = false }
-        // The purchase moment plays over the app once the sheet is out of the way.
-        Task {
-            try? await Task.sleep(for: .milliseconds(350))
-            dismiss()
-        }
     }
 }
 
