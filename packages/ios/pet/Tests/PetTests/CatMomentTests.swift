@@ -1,8 +1,10 @@
 import Foundation
 import Testing
-import simd
 
 @testable import Pet
+#if canImport(simd)
+  import simd
+#endif
 
 @Suite("CatTrip")
 struct CatTripTests {
