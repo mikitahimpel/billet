@@ -15,6 +15,7 @@ manifest = {
         {"name": "far", "file": "far_{time}.webp", "follow": 0.2},
         {"name": "mid", "file": "mid_{time}.webp", "follow": 0.42},
         {"name": "street", "file": "street_{time}.webp", "follow": 0.62},
+        {"name": "near", "file": "near_{time}.webp", "follow": 0.85},
     ],
     "cars": {
         "file": "cars_{time}.webp",
