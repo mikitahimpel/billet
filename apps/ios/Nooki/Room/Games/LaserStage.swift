@@ -33,8 +33,8 @@ final class LaserStage: GameStage {
         glow.blending = .transparent(opacity: .init(floatLiteral: 0.35))
         halo = dot.cylinder(0.001, 0.012, glow, at: [0, 0.0005, 0])
         dot.isEnabled = false
-        deck.say("Drag the red dot across the floor", for: 4)
-        deck.bar = (0, "Play")
+        deck.say("Drag the red dot across the floor")
+        deck.show(0, "Played")
         let seat = spots.at(0, -0.05)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + spots.toward), id: "laser-start")
     }
@@ -92,7 +92,7 @@ final class LaserStage: GameStage {
                 }
             }
         }
-        deck.show(laser.play, "Play")
+        deck.show(laser.play, "Played")
     }
 
     /// Runs her to the dot, stopping short of it so her fore paws land on it; a pounce ends in paw pats.
