@@ -280,7 +280,7 @@ private struct SmallTile: View {
         Card {
             VStack(alignment: .leading, spacing: Space.s) {
                 RowIcon(symbol: icon.symbol, tint: icon.tint.color, size: Size.cardMark)
-                VStack(alignment: .leading, spacing: 2) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     Text(title)
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
