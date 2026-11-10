@@ -1,0 +1,19 @@
+{
+ "id": "desk",
+ "name": "Writing desk",
+ "kind": "SURFACE",
+ "width_m": 0.372,
+ "depth_m": 0.5,
+ "height_m": 0.481,
+ "footprint_cells": [
+  8,
+  11
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.5,
+ "anchors": [],
+ "tris": 2000,
+ "affordance": null,
+ "usdz_kb": 222
+}
