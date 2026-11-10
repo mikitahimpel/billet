@@ -80,13 +80,14 @@ in `MoodInterface` and takes its file as `load` and `save`, which `OurioShared` 
 `Couple`, `PairMembers`, `CoupleStore` (with `load`, `save` and `photoURL`) and `CatProfile` are in `ProfileInterface`;
 the Us model, `UsStore`, `PendingListChange`, `DateCatalog`, `GroceryHistory`, `GroceryWords` and `Country` in
 `UsInterface`; `Moment`, `Note`, their stores and `InstantFilm` in `MomentsInterface` (iOS only: the photos
-are UIKit images). `WishMedia`, `BlurHash`, `Streak`, `Wallet` and `WorldMap` moved into the app, the only user.
+are UIKit images). `WishMedia`, `BlurHash`, `Streak` and `Wallet` moved into the app, the only user.
 What is left:
 
 | To | From `OurioShared` |
 | --- | --- |
 | `WidgetBridge` | `OurioSnapshot`, `WidgetTimeline`, `WidgetActivity`, `DeepLink` |
 | `WidgetUI` (new; SwiftUI, with the mood faces) | `MoodArt`, `DrawingCard`, `InkLayer`, `LockWallpaper` |
+| the app, once its colour and font pass the design rules | `WorldMap` |
 
 ### 1.2 What a feature owns
 
