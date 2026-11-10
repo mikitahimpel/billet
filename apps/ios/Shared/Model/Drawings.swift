@@ -1,4 +1,5 @@
 import Foundation
+import Persistence
 import Wire
 
 /// The newest drawing the partner sent, as the widgets show it. The app writes it when it fetches notes or one

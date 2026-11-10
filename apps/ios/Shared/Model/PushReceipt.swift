@@ -1,4 +1,5 @@
 import Foundation
+import Persistence
 
 /// When the last alert push reached this phone. The notification extension stamps it before the alert shows, so
 /// Settings can tell a push that never arrived from one that did.

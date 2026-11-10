@@ -1,4 +1,5 @@
 import Foundation
+import Persistence
 
 /// Every date idea, as `GET /v1/dates/catalog` sends it. The build ships the server's catalog file
 /// (`packages/backend/dates/src/date-catalog.json`), and the app keeps the latest one the server sent in the app
