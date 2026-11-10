@@ -328,13 +328,13 @@ final class CityRoomScene: CatRoom {
         let frame = matte(Tone.wood, roughness: 0.6)
         let bead = matte(Tone.woodLight, roughness: 0.6)
         let d: Float = 0.05
-        pivot.box(width + 0.05, 0.03, d, r: 0.008, frame, at: [0, o.top + 0.005, -0.525])
-        pivot.box(0.03, height, d, r: 0.008, frame, at: [o.left - 0.005, c.y, -0.525])
-        pivot.box(0.03, height, d, r: 0.008, frame, at: [o.right + 0.005, c.y, -0.525])
+        pivot.box(width + 0.06, 0.045, d, r: 0.014, frame, at: [0, o.top + 0.0125, -0.525])
+        pivot.box(0.045, height, d, r: 0.014, frame, at: [o.left - 0.0125, c.y, -0.525])
+        pivot.box(0.045, height, d, r: 0.014, frame, at: [o.right + 0.0125, c.y, -0.525])
         pivot.box(width, 0.008, 0.03, r: 0.003, bead, at: [0, o.top - 0.004, -0.53])
         for x in [o.left + 0.004, o.right - 0.004] { pivot.box(0.008, height, 0.03, r: 0.003, bead, at: [x, c.y, -0.53]) }
-        for x in [-width / 6, width / 6] { pivot.box(0.014, height, 0.014, r: 0.004, frame, at: [x, c.y, -0.54]) }
-        pivot.box(width, 0.014, 0.014, r: 0.004, frame, at: [0, o.top - 0.11, -0.54])
+        for x in [-width / 6, width / 6] { pivot.box(0.026, height, 0.026, r: 0.01, frame, at: [x, c.y, -0.54]) }
+        pivot.box(width, 0.026, 0.026, r: 0.01, frame, at: [0, o.top - 0.11, -0.54])
 
         // Mochi sits on the sill, a light wood with a rounded nose, an apron under it and two corbels.
         pivot.box(width + 0.08, 0.025, 0.14, r: 0.007, bead, at: [0, o.bottom, -0.44])
