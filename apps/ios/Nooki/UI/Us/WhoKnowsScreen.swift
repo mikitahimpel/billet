@@ -433,7 +433,7 @@ private struct WhoKnowsProgress: View {
     let total: Int
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.s) {
             ForEach(0..<max(total, 1), id: \.self) { index in
                 Capsule()
                     .fill(index < done ? AnyShapeStyle(Color.honey) : AnyShapeStyle(Ink.surfaceRaised))

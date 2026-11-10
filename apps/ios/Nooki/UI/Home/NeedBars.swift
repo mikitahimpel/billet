@@ -104,7 +104,7 @@ struct PetActions: View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s), count: 3), spacing: Space.s) {
             ForEach(actions) { action in
                 Button(action: action.run) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: Space.s) {
                         Image(systemName: action.symbol)
                             .ourioScaledFont(size: 18, weight: .bold)
                             .dynamicTypeSize(...DynamicTypeSize.xxLarge)
@@ -183,10 +183,10 @@ extension PetNeed {
 
     var hue: Color {
         switch self {
-        case .full: Color(hex: 0xF2A65E)
+        case .full: .honey
         case .rested: Color(hex: 0xE8C47A)
         case .playful: Color(hex: 0xF08A5D)
-        case .loved: Color(hex: 0xFF8FA3)
+        case .loved: .blushPink
         }
     }
 

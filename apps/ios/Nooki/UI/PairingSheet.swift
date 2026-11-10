@@ -119,7 +119,7 @@ struct PairingSheet: View {
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.text)
             }
-            .padding(.top, 4)
+            .padding(.top, Space.xs)
             ShareLink(item: "Pair with me on Ourio: \(code)") {
                 Label("Send the code", systemImage: "square.and.arrow.up")
             }

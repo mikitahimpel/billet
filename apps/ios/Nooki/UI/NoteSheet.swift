@@ -85,14 +85,14 @@ struct NoteSheet: View {
         ZStack {
             Color(hex: note.paper.hex)
             if let doodle {
-                Image(uiImage: doodle).resizable().scaledToFit().padding(24)
+                Image(uiImage: doodle).resizable().scaledToFit().padding(Space.section)
             } else {
                 Text(note.text)
                     .font(.custom("Noteworthy-Bold", size: 30))
                     .foregroundStyle(Color(hex: note.inkHex))
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.4)
-                    .padding(26)
+                    .padding(Space.section)
             }
         }
         .frame(width: 300, height: 300)

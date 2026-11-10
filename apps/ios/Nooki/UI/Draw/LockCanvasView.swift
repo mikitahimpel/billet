@@ -43,7 +43,7 @@ struct LockCanvasView: View {
                 }
                 .padding(.horizontal, Space.l)
 
-                VStack(spacing: 10) {
+                VStack(spacing: Space.m) {
                     Spacer(minLength: 0)
                     if choosingInk { inkPalette.transition(.move(edge: .bottom).combined(with: .opacity)) }
                     toolbar
@@ -133,12 +133,12 @@ struct LockCanvasView: View {
             .foregroundStyle(.white)
             .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
         }
-        .padding(.top, 18)
+        .padding(.top, Space.l)
         .accessibilityElement(children: .combine)
     }
 
     private func riddleWord(_ word: String) -> some View {
-        VStack(spacing: 6) {
+        VStack(spacing: Space.s) {
             Text("Draw")
                 .font(.system(.subheadline, design: .rounded, weight: .semibold))
                 .foregroundStyle(.white.opacity(0.85))
@@ -151,7 +151,7 @@ struct LockCanvasView: View {
                 .foregroundStyle(.white.opacity(0.85))
         }
         .shadow(color: .black.opacity(0.2), radius: 6, y: 1)
-        .padding(.top, 18)
+        .padding(.top, Space.l)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Draw \(word). No letters in the drawing.")
         .allowsHitTesting(false)
@@ -161,7 +161,7 @@ struct LockCanvasView: View {
         Capsule()
             .fill(.white.opacity(0.7))
             .frame(width: 134, height: 5)
-            .padding(.bottom, 4)
+            .padding(.bottom, Space.xs)
             .accessibilityHidden(true)
     }
 
@@ -241,7 +241,7 @@ struct LockCanvasView: View {
                         ProgressView().tint(Ink.heroInk)
                     } else {
                         Image(systemName: model.sendState == .failed ? "arrow.clockwise" : "paperplane.fill")
-                            .font(.body.weight(.bold))
+                            .font(.ourioHeadline)
                     }
                 }
                 .buttonStyle(PrimaryButtonStyle(fullWidth: false))
@@ -249,7 +249,7 @@ struct LockCanvasView: View {
                 .accessibilityLabel(model.sendState == .failed ? "Try sending again" : riddle == nil ? "Send" : "Send riddle")
                 .accessibilityIdentifier("drawSend")
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .padding(Space.xs)
             .warmGlass(Capsule(), interactive: true)
         }
@@ -278,8 +278,8 @@ struct LockCanvasView: View {
             model.tool = .pen
             choosingInk = false
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Space.l)
+        .padding(.vertical, Space.s)
         .warmGlass(Capsule())
     }
 

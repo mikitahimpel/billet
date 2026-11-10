@@ -110,7 +110,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
             .foregroundStyle(Ink.textTertiary)
         }
       }
-      .buttonStyle(.plain)
+      .buttonStyle(RowButtonStyle())
     } else {
       rowView
     }
@@ -144,7 +144,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
   let face: (CheckInMood) -> Face
 
   var body: some View {
-    HStack(spacing: 12) {
+    HStack(spacing: Space.m) {
       avatar
         .frame(width: 40, height: 40)
         .overlay(alignment: .bottomTrailing) {
@@ -179,7 +179,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
           .accessibilityLabel("New")
       }
     }
-    .padding(.vertical, 4)
+    .padding(.vertical, Space.xs)
     .accessibilityElement(children: .combine)
   }
 

@@ -60,14 +60,14 @@ private struct NoteCard: View {
             .background { PaperSheet(color: Color(hex: note.paper.hex), lift: PaperSheet.Lift()) }
             .overlay {
                 if let doodle {
-                    Image(uiImage: doodle).resizable().scaledToFit().padding(12)
+                    Image(uiImage: doodle).resizable().scaledToFit().padding(Space.m)
                 } else if note.doodle == nil {
                     Text(note.text)
                         .font(.custom("Noteworthy-Bold", size: 18))
                         .foregroundStyle(Color(hex: note.inkHex))
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
-                        .padding(14)
+                        .padding(Space.l)
                 }
             }
             .overlay {
@@ -77,14 +77,14 @@ private struct NoteCard: View {
             }
             .overlay(alignment: .topTrailing) {
                 if UnsentMark.shows(note.unsent, paired: session?.isPaired == true) {
-                    UnsentMark(size: 11, tint: Color(hex: note.inkHex).opacity(0.6)).padding(8)
+                    UnsentMark(size: 11, tint: Color(hex: note.inkHex).opacity(0.6)).padding(Space.s)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
                 Text("— \(note.author)")
                     .font(.custom("Noteworthy-Bold", size: 13))
                     .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
-                    .padding(8)
+                    .padding(Space.s)
             }
             .task(id: note.id) {
                 guard let url = NoteStore.doodleURL(for: note) else { return }

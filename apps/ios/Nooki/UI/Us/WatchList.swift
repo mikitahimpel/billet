@@ -140,7 +140,7 @@ struct WatchListBody: View {
                     PosterTile(item: item, both: bothWant(item), profile: state.profile)
                         .opacity(watched ? 0.6 : 1)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
             }
         }
     }
@@ -171,7 +171,7 @@ struct WatchListBody: View {
                 .contentShape(.rect)
                 .cardSurface()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             if showsWatched { grid(watched, watched: true) }
         }
     }
@@ -189,17 +189,12 @@ struct PosterTile: View {
             .overlay(alignment: .topLeading) {
                 Group {
                     if both {
-                        Text("♥ both")
-                            .font(.ourioMicro)
-                            .foregroundStyle(Ink.heroInk)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 3)
-                            .background(Color.honey, in: .capsule)
+                        Chip("♥ both", style: .honey)
                     } else {
                         Monogram(partner: item.author, profile: profile, size: 22)
                     }
                 }
-                .padding(6)
+                .padding(Space.s)
             }
             .perfShadow(color: .black.opacity(0.18), radius: 6, y: 3)
             .accessibilityElement(children: .ignore)

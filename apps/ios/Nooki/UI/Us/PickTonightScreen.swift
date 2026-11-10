@@ -113,7 +113,7 @@ struct PickTonightScreen: View {
                 LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
             }
             .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     Text(card.name)
                         .ourioScaledFont(size: 26, weight: .bold, design: .rounded, relativeTo: .title)
                         .foregroundStyle(.white)
@@ -157,7 +157,7 @@ struct PickTonightScreen: View {
                 .background(Circle().fill(honey ? AnyShapeStyle(.honeyGradient) : AnyShapeStyle(Ink.surfaceRaised)))
                 .shadow(color: .black.opacity(honey ? 0.2 : 0.08), radius: 8, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(label)
     }
 

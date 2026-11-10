@@ -321,6 +321,19 @@ public struct ToggleButtonStyle: ButtonStyle {
   }
 }
 
+/// A whole row in a `GroupedSection` or a list that opens something: the row lights up while
+/// pressed instead of shrinking, so its edges stay level with its neighbours.
+public struct RowButtonStyle: ButtonStyle {
+  public init() {}
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .contentShape(.rect)
+      .background(Ink.surfaceRaised.opacity(configuration.isPressed ? 1 : 0))
+      .animation(Motion.fade(), value: configuration.isPressed)
+  }
+}
+
 #Preview("Buttons") {
   ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
     VStack(spacing: Space.m) {

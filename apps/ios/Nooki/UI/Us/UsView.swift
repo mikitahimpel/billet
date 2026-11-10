@@ -45,7 +45,7 @@ struct UsView: View {
                 lists
             }
             .padding(.horizontal, hMargin)
-            .padding(.top, 4)
+            .padding(.top, Space.xs)
             .padding(.bottom, Space.l)
         }
         .scrollIndicators(.hidden)
@@ -77,7 +77,7 @@ struct UsView: View {
     private var drawGuess: DrawGuessModel { session?.drawGuess ?? unpairedRiddles }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: Space.m) {
             Text("Us")
                 .font(.ourioLargeTitle)
                 .foregroundStyle(Ink.primary)
@@ -92,46 +92,46 @@ struct UsView: View {
             Button { state.usRoute = .dates } label: {
                 DatesTile(matches: us.matches.count, next: us.plannedSorted.first { $0.rating == nil })
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
 
             HStack(spacing: Space.m) {
                 Button { state.usRoute = .wishlists } label: {
                     SmallTile(icon: .init(symbol: "gift.fill", tint: .coral), title: "Wishlists",
                               detail: "\(us.wishes(of: state.partners.0).count + us.wishes(of: state.partners.1).count) wishes")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 Button { state.usRoute = .calendar } label: {
                     SmallTile(icon: .init(symbol: "calendar", tint: .sky), title: "Calendar",
                               detail: "\(upcoming) coming up")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
             }
         }
     }
 
     private var games: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.m) {
             Text("Games")
                 .font(.ourioTitle)
                 .foregroundStyle(Ink.primary)
                 .accessibilityAddTraits(.isHeader)
-                .padding(.top, 6)
+                .padding(.top, Space.s)
 
             Button { state.usRoute = .whoKnows } label: {
                 WhoKnowsTile(model: whoKnows, me: state.profile.name(of: state.viewer),
                              partner: state.profile.name(of: state.otherPartner))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
 
             Button { state.usRoute = .drawGuess } label: {
                 DrawGuessTile(model: drawGuess, partner: state.profile.name(of: state.otherPartner))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
         }
     }
 
     private var lists: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.m) {
             HStack {
                 Text("Lists")
                     .font(.ourioTitle)
@@ -143,27 +143,27 @@ struct UsView: View {
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.accentText)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
             }
-            .padding(.top, 6)
+            .padding(.top, Space.s)
 
             let layout = UsListsLayout(lists: us.lists, partner: state.otherPartner)
             ForEach(layout.cards) { list in
                 Button { state.usRoute = .list(list.id) } label: { ListCard(list: list, state: state) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
             }
 
             if !layout.rows.isEmpty {
                 GroupedSection {
                     ForEach(layout.rows) { list in
                         Button { state.usRoute = .list(list.id) } label: { ListRow(list: list) }
-                            .buttonStyle(.plain)
+                            .buttonStyle(RowButtonStyle())
                     }
                 }
             }
 
             Button { state.usRoute = .newList } label: { StartListCard() }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
         }
     }
 }
@@ -195,7 +195,7 @@ private struct CountdownHero: View {
                 }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 }
 

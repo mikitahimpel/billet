@@ -47,7 +47,7 @@ private struct ModuleHeader: View {
     var smart = false
 
     var body: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Space.xs) {
             Text(title.uppercased())
                 .font(.ourioMicro)
                 .tracking(0.4)
@@ -159,7 +159,7 @@ struct MochiRoom: View {
             .font(.ourioMicro)
             .foregroundStyle(Ink.heroInk)
             .lineLimit(1)
-            .padding(.horizontal, 8)
+            .padding(.horizontal, Space.s)
             .padding(.vertical, 3)
             .background(.white.opacity(0.88), in: .capsule)
     }
@@ -424,7 +424,7 @@ struct MomentModule: View {
                         .foregroundStyle(.white)
                         .lineLimit(1)
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 8)
+                        .padding(.vertical, Space.s)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(LinearGradient(colors: [.clear, .black.opacity(0.45)], startPoint: .top, endPoint: .bottom))
                 }
