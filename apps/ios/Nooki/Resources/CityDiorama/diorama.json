@@ -43,20 +43,20 @@
     "lanes": [
       {
         "name": "far",
-        "y": 0.7604,
-        "scale": 0.7059,
+        "y": 0.838,
+        "scale": 1.1321,
         "direction": -1
       },
       {
         "name": "near",
-        "y": 0.793,
-        "scale": 0.7792,
+        "y": 0.9076,
+        "scale": 1.3333,
         "direction": 1
       }
     ],
     "crossing": {
-      "left": 0.5627,
-      "right": 0.7118
+      "left": 0.4748,
+      "right": 0.7138
     }
   }
 }
