@@ -40,6 +40,14 @@ enum GalleryPage: String, CaseIterable, Sendable {
             GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
             PriceButton(120, was: 150) {}
         }
+        // A header's controls share one glass container, which draws its glass over a badge left inside it.
+        GlassGroup {
+            HStack(spacing: GlassMetrics.gap) {
+                GlassIconButton(symbol: "tray.fill", label: "Inbox", badge: .count(2)) {}
+                GlassIconButton(symbol: "bell", label: "Alerts", badge: .dot) {}
+                GlassIconButton(symbol: "tray.fill", label: "Inbox", badge: .count(12)) {}
+            }
+        }
         ActionRow {
             SecondaryButton("Later", fullWidth: false) {}
             PrimaryButton("Answer now", fullWidth: false) {}
