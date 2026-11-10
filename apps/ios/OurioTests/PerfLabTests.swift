@@ -79,6 +79,20 @@ struct PerfLabTests {
         #expect(EnergyStats.Room(.hidden) == .off)
     }
 
+    @Test func tabSwitchesKeepTheLastTwentyAndTheirPercentiles() {
+        var times = TabSwitchTimes()
+        #expect(times.line == nil)
+        for ms in 1...25 { times.add(Double(ms * 10)) }
+        // 60...250 ms are kept: the median of twenty is the tenth, the 95th percentile the nineteenth.
+        #expect(times.recent.count == 20)
+        #expect(times.last == 250)
+        #expect(times.p50 == 150)
+        #expect(times.p95 == 240)
+        #expect(times.line == "tab 250 ms, p50 150, p95 240 of 20")
+        #expect(PerfLabMachine.summary(.shipped, reading: nil, tabs: times)
+            == "Perf lab: as shipped · tab 250 ms, p50 150, p95 240 of 20")
+    }
+
     @Test func aSteadyScreenDropsNothing() throws {
         let stats = try #require(FrameStats(gaps: Array(repeating: 1.0 / 120, count: 240), interval: 1.0 / 120))
         #expect(abs(stats.fps - 120) < 0.01)
