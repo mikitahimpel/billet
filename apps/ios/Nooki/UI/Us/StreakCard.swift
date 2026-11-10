@@ -4,6 +4,7 @@ import Design
 
 struct StreakCard: View {
     let store: StreakStore
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         // Ticks each minute so "hours left" and the midnight rollover stay current while the tab is open.
@@ -25,11 +26,9 @@ struct StreakCard: View {
                 } detail: {
                     Text(caption(status, now: now)).lineLimit(2)
                 } trailing: {
-                    Text(days == 1 ? "1 day" : "\(days) days")
-                        .font(.ourioTitle.monospacedDigit())
-                        .foregroundStyle(Ink.text)
-                        .contentTransition(.numericText())
+                    if !typeSize.isAccessibilitySize { count(days) }
                 }
+                if typeSize.isAccessibilitySize { count(days) }
 
                 if status == .restorable {
                     Button {
@@ -41,17 +40,22 @@ struct StreakCard: View {
                     .buttonStyle(PrimaryButtonStyle())
                 }
 
-                HStack(spacing: Space.s) {
-                    Badge(reached: milestone.reached)
-                    StatusPill(status: status, now: now)
-                    Spacer(minLength: 0)
-                    Label("Best \(streak.best)", systemImage: "trophy.fill")
-                        .font(.ourioCaption.monospacedDigit())
-                        .foregroundStyle(Ink.textSecondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Space.s) {
+                        Badge(reached: milestone.reached)
+                        StatusPill(status: status, now: now)
+                        Spacer(minLength: 0)
+                        best(streak.best)
+                    }
+                    VStack(alignment: .leading, spacing: Space.s) {
+                        Badge(reached: milestone.reached)
+                        StatusPill(status: status, now: now)
+                        best(streak.best)
+                    }
                 }
 
                 if let next = milestone.next {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: Space.s) {
                         ProgressCapsule(value: Double(days) / Double(next))
                         Text("\(next - days) to the \(next)-day badge")
                             .font(.ourioCaption)
@@ -61,6 +65,19 @@ struct StreakCard: View {
             }
         }
         .animation(.snappy(duration: 0.3), value: days)
+    }
+
+    private func count(_ days: Int) -> some View {
+        Text(days == 1 ? "1 day" : "\(days) days")
+            .font(.ourioTitle.monospacedDigit())
+            .foregroundStyle(Ink.text)
+            .contentTransition(.numericText())
+    }
+
+    private func best(_ best: Int) -> some View {
+        Label("Best \(best)", systemImage: "trophy.fill")
+            .font(.ourioCaption.monospacedDigit())
+            .foregroundStyle(Ink.textSecondary)
     }
 
     private func caption(_ status: LoveStreak.Status, now: Date) -> String {
@@ -106,9 +123,9 @@ private struct StatusPill: View {
     var body: some View {
         switch status {
         case .done:
-            pill("Today", symbol: "checkmark", tint: Color(hex: 0xA8D98A))
+            Chip("Today", symbol: "checkmark", style: .tinted(.honey))
         case .atRisk:
-            pill(hoursLeft, symbol: "hourglass", tint: Color.honey)
+            Chip(hoursLeft, symbol: "hourglass", style: .honey)
         case .restorable, .cold:
             EmptyView()
         }
@@ -119,15 +136,6 @@ private struct StatusPill: View {
         let hours = Int(midnight.timeIntervalSince(now) / 3600)
         return hours < 1 ? "<1h left" : "\(hours)h left"
     }
-
-    private func pill(_ title: String, symbol: String, tint: Color) -> some View {
-        Label(title, systemImage: symbol)
-            .font(.ourioMicro)
-            .foregroundStyle(tint)
-            .padding(.horizontal, 10)
-            .frame(minHeight: 28)
-            .background(tint.opacity(0.18), in: .capsule)
-    }
 }
 
 /// The highest milestone reached; before the first one it shows what's ahead.
@@ -135,14 +143,10 @@ private struct Badge: View {
     let reached: Int?
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: reached == nil ? "lock.fill" : "rosette")
-            Text(reached.map { "\($0)-day badge" } ?? "First badge at \(LoveStreak.milestones[0]) days")
-        }
-        .font(.ourioMicro)
-        .foregroundStyle(reached == nil ? Ink.textSecondary : Ink.accentText)
-        .padding(.horizontal, 10)
-        .frame(minHeight: 28)
-        .background(reached == nil ? Ink.surfaceRaised : Color.honey.opacity(0.18), in: .capsule)
+        Chip(
+            reached.map { "\($0)-day badge" } ?? "First badge at \(LoveStreak.milestones[0]) days",
+            symbol: reached == nil ? "lock.fill" : "rosette",
+            style: reached == nil ? .quiet : .tinted(.honey)
+        )
     }
 }

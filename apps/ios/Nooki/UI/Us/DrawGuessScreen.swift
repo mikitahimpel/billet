@@ -201,7 +201,7 @@ struct DrawGuessScreen: View {
                             .font(.ourioCallout)
                             .foregroundStyle(Ink.accentText)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                 }
                 VStack(alignment: .leading, spacing: Space.s) {
                     Text("Your own word")
@@ -333,16 +333,16 @@ private struct RiddleReplay: View {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.heroInk)
-                        .frame(width: 44, height: 44)
+                        .frame(width: Size.control, height: Size.control)
                         .background(Circle().fill(.white.opacity(0.7)))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .padding(Space.s)
                 .accessibilityLabel("Replay the drawing")
             }
         }
         .aspectRatio(1, contentMode: .fit)
-        .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+        .corners(.card)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("The drawing")
         .task(id: riddle.id) {
@@ -361,9 +361,9 @@ private struct RiddleBlanks: View {
     var takeBack: (Int) -> Void
 
     var body: some View {
-        WrapLayout(spacing: Space.l) {
+        FlowRow(spacing: Space.l) {
             ForEach(Array(words.enumerated()), id: \.offset) { _, word in
-                HStack(spacing: 6) {
+                HStack(spacing: Space.s) {
                     ForEach(word, id: \.index) { slot in blank(slot) }
                 }
             }
@@ -402,7 +402,7 @@ private struct RiddleBlanks: View {
                     .foregroundStyle(Ink.text)
                     .overlay(alignment: .bottom) { Capsule().fill(Ink.text).frame(height: 3) }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Letter \(slot.index + 1), \(slot.letter ?? "")")
             .accessibilityHint("Takes the letter back")
         }

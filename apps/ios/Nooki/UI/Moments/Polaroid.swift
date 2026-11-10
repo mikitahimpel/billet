@@ -138,8 +138,8 @@ struct PaperSheet: View {
         ZStack {
             if let lift {
                 shape.fill(color)
-                    .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
-                    .shadow(color: .black.opacity(lift.opacity), radius: lift.radius, y: lift.y)
+                    .perfShadow(color: .black.opacity(0.16), radius: 1, y: 1)
+                    .perfShadow(color: .black.opacity(lift.opacity), radius: lift.radius, y: lift.y)
             }
             Image(uiImage: PaperGrain.tile(on: color))
                 .resizable(resizingMode: .tile)

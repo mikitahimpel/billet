@@ -27,6 +27,7 @@ struct SettingsView: View {
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
     @AppStorage(ComposerStyle.key) private var composerStyle = ComposerStyle.standard
+    @Environment(PerfLab.self) private var perfLab: PerfLab?
     @State private var confirmingErase = false
     @State private var demoBusy = false
     @State private var demoFailed = false
@@ -72,7 +73,7 @@ struct SettingsView: View {
             }
 
             GroupedSection(header: "Window",
-                         footer: "What the City room's window looks out on. Suburbia follows the time of day.") {
+                         footer: "What the bedroom's window looks out on. Suburbia follows the time of day.") {
                 PickerRow("View", symbol: "window.horizontal", tint: UsTint.sky.color, selection: $windowView) {
                     ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
                 }
@@ -122,7 +123,7 @@ struct SettingsView: View {
             GroupedSection(header: "Labs",
                          footer: "With the brain off, \(CatProfile.name()) lives on her own original timers. The "
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
-                             + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
+                             + "heard. All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
                              + "them baked, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
                              + "the controls over the room after a few seconds without a touch. Coins come from the dev "
@@ -138,6 +139,12 @@ struct SettingsView: View {
                     Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
+                if let perfLab {
+                    NavigationLink { PerfLabPage(lab: perfLab) } label: {
+                        Row("Performance", symbol: "speedometer", tint: UsTint.sage.color) { RowChevron() }
+                    }
+                    .buttonStyle(PressScaleStyle())
+                }
                 PickerRow("Composer style", symbol: "square.and.pencil", tint: UsTint.sun.color,
                           selection: $composerStyle) {
                     ForEach(ComposerStyle.allCases) { Text($0.title).tag($0) }

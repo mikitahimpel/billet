@@ -37,6 +37,8 @@ private struct RoomStage: View {
     let input: RoomInput
     let controller: RoomController
 
+    private var visible: Bool { input.visibility == .visible }
+
     var body: some View {
         let _ = controller.probe.stageBody()
         ZStack {
@@ -57,21 +59,30 @@ private struct RoomStage: View {
                     .allowsHitTesting(input.visibility == .visible && controller.game == nil)
                     .modifier(RoomTapCounter())
                     .ignoresSafeArea()
-            } else if input.visibility == .visible, let scene = controller.scene(for: input.scene) {
-                // Only while the room can be seen: a paused RealityView left in place under the Shop, Moments, Us or
-                // a cover still runs its render loop and composites a full-screen layer every frame. The scenes stay
-                // loaded, so coming back only makes a new view for one.
-                DioramaView(scene: scene, paused: controller.corner != nil, petPulse: controller.petPulse) {
+            } else if let scene = controller.scene(for: input.scene) {
+                // One view for the app's life. A RealityView that goes away takes the GPU side of what it drew with
+                // it a few seconds later, so a room moved into a new one after that draws nothing until relaunch.
+                // While no room can be seen it holds an empty one, paused and transparent. A RealityView renders every
+                // frame while it exists, so it also shrinks to one point: each of those frames is next to nothing.
+                DioramaView(scene: visible ? scene : controller.offStage, paused: !visible || controller.corner != nil,
+                            petPulse: controller.petPulse) {
                     controller.petted()
                 }
-                .allowsHitTesting(controller.game == nil)
+                .frame(width: visible ? nil : 1, height: visible ? nil : 1)
+                .allowsHitTesting(visible && controller.game == nil)
+                .opacity(visible ? 1 : 0)
                 .accessibilityHidden(true)
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
 
-                if controller.game == nil { CatVoice(name: input.catName, controller: controller) }
+                if visible, controller.game == nil { CatVoice(name: input.catName, controller: controller) }
             }
         }
+        // The room's view no longer drives a room it doesn't show; the next look starts it again.
+        .onChange(of: visible) { _, visible in
+            if !visible { controller.stop() }
+        }
+        .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         // Her status is read once a second only while she can be seen; under a cover or a sheet that hides her it
         // waits, and the first look back reads it at once.
         .task(id: input.visibility == .visible && controller.hasHome) {

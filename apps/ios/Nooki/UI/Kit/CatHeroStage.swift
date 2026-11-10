@@ -2,10 +2,10 @@ import Design
 import SwiftUI
 import UIKit
 
-/// The hero Mochi's pictures for one coat, from `Tools/bake_hero.py`: the seated splat at rest, 3:4, and the patches
-/// that close her lids and flick her ear. A patch replaces its rectangle of the rest image; outside it the frames are
-/// the rest image, pixel for pixel.
-nonisolated struct HeroImages: @unchecked Sendable {
+/// The hero Mochi's pictures for one coat as they ship, from `Tools/bake_hero.py`: her splat sitting at rest, 3:4, and
+/// the patches that close her lids and flick her ear. A patch replaces its rectangle of the rest image; outside it the
+/// frames are the rest image, pixel for pixel.
+nonisolated struct HeroArt: @unchecked Sendable {
     let rest: UIImage
     /// Half and fully shut.
     let blink: [UIImage]
@@ -13,25 +13,125 @@ nonisolated struct HeroImages: @unchecked Sendable {
     let ear: [UIImage]
 
     /// The patches' rectangles as fractions of the rest image, printed by the bake.
-    static let blinkRect = CGRect(x: 0.32222, y: 0.20486, width: 0.44352, height: 0.22639)
-    static let earRect = CGRect(x: 0.23889, y: 0.10764, width: 0.21019, height: 0.16736)
+    static let blinkRect = CGRect(x: 0.33519, y: 0.21042, width: 0.41111, height: 0.20625)
+    static let earRect = CGRect(x: 0.25926, y: 0.11944, width: 0.18889, height: 0.15764)
 
-    /// Read and decoded off the main actor, so the first frames never wait on a decode.
-    static func load(_ coat: CatCoat, from bundle: Bundle = .main) async -> HeroImages? {
+    /// Reads and decodes; it blocks, so it runs off the main actor.
+    static func read(_ coat: CatCoat, from bundle: Bundle) -> HeroArt? {
         let names = ["Hero", "HeroBlink1", "HeroBlink2", "HeroEar1", "HeroEar2"]
-        let urls = names.compactMap { bundle.url(forResource: "\($0)-\(coat.rawValue)", withExtension: "webp") }
-        guard urls.count == names.count else { return nil }
-        return await Task.detached(priority: .userInitiated) { () -> HeroImages? in
-            let images = urls.compactMap { UIImage(contentsOfFile: $0.path)?.preparingForDisplay() }
-            guard images.count == urls.count else { return nil }
-            return HeroImages(rest: images[0], blink: Array(images[1...2]), ear: Array(images[3...4]))
-        }.value
+        let images = names.compactMap { name in
+            bundle.url(forResource: "\(name)-\(coat.rawValue)", withExtension: "webp")
+                .flatMap { UIImage(contentsOfFile: $0.path)?.preparingForDisplay() }
+        }
+        guard images.count == names.count else { return nil }
+        return HeroArt(rest: images[0], blink: Array(images[1...2]), ear: Array(images[3...4]))
+    }
+
+    /// `rect`, a fraction of an image of `size`, in whole pixels. The bake cut each patch on whole pixels and wrote
+    /// the fractions to 5 places, so every edge rounds back to its pixel; rounding outward would add one on each side.
+    static func pixels(_ rect: CGRect, of size: CGSize) -> CGRect {
+        let minX = (rect.minX * size.width).rounded(), maxX = (rect.maxX * size.width).rounded()
+        let minY = (rect.minY * size.height).rounded(), maxY = (rect.maxY * size.height).rounded()
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+    }
+
+    /// The whole cat with `blink` and `ear` frames (0 rest) laid over the rest image.
+    func frame(blink: Int, ear: Int) -> UIImage {
+        let size = rest.size
+        var patches: [(image: UIImage, rect: CGRect)] = []
+        if blink > 0 { patches.append((self.blink[blink - 1], Self.pixels(Self.blinkRect, of: size))) }
+        if ear > 0 { patches.append((self.ear[ear - 1], Self.pixels(Self.earRect, of: size))) }
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        return UIGraphicsImageRenderer(size: size, format: format).image { context in
+            let full = CGRect(origin: .zero, size: size)
+            context.cgContext.saveGState()
+            if !patches.isEmpty {
+                let cut = CGMutablePath()
+                cut.addRect(full)
+                for patch in patches { cut.addRect(patch.rect) }
+                context.cgContext.addPath(cut)
+                context.cgContext.clip(using: .evenOdd)
+            }
+            rest.draw(in: full)
+            context.cgContext.restoreGState()
+            for patch in patches { patch.image.draw(in: patch.rect) }
+        }
     }
 }
 
-/// Mochi on a warm stage: a glow behind her, drifting dust, a contact shadow, a honey rim light from behind on her
-/// edges, and the loop of `HeroMotion` (breath, sway, blinks, an ear flick, a hop on `pokedAt`). The parent's clock
-/// drives it; with `moving` false she rests and nothing drifts. Each layer sways by its own amount, for depth.
+/// The hero Mochi lit for the stage: a honey halo around her and a rim of warm light on her upper-left edges, baked
+/// once into each frame off the main actor, so the stage draws plain images and never runs a blur or a shadow while
+/// it plays.
+nonisolated struct HeroImages: @unchecked Sendable {
+    /// Her ear at rest, half and fully out.
+    let lit: [UIImage]
+    /// `blinks[ear][n]`: lids half (0) and fully (1) shut with the ear in that frame, cut to `HeroArt.blinkRect`.
+    let blinks: [[UIImage]]
+
+    static func load(_ coat: CatCoat, tint: Color.Resolved, from bundle: Bundle = .main) async -> HeroImages? {
+        await Task.detached(priority: .userInitiated) { () -> HeroImages? in
+            HeroArt.read(coat, from: bundle).flatMap { lighting($0, tint: tint) }
+        }.value
+    }
+
+    static func lighting(_ art: HeroArt, tint: Color.Resolved) -> HeroImages? {
+        let context = CIContext(options: [.cacheIntermediates: false])
+        let colour = tint.cgColor
+        func render(blink: Int, ear: Int, cutTo fraction: CGRect? = nil) -> UIImage? {
+            guard let cat = CIImage(image: art.frame(blink: blink, ear: ear)) else { return nil }
+            let extent = cat.extent
+            // Core Image counts y from the bottom.
+            let crop = fraction.map {
+                let cut = HeroArt.pixels($0, of: extent.size)
+                return CGRect(x: cut.minX, y: extent.height - cut.maxY, width: cut.width, height: cut.height)
+            } ?? extent
+            guard let image = context.createCGImage(Self.lighting(cat, colour: colour), from: crop) else { return nil }
+            return UIImage(cgImage: image)
+        }
+        let lit = (0...2).compactMap { render(blink: 0, ear: $0) }
+        let blinks = (0...2).map { ear in
+            (1...2).compactMap { render(blink: $0, ear: ear, cutTo: HeroArt.blinkRect) }
+        }
+        guard lit.count == 3, blinks.allSatisfy({ $0.count == 2 }) else { return nil }
+        return HeroImages(lit: lit, blinks: blinks)
+    }
+
+    /// The halo is her silhouette in honey at half strength, blurred by 5% of her width, under her. The rim is her
+    /// silhouette less itself moved down and right by 1.2% of her width, softened and added at 0.55: light from
+    /// behind, upper left, catching her edge.
+    private static func lighting(_ cat: CIImage, colour: CGColor) -> CIImage {
+        let extent = cat.extent
+        func silhouette(_ alpha: CGFloat) -> CIImage {
+            CIImage(color: CIColor(cgColor: colour.copy(alpha: alpha) ?? colour))
+                .cropped(to: extent)
+                .applyingFilter("CISourceInCompositing", parameters: [kCIInputBackgroundImageKey: cat])
+        }
+        let halo = silhouette(0.5).clampedToExtent().applyingGaussianBlur(sigma: extent.width * 0.025)
+            .cropped(to: extent)
+        let edge = extent.width * 0.012
+        let moved = cat.transformed(by: CGAffineTransform(translationX: edge, y: -edge * 1.4))
+        let strength = 0.55
+        let rim = silhouette(1)
+            .applyingFilter("CISourceOutCompositing", parameters: [kCIInputBackgroundImageKey: moved])
+            .clampedToExtent()
+            .applyingGaussianBlur(sigma: edge * 0.3)
+            .cropped(to: extent)
+            .applyingFilter("CIColorMatrix", parameters: [
+                "inputRVector": CIVector(x: strength, y: 0, z: 0, w: 0),
+                "inputGVector": CIVector(x: 0, y: strength, z: 0, w: 0),
+                "inputBVector": CIVector(x: 0, y: 0, z: strength, w: 0),
+                "inputAVector": CIVector(x: 0, y: 0, z: 0, w: strength),
+            ])
+        return rim.applyingFilter("CIAdditionCompositing",
+                                  parameters: [kCIInputBackgroundImageKey: cat.composited(over: halo)])
+    }
+}
+
+/// Mochi on a warm stage: a glow behind her, drifting dust, a contact shadow, and the loop of `HeroMotion` (breath,
+/// sway, blinks, an ear flick, a hop on `pokedAt`). The parent's clock drives it; with `moving` false she rests and
+/// nothing drifts. Each layer sways by its own amount, for depth. Nothing here blurs or shadows per frame: the light on
+/// her is baked into `HeroImages`, and the contact shadow is a gradient.
 struct CatHeroStage: View {
     let coat: CatCoat
     /// Seconds since the stage appeared.
@@ -52,18 +152,17 @@ struct CatHeroStage: View {
                     .frame(width: cat * 1.1, height: cat * 1.1)
                     .scaleEffect(1 + 0.04 * pose.breath)
                     .offset(x: -8 * pose.sway, y: -cat * 0.06)
-                DustField(time: moving ? time : 0, count: 16, reach: cat * 0.012)
+                DustField(time: moving ? time : 0, count: 12, reach: cat * 0.012)
                     .offset(x: 10 * pose.sway)
-                Ellipse()
-                    .fill(.black.opacity(0.42))
-                    .frame(width: cat * 0.42, height: cat * 0.05)
-                    .blur(radius: cat * 0.022)
+                EllipticalGradient(colors: [.black.opacity(0.42), .black.opacity(0.2), .clear],
+                                   center: .center, startRadiusFraction: 0, endRadiusFraction: 0.5)
+                    .frame(width: cat * 0.5, height: cat * 0.09)
                     .scaleEffect(1 - 0.12 * pose.hop)
                     .offset(x: 3 * pose.sway, y: cat * 0.43)
                 if let images {
-                    HeroCat(images: images, blink: pose.blink, ear: pose.ear)
+                    HeroCat(images: images, blink: pose.blink, ear: pose.ear,
+                            size: CGSize(width: cat * 3 / 4, height: cat))
                         .equatable()
-                        .frame(width: cat * 3 / 4, height: cat)
                         .scaleEffect(x: 1 + 0.006 * pose.breath, y: 1 + 0.014 * pose.breath, anchor: .bottom)
                         .offset(x: 3 * pose.sway, y: -cat * 0.05 * pose.hop)
                         .transition(.opacity)
@@ -72,60 +171,51 @@ struct CatHeroStage: View {
             .frame(width: size.width, height: size.height)
         }
         .animation(Motion.fade(Motion.standard), value: images == nil)
-        .task(id: coat) { images = await HeroImages.load(coat) }
+        .task(id: coat) {
+            images = await HeroImages.load(coat, tint: Color.honey.resolve(in: EnvironmentValues()))
+        }
         .accessibilityHidden(true)
     }
 }
 
-/// The cat itself, drawn only when a frame changes: the rest image with the patches of the moment over it, a honey
-/// halo, and a rim light on her upper-left edges where the warm light behind her catches the fur.
+/// The lit cat of the moment: her ear frame whole, and while she blinks, the lids of that ear frame over their
+/// rectangle, which is cut out of the image under them so the two never add up.
 private struct HeroCat: View, Equatable {
     let images: HeroImages
     let blink: Int
     let ear: Int
+    let size: CGSize
 
     static func == (lhs: HeroCat, rhs: HeroCat) -> Bool {
-        lhs.images.rest === rhs.images.rest && lhs.blink == rhs.blink && lhs.ear == rhs.ear
+        lhs.images.lit[0] === rhs.images.lit[0] && lhs.blink == rhs.blink && lhs.ear == rhs.ear
+            && lhs.size == rhs.size
     }
 
     var body: some View {
-        let images = images, blink = blink, ear = ear
-        Canvas { context, size in
-            let full = CGRect(origin: .zero, size: size)
-            func scaled(_ rect: CGRect) -> CGRect {
-                CGRect(x: rect.minX * size.width, y: rect.minY * size.height,
-                       width: rect.width * size.width, height: rect.height * size.height)
-            }
-            var patches: [(image: UIImage, rect: CGRect)] = []
-            if blink > 0 { patches.append((images.blink[blink - 1], scaled(HeroImages.blinkRect))) }
-            if ear > 0 { patches.append((images.ear[ear - 1], scaled(HeroImages.earRect))) }
-            func cat(_ layer: inout GraphicsContext, offset: CGSize = .zero) {
-                func moved(_ rect: CGRect) -> CGRect { rect.offsetBy(dx: offset.width, dy: offset.height) }
-                var rest = layer
-                if !patches.isEmpty {
-                    var cut = Path(moved(full))
-                    for patch in patches { cut.addRect(moved(patch.rect)) }
-                    rest.clip(to: cut, style: FillStyle(eoFill: true))
+        let lids = CGRect(x: HeroArt.blinkRect.minX * size.width, y: HeroArt.blinkRect.minY * size.height,
+                          width: HeroArt.blinkRect.width * size.width, height: HeroArt.blinkRect.height * size.height)
+        ZStack(alignment: .topLeading) {
+            Image(uiImage: images.lit[ear])
+                .resizable()
+                .mask {
+                    if blink > 0 {
+                        Path { path in
+                            path.addRect(CGRect(origin: .zero, size: size))
+                            path.addRect(lids)
+                        }
+                        .fill(style: FillStyle(eoFill: true))
+                    } else {
+                        Rectangle()
+                    }
                 }
-                rest.draw(Image(uiImage: images.rest), in: moved(full))
-                for patch in patches { layer.draw(Image(uiImage: patch.image), in: moved(patch.rect)) }
-            }
-            context.drawLayer { halo in
-                halo.addFilter(.shadow(color: Color.honey.opacity(0.5), radius: size.width * 0.05))
-                cat(&halo)
-            }
-            var lit = context
-            lit.blendMode = .plusLighter
-            lit.opacity = 0.55
-            lit.drawLayer { rim in
-                let edge = size.width * 0.012
-                rim.addFilter(.blur(radius: edge * 0.6))
-                rim.clipToLayer { mask in cat(&mask) }
-                rim.fill(Path(full), with: .color(Color.honey))
-                rim.blendMode = .destinationOut
-                cat(&rim, offset: CGSize(width: edge, height: edge * 1.4))
+            if blink > 0 {
+                Image(uiImage: images.blinks[ear][blink - 1])
+                    .resizable()
+                    .frame(width: lids.width, height: lids.height)
+                    .offset(x: lids.minX, y: lids.minY)
             }
         }
+        .frame(width: size.width, height: size.height)
     }
 }
 
@@ -137,6 +227,8 @@ struct DustField: View {
     /// The largest speck's radius, in points.
     var reach: CGFloat = 4
     var seed: UInt64 = 7
+
+    @State private var size = CGSize.zero
 
     private nonisolated struct Speck: Sendable {
         let x, y, pace, phase: Double
@@ -152,21 +244,38 @@ struct DustField: View {
         }
     }
 
+    /// One soft honey speck, drawn once. Each speck is a view of it that only moves and fades, so a frame of dust
+    /// moves layers and draws nothing.
+    private static let glow: UIImage = {
+        let side: CGFloat = 48
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let honey = UIColor(Color.honey)
+        return UIGraphicsImageRenderer(size: CGSize(width: side, height: side), format: format).image { context in
+            let colours = [honey.cgColor, honey.withAlphaComponent(0).cgColor] as CFArray
+            guard let gradient = CGGradient(colorsSpace: CGColorSpace(name: CGColorSpace.sRGB), colors: colours,
+                                            locations: [0, 1]) else { return }
+            let centre = CGPoint(x: side / 2, y: side / 2)
+            context.cgContext.drawRadialGradient(gradient, startCenter: centre, startRadius: 0, endCenter: centre,
+                                                 endRadius: side / 2, options: [])
+        }
+    }()
+
     var body: some View {
-        let specks = specks, time = time
-        Canvas { context, size in
-            for speck in specks {
+        ZStack(alignment: .topLeading) {
+            ForEach(Array(specks.enumerated()), id: \.offset) { _, speck in
                 let rise = (speck.y - speck.pace * time).truncatingRemainder(dividingBy: 1)
-                let point = CGPoint(x: (speck.x + 0.025 * sin(time * 0.6 + speck.phase)) * size.width,
-                                    y: (rise < 0 ? rise + 1 : rise) * size.height)
-                let twinkle = 0.2 + 0.45 * (0.5 + 0.5 * sin(time * 1.3 + speck.phase))
                 let reach = speck.radius * 3
-                let glow = CGRect(x: point.x - reach, y: point.y - reach, width: reach * 2, height: reach * 2)
-                context.fill(Path(ellipseIn: glow), with: .radialGradient(
-                    Gradient(colors: [Color.honey.opacity(twinkle), Color.honey.opacity(0)]),
-                    center: point, startRadius: 0, endRadius: reach))
+                Image(uiImage: Self.glow)
+                    .resizable()
+                    .frame(width: reach * 2, height: reach * 2)
+                    .opacity(0.2 + 0.45 * (0.5 + 0.5 * sin(time * 1.3 + speck.phase)))
+                    .offset(x: (speck.x + 0.025 * sin(time * 0.6 + speck.phase)) * size.width - reach,
+                            y: (rise < 0 ? rise + 1 : rise) * size.height - reach)
             }
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

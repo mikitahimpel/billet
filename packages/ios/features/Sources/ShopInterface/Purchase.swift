@@ -36,7 +36,8 @@ public struct ShopOrder: Hashable, Sendable {
 }
 
 /// One buy in the Shop, shown on the phone from the tap until the server answers: the purchase
-/// moment plays for it, it offers Undo for a few seconds, and only then is it ordered.
+/// moment plays for it, room pieces offer Undo for a few seconds and only then are ordered; an
+/// ink or a treat is ordered at once.
 public struct Purchase: Identifiable, Hashable, Sendable {
   /// Made once per tap; its string is the order's idempotency key on every retry.
   public let id: UUID
@@ -79,7 +80,7 @@ public struct Purchase: Identifiable, Hashable, Sendable {
   public enum Kind: Hashable, Sendable {
     /// Room pieces.
     case item
-    /// An ink colour for notes and drawings.
+    /// An ink colour for notes and drawings: the purchase moment, no Undo.
     case ink
     /// A treat for the cat: no purchase moment and no Undo.
     case treat
@@ -89,15 +90,27 @@ public struct Purchase: Identifiable, Hashable, Sendable {
   public enum Stage: Hashable, Sendable {
     /// Shown, Undo offered, not yet ordered.
     case undoable
-    /// The Undo window passed (a treat has none): the order is on its way.
+    /// The Undo window passed (an ink or a treat has none): the order is on its way.
     case ordering
   }
 
+  /// How long the purchase moment shows, and Undo works for room pieces.
   public static let undoWindow: TimeInterval = 5
 
   public var key: IdempotencyKey { IdempotencyKey(id.uuidString) }
 
+  public var undoable: Bool {
+    switch kind {
+    case .item: true
+    case .ink, .treat: false
+    }
+  }
+
   public func canUndo(at now: Date) -> Bool {
+    undoable && now.timeIntervalSince(date) < Self.undoWindow
+  }
+
+  public func momentShows(at now: Date) -> Bool {
     kind != .treat && now.timeIntervalSince(date) < Self.undoWindow
   }
 }

@@ -240,7 +240,43 @@ describe("the shop routes", () => {
       items: ["lamp", "rug"],
       wishlist: [],
       bonuses: [],
+      layout: [],
     });
+  });
+
+  it("keeps one layout for both partners, applies an id once and refuses overlaps", async () => {
+    const id = "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
+    const placed = { item: "lamp", surface: "floor", u: -5, v: -5, quarterTurns: 0 };
+    const place = (key: string, placement: object, who = "ana") =>
+      handler(
+        request("/v1/shop/layout", who, {
+          ...json({ id: key, change: { _tag: "Place", placement } }),
+          method: "POST",
+        }),
+      );
+    const first = await place(id, placed);
+    expect(first.status).toBe(200);
+    expect(await first.json()).toMatchObject({ result: "applied", shop: { layout: [placed] } });
+    const again = await place(id, { ...placed, u: 3 });
+    expect(await again.json()).toMatchObject({ result: "duplicate", shop: { layout: [placed] } });
+    const seen = await (await handler(request("/v1/shop", "ben"))).json();
+    expect(seen).toMatchObject({ layout: [placed] });
+    const clash = await place("7f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f", {
+      ...placed,
+      item: "rug",
+      u: 0,
+      v: 0,
+    });
+    expect(clash.status).toBe(200);
+    const crowded = await place("8f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f", {
+      item: "armchair",
+      surface: "floor",
+      u: 0,
+      v: 0,
+      quarterTurns: 0,
+    });
+    expect(await crowded.json()).toEqual({ _tag: "LayoutRefused", reason: "not-owned" });
+    expect(crowded.status).toBe(409);
   });
 
   it("keeps one wishlist for both partners", async () => {

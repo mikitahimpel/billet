@@ -63,7 +63,7 @@ struct MovieCard: View {
                 }
                 .padding(.horizontal, Space.gutter)
                 .padding(.top, 28)
-                .padding(.bottom, 40)
+                .padding(.bottom, Space.xl + Space.s)
             }
         }
         .softScrollEdges()
@@ -83,12 +83,12 @@ struct MovieCard: View {
                 .overlay(alignment: .bottomLeading) {
                     PosterImage(path: path, title: item.text, size: .card)
                         .frame(width: 96, height: 142)
-                        .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                        .corners(.inner)
                         .overlay {
                             RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
                                 .strokeBorder(Ink.screen, lineWidth: 3)
                         }
-                        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                        .perfShadow(color: .black.opacity(0.25), radius: 8, y: 4)
                         .padding(.leading, Space.gutter)
                         .offset(y: 40)
                 }
@@ -106,7 +106,7 @@ struct MovieCard: View {
             .frame(minHeight: 40, alignment: .top)
             .padding(.leading, 132)
             .padding(.trailing, Space.gutter)
-            .padding(.top, 10)
+            .padding(.top, Space.m)
         }
     }
 
@@ -151,13 +151,13 @@ struct MovieCard: View {
     }
 
     private func provider(name: String, extra: String?) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Space.xs) {
             Text(name)
             if let extra { Text(extra).foregroundStyle(Ink.textTertiary) }
         }
         .font(.ourioCallout)
         .foregroundStyle(Ink.text)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(minHeight: 34)
         .background(Ink.surfaceRaised, in: .capsule)
     }
@@ -196,10 +196,10 @@ struct MovieCard: View {
                 }
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.heroInk)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, Space.l)
                 .frame(minHeight: 34)
                 .background(Color.honey, in: .capsule)
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
             }
         }
         .padding(CardMetrics.padding)
@@ -238,6 +238,6 @@ struct MovieCard: View {
                 .frame(minHeight: 50)
                 .background(Ink.surfaceRaised, in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 }

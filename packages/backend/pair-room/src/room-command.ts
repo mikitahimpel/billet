@@ -14,6 +14,7 @@ import { Mood } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction, Reaction } from "@billet/contracts-domain/reaction";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { LayoutChange } from "@billet/contracts-domain/decor";
 import { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
@@ -74,6 +75,11 @@ export const RoomCommand = Schema.TaggedUnion({
     utcOffsetSeconds: Schema.optionalKey(UtcOffsetSeconds),
     terms: Schema.optionalKey(PriceTerms),
   },
+  /**
+   * Stands a piece in the room, moves it, or takes it back to the closet. `id` is applied once, in the
+   * order commands arrive.
+   */
+  ChangeLayout: { by: UserId, id: IdempotencyKey, change: LayoutChange },
   /** `offered`: the catalog sells `item`, though the canonical list does not. */
   SetWish: {
     by: UserId,

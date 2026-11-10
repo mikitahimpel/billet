@@ -25,7 +25,7 @@ struct GroceryItemSheet: View {
         let current = aisle ?? GroceryCatalog.bundled.aisle(for: item, history: state.us.groceries)
         BilletSheet("Item", size: .fit) {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(spacing: 14) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: current.icon, size: 50)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.text)
@@ -38,10 +38,10 @@ struct GroceryItemSheet: View {
             }
 
             UsField(placeholder: "Quantity or note", text: $amount)
-                .padding(.top, 18)
+                .padding(.top, Space.l)
 
             GrocerySectionLabel(title: "Aisle")
-            WrapLayout(spacing: 8) {
+            FlowRow(spacing: Space.s) {
                 ForEach(GroceryAisle.allCases) { choice in
                     FilterChip(choice.title, isSelected: choice == current) { aisle = choice }
                 }
@@ -55,8 +55,8 @@ struct GroceryItemSheet: View {
                 Label("Delete", systemImage: "trash")
             }
             .font(.ourioCallout.weight(.semibold))
-            .foregroundStyle(Color.red.opacity(0.85))
-            .buttonStyle(.plain)
+            .foregroundStyle(Ink.destructive)
+            .buttonStyle(PressScaleStyle())
             .frame(maxWidth: .infinity)
             .padding(.top, Space.xl)
         }

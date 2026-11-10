@@ -31,6 +31,26 @@ public struct Card<Content: View>: View {
 }
 
 /// Every card that opens something starts with it.
+/// The one card that floats: a passing note over the screen, such as a purchase with its Undo. A
+/// hairline rim and a soft shadow lift it off whatever scrolls underneath.
+public struct Toast<Content: View>: View {
+  let content: Content
+
+  public init(@ViewBuilder content: () -> Content) { self.content = content() }
+
+  public var body: some View {
+    content
+      .padding(CardMetrics.padding)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .cardSurface()
+      .overlay {
+        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+          .strokeBorder(Ink.separator, lineWidth: 1)
+      }
+      .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
+  }
+}
+
 public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
   let title: String
   let leading: Leading
@@ -47,21 +67,43 @@ public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
     self.trailing = trailing()
   }
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  /// At accessibility sizes the mark and the trailing view share the first line and the words take
+  /// the card's whole width under them, so a title wraps at word ends instead of truncating.
   public var body: some View {
-    HStack(spacing: Space.m) {
-      leading
-        .frame(width: Size.cardMark, height: Size.cardMark)
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title)
-          .font(.ourioHeadline)
-          .foregroundStyle(Ink.text)
-          .lineLimit(2)
-        detail
-          .font(.ourioCaption)
-          .foregroundStyle(Ink.textSecondary)
+    if dynamicTypeSize.isAccessibilitySize {
+      VStack(alignment: .leading, spacing: Space.s) {
+        HStack(spacing: Space.m) {
+          mark
+          Spacer(minLength: 0)
+          trailing
+        }
+        words
       }
-      Spacer(minLength: 0)
-      trailing
+    } else {
+      HStack(spacing: Space.m) {
+        mark
+        words.lineLimit(2)
+        Spacer(minLength: 0)
+        trailing
+      }
+    }
+  }
+
+  private var mark: some View {
+    leading.frame(width: Size.cardMark, height: Size.cardMark)
+  }
+
+  private var words: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(title)
+        .font(.ourioHeadline)
+        .foregroundStyle(Ink.text)
+        .fixedSize(horizontal: false, vertical: true)
+      detail
+        .font(.ourioCaption)
+        .foregroundStyle(Ink.textSecondary)
     }
   }
 }
@@ -175,28 +217,58 @@ public struct Row<Trailing: View>: View {
     self.trailing = trailing()
   }
 
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+  /// At accessibility sizes the icon and the trailing control share the first line and the words
+  /// take the row's whole width under them; without an icon the control goes under the words.
   public var body: some View {
-    HStack(spacing: 14) {
-      if let symbol {
-        RowIcon(symbol: symbol, tint: destructive ? Optional(Ink.destructive) : tint)
-      }
-      VStack(alignment: .leading, spacing: 2) {
-        Text(title)
-          .font(.ourioBody)
-          .foregroundStyle(destructive ? Ink.destructive : Ink.text)
-        if let detail {
-          Text(detail)
-            .font(.ourioCaption)
-            .foregroundStyle(Ink.textSecondary)
+    Group {
+      if dynamicTypeSize.isAccessibilitySize {
+        VStack(alignment: .leading, spacing: Space.s) {
+          if let symbol {
+            HStack(spacing: Space.m) {
+              icon(symbol)
+              Spacer(minLength: Space.s)
+              trailing
+            }
+            words
+          } else {
+            words
+            trailing
+          }
+        }
+      } else {
+        HStack(spacing: 14) {
+          if let symbol { icon(symbol) }
+          words.layoutPriority(1)
+          Spacer(minLength: Space.s)
+          trailing
         }
       }
-      Spacer(minLength: Space.s)
-      trailing
     }
     .padding(.horizontal, Space.l)
     .padding(.vertical, Space.s + 2)
     .frame(maxWidth: .infinity, minHeight: Size.row, alignment: .leading)
     .contentShape(.rect)
+  }
+
+  private func icon(_ symbol: String) -> some View {
+    RowIcon(symbol: symbol, tint: destructive ? Optional(Ink.destructive) : tint)
+  }
+
+  private var words: some View {
+    VStack(alignment: .leading, spacing: 2) {
+      Text(title)
+        .font(.ourioBody)
+        .foregroundStyle(destructive ? Ink.destructive : Ink.text)
+        .fixedSize(horizontal: false, vertical: true)
+      if let detail {
+        Text(detail)
+          .font(.ourioCaption)
+          .foregroundStyle(Ink.textSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
+    }
   }
 }
 
@@ -293,12 +365,19 @@ public struct PickerRow<Value: Hashable, Options: View>: View {
 
   public var body: some View {
     Row(title, symbol: symbol, tint: tint) {
+      // A menu picker is a UIKit button: it ignores `lineLimit` and reports less height than it
+      // draws once its value wraps, so its type stops growing where a short value still fits a line.
       Picker(title, selection: $selection) { options }
         .pickerStyle(.menu)
         .labelsHidden()
+        .lineLimit(1)
+        .truncationMode(.middle)
+        .dynamicTypeSize(...Self.largestType)
         .tint(Ink.accentText)
     }
   }
+
+  static var largestType: DynamicTypeSize { .xxxLarge }
 }
 
 #Preview("Grouped section") {
@@ -329,5 +408,26 @@ extension View {
   public func listRowSurface() -> some View {
     listRowBackground(Ink.surface)
       .listRowSeparatorTint(Ink.separator)
+  }
+}
+
+#Preview("Toast") {
+  BothSchemes {
+    VStack {
+      Spacer()
+      Toast {
+        HStack(spacing: Space.m) {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Tea for Two is yours").font(.ourioHeadline).foregroundStyle(Ink.text)
+            Text("It's in your room's closet.").font(.ourioCaption)
+              .foregroundStyle(Ink.textSecondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          PillButton("Undo") {}
+        }
+      }
+      .padding(Space.l)
+    }
+    .background(Ink.screen)
   }
 }

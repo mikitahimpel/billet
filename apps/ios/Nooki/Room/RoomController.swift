@@ -2,6 +2,7 @@ import FeatureGames
 import GamesInterface
 import Observation
 import Pet
+import RealityKit
 import RoomInterface
 import SwiftUI
 import WindowViews
@@ -37,7 +38,10 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     @ObservationIgnored private let usesStandIn: Bool
     @ObservationIgnored private lazy var standIn = CatRoom()
+    /// An empty room the room's view holds while no room can be seen (see `RoomStage`).
+    @ObservationIgnored private(set) lazy var offStage = CatRoom()
     @ObservationIgnored private var polaroids: [UIImage] = []
+    @ObservationIgnored private var motes = true
     @ObservationIgnored private var pins: [BoardPin] = []
     /// The scenery last picked for each game, for the next time it is played.
     @ObservationIgnored private var picked: [MiniGame: GameScenery] = [:]
@@ -79,7 +83,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     var hasHome: Bool { home != nil }
     var hasBoard: Bool { board != nil }
     var isReady: Bool { home?.isReady == true }
-    var cityWindowView: FlatWindowView? { city?.windowView }
+    var cityWindowView: CityWindowView? { city?.windowView }
 
     var current: CatRoom? {
         guard home != nil else { return nil }
@@ -97,6 +101,23 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     private func wire(_ room: CatRoom) {
         room.onShowcase = { [weak self] label in withAnimation(.snappy(duration: 0.25)) { self?.showcase = label } }
+        if !motes { Self.show(motes: false, in: room) }
+    }
+
+    /// Shows or hides the dust motes in every room, those built now and those built later.
+    func showMotes(_ on: Bool) {
+        guard on != motes else { return }
+        motes = on
+        for room in [home, city, board].compactMap({ $0 }) { Self.show(motes: on, in: room) }
+    }
+
+    /// A disabled emitter is not simulated, where one left on is stepped every frame the room is drawn.
+    private static func show(motes on: Bool, in room: CatRoom) {
+        func visit(_ entity: Entity) {
+            if entity.components.has(ParticleEmitterComponent.self) { entity.isEnabled = on }
+            entity.children.forEach(visit)
+        }
+        visit(room.root)
     }
 
     // MARK: Showing a room

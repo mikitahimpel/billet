@@ -37,17 +37,34 @@ enum Thumbnails {
 
     /// Fan pieces are at most 88 pt, so the 512 px card decode leaves enough after the crop.
     static func trimmed(_ name: String) -> UIImage? {
-        let key = "\(name)/trimmed" as NSString
-        if let cached = cache.object(forKey: key) { return cached }
+        if let cached = cache.object(forKey: trimmedKey(name)) { return cached }
         guard let image = Self.image(name, maxPixels: 512) else { return nil }
+        return trim(image, name)
+    }
+
+    /// `trimmed` for each of `names`, away from the main thread.
+    nonisolated static func prefetchTrimmed(_ names: [String]) async {
+        await prefetch(names, maxPixels: 512)
+        await Task.detached(priority: .userInitiated) {
+            for name in names where cache.object(forKey: trimmedKey(name)) == nil {
+                if Task.isCancelled { return }
+                if let image = cache.object(forKey: key(name, 512)) { trim(image, name) }
+            }
+        }.value
+    }
+
+    private nonisolated static func trimmedKey(_ name: String) -> NSString { "\(name)/trimmed" as NSString }
+
+    @discardableResult
+    private nonisolated static func trim(_ image: UIImage, _ name: String) -> UIImage {
         let result = image.trimmingTransparentEdges() ?? image
-        cache.setObject(result, forKey: key)
+        cache.setObject(result, forKey: trimmedKey(name))
         return result
     }
 }
 
 private extension UIImage {
-    func trimmingTransparentEdges() -> UIImage? {
+    nonisolated func trimmingTransparentEdges() -> UIImage? {
         guard let cgImage, cgImage.bitsPerPixel == 32,
               let data = cgImage.dataProvider?.data,
               let bytes = CFDataGetBytePtr(data) else { return nil }

@@ -25,14 +25,12 @@ struct MoodHeaderButton: View {
         GlassIconButton(label: "How are you?", action: action) {
             MoodArt(mood: mine?.mood, size: 30)
         }
-        .overlay(alignment: .topTrailing) {
+        .glassControlBadge {
             if let theirs {
                 MoodArt(mood: theirs.mood, size: 18)
                     .frame(width: 22, height: 22)
                     .glassBadge(Ink.surface)
-                    .offset(x: 5, y: -5)
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+                    .offset(x: GlassMetrics.badgeOverhang, y: -GlassMetrics.badgeOverhang)
             }
         }
         .accessibilityValue(value)

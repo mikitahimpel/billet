@@ -13,7 +13,7 @@ by `GET /v1/flags`; a variant the app lacks is ignored.
 | --- | --- | --- | --- |
 | `payments` | flag | `off` | **Keep, fixed `off`.** No coin purchases in the first release. Never start it before payments ship (`docs/payments.md`). |
 | `pick-tonight` | flag | `on` | **Keep as a kill switch, fixed `on`.** It is a shipped feature with a safe off. |
-| `rooms` | experiment | `both` | **Owner.** Room vs City vs both. Until decided, leave it `draft` so every pair gets `both`. |
+| `rooms` | experiment | `both` | **Owner.** Living room vs Bedroom vs both. Until decided, leave it `draft` so every pair gets `both`. |
 | `home-layout` | flag | `classic` | **Owner.** Home variants (`immersive`, `living-window`, `night-and-day`). Leave `classic` until chosen. |
 | `room-lighting` | flag | `amber-lantern` | **Owner.** Room lighting variants. |
 | `window-view` | flag | `suburb-night` | **Owner.** Window views. |

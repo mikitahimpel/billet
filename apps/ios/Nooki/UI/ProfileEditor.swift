@@ -49,7 +49,7 @@ struct ProfileEditor: View {
     }
 
     private func partnerCard(_ partner: String) -> some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Space.m) {
             Menu {
                 Button("Choose photo", systemImage: "photo") { photoFor = partner }
                 if profile.photos[partner] != nil {
@@ -67,7 +67,7 @@ struct ProfileEditor: View {
                     }
             }
 
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Space.s) {
                 Field("Name", text: Binding(get: { names[partner] ?? "" }, set: { names[partner] = $0 }),
                       font: .ourioHeadline)
                     .textInputAutocapitalization(.words)
@@ -89,7 +89,7 @@ struct ProfileEditor: View {
     }
 
     private var togetherCard: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.s) {
             DatePicker("Together since", selection: $since, in: ...Date.now, displayedComponents: .date)
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)

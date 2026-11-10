@@ -7,6 +7,8 @@ import Design
 /// same place.
 struct PurchaseMoment: View {
     let state: HomeState
+    /// The top of the tab bar in global coordinates, which the card keeps clear of; nil where there is no bar.
+    var floor: CGFloat? = nil
 
     @State private var shown: Purchase?
     @State private var refused: Purchase?
@@ -15,9 +17,11 @@ struct PurchaseMoment: View {
 
     var body: some View {
         GeometryReader { proxy in
+            let lift = Self.lift(bottom: proxy.frame(in: .global).maxY, floor: floor,
+                                 safeBottom: proxy.safeAreaInsets.bottom)
             let centre = CGPoint(x: proxy.size.width / 2, y: proxy.size.height * 0.42)
-            // Just above the tab bar, where the card sits.
-            let landing = CGPoint(x: 52, y: proxy.size.height - 132)
+            // On the cat at the card's leading edge.
+            let landing = CGPoint(x: Space.l + CardMetrics.padding + 20, y: proxy.size.height - lift - 40)
             ZStack {
                 if let shown, !reduceMotion {
                     ZStack {
@@ -34,12 +38,12 @@ struct PurchaseMoment: View {
                     if let shown {
                         card(shown)
                             .padding(.horizontal, Space.l)
-                            .padding(.bottom, 92)
+                            .padding(.bottom, lift)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     } else if let refused {
                         refusal(refused)
                             .padding(.horizontal, Space.l)
-                            .padding(.bottom, 92)
+                            .padding(.bottom, lift)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
                 }
@@ -68,7 +72,7 @@ struct PurchaseMoment: View {
             if refused?.id == current.id { withAnimation(.spring(duration: 0.35)) { refused = nil } }
         }
         .task(id: shown?.id) {
-            // The card leaves when Undo would no longer work, counted from the buy itself.
+            // The card leaves when its Undo window ends, counted from the buy itself.
             guard let current = shown else { return }
             let left = Purchase.undoWindow - Date.now.timeIntervalSince(current.date)
             try? await Task.sleep(for: .seconds(max(0, left)))
@@ -84,46 +88,54 @@ struct PurchaseMoment: View {
         }
     }
 
+    /// How far above its container's bottom (`bottom`, global) the card sits: `Space.m` over the tab bar's top edge
+    /// (`floor`), or `Space.l` over the home indicator where there is no bar.
+    static func lift(bottom: CGFloat, floor: CGFloat?, safeBottom: CGFloat) -> CGFloat {
+        guard let floor, floor < bottom else { return safeBottom + Space.l }
+        return bottom - floor + Space.m
+    }
+
     private func card(_ purchase: Purchase) -> some View {
-        HStack(spacing: Space.m) {
-            MochiHop(trigger: flights)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("\(purchase.title) is yours")
-                    .font(.ourioHeadline)
-                    .foregroundStyle(Ink.text)
-                    .lineLimit(2)
-                Text(detail(purchase))
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
-                    .lineLimit(2)
+        Toast {
+            HStack(spacing: Space.m) {
+                MochiHop(trigger: flights)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(purchase.title) is yours")
+                        .font(.ourioHeadline)
+                        .foregroundStyle(Ink.text)
+                        .lineLimit(2)
+                    Text(detail(purchase))
+                        .font(.ourioCaption)
+                        .foregroundStyle(Ink.textSecondary)
+                        .lineLimit(2)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                if purchase.undoable {
+                    PillButton("Undo", symbol: "arrow.uturn.backward") {
+                        if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
+                    }
+                    .fixedSize()
+                    .accessibilityHint("Gives back \(purchase.cost) coins")
+                }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            SecondaryButton("Undo", fullWidth: false) {
-                if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
-            }
-            .accessibilityHint("Gives back \(purchase.cost) coins")
         }
-        .padding(CardMetrics.padding)
-        .cardSurface()
-        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
         .accessibilityElement(children: .contain)
     }
 
     private func refusal(_ purchase: Purchase) -> some View {
-        HStack(spacing: Space.m) {
-            Image(systemName: "arrow.uturn.backward.circle.fill")
-                .font(.ourioTitle)
-                .symbolRenderingMode(.hierarchical)
-                .foregroundStyle(Color.honey)
-                .accessibilityHidden(true)
-            Text("Couldn't buy \(purchase.title). Your coins are back.")
-                .font(.ourioCallout)
-                .foregroundStyle(Ink.text)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        Toast {
+            HStack(spacing: Space.m) {
+                Image(systemName: "arrow.uturn.backward.circle.fill")
+                    .font(.ourioTitle)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Color.honey)
+                    .accessibilityHidden(true)
+                Text("Couldn't buy \(purchase.title). Your coins are back.")
+                    .font(.ourioCallout)
+                    .foregroundStyle(Ink.text)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .padding(CardMetrics.padding)
-        .cardSurface()
-        .shadow(color: .black.opacity(0.25), radius: 12, y: 4)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("purchaseRefused")
     }

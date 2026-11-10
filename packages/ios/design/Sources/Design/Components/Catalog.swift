@@ -62,6 +62,11 @@ private struct Catalog: View {
           SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
         }
         HStack {
+          Button("Loved", systemImage: "heart.fill") {}
+            .buttonStyle(ToggleButtonStyle(isOn: true, tint: .blushPink))
+          Button("Pin to wall", systemImage: "pin") {}.buttonStyle(ToggleButtonStyle(isOn: false))
+        }
+        HStack {
           RetryButton {}
           RetryButton(compact: true) {}
         }
@@ -78,6 +83,7 @@ private struct Catalog: View {
           PriceButton(120) {}
           PriceButton(90, was: 125) {}
           CoinIcon(size: 28)
+          SymbolBadge(symbol: "fork.knife")
         }
 
         SectionHeader("Stamps and seals")
@@ -93,6 +99,13 @@ private struct Catalog: View {
           Row("Profile", detail: "Mikita", symbol: "person.fill") { RowChevron() }
           ToggleRow("Haptics", symbol: "hand.tap.fill", tint: .blushPink, isOn: $isOn)
           Row("Erase all data", symbol: "trash.fill", destructive: true)
+        }
+        GroupedSection(inset: StatusRow.inset) {
+          StatusRow(
+            "Water", state: "Thirsty", symbol: "drop.fill", emphasis: .raised, action: "Water"
+          ) {}
+          StatusRow("Light", state: "Plenty", symbol: "sun.max.fill", note: "Moves on its own")
+          StatusRow("Food", state: "Well fed", symbol: "fork.knife", action: "Feed") {}
         }
         Card(warm: true) {
           CardHeader("A hero card", detail: "Same radius, warmer", symbol: "sparkles")
@@ -126,7 +139,7 @@ private struct HeaderOverRoom: View {
       .padding(Space.l)
       .overlay(alignment: .bottom) {
         GlassSegmented(
-          [("Room", "Room"), ("City", "City")], selection: $room, identifier: "catalog"
+          [("Room", "Living room"), ("City", "Bedroom")], selection: $room, identifier: "catalog"
         )
         .padding(.bottom, Space.l)
       }

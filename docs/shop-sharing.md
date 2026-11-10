@@ -1,6 +1,6 @@
 # Sharing the shop between partners
 
-Design only. Today the shop state (`ShopState` in `Pet/Shop`) lives on one phone, in
+The layout part is built (see Layout below); the rest is design only. Today the shop state (`ShopState` in `Pet/Shop`) lives on one phone, in
 `UserDefaults`. Nothing here is built, and the backend deploy is on hold.
 
 ## What is shared
@@ -47,3 +47,22 @@ entry, `grant:demo`, written by the room when it is created and never by a phone
 - A `shop` table in the room's durable object: ledger entries, closet counts, placements.
 - `parsePlay` accepting the kinds above, with a catalog ID check on the server.
 - A rejection reply on `play` frames, which only `name` and `react` could use so far.
+
+## Layout (built)
+
+The pair's layout rides the shop, not the `play` frames: the room has no `play` frames today, and
+the shop already has a read, a push and an owner. What is built:
+
+- `POST /v1/shop/layout` with `{ id, change }`, `change` being `Place { placement }` (stand a piece,
+  or move it) or `Unplace { item }`. `id` is an idempotency key; the room applies each `id` once, in
+  the order commands arrive, and keeps the newest 64. Answers `{ result: "applied" | "duplicate", shop }`.
+- A refusal is `409 LayoutRefused { reason }`: `not-owned`, `unknown-piece`, `wrong-surface`,
+  `outside-room` or `occupied`. The sender rolls its optimistic move back.
+- `ShopResponse.layout` is the whole layout, on `GET /v1/shop` and in every `ShopChanged` push, so a
+  partner's change reaches the other phone live and a phone that was away reads it on connect.
+- A placement is `item`, `surface` (`floor`, `backWall`, `leftWall`), `u`, `v` (cells of 5 cm from
+  the room's middle; `v` is 0 on a wall) and `quarterTurns`. A piece is owned once, so there is one
+  placement per piece. A flat piece (the rug) shares its floor with what stands on it.
+- The room refuses a piece that is not the pair's, off its surface, outside the room or on another
+  piece. The footprints are in `packages/contracts/domain/src/decor.ts`, the same table the app
+  has. The room's own furniture and keeping the cat's way open are checked by the phone only.

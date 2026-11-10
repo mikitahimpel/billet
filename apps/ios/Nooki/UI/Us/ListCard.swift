@@ -95,7 +95,7 @@ private struct GroceryPeek: View {
 
     var body: some View {
         let open = list.open.sorted { $0.added > $1.added }
-        WrapLayout(spacing: 6) {
+        FlowRow(spacing: Space.s) {
             if open.isEmpty {
                 ForEach(Self.samples, id: \.self) { chip($0, icon: catalog.aisle(for: $0).icon) }
                 more("+")
@@ -109,7 +109,7 @@ private struct GroceryPeek: View {
     }
 
     private func chip(_ text: String, icon: UsGlyph) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.s) {
             UsIcon(glyph: icon, size: 22)
             Text(text)
                 .font(.ourioCallout)
@@ -117,7 +117,7 @@ private struct GroceryPeek: View {
                 .lineLimit(1)
         }
         .padding(.leading, 5)
-        .padding(.trailing, 12)
+        .padding(.trailing, Space.m)
         .frame(minHeight: 32)
         .background(Ink.surfaceRaised, in: .capsule)
     }
@@ -126,7 +126,7 @@ private struct GroceryPeek: View {
         Text(text)
             .font(.ourioCallout.weight(.semibold))
             .foregroundStyle(Ink.textSecondary)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Space.m)
             .frame(minHeight: 32)
             .background(Ink.text.opacity(0.06), in: .capsule)
     }
@@ -139,7 +139,7 @@ private struct PosterPeek: View {
 
     var body: some View {
         let open = Array(list.open.sorted { $0.added > $1.added }.prefix(6))
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             if open.isEmpty {
                 ForEach(["Dune", "Up", "Her", "Big"], id: \.self) { poster(path: nil, title: $0, both: false) }
                     .opacity(0.35)
@@ -156,24 +156,24 @@ private struct PosterPeek: View {
     private func poster(path: String?, title: String, both: Bool) -> some View {
         PosterImage(path: path, title: title, size: .grid, showsTitle: false)
             .frame(width: 46, height: 69)
-            .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+            .corners(.inner)
             .overlay(alignment: .topLeading) {
                 if both {
                     Text("♥")
                         .ourioScaledFont(size: 10, weight: .bold, design: .rounded, relativeTo: .caption2)
                         .dynamicTypeSize(...DynamicTypeSize.xLarge)
                         .foregroundStyle(Ink.heroInk)
-                        .padding(.horizontal, 4)
+                        .padding(.horizontal, Space.xs)
                         .padding(.vertical, 1)
                         .background(Color.honey, in: .capsule)
-                        .padding(4)
+                        .padding(Space.xs)
                 }
             }
             // Cast by a shape the poster's size, not traced from the poster's pixels: an offscreen pass per poster.
             .background {
                 RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
                     .fill(Ink.surfaceRaised)
-                    .shadow(color: .black.opacity(0.3), radius: 4, y: 3)
+                    .perfShadow(color: .black.opacity(0.3), radius: 4, y: 3)
             }
     }
 }
@@ -184,7 +184,7 @@ private struct FlagPeek: View {
     var body: some View {
         let rows = PlaceRow.rows(of: list)
         let codes = (rows.been + rows.want).compactMap { $0.item.isCountry ? $0.item.country : nil }
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             if codes.isEmpty {
                 flags(["IT", "JP", "FR"]).opacity(0.45)
             } else {

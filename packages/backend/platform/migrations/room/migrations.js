@@ -19,6 +19,7 @@ import m0017 from './20261106115435_movie_swipes/migration.sql';
 import m0018 from './20261106185223_guess/migration.sql';
 import m0019 from './20261106201025_riddles/migration.sql';
 import m0020 from './20261108193339_streak/migration.sql';
+import m0021 from './20261110194612_layout/migration.sql';
 
   export default {
     migrations: {
@@ -42,7 +43,8 @@ import m0020 from './20261108193339_streak/migration.sql';
 "20261106115435_movie_swipes": m0017,
 "20261106185223_guess": m0018,
 "20261106201025_riddles": m0019,
-"20261108193339_streak": m0020
+"20261108193339_streak": m0020,
+"20261110194612_layout": m0021
 }
   }
   

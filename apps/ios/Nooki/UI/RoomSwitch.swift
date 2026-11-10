@@ -17,13 +17,14 @@ struct RoomSwitch: View {
             GlassSegmented(
                 state.rooms.variant.kinds.map { ($0, $0.title) },
                 selection: Binding(get: { state.room }, set: select),
-                identifier: "roomSwitch"
+                identifier: "roomSwitch",
+                identifiers: Dictionary(uniqueKeysWithValues: state.rooms.variant.kinds.map { ($0, $0.identifier) })
             )
             .frame(maxWidth: .infinity)
             .accessibilityLabel("Room")
             .accessibilityValue(state.room.title)
-            .accessibilityHint("Tap to visit the other room")
-            .popoverTip(RoomsHint(), arrowEdge: .top)
+            .accessibilityHint("Tap to go to the other room")
+            .hint(RoomsHint(), arrowEdge: .top, target: Capsule())
         }
     }
 }

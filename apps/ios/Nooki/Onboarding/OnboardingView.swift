@@ -250,31 +250,7 @@ struct OnboardingView: View {
             if let pairing {
                 switch pairing.state {
                 case .waiting(let code, let expiresAt, _):
-                    GroupedSection(inset: Space.l) {
-                        Text(PairingCopy.spaced(code))
-                            .font(.system(.largeTitle, design: .monospaced, weight: .bold))
-                            .foregroundStyle(Ink.text)
-                            .minimumScaleFactor(0.6)
-                            .lineLimit(1)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, Space.s)
-                            .accessibilityLabel("Your code: \(code)")
-                            .rowCell()
-                        if let image = QRCode.image(for: inviteLink(code)) {
-                            Image(uiImage: image)
-                                .interpolation(.none)
-                                .resizable()
-                                .scaledToFit()
-                                .frame(width: 160, height: 160)
-                                .padding(Space.s)
-                                .background(.white, in: .rect(cornerRadius: Radius.inner))
-                                .frame(maxWidth: .infinity)
-                                .rowCell()
-                                .accessibilityLabel("QR code of your invite")
-                        }
-                    } footer: {
-                        Text(PairingCopy.expiry(expiresAt: expiresAt, now: .now))
-                    }
+                    inviteCard(code: code, expiresAt: expiresAt)
                 case .choosing(nil, _) where !signedIn:
                     GroupedSection { progressRow("Connecting…") }
                 case .creating, .claiming:
@@ -290,13 +266,57 @@ struct OnboardingView: View {
                 }
             }
             if let demoPartner, !isPaired, !alreadyPaired {
-                Button("Try with a demo partner", action: demoPartner)
-                    .buttonStyle(SecondaryButtonStyle(fullWidth: false))
-                    .font(.ourioCallout)
-                    .frame(maxWidth: .infinity)
+                SecondaryButton(String(localized: "Try with a demo partner"), symbol: "person.fill.questionmark",
+                                action: demoPartner)
             }
         }
     }
+
+    /// The code and its QR as one card, everything on the page's leading edge: the code to read out, when it runs out,
+    /// and the QR beside a line that says what it is for.
+    private func inviteCard(code: String, expiresAt: Int) -> some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text("Your code")
+                        .font(.ourioCaption.weight(.semibold))
+                        .foregroundStyle(Ink.textSecondary)
+                    Text(PairingCopy.spaced(code))
+                        .font(.system(.largeTitle, design: .monospaced, weight: .bold))
+                        .foregroundStyle(Ink.text)
+                        .minimumScaleFactor(0.5)
+                        .lineLimit(1)
+                        .accessibilityLabel("Your code: \(code)")
+                    TimelineView(.periodic(from: .now, by: 1)) { context in
+                        Text(PairingCopy.expiry(expiresAt: expiresAt, now: context.date))
+                            .font(.ourioCallout)
+                            .foregroundStyle(Ink.textSecondary)
+                            .monospacedDigit()
+                    }
+                }
+                if let image = QRCode.image(for: inviteLink(code)) {
+                    Rectangle().fill(Ink.separator).frame(height: 0.5)
+                    HStack(alignment: .center, spacing: Space.l) {
+                        Image(uiImage: image)
+                            .interpolation(.none)
+                            .resizable()
+                            .scaledToFit()
+                            .frame(width: Self.qrSide, height: Self.qrSide)
+                            .padding(Space.s)
+                            .cornerFill(.inner, .white)
+                            .accessibilityLabel("QR code of your invite")
+                        Text("Next to you? They can scan this with their camera.")
+                            .font(.ourioCallout)
+                            .foregroundStyle(Ink.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Big enough for a phone camera at arm's length, small enough to leave the line beside it room on an SE.
+    private static let qrSide: CGFloat = 120
 
     private var join: some View {
         let failure = Self.failure(in: pairing?.state, on: .join)
@@ -378,7 +398,7 @@ struct OnboardingView: View {
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .frame(maxWidth: .infinity)
-                    .rowCell()
+                    .padding(.vertical, Space.s)
             }
         }
     }
@@ -477,7 +497,7 @@ struct MochiSays: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
-                .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
+                .cornerFill(.card, Ink.surface)
         }
     }
 }

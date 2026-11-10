@@ -3,76 +3,78 @@ import SwiftUI
 import Design
 import TipKit
 
-/// The background is the system's (glass on iOS 26), warmed before that.
+/// TipKit's look for every hint: the design package's `Callout` card in the app's theme. Its popover's arrow points
+/// at the control it is about, and that control is ringed (`hint(_:arrowEdge:target:)`).
 struct HintStyle: TipViewStyle {
     let hints: Hints
 
     func makeBody(configuration: Configuration) -> some View {
-        HStack(alignment: .top, spacing: 12) {
-            configuration.image?
-                .font(.system(.title2, weight: .semibold))
-                .symbolRenderingMode(.monochrome)
-                .foregroundStyle(Color.honey)
-                .frame(width: 30)
-
-            VStack(alignment: .leading, spacing: 4) {
-                configuration.title?
-                    .font(.system(.headline, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Ink.primary)
-                configuration.message?
-                    .font(.system(.subheadline, weight: .medium))
-                    .foregroundStyle(Ink.secondary)
-                    .lineLimit(3)
-                ForEach(configuration.actions) { action in
-                    Button(action: action.handler) {
-                        action.label()
-                            .font(.system(.subheadline, design: .rounded, weight: .semibold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .tint(.honey)
-                    .foregroundStyle(Ink.heroInk)
-                    .padding(.top, 6)
-                }
+        Callout(close: { hints.close(configuration.tip) }) {
+            configuration.image
+        } title: {
+            configuration.title
+        } message: {
+            configuration.message
+        } actions: {
+            ForEach(configuration.actions) { action in
+                CalloutButton(action: action.handler) { action.label() }
             }
-            .fixedSize(horizontal: false, vertical: true)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button {
-                hints.close(configuration.tip)
-            } label: {
-                Image(systemName: "xmark")
-                    .ourioScaledFont(size: 13, weight: .bold)
-                    .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-                    .foregroundStyle(Ink.secondary)
-                    .frame(width: 28, height: 28)
-                    .contentShape(.rect)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Close hint")
         }
-        .padding(16)
-        .environment(\.colorScheme, .dark)
         .onAppear { hints.appeared(configuration.tip) }
     }
 }
 
 extension View {
     func hintStyle(_ hints: Hints) -> some View {
-        modifier(HintLook(hints: hints))
+        tipViewStyle(HintStyle(hints: hints))
+            .tipBackground(Ink.surface)
+    }
+
+    /// The hint's popover, with its arrow at this view, and a honey ring around `target` while it shows.
+    func hint<T: HintTip>(_ tip: T, arrowEdge: Edge, target: some InsettableShape) -> some View {
+        modifier(HintRing(tip: tip, target: target)).popoverTip(tip, arrowEdge: arrowEdge)
     }
 }
 
-private struct HintLook: ViewModifier {
-    let hints: Hints
+private struct HintRing<T: HintTip, Target: InsettableShape>: ViewModifier {
+    let tip: T
+    let target: Target
+    @State private var showing = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     func body(content: Content) -> some View {
-        if #available(iOS 26, *) {
-            content.tipViewStyle(HintStyle(hints: hints))
-        } else {
-            content
-                .tipViewStyle(HintStyle(hints: hints))
-                .tipBackground(Ink.screen)
-        }
+        content
+            .overlay {
+                ZStack {
+                    if showing {
+                        // A few pulses, then it holds: a ring that pulses for as long as the hint waits keeps
+                        // the header's glass redrawing every frame.
+                        target
+                            .strokeBorder(Color.honey, lineWidth: 2.5)
+                            .padding(-Space.xs)
+                            .keyframeAnimator(initialValue: 1.0, repeating: false) { ring, opacity in
+                                ring.opacity(reduceMotion ? 1 : opacity)
+                            } keyframes: { _ in
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                            }
+                            .transition(.opacity)
+                    }
+                }
+                // Hidden as a whole, and animated from the task rather than by `.animation` on the control: inside
+                // the header's glass container either made iOS 27 report the container's merged frame for the
+                // Inbox (`TabBarTouchTests`).
+                .accessibilityHidden(true)
+                .allowsHitTesting(false)
+            }
+            .task {
+                for await shows in tip.shouldDisplayUpdates {
+                    withAnimation(Motion.fade()) { showing = shows }
+                }
+            }
     }
 }

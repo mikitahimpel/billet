@@ -113,7 +113,7 @@ struct PickTonightScreen: View {
                 LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
             }
             .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     Text(card.name)
                         .ourioScaledFont(size: 26, weight: .bold, design: .rounded, relativeTo: .title)
                         .foregroundStyle(.white)
@@ -125,7 +125,7 @@ struct PickTonightScreen: View {
                 }
                 .padding(Space.l)
             }
-            .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+            .corners(.card)
             .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(card.name), \(caption(card))")
@@ -157,7 +157,7 @@ struct PickTonightScreen: View {
                 .background(Circle().fill(honey ? AnyShapeStyle(.honeyGradient) : AnyShapeStyle(Ink.surfaceRaised)))
                 .shadow(color: .black.opacity(honey ? 0.2 : 0.08), radius: 8, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(label)
     }
 
@@ -280,7 +280,7 @@ private struct PickMatchScreen: View {
                     .foregroundStyle(Ink.secondary)
                 PosterImage(path: match.posterPath, title: match.name, size: .card)
                     .frame(width: 150, height: 225)
-                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                    .corners(.inner)
                     .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
                     .padding(.vertical, Space.s)
                 Text(match.name)

@@ -72,7 +72,7 @@ struct GameView: View {
                     .ourioScaledFont(size: 15, weight: .semibold)
                     .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     .foregroundStyle(Ink.glassGlyph)
-                    .frame(width: 44, height: 44)
+                    .frame(width: Size.control, height: Size.control)
                     .contentShape(.circle)
                     .background { Color.clear.glass(.circle, role: .bar).allowsHitTesting(false) }
             }
@@ -82,7 +82,7 @@ struct GameView: View {
             Spacer(minLength: 0)
 
             if let result = session.finished {
-                Toast(result: result, again: session.playAgain, done: end)
+                ResultToast(result: result, again: session.playAgain, done: end)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
                 VStack(spacing: Space.m) {
@@ -238,7 +238,7 @@ private struct HintCard: View {
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Ink.screen, in: .rect(cornerRadius: Radius.card, style: .continuous))
+        .cornerFill(.card, Ink.screen)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
     }
@@ -274,31 +274,26 @@ private struct GameBar: View {
 }
 
 /// The finished game: what she got, and either another round or back to the room.
-private struct Toast: View {
+private struct ResultToast: View {
     let result: GameResult
     var again: () -> Void
     var done: () -> Void
 
     var body: some View {
-        VStack(spacing: Space.m) {
-            HStack(spacing: Space.s) {
-                CoinIcon(size: 18)
-                Text(result.line)
-                    .font(.ourioHeadline)
-                    .foregroundStyle(Ink.text)
-            }
-            HStack(spacing: Space.m) {
-                Button("Again", action: again)
-                    .font(.ourioCallout.weight(.semibold))
-                    .foregroundStyle(Ink.text)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-                    .glass(.capsule, interactive: true)
-                Button(action: done) { Text("Done").frame(maxWidth: .infinity) }
-                    .buttonStyle(PrimaryButtonStyle())
+        Toast {
+            VStack(spacing: Space.m) {
+                HStack(spacing: Space.s) {
+                    CoinIcon(size: 18)
+                    Text(result.line)
+                        .font(.ourioHeadline)
+                        .foregroundStyle(Ink.text)
+                }
+                ActionRow {
+                    SecondaryButton("Again", action: again)
+                    PrimaryButton("Done", action: done)
+                }
             }
         }
-        .padding(Space.l)
-        .glass(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
         .padding(.horizontal, Space.gutter)
     }
 }

@@ -8,7 +8,7 @@ struct RainySuburb: ViewRecipe {
   static let lampHead = CGPoint(x: 8, y: 13)
   static let roadway = ViewRoad(
     line: 53.4, kerb: streetBase,
-    cars: ViewRhythm(seed: 221, slot: 18, chance: 0.7, length: 3.8...5.6))
+    cars: ViewRhythm(seed: 221, slot: 18, chance: 0, length: 3.8...5.6))
   static let lamp = ViewStreetLamp(head: lampHead, ground: streetBase, shines: [74, 90])
   static let walker = ViewRhythm(seed: 231, slot: 55, chance: 0.55, length: 20...28)
   static let lightning = ViewRhythm(seed: 241, slot: 75, chance: 0.4, length: 0.7...1.1)

@@ -1,3 +1,4 @@
+import DrawInterface
 import OurioShared
 import PetScene
 import PhotosUI
@@ -27,10 +28,10 @@ struct MomentViewer: View {
         VStack(spacing: 0) {
             if let moment {
                 topBar(moment)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 8)
+                    .padding(.horizontal, Space.l)
+                    .padding(.top, Space.s)
 
-                Spacer(minLength: 12)
+                Spacer(minLength: Space.m)
 
                 GeometryReader { geo in
                     MomentPrint(moment: moment, store: store, profile: state.profile, width: min(geo.size.width - 40, 520),
@@ -39,19 +40,19 @@ struct MomentViewer: View {
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                 }
 
-                Spacer(minLength: 12)
+                Spacer(minLength: Space.m)
 
                 if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
-                    UnsentLabel().padding(.bottom, 10)
+                    UnsentLabel().padding(.bottom, Space.m)
                 }
 
                 if let note = moment.noteID, moment.author == state.otherPartner, let reactions = session?.reactions {
                     ReactionPicker(selected: reactions.mine(note)) { reactions.tap($0, on: NoteId(note)) }
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 10)
+                        .padding(.horizontal, Space.gutter)
+                        .padding(.bottom, Space.m)
                 }
 
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     // A shared photo gets reactions instead; the heart stays for ones kept only on this phone.
                     if moment.noteID == nil {
                         action(moment.loved ? "Loved" : "Love", symbol: moment.loved ? "heart.fill" : "heart",
@@ -60,8 +61,8 @@ struct MomentViewer: View {
                     action(moment.pinned ? "On the wall" : "Pin to wall", symbol: moment.pinned ? "pin.fill" : "pin",
                            tint: Color.honey, active: moment.pinned) { store.togglePin(moment) }
                 }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 12)
+                .padding(.horizontal, Space.gutter)
+                .padding(.bottom, Space.m)
             }
         }
         .background(Ink.screen.ignoresSafeArea())
@@ -94,7 +95,7 @@ struct MomentViewer: View {
     }
 
     private func topBar(_ moment: Moment) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             GlassIconButton(symbol: "xmark", label: "Close") { dismiss() }
 
             Spacer(minLength: 0)
@@ -167,20 +168,14 @@ struct MomentViewer: View {
     private func action(_ title: String, symbol: String, tint: Color, active: Bool,
                         perform: @escaping () -> Void) -> some View {
         Button(action: perform) {
-            HStack(spacing: 7) {
+            HStack(spacing: Space.s) {
                 Image(systemName: symbol)
-                    .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(tint)
                     .contentTransition(.symbolEffect(.replace))
                 Text(title)
-                    .font(.ourioCallout.weight(.semibold))
-                    .foregroundStyle(Ink.text)
             }
-            .frame(maxWidth: .infinity)
-            .frame(height: Size.button)
-            .background(active ? tint.opacity(0.22) : Ink.surfaceRaised, in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(ToggleButtonStyle(isOn: active, tint: tint))
     }
 }
 
@@ -190,20 +185,16 @@ private struct ReactionPicker: View {
     let choose: (PhotoReaction) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             ForEach(PhotoReaction.allCases, id: \.self) { reaction in
                 Button { choose(reaction) } label: {
                     Text(reaction.emoji)
-                        .font(.title)
+                        .font(.ourioTitle)
                         .scaleEffect(selected == reaction ? 1.15 : 1)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: Size.button)
-                        .background(selected == reaction ? Color.honey.opacity(0.26) : Ink.surfaceRaised, in: .capsule)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(ToggleButtonStyle(isOn: selected == reaction))
                 .sensoryFeedback(.selection, trigger: selected == reaction)
                 .accessibilityLabel(reaction.label)
-                .accessibilityAddTraits(selected == reaction ? .isSelected : [])
             }
         }
         .animation(.snappy(duration: 0.2), value: selected)

@@ -15,21 +15,21 @@ struct ShopView: View {
     @State private var highlightedInk: String?
     @State private var scrolling = ShopScrolling()
 
-    private let columns = [
-        GridItem(.flexible(), spacing: Space.m, alignment: .top),
-        GridItem(.flexible(), spacing: Space.m, alignment: .top),
-    ]
-
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
-                VStack(alignment: .leading, spacing: Space.section) {
-                    chips
-                    if selected == .today {
-                        today
-                    } else {
-                        grid(Catalog.items(in: selected))
-                            .padding(.horizontal, Space.l)
+                LazyVStack(alignment: .leading, spacing: Space.section, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        if selected == .today {
+                            today
+                        } else {
+                            grid(Catalog.items(in: selected))
+                                .padding(.horizontal, Space.l)
+                        }
+                    } header: {
+                        chips
+                            .padding(.vertical, Space.xs)
+                            .background(Ink.screen)
                     }
                 }
                 .padding(.top, Space.s)
@@ -104,7 +104,7 @@ struct ShopView: View {
             HStack(spacing: Space.s) {
                 ForEach(ShopCategory.allCases) { category in
                     let isSelected = selected == category
-                    FilterChip(category.title, isSelected: isSelected) { selected = category }
+                    FilterChip(category.title, symbol: category.symbol, isSelected: isSelected) { selected = category }
                 }
             }
             .padding(.horizontal, Space.l)
@@ -133,9 +133,8 @@ struct ShopView: View {
                 }
                 .accessibilityLabel("New deals at midnight")
             }
-            grid(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
+            dealsRow(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
-        .padding(.horizontal, Space.l)
         .id("deals")
 
         DailyGiftCard(state: state)
@@ -181,12 +180,37 @@ struct ShopView: View {
             .padding(.horizontal, Space.l)
     }
 
+    /// The day's deals side by side in one row that scrolls sideways, each tile as wide as a grid tile on an iPhone.
+    private func dealsRow(_ items: [ShopItem]) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(alignment: .top, spacing: Space.m) {
+                ForEach(items) { item in
+                    ShopItemCard(item: item, state: state) { sheetItem = item }
+                        .frame(width: ShopLayout.dealWidth)
+                }
+            }
+            .padding(.horizontal, Space.l)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    }
+
     private func grid(_ items: [ShopItem]) -> some View {
-        LazyVGrid(columns: columns, spacing: Space.m) {
+        ItemGrid {
             ForEach(items) { item in
                 ShopItemCard(item: item, state: state) { sheetItem = item }
                     .shopAppear()
             }
         }
     }
+
+    /// Decodes the art Today shows first, the featured set and the deals, off the main thread, so the first visit to
+    /// the Shop doesn't decode it in front of the tap.
+    static func prewarm(_ offers: ShopOffers, now: Date = .now) async {
+        let featured = offers.featured(on: now).itemIDs.compactMap(Catalog.item).map(\.thumbnail)
+        let deals = offers.deals(on: now).compactMap { Catalog.item($0.itemID)?.thumbnail }
+        await Thumbnails.prefetchTrimmed(featured)
+        await Thumbnails.prefetch(deals, maxPixels: 512)
+    }
+
 }

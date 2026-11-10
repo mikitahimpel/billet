@@ -30,6 +30,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 7. **Glass is for chrome that floats:** header buttons, the tab bar, the toolbar of a full-screen canvas. Never glass
    on glass, never glass behind reading text, and not on every card of a scrolling list.
 8. **Spacing comes from `Space`**, sizes from `Size` (`Size.control` = 44 is the height of every header control).
+   A padding or spacing written as a number, a `.buttonStyle(.plain)` (no pressed state) and a system text style
+   (`.font(.title)`) are counted per file by `check-design.mjs`; the counts only go down.
 9. Numbers that change get `.monospacedDigit()`; animate them with `.contentTransition(.numericText())` only
    while the value changes.
 10. Text on honey is `Ink.heroInk`; white on honey is unreadable.
@@ -39,7 +41,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 12. **Icon tiles have one rule:** a full-tint glyph on the same tint at 16%, for every row. No tint is the
     accent (`Ink.accentText` glyph); destructive is `Ink.destructive` only.
 13. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
-    content; `GlassSegmented` is only the Room | City prototype.
+    content; `GlassSegmented` is only the Living room | Bedroom switch.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
     `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
     `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
@@ -58,24 +60,39 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | --- | --- |
 | A sheet | `BilletSheet("Title", size:, onConfirm:) { content }` |
 | A pushed or full screen of sections | `Page { ... }` |
+| A full screen with a main action | `Screen { content } primary: { } secondary: { }`; over art or a camera `.bottomActions(primary:secondary:)`; under a fixed header `ActionSlot` |
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
 | A row | `Row(title, detail:, symbol:, tint:) { trailing }`, `ToggleRow`, `PickerRow`, `RowChevron` |
 | Any other content on a card | `Card { ... }` or `.cardSurface()` |
+| A state read at a glance that a tap acts on (the cat's needs) | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. The state is a word, never a bar or a percentage (VoiceOver gets the number through `value:`); only a state that wants something now is `.raised` |
+| What an avatar or a round control wants, while it matters | `SymbolBadge(symbol:tint:)` at its top trailing corner; nothing when nothing is wanted |
+| A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
+| Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
+| A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, open:) { art } leadingBadge: trailingBadge: footer: }` |
+| A picture or tile clipped to the scale | `.corners(.card / .inner / .control)`, a tile's fill `.cornerFill(.inner, style)` |
 | The top of a card | `CardHeader(title, detail:, symbol:, tint:)`, or with `leading:` / `detail:` / `trailing:` views; art goes in `CardArt` |
 | A text field | `Field(placeholder, text:, axis:, lines:, font:, failed:)` |
+| A labelled field with its error or footnote | `FormField(label, placeholder:, text:, footer:, error:)` |
 | A control that is not a `TextField` but sits with fields (a search bar with an icon, a picker or toggle row in an editor) | `.fieldSurface()` |
 | The main action | `PrimaryButton` (or `PrimaryButtonStyle` on a custom label) |
 | A quieter action | `SecondaryButton` |
+| On or off (Love, Pin to wall), or one of a row of choices | `ToggleButtonStyle(isOn:tint:)` |
+| A whole row that opens something | `RowButtonStyle()`: the row lights up while pressed; a card or tile takes `PressScaleStyle()` |
 | Try a failed load or send again | `RetryButton` under an `EmptyState` or in a card; `RetryButton(compact: true)` in a row |
 | A round control in a header | `GlassIconButton(symbol:label:badge:action:)` |
 | Any other surface that floats | `glass(_:role:)` inside the bar's `GlassGroup`; the main action `accentGlass()` |
 | A badge on glass | `glassBadge(_:)` |
 | Nothing here yet | `EmptyState`, sized to its content |
+| A load that failed, in place of the content | `ErrorState(title, text:) { retry }`, with the one `RetryButton` |
 | Chips or a search field over a sheet's list | `.scrollHeader { ... }` on the list's `ScrollView` (`BilletSheet(scrolls: false)`) |
 | The title of a block | `SectionHeader` |
 | A tag: rarity, discount, count | `Chip(style: .tinted / .honey / .quiet)` |
 | A filter or category | `FilterChip` |
 | A price in coins | `PriceButton(price, was:)`; a deal's old price sits inside it |
+| A small action inside a card or toast (Place, Undo) | `PillButton(title, symbol:)`, 36 pt tall with a 44 pt tap area, the price tag's height |
+| A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
+| A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
+| The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:)` on the note's face |
 
 ### Do and don't
@@ -94,6 +111,89 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
 - Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
   `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
+
+## How to build a screen
+
+Feature code (`apps/ios/Nooki`, `packages/ios/features`) is assembled from the package; it never draws its own
+corners, gaps, heights, shadows or type. Start from one of these three and fill the slots.
+
+**1. A full screen with a main action** (onboarding pages, a pairing step, a paywall-like explainer):
+
+```swift
+Screen {
+    SectionHeader("Name your cat")
+    FormField("Name", placeholder: "Mochi", text: $name, error: nameError)
+} primary: {
+    PrimaryButton("Continue", action: next)
+} secondary: {
+    SecondaryButton("Skip for now", action: skip)
+}
+```
+
+The primary is always last, `Space.s` over the safe area, at the same height on every page; the content scrolls
+under it at any text size. A page whose content is art or a camera keeps its own layout and adds
+`.bottomActions(primary:secondary:)` for the same slot.
+
+**2. A list of cards** (Us, the Shop's Today, a settings-like page): `Page { ... }` or `BilletSheet`, then
+
+```swift
+ContentCard("Weekend in Lisbon", subtitle: "Saved by both of you", chip: Chip("Plan", style: .honey)) {
+    SecondaryButton("Edit", fullWidth: false, action: edit)
+    PrimaryButton("Book it", fullWidth: false, action: book)
+}
+Card { CardActions { title } trail: { PriceButton(price, action: buy) } }
+GroupedSection(header: "Notifications") { ToggleRow(...); Row(...) { RowChevron() } }
+```
+
+`ActionRow` (inside `ContentCard`) puts buttons side by side while they fit and stacks them, full width,
+when they don't; `CardActions` keeps one trailing action at its own size beside text that wraps.
+
+**3. A grid of things** (shop shelves, a collection):
+
+```swift
+ItemGrid {
+    ForEach(items) { item in
+        ItemCard(item.name, subtitle: item.blurb, open: { open(item) }) {
+            art(item)
+        } leadingBadge: { item.rarity.chip } trailingBadge: { dealChip(item) } footer: {
+            BuyButton(...)
+        }
+    }
+}
+```
+
+Columns are equal and `Space.m` apart, every tile in a row has the row's height so the footers line up, badges
+stack instead of covering each other, and at accessibility sizes the grid is one column.
+
+Loading, empty and failed states are `EmptyState` and `ErrorState` (with the one `RetryButton`); a message that
+floats is `Toast`; a hint is `.hint(tip, arrowEdge:, target:)`, and the same card outside TipKit is `Callout`
+on `.calloutBubble(pointer:)`.
+
+## Enforcement
+
+- `packages/ios/scripts/check-design.mjs` (CI, `ios:format:check`) runs the rules in `design-rules.mjs` over
+  feature code: raw colours, non-`.ourio` fonts, numeric paddings and heights, hand-made corners, shadows,
+  blurs and materials, `GeometryReader`, system or plain button styles, TipKit without the Hint style, and Text
+  without a text style. Each file may keep at most its count in `packages/ios/design/lint/baseline.json`, which
+  only shrinks (`node packages/ios/scripts/check-design.mjs --update` lowers it after a cleanup, never raises it).
+  `lint/allow.json` exempts a path from one rule and grows only together with a change to the design package.
+  Every rule has a failing and a passing fixture (`packages/ios/scripts/fixtures/design`).
+- `scripts/check-ui.sh` is the pre-merge check for a UI pull request: the rules against main, their fixtures,
+  swift-format. `scripts/gallery.sh` draws every component and the key screens at the SE and Pro Max sizes and
+  at the largest text size and compares them with the WebP references in `packages/ios/design/Tests/Gallery`;
+  `--record` takes a new drawing as the reference after a deliberate change.
+
+## Never
+
+- A number for a padding, a gap, a height, a corner or a font size in feature code.
+- `Color(...)`, `.white`, `.black` or a system colour for UI; `.font(.system...)`, `.headline` and friends.
+- `RoundedRectangle`, `.cornerRadius`, `.clipShape(.rect(cornerRadius:))`: use `Card`, `.cardSurface()`,
+  `.corners(_:)`.
+- `.shadow`, `.blur`, a `Material`, `.glassEffect` of your own (`Toast` and `glass(_:role:)` have theirs);
+  `GeometryReader` for layout.
+- `.buttonStyle(.plain / .bordered / .borderedProminent)` on a visible button; a hand-made toast, hint or
+  "Try again".
+- A CTA anywhere but the bottom slot of `Screen` on a full screen, and two buttons squeezed into one row.
 
 ## Tokens
 
@@ -118,7 +218,7 @@ Every piece of glass in the app's chrome is one of these. `Tokens/Glass.swift` h
 | Role | Where | Glass | Tint | Rim | Shadow | Ink |
 | --- | --- | --- | --- | --- | --- | --- |
 | `control` | header buttons, coin pill, the pet, a sheet's close over a canvas | regular, interactive | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `Ink.glassGlyph` |
-| `bar` | tab bar, Room \| City switch, a label over the scene | regular | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `glassGlyph`; unselected `glassGlyphSecondary`; selected on `Ink.glassSelection` |
+| `bar` | tab bar, Living room \| Bedroom switch, a label over the scene | regular | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `glassGlyph`; unselected `glassGlyphSecondary`; selected on `Ink.glassSelection` |
 | accent | the "+" beside the tab bar | prominent, interactive | honey | the system's own | the system's own | `Ink.heroInk` |
 | badge | counts, Lv., heart and crown, the partner's mood | none, solid | honey, blush or `Ink.surface` | 1.5 pt `Ink.glassFill` | none | `Ink.heroInk` |
 

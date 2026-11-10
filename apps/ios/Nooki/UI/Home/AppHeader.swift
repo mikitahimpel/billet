@@ -14,7 +14,7 @@ struct AppHeader<Below: View>: View {
     var body: some View {
         // One container for all the glass of the top bar, as the tab bar has, so it is sampled together.
         GlassGroup {
-            VStack(spacing: 12) {
+            VStack(spacing: Space.m) {
                 HStack(alignment: .center, spacing: GlassMetrics.gap) {
                     InboxButton(unread: session?.inbox.unread ?? 0) { state.showsInbox = true }
                     MoodHeaderButton(state: state) { checkingIn = true }
@@ -34,6 +34,8 @@ struct AppHeader<Below: View>: View {
             }
             .animation(.easeInOut(duration: 0.2), value: state.tab)
         }
+        // Outside the group, so the badges it draws above its glass are capped too.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .onChange(of: state.invitedCode) { _, code in
             if code != nil, session?.isPaired == false { pairing = true }
         }

@@ -4,6 +4,7 @@ import Design
 struct HeartBubble: View {
     let pulse: Int
     @State private var floating = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var bursts: [Int] = []
 
     var body: some View {
@@ -32,6 +33,7 @@ struct HeartBubble: View {
         }
         .offset(y: floating ? -4 : 2)
         .onAppear {
+            guard !reduceMotion else { return }
             withAnimation(.easeInOut(duration: 1.8).repeatForever()) { floating = true }
         }
         .onChange(of: pulse) { _, new in

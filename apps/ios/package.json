@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "ios:generate": "xcodegen generate",
-    "ios:format:check": "node ../../packages/ios/scripts/check-design.mjs"
+    "ios:format:check": "node ../../packages/ios/scripts/check-design.mjs && node --test ../../packages/ios/scripts/design-rules.test.mjs"
   }
 }

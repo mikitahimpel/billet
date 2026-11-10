@@ -1,4 +1,5 @@
 import OurioShared
+import Persistence
 import SwiftUI
 import Design
 
@@ -77,9 +78,9 @@ struct ShareWishView: View {
                 PrimaryButton(String(localized: "Add wish"), symbol: "gift.fill") { save() }
                     .opacity(trimmedTitle.isEmpty ? 0.45 : 1)
                     .disabled(trimmedTitle.isEmpty)
-                    .padding(.top, 4)
+                    .padding(.top, Space.xs)
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Space.gutter)
             .padding(.top, 18)
             .padding(.bottom, 40)
         }
@@ -106,7 +107,7 @@ struct ShareWishView: View {
     }
 
     private var savedNote: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Space.m) {
             Image(systemName: "heart.fill")
                 .font(.system(.largeTitle, weight: .semibold))
                 .foregroundStyle(Color.blushPink)

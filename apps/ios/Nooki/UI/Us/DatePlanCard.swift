@@ -13,7 +13,7 @@ struct DateMatchOverlay: View {
             Color.black.opacity(0.6)
                 .ignoresSafeArea()
 
-            VStack(spacing: 10) {
+            VStack(spacing: Space.m) {
                 Text("It's a match!")
                     .font(.ourioLargeTitle)
                     .foregroundStyle(Ink.text)
@@ -26,32 +26,32 @@ struct DateMatchOverlay: View {
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.accentText)
 
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     Button(action: onKeep) {
                         Text("Keep swiping")
                             .font(.ourioHeadline)
                             .foregroundStyle(Ink.text)
                             .frame(maxWidth: .infinity)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Size.control)
                             .background(Ink.surfaceRaised, in: .capsule)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
 
                     Button(action: onPlan) {
                         Text("Plan it")
                             .font(.ourioHeadline)
                             .foregroundStyle(Ink.heroInk)
                             .frame(maxWidth: .infinity)
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Size.control)
                             .background(Capsule().fill(.honeyGradient))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                 }
-                .padding(.top, 6)
+                .padding(.top, Space.s)
             }
-            .padding(24)
+            .padding(Space.section)
             .frame(maxWidth: 330)
-            .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
+            .cornerFill(.card, Ink.surface)
             .shadow(color: .black.opacity(0.3), radius: 24, y: 10)
         }
     }
@@ -87,15 +87,15 @@ struct DatePlanCard: View {
     }
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: hidden ? .init(symbol: "gift.fill", tint: .coral)
                                      : idea?.place.icon ?? .init(symbol: "heart.fill", tint: .blush), size: 42)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(hidden ? "Surprise from \(plan.organizer)" : idea?.title ?? "Date")
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
-                    HStack(spacing: 4) {
+                    HStack(spacing: Space.xs) {
                         Text(plan.date.formatted(.dateTime.weekday().day().month().hour().minute()))
                         if upcoming, plan.remind == true {
                             Image(systemName: "bell.fill")
@@ -111,7 +111,7 @@ struct DatePlanCard: View {
                         .resizable()
                         .scaledToFill()
                         .frame(width: 42, height: 42)
-                        .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                        .corners(.inner)
                         .accessibilityHidden(true)
                 } else {
                     Monogram(partner: plan.organizer, profile: profile, size: 26)
@@ -144,7 +144,7 @@ struct DatePlanCard: View {
     @ViewBuilder
     private var ratingRow: some View {
         if let rating = plan.rating {
-            HStack(spacing: 4) {
+            HStack(spacing: Space.xs) {
                 ForEach(1...3, id: \.self) { value in
                     Image(systemName: value <= rating ? "heart.fill" : "heart")
                         .font(.ourioHeadline)
@@ -154,7 +154,7 @@ struct DatePlanCard: View {
             }
         } else if plan.date < .now {
             Button(action: onDone) {
-                HStack(spacing: 8) {
+                HStack(spacing: Space.s) {
                     Image(systemName: "checkmark.circle.fill")
                     Text("How was it? Mark it done")
                     Spacer(minLength: 0)
@@ -163,11 +163,11 @@ struct DatePlanCard: View {
                 }
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Color.honey)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, Space.m)
                 .frame(minHeight: 40)
                 .background(Color.honey.opacity(0.16), in: .capsule)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
         }
     }
 }

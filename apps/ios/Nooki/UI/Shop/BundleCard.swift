@@ -7,30 +7,25 @@ struct BundleCard: View {
     var open: (ShopItem) -> Void
     var openSet: () -> Void = {}
 
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
     private var items: [ShopItem] { bundle.itemIDs.compactMap(Catalog.item) }
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: bundle, owned: state.shop.owned) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
             pieces
-            // The button sits beside the title, which wraps; at accessibility text sizes it goes under it.
-            let layout = dynamicTypeSize.isAccessibilitySize
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
-                : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
-            layout {
+            CardActions {
                 Button(action: openSet) {
                     title.frame(maxWidth: .infinity, alignment: .leading).contentShape(.rect)
                 }
                 .buttonStyle(PressScaleStyle())
+            } trail: {
                 SetBuyButton(state: state, set: bundle)
-                    .fixedSize()
             }
         }
         .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
+        .perfFlattened()
     }
 
     private var title: some View {

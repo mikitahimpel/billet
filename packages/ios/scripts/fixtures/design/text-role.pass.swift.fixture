@@ -1,0 +1,17 @@
+struct Good: View {
+  var body: some View {
+    VStack {
+      Text("Own style").font(.ourioBody)
+      HStack { Text("From the stack") }
+    }
+    .font(.ourioCaption)
+    CardHeader("Title") {
+      RowIcon(symbol: "heart")
+    } detail: {
+      Text("From the component")
+    } trailing: {
+      EmptyView()
+    }
+    Button { } label: { Text("From the button style") }.buttonStyle(PrimaryButtonStyle())
+  }
+}

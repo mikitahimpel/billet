@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { UtcOffsetSeconds } from "@billet/contracts-domain/cat";
 import { CoinEntry } from "@billet/contracts-domain/coins";
 import { ShopCatalogItem } from "@billet/contracts-domain/shop-catalog";
+import { LayoutResult } from "@billet/contracts-domain/decor";
 import { ExpectedPrice } from "./coins.ts";
 import { IdempotencyKey } from "@billet/contracts-domain/ids";
 import {
@@ -36,6 +37,10 @@ export type OrderResponse = typeof OrderResponse.Type;
 
 export const WishRequest = Schema.Struct({ item: RoomItemId, wished: Schema.Boolean });
 export type WishRequest = typeof WishRequest.Type;
+
+/** `POST /v1/shop/layout`: the layout as it is after the change, in `shop.layout`. */
+export const LayoutResponse = Schema.Struct({ result: LayoutResult, shop: ShopResponse });
+export type LayoutResponse = typeof LayoutResponse.Type;
 
 /** `POST /v1/shop/gift`: opens the day's gift. Once a day for the pair; again answers the same. */
 export const OpenGiftRequest = Schema.Struct(LocalClock);

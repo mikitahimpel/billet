@@ -1,11 +1,13 @@
 // Fails when feature code outside the design package gains a raw `Color(red:`,
 // `.font(.system(size:`, numeric corner radius or hand-made "Try again" button, a card whose
-// content is not at `CardMetrics.padding`, or a scroll view with a hard edge (docs/design-system.md).
+// content is not at `CardMetrics.padding`, a scroll view with a hard edge, or a design button restyled
+// after its style (docs/design-system.md).
 // Baseline counts may only shrink; `--update` rewrites them after a cleanup. Run from anywhere in the
 // repository.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkFeatureRules } from "./design-rules.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..", "..");
@@ -39,6 +41,26 @@ const checks = [
     baseline: join(here, "retry-baseline.json"),
     what: "hand-made Try again buttons",
     fix: "A failed load or send is retried with RetryButton from the design package (docs/design-system.md).",
+  },
+  {
+    pattern:
+      /\.padding\((?:\.\w+,\s*)?(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\)|\bspacing:\s*(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\b/g,
+    baseline: join(here, "spacing-baseline.json"),
+    what: "paddings or spacings written as numbers",
+    fix: "Gaps and insets come from Space (xs…xl, gutter, section) or CardMetrics.padding (docs/design-system.md).",
+  },
+  {
+    pattern: /\.buttonStyle\(\s*\.plain\s*\)/g,
+    baseline: join(here, "plain-button-baseline.json"),
+    what: "buttons with no pressed state (.buttonStyle(.plain))",
+    fix: "Use a design button (PrimaryButton, SecondaryButton, ToggleButtonStyle, RetryButton), RowButtonStyle for a row, or PressScaleStyle.",
+  },
+  {
+    pattern:
+      /\.font\(\s*\.(?:title[23]?|body|headline|subheadline|caption2?|callout|footnote|largeTitle)\b/g,
+    baseline: join(here, "text-style-baseline.json"),
+    what: "system text styles instead of the .ourio* styles",
+    fix: "Type is the .ourio* text styles from the design package (docs/design-system.md).",
   },
 ];
 
@@ -83,6 +105,8 @@ if (process.argv.includes("--update")) {
     writeFileSync(check.baseline, JSON.stringify(sorted, null, 2) + "\n");
     console.log(`${relative(root, check.baseline)}: ${Object.keys(sorted).length} files`);
   }
+  checkFeatureRules({ root, update: true });
+  console.log("packages/ios/design/lint/baseline.json: lowered where feature code improved");
   process.exit(0);
 }
 
@@ -138,6 +162,39 @@ if (edgeViolations.length > 0) {
   console.error(edgeViolations.join("\n"));
   console.error(
     "Every scroll view fades under the bars with .softScrollEdges(), and under a sheet's chips or search with .scrollHeader { } (docs/design-system.md).",
+  );
+  failed = true;
+}
+
+// A design button keeps the package's type and colour: a `.font`, `.tint` or `.foregroundStyle` after
+// its style makes a one-off that no longer matches the other buttons.
+const restyled = [];
+for (const [file, text] of sources) {
+  for (const match of text.matchAll(
+    /\.buttonStyle\(\s*(Primary|Secondary|Quiet)ButtonStyle\([^)]*\)\s*\)\s*\.(font|tint|foregroundStyle)\(/g,
+  )) {
+    restyled.push(`${file}: a ${match[1]}ButtonStyle restyled by .${match[2]}`);
+  }
+}
+if (restyled.length > 0) {
+  console.error(restyled.join("\n"));
+  console.error(
+    "Use PrimaryButton, SecondaryButton or QuietButtonStyle as they are; add a variant to the design package if one is missing (docs/design-system.md).",
+  );
+  failed = true;
+}
+
+// The closed vocabulary for feature code (design-rules.mjs). `--base <commit>` also fails when the
+// baseline grew since that commit, or the allow-list did without a change to the design package.
+const baseAt = process.argv.indexOf("--base");
+const featureProblems = checkFeatureRules({
+  root,
+  base: baseAt > 0 ? process.argv[baseAt + 1] : null,
+});
+if (featureProblems.length > 0) {
+  console.error(featureProblems.join("\n"));
+  console.error(
+    "Feature code uses only the design package's tokens and components (docs/design-system.md#rules).",
   );
   failed = true;
 }

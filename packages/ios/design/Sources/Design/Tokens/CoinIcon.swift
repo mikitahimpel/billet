@@ -1,10 +1,20 @@
 import SwiftUI
 
 /// The dark ring keeps it apart from honey buttons and from any dark surface.
+/// With `relativeTo`, it grows and shrinks with Dynamic Type as that text style does, so it keeps
+/// its size beside the digits it counts; without, it is art at a fixed size.
 public struct CoinIcon: View {
-  var size: CGFloat
+  let base: CGFloat
+  let scales: Bool
+  @ScaledMetric private var scaled: CGFloat
 
-  public init(size: CGFloat = 16) { self.size = size }
+  public init(size: CGFloat = 16, relativeTo style: Font.TextStyle? = nil) {
+    base = size
+    scales = style != nil
+    _scaled = ScaledMetric(wrappedValue: size, relativeTo: style ?? .body)
+  }
+
+  private var size: CGFloat { scales ? scaled : base }
 
   public var body: some View {
     ZStack {

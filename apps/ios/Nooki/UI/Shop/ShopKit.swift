@@ -42,6 +42,7 @@ extension ShopRarity {
 struct RarityFrame<Content: View>: View {
     let rarity: ShopRarity
     @ViewBuilder let content: Content
+    @Environment(\.perfShine) private var shine
 
     private let shape = RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
 
@@ -53,10 +54,10 @@ struct RarityFrame<Content: View>: View {
                 // to be drawn again just to cast it.
                 shape.fill(RadialGradient(colors: [rarity.fill.light, rarity.fill.edge],
                                           center: UnitPoint(x: 0.5, y: 0.3), startRadius: 4, endRadius: 140))
-                    .shadow(color: rarity.shines ? rarity.tint.opacity(0.5) : .clear, radius: 9)
+                    .perfShadow(color: rarity.shines ? rarity.tint.opacity(0.5) : .clear, radius: 9)
             }
             .overlay {
-                if rarity.shines { ShineSweep(period: rarity == .legendary ? 2.6 : 3.6).clipShape(shape) }
+                if rarity.shines, shine { ShineSweep(period: rarity == .legendary ? 2.6 : 3.6).clipShape(shape) }
             }
             .overlay {
                 shape.strokeBorder(
@@ -75,14 +76,14 @@ final class ShopScrolling {
     var isScrolling = false
 }
 
-/// Crosses once per period, only while on screen and the page holds still; still under Reduce Motion. An animated
-/// effect, not a timeline: SwiftUI moves it each frame without building the view again, and a card scrolled out of
-/// sight stops it. Each frame of it is still the main thread's work, so it waits while the page scrolls.
+/// Crosses once per period, only while on screen and the page holds still; still under Reduce Motion and in Low
+/// Power Mode. An animated effect, not a timeline: SwiftUI moves it each frame without building the view again. Only
+/// the crossing is animated: between crossings nothing moves, so the page and the glass over it can go idle.
 private struct ShineSweep: View {
     let period: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ShopScrolling.self) private var scrolling: ShopScrolling?
-    /// 0 to 1 through each period, animated forever while the sweep runs.
+    /// 0 to 1 through a crossing.
     @State private var progress = 0.0
     @State private var visible = false
 
@@ -98,22 +99,32 @@ private struct ShineSweep: View {
                     .modifier(SweepEffect(progress: progress, frameWidth: proxy.size.width, bandWidth: width))
             }
             .onScrollVisibilityChange(threshold: 0.01) { visible = $0 }
-            .onChange(of: runs) { _, runs in
-                if runs {
-                    withAnimation(.linear(duration: period).repeatForever(autoreverses: false)) { progress = 1 }
-                } else {
-                    var still = Transaction(animation: nil)
-                    still.disablesAnimations = true
-                    withTransaction(still) { progress = 0 }
+            .task(id: runs) {
+                rest()
+                guard runs else { return }
+                let crossing = period * 0.45
+                while !Task.isCancelled {
+                    guard (try? await Task.sleep(for: .seconds(period - crossing))) != nil else { return }
+                    if ProcessInfo.processInfo.isLowPowerModeEnabled { continue }
+                    withAnimation(.linear(duration: crossing)) { progress = 1 }
+                    guard (try? await Task.sleep(for: .seconds(crossing))) != nil else { return }
+                    rest()
                 }
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
         }
     }
+
+    /// Back out of sight at the start, without animating there.
+    private func rest() {
+        var still = Transaction(animation: nil)
+        still.disablesAnimations = true
+        withTransaction(still) { progress = 0 }
+    }
 }
 
-/// Where the band is at `progress` through the period: it crosses in the last 45% and rests out of sight before that.
+/// Where the band is at `progress` through a crossing: out of sight on the left at 0, on the right at 1.
 private struct SweepEffect: GeometryEffect {
     var progress: Double
     let frameWidth: CGFloat
@@ -125,8 +136,7 @@ private struct SweepEffect: GeometryEffect {
     }
 
     func effectValue(size: CGSize) -> ProjectionTransform {
-        let travel = max(0, (progress - 0.55) / 0.45)
-        let x = -bandWidth * 1.5 + travel * (frameWidth + bandWidth * 2)
+        let x = -bandWidth * 1.5 + progress * (frameWidth + bandWidth * 2)
         return ProjectionTransform(CGAffineTransform(translationX: x, y: 0))
     }
 }
@@ -161,8 +171,8 @@ extension View {
 }
 
 /// A card springs up as it comes into view while the page scrolls. Set once as it crosses in, not a scroll transition
-/// worked out for every card on every scrolled frame: the Shop's sections are not lazy, so that was each card's work
-/// on the main thread through a whole scroll.
+/// worked out for every card on every scrolled frame, which was each card's work on the main thread through a whole
+/// scroll.
 private struct ShopAppear: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ShopScrolling.self) private var scrolling: ShopScrolling?
@@ -184,43 +194,6 @@ private struct ShopAppear: ViewModifier {
     }
 }
 
-struct WrapLayout: Layout {
-    var spacing: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let rows = rows(width: proposal.width ?? .infinity, subviews: subviews)
-        let width = rows.map { $0.width }.max() ?? 0
-        let height = rows.map(\.height).reduce(0, +) + spacing * CGFloat(max(0, rows.count - 1))
-        return CGSize(width: proposal.width ?? width, height: height)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var y = bounds.minY
-        for row in rows(width: bounds.width, subviews: subviews) {
-            var x = bounds.minX
-            for index in row.indices {
-                let size = subviews[index].sizeThatFits(.unspecified)
-                subviews[index].place(at: CGPoint(x: x, y: y + (row.height - size.height) / 2), proposal: .unspecified)
-                x += size.width + spacing
-            }
-            y += row.height + spacing
-        }
-    }
-
-    private func rows(width: CGFloat, subviews: Subviews) -> [(indices: [Int], width: CGFloat, height: CGFloat)] {
-        var rows: [(indices: [Int], width: CGFloat, height: CGFloat)] = []
-        var current: (indices: [Int], width: CGFloat, height: CGFloat) = ([], 0, 0)
-        for index in subviews.indices {
-            let size = subviews[index].sizeThatFits(.unspecified)
-            let needed = current.indices.isEmpty ? size.width : current.width + spacing + size.width
-            if needed > width, !current.indices.isEmpty {
-                rows.append(current)
-                current = ([index], size.width, size.height)
-            } else {
-                current = (current.indices + [index], needed, max(current.height, size.height))
-            }
-        }
-        if !current.indices.isEmpty { rows.append(current) }
-        return rows
-    }
+enum ShopLayout {
+    static let dealWidth: CGFloat = 176
 }

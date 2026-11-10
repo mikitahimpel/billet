@@ -31,9 +31,9 @@ on:
 
 concurrency:
   group: ios-${{ github.ref }}
-  # A newer commit supersedes a running check on main too: main moves faster than a run, and
-  # finished runs that nobody waits for hold the few macOS runners.
-  cancel-in-progress: true
+  # A pull request's newer commit supersedes its running check. On main a running check finishes, or
+  # main, which moves faster than a run, never gets a verdict; only the newest waiting run is kept.
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read

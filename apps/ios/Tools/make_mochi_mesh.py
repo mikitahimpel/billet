@@ -1,9 +1,9 @@
-"""Builds Cat.usdz and CatStanding.usdz, the mesh fallbacks for the seated and standing Mochi splats, from the splats.
+"""Builds CatStanding.usdz, the mesh fallback for Mochi's splat, from the splat.
 
 Run with nooki-scene's generation Python (numpy, scipy, scikit-image, fast-simplification, xatlas, usd-core, Pillow):
-  python Tools/make_mochi_mesh.py [--name Mochi|MochiStanding] [--blender path/to/blender] [--work dir]
+  python Tools/make_mochi_mesh.py [--name MochiStanding] [--blender path/to/blender] [--work dir]
 
-Reads Nooki/Resources/<name>.ply, .rig.json and .skin, writes Nooki/Resources/Cat.usdz or CatStanding.usdz:
+Reads Nooki/Resources/<name>.ply, .rig.json and .skin, writes Nooki/Resources/CatStanding.usdz:
 - shape: carved from the splat's median depth (where it turns half opaque) seen from many directions, so thin parts
   like the ears stay thin;
 - color: every texel is what the splat shows along the surface normal there, divided by the mesh's own ambient
@@ -791,8 +791,8 @@ def main():
     parser.add_argument("--blender", default=os.environ.get("BLENDER") or shutil.which("blender") or "blender")
     parser.add_argument("--work", help="keep intermediate files here instead of a temporary folder; a carved "
                         "surface already there is reused")
-    parser.add_argument("--name", default="Mochi", help="the splat and rig to build from: Mochi or MochiStanding")
-    parser.add_argument("--out", help="defaults to Cat.usdz for Mochi, CatStanding.usdz for MochiStanding")
+    parser.add_argument("--name", default="MochiStanding", help="the splat and rig to build from: Mochi or MochiStanding")
+    parser.add_argument("--out", help="defaults to CatStanding.usdz for MochiStanding")
     args = parser.parse_args()
     out = args.out or os.path.join(RESOURCES, "Cat" + args.name.removeprefix("Mochi") + ".usdz")
     work = args.work or tempfile.mkdtemp(prefix="mochi_mesh_")

@@ -1,6 +1,7 @@
 import OurioShared
 import Pet
 import SwiftUI
+import UIKit
 import Design
 
 extension AppSettings {
@@ -18,14 +19,57 @@ struct BrainCard: View {
     let director: CatDirector
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Space.s) {
             readout.allowsHitTesting(false)
             controls
+            observatory
+            timeline.allowsHitTesting(false)
         }
         .foregroundStyle(.white)
-        .padding(12)
-        .frame(width: 210, alignment: .leading)
-        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .padding(Space.m)
+        .frame(width: 236, alignment: .leading)
+        .cornerFill(.card, .black.opacity(0.55))
+        .onAppear { director.observing = true }
+        .onDisappear { director.observing = false }
+    }
+
+    /// The observatory: the brain's speed, a nudge to a group or an event, and the log to paste.
+    private var observatory: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                ForEach(CatClock.speeds, id: \.self) { speed in
+                    chip("x\(Int(speed))", selected: director.speed == speed) { director.set(speed: speed) }
+                }
+                chip("Copy log") { UIPasteboard.general.string = director.log() }
+            }
+            HStack(spacing: 6) {
+                Menu {
+                    ForEach(CatActivityGroup.chosen, id: \.self) { group in
+                        Button(group.title) { director.force(group: group) }
+                    }
+                } label: { chipLabel("Force group") }
+                Menu {
+                    ForEach(LifeEvent.Kind.allCases, id: \.self) { kind in
+                        Button(kind.rawValue) { director.send(kind) }
+                    }
+                } label: { chipLabel("Event") }
+            }
+        }
+    }
+
+    /// The last twenty things she did, newest first, with how long each lasted.
+    private var timeline: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            ForEach(Array(director.timeline.reversed().enumerated()), id: \.offset) { _, episode in
+                HStack {
+                    Text("\(episode.group.rawValue)/\(episode.step.rawValue)")
+                    Spacer(minLength: 4)
+                    Text(episode.end.map { "\(Int(($0 - episode.start).rounded())) s" } ?? "now")
+                }
+                .font(.system(size: 9, design: .monospaced))
+                .foregroundStyle(.white.opacity(episode.end == nil ? 1 : 0.6))
+            }
+        }
     }
 
     /// Labs controls: a tour of every state, the brain's clock, a neglected cat, and the couple's touches.
@@ -51,16 +95,16 @@ struct BrainCard: View {
         }
     }
 
-    private func chip(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) { chipLabel(title) }.buttonStyle(.plain)
+    private func chip(_ title: String, selected: Bool = false, action: @escaping () -> Void) -> some View {
+        Button(action: action) { chipLabel(title, selected: selected) }.buttonStyle(.plain)
     }
 
-    private func chipLabel(_ title: String) -> some View {
+    private func chipLabel(_ title: String, selected: Bool = false) -> some View {
         Text(title)
             .font(.system(size: 11, weight: .semibold, design: .rounded))
             .padding(.horizontal, 9)
             .frame(height: 26)
-            .background(.white.opacity(0.16), in: Capsule())
+            .background(.white.opacity(selected ? 0.4 : 0.16), in: Capsule())
     }
 
     private var readout: some View {

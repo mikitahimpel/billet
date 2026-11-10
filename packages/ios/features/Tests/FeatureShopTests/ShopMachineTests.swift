@@ -14,6 +14,9 @@ private let lamp = ShopOrder(
 private let gift = ShopOrder(
   offer: .item(RoomItemId("rug")), itemIDs: ["rug"], cost: 180, title: "Rug", asGift: true)
 
+private let ink = ShopOrder(
+  offer: .ink(InkId("ink-plum")), itemIDs: ["ink-plum"], cost: 60, title: "Plum ink", kind: .ink)
+
 private func room(
   _ balance: Int, items: [String] = ["lamp0"], giftDay: String? = nil, bonuses: [String] = []
 ) -> ShopResponse {
@@ -133,6 +136,24 @@ private func shop(_ state: M.State) -> M.PairShop {
     let (late, lateOutputs) = M.transition(state, .undoTapped(lampID))
     #expect(late == state)
     #expect(lateOutputs.isEmpty)
+  }
+
+  @Test func anInkShowsItsMomentAndIsOrderedAtOnceWithNoUndo() {
+    var (state, outputs) = M.transition(.open(open(400)), .buyTapped(ink, id: lampID, at: placedAt))
+    let ordering = shop(state).pending
+    #expect(ordering.map(\.stage) == [.ordering])
+    #expect(outputs == [.order(ordering[0]), .catNoticed])
+    #expect(shop(state).moment == .placed(ordering[0]))
+    #expect(!ordering[0].canUndo(at: placedAt))
+    #expect(ordering[0].momentShows(at: placedAt))
+
+    let before = state
+    (state, outputs) = M.transition(state, .undoTapped(lampID))
+    #expect(state == before)
+    #expect(outputs.isEmpty)
+    (state, outputs) = M.transition(state, .undoWindowPassed(lampID))
+    #expect(state == before)
+    #expect(outputs.isEmpty)
   }
 
   @Test func aGiftIsMarkedGiftedOnceCharged() {

@@ -1,3 +1,4 @@
+import DrawInterface
 import OurioShared
 import PetScene
 import PhotosUI
@@ -19,8 +20,8 @@ struct MomentsView: View {
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
 
-    private let hMargin: CGFloat = 16
-    private let columnGap: CGFloat = 14
+    private let hMargin: CGFloat = Space.l
+    private let columnGap: CGFloat = Space.m
 
     private var store: MomentStore { state.moments }
     private var notes: [Note] { state.notes.notes }
@@ -34,20 +35,20 @@ struct MomentsView: View {
                     header.padding(.horizontal, hMargin)
                     Spacer(minLength: 0)
                     EmptyMoments(pick: $pick)
-                        .padding(.horizontal, 32)
+                        .padding(.horizontal, Space.xl)
                     Spacer(minLength: 0)
                 }
-                .padding(.top, 4)
+                .padding(.top, Space.xs)
                 .padding(.bottom, Space.l)
             } else {
                 ScrollView {
-                    VStack(alignment: .leading, spacing: 18) {
+                    VStack(alignment: .leading, spacing: Space.l) {
                         header
                         WallStrip(store: store)
                         feed
                     }
                     .padding(.horizontal, hMargin)
-                    .padding(.top, 4)
+                    .padding(.top, Space.xs)
                     .padding(.bottom, Space.l)
                 }
                 .scrollIndicators(.hidden)
@@ -127,6 +128,7 @@ struct MomentsView: View {
             ForEach(moments) { moment in
                 Button { viewing = PinRoute(id: moment.id) } label: {
                     MomentPrint(moment: moment, store: store, profile: state.profile, width: width, undeveloped: undeveloped.contains(moment.id))
+                        .perfFlattened()
                         .rotationEffect(moment.id.polaroidTilt)
                         .padding(.vertical, width * 0.04)
                 }
@@ -140,14 +142,14 @@ struct MomentsView: View {
         VStack(spacing: 0) {
             header
                 .padding(.horizontal, hMargin)
-                .padding(.top, 4)
+                .padding(.top, Space.xs)
             Spacer(minLength: 0)
             if notes.isEmpty, store.pinned.isEmpty {
                 Text("Leave a note or doodle for the board")
                     .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.glassGlyph)
-                    .padding(.horizontal, 18)
-                    .frame(height: 42)
+                    .padding(.horizontal, Space.l)
+                    .frame(minHeight: Size.control)
                     .glass(.capsule, role: .bar)
                     .padding(.bottom, Space.l)
             }
@@ -243,7 +245,7 @@ private struct EmptyMoments: View {
     @Binding var pick: PhotosPickerItem?
 
     var body: some View {
-        VStack(spacing: 22) {
+        VStack(spacing: Space.section) {
             ZStack {
                 BlankPolaroid(symbol: "heart.fill").rotationEffect(.degrees(-10)).offset(x: -46, y: 6)
                 BlankPolaroid(symbol: "camera.fill").rotationEffect(.degrees(8)).offset(x: 46, y: 10)
@@ -251,7 +253,7 @@ private struct EmptyMoments: View {
             }
             .frame(height: 170)
 
-            VStack(spacing: 8) {
+            VStack(spacing: Space.s) {
                 Text("Your first moment")
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.primary)
@@ -262,19 +264,19 @@ private struct EmptyMoments: View {
             }
 
             PhotosPicker(selection: $pick, matching: .images) {
-                HStack(spacing: 8) {
+                HStack(spacing: Space.s) {
                     Image(systemName: "photo.badge.plus")
                     Text("Add a photo")
                     Text("+10")
                         .font(.ourioMicro)
-                        .padding(.horizontal, 8)
+                        .padding(.horizontal, Space.s)
                         .frame(height: 22)
                         .background(Ink.heroInk.opacity(0.12), in: .capsule)
                 }
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryButtonStyle())
-            .padding(.top, 6)
+            .padding(.top, Space.xs)
         }
     }
 }
@@ -325,7 +327,7 @@ struct MomentPrint: View {
                     .font(.system(size: max(13, width * 0.08)))
                     .frame(width: max(28, width * 0.16), height: max(28, width * 0.16))
                     .background(Ink.surface, in: .circle)
-                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                    .perfShadow(color: .black.opacity(0.2), radius: 2, y: 1)
                     .padding(width * 0.08)
                     .transition(.scale.combined(with: .opacity))
                     .accessibilityLabel("Reacted \(reaction.label)")
@@ -335,7 +337,7 @@ struct MomentPrint: View {
                     .foregroundStyle(.white)
                     .frame(width: max(24, width * 0.14), height: max(24, width * 0.14))
                     .background(Color.blushPink, in: .circle)
-                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                    .perfShadow(color: .black.opacity(0.2), radius: 2, y: 1)
                     .padding(width * 0.09)
             }
         }
@@ -366,7 +368,7 @@ private struct WallStrip: View {
                 .labelStyle(.titleAndIcon)
                 .tint(.honey)
             Spacer(minLength: 0)
-            HStack(spacing: 4) {
+            HStack(spacing: Space.xs) {
                 ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
                     let moment = slot < store.pinned.count ? store.pinned[slot] : nil
                     RoundedRectangle(cornerRadius: 2)
