@@ -1,0 +1,19 @@
+{
+ "id": "radio",
+ "name": "Wooden radio",
+ "kind": "SOLID",
+ "width_m": 0.16,
+ "depth_m": 0.098,
+ "height_m": 0.151,
+ "footprint_cells": [
+  4,
+  2
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.16,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": "smallItem",
+ "usdz_kb": 189
+}

@@ -1,0 +1,19 @@
+{
+ "id": "frame-landscape",
+ "name": "Sunset hills painting",
+ "kind": "FLAT",
+ "width_m": 0.223,
+ "depth_m": 0.016,
+ "height_m": 0.273,
+ "footprint_cells": [
+  5,
+  1
+ ],
+ "mount": "wall",
+ "fit": "width",
+ "size_m": 0.223,
+ "anchors": [],
+ "tris": 800,
+ "affordance": null,
+ "usdz_kb": 106
+}
