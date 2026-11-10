@@ -6,6 +6,7 @@
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
+import { checkFeatureRules } from "./design-rules.mjs";
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, "..", "..", "..");
@@ -83,6 +84,8 @@ if (process.argv.includes("--update")) {
     writeFileSync(check.baseline, JSON.stringify(sorted, null, 2) + "\n");
     console.log(`${relative(root, check.baseline)}: ${Object.keys(sorted).length} files`);
   }
+  checkFeatureRules({ root, update: true });
+  console.log("packages/ios/design/lint/baseline.json: lowered where feature code improved");
   process.exit(0);
 }
 
@@ -139,6 +142,19 @@ if (edgeViolations.length > 0) {
   console.error(
     "Every scroll view fades under the bars with .softScrollEdges(), and under a sheet's chips or search with .scrollHeader { } (docs/design-system.md).",
   );
+  failed = true;
+}
+
+// The closed vocabulary for feature code (design-rules.mjs). `--base <commit>` also fails when the
+// baseline grew since that commit, or the allow-list did without a change to the design package.
+const baseAt = process.argv.indexOf("--base");
+const featureProblems = checkFeatureRules({
+  root,
+  base: baseAt > 0 ? process.argv[baseAt + 1] : null,
+});
+if (featureProblems.length > 0) {
+  console.error(featureProblems.join("\n"));
+  console.error("Feature code uses only the design package's tokens and components (docs/design-system.md#rules).");
   failed = true;
 }
 

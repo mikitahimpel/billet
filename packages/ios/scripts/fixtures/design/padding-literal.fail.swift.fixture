@@ -1,0 +1,7 @@
+struct Bad: View {
+  var body: some View {
+    Text("a").font(.ourioBody).padding(16)
+    Text("b").font(.ourioBody).padding(.horizontal, 12)
+    Text("c").font(.ourioBody).padding(EdgeInsets(top: 1, leading: 2, bottom: 3, trailing: 4))
+  }
+}

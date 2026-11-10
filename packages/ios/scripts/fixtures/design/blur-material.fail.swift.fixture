@@ -1,0 +1,7 @@
+struct Bad: View {
+  var body: some View {
+    Image("a").blur(radius: 4)
+    Rectangle().fill(.ultraThinMaterial)
+    Image("b").glassEffect(.regular)
+  }
+}

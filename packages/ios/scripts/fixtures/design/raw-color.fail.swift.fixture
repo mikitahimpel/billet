@@ -1,0 +1,7 @@
+struct Bad: View {
+  var body: some View {
+    Text("a").font(.ourioBody).foregroundStyle(.white)
+    Color(red: 1, green: 0, blue: 0)
+    Color.black.opacity(0.2)
+  }
+}
