@@ -55,10 +55,12 @@ private struct HintRing<T: HintTip, Target: InsettableShape>: ViewModifier {
                             .keyframeAnimator(initialValue: 1.0, repeating: false) { ring, opacity in
                                 ring.opacity(reduceMotion ? 1 : opacity)
                             } keyframes: { _ in
-                                for _ in 0..<3 {
-                                    CubicKeyframe(0.35, duration: Motion.standard)
-                                    CubicKeyframe(1, duration: Motion.standard)
-                                }
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
                             }
                             .transition(.opacity)
                     }
