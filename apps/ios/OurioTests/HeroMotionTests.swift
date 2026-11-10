@@ -1,3 +1,5 @@
+import Design
+import SwiftUI
 import Testing
 import UIKit
 @testable import Billet
@@ -44,14 +46,28 @@ struct HeroMotionTests {
     /// Every coat ships the rest image at 3:4 and patches exactly the size of their rectangles, so a patch lands on
     /// the pixels it was cut from.
     @Test(arguments: CatCoat.allCases)
-    func everyCoatHasItsHeroAndPatchesThatFit(coat: CatCoat) async throws {
-        let images = try #require(await HeroImages.load(coat))
-        let rest = images.rest.size
+    func everyCoatHasItsHeroAndPatchesThatFit(coat: CatCoat) throws {
+        let art = try #require(HeroArt.read(coat, from: .main))
+        let rest = art.rest.size
         #expect(rest.width * 4 == rest.height * 3)
-        for (patches, rect) in [(images.blink, HeroImages.blinkRect), (images.ear, HeroImages.earRect)] {
+        for (patches, rect) in [(art.blink, HeroArt.blinkRect), (art.ear, HeroArt.earRect)] {
             for patch in patches {
                 #expect(abs(patch.size.width - rect.width * rest.width) <= 1)
                 #expect(abs(patch.size.height - rect.height * rest.height) <= 1)
+            }
+        }
+    }
+
+    /// The lit frames keep the art's size, and each lit blink is its rectangle of the frame it goes over.
+    @Test func theLitFramesMatchTheArt() async throws {
+        let art = try #require(HeroArt.read(.grey, from: .main))
+        let images = try #require(await HeroImages.load(.grey, tint: Color.honey.resolve(in: EnvironmentValues())))
+        let rest = art.rest.size
+        #expect(images.lit.count == 3 && images.lit.allSatisfy { $0.size == rest })
+        for patches in images.blinks {
+            for patch in patches {
+                #expect(abs(patch.size.width - HeroArt.blinkRect.width * rest.width) <= 1)
+                #expect(abs(patch.size.height - HeroArt.blinkRect.height * rest.height) <= 1)
             }
         }
     }
