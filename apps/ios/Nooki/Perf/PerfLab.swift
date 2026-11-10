@@ -2,6 +2,7 @@ import BilletKit
 import Foundation
 import Observation
 import QuartzCore
+import RoomInterface
 import SwiftUI
 
 /// What Labs → Performance can switch off while the app runs, to find what costs a phone its frames.
@@ -89,12 +90,11 @@ nonisolated enum PerfLabMachine: Machine {
     }
 
     /// One line to paste into a message: what is switched and the meter's last reading.
-    static func summary(_ state: State, reading: FrameStats?) -> String {
+    static func summary(_ state: State, reading: FrameStats?, energy: EnergyStats? = nil) -> String {
         let changed = PerfSuspect.allCases.filter { state.changed.contains($0) }
             .map { "\($0.rawValue) \(state.isOn($0) ? "on" : "off")" }
         let switches = changed.isEmpty ? "as shipped" : changed.joined(separator: ", ")
-        guard let reading else { return "Perf lab: \(switches)" }
-        return "Perf lab: \(switches) · \(reading.line)"
+        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line].compactMap { $0 }).joined(separator: " · ")
     }
 }
 
@@ -117,6 +117,48 @@ nonisolated struct FrameStats: Equatable, Sendable {
     }
 
     var line: String { String(format: "%.0f fps, p95 %.1f ms, %d dropped", fps, p95, dropped) }
+}
+
+/// What warms the phone: the app's CPU, whether the room draws, and how the system rates its own heat.
+nonisolated struct EnergyStats: Equatable, Sendable {
+    enum Room: String, Sendable {
+        /// On screen and drawing.
+        case drawing
+        /// Under a sheet or a cover, held still.
+        case paused
+        /// On another tab or in the background, nothing to draw.
+        case off
+    }
+
+    enum Heat: String, Sendable {
+        case nominal, fair, serious, critical
+    }
+
+    /// The app's CPU over the last sample, summed over its threads: 100 is one core kept busy.
+    var cpu: Double
+    var room: Room
+    var heat: Heat
+    var lowPower: Bool
+
+    /// `busy` is the app's total CPU time in seconds, read at two moments `elapsed` seconds apart.
+    static func cpu(busy from: Double, _ to: Double, elapsed: Double) -> Double? {
+        guard elapsed > 0, to >= from else { return nil }
+        return (to - from) / elapsed * 100
+    }
+
+    var line: String {
+        "CPU \(Int(cpu.rounded()))% · room \(room.rawValue) · \(heat.rawValue)\(lowPower ? " · low power" : "")"
+    }
+}
+
+extension EnergyStats.Room {
+    init(_ visibility: RoomVisibility) {
+        switch visibility {
+        case .visible: self = .drawing
+        case .covered: self = .paused
+        case .hidden: self = .off
+        }
+    }
 }
 
 /// Runs ``PerfLabMachine`` and keeps its state on this phone.
