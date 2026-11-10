@@ -20,6 +20,9 @@ public enum ApiError: Codable, Hashable, Sendable {
   case streakNotRestorable
   /// Nothing was charged; `price` is the price now.
   case priceChanged(price: Int)
+  /// A piece the pair does not own, or that does not fit where it was put: `not-owned`, `unknown-piece`,
+  /// `wrong-surface`, `outside-room` or `occupied`.
+  case layoutRefused(reason: String)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -30,6 +33,7 @@ public enum ApiError: Codable, Hashable, Sendable {
     case collection
     case day
     case price
+    case reason
   }
 
   public init(from decoder: any Decoder) throws {
@@ -60,6 +64,8 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "CatNotAdopted": self = .catNotAdopted
     case "StreakNotRestorable": self = .streakNotRestorable
     case "PriceChanged": self = .priceChanged(price: try container.decode(Int.self, forKey: .price))
+    case "LayoutRefused":
+      self = .layoutRefused(reason: try container.decode(String.self, forKey: .reason))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -101,6 +107,9 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .priceChanged(let price):
       try container.encode("PriceChanged", forKey: .tag)
       try container.encode(price, forKey: .price)
+    case .layoutRefused(let reason):
+      try container.encode("LayoutRefused", forKey: .tag)
+      try container.encode(reason, forKey: .reason)
     }
   }
 }

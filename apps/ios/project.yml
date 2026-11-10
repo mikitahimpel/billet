@@ -87,7 +87,23 @@ targets:
       - package: BilletPet
         products: [Pet, PetScene]
       - package: BilletFeatures
-        products: [FeatureCanvas, FeatureGames, FeatureInbox, FeatureMood, FeatureMoments, FeatureOnboarding, FeaturePairing, FeatureShop, GamesInterface, MoodInterface, RoomInterface, ShopInterface, WidgetBridge]
+        products:
+          [
+            FeatureCanvas,
+            FeatureGames,
+            FeatureInbox,
+            FeatureMood,
+            FeatureMoments,
+            FeatureOnboarding,
+            FeaturePairing,
+            FeatureShop,
+            DrawInterface,
+            GamesInterface,
+            MoodInterface,
+            RoomInterface,
+            ShopInterface,
+            WidgetBridge,
+          ]
       - package: BilletPayments
         products: [Payments, PaymentsLive]
     entitlements:
@@ -140,7 +156,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [MoodInterface]
+        products: [DrawInterface, MoodInterface]
     settings:
       base:
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -177,7 +193,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [MoodInterface]
+        products: [DrawInterface, MoodInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
@@ -217,7 +233,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [MoodInterface]
+        products: [DrawInterface, MoodInterface]
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
@@ -261,7 +277,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [MoodInterface]
+        products: [DrawInterface, MoodInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.share

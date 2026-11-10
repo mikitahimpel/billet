@@ -7,7 +7,8 @@ import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { LoveStreak } from "@billet/contracts-domain/streak";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { CollectionId, RoomItemId } from "@billet/contracts-domain/shop";
+import { IdempotencyKey } from "@billet/contracts-domain/ids";
+import { CollectionId, Placement, RoomItemId } from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 
 /** A partner and their presence, kept together so presence cannot exist for a stranger. */
@@ -68,6 +69,10 @@ export const RoomState = Schema.TaggedUnion({
     /** Pieces the pair wishes for, in the order they were wished. */
     wishlist: Schema.Array(RoomItemId),
     bonuses: Schema.Array(CollectionId).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
+    /** Where the pair stood its pieces, one placement per piece. */
+    layout: Schema.Array(Placement).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
+    /** The newest layout changes applied, so a repeated id is answered and not applied twice. */
+    layoutLog: Schema.Array(IdempotencyKey).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
     /** The pair's local day it last opened the daily gift on. */
     giftDay: Schema.optionalKey(LocalDay),
     /** A room opened before welcome coins existed reads false and gets them on its next call. */

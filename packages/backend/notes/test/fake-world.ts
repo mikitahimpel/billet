@@ -358,6 +358,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     claimBonus: (pairId, by, collection) => roomOf(pairId).claimBonus(by, collection),
     earn: (pairId, by, event, utcOffsetSeconds) => roomOf(pairId).earn(by, event, utcOffsetSeconds),
     creditPurchase: (pairId, credit) => roomOf(pairId).creditPurchase(credit),
+    changeLayout: (pairId, by, id, change) => roomOf(pairId).changeLayout(by, id, change),
     setWish: (pairId, by, item, wished, offered) =>
       roomOf(pairId).setWish(by, item, wished, offered),
     notesAfter: (pairId, afterSeq, limit) => roomOf(pairId).notesAfter(afterSeq, limit),

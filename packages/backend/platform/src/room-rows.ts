@@ -62,6 +62,20 @@ export const StoredWish = Schema.Struct({
   position: Schema.Int,
 });
 
+export const StoredPlacement = Schema.Struct({
+  itemId: Schema.String,
+  surface: Schema.String,
+  u: Schema.Int,
+  v: Schema.Int,
+  quarterTurns: Schema.Int,
+  position: Schema.Int,
+});
+
+export const StoredLayoutLog = Schema.Struct({
+  changeId: Schema.String,
+  position: Schema.Int,
+});
+
 export const StoredClaimedBonus = Schema.Struct({
   collectionId: Schema.String,
   position: Schema.Int,

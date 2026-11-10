@@ -24,6 +24,16 @@ export const ApiError = Schema.TaggedUnion({
     have: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   },
   AlreadyOwned: { itemId: Schema.String },
+  /** A piece the pair does not own, does not fit where it was put, or is not placed that way. */
+  LayoutRefused: {
+    reason: Schema.Literals([
+      "not-owned",
+      "unknown-piece",
+      "wrong-surface",
+      "outside-room",
+      "occupied",
+    ]),
+  },
   CollectionIncomplete: { collection: CollectionId },
   /** The day's gift is already open. Come back tomorrow. */
   GiftTaken: { day: LocalDay },

@@ -86,6 +86,8 @@ export const routes = {
   /** Buys one offer (an ink, a piece, a set or a treat) with the pair's coins. */
   placeOrder: route("POST", "/v1/shop/orders"),
   setWish: route("PUT", "/v1/shop/wishlist"),
+  /** Stands a piece in the room, moves it or puts it back in the closet; each id applies once. */
+  changeLayout: route("POST", "/v1/shop/layout"),
   /** Opens the pair's free gift of the local day, once a day for the pair. */
   openGift: route("POST", "/v1/shop/gift"),
   /** Collects a complete collection's coin bonus, once. */

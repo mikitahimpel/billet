@@ -41,7 +41,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 12. **Icon tiles have one rule:** a full-tint glyph on the same tint at 16%, for every row. No tint is the
     accent (`Ink.accentText` glyph); destructive is `Ink.destructive` only.
 13. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
-    content; `GlassSegmented` is only the Room | City prototype.
+    content; `GlassSegmented` is only the Living room | Bedroom switch.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
     `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
     `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
@@ -218,7 +218,7 @@ Every piece of glass in the app's chrome is one of these. `Tokens/Glass.swift` h
 | Role | Where | Glass | Tint | Rim | Shadow | Ink |
 | --- | --- | --- | --- | --- | --- | --- |
 | `control` | header buttons, coin pill, the pet, a sheet's close over a canvas | regular, interactive | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `Ink.glassGlyph` |
-| `bar` | tab bar, Room \| City switch, a label over the scene | regular | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `glassGlyph`; unselected `glassGlyphSecondary`; selected on `Ink.glassSelection` |
+| `bar` | tab bar, Living room \| Bedroom switch, a label over the scene | regular | `Ink.glassFill` | 1 pt `Ink.glassRim` | the system's own | `glassGlyph`; unselected `glassGlyphSecondary`; selected on `Ink.glassSelection` |
 | accent | the "+" beside the tab bar | prominent, interactive | honey | the system's own | the system's own | `Ink.heroInk` |
 | badge | counts, Lv., heart and crown, the partner's mood | none, solid | honey, blush or `Ink.surface` | 1.5 pt `Ink.glassFill` | none | `Ink.heroInk` |
 

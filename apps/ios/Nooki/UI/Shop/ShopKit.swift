@@ -171,8 +171,8 @@ extension View {
 }
 
 /// A card springs up as it comes into view while the page scrolls. Set once as it crosses in, not a scroll transition
-/// worked out for every card on every scrolled frame: the Shop's sections are not lazy, so that was each card's work
-/// on the main thread through a whole scroll.
+/// worked out for every card on every scrolled frame, which was each card's work on the main thread through a whole
+/// scroll.
 private struct ShopAppear: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ShopScrolling.self) private var scrolling: ShopScrolling?
@@ -192,4 +192,8 @@ private struct ShopAppear: ViewModifier {
                 }
             }
     }
+}
+
+enum ShopLayout {
+    static let dealWidth: CGFloat = 176
 }

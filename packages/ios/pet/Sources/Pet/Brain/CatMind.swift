@@ -55,17 +55,19 @@ public enum CatMind: String, CaseIterable, Codable, Hashable, Sendable {
 
   private static func activity(_ step: CatActivityStep) -> CatMind {
     switch step {
-    case .sit, .lookAround, .bellyUp, .watchWindow, .watchPartnerWindow, .startle, .curiousTilt:
+    case .sit, .lookAround, .bellyUp, .watchWindow, .watchPartnerWindow, .startle, .curiousTilt,
+      .heardNoise, .trackMover, .chatter, .perkUp:
       .idle
-    case .loaf, .findNapSpot, .knead, .wake, .yawn: .loaf
+    case .loaf, .findNapSpot, .knead, .wake, .yawn, .bask: .loaf
     case .curl: .napping
     case .wander, .sniffObject, .inspectFurniture: .exploring
     case .groomPaw, .groomFlank, .groomTail, .lickLips: .grooming
     case .walkToBowl, .eat, .waitByBowl, .pawBowl, .beg, .yowl: .eating
-    case .stalk, .pounce, .chase, .batObject, .zoomies, .scratch, .knockOff, .flop, .pushItem:
+    case .stalk, .pounce, .chase, .batObject, .zoomies, .scratch, .knockOff, .flop, .pushItem,
+      .spotMote, .windUp, .shakeOff, .skid, .chaseTail, .glanceBack:
       .playing
     case .sitInCardigan, .sitOnDesk: .loaf
-    case .seekYou, .rub, .slowBlink, .bringToy, .waitByDoor, .dropToy, .carryNote:
+    case .seekYou, .rub, .slowBlink, .bringToy, .waitByDoor, .dropToy, .carryNote, .dashToDoor:
       .seekingAttention
     case .sulk: .sulking
     }

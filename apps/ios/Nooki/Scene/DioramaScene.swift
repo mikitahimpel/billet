@@ -62,6 +62,7 @@ final class DioramaScene: CatRoom {
         buildFloor()
         buildWalls()
         setPolaroids([])
+        addContactShadow(named: "room_contact", x0: -0.595, z0: -0.595, x1: 0.56, z1: 0.56, y: 0.017)
         buildFairyLights()
         buildHitBoxes()
         buildCat()

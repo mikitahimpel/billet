@@ -139,7 +139,7 @@ private struct HeaderOverRoom: View {
       .padding(Space.l)
       .overlay(alignment: .bottom) {
         GlassSegmented(
-          [("Room", "Room"), ("City", "City")], selection: $room, identifier: "catalog"
+          [("Room", "Living room"), ("City", "Bedroom")], selection: $room, identifier: "catalog"
         )
         .padding(.bottom, Space.l)
       }

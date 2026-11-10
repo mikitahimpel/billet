@@ -1,3 +1,4 @@
+import DrawInterface
 import Ink
 import SwiftUI
 import Wire

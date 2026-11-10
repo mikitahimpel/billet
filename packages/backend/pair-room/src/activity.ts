@@ -251,6 +251,8 @@ export const activityOf = (
       case "InksGranted":
       case "ItemsGranted":
       case "WishlistChanged":
+      case "LayoutChanged":
+      case "LayoutRepeated":
       case "CoinsEntered":
       case "CoinsRepeated":
       case "ListSaved":

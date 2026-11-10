@@ -28,6 +28,8 @@ public enum CatActivityGroup: String, CaseIterable, Codable, Hashable, Sendable 
 
 public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   case sit, loaf, lookAround
+  /// A sound off to one side: the ears swivel, the head snaps round, and it looks about. Rare.
+  case heardNoise
   /// Happy and full: it rolls onto its back, belly up, and purrs.
   case bellyUp
   case wander, sniffObject, inspectFurniture
@@ -49,31 +51,55 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   /// A tantrum: it flops over onto its side in despair, tail lashing.
   case flop
   case stalk, pounce, chase, batObject, zoomies
+  /// Something drifts in the air, a mote or a fly: the head comes up and follows it.
+  case spotMote
+  /// The crouch before a pounce or a dash: low, eyes fixed, the rump wiggling.
+  case windUp
+  /// After a pounce or a dash: it shakes itself, pleased, and looks round as if it meant to.
+  case shakeOff
+  /// It stops short at the end of a run and sits as though nothing happened.
+  case skid
+  /// It spins after its own tail. Rare.
+  case chaseTail
   /// Bored: it scratches the cushion.
   case scratch
   case watchWindow, watchPartnerWindow
+  /// The head follows something quick outside: a car, a bird.
+  case trackMover
+  /// Its jaw chatters at a bird it cannot reach.
+  case chatter
+  /// It lies in the sun on the sill with its eyes half shut.
+  case bask
   case seekYou, rub, slowBlink, bringToy, waitByDoor
   /// It carries the toy to you and drops it at your feet.
   case dropToy
   /// Lonely: it sits with its back to you, and the first touch is ignored.
   case sulk
   case pushItem, sitInCardigan, sitOnDesk
+  /// After the nudge it looks round to see who saw.
+  case glanceBack
   case startle, curiousTilt
+  /// A note came: the ears go up and it looks to the door.
+  case perkUp
+  /// It runs to the door or the glass to meet the note.
+  case dashToDoor
   /// A note came: the cat carries it in its mouth to the wall or the glass and tapes it up.
   case carryNote
 
   public var group: CatActivityGroup {
     switch self {
-    case .sit, .loaf, .lookAround, .bellyUp: .idle
+    case .sit, .loaf, .lookAround, .bellyUp, .heardNoise: .idle
     case .wander, .sniffObject, .inspectFurniture: .explore
     case .findNapSpot, .knead, .curl, .wake, .yawn: .rest
-    case .groomPaw, .groomFlank, .groomTail: .groom
+    case .groomPaw, .groomFlank, .groomTail, .bask: .groom
     case .walkToBowl, .eat, .lickLips, .waitByBowl, .pawBowl, .beg, .yowl, .knockOff, .flop: .eat
-    case .stalk, .pounce, .chase, .batObject, .zoomies, .scratch: .play
-    case .watchWindow, .watchPartnerWindow: .watch
+    case .stalk, .pounce, .chase, .batObject, .zoomies, .scratch, .spotMote, .windUp, .shakeOff,
+      .skid, .chaseTail:
+      .play
+    case .watchWindow, .watchPartnerWindow, .trackMover, .chatter: .watch
     case .seekYou, .rub, .slowBlink, .bringToy, .waitByDoor, .dropToy, .sulk: .social
-    case .pushItem, .sitInCardigan, .sitOnDesk: .mischief
-    case .startle, .curiousTilt, .carryNote: .react
+    case .pushItem, .sitInCardigan, .sitOnDesk, .glanceBack: .mischief
+    case .startle, .curiousTilt, .carryNote, .perkUp, .dashToDoor: .react
     }
   }
 
@@ -81,13 +107,14 @@ public enum CatActivityStep: String, CaseIterable, Codable, Hashable, Sendable {
   public var travels: Bool {
     switch self {
     case .wander, .findNapSpot, .walkToBowl, .chase, .zoomies, .seekYou, .bringToy,
-      .inspectFurniture, .dropToy, .beg, .knockOff, .scratch:
+      .inspectFurniture, .dropToy, .beg, .knockOff, .scratch, .dashToDoor:
       true
     case .sit, .loaf, .lookAround, .sniffObject, .knead, .curl, .wake, .groomPaw, .groomFlank,
       .groomTail, .eat, .lickLips, .stalk, .pounce, .batObject, .watchWindow,
       .watchPartnerWindow, .rub, .slowBlink, .waitByDoor, .waitByBowl, .pushItem, .sitInCardigan,
       .sitOnDesk, .startle, .curiousTilt, .carryNote, .bellyUp, .yawn, .pawBowl, .yowl, .flop,
-      .sulk:
+      .sulk, .heardNoise, .spotMote, .windUp, .shakeOff, .skid, .chaseTail, .trackMover, .chatter,
+      .bask, .glanceBack, .perkUp:
       false
     }
   }

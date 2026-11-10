@@ -10,6 +10,8 @@ public struct CatUtilityScore: Hashable, Sendable {
   public var temperament: Double
   /// What its upbringing adds: habits learned from the pair, 1 for a cat that learned none.
   public var upbringing: Double
+  /// What repeating yesterday's hour adds, 1 for none.
+  public var habit: Double = 1
   public var time: Double
   public var room: Double
   public var novelty: Double
@@ -53,6 +55,8 @@ public struct CatUtilityInput: Sendable {
   /// How hungry it acts, from 0 up, after its temperament's drama: a hungry cat keeps going
   /// back to the bowl.
   public var hunger: Double = 0
+  /// Yesterday's routine for this hour, per group; a missing group is 1.
+  public var habits: [CatActivityGroup: Double] = [:]
 }
 
 /// Scores each activity group: `need × personality × time of day × room × novelty × mood ×
@@ -76,6 +80,7 @@ public enum CatUtility {
     let kind = input.temperament?.bias(group) ?? 1
     let raised =
       input.upbringing.bias(group, hour: input.hour) * (group == .eat && input.mealtime ? 3 : 1)
+    let habit = input.habits[group] ?? 1
     let time = timeTerm(group, hour: input.hour)
     let room = roomTerm(group, input)
     let novelty = noveltyTerm(group, input)
@@ -83,9 +88,10 @@ public enum CatUtility {
     let vitality = vitalityTerm(group, input.vitality, sleepy: input.sleepy)
     return CatUtilityScore(
       group: group,
-      score: base(group) * need * traits * kind * raised * time * room * novelty * mood
+      score: base(group) * need * traits * kind * raised * habit * time * room * novelty * mood
         * vitality,
-      need: need, personality: traits, temperament: kind, upbringing: raised, time: time,
+      need: need, personality: traits, temperament: kind, upbringing: raised, habit: habit,
+      time: time,
       room: room,
       novelty: novelty, mood: mood,
       vitality: vitality)
@@ -93,15 +99,15 @@ public enum CatUtility {
 
   static func base(_ group: CatActivityGroup) -> Double {
     switch group {
-    case .idle: 1
-    case .explore: 0.7
+    case .idle: 0.6
+    case .explore: 0.9
     case .rest: 0.55
-    case .groom: 0.6
+    case .groom: 0.7
     case .eat: 0.3
-    case .play: 0.6
-    case .watch: 0.7
-    case .social: 0.55
-    case .mischief: 0.12
+    case .play: 0.85
+    case .watch: 0.5
+    case .social: 0.7
+    case .mischief: 0.25
     case .react: 0
     }
   }

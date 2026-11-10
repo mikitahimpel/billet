@@ -139,6 +139,26 @@ export type ShopOffer = typeof ShopOffer.Type;
 export const CollectionId = slug.pipe(Schema.brand("CollectionId"));
 export type CollectionId = typeof CollectionId.Type;
 
+export const PlacementSurface = Schema.Literals(["floor", "backWall", "leftWall"]);
+export type PlacementSurface = typeof PlacementSurface.Type;
+
+/** A grid cell of 5 cm, counted from the room's middle. */
+export const Cell = Schema.Int.check(Schema.isBetween({ minimum: -9, maximum: 9 }));
+
+/**
+ * Where a piece stands. `u` runs across the floor and the back wall (x) and along the left wall (z);
+ * `v` runs into the room on the floor and is 0 on a wall. A piece is owned once, so one placement
+ * per item.
+ */
+export const Placement = Schema.Struct({
+  item: RoomItemId,
+  surface: PlacementSurface,
+  u: Cell,
+  v: Cell,
+  quarterTurns: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 3 })),
+});
+export type Placement = typeof Placement.Type;
+
 /** `inks` and `items` start with the free ink and starter pieces, then purchase order.
  * `giftDay`: the local day the daily gift was last opened, absent before the first. */
 export const PairShop = Schema.Struct({
@@ -148,6 +168,8 @@ export const PairShop = Schema.Struct({
   wishlist: Schema.Array(RoomItemId),
   giftDay: Schema.optionalKey(LocalDay),
   bonuses: Schema.Array(CollectionId),
+  /** Where the pair stood its pieces; absent from a room that never placed one. */
+  layout: Schema.optionalKey(Schema.Array(Placement)),
 });
 export type PairShop = typeof PairShop.Type;
 

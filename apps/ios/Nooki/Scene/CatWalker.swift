@@ -261,6 +261,55 @@ final class CatWalker {
         sitDown()
     }
 
+    /// Gets up and drops into a low crouch, rump up and wiggling, and sits again.
+    func crouch() {
+        guard !moving else { return }
+        rest = .sit
+        standUp()
+        var low = Posture.stand
+        low.lift = -0.02
+        low.pitch = -0.3
+        low.bend = 0.05
+        low.headPitch = 0.3
+        low.fore = [0, -0.03]
+        low.tail = [0.4, 0.2, 0.1]
+        add(1.8) { [unowned self] u in
+            let t = u * 1.8
+            keyframes([(0, .stand), (0.35, low), (1.45, low), (1.8, .stand)], t)
+            if t > 0.35 && t < 1.45 { posture.lift += 0.0025 * sin(t * 26) }
+        }
+        sitDown()
+    }
+
+    /// Gets up for one quick hop forward onto the fore paws, and sits again.
+    func hop() {
+        guard !moving else { return }
+        rest = .sit
+        standUp()
+        var air = Posture.stand
+        air.lift = 0.035
+        air.pitch = 0.3
+        air.headPitch = 0.1
+        air.fore = [0.04, -0.03]
+        air.tail = [0.5, 0.3, 0.1]
+        add(0.7) { [unowned self] u in
+            keyframes([(0, .stand), (0.25, air), (0.5, .stand), (0.7, .stand)], u * 0.7)
+        }
+        sitDown()
+    }
+
+    /// Gets up and turns a full circle on the spot after her tail, and sits again facing as before.
+    func spin() {
+        guard !moving else { return }
+        rest = .sit
+        standUp()
+        planYaw = yaw
+        let home = yaw
+        for third in 1...3 { turn(home + Float(third) * 2 * .pi / 3) }
+        turn(home)
+        sitDown()
+    }
+
     /// Model-space point she sees whoever watches her from.
     func watch(_ point: SIMD3<Float>) {
         viewer = point

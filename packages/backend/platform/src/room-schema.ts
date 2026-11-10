@@ -152,6 +152,22 @@ export const wish = sqliteTable("wish", {
   position: integer("position").notNull(),
 });
 
+// Where each piece stands, written whole on every commit like the wishlist. `position` keeps the order.
+export const placement = sqliteTable("placement", {
+  itemId: text("item_id").primaryKey(),
+  surface: text("surface").notNull(),
+  u: integer("u").notNull(),
+  v: integer("v").notNull(),
+  quarterTurns: integer("quarter_turns").notNull(),
+  position: integer("position").notNull(),
+});
+
+// The newest layout changes applied, oldest first, so a repeated change is answered and not applied twice.
+export const layoutLog = sqliteTable("layout_log", {
+  changeId: text("change_id").primaryKey(),
+  position: integer("position").notNull(),
+});
+
 // `day` is the cat's local day the daily caps count against. No row means no coin yet.
 export const wallet = sqliteTable(
   "wallet",
