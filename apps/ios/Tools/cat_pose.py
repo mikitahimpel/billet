@@ -8,8 +8,8 @@ for CatWalker's `Posture.sit` at rest; `lids` and `ear` close the lids and flick
 import numpy as np
 
 # CatWalker.Posture.sit: lift, back, pitch, bend, head seat, head shift, paw offsets (up, back), tail lift, sway, lean.
-SIT = dict(lift=-0.028, back=-0.05, pitch=0.7, bend=0.0, seat=1.0, neck=(0.0, 0.017, -0.011), fore=(0.0, 0.02),
-           hind=(0.0, -0.09), tail=(-0.25, 0.53, 0.16), sway=(0.04, -0.14, -0.18), lean=(-1.1, -0.76, -0.29))
+SIT = dict(lift=-0.008, back=-0.05, pitch=0.7, bend=-0.5, seat=1.0, neck=(0.0, 0.017, -0.011), fore=(0.0, 0.02),
+           hind=(0.0, -0.09), tail=(-1.07, -0.79, -0.79), sway=(1.12, -0.42, -1.12), lean=(-1.32, -0.31, -0.05))
 # CatWalker.seat: where she sits from the splat's origin; pictures frame her about it.
 SEAT = np.array([0.01, 0.0, -0.058])
 # CatRig.lidSwing and Gait.kneeFloor.
