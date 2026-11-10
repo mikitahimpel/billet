@@ -6,6 +6,8 @@ struct GrocerySuggestions: View {
     let draft: String
     let list: UsList
     let history: GroceryHistory
+    /// The quick picks: while the field is focused, and on an empty list so the first item is one tap.
+    var showsOften = true
     var onAdd: (String) -> Void
 
     private let catalog = GroceryCatalog.bundled
@@ -26,9 +28,10 @@ struct GrocerySuggestions: View {
                 .cardSurface()
             }
 
-            let often = often(excluding: onList)
+            let often = showsOften && draft.isEmpty ? often(excluding: onList) : []
             if !often.isEmpty {
-                GrocerySectionLabel(title: "You often buy", top: suggestions.isEmpty ? 4 : 18)
+                GrocerySectionLabel(title: history.often(limit: 1).isEmpty ? "Quick add" : "You often buy",
+                                    top: suggestions.isEmpty ? 4 : 18)
                 FlowRow(spacing: Space.s) {
                     ForEach(often, id: \.self) { text in
                         FilterChip(text, isSelected: false) { onAdd(text) }

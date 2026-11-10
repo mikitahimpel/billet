@@ -42,6 +42,7 @@ struct WatchListBody: View {
     let state: HomeState
     let list: UsList
     let details: WatchDetails
+    var add: () -> Void
     var open: (ListItem) -> Void
 
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -55,7 +56,10 @@ struct WatchListBody: View {
         VStack(alignment: .leading, spacing: Space.l) {
             if list.items.isEmpty {
                 EmptyState(icon: list.icon, title: "Nothing to watch yet",
-                           text: "Add a film or a show with +. You both see this list.")
+                           text: "Find a movie or a show by its title. You both see this list.") {
+                    PrimaryButton("Add a movie or show", action: add)
+                        .padding(.top, Space.s)
+                }
             } else {
                 if canPick {
                     PrimaryButton("🍿 Pick tonight") { picking = true }
@@ -135,6 +139,7 @@ struct WatchListBody: View {
 
     private func grid(_ items: [ListItem], watched: Bool) -> some View {
         LazyVGrid(columns: columns, spacing: Space.m) {
+            if !watched { AddTitleTile(action: add) }
             ForEach(items) { item in
                 Button { open(item) } label: {
                     PosterTile(item: item, both: bothWant(item), profile: state.profile)
@@ -174,6 +179,31 @@ struct WatchListBody: View {
             .buttonStyle(PressScaleStyle())
             if showsWatched { grid(watched, watched: true) }
         }
+    }
+}
+
+/// The grid's first tile, a poster's size, so adding sits where the titles go.
+private struct AddTitleTile: View {
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Color.clear
+                .aspectRatio(2 / 3, contentMode: .fit)
+                .cornerFill(.inner, Ink.surfaceRaised)
+                .overlay {
+                    VStack(spacing: Space.s) {
+                        Image(systemName: "plus")
+                            .font(.ourioTitle)
+                            .foregroundStyle(Ink.accentText)
+                        Text("Add")
+                            .font(.ourioCallout.weight(.semibold))
+                            .foregroundStyle(Ink.text)
+                    }
+                }
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel("Add a movie or show")
     }
 }
 

@@ -5,6 +5,7 @@ import Design
 struct PlacesListBody: View {
     let state: HomeState
     let list: UsList
+    var add: () -> Void
     /// Opens the "been there" sheet: from a tick still to go, or a row already been to.
     var mark: (ListItem) -> Void
 
@@ -20,21 +21,24 @@ struct PlacesListBody: View {
             }
             .padding(.top, 2)
             let shown = tab == .want ? rows.want : rows.been
-            if shown.isEmpty {
-                Text(tab == .want ? "Add a country or a place with +." : "Tick a country once you've been together.")
-                    .font(.ourioCallout)
-                    .foregroundStyle(Ink.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Space.xl)
-            } else {
+            if tab == .want || !shown.isEmpty {
                 VStack(spacing: 0) {
+                    if tab == .want { AddRow(title: "Add a country or place", action: add) }
                     ForEach(Array(shown.enumerated()), id: \.element.item.id) { index, row in
-                        if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 60) }
+                        if index > 0 || tab == .want { Divider().overlay(Ink.separator).padding(.leading, 60) }
                         rowView(row)
                     }
                 }
                 .cardSurface()
+            }
+            if shown.isEmpty {
+                Text(tab == .want ? "Countries you add light up on the map. Tick one once you've been together."
+                                  : "Tick a country once you've been together.")
+                    .font(.ourioCallout)
+                    .foregroundStyle(Ink.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Space.l)
             }
         }
     }

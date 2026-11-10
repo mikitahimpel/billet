@@ -2,29 +2,30 @@ import OurioShared
 import SwiftUI
 import Design
 import Wire
+import BilletKit
 
 struct ListScreen: View {
     let state: HomeState
     let listID: UUID
-    /// Opened from the "+" menu to add an item, so the keyboard comes up at once.
-    var focusesField = false
+    /// Opened from the "+" menu to add an item, so the keyboard or the add sheet comes up at once.
+    let focusesField: Bool
 
     @Environment(\.dismiss) private var dismiss
+    @State private var store: Store<ListScreenMachine>
     @State private var draft = ""
-    @State private var renaming = false
-    @State private var confirmingDelete = false
     @State private var reward: UUID?
     @State private var rewardRising = false
-    @State private var editing: ListItem?
     @State private var watchDetails = WatchDetails()
-    @State private var addingTitle = false
-    @State private var openedTitle: OpenedTitle?
-    @State private var addingPlace = false
-    @State private var markingBeen: ListItem?
     @FocusState private var focused: Bool
 
-    private struct OpenedTitle: Identifiable {
-        let id: UUID
+    init(state: HomeState, listID: UUID, focusesField: Bool = false) {
+        self.state = state
+        self.listID = listID
+        self.focusesField = focusesField
+        let kind = state.us.list(listID)?.kind ?? .custom
+        _store = State(initialValue: Store(initial: ListScreenMachine.initial(for: kind, adding: focusesField)) {
+            output in switch output {}
+        })
     }
 
     var body: some View {
@@ -44,35 +45,36 @@ struct ListScreen: View {
         ScrollViewReader { scroll in
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.m) {
-                    if adding(to: list) {
-                        GrocerySuggestions(draft: draft, list: list, history: state.us.groceries) {
+                    if list.kind.isChecklist, list.items.isEmpty, draft.isEmpty {
+                        EmptyState(icon: list.icon, title: "Start the list", text: emptyText(for: list.kind))
+                    }
+                    if list.kind.isChecklist {
+                        GrocerySuggestions(draft: draft, list: list, history: state.us.groceries,
+                                           showsOften: focused || list.open.isEmpty) {
                             add($0, to: list)
                         }
                     }
                     if list.kind == .watch {
-                        WatchListBody(state: state, list: list, details: watchDetails) {
-                            openedTitle = OpenedTitle(id: $0.id)
-                        }
+                        WatchListBody(state: state, list: list, details: watchDetails,
+                                      add: { store.send(.open(.addingTitle)) },
+                                      open: { store.send(.open(.openedTitle(itemID: $0.id))) })
                     } else if list.kind == .travel {
-                        PlacesListBody(state: state, list: list) { markingBeen = $0 }
+                        PlacesListBody(state: state, list: list,
+                                       add: { store.send(.open(.addingPlace)) },
+                                       mark: { store.send(.open(.markingBeen(itemID: $0.id))) })
                     } else if list.items.isEmpty {
-                        if !adding(to: list) {
-                            EmptyState(icon: list.icon,
-                                    title: "Nothing here yet",
-                                    text: "Add the first one above. You both see this list.")
+                        if draft.isEmpty, !list.kind.isChecklist {
+                            EmptyState(icon: list.icon, title: "Start the list", text: emptyText(for: list.kind))
                         }
                     } else if list.kind.isChecklist {
-                        // While a name is typed, its suggestions take the screen, as the list would push them away.
-                        if draft.isEmpty {
-                            GroceryList(list: list, state: state,
-                                        onTap: { toggle($0, in: list) },
-                                        onEdit: { editing = $0 },
-                                        onClear: {
-                                            withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
-                                        })
-                        }
+                        GroceryList(list: list, state: state,
+                                    onTap: { toggle($0, in: list) },
+                                    onEdit: { store.send(.open(.editing(itemID: $0.id))) },
+                                    onClear: {
+                                        withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
+                                    })
                     } else {
-                        openCard(list)
+                        if !list.open.isEmpty { openCard(list) }
                         finishedSection(list)
                     }
                 }
@@ -82,6 +84,7 @@ struct ListScreen: View {
                 .padding(.bottom, Space.xl + Space.s)
             }
             .scrollIndicators(.hidden)
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: focused) { _, focused in
                 if focused { withAnimation(.snappy(duration: 0.25)) { scroll.scrollTo(Self.top, anchor: .top) } }
             }
@@ -89,28 +92,27 @@ struct ListScreen: View {
         .scrollHeader {
             VStack(spacing: 0) {
                 if !usesSheetToAdd(list) {
-                    UsField(placeholder: placeholder(for: list.kind), text: $draft)
-                        .focused($focused)
-                        .submitLabel(.done)
-                        .onSubmit { addItem(list) }
-                        .onAppear { if focusesField { focused = true } }
-                        .padding(.horizontal, Space.gutter)
-                        .padding(.top, Space.l)
+                    AddItemField(placeholder: placeholder(for: list.kind), text: $draft, focused: $focused) {
+                        add(draft, to: list)
+                    }
+                    .onAppear { if focusesField { focused = true } }
+                    .padding(.horizontal, Space.gutter)
+                    .padding(.top, Space.l)
                 }
             }
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarLeading) {
                 if list.kind == .watch {
-                    Button { addingTitle = true } label: { Image(systemName: "plus") }
+                    Button { store.send(.open(.addingTitle)) } label: { Image(systemName: "plus") }
                         .accessibilityLabel("Add")
                 } else if list.kind == .travel {
-                    Button { addingPlace = true } label: { Image(systemName: "plus") }
+                    Button { store.send(.open(.addingPlace)) } label: { Image(systemName: "plus") }
                         .accessibilityLabel("Add")
                 }
                 Menu {
-                    Button("Rename") { renaming = true }
-                    Button("Delete list", role: .destructive) { confirmingDelete = true }
+                    Button("Rename") { store.send(.open(.rename)) }
+                    Button("Delete list", role: .destructive) { store.send(.open(.confirmingDelete)) }
                 } label: {
                     Image(systemName: "ellipsis")
                 }
@@ -118,30 +120,26 @@ struct ListScreen: View {
             }
         }
         }
-        .onAppear {
-            guard focusesField else { return }
-            if list.kind == .watch { addingTitle = true }
-            if list.kind == .travel { addingPlace = true }
-        }
-        .sheet(item: $editing) { item in
+        .sheet(item: shown { if case .editing(let id) = $0 { list.items.first { $0.id == id } } else { nil } }) { item in
             GroceryItemSheet(state: state, listID: listID, item: item)
         }
-        .sheet(isPresented: $renaming) {
+        .sheet(isPresented: showing(.rename)) {
             RenameListSheet(state: state, list: list)
         }
-        .sheet(isPresented: $addingTitle) {
+        .sheet(isPresented: showing(.addingTitle)) {
             AddTitleSheet(state: state, listID: listID)
         }
-        .sheet(isPresented: $addingPlace) {
+        .sheet(isPresented: showing(.addingPlace)) {
             AddPlaceSheet(state: state, listID: listID)
         }
-        .sheet(item: $markingBeen) { item in
+        .sheet(item: shown { if case .markingBeen(let id) = $0 { list.items.first { $0.id == id } } else { nil } }) {
+            item in
             BeenSheet(state: state, listID: listID, item: item)
         }
-        .sheet(item: $openedTitle) { opened in
+        .sheet(item: shown { if case .openedTitle(let id) = $0 { OpenedTitle(id: id) } else { nil } }) { opened in
             MovieCard(state: state, listID: listID, itemID: opened.id, details: watchDetails)
         }
-        .confirmationDialog("Delete this list?", isPresented: $confirmingDelete, titleVisibility: .visible) {
+        .confirmationDialog("Delete this list?", isPresented: showing(.confirmingDelete), titleVisibility: .visible) {
             Button("Delete list", role: .destructive) {
                 state.us.deleteList(listID)
                 dismiss()
@@ -152,9 +150,25 @@ struct ListScreen: View {
         }
     }
 
+    private struct OpenedTitle: Identifiable {
+        let id: UUID
+    }
+
     private static let top = "top"
 
-    private func adding(to list: UsList) -> Bool { list.kind.isChecklist && focused }
+    private func showing(_ sheet: ListScreenMachine.Sheet) -> Binding<Bool> {
+        Binding(
+            get: { store.state == .showing(sheet) },
+            set: { if !$0 { store.send(.closed) } }
+        )
+    }
+
+    private func shown<Value>(_ value: @escaping (ListScreenMachine.Sheet) -> Value?) -> Binding<Value?> {
+        Binding(
+            get: { if case .showing(let sheet) = store.state { value(sheet) } else { nil } },
+            set: { if $0 == nil { store.send(.closed) } }
+        )
+    }
 
     private func usesSheetToAdd(_ list: UsList) -> Bool { list.kind == .watch || list.kind == .travel }
 
@@ -170,18 +184,24 @@ struct ListScreen: View {
 
     private func placeholder(for kind: ListKind) -> String {
         switch kind {
-        case .watch: "Add a movie or show…"
-        case .groceries: "Add something to buy…"
-        case .travel: "Add a place…"
-        case .food: "Add a place to eat…"
-        case .books: "Add a book…"
-        case .bucket: "Add a dream…"
-        case .custom: "Add an item…"
+        case .watch: "Add a movie or show"
+        case .groceries: "Add something to buy"
+        case .travel: "Add a place"
+        case .food: "Add a place to eat"
+        case .books: "Add a book"
+        case .bucket: "Add a dream"
+        case .custom: "Add an item"
         }
     }
 
-    private func addItem(_ list: UsList) {
-        add(draft, to: list)
+    private func emptyText(for kind: ListKind) -> String {
+        switch kind {
+        case .groceries: "Type what you need above and tap Add, or pick a staple. You both see this list."
+        case .food: "Type a restaurant or a café above and tap Add. You both see this list."
+        case .books: "Type a book above and tap Add. You both see this list."
+        case .bucket: "Type something you want to do together above and tap Add."
+        case .watch, .travel, .custom: "Type the first item above and tap Add. You both see this list."
+        }
     }
 
     /// A grocery the pair moved to another aisle before goes there again.
