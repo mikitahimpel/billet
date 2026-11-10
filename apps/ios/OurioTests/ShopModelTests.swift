@@ -2,6 +2,7 @@ import FeatureShop
 import Foundation
 import OurioShared
 import Persistence
+import ProfileInterface
 import ShopInterface
 import Synchronization
 import Testing

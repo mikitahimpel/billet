@@ -1,5 +1,6 @@
 import OurioShared
 import PhotosUI
+import ProfileInterface
 import SwiftUI
 import Design
 

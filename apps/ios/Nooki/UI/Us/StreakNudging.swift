@@ -1,5 +1,6 @@
 import Design
 import OurioShared
+import ProfileInterface
 import SwiftUI
 
 /// Keeps the evening streak nudge in step with the streak and the Settings switch.

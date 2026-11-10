@@ -107,6 +107,7 @@ targets:
             DrawInterface,
             GamesInterface,
             MoodInterface,
+            ProfileInterface,
             RoomInterface,
             ShopInterface,
             WidgetBridge,
@@ -163,7 +164,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MoodInterface, ProfileInterface]
     settings:
       base:
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -200,7 +201,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MoodInterface, ProfileInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
@@ -240,7 +241,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MoodInterface, ProfileInterface]
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
@@ -284,7 +285,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MoodInterface, ProfileInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.share

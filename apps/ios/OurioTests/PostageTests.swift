@@ -3,6 +3,7 @@ import Design
 import Foundation
 import OurioShared
 import Persistence
+import ProfileInterface
 import Synchronization
 import Testing
 import Transport

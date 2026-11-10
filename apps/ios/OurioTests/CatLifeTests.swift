@@ -1,6 +1,7 @@
 import Foundation
 import OurioShared
 import Pet
+import ProfileInterface
 import RoomInterface
 import Synchronization
 import Testing

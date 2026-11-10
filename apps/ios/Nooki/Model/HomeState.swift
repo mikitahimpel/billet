@@ -4,6 +4,7 @@ import MoodInterface
 import Observation
 import OurioShared
 import Persistence
+import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design

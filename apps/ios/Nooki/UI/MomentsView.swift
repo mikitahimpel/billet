@@ -2,6 +2,7 @@ import DrawInterface
 import OurioShared
 import PetScene
 import PhotosUI
+import ProfileInterface
 import SwiftUI
 import Design
 import UIKit

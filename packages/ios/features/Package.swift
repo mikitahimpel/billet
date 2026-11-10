@@ -38,6 +38,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("RoomInterfaceTests", ["RoomInterface", "Pet"]),
   ("FeatureInboxTests", ["Design", "FeatureInbox", "Transport", "Wire"]),
   ("FeatureMoodTests", ["FeatureMood", "MoodInterface", "Transport", "Wire"]),
+  ("ProfileInterfaceTests", ["ProfileInterface"]),
   ("DecorInterfaceTests", ["DecorInterface"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence"]),
 ]
@@ -54,6 +55,8 @@ let decor: Target = .target(
   name: "FeatureDecor",
   dependencies: dependencies(["DecorInterface", "BilletKit", "Persistence"]))
 let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
+let profileInterface: Target = .target(
+  name: "ProfileInterface", dependencies: dependencies(["Persistence"]))
 let drawInterface: Target = .target(
   name: "DrawInterface", dependencies: dependencies(["Persistence", "Wire"]))
 let mood: Target = .target(
@@ -72,6 +75,7 @@ let products =
   features + [
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
+    "ProfileInterface",
     "DecorInterface", "FeatureDecor",
   ]
 
@@ -88,7 +92,7 @@ let package = Package(
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
     + [
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
-      mood, drawInterface, decorInterface, decor,
+      mood, drawInterface, profileInterface, decorInterface, decor,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]

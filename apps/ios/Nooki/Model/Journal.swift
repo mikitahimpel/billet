@@ -1,5 +1,6 @@
 import Observation
 import OurioShared
+import ProfileInterface
 import UIKit
 import Wire
 

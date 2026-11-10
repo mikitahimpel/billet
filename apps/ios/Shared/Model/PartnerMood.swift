@@ -1,6 +1,7 @@
 import Foundation
 import MoodInterface
 import Persistence
+import ProfileInterface
 import Wire
 
 /// Earns nothing, so nobody taps it for coins.

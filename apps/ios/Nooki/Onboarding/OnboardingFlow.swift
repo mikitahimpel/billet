@@ -1,6 +1,7 @@
 import Foundation
 import Observation
 import OurioShared
+import ProfileInterface
 import Transport
 import Wire
 

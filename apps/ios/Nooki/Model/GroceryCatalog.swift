@@ -1,5 +1,6 @@
 import Foundation
 import OurioShared
+import ProfileInterface
 
 /// A store section. The raw value is the slug kept in a list item's `aisle`.
 nonisolated enum GroceryAisle: String, CaseIterable, Codable, Identifiable {

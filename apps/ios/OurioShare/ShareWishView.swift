@@ -1,5 +1,6 @@
 import OurioShared
 import Persistence
+import ProfileInterface
 import SwiftUI
 import Design
 

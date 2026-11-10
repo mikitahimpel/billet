@@ -1,3 +1,4 @@
+import ProfileInterface
 import XCTest
 
 /// Screenshots every reachable screen for the UI audit; a step whose control is missing is skipped, so one moved

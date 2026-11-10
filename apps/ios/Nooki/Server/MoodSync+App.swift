@@ -1,6 +1,7 @@
 import FeatureMood
 import MoodInterface
 import OurioShared
+import ProfileInterface
 import Transport
 import Wire
 

@@ -1,6 +1,7 @@
 import FeatureOnboarding
 import OurioShared
 import Pet
+import ProfileInterface
 import RoomInterface
 import StoreKit
 import SwiftUI

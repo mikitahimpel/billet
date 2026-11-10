@@ -1,5 +1,6 @@
 import ActivityKit
 import OurioShared
+import ProfileInterface
 import SwiftUI
 import Design
 import Wire

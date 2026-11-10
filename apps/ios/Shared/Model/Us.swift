@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import ProfileInterface
 import Wire
 
 // MARK: - Icons
@@ -395,8 +396,8 @@ public nonisolated struct DateIdea: Identifiable, Codable, Hashable, Sendable {
     public let season: Season
     public let art: Art
 
-    public var title: String { CatProfile.named(rawTitle) }
-    public var pitch: String { CatProfile.named(rawPitch) }
+    public var title: String { ProfileInterface.CatProfile.named(rawTitle) }
+    public var pitch: String { ProfileInterface.CatProfile.named(rawPitch) }
 
     private enum CodingKeys: String, CodingKey {
         case id, rawTitle = "title", rawPitch = "pitch", place, cost, time, season, art

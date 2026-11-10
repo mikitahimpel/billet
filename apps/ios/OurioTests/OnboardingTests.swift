@@ -1,6 +1,7 @@
 import FeaturePairing
 import Foundation
 import OurioShared
+import ProfileInterface
 import Synchronization
 import Testing
 import Transport

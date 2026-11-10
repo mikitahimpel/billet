@@ -1,6 +1,7 @@
 import FeatureGames
 import FeatureInbox
 import OurioShared
+import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design

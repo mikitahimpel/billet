@@ -1,6 +1,7 @@
 import DrawInterface
 import Foundation
 import OurioShared
+import ProfileInterface
 import UserNotifications
 import WidgetKit
 import Wire

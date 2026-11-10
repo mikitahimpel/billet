@@ -1,4 +1,5 @@
 import OurioShared
+import ProfileInterface
 import SwiftUI
 import TipKit
 

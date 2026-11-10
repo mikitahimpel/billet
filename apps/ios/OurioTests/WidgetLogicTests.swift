@@ -2,6 +2,7 @@ import Foundation
 import MoodInterface
 import OurioShared
 import Persistence
+import ProfileInterface
 import Testing
 import Wire
 @testable import Billet
