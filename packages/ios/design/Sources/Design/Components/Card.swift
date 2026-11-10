@@ -31,6 +31,26 @@ public struct Card<Content: View>: View {
 }
 
 /// Every card that opens something starts with it.
+/// The one card that floats: a passing note over the screen, such as a purchase with its Undo. A
+/// hairline rim and a soft shadow lift it off whatever scrolls underneath.
+public struct Toast<Content: View>: View {
+  let content: Content
+
+  public init(@ViewBuilder content: () -> Content) { self.content = content() }
+
+  public var body: some View {
+    content
+      .padding(CardMetrics.padding)
+      .frame(maxWidth: .infinity, alignment: .leading)
+      .cardSurface()
+      .overlay {
+        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
+          .strokeBorder(Ink.separator, lineWidth: 1)
+      }
+      .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
+  }
+}
+
 public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
   let title: String
   let leading: Leading
@@ -329,5 +349,26 @@ extension View {
   public func listRowSurface() -> some View {
     listRowBackground(Ink.surface)
       .listRowSeparatorTint(Ink.separator)
+  }
+}
+
+#Preview("Toast") {
+  BothSchemes {
+    VStack {
+      Spacer()
+      Toast {
+        HStack(spacing: Space.m) {
+          VStack(alignment: .leading, spacing: 2) {
+            Text("Tea for Two is yours").font(.ourioHeadline).foregroundStyle(Ink.text)
+            Text("It's in your room's closet.").font(.ourioCaption)
+              .foregroundStyle(Ink.textSecondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          PillButton("Undo") {}
+        }
+      }
+      .padding(Space.l)
+    }
+    .background(Ink.screen)
   }
 }

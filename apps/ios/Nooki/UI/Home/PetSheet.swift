@@ -45,7 +45,10 @@ struct PetButton: View {
                     SpringKeyframe(1.0, duration: 0.35)
                 }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
+        // Above the portrait, the arrow down at it, so the hint never covers her.
+        .hint(PetHint(), arrowEdge: .bottom, target: Circle())
+        .hint(TreatHint(), arrowEdge: .bottom, target: Circle())
         .accessibilityLabel("\(state.petName), Lv. \(state.care.level)")
         .accessibilityIdentifier("pet")
         .onChange(of: state.showsPetSheet) { _, asked in

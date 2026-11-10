@@ -19,14 +19,14 @@ struct ComposeSheet: View {
 
     var body: some View {
         BilletSheet("New moment", size: .fit) {
-            VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 10) {
+            VStack(spacing: Space.gutter) {
+                VStack(alignment: .leading, spacing: Space.m) {
                     Image(uiImage: film ?? image)
                         .resizable()
                         .scaledToFill()
                         .frame(width: 220, height: 220)
                         .clipped()
-                    TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(Color(hex: 0xB8957A)))
+                    TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(PolaroidPaper.byline))
                         .font(.custom("Noteworthy-Bold", size: 17))
                         .foregroundStyle(PolaroidPaper.ink)
                         .focused($focused)
@@ -36,8 +36,8 @@ struct ComposeSheet: View {
                             if text.count > 40 { caption = String(text.prefix(40)) }
                         }
                 }
-                .padding(12)
-                .padding(.bottom, 14)
+                .padding(Space.m)
+                .padding(.bottom, Space.l)
                 .background { PaperSheet(lift: PaperSheet.Lift(radius: 12, y: 8, opacity: 0.3)) }
                 .rotationEffect(.degrees(-2))
 

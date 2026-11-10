@@ -19,7 +19,7 @@ struct InkPalette: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Space.m) {
             ForEach(state.shop.inks) { ink in
                 dot(ink)
             }
@@ -57,7 +57,7 @@ struct InkPalette: View {
             }
             .frame(minWidth: 34, minHeight: 44)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(owned ? "\(ink.name) ink" : "Buy \(ink.name) ink, \(ink.price) coins")
         .accessibilityHint(owned ? "" : "Buys it, or opens the Store when the coins are short")
         .accessibilityAddTraits(selected ? .isSelected : [])

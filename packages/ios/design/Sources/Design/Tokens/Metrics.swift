@@ -29,4 +29,6 @@ public enum Size {
   public static let button: CGFloat = 52
   public static let cardMark: CGFloat = 44
   public static let row: CGFloat = 54
+  /// A price tag or pill button: shorter than `control`, which stays its tap area.
+  public static let pill: CGFloat = 36
 }

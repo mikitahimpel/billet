@@ -30,6 +30,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 7. **Glass is for chrome that floats:** header buttons, the tab bar, the toolbar of a full-screen canvas. Never glass
    on glass, never glass behind reading text, and not on every card of a scrolling list.
 8. **Spacing comes from `Space`**, sizes from `Size` (`Size.control` = 44 is the height of every header control).
+   A padding or spacing written as a number, a `.buttonStyle(.plain)` (no pressed state) and a system text style
+   (`.font(.title)`) are counted per file by `check-design.mjs`; the counts only go down.
 9. Numbers that change get `.monospacedDigit()`; animate them with `.contentTransition(.numericText())` only
    while the value changes.
 10. Text on honey is `Ink.heroInk`; white on honey is unreadable.
@@ -66,6 +68,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A control that is not a `TextField` but sits with fields (a search bar with an icon, a picker or toggle row in an editor) | `.fieldSurface()` |
 | The main action | `PrimaryButton` (or `PrimaryButtonStyle` on a custom label) |
 | A quieter action | `SecondaryButton` |
+| On or off (Love, Pin to wall), or one of a row of choices | `ToggleButtonStyle(isOn:tint:)` |
+| A whole row that opens something | `RowButtonStyle()`: the row lights up while pressed; a card or tile takes `PressScaleStyle()` |
 | Try a failed load or send again | `RetryButton` under an `EmptyState` or in a card; `RetryButton(compact: true)` in a row |
 | A round control in a header | `GlassIconButton(symbol:label:badge:action:)` |
 | Any other surface that floats | `glass(_:role:)` inside the bar's `GlassGroup`; the main action `accentGlass()` |
@@ -76,6 +80,9 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A tag: rarity, discount, count | `Chip(style: .tinted / .honey / .quiet)` |
 | A filter or category | `FilterChip` |
 | A price in coins | `PriceButton(price, was:)`; a deal's old price sits inside it |
+| A small action inside a card or toast (Place, Undo) | `PillButton(title, symbol:)`, 36 pt tall with a 44 pt tap area, the price tag's height |
+| A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
+| A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:)` on the note's face |
 
 ### Do and don't

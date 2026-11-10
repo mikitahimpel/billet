@@ -22,8 +22,8 @@ struct TabBar: View {
                 HStack(spacing: 0) {
                     ForEach(Self.tabs, id: \.self) { tab in
                         switch tab {
-                        case .moments: item(tab).popoverTip(MomentsHint(), arrowEdge: .bottom)
-                        case .shop: item(tab).popoverTip(ShopHint(), arrowEdge: .bottom)
+                        case .moments: item(tab).hint(MomentsHint(), arrowEdge: .bottom, target: Capsule())
+                        case .shop: item(tab).hint(ShopHint(), arrowEdge: .bottom, target: Capsule())
                         case .world, .us: item(tab)
                         }
                     }
@@ -196,7 +196,7 @@ struct AddButton: View {
         }
         .accentGlass()
         .accessibilityLabel("Add")
-        .popoverTip(AddHint(), arrowEdge: .bottom)
+        .hint(AddHint(), arrowEdge: .bottom, target: Circle())
         .onChange(of: adding) { _, adding in
             if adding { hints.done(AddHint()) }
         }

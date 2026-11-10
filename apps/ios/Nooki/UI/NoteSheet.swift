@@ -19,13 +19,13 @@ struct NoteSheet: View {
     var body: some View {
         BilletSheet("Note", size: .fit) {
             if let note {
-                VStack(spacing: Space.l + 6) {
+                VStack(spacing: Space.section) {
                     face(note)
                         .rotationEffect(.degrees(-1))
                         .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
                         .padding(.top, Space.s)
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: Space.s) {
                         Monogram(partner: note.author, profile: state.profile, size: 20)
                         Text(note.date.formatted(date: .long, time: .omitted))
                             .font(.ourioCaption)
@@ -85,14 +85,14 @@ struct NoteSheet: View {
         ZStack {
             Color(hex: note.paper.hex)
             if let doodle {
-                Image(uiImage: doodle).resizable().scaledToFit().padding(24)
+                Image(uiImage: doodle).resizable().scaledToFit().padding(Space.section)
             } else {
                 Text(note.text)
                     .font(.custom("Noteworthy-Bold", size: 30))
                     .foregroundStyle(Color(hex: note.inkHex))
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.4)
-                    .padding(26)
+                    .padding(Space.section)
             }
         }
         .frame(width: 300, height: 300)

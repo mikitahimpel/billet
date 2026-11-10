@@ -64,10 +64,10 @@ struct UsIcon: View {
 struct UsGlyphPicker: View {
     @Binding var selection: UsGlyph
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 8)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 8)
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
+        LazyVGrid(columns: columns, spacing: Space.m) {
             ForEach(UsGlyph.palette, id: \.self) { glyph in
                 Button { selection = glyph } label: {
                     UsIcon(glyph: glyph, size: 34)
@@ -79,7 +79,7 @@ struct UsGlyphPicker: View {
                                 .padding(-3)
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .animation(.snappy(duration: 0.2), value: selection)
             }
         }

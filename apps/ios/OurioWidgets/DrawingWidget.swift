@@ -93,7 +93,7 @@ struct DrawingWidgetView: View {
                 }
             }
         } else {
-            VStack(spacing: 4) {
+            VStack(spacing: Space.xs) {
                 Image(systemName: "scribble.variable")
                     .font(.system(size: family == .accessoryRectangular ? 16 : 26, weight: .semibold))
                 Text(family == .accessoryRectangular ? "Draw for \(entry.partner)" : "Nothing from \(entry.partner) yet")

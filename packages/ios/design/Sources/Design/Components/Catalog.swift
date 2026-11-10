@@ -62,6 +62,11 @@ private struct Catalog: View {
           SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
         }
         HStack {
+          Button("Loved", systemImage: "heart.fill") {}
+            .buttonStyle(ToggleButtonStyle(isOn: true, tint: .blushPink))
+          Button("Pin to wall", systemImage: "pin") {}.buttonStyle(ToggleButtonStyle(isOn: false))
+        }
+        HStack {
           RetryButton {}
           RetryButton(compact: true) {}
         }

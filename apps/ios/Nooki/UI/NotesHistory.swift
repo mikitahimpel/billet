@@ -14,7 +14,7 @@ struct NotesHistory: View {
 
     @State private var opened: PinRoute?
 
-    private let columns = [GridItem(.flexible(), spacing: 14), GridItem(.flexible(), spacing: 14)]
+    private let columns = [GridItem(.flexible(), spacing: Space.l), GridItem(.flexible(), spacing: Space.l)]
 
     private var months: [(title: String, notes: [Note])] {
         let calendar = Calendar.current
@@ -25,24 +25,19 @@ struct NotesHistory: View {
     }
 
     var body: some View {
-        BilletSheet("All notes") {
-            VStack(alignment: .leading, spacing: 18) {
-                Text("\(state.notes.notes.count) \(state.notes.notes.count == 1 ? "note" : "notes")")
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
-
+        let count = state.notes.notes.count
+        BilletSheet("All notes", subtitle: "\(count) \(count == 1 ? "note" : "notes")") {
+            VStack(alignment: .leading, spacing: Space.l) {
                 ForEach(months, id: \.title) { month in
-                    Text(month.title)
-                        .font(.ourioCallout.weight(.semibold))
-                        .foregroundStyle(Ink.textSecondary)
-                        .padding(.top, 4)
-                    LazyVGrid(columns: columns, spacing: 18) {
+                    SectionHeader(month.title)
+                        .padding(.top, Space.xs)
+                    LazyVGrid(columns: columns, spacing: Space.l + Space.xs) {
                         ForEach(month.notes) { note in
                             Button { opened = PinRoute(id: note.id) } label: {
                                 NoteCard(note: note)
                                     .rotationEffect(note.id.polaroidTilt)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressScaleStyle())
                         }
                     }
                 }
@@ -65,14 +60,14 @@ private struct NoteCard: View {
             .background { PaperSheet(color: Color(hex: note.paper.hex), lift: PaperSheet.Lift()) }
             .overlay {
                 if let doodle {
-                    Image(uiImage: doodle).resizable().scaledToFit().padding(12)
+                    Image(uiImage: doodle).resizable().scaledToFit().padding(Space.m)
                 } else if note.doodle == nil {
                     Text(note.text)
                         .font(.custom("Noteworthy-Bold", size: 18))
                         .foregroundStyle(Color(hex: note.inkHex))
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
-                        .padding(14)
+                        .padding(Space.l)
                 }
             }
             .overlay {
@@ -82,14 +77,14 @@ private struct NoteCard: View {
             }
             .overlay(alignment: .topTrailing) {
                 if UnsentMark.shows(note.unsent, paired: session?.isPaired == true) {
-                    UnsentMark(size: 11, tint: Color(hex: note.inkHex).opacity(0.6)).padding(8)
+                    UnsentMark(size: 11, tint: Color(hex: note.inkHex).opacity(0.6)).padding(Space.s)
                 }
             }
             .overlay(alignment: .bottomTrailing) {
                 Text("— \(note.author)")
                     .font(.custom("Noteworthy-Bold", size: 13))
                     .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
-                    .padding(8)
+                    .padding(Space.s)
             }
             .task(id: note.id) {
                 guard let url = NoteStore.doodleURL(for: note) else { return }

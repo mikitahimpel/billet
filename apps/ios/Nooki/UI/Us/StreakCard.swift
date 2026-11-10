@@ -51,7 +51,7 @@ struct StreakCard: View {
                 }
 
                 if let next = milestone.next {
-                    VStack(alignment: .leading, spacing: 6) {
+                    VStack(alignment: .leading, spacing: Space.s) {
                         ProgressCapsule(value: Double(days) / Double(next))
                         Text("\(next - days) to the \(next)-day badge")
                             .font(.ourioCaption)
@@ -106,9 +106,9 @@ private struct StatusPill: View {
     var body: some View {
         switch status {
         case .done:
-            pill("Today", symbol: "checkmark", tint: Color(hex: 0xA8D98A))
+            Chip("Today", symbol: "checkmark", style: .tinted(.honey))
         case .atRisk:
-            pill(hoursLeft, symbol: "hourglass", tint: Color.honey)
+            Chip(hoursLeft, symbol: "hourglass", style: .honey)
         case .restorable, .cold:
             EmptyView()
         }
@@ -119,15 +119,6 @@ private struct StatusPill: View {
         let hours = Int(midnight.timeIntervalSince(now) / 3600)
         return hours < 1 ? "<1h left" : "\(hours)h left"
     }
-
-    private func pill(_ title: String, symbol: String, tint: Color) -> some View {
-        Label(title, systemImage: symbol)
-            .font(.ourioMicro)
-            .foregroundStyle(tint)
-            .padding(.horizontal, 10)
-            .frame(minHeight: 28)
-            .background(tint.opacity(0.18), in: .capsule)
-    }
 }
 
 /// The highest milestone reached; before the first one it shows what's ahead.
@@ -135,14 +126,10 @@ private struct Badge: View {
     let reached: Int?
 
     var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: reached == nil ? "lock.fill" : "rosette")
-            Text(reached.map { "\($0)-day badge" } ?? "First badge at \(LoveStreak.milestones[0]) days")
-        }
-        .font(.ourioMicro)
-        .foregroundStyle(reached == nil ? Ink.textSecondary : Ink.accentText)
-        .padding(.horizontal, 10)
-        .frame(minHeight: 28)
-        .background(reached == nil ? Ink.surfaceRaised : Color.honey.opacity(0.18), in: .capsule)
+        Chip(
+            reached.map { "\($0)-day badge" } ?? "First badge at \(LoveStreak.milestones[0]) days",
+            symbol: reached == nil ? "lock.fill" : "rosette",
+            style: reached == nil ? .quiet : .tinted(.honey)
+        )
     }
 }

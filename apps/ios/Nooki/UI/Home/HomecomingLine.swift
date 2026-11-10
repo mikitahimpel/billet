@@ -48,7 +48,7 @@ struct HomecomingLabel: View {
     let line: HomecomingLine
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.s) {
             Image(systemName: "heart.fill")
             Text(line.text)
                 .lineLimit(1)
@@ -56,7 +56,7 @@ struct HomecomingLabel: View {
         }
         .font(.ourioCallout.weight(.semibold))
         .foregroundStyle(Ink.glassGlyph)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(height: 40)
         .glass(.capsule, role: .bar)
         .accessibilityElement(children: .combine)

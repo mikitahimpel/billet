@@ -201,7 +201,7 @@ struct DrawGuessScreen: View {
                             .font(.ourioCallout)
                             .foregroundStyle(Ink.accentText)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                 }
                 VStack(alignment: .leading, spacing: Space.s) {
                     Text("Your own word")
@@ -336,7 +336,7 @@ private struct RiddleReplay: View {
                         .frame(width: 44, height: 44)
                         .background(Circle().fill(.white.opacity(0.7)))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .padding(Space.s)
                 .accessibilityLabel("Replay the drawing")
             }
@@ -363,7 +363,7 @@ private struct RiddleBlanks: View {
     var body: some View {
         WrapLayout(spacing: Space.l) {
             ForEach(Array(words.enumerated()), id: \.offset) { _, word in
-                HStack(spacing: 6) {
+                HStack(spacing: Space.s) {
                     ForEach(word, id: \.index) { slot in blank(slot) }
                 }
             }
@@ -402,7 +402,7 @@ private struct RiddleBlanks: View {
                     .foregroundStyle(Ink.text)
                     .overlay(alignment: .bottom) { Capsule().fill(Ink.text).frame(height: 3) }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Letter \(slot.index + 1), \(slot.letter ?? "")")
             .accessibilityHint("Takes the letter back")
         }

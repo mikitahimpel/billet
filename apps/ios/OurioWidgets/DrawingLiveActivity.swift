@@ -51,7 +51,7 @@ private struct DrawingActivityBanner: View {
             DrawingTile(state: state, margin: 0.1)
                 .frame(width: 132, height: 104)
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: Space.xs) {
                 Text("From \(partner)")
                     .font(.ourioHeadline)
                 Text("Tap to draw one back")
