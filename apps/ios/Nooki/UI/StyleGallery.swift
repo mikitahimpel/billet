@@ -37,6 +37,11 @@ struct StyleGallery: View {
                 Row("Erase all data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
                 Row("Not connected", symbol: "icloud.slash", tint: UsTint.coral.color) { RetryButton(compact: true) {} }
             }
+            GroupedSection(header: "Status rows", inset: StatusRow.inset) {
+                StatusRow("Food", state: "Hungry", symbol: "fork.knife", emphasis: .raised, action: "Feed") {}
+                StatusRow("Rest", state: "Wide awake", symbol: "moon.zzz.fill", note: "Naps on her own")
+                StatusRow("Love", state: "Adored", symbol: "heart.fill", tint: .blushPink, action: "Pet") {}
+            }
             GroupedSection(header: "Chips", inset: Space.l) {
                 HStack {
                     ForEach(["Today", "Cats", "Rooms"].indices, id: \.self) { index in

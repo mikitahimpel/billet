@@ -24,7 +24,7 @@ nonisolated struct PetHint: HintTip {
     static let hintId = "pet"
 
     var title: Text { Text("Say hi to \(CatProfile.name())") }
-    var message: Text? { Text("Tap her in the room to pet her. Her portrait opens her card.") }
+    var message: Text? { Text("Tap her in the room to pet her. Her portrait shows what she would like.") }
     var image: Image? { Image(systemName: "hand.wave.fill") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "pet" }] }
 }
@@ -65,12 +65,12 @@ nonisolated struct RoomsHint: HintTip {
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "rooms" }] }
 }
 
-/// On her portrait again: the Treat button lives in the card it opens.
+/// On her portrait again: the Treat button lives in the sheet it opens.
 nonisolated struct TreatHint: HintTip {
     static let hintId = "treat"
 
     var title: Text { Text("A treat goes further") }
-    var message: Text? { Text("Her card has treats: one fills her bar more than a pet, for \(ShopModel.treatPrice) coins.") }
+    var message: Text? { Text("Her portrait opens her treats: one fills her up more than a pet, for \(ShopModel.treatPrice) coins.") }
     var image: Image? { Image(systemName: "fork.knife") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "treat" }] }
 }
