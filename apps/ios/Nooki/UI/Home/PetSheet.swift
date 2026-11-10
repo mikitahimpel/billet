@@ -98,8 +98,8 @@ private struct PetSheet: View {
                 VStack(spacing: Space.m) {
                     hero(mood: current?.moodLine(name: state.petName))
                     NeedList(name: state.petName, needs: current, care: give)
-                    moreCare
-                    Text(short ? "Not enough coins for a treat" : "With you two for \(state.daysTogether) days")
+                    moreCare(needsKnown: current != nil)
+                    Text(short ? "Not enough coins for a treat" : "With you two for ^[\(state.daysTogether) day](inflect: true)")
                         .font(.ourioCaption)
                         .foregroundStyle(short ? Ink.accentText : Ink.textSecondary)
                         .contentTransition(.opacity)
@@ -124,9 +124,9 @@ private struct PetSheet: View {
     }
 
     /// Smaller than a need's row, so the rows stay what the eye reads first.
-    private var moreCare: some View {
+    private func moreCare(needsKnown: Bool) -> some View {
         FlowRow {
-            ForEach(NeedCare.more, id: \.self) { care in
+            ForEach(NeedCare.extra(needsKnown: needsKnown), id: \.self) { care in
                 PillButton(care.title, symbol: care.symbol) { give(care) }
                     .accessibilityHint(care.hint(name: state.petName))
             }
@@ -175,6 +175,8 @@ private struct PetSheet: View {
             }
             .frame(maxWidth: .infinity)
         }
+        // Past this the mood line alone fills an SE's screen and pushes her needs below the fold.
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
     /// The way to her next level in words; the ring on her portrait on Home draws it.

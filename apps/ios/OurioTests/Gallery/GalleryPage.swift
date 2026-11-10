@@ -130,6 +130,8 @@ enum GalleryPage: String, CaseIterable, Sendable {
             GlassIconButton(symbol: "person.fill", label: "Alex") {}
                 .overlay(alignment: .topTrailing) { SymbolBadge(symbol: "heart.fill", tint: .blushPink) }
         }
+        // Glass controls sit in chrome, which caps its text size as the app's header does.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     @MainActor @ViewBuilder private static var fieldsPage: some View {

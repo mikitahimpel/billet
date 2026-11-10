@@ -55,6 +55,26 @@ import Testing
     }
 
     @Test(arguments: [
+        (PetNeeds(all: 0.2), Set<PetNeed>([.full, .rested])),
+        (PetNeeds(full: 0.3, rested: 0.9, loved: 0.1, playful: 0.2), [.loved, .playful]),
+        (PetNeeds(full: 0.3, rested: 0.9, loved: 0.5, playful: 0.6), [.full]),
+        (PetNeeds(all: 0.5), []),
+    ])
+    func atMostTheTwoLowestWantingNeedsAreRaised(needs: PetNeeds, raised: Set<PetNeed>) {
+        #expect(NeedLevel.raised(needs) == raised)
+    }
+
+    @Test(arguments: [PetNeeds(all: 0.2), PetNeeds(full: 0.3, rested: 0.9, loved: 0.1, playful: 0.2)])
+    func theHomeCueIsAlwaysARaisedNeed(needs: PetNeeds) throws {
+        #expect(NeedLevel.raised(needs).contains(try #require(NeedLevel.cue(needs))))
+    }
+
+    @Test func beforeHerNeedsAreKnownEveryCareIsStillThere() {
+        #expect(NeedCare.extra(needsKnown: true) == NeedCare.more)
+        #expect(NeedCare.extra(needsKnown: false).map(\.title) == ["Feed", "Play", "Pet", "Water", "Brush"])
+    }
+
+    @Test(arguments: [
         (PetNeeds(all: 0.9), PetNeed?.none),
         (PetNeeds(all: 0.5), nil),
         (PetNeeds(all: 0.35), nil),

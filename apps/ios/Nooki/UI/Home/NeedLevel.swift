@@ -23,6 +23,14 @@ nonisolated enum NeedLevel: Hashable, CaseIterable, Sendable {
         }
     }
 
+    /// The needs the sheet raises: those that want something, at most the two lowest, so a raised row still says what
+    /// comes first. Ties go in display order.
+    static func raised(_ needs: PetNeeds) -> Set<PetNeed> {
+        let wanting = PetNeed.displayOrder.enumerated().filter { NeedLevel(needs[$0.element]) == .wants }
+        let lowest = wanting.sorted { (needs[$0.element], $0.offset) < (needs[$1.element], $1.offset) }
+        return Set(lowest.prefix(2).map(\.element))
+    }
+
     /// The need her portrait on Home shows: the lowest, while it wants something.
     static func cue(_ needs: PetNeeds) -> PetNeed? {
         let (need, value) = needs.lowest
@@ -68,6 +76,11 @@ nonisolated enum NeedCare: Hashable, Sendable {
 
     /// The care that no need's row offers, under the rows.
     static let more: [NeedCare] = [.game(.water), .game(.brush)]
+
+    /// Under the rows; before her needs are known there are no rows, so every care goes there.
+    static func extra(needsKnown: Bool) -> [NeedCare] {
+        needsKnown ? more : PetNeed.displayOrder.compactMap(\.care) + more
+    }
 }
 
 nonisolated extension PetNeed {
