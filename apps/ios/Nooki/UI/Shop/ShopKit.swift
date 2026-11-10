@@ -13,24 +13,18 @@ enum ShopInk {
 }
 
 extension ShopRarity {
-    var tint: Color {
+    var tone: RarityTone {
         switch self {
-        case .common: Color(hex: 0xE3BD8F)
-        case .rare: ShopInk.teal
-        case .epic: ShopInk.plum
-        case .legendary: ShopInk.gold
+        case .common: Ink.rarityCommon
+        case .rare: Ink.rarityRare
+        case .epic: Ink.rarityEpic
+        case .legendary: Ink.rarityLegendary
         }
     }
 
-    var fill: (light: Color, edge: Color) {
-        switch self {
-        // Always the light pair, in either appearance: the art sits on a bright tint, never on dark.
-        case .common: (Color(hex: 0xFFF1DE), Color(hex: 0xF3DDC2))
-        case .rare: (Color(hex: 0xDDF6FA), Color(hex: 0xB9E6EE))
-        case .epic: (Color(hex: 0xF1E3FF), Color(hex: 0xDCC4F8))
-        case .legendary: (Color(hex: 0xFFF0C4), Color(hex: 0xFFDB8A))
-        }
-    }
+    var tint: Color { tone.tint }
+
+    var fill: (light: Color, edge: Color) { (tone.light, tone.edge) }
 
     var chip: Chip {
         Chip(title, style: self == .common ? .quiet : .tinted(tint))
