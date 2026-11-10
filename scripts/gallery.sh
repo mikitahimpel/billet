@@ -6,8 +6,8 @@
 #   scripts/gallery.sh            compare
 #   scripts/gallery.sh --record   draw the pages again and keep them as the new references
 #
-# Runs under ~/.billet-manager/build.lock, once the load is under 40, with its own Simulator, which it
-# shuts down after.
+# Runs under ~/.billet-manager/build.lock, taken through the lockq-wait queue, with its own Simulator,
+# which it shuts down after.
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
@@ -39,26 +39,12 @@ release() {
 trap release EXIT
 trap 'exit 130' INT TERM
 
-# Waits while the machine is busy (1-minute load over 40) or another live process holds the lock.
-# It never clears or rewrites the lock: macOS shlock refuses even a lock whose pid is gone, so a stale
-# one waits for whoever owns it, or the manager, to remove it.
-while true; do
-  load=$(sysctl -n vm.loadavg | awk '{print int($2)}')
-  if ((load > 40)); then
-    echo "gallery: load $load is over 40; waiting"
-  elif shlock -f "$lock" -p $$; then
-    holding=1
-    break
-  else
-    holder=$(tr -dc 0-9 <"$lock" 2>/dev/null)
-    if [[ -n $holder ]] && kill -0 "$holder" 2>/dev/null; then
-      echo "gallery: build.lock is held by $holder ($(ps -o command= -p "$holder" | cut -c1-100)); waiting"
-    else
-      echo "gallery: build.lock names ${holder:-nobody}, which is not running; waiting for its owner to clear it"
-    fi
-  fi
-  sleep 30
-done
+# The machine's build queue: first come, first served, once the 1-minute load is under 40. It takes
+# the lock for this script's pid and prints the queue position while it waits.
+lockq=~/.billet-manager/bin/lockq-wait
+[[ -x $lockq ]] || { echo "gallery: $lockq is missing; see ~/.billet-manager/bin/README-lockq.md" >&2; exit 1; }
+"$lockq" $$ "gallery $(basename "$PWD")"
+holding=1
 
 (cd apps/ios && xcodegen generate --quiet)
 xcode() {
