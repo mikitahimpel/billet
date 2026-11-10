@@ -173,7 +173,7 @@ private struct PosterPeek: View {
             .background {
                 RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
                     .fill(Ink.surfaceRaised)
-                    .shadow(color: .black.opacity(0.3), radius: 4, y: 3)
+                    .perfShadow(color: .black.opacity(0.3), radius: 4, y: 3)
             }
     }
 }

@@ -41,6 +41,7 @@ struct ShopItemCard: View {
         .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .cardSurface()
+        .perfFlattened()
     }
 
     private var art: some View {

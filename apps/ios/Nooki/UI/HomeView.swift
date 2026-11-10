@@ -37,6 +37,8 @@ struct HomeView: View {
     /// The header and the tab bar as a perf run wants them drawn; glass, as shipped, otherwise.
     @State private var hud = HUDArm.launch
     @State private var sheetGround = SheetGroundStyle.opaque
+    /// Labs → Performance: suspects switched off while the app runs, and its frame meter.
+    @State private var perfLab = PerfLab(defaults: .standard)
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
@@ -206,6 +208,7 @@ struct HomeView: View {
             withAnimation(.spring(duration: 0.4)) { state.open(link) }
         }
         .environment(\.sheetGround, sheetGround)
+        .environment(perfLab)
     }
 
     private var layout: some View {
@@ -247,13 +250,14 @@ struct HomeView: View {
                     Color.clear
                 }
             }
+            .perfLab(perfLab)
             // Tab to tab, the page alone fades; the header and the tab bar are outside it and stay put.
             .transition(.opacity)
             .animation(Motion.fade(), value: state.tab)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
-            .bars(fades: !showsRoom) {
+            .bars(fades: !showsRoom, softEdges: perfLab.isOn(.scrollEdges)) {
                 if hud != .hidden {
                     AppHeader(state: state, erase: {
                         room.stop()
@@ -267,14 +271,14 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 4)
-                    .environment(\.glassRendering, hud.glass)
+                    .environment(\.glassRendering, barGlass)
                 }
             } bottom: {
                 if hud != .hidden {
                     TabBar(state: state)
                         .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
                         .padding(.horizontal, 16)
-                        .environment(\.glassRendering, hud.glass)
+                        .environment(\.glassRendering, barGlass)
                 }
             }
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
@@ -298,6 +302,15 @@ struct HomeView: View {
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
         .background { TouchWatcher { [quiet] in quiet.send(.touched) } }
+        #if DEBUG || LABS_YES
+        .overlay(alignment: .topTrailing) {
+            if perfLab.state.meter {
+                PerfLabMeter(lab: perfLab)
+                    .padding(.trailing, 16)
+                    .padding(.top, 64)
+            }
+        }
+        #endif
         .overlay(alignment: .topLeading) {
             if brainCard && state.tab == .world {
                 RoomBrainCard(controller: room)
@@ -460,6 +473,9 @@ struct HomeView: View {
         UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows).first(where: \.isKeyWindow)
     }
+
+    /// The header's and the tab bar's glass: a perf run's arm, flat while Labs → Performance has it off.
+    private var barGlass: GlassRendering { perfLab.isOn(.barGlass) ? hud.glass : .flat }
 
     private var roomInput: RoomInput {
         let visibility: RoomVisibility =

@@ -42,6 +42,7 @@ extension ShopRarity {
 struct RarityFrame<Content: View>: View {
     let rarity: ShopRarity
     @ViewBuilder let content: Content
+    @Environment(\.perfShine) private var shine
 
     private let shape = RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
 
@@ -53,10 +54,10 @@ struct RarityFrame<Content: View>: View {
                 // to be drawn again just to cast it.
                 shape.fill(RadialGradient(colors: [rarity.fill.light, rarity.fill.edge],
                                           center: UnitPoint(x: 0.5, y: 0.3), startRadius: 4, endRadius: 140))
-                    .shadow(color: rarity.shines ? rarity.tint.opacity(0.5) : .clear, radius: 9)
+                    .perfShadow(color: rarity.shines ? rarity.tint.opacity(0.5) : .clear, radius: 9)
             }
             .overlay {
-                if rarity.shines { ShineSweep(period: rarity == .legendary ? 2.6 : 3.6).clipShape(shape) }
+                if rarity.shines, shine { ShineSweep(period: rarity == .legendary ? 2.6 : 3.6).clipShape(shape) }
             }
             .overlay {
                 shape.strokeBorder(

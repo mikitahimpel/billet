@@ -88,7 +88,7 @@ struct MovieCard: View {
                             RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
                                 .strokeBorder(Ink.screen, lineWidth: 3)
                         }
-                        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
+                        .perfShadow(color: .black.opacity(0.25), radius: 8, y: 4)
                         .padding(.leading, Space.gutter)
                         .offset(y: 40)
                 }

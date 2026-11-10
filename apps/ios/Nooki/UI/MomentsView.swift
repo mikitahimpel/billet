@@ -135,6 +135,7 @@ struct MomentsView: View {
             ForEach(moments) { moment in
                 Button { viewing = PinRoute(id: moment.id) } label: {
                     MomentPrint(moment: moment, store: store, profile: state.profile, width: width, undeveloped: undeveloped.contains(moment.id))
+                        .perfFlattened()
                         .rotationEffect(moment.id.polaroidTilt)
                         .padding(.vertical, width * 0.04)
                 }
@@ -333,7 +334,7 @@ struct MomentPrint: View {
                     .font(.system(size: max(13, width * 0.08)))
                     .frame(width: max(28, width * 0.16), height: max(28, width * 0.16))
                     .background(Ink.surface, in: .circle)
-                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                    .perfShadow(color: .black.opacity(0.2), radius: 2, y: 1)
                     .padding(width * 0.08)
                     .transition(.scale.combined(with: .opacity))
                     .accessibilityLabel("Reacted \(reaction.label)")
@@ -343,7 +344,7 @@ struct MomentPrint: View {
                     .foregroundStyle(.white)
                     .frame(width: max(24, width * 0.14), height: max(24, width * 0.14))
                     .background(Color.blushPink, in: .circle)
-                    .shadow(color: .black.opacity(0.2), radius: 2, y: 1)
+                    .perfShadow(color: .black.opacity(0.2), radius: 2, y: 1)
                     .padding(width * 0.09)
             }
         }

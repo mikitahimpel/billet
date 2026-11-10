@@ -27,6 +27,7 @@ struct SettingsView: View {
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
     @AppStorage(ComposerStyle.key) private var composerStyle = ComposerStyle.standard
+    @Environment(PerfLab.self) private var perfLab: PerfLab?
     @State private var confirmingErase = false
     @State private var demoBusy = false
     @State private var demoFailed = false
@@ -138,6 +139,12 @@ struct SettingsView: View {
                     Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
+                if let perfLab {
+                    NavigationLink { PerfLabPage(lab: perfLab) } label: {
+                        Row("Performance", symbol: "speedometer", tint: UsTint.sage.color) { RowChevron() }
+                    }
+                    .buttonStyle(PressScaleStyle())
+                }
                 PickerRow("Composer style", symbol: "square.and.pencil", tint: UsTint.sun.color,
                           selection: $composerStyle) {
                     ForEach(ComposerStyle.allCases) { Text($0.title).tag($0) }
