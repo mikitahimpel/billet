@@ -15,7 +15,7 @@ struct PerfLabTests {
         #expect(!state.meter)
     }
 
-    static let accepted: [(State, PerfLabMachine.Event, State)] = [
+    nonisolated static let accepted: [(State, PerfLabMachine.Event, State)] = [
         (.shipped, .set(.shadows, on: false), State(changed: [.shadows])),
         (.shipped, .set(.flatten, on: true), State(changed: [.flatten])),
         (State(changed: [.shadows, .shine]), .set(.shadows, on: true), State(changed: [.shine])),
@@ -32,7 +32,7 @@ struct PerfLabTests {
         #expect(outputs == [.save(to)])
     }
 
-    static let rejected: [(State, PerfLabMachine.Event)] = [
+    nonisolated static let rejected: [(State, PerfLabMachine.Event)] = [
         (.shipped, .set(.shadows, on: true)),
         (.shipped, .set(.flatten, on: false)),
         (State(changed: [.pageGlass]), .set(.pageGlass, on: false)),

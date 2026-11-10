@@ -5,7 +5,7 @@ import QuartzCore
 import SwiftUI
 
 /// What Labs → Performance can switch off while the app runs, to find what costs a phone its frames.
-enum PerfSuspect: String, CaseIterable, Codable, Sendable {
+nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     /// The header and the tab bar drawn as Liquid Glass; off, a flat surface.
     case barGlass
     /// Glass drawn inside pages, such as the Shop's featured card; off, a flat surface.
@@ -99,7 +99,7 @@ nonisolated enum PerfLabMachine: Machine {
 }
 
 /// The frames of a moment, from the screen's own timestamps.
-struct FrameStats: Equatable, Sendable {
+nonisolated struct FrameStats: Equatable, Sendable {
     var fps: Double
     /// The 95th percentile of the frame times, in milliseconds.
     var p95: Double
