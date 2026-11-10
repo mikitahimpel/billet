@@ -1,4 +1,4 @@
-"""Renders the City window's street diorama as transparent layers, one time of day per run.
+"""Renders the Bedroom window's suburb diorama as transparent layers, one time of day per run.
 
   blender -b -P city_diorama.py -- <out_dir> <day|dusk|night> [--samples 96] [--width 1280] [--only far,mid,street,sky,cars]
 
@@ -32,16 +32,16 @@ HEIGHT = WIDTH * 11 // 20
 ONLY = option("--only", "sky,far,mid,street,cars").split(",")
 
 # Where the cross street opens in the row of buildings, and the street the cars drive on (world units, metres).
-GAP_X = 7.0
-GAP_W = 7.0
+GAP_X = 3.0
+GAP_W = 6.0
 ROAD = (-9.0, 2.0)
 LANES = {"far": -1.5, "near": -5.5}
 
 # The Room's palette (Kit.swift Tone) plus the town's own.
 WALLS = [0xF6E4C8, 0xE8D2B2, 0xF2C79A, 0xE9A98A, 0xD8653F, 0xB9C9A2, 0xF0B7B0, 0xCFE0DE, 0xF4D58A]
-ROOFS = [0xB46C3C, 0x8C4F2B, 0xA85A3A, 0x7A5A4A]
+ROOFS = [0xB46C3C, 0x8C4F2B, 0xA85A3A, 0x7A5A4A, 0xC8653F]
 WOOD = 0xB46C3C
-LEAF = [0x93A86A, 0x6F8A4E, 0x7FA35F]
+LEAF = [0x93A86A, 0x6F8A4E, 0x7FA35F, 0xA3B56F]
 ROAD_C, SIDEWALK_C, CURB_C, STRIPE_C = 0x8A7F78, 0xE6D4B8, 0xCDB89A, 0xFAF1DF
 CAR_PAINTS = [0xE0554A, 0xE3B45C, 0x6F8FB0, 0x7C9A7E, 0xF2E6D2, 0xD8653F]
 
@@ -171,111 +171,196 @@ def window_glass(haze, lit):
     return material(sky, rough=0.25, haze=haze, key=("glass", TIME))
 
 
-def building(layer, x, y, w, d, h, haze, wall=None, rows=True, gable=None):
-    """A building whose front (towards the street, -y) faces the camera: walls, roof cap, window grid, ground floor."""
-    wall = wall if wall is not None else random.choice(WALLS)
-    roof = random.choice(ROOFS)
-    wm, rm = material(wall, haze=haze), material(roof, haze=haze)
-    box(layer, (w, d, h), (x, y, 0), wm, bevel=0.18)
-    box(layer, (w + 0.35, d + 0.35, 0.45), (x, y, h), rm, bevel=0.12)
-    if gable:
-        box(layer, (w * 0.5, d * 0.5, gable), (x, y, h + 0.45), rm, bevel=0.2)
-    front = y - d / 2
-    floors = max(int((h - 2.6) // 3.2), 0)
-    cols = max(int((w - 1.0) // 2.2), 1)
-    pitch = w / cols
-    trim = material(0xFBF1DE, haze=haze)
-    for f in range(floors):
-        z = 3.1 + f * 3.2
-        for c in range(cols):
-            cx = x - w / 2 + pitch * (c + 0.5)
-            lit = LIT.random() < LOOK["lit"]
-            box(layer, (1.15, 0.1, 1.6), (cx, front - 0.04, z), window_glass(haze, lit), bevel=0.05)
-            box(layer, (1.5, 0.16, 0.14), (cx, front - 0.08, z - 0.12), trim, bevel=0.04)
-    ground_h = 2.7
-    door = material(random.choice([WOOD, 0x6F8FB0, 0x7C9A7E]), haze=haze)
-    awn = material(random.choice([0xD8653F, 0xE3B45C, 0x7C9A7E, 0xE0554A]), haze=haze)
-    shop = random.random() < 0.6
+def prism(layer, size, at, mat, ridge="x", overhang=0.5):
+    """A gabled roof: `size` is (width, depth, rise); the ridge runs along `ridge`; `at` is the base centre."""
+    w, d, h = size[0] + overhang * 2, size[1] + overhang * 2, size[2]
+    if ridge == "x":
+        v = [(-w / 2, -d / 2, 0), (w / 2, -d / 2, 0), (w / 2, d / 2, 0), (-w / 2, d / 2, 0), (-w / 2, 0, h), (w / 2, 0, h)]
+        f = [(0, 1, 5, 4), (2, 3, 4, 5), (0, 4, 3), (1, 2, 5), (0, 3, 2, 1)]
+    else:
+        v = [(-w / 2, -d / 2, 0), (w / 2, -d / 2, 0), (w / 2, d / 2, 0), (-w / 2, d / 2, 0), (0, -d / 2, h), (0, d / 2, h)]
+        f = [(0, 4, 5, 3), (1, 2, 5, 4), (0, 1, 4), (3, 5, 2), (0, 3, 2, 1)]
+    mesh = bpy.data.meshes.new("roof")
+    mesh.from_pydata(v, [], f)
+    mesh.update()
+    bm = bmesh.new()
+    bm.from_mesh(mesh)
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bm.to_mesh(mesh)
+    bm.free()
+    return add(layer, "roof", mesh, at, mat)
+
+
+def windows(layer, x, front, z, cols, pitch, haze, shutters, lit_bonus=0.0):
+    glass_trim = material(0xFBF1DE, haze=haze)
     for c in range(cols):
-        cx = x - w / 2 + pitch * (c + 0.5)
-        if shop and c % 2 == 0 and w > 5:
-            box(layer, (min(pitch * 0.85, 3.4), 0.1, 1.9), (cx, front - 0.04, 0.35), window_glass(haze, LIT.random() < LOOK["lit"] + 0.2), bevel=0.05)
-            box(layer, (min(pitch * 0.95, 3.7), 0.9, 0.3), (cx, front - 0.5, 2.3), awn, bevel=0.1)
-        else:
-            box(layer, (1.2, 0.12, 2.1), (cx, front - 0.05, 0.12), door, bevel=0.05)
-    box(layer, (w + 0.2, 0.2, 0.22), (x, front - 0.06, ground_h), trim, bevel=0.06)
+        cx = x + (c - (cols - 1) / 2) * pitch
+        lit = LIT.random() < LOOK["lit"] + lit_bonus
+        box(layer, (1.1, 0.1, 1.5), (cx, front - 0.04, z), window_glass(haze, lit), bevel=0.05)
+        box(layer, (1.4, 0.14, 0.12), (cx, front - 0.07, z - 0.1), glass_trim, bevel=0.04)
+        if shutters is not None:
+            for s in (-1, 1):
+                box(layer, (0.38, 0.09, 1.5), (cx + s * 0.8, front - 0.045, z), shutters, bevel=0.04)
 
 
-def tree(layer, x, y, scale=1.0, haze=0.0):
+def porch_light(layer, x, front, z, haze):
+    bulb = material(0xFFE3A8, glow=10 if LOOK["lamps"] else 0.0, glow_color=0xFFC27A, key="porch")
+    blob(layer, 0.14, (x + 0.75, front - 0.2, z), bulb)
+
+
+def door(layer, x, front, haze, z=0.15):
+    d = material(random.choice([0xB46C3C, 0x6F8FB0, 0x7C9A7E, 0xE0554A]), haze=haze)
+    box(layer, (1.2, 0.12, 2.2), (x, front - 0.05, z), d, bevel=0.05)
+    porch_light(layer, x, front, z + 1.8, haze)
+
+
+def house(layer, cx, front, style, haze):
+    """A detached house whose front faces the street (-y): `front` is the y of its front wall, `cx` its centre."""
+    wall = material(random.choice([0xF6E4C8, 0xF4D58A, 0xB9C9A2, 0xF0B7B0, 0xCFE0DE, 0xF2C79A, 0xFBF1DE]), haze=haze)
+    roof = material(random.choice(ROOFS), haze=haze)
+    trim = material(0xFBF1DE, haze=haze)
+    shutter = material(random.choice([0x6F8A4E, 0x4F6F86, 0x8C4F2B]), haze=haze)
+    wood = material(0xE8D2B2, haze=haze)
+    if style == "colonial":
+        w, d, h = 9.0, 7.5, 6.0
+        box(layer, (w, d, h), (cx, front + d / 2, 0.15), wall, bevel=0.2)
+        prism(layer, (w, d, 2.6), (cx, front + d / 2, h + 0.15), roof, ridge="x", overhang=0.55)
+        box(layer, (1.0, 1.0, 3.2), (cx + 3, front + d / 2 + 1.5, h + 0.2), material(0xA85A3A, haze=haze, key="brick"), bevel=0.08)
+        windows(layer, cx, front, 3.5, 3, 2.7, haze, shutter)
+        windows(layer, cx, front, 0.85, 3, 2.7, haze, shutter)
+        door(layer, cx, front, haze)
+        box(layer, (2.6, 1.3, 0.2), (cx, front - 0.65, 2.6), roof, bevel=0.05)
+        for s in (-1, 1):
+            box(layer, (0.18, 0.18, 2.5), (cx + s * 1.1, front - 1.15, 0.15), trim, bevel=0.03)
+        box(layer, (2.8, 1.4, 0.2), (cx, front - 0.7, 0.0), material(0xCDB89A, haze=haze, key="step"), bevel=0.05)
+    elif style == "ranch":
+        w, d, h = 11.0, 6.5, 3.4
+        box(layer, (w, d, h), (cx, front + d / 2, 0.15), wall, bevel=0.2)
+        prism(layer, (w, d, 1.7), (cx, front + d / 2, h + 0.15), roof, ridge="x", overhang=0.6)
+        windows(layer, cx + 2.2, front, 1.2, 2, 2.8, haze, shutter)
+        door(layer, cx - 0.6, front, haze)
+        box(layer, (3.0, 0.1, 2.3), (cx - 3.6, front - 0.05, 0.15), material(0xF3EDE4, haze=haze, key="garage"), bevel=0.06)
+        for gy in (0.7, 1.4, 2.1):
+            box(layer, (3.0, 0.12, 0.05), (cx - 3.6, front - 0.1, gy), trim, bevel=0.01)
+        box(layer, (1.3, 0.8, 0.4), (cx + 4.2, front + 0.3, 0.15), material(0x93A86A, haze=haze, key="shrub"), bevel=0.2)
+    else:
+        two = style == "farmhouse"
+        w, d, h = 8.0, 8.0, 5.6 if two else 3.6
+        box(layer, (w, d, h), (cx, front + d / 2, 0.55), wall, bevel=0.2)
+        prism(layer, (w, d, 3.0 if two else 2.6), (cx, front + d / 2, h + 0.55), roof, ridge="y", overhang=0.55)
+        box(layer, (w + 0.6, 2.4, 0.4), (cx, front - 1.2, 0.15), wood, bevel=0.08)
+        box(layer, (w + 0.8, 2.6, 0.22), (cx, front - 1.2, 2.9), roof, bevel=0.05)
+        for px in (-w / 2 + 0.3, w / 2 - 0.3, -1.6, 1.6):
+            box(layer, (0.2, 0.2, 2.35), (cx + px, front - 2.1, 0.55), trim, bevel=0.03)
+        windows(layer, cx, front, 1.5, 2, 4.4, haze, None)
+        door(layer, cx + 0.0, front, haze, z=0.55)
+        if two:
+            windows(layer, cx, front, 4.4, 2, 4.4, haze, shutter)
+
+
+def tree(layer, x, y, scale=1.0, haze=0.0, tone=None):
+    """A big rounded clay tree: a trunk and a heap of soft canopy blobs."""
     trunk = material(0x8C4F2B, haze=haze)
-    leaf = material(random.choice(LEAF), haze=haze)
-    cyl(layer, 0.18 * scale, 2.2 * scale, (x, y, 0.15), trunk, verts=6)
-    blob(layer, 1.35 * scale, (x, y, 3.0 * scale), leaf, (1, 1, 1.05))
-    blob(layer, 0.95 * scale, (x + 0.35 * scale, y - 0.1, 4.2 * scale), leaf)
+    colour = tone if tone is not None else random.choice(LEAF)
+    leaf = material(colour, haze=haze)
+    cyl(layer, 0.32 * scale, 3.2 * scale, (x, y, 0.15), trunk, verts=7)
+    for dx, dy, dz, r in ((0, 0, 5.6, 2.8), (-1.9, 0.2, 4.7, 2.1), (1.9, -0.2, 4.9, 2.2), (0.3, -0.6, 7.2, 1.9)):
+        blob(layer, r * scale, (x + dx * scale, y + dy, dz * scale), leaf, (1, 1, 0.92))
+
+
+def bush(layer, x, y, r=0.9, tone=0x6F8A4E, haze=0.0):
+    blob(layer, r, (x, y, r * 0.6), material(tone, haze=haze), (1.2, 1, 0.85))
+
+
+def fence(layer, x0, x1, y, haze=0.0):
+    white = material(0xFBF1DE, haze=haze)
+    x = x0
+    while x < x1:
+        box(layer, (0.16, 0.06, 0.95), (x, y, 0.18), white, bevel=0.02)
+        x += 0.45
+    for z in (0.5, 0.95):
+        box(layer, (x1 - x0, 0.06, 0.1), ((x0 + x1) / 2, y + 0.02, z), white, bevel=0.01)
+
+
+def mailbox(layer, x, y):
+    cyl(layer, 0.05, 1.0, (x, y, 0.18), material(0x4A3A33, key="post"), verts=5)
+    box(layer, (0.5, 0.25, 0.28), (x, y, 1.15), material(0xE0554A, key="mail"), bevel=0.06)
 
 
 def lamp(layer, x, y, haze=0.0):
     post = material(0x4A3A33, haze=haze)
-    cyl(layer, 0.09, 5.2, (x, y, 0.15), post, verts=6)
-    box(layer, (0.9, 0.08, 0.08), (x + 0.35, y, 5.2), post, bevel=0.02)
+    cyl(layer, 0.09, 5.0, (x, y, 0.15), post, verts=6)
+    box(layer, (0.9, 0.08, 0.08), (x + 0.35, y, 5.0), post, bevel=0.02)
     bulb = material(0xFFE3A8, glow=12 if LOOK["lamps"] else 0.0, glow_color=0xFFC27A, key="bulb")
-    blob(layer, 0.2, (x + 0.8, y, 5.2), bulb)
+    blob(layer, 0.2, (x + 0.8, y, 5.0), bulb)
     if LOOK["lamps"]:
         light = bpy.data.lights.new(f"l{x}", "POINT")
         light.energy = 450
         light.color = rgb(0xFFC27A)
         light.shadow_soft_size = 0.4
         o = bpy.data.objects.new(f"l{x}", light)
-        o.location = (x + 0.8, y, 4.9)
+        o.location = (x + 0.8, y, 4.7)
         collection(layer).objects.link(o)
 
 
-def ground(layer, y0, y1, color, z=0.0, x=(-120, 120), haze=0.0):
-    box(layer, (x[1] - x[0], y1 - y0, 0.3), ((x[0] + x[1]) / 2, (y0 + y1) / 2, z - 0.3), material(color, haze=haze), bevel=0)
+def ground(layer, y0, y1, color, z=0.0, x=(-120, 120), haze=0.0, key=None):
+    box(layer, (x[1] - x[0], y1 - y0, 0.3), ((x[0] + x[1]) / 2, (y0 + y1) / 2, z - 0.3), material(color, haze=haze, key=key), bevel=0)
 
 
-# Far: a skyline of tall straight blocks, hazed towards the sky.
+LAWN = 0xA9BF78
+STYLES = ["colonial", "ranch", "bungalow", "farmhouse", "colonial", "bungalow", "ranch", "colonial"]
+LOTS = [-45.0, -32.0, -19.0, -6.0, 12.0, 25.0, 38.0, 51.0]
+
+
 def build_far():
-    x = -120
-    while x < 120:
-        w = random.choice([6, 8, 10, 12])
-        h = random.choice([14, 20, 26, 34, 42])
-        y = random.choice([80, 90, 100])
-        building("far", x + w / 2, y, w, 10, h, haze=0.9, rows=True)
-        x += w + random.choice([1, 2, 3])
-    ground("far", 40, 140, 0xCFD8C8, haze=0.9)
-    for tx in range(-80, 90, 17):
-        tree("far", tx, 60, 2.2, haze=0.9)
+    """Low rolling hills, a church steeple, distant roofs and tree lines, hazed into the sky."""
+    hill = (0xA9BF78, 0x93A86A, 0xB5C48A)
+    for i, x in enumerate(range(-150, 160, 42)):
+        blob("far", 38, (x, 120 + (i % 2) * 15, -2), material(hill[i % 3], haze=0.8), (1.3, 1, 0.55))
+    for x in range(-80, 90, 9):
+        tree("far", x + random.uniform(-2, 2), random.choice([80, 88]), random.choice([0.9, 1.1, 1.3]), haze=0.85)
+    box("far", (4, 4, 9), (-24, 92, 0), material(0xF6E4C8, haze=0.85, key="church"), bevel=0.2)
+    prism("far", (4, 4, 5), (-24, 92, 9), material(0xA85A3A, haze=0.85, key="spire"), ridge="x", overhang=0.1)
+    box("far", (2.6, 2.6, 7), (-24, 92, 14), material(0xF6E4C8, haze=0.85, key="church"), bevel=0.1)
+    prism("far", (2.6, 2.6, 6), (-24, 92, 21), material(0xA85A3A, haze=0.85, key="spire"), ridge="x", overhang=0.2)
+    for x in (-60, -40, 6, 28, 52, 70):
+        house("far", x, 62, random.choice(["colonial", "bungalow"]), haze=0.75)
+    ground("far", 40, 160, 0xB5C48A, haze=0.8, key="farground")
 
 
-# Mid: two rows of buildings across the street with the cross street open between them.
 def build_mid():
-    def row(y, d, hs, haze, skip_gap):
-        x = -80.0
-        while x < 90:
-            w = random.choice([5.5, 7, 8.5, 10])
-            if skip_gap and abs(x + w / 2 - GAP_X) < (GAP_W / 2 + w / 2):
-                x = GAP_X + GAP_W / 2
-                continue
-            building("mid", x + w / 2, y, w, d, random.choice(hs), haze=haze)
-            x += w + 0.25
-    row(8.0, 9.0, [7, 9.5, 12, 15], 0.18, True)
-    row(24.0, 12.0, [12, 16, 20, 26], 0.5, False)
-    ground("mid", 2, 60, 0xD9C7A5, haze=0.3)
-    ground("mid", 2, 60, 0xA79A8E, x=(GAP_X - GAP_W / 2 + 0.4, GAP_X + GAP_W / 2 - 0.4), z=0.01, haze=0.3)
+    """Two rows of houses on a grid of lots with the side street open between them, lawns and driveways."""
+    ground("mid", 2, 60, LAWN, haze=0.15, key="lawn")
+    gx0, gx1 = GAP_X - GAP_W / 2 + 0.3, GAP_X + GAP_W / 2 - 0.3
+    box("mid", (gx1 - gx0, 58, 0.3), ((gx0 + gx1) / 2, 31, -0.28), material(ROAD_C, haze=0.15, key="side"), bevel=0)
+    for i, x in enumerate(LOTS):
+        style = STYLES[i]
+        house("mid", x, 13.0, style, haze=0.1)
+        drive_x = x - 3.6 if style == "ranch" else x + 5.2
+        box("mid", (3.0, 11.0, 0.06), (drive_x, 2.4, 0.0), material(0xD9CDBB, haze=0.1, key="drive"), bevel=0.02)
+        box("mid", (1.3, 8.6, 0.05), (x - 0.6 if style == "ranch" else x, 4.0, 0.0), material(0xD9CDBB, haze=0.1, key="path"), bevel=0.02)
+        bush("mid", x - 4.7 if style != "ranch" else x + 5.6, 11.5, 0.9, haze=0.1)
+        bush("mid", x + 4.6 if style != "ranch" else x - 6.4, 11.5, 0.8, 0x7FA35F, haze=0.1)
+        if i % 2 == 0:
+            car("mid", drive_x, 6.5, random.choice(CAR_PAINTS), kind="sedan", turn=True)
+    for i, x in enumerate([-46, -33, -20, -7, 13, 26, 39]):
+        house("mid", x + 1, 34.0, STYLES[(i + 3) % len(STYLES)], haze=0.4)
+        tree("mid", x - 5.5, 31.0, 1.2, haze=0.4)
+    for x in (-52, -12, 4, 19, 33, 47):
+        tree("mid", x, 24.0, 1.25, haze=0.25)
 
 
-# Street: the road and its far sidewalk with trees and lamp posts, the cross street's mouth and its crossing.
 def build_street():
+    """The quiet road, its far sidewalk with picket fences, mailboxes, street lamps and big front-yard trees."""
     r0, r1 = ROAD
     ground("street", r0, r1, ROAD_C)
-    ground("street", r1, 8.0, SIDEWALK_C, z=0.18)
+    ground("street", r1, 5.6, SIDEWALK_C, z=0.18)
     box("street", (240, 0.35, 0.22), (0, r1 + 0.1, 0), material(CURB_C), bevel=0.05)
     ground("street", -30, r0, SIDEWALK_C, z=0.18)
     box("street", (240, 0.35, 0.22), (0, r0 - 0.1, 0), material(CURB_C), bevel=0.05)
-    gx0, gx1 = GAP_X - GAP_W / 2 + 0.4, GAP_X + GAP_W / 2 - 0.4
+    gx0, gx1 = GAP_X - GAP_W / 2 + 0.3, GAP_X + GAP_W / 2 - 0.3
     cut = material(ROAD_C, key="cross")
-    box("street", (gx1 - gx0, 7.0, 0.3), ((gx0 + gx1) / 2, r1 + 3.5, 0.0), cut, bevel=0)
+    box("street", (gx1 - gx0, 4.5, 0.3), ((gx0 + gx1) / 2, r1 + 2.1, 0.0), cut, bevel=0)
     stripe = material(STRIPE_C)
     for i in range(-3, 4):
         box("street", (0.7, r1 - r0 - 0.8, 0.03), (GAP_X + i * 1.15, (r0 + r1) / 2, 0.0), stripe, bevel=0.02)
@@ -285,41 +370,60 @@ def build_street():
     seam = material(0xCDB89A, key="seam")
     for x in range(-90, 100, 3):
         box("street", (0.06, 5.0, 0.02), (x, r0 - 2.6, 0.18), seam, bevel=0)
-        box("street", (0.06, 6.0, 0.02), (x + 1.5, r1 + 2.9, 0.18), seam, bevel=0)
+        box("street", (0.06, 3.6, 0.02), (x + 1.5, r1 + 1.9, 0.18), seam, bevel=0)
+    for x0, x1 in ((-52, -1.0), (7.0, 56)):
+        fence("street", x0, x1, 5.9)
+    for lot, x in enumerate(LOTS):
+        mailbox("street", x + 4.6, 5.0)
+        tree("street", x + (-5.2 if lot % 2 else 5.4), 9.0, 1.0 + 0.1 * (lot % 3),
+             tone=[0x93A86A, 0x7FA35F, 0xE3B45C, 0x6F8A4E][lot % 4] if lot != 2 else 0xD8653F)
+    for lx in (-26, -1, 15, 30, 45):
+        lamp("street", lx, r1 + 1.0)
     for bx, by in ((-14, -12), (9, -12), (28, -12)):
         box("street", (1.8, 0.7, 0.55), (bx, by, 0.18), material(WOOD), bevel=0.1)
         box("street", (1.8, 0.12, 0.5), (bx, by + 0.3, 0.7), material(WOOD), bevel=0.04)
     for hx in (-3, 19, 34):
-        cyl("street", 0.55, 0.9, (hx, -11.0, 0.18), material(0x6F8A4E, key="bin"), verts=8)
-        blob("street", 0.8, (hx, -11.0, 1.0), material(0x93A86A, key="bush"), (1.1, 1, 0.8))
-    for tx in (-24, -13, 15, 26, 38):
-        tree("street", tx, r1 + 2.6, 1.0)
-    for lx in (-19, -3, 12, 30):
-        lamp("street", lx, r1 + 1.0)
-    for bx in (-17, 20, 33):
-        box("street", (2.2, 0.6, 0.5), (bx, r1 + 4.3, 0.18), material(WOOD), bevel=0.08)
+        bush("street", hx, -11.0, 0.9, 0x93A86A)
 
 
 CARS_X = 0.0
 
 
-def car(layer, x, y, paint):
-    """A clay car, side view along x, base centred at (x, y)."""
+def car(layer, x, y, paint, kind="sedan", turn=False):
+    """A clay car, side view along x with its front at +x; `turn` stands it end-on, nose towards the street."""
     body = material(paint)
     cabin = material(0xC9D6DE, rough=0.3, key="cabin")
     dark = material(0x4A3B36, key="tyre")
-    box(layer, (4.2, 1.8, 0.8), (x, y, 0.35), body, bevel=0.3)
-    box(layer, (2.3, 1.6, 0.75), (x - 0.15, y, 1.05), body, bevel=0.32)
-    box(layer, (2.0, 1.66, 0.5), (x - 0.15, y, 1.12), cabin, bevel=0.2)
-    for wx in (-1.4, 1.4):
-        for wy in (-0.8, 0.8):
-            o = cyl(layer, 0.38, 0.28, (x + wx, y + wy, 0.0), dark, verts=10)
-            o.rotation_euler[0] = math.pi / 2
-            o.location = (x + wx, y + wy, 0.38)
+    parts = []
+    if kind == "sedan":
+        parts += [((4.2, 1.8, 0.8), 0, 0.35, body), ((2.3, 1.6, 0.75), -0.15, 1.05, body),
+                  ((2.0, 1.66, 0.5), -0.15, 1.12, cabin)]
+        length = 4.2
+    elif kind == "suv":
+        parts += [((4.6, 1.9, 1.1), 0, 0.35, body), ((3.4, 1.7, 0.9), -0.45, 1.3, body),
+                  ((3.1, 1.76, 0.6), -0.45, 1.4, cabin)]
+        length = 4.6
+    else:
+        parts += [((4.8, 1.9, 0.75), 0, 0.4, body), ((1.7, 1.7, 0.85), 0.9, 1.1, body),
+                  ((1.45, 1.76, 0.5), 0.95, 1.2, cabin), ((2.4, 1.9, 0.4), -1.15, 1.1, material(0x8A7F78, key="bed"))]
+        length = 4.8
+    wheels = [(-length * 0.33, -0.8), (length * 0.33, -0.8), (-length * 0.33, 0.8), (length * 0.33, 0.8)]
     lamp_m = material(0xFFE3A8, glow=6 if LOOK["lamps"] else 0.0, glow_color=0xFFD890, key="head")
     tail_m = material(0xE0554A, glow=3 if LOOK["lamps"] else 0.0, glow_color=0xFF4030, key="tail")
-    box(layer, (0.12, 1.3, 0.25), (x + 2.1, y, 0.6), lamp_m, bevel=0.04)
-    box(layer, (0.12, 1.3, 0.25), (x - 2.1, y, 0.6), tail_m, bevel=0.04)
+    parts += [((0.12, 1.3, 0.25), length / 2, 0.6, lamp_m), ((0.12, 1.3, 0.25), -length / 2, 0.6, tail_m)]
+
+    def place(px, py):
+        return (x + py, y - px) if turn else (x + px, y + py)
+
+    rot = -math.pi / 2 if turn else 0.0
+    for size, px, pz, mat in parts:
+        o = box(layer, size, (0, 0, pz), mat, bevel=0.25)
+        o.location = (*place(px, 0.0), pz + size[2] / 2)
+        o.rotation_euler[2] = rot
+    for wx, wy in wheels:
+        o = cyl(layer, 0.38, 0.28, (0, 0, 0), dark, verts=10)
+        o.rotation_euler = (math.pi / 2, 0, rot)
+        o.location = (*place(wx, wy), 0.38)
 
 
 def build_cars():
@@ -329,8 +433,9 @@ def build_cars():
     fo = bpy.data.objects.new("fill", fill)
     fo.rotation_euler = (math.radians(70), 0, math.radians(20))
     collection("cars").objects.link(fo)
-    for i, paint in enumerate(CAR_PAINTS):
-        car("cars", 6.0 * i, 0.0, paint)
+    kinds = ["sedan", "suv", "pickup", "sedan", "suv", "pickup"]
+    for i, (paint, kind) in enumerate(zip(CAR_PAINTS, kinds)):
+        car("cars", 6.0 * i, 0.0, paint, kind=kind)
     # A shadow catcher under the row so the sprites keep a soft contact shadow of their own.
     bm = bmesh.new()
     bmesh.ops.create_grid(bm, x_segments=1, y_segments=1, size=100)
@@ -393,7 +498,7 @@ def camera(kind):
     cam.sensor_width = 36
     cam.sensor_fit = "HORIZONTAL"
     cam.shift_y = -0.03
-    o.location = (0, -44, 9.0)
+    o.location = (0, -28, 7.0)
     o.rotation_euler = (math.pi / 2, 0, 0)
 
 
