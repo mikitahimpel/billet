@@ -39,7 +39,7 @@ final class CityRoomScene: CatRoom {
     private let opening: (left: Float, right: Float, bottom: Float, top: Float) = (-0.4, 0.4, 0.28, 0.72)
     private var windowCenter: SIMD3<Float> { [0, (opening.bottom + opening.top) / 2, -0.525] }
     private var sillTop: Float { opening.bottom + 0.0125 }
-    private let catBed: (at: SIMD3<Float>, scale: Float) = ([0.28, 0.014, 0.27], 0.6)
+    private let catBed: (at: SIMD3<Float>, scale: Float) = ([CityLayout.catBed.at.x, 0.014, CityLayout.catBed.at.y], 0.6)
     /// cat-standing.ply is 0.26 m tall on all fours; here Mochi sits about as tall as the nightstand.
     private let catScale: Float = 0.5 * (0.162 / 0.152)
 
@@ -93,8 +93,8 @@ final class CityRoomScene: CatRoom {
         buildCat(at: [0.25, sillTop, -0.44], rests: [.pi + 0.75, .pi + 0.55], route: [
             .init(at: bedSeat),
             .init(at: [0.13, 0.014, 0.13], move: .jump),
-            .init(at: [0.16, 0.014, -0.07], move: .walk),
-            .init(at: [0.15, 0.204, -0.27], move: .jump),
+            .init(at: [0.16, 0.014, 0.07], move: .walk),
+            .init(at: [0.15, 0.204, -0.17], move: .jump),
             .init(at: [0.25, sillTop, -0.44], move: .jump),
         ], scale: catScale, wandering: true)
         buildMotes()
@@ -372,16 +372,17 @@ final class CityRoomScene: CatRoom {
     // MARK: - Furniture
 
     private func buildRug() {
-        pivot.cylinder(0.006, 0.22, matte(Tone.rugEdge, roughness: 1), at: [0.04, 0.016, 0.2])
-        pivot.cylinder(0.008, 0.2, matte(Tone.rug, roughness: 1), at: [0.04, 0.019, 0.2])
+        let rug = CityLayout.rug.at
+        pivot.cylinder(0.006, 0.22, matte(Tone.rugEdge, roughness: 1), at: [rug.x, 0.016, rug.y])
+        pivot.cylinder(0.008, 0.2, matte(Tone.rug, roughness: 1), at: [rug.x, 0.019, rug.y])
         // Rings like the Living room's rug.
-        pivot.cylinder(0.009, 0.15, matte(0xEFC99C, roughness: 1), at: [0.04, 0.0195, 0.2])
-        pivot.cylinder(0.010, 0.11, matte(Tone.rug, roughness: 1), at: [0.04, 0.02, 0.2])
+        pivot.cylinder(0.009, 0.15, matte(0xEFC99C, roughness: 1), at: [rug.x, 0.0195, rug.y])
+        pivot.cylinder(0.010, 0.11, matte(Tone.rug, roughness: 1), at: [rug.x, 0.02, rug.y])
     }
 
     /// Along the back wall under the window, pillow on the left, blanket over the right.
     private func buildBed() {
-        let bed = pivot.group(at: [-0.04, 0.014, -0.315])
+        let bed = pivot.group(at: [CityLayout.bed.at.x, 0.014, CityLayout.bed.at.y])
         bed.box(0.76, 0.1, 0.36, r: 0.02, matte(Tone.bedFrame), at: [0, 0.05, 0])
         bed.box(0.72, 0.07, 0.33, r: 0.03, matte(Tone.mattress, roughness: 1), at: [0, 0.13, 0])
         bed.box(0.44, 0.04, 0.35, r: 0.018, matte(Tone.blanket, roughness: 1), at: [0.15, 0.17, 0.005])
@@ -391,7 +392,7 @@ final class CityRoomScene: CatRoom {
     }
 
     private func buildNightstand() {
-        let n = pivot.group(at: [-0.37, 0.014, -0.02])
+        let n = pivot.group(at: [CityLayout.nightstand.at.x, 0.014, CityLayout.nightstand.at.y])
         let slat = matte(0xB84F30)
         n.box(0.13, 0.15, 0.13, r: 0.008, matte(Tone.crate), at: [0, 0.075, 0])
         for y: Float in [0.04, 0.09, 0.135] { n.box(0.134, 0.012, 0.134, r: 0.004, slat, at: [0, y, 0]) }
@@ -439,11 +440,11 @@ final class CityRoomScene: CatRoom {
         Props.bookStack(pivot, at: [-0.43, 0.184, 0.28], tones: [0xE98A5B, 0xF2D3A0], rotation: .y(0.3))
 
         Props.catBed(pivot, at: catBed.at, scale: catBed.scale)
-        Props.slippers(pivot, at: [-0.2, 0.014, -0.08], rotation: .y(-0.4))
-        Props.catBowls(pivot, at: [0.38, 0.014, -0.05], rotation: .y(.pi / 2 - 0.3))
+        Props.slippers(pivot, at: [-0.2, 0.014, 0.08], rotation: .y(-0.4))
+        Props.catBowls(pivot, at: [0.4, 0.014, 0.09], rotation: .y(.pi / 2 - 0.3))
         Props.toyMouse(pivot, at: [0.0, 0.023, 0.27], rotation: .y(0.8))
         Props.bookStack(pivot, at: [-0.22, 0.014, 0.42], tones: [0x6F8FB0, 0xC0563A, 0xE3B45C], rotation: .y(-0.4))
-        Props.plush(pivot, at: [-0.16, 0.18, -0.42], rotation: .y(-0.8))
+        Props.plush(pivot, at: [-0.16, 0.18, -0.28], rotation: .y(-0.8))
     }
 
     private func buildLighting() {
