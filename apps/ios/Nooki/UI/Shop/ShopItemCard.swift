@@ -1,7 +1,8 @@
 import SwiftUI
 import Design
 
-/// Every card has the same three lines under its art, so a row of cards is level.
+/// Every card has the same name line, two-line blurb and buy row under its art, so a row of cards is level whatever
+/// each one costs or whether it is owned.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState
@@ -25,7 +26,7 @@ struct ShopItemCard: View {
                         Text(item.blurb)
                             .font(.ourioCaption)
                             .foregroundStyle(Ink.textSecondary)
-                            .lineLimit(1)
+                            .lineLimit(2, reservesSpace: true)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -62,6 +63,8 @@ struct ShopItemCard: View {
                     .padding(Space.s)
             } else if item.isNew, !owned {
                 Chip("New", style: .honey).padding(Space.s)
+            } else if owned {
+                Chip("Owned", symbol: "checkmark").padding(Space.s)
             }
         }
     }

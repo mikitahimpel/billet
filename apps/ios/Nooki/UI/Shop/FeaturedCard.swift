@@ -39,18 +39,29 @@ struct FeaturedCard: View {
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel("\(offer.name), see the pieces")
 
-            HStack(alignment: .center, spacing: Space.m) {
-                VStack(alignment: .leading, spacing: 2) {
+            // The name and blurb take the card's width; the state and the buy sit under them on a row of their own,
+            // so a long blurb never squeezes the button.
+            VStack(alignment: .leading, spacing: Space.m) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     Text(offer.name)
                         .font(.ourioTitle)
                         .foregroundStyle(.white)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     Text(offer.blurb)
                         .font(.ourioCaption)
                         .foregroundStyle(.white.opacity(0.85))
+                        .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                SetBuyButton(state: state, set: offer)
+                HStack(spacing: Space.m) {
+                    if quote == nil {
+                        Chip("Owned", symbol: "checkmark")
+                    }
+                    Spacer(minLength: 0)
+                    SetBuyButton(state: state, set: offer)
+                }
             }
             .padding(.top, Space.s)
         }

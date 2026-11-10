@@ -14,6 +14,7 @@ import Testing
     #expect(Size.control >= 44)
     #expect(Size.button >= Size.control)
     #expect(Size.row >= Size.control)
+    #expect(Size.pill < Size.control)
   }
 
   @Test func cornersAreConcentric() {

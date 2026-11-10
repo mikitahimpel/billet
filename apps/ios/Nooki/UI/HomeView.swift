@@ -15,6 +15,8 @@ struct HomeView: View {
     @State var room = RoomController()
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
+    /// The tab bar's top edge, global, which a purchase's card keeps clear of.
+    @State private var tabBarTop: CGFloat?
     /// The splash is still drawn while it fades out after `launching` ends, though it takes no touches by then.
     @State private var splashDrawn = true
     /// The screen as the World last showed it, held up on the way back until the room draws again.
@@ -270,6 +272,7 @@ struct HomeView: View {
             } bottom: {
                 if hud != .hidden {
                     TabBar(state: state)
+                        .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
                         .padding(.horizontal, 16)
                         .environment(\.glassRendering, hud.glass)
                 }
@@ -281,7 +284,9 @@ struct HomeView: View {
             RoomGameLayer(controller: room)
 
             // The composer and the canvas play it over themselves while they're up.
-            if state.composingNote == nil, !state.drawing { PurchaseMoment(state: state) }
+            if state.composingNote == nil, !state.drawing {
+                PurchaseMoment(state: state, floor: hud == .hidden ? nil : tabBarTop)
+            }
         }
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
