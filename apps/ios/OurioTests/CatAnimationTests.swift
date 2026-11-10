@@ -5,9 +5,8 @@ import Testing
 import simd
 @testable import Billet
 
-/// Mochi's motion checked on her real splats, skinned on the CPU as SkinSplats.metal does on the GPU: she never goes
-/// through the floor, lies down and gets up without a jump, and the swap between her two splats lands the seated one
-/// where the standing one was.
+/// Mochi's motion checked on her real splat, skinned on the CPU as SkinSplats.metal does on the GPU: she never goes
+/// through the floor, lies down, gets up and sets off without a jump, and stays the same size in every pose.
 @MainActor
 struct CatAnimationTests {
     /// Every `stride`th opaque splat of a pose's file, with its skin, ready to move by a rig's bone poses.
@@ -16,7 +15,7 @@ struct CatAnimationTests {
         let bones: [SIMD4<UInt8>]
         let weights: [SIMD4<Float>]
 
-        init(_ name: String, stride: Int = 9) throws {
+        init(_ name: String = "MochiStanding", stride: Int = 9) throws {
             let file = try SplatLoader.read(named: name)
             let url = try #require(Bundle.main.url(forResource: name, withExtension: "skin"))
             let skin = try [UInt8](Data(contentsOf: url))
@@ -52,26 +51,23 @@ struct CatAnimationTests {
         }
     }
 
-    private static func rig(_ name: String) throws -> CatRig {
-        try CatRig(CatRig.Files(named: name, drawn: false))
+    private static func rig() throws -> CatRig {
+        try CatRig(CatRig.Files(named: "MochiStanding", drawn: false))
     }
 
     private static func walker(route: [CatWalker.Waypoint] = []) throws -> CatWalker {
-        let walker = try CatWalker(group: Entity(), standing: rig("MochiStanding"), seated: rig("Mochi"), scale: 1,
-                                   rests: route.isEmpty ? [0] : [0, 0], route: route, wandering: false)
+        let walker = try CatWalker(group: Entity(), rig: rig(), scale: 1, rests: route.isEmpty ? [0] : [0, 0],
+                                   route: route, wandering: false)
         walker.directed = true
         return walker
     }
 
-    /// The splats of whichever splat shows, in the walker's model space: the seated one sits `mount` from the standing.
-    private static func shown(_ walker: CatWalker, standing: Sample, seated: Sample) -> [SIMD3<Float>] {
-        walker.seatedShows
-            ? seated.posed(walker.seated.poses).map { $0 + walker.seated.mount }
-            : standing.posed(walker.standing.poses)
+    private static func fastest(_ a: [SIMD3<Float>], _ b: [SIMD3<Float>]) -> Float {
+        zip(a, b).map { simd_distance($0, $1) }.max() ?? 0
     }
 
     @Test func lyingDownAndCurlingUpStayOnTheFloorAndMoveSmoothly() throws {
-        let seated = try Sample("Mochi"), standing = try Sample("MochiStanding")
+        let sample = try Sample()
         let walker = try Self.walker()
         var last: [SIMD3<Float>]?
         var lowest = Float.infinity, fastest: Float = 0
@@ -79,70 +75,65 @@ struct CatAnimationTests {
             walker.settle(pose)
             for _ in 0..<150 {
                 walker.update(1 / 60)
-                let now = Self.shown(walker, standing: standing, seated: seated)
+                let now = sample.posed(walker.rig.poses)
                 lowest = min(lowest, now.map(\.y).min() ?? 0)
-                if let last { fastest = max(fastest, zip(now, last).map { simd_distance($0, $1) }.max() ?? 0) }
+                if let last { fastest = max(fastest, Self.fastest(now, last)) }
                 last = now
             }
             #expect(walker.rest == pose)
         }
-        #expect(walker.seatedShows)
-        // Model units: 3 mm below the floor at most, and no splat moving more than 8 mm in a 60 fps frame, which her
-        // quickest glance stays under and a cut between two splats (centimeters) does not.
+        // Model units: 3 mm below the floor at most, and no splat moving more than 14 mm in a 60 fps frame. The tail's
+        // tip sweeping down to the floor is the quickest at about 12; a cut to another splat moves centimeters.
         #expect(lowest > -0.003, "lowest \(lowest)")
-        #expect(fastest < 0.008, "fastest \(fastest)")
+        #expect(fastest < 0.014, "fastest \(fastest)")
     }
 
-    @Test func aTripFromLyingStaysOnTheFloorAndTheSwapLandsHeadOnHead() throws {
-        let seated = try Sample("Mochi"), standing = try Sample("MochiStanding")
+    @Test func aTripFromSleepRisesFirstStaysOnTheFloorAndNeverJumps() throws {
+        let sample = try Sample()
         let walker = try Self.walker(route: [.init(at: [0, 0, 0]), .init(at: [0.4, 0, 0])])
         walker.settle(.sleep)
         for _ in 0..<180 { walker.update(1 / 60) }
         #expect(walker.lying.curl > 0.9)
         walker.trip()
-        var lowest = Float.infinity, eyeJump: Float = 0, swaps = 0
-        var eyes = walker.eyes, showing = walker.seatedShows
-        for _ in 0..<(60 * 20) where walker.moving || walker.lying.isDown {
+        var last = sample.posed(walker.rig.poses)
+        var lowest = Float.infinity, fastest: Float = 0, frames = 0
+        for _ in 0..<(60 * 20) where walker.moving {
             walker.update(1 / 60)
-            let now = Self.shown(walker, standing: standing, seated: seated)
+            frames += 1
+            let now = sample.posed(walker.rig.poses)
             lowest = min(lowest, now.map(\.y).min() ?? 0)
-            if walker.seatedShows != showing {
-                swaps += 1
-                showing = walker.seatedShows
-                eyeJump = max(eyeJump, simd_distance(walker.eyes, eyes))
-                #expect(!walker.lying.isDown, "she swaps splats sitting up")
-            }
-            eyes = walker.eyes
+            fastest = max(fastest, Self.fastest(now, last))
+            last = now
         }
-        #expect(!walker.moving)
-        #expect(swaps == 2, "stands up off the seated splat, sits back down on it")
+        #expect(!walker.moving && frames > 60)
+        #expect(!walker.lying.isDown)
         #expect(lowest > -0.003, "lowest \(lowest)")
-        #expect(eyeJump < 0.006, "eyes jump \(eyeJump) at a swap")
+        // Walking moves her model-space splats only by the gait; 15 mm a frame is a brisk paw swing, not a cut.
+        #expect(fastest < 0.015, "fastest \(fastest)")
     }
 
-    @Test func theStandingSplatSittingHasTheSeatedSilhouette() throws {
-        let seated = try Sample("Mochi", stride: 40), standing = try Sample("MochiStanding", stride: 40)
-        let walker = try Self.walker(route: [.init(at: [0, 0, 0]), .init(at: [0.4, 0, 0])])
-        walker.trip()
-        // The frame before the seated splat shows again at the far end: the standing one in the sit posture.
-        var before: [SIMD3<Float>] = [], showing = walker.seatedShows
-        for _ in 0..<(60 * 20) where walker.moving {
-            if !walker.seatedShows { before = standing.posed(walker.standing.poses) }
-            walker.update(1 / 60)
-            if walker.seatedShows && !showing { break }
-            showing = walker.seatedShows
+    /// Her head is bound to one bone only, so sitting, lying or asleep it turns and moves but keeps its size, as the
+    /// rest of her keeps hers: there is one splat, never another cat swapped in.
+    @Test func everyPoseIsTheSameCatAtTheSameSize() throws {
+        let files = try CatRig.Files(named: "MochiStanding", drawn: false)
+        let sample = try Sample(stride: 40)
+        let head = try #require(files.rig.bones.firstIndex { $0.name == "head" })
+        let headOnly = sample.centers.indices.filter { sample.bones[$0][0] == head && sample.weights[$0][0] > 0.999 }
+        #expect(headOnly.count > 50)
+        func size(_ points: [SIMD3<Float>]) -> Float {
+            headOnly.dropFirst().map { simd_distance(points[$0], points[headOnly[0]]) }.reduce(0, +)
         }
-        let after = seated.posed(walker.seated.poses).map { $0 + walker.seated.mount }
-        func nearest(_ a: [SIMD3<Float>], _ b: [SIMD3<Float>]) -> Float {
-            a.map { p in b.map { simd_distance(p, $0) }.min() ?? 0 }.reduce(0, +) / Float(a.count)
+        let rest = size(sample.centers)
+        let walker = try Self.walker()
+        for pose in [NookiRestPose.sit, .loaf, .sleep] {
+            walker.settle(pose)
+            for _ in 0..<240 { walker.update(1 / 60) }
+            #expect(abs(size(sample.posed(walker.rig.poses)) / rest - 1) < 1e-3, "\(pose)")
         }
-        // Mean distance to the other cloud's nearest splat, both ways: under 1.5 cm on a 30 cm cat.
-        let chamfer = nearest(before, after) + nearest(after, before)
-        #expect(chamfer < 0.015, "chamfer \(chamfer)")
     }
 
     @Test func aFoldedKneeRestsOnTheFloorAndThePawSlidesOut() throws {
-        let rig = try Self.rig("MochiStanding")
+        let rig = try Self.rig()
         let leg = try #require(rig.legs.first { $0.name == "leftHind" })
         let foot = leg.paw
         #expect(Gait.kneeAboveFloor(leg, hip: leg.hip, foot: foot) == foot)

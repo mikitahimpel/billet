@@ -25,10 +25,11 @@ License 2.0 (`idol-sdk/LICENSE`), without its gallery images and Gradio demo.
    order). The app's `SkinSplats.metal` moves the splats with these weights every frame.
 5. **The app.** `SplatLoader` reads the PLY as it is: its body is already GaussianSplatResource's
    layout. Mochi's files are checked byte for byte against `apps/ios/nooki-cat.sha256`.
-6. **Lying down.** The loaf and the curled sleep are the seated splat posed, not splats of their own,
-   so she stays the same cat: `cat-sit.json` gives her fore legs and paws to fold and keeps the
-   haunch's paws on the floor. A bone added to a rig needs its joint in the mesh fallback too:
-   `apps/ios/Tools/reskin_mochi_mesh.py --name Mochi` (or `MochiStanding`) after `--bind`.
+6. **One cat.** The room draws only `MochiStanding`: sitting, the loaf and sleep are that splat posed
+   by `CatWalker`, so she keeps one body, one size and one coat in every pose. `Mochi` (the seated
+   generation, another body) is only the source of the baked hero and coat pictures. A bone added to
+   a rig needs its joint in the mesh fallback too: `apps/ios/Tools/reskin_mochi_mesh.py --name
+   MochiStanding` after `--bind`.
 
 ## Run it
 

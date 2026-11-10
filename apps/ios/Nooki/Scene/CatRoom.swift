@@ -185,7 +185,7 @@ class CatRoom {
         // A quick squash-and-stretch after a tap while her mesh is still loading; posed, she leans into the pet
         // instead, and breathes on her own skeleton.
         let p = t - purrStart
-        let bounce: Float = p < 0.7 && walker?.standing.entity == nil ? sin(p / 0.7 * .pi * 3) * (1 - p / 0.7) * 0.12 : 0
+        let bounce: Float = p < 0.7 && walker?.rig.entity == nil ? sin(p / 0.7 * .pi * 3) * (1 - p / 0.7) * 0.12 : 0
         catBody.scale = [1 + 0.4 * bounce, 1 - bounce, 1 + 0.4 * bounce]
 
         advanceShowcase(dt)
@@ -194,19 +194,19 @@ class CatRoom {
     // MARK: - Mochi
 
     /// Mochi sitting at `at` facing `rests.last`; with a route she walks between its ends, `rests` her yaws at each.
-    /// Splats where the GPU draws them, else meshes of the same splats (Cat.usdz, CatStanding.usdz); loaded once in
-    /// the background and shared by the rooms (see `adoptCat`).
+    /// Her splat where the GPU draws it, else a mesh of the same splat (CatStanding.usdz); loaded once in the
+    /// background and shared by the rooms (see `adoptCat`).
     func buildCat(at: SIMD3<Float>, rests: [Float], route: [CatWalker.Waypoint] = [], scale: Float, wandering: Bool) {
         Task {
-            let mochi: Mochi
+            let mochi: CatRig
             do {
                 mochi = try await Self.loadMochi()
             } catch {
                 print("Cat rig failed to load: \(error)")
                 return
             }
-            // The group stands at the standing splat's origin; the seated one sits `mount` from it.
-            let origin = route.last?.at ?? at - simd_quatf.y(rests[rests.count - 1]).act(mochi.seated.mount * scale)
+            // The group stands at the splat's origin; sitting, her body is `CatWalker.seat` from it.
+            let origin = route.last?.at ?? at - simd_quatf.y(rests[rests.count - 1]).act(CatWalker.seat * scale)
             catGroup = pivot.group(at: origin)
             catBody = catGroup.group()
             catModel = catBody.group()
@@ -218,8 +218,8 @@ class CatRoom {
             ]))
             catGroup.components.set(InputTargetComponent())
 
-            let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, scale: scale,
-                                   rests: rests, route: route, wandering: wandering)
+            let walker = CatWalker(group: catGroup, rig: mochi, scale: scale, rests: rests, route: route,
+                                   wandering: wandering)
             walker.keepOut = catKeepOut
             self.walker = walker
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
@@ -236,11 +236,6 @@ class CatRoom {
         mochi = nil
     }
 
-    private struct Mochi {
-        let standing: CatRig
-        let seated: CatRig
-    }
-
     private static func castShadow(_ entity: Entity, _ isOn: Bool = true) {
         entity.components.set(GroundingShadowComponent(castsShadow: isOn))
         entity.forEachDescendant { $0.components.set(GroundingShadowComponent(castsShadow: isOn)) }
@@ -249,37 +244,32 @@ class CatRoom {
     /// For a perf run's `cost` step.
     func setCatShadow(_ isOn: Bool) {
         guard let walker else { return }
-        for entity in [walker.standing, walker.seated].compactMap(\.entity) {
-            Self.castShadow(entity, isOn)
-        }
+        if let entity = walker.rig.entity { Self.castShadow(entity, isOn) }
     }
 
-    private static var mochi: Task<Mochi, any Error>?
+    private static var mochi: Task<CatRig, any Error>?
 
-    private static func loadMochi() async throws -> Mochi {
+    private static func loadMochi() async throws -> CatRig {
         if let mochi { return try await mochi.value }
         let task = Task {
             let drawn = SplatLoader.isSupported
             let files = try await Task.detached {
                 // Grey reads the original files from the app; another coat reads its recoloured copy (CatCoat.bundle).
-                let coat = try drawn ? CatCoat.current().bundle(poses: ["MochiStanding", "Mochi"]) : .main
-                return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat),
-                        try CatRig.Files(named: "Mochi", drawn: drawn, in: coat))
+                let coat = try drawn ? CatCoat.current().bundle() : .main
+                return try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat)
             }.value
-            let standing = try CatRig(files.0), seated = try CatRig(files.1)
+            let rig = try CatRig(files)
             if !drawn {
-                for (rig, file) in [(seated, "Cat"), (standing, "CatStanding")] {
-                    do {
-                        let model = try await Entity(named: file, in: .main)
-                        await CatCoat.current().dress(model, model: file)
-                        try rig.wear(model)
-                    } catch {
-                        print("\(file) failed to load: \(error)")
-                    }
+                do {
+                    let model = try await Entity(named: "CatStanding", in: .main)
+                    await CatCoat.current().dress(model, model: "CatStanding")
+                    try rig.wear(model)
+                } catch {
+                    print("CatStanding failed to load: \(error)")
                 }
             }
-            for entity in [standing.entity, seated.entity].compactMap({ $0 }) { castShadow(entity) }
-            return Mochi(standing: standing, seated: seated)
+            if let entity = rig.entity { castShadow(entity) }
+            return rig
         }
         mochi = task
         return try await task.value
@@ -288,8 +278,7 @@ class CatRoom {
     /// Lit by this room's ambient light and posed as this room's walker last left her.
     func adoptCat() {
         guard let walker else { return }
-        for rig in [walker.standing, walker.seated] {
-            guard let entity = rig.entity, entity.parent !== catModel else { continue }
+        if let entity = walker.rig.entity, entity.parent !== catModel {
             catModel.addChild(entity)
             if let iblReceiver {
                 entity.components.set(iblReceiver)

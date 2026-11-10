@@ -65,7 +65,7 @@ final class CatRig {
     /// The whole body pitches nose up (+) and rolls about the spine's middle, rises by `lift` and moves back by `back`;
     /// the spine sags by `bend`, chest and rump both up for positive values, and the rump swings by `wiggle` to her left.
     /// `chestMove` and `hipsMove` are laid over the result in model space. The head turns on the neck, hung `headSeat`
-    /// of the way from the chest to where the seated skeleton holds it, and then moves by `headShift`.
+    /// of the way from the chest to where it rests, moved only by `chestMove`, and then moves by `headShift`.
     /// `feet` are where the paws should be, in `legs` order; a leg that cannot reach stretches toward its paw.
     struct Posture {
         var lift: Float = 0, back: Float = 0, pitch: Float = 0, roll: Float = 0, bend: Float = 0, wiggle: Float = 0
@@ -139,7 +139,6 @@ final class CatRig {
     /// Tail bones' heads and directions, root first.
     let tailJoints: [SIMD3<Float>]
     let tailDirections: [SIMD3<Float>]
-    let mount: SIMD3<Float>
     private(set) var headPose = Pose()
     private(set) var hipsPose = Pose()
     /// Every bone's motion of model space as posed last frame, in the rig file's order.
@@ -153,7 +152,7 @@ final class CatRig {
     private let hips, chest, head, earLeft, earRight: Int
     private let lids: [(upper: Int, lower: Int)]
     private let tail: [Int]
-    /// Bones nothing above poses, such as the seated haunch's paws, with the parent each one rides on.
+    /// Bones nothing above poses, with the parent each one rides on.
     private let riders: [(bone: Int, parent: Int)]
 
     init(_ files: Files) throws {
@@ -169,7 +168,6 @@ final class CatRig {
         joints = rig.bones.map(\.head)
         boneNames = rig.bones.map(\.name)
         eyesCenter = rig.eyes ?? .zero
-        mount = rig.mount ?? .zero
 
         func bone(_ name: String) throws -> Int {
             guard let index = rig.bones.firstIndex(where: { $0.name == name }) else { throw Failure.missing(name) }
