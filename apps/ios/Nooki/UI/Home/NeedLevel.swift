@@ -23,15 +23,8 @@ nonisolated enum NeedLevel: Hashable, CaseIterable, Sendable {
         }
     }
 
-    /// The needs the sheet raises: those that want something, at most the two lowest, so a raised row still says what
-    /// comes first. Ties go in display order.
-    static func raised(_ needs: PetNeeds) -> Set<PetNeed> {
-        let wanting = PetNeed.displayOrder.enumerated().filter { NeedLevel(needs[$0.element]) == .wants }
-        let lowest = wanting.sorted { (needs[$0.element], $0.offset) < (needs[$1.element], $1.offset) }
-        return Set(lowest.prefix(2).map(\.element))
-    }
-
-    /// The need her portrait on Home shows: the lowest, while it wants something.
+    /// The one need raised, on the sheet and as the badge on her portrait on Home: the lowest, while it wants something.
+    /// Only one, so the eye always lands on what comes first.
     static func cue(_ needs: PetNeeds) -> PetNeed? {
         let (need, value) = needs.lowest
         return NeedLevel(value) == .wants ? need : nil

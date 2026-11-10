@@ -14,8 +14,8 @@ extension RoomController: PetNeedsSource {
     var needs: PetNeeds? { status.needs }
 }
 
-/// Mochi's four needs, one row each: what it is, how she feels in a word, and the care a tap on the row gives. Only a
-/// need that wants something, and at most two of them, is raised.
+/// Mochi's four needs, one row each: what it is, how she feels in a word, and the care a tap on the row gives. Only the
+/// lowest need, and only while it wants something, is raised.
 struct NeedList: View {
     let name: String
     let needs: PetNeeds?
@@ -23,10 +23,10 @@ struct NeedList: View {
 
     var body: some View {
         if let needs {
-            let raised = NeedLevel.raised(needs)
+            let raised = NeedLevel.cue(needs)
             GroupedSection(inset: StatusRow.inset) {
                 ForEach(PetNeed.displayOrder, id: \.self) { need in
-                    row(need, value: needs[need], raised: raised.contains(need))
+                    row(need, value: needs[need], raised: need == raised)
                 }
             }
         } else {
