@@ -43,9 +43,7 @@ struct CatCoatTests {
             #expect(Bundle.main.url(forResource: coat.portrait, withExtension: "png") != nil)
             #expect(Bundle.main.url(forResource: coat.avatar, withExtension: "png") != nil)
             guard coat != .grey else { continue }
-            for model in ["Cat", "CatStanding"] {
-                #expect(Bundle.main.url(forResource: "\(model)Color-\(coat.rawValue)", withExtension: "jpg") != nil)
-            }
+            #expect(Bundle.main.url(forResource: "CatStandingColor-\(coat.rawValue)", withExtension: "jpg") != nil)
         }
     }
 }

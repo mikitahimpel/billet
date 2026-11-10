@@ -1,7 +1,7 @@
-"""Gives Cat.usdz or CatStanding.usdz joints for the rig's bones it lacks, and reweights the vertices those bones take.
+"""Gives CatStanding.usdz joints for the rig's bones it lacks, and reweights the vertices those bones take.
 
 Run with make_mochi_mesh.py's Python:
-  python Tools/reskin_mochi_mesh.py [--name Mochi|MochiStanding]
+  python Tools/reskin_mochi_mesh.py [--name MochiStanding]
 
 A bone added to the rig (tools/cat-gen/rigs, then skin.py) moves the splat at once; the mesh fallback only once it has a
 joint of that name. This adds each missing bone as a joint after the existing ones, resting unrotated at its head as
@@ -23,7 +23,7 @@ from make_mochi_mesh import RESOURCES, read_splat, skin_weights, top4
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--name", default="Mochi", help="the splat and rig the mesh was built from")
+    parser.add_argument("--name", default="MochiStanding", help="the splat and rig the mesh was built from")
     args = parser.parse_args()
     path = os.path.join(RESOURCES, "Cat" + args.name.removeprefix("Mochi") + ".usdz")
 

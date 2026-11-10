@@ -46,8 +46,6 @@ nonisolated struct RigFile: Decodable {
     let bones: [Bone]
     /// Model-space point between the eyes.
     let eyes: SIMD3<Float>?
-    /// Where the seated splat sits in the standing one's model space.
-    let mount: SIMD3<Float>?
 }
 
 /// Mochi's skeletons, ported from nooki-scene/src/three/catRig.js: a two-part spine, head with ears and lids, a tail
@@ -264,7 +262,7 @@ final class CatRig {
     }
 }
 
-/// Mochi as a skinned mesh (Cat.usdz, CatStanding.usdz) where splats can't be drawn, following its rig's bones. The
+/// Mochi as a skinned mesh (CatStanding.usdz) where splats can't be drawn, following its rig's bones. The
 /// USDZ's joints carry the rig's bone names and rest unrotated, in the splat's model space (Tools/make_mochi_mesh.py).
 /// A joint named `<bone>Pivot` turns as its bone does but about its own rest point, carried there by its parent's bone:
 /// the mesh's eyelids, which swing about a point behind the eye rather than the lid bone's hinge.

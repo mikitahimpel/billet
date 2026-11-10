@@ -100,19 +100,22 @@ final class CatWalker {
     }
 
     /// Body postures as rig values; feet are offsets (up, back) from the rest paws in model units, `tail` lifts each
-    /// tail joint (negative lowers it) and `sway` swings it to her left; `shut` closes the lids.
+    /// tail joint (negative lowers it) and `sway` swings it to her left; `shut` closes the lids, `neck` moves the head
+    /// in model units.
     private struct Posture {
         var lift: Float = 0, back: Float = 0, pitch: Float = 0, bend: Float = 0, headPitch: Float = 0, seat: Float = 0
         var headYaw: Float = 0, headRoll: Float = 0, shut: Float = 0
+        var neck = SIMD3<Float>.zero
         var fore = SIMD2<Float>.zero, hind = SIMD2<Float>.zero
         var tail: [Float] = [0, 0, 0]
         var sway: [Float] = [0, 0, 0]
 
         static let stand = Posture()
         // Rump on the floor over hind legs folded at the hocks, chest up on straight fore legs, tail curled down behind
-        // her, the head held where it is standing; nothing goes below the floor on the way down from standing.
-        static let sit = Posture(lift: -0.014, back: -0.04, pitch: 0.71, bend: -0.34, headPitch: 0, seat: 1,
-                                 hind: [0, -0.14], tail: [2.84, -0.05, -0.32])
+        // her, the head level and raised over the chest so the collar shows; nothing goes below the floor on the way
+        // down from standing.
+        static let sit = Posture(lift: -0.014, back: -0.04, pitch: 0.5, bend: -0.34, headPitch: 0, seat: 1,
+                                 neck: [0, 0.02, -0.01], hind: [0, -0.14], tail: [2.84, -0.05, -0.32])
         // Belly on the floor over legs folded under her, tail along the floor.
         static let loaf = Posture(lift: -0.05, tail: [-1.3, -0.4, -0.2], sway: [0.5, 0.5, 0.4])
         // The loaf with the chin down and turned, the tail along her side and the eyes shut.
@@ -126,6 +129,7 @@ final class CatWalker {
                     bend: lerp(a.bend, b.bend, t), headPitch: lerp(a.headPitch, b.headPitch, t), seat: lerp(a.seat, b.seat, t),
                     headYaw: lerp(a.headYaw, b.headYaw, t),
                     headRoll: lerp(a.headRoll, b.headRoll, t), shut: lerp(a.shut, b.shut, t),
+                    neck: simd_mix(a.neck, b.neck, SIMD3(repeating: t)),
                     fore: simd_mix(a.fore, b.fore, SIMD2(repeating: t)), hind: simd_mix(a.hind, b.hind, SIMD2(repeating: t)),
                     tail: zip(a.tail, b.tail).map { lerp($0, $1, t) },
                     sway: zip(a.sway, b.sway).map { lerp($0, $1, t) })
@@ -422,6 +426,7 @@ final class CatWalker {
         p.headYaw = s.headYaw + lerp(0.12 * noise(time * 0.5, 8), b.yaw, r) * still
         p.headRoll = s.headRoll + b.roll * r * still
         steadyHead(&p, dt, g)
+        p.headShift += s.neck
         settle(&p, dt, r)
         p.earLeft = b.earLeft * r
         p.earRight = b.earRight * r

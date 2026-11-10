@@ -2,7 +2,7 @@ import Design
 import SwiftUI
 import UIKit
 
-/// The hero Mochi's pictures for one coat as they ship, from `Tools/bake_hero.py`: the seated splat at rest, 3:4, and
+/// The hero Mochi's pictures for one coat as they ship, from `Tools/bake_hero.py`: her splat sitting at rest, 3:4, and
 /// the patches that close her lids and flick her ear. A patch replaces its rectangle of the rest image; outside it the
 /// frames are the rest image, pixel for pixel.
 nonisolated struct HeroArt: @unchecked Sendable {
@@ -13,8 +13,8 @@ nonisolated struct HeroArt: @unchecked Sendable {
     let ear: [UIImage]
 
     /// The patches' rectangles as fractions of the rest image, printed by the bake.
-    static let blinkRect = CGRect(x: 0.32222, y: 0.20486, width: 0.44352, height: 0.22639)
-    static let earRect = CGRect(x: 0.23889, y: 0.10764, width: 0.21019, height: 0.16736)
+    static let blinkRect = CGRect(x: 0.33796, y: 0.20208, width: 0.40741, height: 0.20556)
+    static let earRect = CGRect(x: 0.25926, y: 0.11111, width: 0.18889, height: 0.15764)
 
     /// Reads and decodes; it blocks, so it runs off the main actor.
     static func read(_ coat: CatCoat, from bundle: Bundle) -> HeroArt? {

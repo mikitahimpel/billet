@@ -4,8 +4,9 @@
 billet-gpu's coat PLYs differ from the original only in f_dc_0..2, so the app ships just those floats and lays them over
 the original PLY when it loads (CatCoat.dress). This checks that claim and that the result rebuilds the coat PLY byte for byte.
 
-    python3 scripts/coats/coat-colours.py Nooki/Resources/Mochi.ply ~/billet-gpu/out/coats/Mochi-ginger.ply \
-        Nooki/Resources/Coats/Mochi-ginger.fdc
+    python3 scripts/coats/coat-colours.py Nooki/Resources/MochiStanding.ply \
+        ~/billet-gpu/out/coats/MochiStanding-ginger.ply \
+        Nooki/Resources/Coats/MochiStanding-ginger.fdc
 """
 import hashlib
 import sys
