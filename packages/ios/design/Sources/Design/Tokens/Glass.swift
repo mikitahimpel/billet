@@ -185,17 +185,21 @@ public struct GlassGroup<Content: View>: View {
     } else if #available(iOS 26, macOS 26, *) {
       GlassEffectContainer(spacing: spacing) { content.environment(\.liftsGlassBadges, true) }
         .overlayPreferenceValue(LiftedBadges.self) { badges in
-          GeometryReader { proxy in
-            ForEach(badges.indices, id: \.self) { index in
-              let frame = proxy[badges[index].bounds]
-              Color.clear
-                .frame(width: frame.width, height: frame.height)
-                .overlay(alignment: badges[index].alignment) { badges[index].view }
-                .position(x: frame.midX, y: frame.midY)
+          // Only while there is a badge: on iOS 27 a view laid over the container, even an empty
+          // one, makes VoiceOver and UI tests read its controls as one merged frame.
+          if !badges.isEmpty {
+            GeometryReader { proxy in
+              ForEach(badges.indices, id: \.self) { index in
+                let frame = proxy[badges[index].bounds]
+                Color.clear
+                  .frame(width: frame.width, height: frame.height)
+                  .overlay(alignment: badges[index].alignment) { badges[index].view }
+                  .position(x: frame.midX, y: frame.midY)
+              }
             }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
           }
-          .allowsHitTesting(false)
-          .accessibilityHidden(true)
         }
     } else {
       content
