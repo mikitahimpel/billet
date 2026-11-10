@@ -75,7 +75,7 @@ same name.
 It is a step, not the end: nothing new goes into it. Each feature PR moves its part out, and the
 library goes when it is empty. `AppGroup` and `SharedFile` are in core's `Persistence`; `MoodStore` is
 in `MoodInterface` and takes its file as `load` and `save`, which `OurioShared` points at the App Group;
-`LatestDrawing`, `PushTokens`, `PushReceipt` and `PushPayload(push:)` are in `DrawInterface`.
+`LatestDrawing`, `PushTokens`, `PushReceipt`, `PushPayload(push:)` and the reaction emoji are in `DrawInterface`.
 What is left:
 
 | To | From `OurioShared` |

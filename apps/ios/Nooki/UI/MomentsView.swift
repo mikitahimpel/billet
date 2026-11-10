@@ -1,3 +1,4 @@
+import DrawInterface
 import OurioShared
 import PetScene
 import PhotosUI
