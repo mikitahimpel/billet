@@ -1,3 +1,4 @@
+import CoreGraphics
 import Design
 import Testing
 @testable import Billet
@@ -12,10 +13,13 @@ import Testing
     }
 
     @Test func withoutABarItSitsOverTheHomeIndicator() {
-        #expect(PurchaseMoment.lift(bottom: 874, floor: nil, safeBottom: 34) == 34 + Space.l)
+        let noBar: CGFloat? = nil
+        let lift = PurchaseMoment.lift(bottom: 874, floor: noBar, safeBottom: 34)
+        #expect(lift == 34 + Space.l)
     }
 
     @Test func aBarBelowTheContainerIsIgnored() {
-        #expect(PurchaseMoment.lift(bottom: 700, floor: 790, safeBottom: 0) == Space.l)
+        let lift = PurchaseMoment.lift(bottom: 700, floor: 790, safeBottom: 0)
+        #expect(lift == Space.l)
     }
 }
