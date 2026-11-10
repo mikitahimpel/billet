@@ -153,7 +153,7 @@ jobs:
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO SWIFT_COMPILATION_MODE=wholemodule 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" \
             | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
             status=1
