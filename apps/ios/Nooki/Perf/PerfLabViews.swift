@@ -138,8 +138,7 @@ struct PerfLabMeter: View {
                     .padding(.horizontal, Space.s)
                     .padding(.vertical, Space.xs)
                     .frame(minHeight: 24)
-                    .background(Ink.surface, in: .rect(cornerRadius: Radius.inner))
-                    .overlay(RoundedRectangle(cornerRadius: Radius.inner).strokeBorder(Ink.hairline, lineWidth: 1))
+                    .cornerFill(.inner, Ink.surface)
             }
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Frame meter")
