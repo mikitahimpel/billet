@@ -1,0 +1,19 @@
+{
+ "id": "poster-moon",
+ "name": "Moon poster",
+ "kind": "FLAT",
+ "width_m": 0.197,
+ "depth_m": 0.054,
+ "height_m": 0.3,
+ "footprint_cells": [
+  4,
+  2
+ ],
+ "mount": "wall",
+ "fit": "height",
+ "size_m": 0.3,
+ "anchors": [],
+ "tris": 800,
+ "affordance": null,
+ "usdz_kb": 123
+}

@@ -1,0 +1,19 @@
+{
+ "id": "lavalamp",
+ "name": "Lava lamp",
+ "kind": "SOLID",
+ "width_m": 0.099,
+ "depth_m": 0.098,
+ "height_m": 0.2,
+ "footprint_cells": [
+  2,
+  2
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.2,
+ "anchors": [],
+ "tris": 1200,
+ "affordance": null,
+ "usdz_kb": 166
+}

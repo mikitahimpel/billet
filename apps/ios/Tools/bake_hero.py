@@ -1,11 +1,7 @@
-"""Renders the hero Mochi (the splash and the welcome) from her splat sitting, coat by coat, with numpy.
+"""Renders the hero Mochi (the splash and the welcome) from the seated splat, coat by coat, with numpy.
 
 Run (scripts/hero/bake-hero.sh does this for every coat):
   python3 Tools/bake_hero.py <out dir> --coat grey|ginger|... [--width 1080]
-  python3 Tools/bake_hero.py Nooki/Resources/Coats --cards [--coats ...]
-
-With `--cards` it writes `Coat-<coat>.png` instead, her card in the onboarding coat carousel: three-quarter view, 600 by
-800, ears 5.5% and paws 94.75% down the card as CatStage expects.
 
 Writes `Hero-<coat>.webp`, the whole cat at rest, and patches the app lays over it: `HeroBlink<n>-<coat>.webp` (both
 lids at 0.5 and shut) and `HeroEar<n>-<coat>.webp` (an ear flicked out half and fully), each cut to the rectangle
@@ -13,8 +9,8 @@ outside which nothing differs from rest, so a patch replaces its rectangle of th
 rectangles, as fractions of the image, are printed for `HeroArt.swift`.
 
 The splat is drawn as the app's GaussianSplatResource draws it: sigmoid opacity, colour 0.5 + SH_C0 * f_dc, Gaussians
-sorted back to front. MochiStanding sits as the room has her (cat_pose.py), with dual quaternion skinning as on the
-GPU; the lids swing shut and the left ear flicks about z, 0.45 rad at the top of a twitch.
+sorted back to front; bones move it as `CatRig.update` does (lids swing 0.7 and 0.42 rad about the upper lid's head, an
+ear flicks about z, 0.45 rad at the top of a twitch), blended linearly by the `.skin` weights.
 """
 
 import argparse
@@ -24,17 +20,16 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from cat_pose import SEAT, sit_poses, skin as skinned
-
 ROOT = Path(__file__).resolve().parents[1]
 RES = ROOT / "Nooki/Resources"
 SH_C0 = 0.28209479
+LID_SWING = (0.7, 0.42)
 EAR_FLICK = 0.45
 # Framing: the camera sits in front of her (her face looks toward -Z), a little above her eyes, and looks down at
 # her middle; she fills `FILL` of the image's height.
-EYE = np.array([0.0, 0.21, -1.1])
-TARGET = np.array([0.0, 0.145, 0.0])
-FILL = 0.82
+EYE = np.array([0.0, 0.2, -1.1])
+TARGET = np.array([0.0, 0.135, 0.0])
+FILL = 0.9
 
 
 def read_ply(path):
@@ -53,29 +48,60 @@ def quat_matrix(q):
     ], 1)
 
 
-def posed(splats, skin, rig, lids=0.0, ear=0.0):
-    """Model-space centres, moved so she sits about the origin, and each splat's rotation by its bones."""
-    rotation, position = skinned(splats[:, :3], skin, sit_poses(rig, lids, ear))
-    return position - SEAT, quat_matrix(rotation[:, [3, 0, 1, 2]])
+def axis_rotation(axis, angle):
+    c, s = np.cos(angle), np.sin(angle)
+    return {
+        "x": np.array([[1, 0, 0], [0, c, -s], [0, s, c]]),
+        "y": np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]]),
+        "z": np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]]),
+    }[axis]
 
 
-def camera(width, height, eye=EYE, target=TARGET, fill=FILL):
-    forward = target - eye
+def bone_poses(rig, lids=0.0, ear=0.0):
+    """Each bone's rotation and translation in model space; only the lids and the left ear leave rest."""
+    names = [b["name"] for b in rig["bones"]]
+    heads = {b["name"]: np.array(b["head"]) for b in rig["bones"]}
+    poses = [(np.eye(3), np.zeros(3)) for _ in names]
+
+    def about(name, pivot, rotation):
+        poses[names.index(name)] = (rotation, pivot - rotation @ pivot)
+
+    for side in ("Left", "Right"):
+        hinge = heads[f"lid{side}"]
+        about(f"lid{side}", hinge, axis_rotation("x", -LID_SWING[0] * lids))
+        about(f"lid{side}Low", hinge, axis_rotation("x", LID_SWING[1] * lids))
+    about("earLeft", heads["earLeft"], axis_rotation("z", -ear))
+    return poses
+
+
+def posed(splats, skin, poses):
+    rotations = np.stack([p[0] for p in poses])
+    translations = np.stack([p[1] for p in poses])
+    index = skin[:, :4].astype(int)
+    weight = skin[:, 4:].astype(np.float64) / 255
+    blend = np.einsum("nk,nkij->nij", weight, rotations[index])
+    shift = np.einsum("nk,nki->ni", weight, translations[index])
+    position = np.einsum("nij,nj->ni", blend, splats[:, :3]) + shift
+    return position, blend
+
+
+def camera(width, height):
+    forward = TARGET - EYE
     forward /= np.linalg.norm(forward)
     right = np.cross(forward, np.array([0.0, 1.0, 0.0]))
     right /= np.linalg.norm(right)
     # Image rows grow downward.
     down = np.cross(forward, right)
     view = np.stack([right, down, forward])
-    depth = np.linalg.norm(target - eye)
-    focal = fill * height / (0.3 / depth)
+    depth = np.linalg.norm(TARGET - EYE)
+    focal = FILL * height / (0.3 / depth)
     return view, focal
 
 
-def render(splats, colour, skin, rig, width, height, lids=0.0, ear=0.0, eye=EYE, target=TARGET, fill=FILL):
-    position, blend = posed(splats, skin, rig, lids, ear)
-    view, focal = camera(width, height, eye, target, fill)
-    p = (position - eye) @ view.T
+def render(splats, colour, skin, rig, width, height, lids=0.0, ear=0.0):
+    position, blend = posed(splats, skin, bone_poses(rig, lids, ear))
+    view, focal = camera(width, height)
+    p = (position - EYE) @ view.T
     z = p[:, 2]
     u = focal * p[:, 0] / z + width / 2
     v = focal * p[:, 1] / z + height / 2
@@ -140,56 +166,31 @@ def changed_box(pairs, pad=4):
             min(columns.max() + 1 + pad, width), min(rows.max() + 1 + pad, height))
 
 
-# The card's camera: in front of her and off to her right, a little above her eyes.
-CARD_EYE = TARGET + 1.1 * np.array([-0.42, 0.22, -1.0]) / np.linalg.norm([-0.42, 0.22, -1.0])
-CARD_SIZE = (600, 800)
-CARD_EARS, CARD_PAWS = 0.055, 0.9475
-
-
-def card(splats, colour, skin, rig):
-    """Rendered loose at twice the size, then cut and scaled so her ears and paws land where CatStage cuts."""
-    width, height = CARD_SIZE
-    image = render(splats, colour, skin, rig, 2 * width, 2 * height, eye=CARD_EYE, fill=0.75)
-    rows = np.nonzero((image[..., 3] > 24 / 255).any(1))[0]
-    columns = np.nonzero((image[..., 3] > 24 / 255).any(0))[0]
-    scale = (rows[-1] + 1 - rows[0]) / (CARD_PAWS - CARD_EARS) / height
-    left = (columns[0] + columns[-1] + 1) / 2 - scale * width / 2
-    top = rows[0] - CARD_EARS * height * scale
-    box = tuple(round(v) for v in (left, top, left + scale * width, top + scale * height))
-    return Image.fromarray(to_bytes(image)).crop(box).resize(CARD_SIZE, Image.Resampling.LANCZOS)
-
-
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("out")
     parser.add_argument("--coats", nargs="+", default=COATS)
     parser.add_argument("--width", type=int, default=1080)
-    parser.add_argument("--cards", action="store_true")
     args = parser.parse_args()
     width, height = args.width, args.width * 4 // 3
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    original = read_ply(RES / "MochiStanding.ply")
-    skin = np.frombuffer((RES / "MochiStanding.skin").read_bytes(), np.uint8).reshape(-1, 8)
-    rig = json.loads((RES / "MochiStanding.rig.json").read_text())
+    original = read_ply(RES / "Mochi.ply")
+    skin = np.frombuffer((RES / "Mochi.skin").read_bytes(), np.uint8).reshape(-1, 8)
+    rig = json.loads((RES / "Mochi.rig.json").read_text())
     rests, frames = {}, {}
     for coat in args.coats:
         splats = original.copy()
         if coat != "grey":
-            splats[:, 11:14] = np.frombuffer((RES / f"Coats/MochiStanding-{coat}.fdc").read_bytes(), "<f4").reshape(-1, 3)
+            splats[:, 11:14] = np.frombuffer((RES / f"Coats/Mochi-{coat}.fdc").read_bytes(), "<f4").reshape(-1, 3)
         colour = np.clip(0.5 + SH_C0 * splats[:, 11:14], 0, 1)
-        if args.cards:
-            card(splats, colour, skin, rig).save(out / f"Coat-{coat}.png", optimize=True)
-            continue
         rests[coat] = to_bytes(render(splats, colour, skin, rig, width, height))
         for kind, poses in POSES.items():
             frames[coat, kind] = [to_bytes(render(splats, colour, skin, rig, width, height, **pose)) for pose in poses]
         # The rest image is lossy; a patch is small, and lossless so its edge matches what it covers.
         Image.fromarray(rests[coat]).save(out / f"Hero-{coat}.webp", quality=92, alpha_quality=100, method=6)
 
-    if args.cards:
-        return
     # One rectangle per kind for every coat, so the app needs one number for each.
     boxes = {}
     for kind in POSES:

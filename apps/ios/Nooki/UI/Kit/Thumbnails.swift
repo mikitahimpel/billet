@@ -3,7 +3,7 @@ import OurioShared
 import UIKit
 import UsInterface
 
-/// Item PNGs are 1024 px with generous transparent margins: each place decodes them at the size it draws,
+/// Item tiles are WebP (512 px, props) or PNG (1024 px) with generous transparent margins: each place decodes them at the size it draws,
 /// and the hero fan also crops them to the artwork before aligning the pieces on the card's bottom edge.
 @MainActor
 enum Thumbnails {
@@ -33,7 +33,8 @@ enum Thumbnails {
     }
 
     private nonisolated static func decode(_ name: String, maxPixels: Int) -> UIImage? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "png") else { return nil }
+        guard let url = Bundle.main.url(forResource: name, withExtension: "webp")
+            ?? Bundle.main.url(forResource: name, withExtension: "png") else { return nil }
         return Downsample.image(at: url, maxPixels: maxPixels)
     }
 

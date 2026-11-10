@@ -66,20 +66,27 @@ extension GameStage {
     func act() {}
 }
 
+/// The progress tray's content: what is filling, how full, and the count in words where there is one.
+struct GameMeter: Equatable {
+    let value: Double
+    let label: String
+    let detail: String?
+}
+
 /// What a game shows over the room and the feel of it in the hand.
 @MainActor
 @Observable
 final class GameDeck {
     var hint: String?
     /// Hidden with nil.
-    var bar: (value: Double, label: String)?
+    var bar: GameMeter?
     var result: GameResult?
 
     /// Sets `bar` when it has moved by a percent, reached an end or changed its label: a stage reports it every
     /// frame, and each write re-renders the bar.
-    func show(_ value: Double, _ label: String) {
-        if let bar, bar.label == label, abs(bar.value - value) < 0.01, value > 0, value < 1 { return }
-        bar = (value, label)
+    func show(_ value: Double, _ label: String, detail: String? = nil) {
+        if let bar, bar.label == label, bar.detail == detail, abs(bar.value - value) < 0.01, value > 0, value < 1 { return }
+        bar = GameMeter(value: value, label: label, detail: detail)
     }
     /// Where a point in the pivot's space shows on screen, and how many points a meter there spans.
     @ObservationIgnored var project: (SIMD3<Float>) -> CGPoint? = { _ in nil }
