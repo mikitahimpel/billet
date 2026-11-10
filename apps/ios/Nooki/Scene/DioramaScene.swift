@@ -274,7 +274,7 @@ final class DioramaScene: CatRoom {
 
     /// Center of the donut bed on the floor.
     private let bedCenter: SIMD3<Float> = [0.06, 0.014, -0.04]
-    /// Mochi sits about as tall as the nightstand, on the bed's cushion; sitting, her splat is 0.26 m tall.
+    /// Mochi sits about as tall as the nightstand, on the bed's cushion; Mochi.ply itself is 0.26 m tall.
     private let catScale: Float = 0.68
 
     /// The furniture and the two toys, loaded in the background side by side and lit like the rest of the room.
@@ -325,8 +325,9 @@ final class DioramaScene: CatRoom {
     /// Mochi on the bed cushion; she can hop out onto the rug, cross it and leap up to the top of the cat tree.
     private func buildCat() {
         let rest: Float = 0.75 + .pi
-        // Where the splat's origin goes for her to sit on the cushion.
-        let bed = bedCenter + [0, 0.05, 0.01] - simd_quatf.y(rest).act(CatWalker.seat * catScale)
+        // Where the standing splat's origin goes for the seated one to sit on the cushion, `mount` behind it.
+        let mount: SIMD3<Float> = [0.01, 0, -0.058]
+        let bed = bedCenter + [0, 0.05, 0.01] - simd_quatf.y(rest).act(mount * catScale)
         buildCat(at: bed, rests: [rest, rest], route: [
             .init(at: [0.36, 0.396, -0.36]),
             .init(at: [0.3, 0.023, -0.12], move: .jump),
