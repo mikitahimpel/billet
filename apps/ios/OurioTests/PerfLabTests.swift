@@ -1,4 +1,5 @@
 import Foundation
+import RoomInterface
 import Testing
 @testable import Billet
 
@@ -54,6 +55,28 @@ struct PerfLabTests {
         #expect(PerfLabMachine.summary(.shipped, reading: nil) == "Perf lab: as shipped")
         #expect(PerfLabMachine.summary(State(changed: [.shine, .barGlass, .flatten]), reading: reading)
             == "Perf lab: barGlass off, shine off, flatten on · 60 fps, p95 16.7 ms, 0 dropped")
+    }
+
+    @Test func theCopyLineEndsWithTheEnergyReading() {
+        let energy = EnergyStats(cpu: 41.6, room: .off, heat: .fair, lowPower: true)
+        #expect(PerfLabMachine.summary(.shipped, reading: nil, energy: energy)
+            == "Perf lab: as shipped · CPU 42% · room off · fair · low power")
+        #expect(EnergyStats(cpu: 3, room: .drawing, heat: .nominal, lowPower: false).line
+            == "CPU 3% · room drawing · nominal")
+    }
+
+    @Test func cpuIsTheTimeUsedOverTheTimePassed() throws {
+        // A second and a half of CPU over three seconds, from threads on two cores: 50% of one core.
+        #expect(try abs(#require(EnergyStats.cpu(busy: 10, 11.5, elapsed: 3)) - 50) < 0.001)
+        #expect(try abs(#require(EnergyStats.cpu(busy: 10, 13, elapsed: 1)) - 300) < 0.001)
+        #expect(EnergyStats.cpu(busy: 10, 11, elapsed: 0) == nil)
+        #expect(EnergyStats.cpu(busy: 10, 9, elapsed: 1) == nil)
+    }
+
+    @Test func theRoomReadsAsItIsShown() {
+        #expect(EnergyStats.Room(.visible) == .drawing)
+        #expect(EnergyStats.Room(.covered) == .paused)
+        #expect(EnergyStats.Room(.hidden) == .off)
     }
 
     @Test func aSteadyScreenDropsNothing() throws {

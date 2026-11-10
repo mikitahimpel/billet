@@ -87,8 +87,13 @@ struct WishlistScreen: View {
                     title: String(localized: "What would make you smile?"),
                     text: String(
                         localized: "Paste a link or type a wish. \(otherName) can secretly pick one to gift you.")
-                )
+                ) {
+                    PrimaryButton(String(localized: "Add a wish")) { adding = true }
+                        .padding(.top, Space.s)
+                }
             } else {
+                AddRow(title: String(localized: "Add a wish")) { adding = true }
+                    .cardSurface()
                 ForEach(wishes) { wish in
                     Button { editing = wish } label: {
                         WishCard(wish: wish)

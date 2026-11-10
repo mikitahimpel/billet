@@ -76,14 +76,14 @@ final class ShopScrolling {
     var isScrolling = false
 }
 
-/// Crosses once per period, only while on screen and the page holds still; still under Reduce Motion. An animated
-/// effect, not a timeline: SwiftUI moves it each frame without building the view again, and a card scrolled out of
-/// sight stops it. Each frame of it is still the main thread's work, so it waits while the page scrolls.
+/// Crosses once per period, only while on screen and the page holds still; still under Reduce Motion and in Low
+/// Power Mode. An animated effect, not a timeline: SwiftUI moves it each frame without building the view again. Only
+/// the crossing is animated: between crossings nothing moves, so the page and the glass over it can go idle.
 private struct ShineSweep: View {
     let period: Double
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(ShopScrolling.self) private var scrolling: ShopScrolling?
-    /// 0 to 1 through each period, animated forever while the sweep runs.
+    /// 0 to 1 through a crossing.
     @State private var progress = 0.0
     @State private var visible = false
 
@@ -99,22 +99,32 @@ private struct ShineSweep: View {
                     .modifier(SweepEffect(progress: progress, frameWidth: proxy.size.width, bandWidth: width))
             }
             .onScrollVisibilityChange(threshold: 0.01) { visible = $0 }
-            .onChange(of: runs) { _, runs in
-                if runs {
-                    withAnimation(.linear(duration: period).repeatForever(autoreverses: false)) { progress = 1 }
-                } else {
-                    var still = Transaction(animation: nil)
-                    still.disablesAnimations = true
-                    withTransaction(still) { progress = 0 }
+            .task(id: runs) {
+                rest()
+                guard runs else { return }
+                let crossing = period * 0.45
+                while !Task.isCancelled {
+                    guard (try? await Task.sleep(for: .seconds(period - crossing))) != nil else { return }
+                    if ProcessInfo.processInfo.isLowPowerModeEnabled { continue }
+                    withAnimation(.linear(duration: crossing)) { progress = 1 }
+                    guard (try? await Task.sleep(for: .seconds(crossing))) != nil else { return }
+                    rest()
                 }
             }
             .allowsHitTesting(false)
             .accessibilityHidden(true)
         }
     }
+
+    /// Back out of sight at the start, without animating there.
+    private func rest() {
+        var still = Transaction(animation: nil)
+        still.disablesAnimations = true
+        withTransaction(still) { progress = 0 }
+    }
 }
 
-/// Where the band is at `progress` through the period: it crosses in the last 45% and rests out of sight before that.
+/// Where the band is at `progress` through a crossing: out of sight on the left at 0, on the right at 1.
 private struct SweepEffect: GeometryEffect {
     var progress: Double
     let frameWidth: CGFloat
@@ -126,8 +136,7 @@ private struct SweepEffect: GeometryEffect {
     }
 
     func effectValue(size: CGSize) -> ProjectionTransform {
-        let travel = max(0, (progress - 0.55) / 0.45)
-        let x = -bandWidth * 1.5 + travel * (frameWidth + bandWidth * 2)
+        let x = -bandWidth * 1.5 + progress * (frameWidth + bandWidth * 2)
         return ProjectionTransform(CGAffineTransform(translationX: x, y: 0))
     }
 }

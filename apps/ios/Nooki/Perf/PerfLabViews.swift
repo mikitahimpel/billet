@@ -3,6 +3,8 @@ import Design
 import OurioShared
 import QuartzCore
 import SwiftUI
+import Darwin
+import RoomInterface
 import UIKit
 
 /// Times every frame the screen shows while the meter is up, and reads them out twice a second over the last two
@@ -48,6 +50,64 @@ final class FrameMeter {
     }
 }
 
+/// Reads the app's CPU, the thermal state and Low Power Mode once a second while the meter is up.
+@MainActor
+@Observable
+final class EnergyMeter {
+    private(set) var cpu: Double?
+
+    @ObservationIgnored private var last: (busy: Double, at: Double)?
+
+    func sample() {
+        guard let busy = Self.busySeconds() else { return }
+        let now = CACurrentMediaTime()
+        if let last, let cpu = EnergyStats.cpu(busy: last.busy, busy, elapsed: now - last.at) { self.cpu = cpu }
+        last = (busy, now)
+    }
+
+    func reading(room: RoomVisibility) -> EnergyStats? {
+        guard let cpu else { return nil }
+        let info = ProcessInfo.processInfo
+        return EnergyStats(cpu: cpu, room: EnergyStats.Room(room), heat: Self.heat(info.thermalState),
+                           lowPower: info.isLowPowerModeEnabled)
+    }
+
+    private static func heat(_ state: ProcessInfo.ThermalState) -> EnergyStats.Heat {
+        switch state {
+        case .nominal: .nominal
+        case .fair: .fair
+        case .serious: .serious
+        case .critical: .critical
+        @unknown default: .critical
+        }
+    }
+
+    /// The CPU time the app has used since launch, in seconds: its threads alive now and those that ended.
+    private static func busySeconds() -> Double? {
+        func count<T>(_: T.Type) -> mach_msg_type_number_t {
+            mach_msg_type_number_t(MemoryLayout<T>.size / MemoryLayout<natural_t>.size)
+        }
+        var live = task_thread_times_info_data_t()
+        var liveCount = count(task_thread_times_info_data_t.self)
+        let liveResult = withUnsafeMutablePointer(to: &live) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(liveCount)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_THREAD_TIMES_INFO), $0, &liveCount)
+            }
+        }
+        var ended = mach_task_basic_info_data_t()
+        var endedCount = count(mach_task_basic_info_data_t.self)
+        let endedResult = withUnsafeMutablePointer(to: &ended) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(endedCount)) {
+                task_info(mach_task_self_, task_flavor_t(MACH_TASK_BASIC_INFO), $0, &endedCount)
+            }
+        }
+        guard liveResult == KERN_SUCCESS, endedResult == KERN_SUCCESS else { return nil }
+        func seconds(_ t: time_value_t) -> Double { Double(t.seconds) + Double(t.microseconds) / 1e6 }
+        return seconds(live.user_time) + seconds(live.system_time) + seconds(ended.user_time)
+            + seconds(ended.system_time)
+    }
+}
+
 /// A display link holds its target strongly; this keeps that target from being the meter.
 private final class LinkTarget: NSObject {
     var tick: (CADisplayLink) -> Void = { _ in }
@@ -58,33 +118,48 @@ private final class LinkTarget: NSObject {
 /// The meter's reading over Home; a tap opens the switches, so one can be flipped and the page scrolled at once.
 struct PerfLabMeter: View {
     let lab: PerfLab
+    let room: RoomVisibility
     @State private var meter = FrameMeter()
+    @State private var energy = EnergyMeter()
     @State private var opened = false
+
+    private var line: String {
+        [meter.reading?.line ?? "measuring…", energy.reading(room: room)?.line].compactMap { $0 }
+            .joined(separator: "\n")
+    }
 
     var body: some View {
         VStack(alignment: .trailing, spacing: Space.s) {
             Button { withAnimation(Motion.fade()) { opened.toggle() } } label: {
-                Text(meter.reading?.line ?? "measuring…")
+                Text(line)
                     .font(.ourioMicro.monospacedDigit())
+                    .multilineTextAlignment(.trailing)
                     .foregroundStyle(Ink.text)
                     .padding(.horizontal, Space.s)
+                    .padding(.vertical, Space.xs)
                     .frame(minHeight: 24)
-                    .background(Ink.surface, in: .capsule)
-                    .overlay(Capsule().strokeBorder(Ink.hairline, lineWidth: 1))
+                    .background(Ink.surface, in: .rect(cornerRadius: Radius.inner))
+                    .overlay(RoundedRectangle(cornerRadius: Radius.inner).strokeBorder(Ink.hairline, lineWidth: 1))
             }
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Frame meter")
-            .accessibilityValue(meter.reading?.line ?? "measuring")
+            .accessibilityValue(line)
             .accessibilityHint("Shows the performance switches")
 
             if opened {
-                PerfLabSwitches(lab: lab, reading: meter.reading)
+                PerfLabSwitches(lab: lab, reading: meter.reading, energy: energy.reading(room: room))
                     .frame(maxWidth: 320)
                     .transition(.opacity)
             }
         }
         .onAppear { meter.start() }
         .onDisappear { meter.stop() }
+        .task {
+            while !Task.isCancelled {
+                energy.sample()
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
     }
 }
 
@@ -95,8 +170,9 @@ struct PerfLabPage: View {
     var body: some View {
         Page {
             GroupedSection(header: "Meter",
-                           footer: "Shows frames per second over Home; tap it there to flip these switches while you "
-                               + "scroll a page. Copy settings puts the switches and the reading on the clipboard.") {
+                           footer: "Shows frames per second and the app's CPU over Home, with whether the room draws "
+                               + "and how warm the phone is; tap it there to flip these switches while you scroll a "
+                               + "page. Copy settings puts the switches and the reading on the clipboard.") {
                 ToggleRow("Frame meter", symbol: "speedometer", tint: UsTint.sage.color, isOn: lab.meter)
             }
             PerfLabSwitches(lab: lab)
@@ -109,6 +185,7 @@ struct PerfLabPage: View {
 struct PerfLabSwitches: View {
     let lab: PerfLab
     var reading: FrameStats?
+    var energy: EnergyStats?
 
     var body: some View {
         Card {
@@ -118,7 +195,8 @@ struct PerfLabSwitches: View {
                 }
                 HStack(spacing: Space.s) {
                     SecondaryButton("Copy settings", fullWidth: true) {
-                        UIPasteboard.general.string = PerfLabMachine.summary(lab.state, reading: reading)
+                        UIPasteboard.general.string = PerfLabMachine.summary(lab.state, reading: reading,
+                                                                             energy: energy)
                     }
                     SecondaryButton("Reset", fullWidth: false) { lab.reset() }
                 }
