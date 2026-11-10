@@ -60,6 +60,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | Need | Use |
 | --- | --- |
 | A sheet | `BilletSheet("Title", size:, onConfirm:) { content }` |
+| A tab's root (World, Moments, Shop, Us) | `TabPage { ... }`, or `.tabContentInsets()` on its own scroll view; no title of its own, the tab bar names it. A tab's switch (Living room \| Bedroom, Photos \| Board) is a `GlassSegmented` in the header's `below` slot, the same size and place on every tab |
 | A pushed or full screen of sections | `Page { ... }` |
 | A full screen with a main action | `Screen { content } primary: { } secondary: { }`; over art or a camera `.bottomActions(primary:secondary:)`; under a fixed header `ActionSlot` |
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
