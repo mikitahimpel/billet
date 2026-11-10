@@ -74,7 +74,8 @@ same name.
 
 It is a step, not the end: nothing new goes into it. Each feature PR moves its part out, and the
 library goes when it is empty. `AppGroup` and `SharedFile` are in core's `Persistence`; `MoodStore` is
-in `MoodInterface` and takes its file as `load` and `save`, which `OurioShared` points at the App Group.
+in `MoodInterface` and takes its file as `load` and `save`, which `OurioShared` points at the App Group;
+`LatestDrawing`, `PushTokens`, `PushReceipt` and `PushPayload(push:)` are in `DrawInterface`.
 What is left:
 
 | To | From `OurioShared` |
@@ -82,7 +83,6 @@ What is left:
 | `ProfileInterface` | `Couple`, `PairMembers`, `CoupleStore`, `CatProfile` |
 | `UsInterface` | the Us model, `UsStore`, `PendingListChange`, `WishMedia` |
 | `MomentsInterface` | `Moment`, `Note` and their stores |
-| `DrawInterface` | `LatestDrawing`, `PushTokens`, `PushReceipt` |
 | `WidgetBridge` | `OurioSnapshot`, `WidgetTimeline`, `WidgetActivity`, `DeepLink` |
 | `WidgetUI` (new; SwiftUI, with the mood faces) | `MoodArt`, `DrawingCard`, `InkLayer`, `LockWallpaper` |
 | the feature that uses it, or the app | Places, `BlurHash`, `InstantFilm`, `DateCatalog`, `GroceryWords`, `Streak`, `Wallet` |
