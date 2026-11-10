@@ -398,7 +398,7 @@ struct OnboardingView: View {
                     .datePickerStyle(.wheel)
                     .labelsHidden()
                     .frame(maxWidth: .infinity)
-                    .rowCell()
+                    .padding(.vertical, Space.s)
             }
         }
     }
