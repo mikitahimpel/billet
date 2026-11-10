@@ -144,7 +144,7 @@ private struct LiftedBadge {
 }
 
 private struct LiftedBadges: PreferenceKey {
-  static let defaultValue: [LiftedBadge] = []
+  static var defaultValue: [LiftedBadge] { [] }
   static func reduce(value: inout [LiftedBadge], nextValue: () -> [LiftedBadge]) {
     value += nextValue()
   }
