@@ -1,0 +1,19 @@
+{
+ "id": "mugs",
+ "name": "Two mugs",
+ "kind": "SOLID",
+ "width_m": 0.04,
+ "depth_m": 0.11,
+ "height_m": 0.042,
+ "footprint_cells": [
+  1,
+  3
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.11,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": "smallItem",
+ "usdz_kb": 199
+}
