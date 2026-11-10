@@ -31,7 +31,9 @@ import {
   mood,
   note,
   ownedInk,
+  layoutLog,
   ownedItem,
+  placement,
   reaction,
   room,
   wallet,
@@ -57,6 +59,7 @@ type RoomRow = typeof room.$inferSelect;
 type CatRow = typeof cat.$inferSelect;
 type CatEntryRow = typeof catEntry.$inferSelect;
 type WalletRow = typeof wallet.$inferSelect;
+type PlacementRow = typeof placement.$inferSelect;
 
 const decodeCoinEntry = Schema.decodeUnknownOption(CoinEntry);
 
@@ -306,6 +309,8 @@ const roomFrom = (
   walletRow: WalletRow | undefined,
   bonuses: ReadonlyArray<string>,
   moods: ReadonlyArray<MoodCheckIn>,
+  layout: ReadonlyArray<PlacementRow>,
+  layoutIds: ReadonlyArray<string>,
 ): RoomState =>
   decodeRoom(
     row === undefined
@@ -328,6 +333,14 @@ const roomFrom = (
           inks,
           items,
           wishlist,
+          layout: layout.map(({ itemId, surface, u, v, quarterTurns }) => ({
+            item: itemId,
+            surface,
+            u,
+            v,
+            quarterTurns,
+          })),
+          layoutLog: layoutIds,
           bonuses,
           // In the members' order, as the room keeps them.
           moods: [row.firstUser, row.secondUser].flatMap((user) =>
@@ -378,18 +391,23 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(wallet),
         db.select().from(claimedBonus).orderBy(asc(claimedBonus.position)),
         db.select().from(mood),
+        db.select().from(placement).orderBy(asc(placement.position)),
+        db.select().from(layoutLog).orderBy(asc(layoutLog.position)),
       ]).pipe(
-        Effect.map(([[row], [catRow], inks, items, wishes, [walletRow], bonuses, moods]) =>
-          roomFrom(
-            row,
-            catRow,
-            inks.map(({ inkId }) => inkId),
-            items.map(({ itemId }) => itemId),
-            wishes.map(({ itemId }) => itemId),
-            walletRow,
-            bonuses.map(({ collectionId }) => collectionId),
-            moodsFrom(moods),
-          ),
+        Effect.map(
+          ([[row], [catRow], inks, items, wishes, [walletRow], bonuses, moods, placed, logged]) =>
+            roomFrom(
+              row,
+              catRow,
+              inks.map(({ inkId }) => inkId),
+              items.map(({ itemId }) => itemId),
+              wishes.map(({ itemId }) => itemId),
+              walletRow,
+              bonuses.map(({ collectionId }) => collectionId),
+              moodsFrom(moods),
+              placed,
+              logged.map(({ changeId }) => changeId),
+            ),
         ),
         Effect.orDie,
       ),
@@ -437,6 +455,21 @@ export const SqliteRoomStore = Layer.effect(
                   .insert(mood)
                   .values(values)
                   .onConflictDoUpdate({ target: mood.user, set: values });
+              }
+              yield* tx.delete(placement);
+              for (const [position, spot] of state.layout.entries()) {
+                yield* tx.insert(placement).values({
+                  itemId: spot.item,
+                  surface: spot.surface,
+                  u: spot.u,
+                  v: spot.v,
+                  quarterTurns: spot.quarterTurns,
+                  position,
+                });
+              }
+              yield* tx.delete(layoutLog);
+              for (const [position, changeId] of state.layoutLog.entries()) {
+                yield* tx.insert(layoutLog).values({ changeId, position });
               }
               yield* tx.delete(wish);
               for (const [position, itemId] of state.wishlist.entries()) {

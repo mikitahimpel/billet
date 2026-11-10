@@ -6,6 +6,7 @@ import type { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { LayoutChange } from "@billet/contracts-domain/decor";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type {
@@ -112,6 +113,12 @@ export class PairRooms extends Context.Service<
     readonly creditPurchase: (
       pairId: PairId,
       credit: PurchaseCredit,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    readonly changeLayout: (
+      pairId: PairId,
+      by: UserId,
+      id: IdempotencyKey,
+      change: LayoutChange,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     readonly setWish: (
       pairId: PairId,

@@ -402,6 +402,11 @@ describe("tagged unions", () => {
       at: 1_700_000_000_000,
     }),
     SetWish: RoomCommand.cases.SetWish.make({ by: alice, item: tower, wished: true }),
+    ChangeLayout: RoomCommand.cases.ChangeLayout.make({
+      by: alice,
+      id: key,
+      change: { _tag: "Unplace", item: tower },
+    }),
     React: react(),
     Welcome: RoomCommand.cases.Welcome.make({ at: 1_700_000_000_000 }),
     OpenGift: RoomCommand.cases.OpenGift.make({
@@ -476,6 +481,8 @@ describe("tagged unions", () => {
     InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),
     ItemsGranted: RoomOutput.cases.ItemsGranted.make({ items: [tower] }),
     WishlistChanged: RoomOutput.cases.WishlistChanged.make({ wishlist: [tower] }),
+    LayoutChanged: RoomOutput.cases.LayoutChanged.make({ layout: [] }),
+    LayoutRepeated: RoomOutput.cases.LayoutRepeated.make({}),
     CoinsEntered: RoomOutput.cases.CoinsEntered.make({ entry: spend }),
     CoinsRepeated: RoomOutput.cases.CoinsRepeated.make({ entry: spend }),
     ReactionSet: RoomOutput.cases.ReactionSet.make({ reaction: heartFromBob }),
@@ -550,6 +557,7 @@ describe("tagged unions", () => {
     NotSold: RoomRejection.cases.NotSold.make({ ink: rose }),
     OfferOwned: RoomRejection.cases.OfferOwned.make({ offer: tower }),
     NotOffered: RoomRejection.cases.NotOffered.make({}),
+    LayoutRefused: RoomRejection.cases.LayoutRefused.make({ reason: "occupied" }),
     NoteNotFound: RoomRejection.cases.NoteNotFound.make({}),
     OwnNote: RoomRejection.cases.OwnNote.make({}),
     NotReactable: RoomRejection.cases.NotReactable.make({}),

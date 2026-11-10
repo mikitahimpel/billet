@@ -23,6 +23,7 @@ import type {
   OrderResponse,
   ShopResponse,
   WishRequest,
+  LayoutResponse,
 } from "@billet/contracts-http-api/shop";
 import type { NoteEntry, SendNoteRequest } from "@billet/contracts-http-api/note";
 import { freeInk, type InkId, inks as inkCatalog } from "@billet/contracts-domain/inks";
@@ -31,6 +32,7 @@ import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import type { RoomDecision, RoomRejection } from "@billet/backend-pair-room/room-decision";
 import type { PurchaseCredit } from "@billet/backend-pair-room/room-service";
 import { shopOf } from "@billet/backend-pair-room/shop-view";
+import type { LayoutRequest } from "@billet/contracts-domain/decor";
 import { detectImageType, extensionOf } from "./image-type.ts";
 import { MediaStore, mediaPrefix } from "./media-store.ts";
 import {
@@ -39,6 +41,7 @@ import {
   CatNotAdopted,
   CollectionIncomplete,
   GiftTaken,
+  LayoutRefused,
   InkNotOwned,
   InvalidNote,
   NotEnoughCoins,
@@ -140,6 +143,11 @@ export class NotesService extends Context.Service<
       userId: UserId,
       request: EarnRequest,
     ) => Effect.Effect<EarnResponse, NotesNotFound | NotesUnavailable>;
+    /** Stands a piece, moves it or puts it back. The same id again answers `duplicate`. */
+    readonly changeLayout: (
+      userId: UserId,
+      request: LayoutRequest,
+    ) => Effect.Effect<LayoutResponse, NotesNotFound | LayoutRefused | NotesUnavailable>;
     readonly setWish: (
       userId: UserId,
       request: WishRequest,
@@ -342,6 +350,7 @@ export class NotesService extends Context.Service<
           case "ListNotFound":
           case "ListItemNotFound":
           case "CollectionIncomplete":
+          case "LayoutRefused":
           case "MoodNoteTooLong":
           case "RoomJournalsGame":
           case "StreakNotRestorable":
@@ -471,6 +480,23 @@ export class NotesService extends Context.Service<
           : yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-wish" }));
       });
 
+      const changeLayout = Effect.fn("NotesService.changeLayout")(function* (
+        userId: UserId,
+        request: LayoutRequest,
+      ): Effect.fn.Return<LayoutResponse, NotesNotFound | LayoutRefused | NotesUnavailable> {
+        const pairId = yield* pairOf(userId);
+        const decision = yield* inOpenRoom(pairId, () =>
+          rooms.changeLayout(pairId, userId, request.id, request.change),
+        );
+        if (decision._tag === "Rejected") {
+          return decision.rejection._tag === "LayoutRefused"
+            ? yield* Effect.fail(new LayoutRefused({ reason: decision.rejection.reason }))
+            : yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-layout" }));
+        }
+        const repeated = decision.outputs.some((output) => output._tag === "LayoutRepeated");
+        return { result: repeated ? "duplicate" : "applied", shop: shopOf(decision.state) };
+      });
+
       /** What a gift entry gave: its coins, or the piece an amount-0 entry names. */
       const rewardOf = (entry: CoinEntry): GiftReward =>
         entry.amount > 0
@@ -579,6 +605,7 @@ export class NotesService extends Context.Service<
         buy,
         shop,
         order,
+        changeLayout,
         setWish,
         openGift,
         claimBonus,

@@ -27,7 +27,10 @@ test("comments and string text are not code, interpolations are", () => {
   assert.ok(code.includes("Color.black"));
   assert.ok(!code.includes("red"));
   assert.ok(!code.includes("shadow"));
-  assert.equal(code.length, 'let a = "Color.white \\(Color.black)" // Color.red\n/* .shadow( */ x'.length);
+  assert.equal(
+    code.length,
+    'let a = "Color.white \\(Color.black)" // Color.red\n/* .shadow( */ x'.length,
+  );
 });
 
 test("the failing fixtures report every hit", () => {

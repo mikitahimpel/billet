@@ -193,7 +193,9 @@ const featureProblems = checkFeatureRules({
 });
 if (featureProblems.length > 0) {
   console.error(featureProblems.join("\n"));
-  console.error("Feature code uses only the design package's tokens and components (docs/design-system.md#rules).");
+  console.error(
+    "Feature code uses only the design package's tokens and components (docs/design-system.md#rules).",
+  );
   failed = true;
 }
 

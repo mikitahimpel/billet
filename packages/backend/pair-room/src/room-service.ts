@@ -8,6 +8,7 @@ import {
   localDayOf,
   rewardForEarn,
 } from "@billet/contracts-domain/coins";
+import type { LayoutChange } from "@billet/contracts-domain/decor";
 import type { ListCommand } from "@billet/contracts-domain/list";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
@@ -57,6 +58,8 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "InksGranted":
       case "ItemsGranted":
       case "WishlistChanged":
+      case "LayoutChanged":
+      case "LayoutRepeated":
       case "CoinsEntered":
       case "CoinsRepeated":
       case "ReactionSet":
@@ -508,6 +511,9 @@ export class RoomService extends Context.Service<RoomService>()(
           ...(offered === undefined ? {} : { offered }),
         });
 
+      const changeLayout = (by: UserId, id: IdempotencyKey, change: LayoutChange) =>
+        dispatch({ _tag: "ChangeLayout", by, id, change });
+
       // The time is taken inside the lock, so the later of two check-ins is the one kept.
       const setMood = (by: UserId, request: SetMoodRequest) =>
         Effect.gen(function* () {
@@ -579,6 +585,7 @@ export class RoomService extends Context.Service<RoomService>()(
         buy,
         order,
         setWish,
+        changeLayout,
         changeList,
         listsFor,
         lists: store.lists,

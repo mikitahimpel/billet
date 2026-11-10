@@ -6,6 +6,7 @@
   "sideEffects": false,
   "exports": {
     "./cat": "./src/cat.ts",
+    "./decor": "./src/decor.ts",
     "./date-ideas": "./src/date-ideas.ts",
     "./guess": "./src/guess.ts",
     "./pair-id": "./src/pair-id.ts",
