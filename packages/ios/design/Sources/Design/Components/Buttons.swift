@@ -216,8 +216,10 @@ public struct PriceButton: View {
       .font(.ourioCallout.weight(.bold))
       .foregroundStyle(Ink.heroInk)
       .padding(.horizontal, Space.m)
-      .frame(minHeight: 36)
+      .frame(minHeight: Size.pill)
       .background(Color.honey, in: .capsule)
+      .frame(minHeight: Size.control)
+      .contentShape(.rect)
     }
     .buttonStyle(PressScaleStyle())
     .accessibilityLabel(label ?? was.map { "\(price) coins, was \($0)" } ?? "\(price) coins")
@@ -240,23 +242,43 @@ public struct RetryButton: View {
 
   public var body: some View {
     if compact {
-      Button(action: action) { ButtonLabel(title: title, symbol: "arrow.clockwise") }
-        .buttonStyle(CompactSecondaryStyle())
+      PillButton(title, symbol: "arrow.clockwise", action: action)
     } else {
       SecondaryButton(title, symbol: "arrow.clockwise", fullWidth: false, action: action)
     }
   }
 }
 
-private struct CompactSecondaryStyle: ButtonStyle {
+/// The secondary action in a tight slot, beside or instead of a `PriceButton` and at its height:
+/// Place on an owned item, a compact retry in a row.
+public struct PillButton: View {
+  let title: String
+  let symbol: String?
+  let action: () -> Void
+
+  public init(_ title: String, symbol: String? = nil, action: @escaping () -> Void) {
+    self.title = title
+    self.symbol = symbol
+    self.action = action
+  }
+
+  public var body: some View {
+    Button(action: action) { ButtonLabel(title: title, symbol: symbol) }
+      .buttonStyle(PillButtonStyle())
+  }
+}
+
+public struct PillButtonStyle: ButtonStyle {
   @Environment(\.isEnabled) private var isEnabled
 
-  func makeBody(configuration: Configuration) -> some View {
+  public init() {}
+
+  public func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.ourioCallout.weight(.semibold))
       .foregroundStyle(isEnabled ? Ink.accentText : Ink.disabledText)
       .padding(.horizontal, Space.m)
-      .frame(minHeight: 36)
+      .frame(minHeight: Size.pill)
       .background(isEnabled ? Ink.surfaceRaised : Ink.disabledFill, in: .capsule)
       .overlay {
         if isEnabled { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
@@ -268,6 +290,37 @@ private struct CompactSecondaryStyle: ButtonStyle {
   }
 }
 
+/// A button that is on or off, like Love or Pin to wall, or one of a row of choices: a capsule the
+/// height of `PrimaryButton`, washed with `tint` while on.
+public struct ToggleButtonStyle: ButtonStyle {
+  public static let washOpacity = 0.22
+
+  let isOn: Bool
+  let tint: Color
+  @Environment(\.isEnabled) private var isEnabled
+
+  public init(isOn: Bool, tint: Color = .honey) {
+    self.isOn = isOn
+    self.tint = tint
+  }
+
+  public func makeBody(configuration: Configuration) -> some View {
+    configuration.label
+      .font(.ourioCallout.weight(.semibold))
+      .foregroundStyle(isEnabled ? Ink.text : Ink.disabledText)
+      .padding(.horizontal, Space.m)
+      .frame(maxWidth: .infinity, minHeight: Size.button)
+      .background(
+        isEnabled ? (isOn ? tint.opacity(Self.washOpacity) : Ink.surfaceRaised) : Ink.disabledFill,
+        in: .capsule
+      )
+      .contentShape(.capsule)
+      .scaleEffect(configuration.isPressed ? 0.97 : 1)
+      .animation(.spring(duration: 0.2), value: configuration.isPressed)
+      .accessibilityAddTraits(isOn ? .isSelected : [])
+  }
+}
+
 #Preview("Buttons") {
   ForEach([ColorScheme.light, .dark], id: \.self) { scheme in
     VStack(spacing: Space.m) {
@@ -276,6 +329,11 @@ private struct CompactSecondaryStyle: ButtonStyle {
       SecondaryButton("Place", symbol: "mappin") {}
       SecondaryButton("Place", symbol: "mappin") {}.disabled(true)
       HStack {
+        Button("Loved", systemImage: "heart.fill") {}.buttonStyle(
+          ToggleButtonStyle(isOn: true, tint: .blushPink))
+        Button("Pin to wall", systemImage: "pin") {}.buttonStyle(ToggleButtonStyle(isOn: false))
+      }
+      HStack {
         RetryButton {}
         RetryButton(compact: true) {}
       }
@@ -283,6 +341,7 @@ private struct CompactSecondaryStyle: ButtonStyle {
         GlassIconButton(symbol: "face.smiling", label: "How are you?") {}
         GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
         PriceButton(120) {}
+        PillButton("Place", symbol: "mappin") {}
       }
     }
     .padding(Space.gutter)

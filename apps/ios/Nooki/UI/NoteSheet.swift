@@ -19,13 +19,13 @@ struct NoteSheet: View {
     var body: some View {
         BilletSheet("Note", size: .fit) {
             if let note {
-                VStack(spacing: Space.l + 6) {
+                VStack(spacing: Space.section) {
                     face(note)
                         .rotationEffect(.degrees(-1))
                         .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
                         .padding(.top, Space.s)
 
-                    HStack(spacing: 6) {
+                    HStack(spacing: Space.s) {
                         Monogram(partner: note.author, profile: state.profile, size: 20)
                         Text(note.date.formatted(date: .long, time: .omitted))
                             .font(.ourioCaption)

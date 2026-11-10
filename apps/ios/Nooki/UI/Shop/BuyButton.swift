@@ -1,6 +1,8 @@
 import SwiftUI
 import Design
 
+/// The buy, or Place once it is owned: one pill at the price tag's height, so a row of cards ends level whatever each
+/// one's state.
 struct BuyButton: View {
     let state: HomeState
     /// What the missing pieces cost and what they'd cost one by one; nil once everything is owned.
@@ -34,18 +36,13 @@ struct BuyButton: View {
                 }
             }
             .haptic(.warning, trigger: shakes)
-            .frame(maxWidth: fills ? .infinity : nil, minHeight: fills ? Size.button : nil, alignment: .leading)
+            .frame(maxWidth: fills ? .infinity : nil, alignment: .leading)
         } else {
-            HStack(spacing: Space.s) {
-                Chip("Owned", symbol: "checkmark")
-                SecondaryButton("Place", symbol: "mappin", fullWidth: false) {
-                    state.tab = .world
-                }
+            PillButton("Place", symbol: "mappin") { state.tab = .world }
                 .fixedSize()
                 .accessibilityLabel("Place \(name)")
                 .accessibilityHint("Opens the room")
-            }
-            .frame(maxWidth: fills ? .infinity : nil, alignment: .leading)
+                .frame(maxWidth: fills ? .infinity : nil, alignment: .leading)
         }
     }
 }
