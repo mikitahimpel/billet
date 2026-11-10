@@ -17,11 +17,6 @@ struct ShopView: View {
     @State private var position = ScrollPosition(edge: .top)
     @State private var scrolling = ShopScrolling()
 
-    private let columns = [
-        GridItem(.flexible(), spacing: Space.m, alignment: .top),
-        GridItem(.flexible(), spacing: Space.m, alignment: .top),
-    ]
-
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
@@ -190,7 +185,7 @@ struct ShopView: View {
     }
 
     private func grid(_ items: [ShopItem]) -> some View {
-        LazyVGrid(columns: columns, spacing: Space.m) {
+        ItemGrid {
             ForEach(items) { item in
                 ShopItemCard(item: item, state: state) { sheetItem = item }
                     .shopAppear()
