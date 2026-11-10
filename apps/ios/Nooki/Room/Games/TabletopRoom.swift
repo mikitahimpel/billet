@@ -12,6 +12,8 @@ final class TabletopRoom: CatRoom {
     static let catScale: Float = 0.68
     /// The wall behind her, along z.
     private static let wallAt: Float = -0.42
+    /// The row of props along the wall; the cat and what she plays with sit in front of it.
+    private static let backRow: Float = wallAt + 0.06
 
     let camera = PerspectiveCamera()
     private(set) var scenery: GameScenery
@@ -21,7 +23,7 @@ final class TabletopRoom: CatRoom {
     private var dressing: Entity?
 
     override var framing: Framing {
-        Framing(target: [0, 0.07, 0.02], direction: simd_normalize([0.2, 0.5, 1]), far: 3.2, near: 3.2)
+        Framing(target: [0, 0.07, 0.02], direction: simd_normalize([0.1, 0.3, 1]), far: 3.2, near: 3.2)
     }
     override var yawLimit: Float { 0 }
 
@@ -102,8 +104,8 @@ final class TabletopRoom: CatRoom {
             window(g, at: [0.2, 0.25, wallAt + 0.012])
             Props.picture(g, at: [-0.2, 0.22, wallAt + 0.012], width: 0.12, height: 0.09)
             Array(g.children).last?.orientation = onWall
-            Props.snakePlant(g, at: [-0.36, top, -0.3])
-            Props.plush(g, at: [0.34, top, -0.28], rotation: .y(-0.6))
+            Props.snakePlant(g, at: [-0.36, top, backRow])
+            Props.plush(g, at: [0.36, top, backRow], rotation: .identity)
         case .kitchen:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xE9DCC8, roughness: 0.6), at: [0, 0, 0])
             g.box(0.44, 0.004, 0.3, r: 0.002, Clay.matte(0x9DB08A, roughness: 1), at: [0, top + 0.002, 0.03])
@@ -118,7 +120,7 @@ final class TabletopRoom: CatRoom {
             for (i, tone) in [UInt32(0xF0663A), 0xF2A65E, 0x6F8FB0].enumerated() {
                 g.cylinder(0.05, 0.018, Clay.matte(tone, roughness: 0.4), at: [-0.26 + Float(i) * 0.08, 0.35, wallAt + 0.03])
             }
-            Props.catBowls(g, at: [0.36, top, -0.24], rotation: .y(-0.4))
+            Props.catBowls(g, at: [0.36, top, -0.3], rotation: .identity)
         case .garden:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xB98A5E, roughness: 0.8), at: [0, 0, 0])
             for z in stride(from: Float(-0.36), through: 0.4, by: 0.08) {
@@ -131,9 +133,9 @@ final class TabletopRoom: CatRoom {
                 g.sphere(0.09, Clay.matte(i % 2 == 0 ? 0x93A86A : 0x7F9A5A, roughness: 1),
                          at: [x, top + 0.3, wallAt + 0.01], scale: [1, 0.8, 0.7])
             }
-            Props.snakePlant(g, at: [-0.34, top, -0.26], pot: 0xD8653F)
-            Props.cactus(g, at: [0.36, top, -0.27])
-            Props.toyMouse(g, at: [0.3, top, 0.02], rotation: .y(0.7))
+            Props.snakePlant(g, at: [-0.36, top, -0.3], pot: 0xD8653F)
+            Props.cactus(g, at: [0.36, top, -0.3])
+            Props.toyMouse(g, at: [0.3, top, 0.02], rotation: .identity)
         }
         return g
     }

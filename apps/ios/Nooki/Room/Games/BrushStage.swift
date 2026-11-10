@@ -41,7 +41,7 @@ final class BrushStage: GameStage {
         let facing = spots.toward * cos(Self.turn) - spots.right * sin(Self.turn)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + facing), id: "brush")
         deck.say("Stroke her back, head to tail", for: 4)
-        deck.bar = (0, "Groom")
+        deck.show(0, "Groomed")
     }
 
     var focus: [SIMD3<Float>] {
@@ -112,7 +112,7 @@ final class BrushStage: GameStage {
     func update(_ dt: Float) {
         sinceTap += dt
         strokes.update(dt: Double(dt))
-        deck.show(strokes.groom, "Groom")
+        deck.show(strokes.groom, "Groomed")
         for index in tufts.indices.reversed() {
             tufts[index].life -= dt
             tufts[index].velocity.y -= 0.02 * dt
