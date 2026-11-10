@@ -29,7 +29,7 @@ def option(name, default):
 SAMPLES = int(option("--samples", 96))
 WIDTH = int(option("--width", 1280))
 HEIGHT = WIDTH * 11 // 20
-ONLY = option("--only", "sky,far,mid,street,cars").split(",")
+ONLY = option("--only", "sky,far,mid,street,near,cars").split(",")
 
 # Where the cross street opens in the row of buildings, and the street the cars drive on (world units, metres).
 GAP_X = 3.0
@@ -153,12 +153,16 @@ def cyl(layer, radius, height, at, mat, verts=8, bevel=0.0):
     return add(layer, "cyl", mesh, (at[0], at[1], at[2] + height / 2), mat)
 
 
-def blob(layer, radius, at, mat, scale=(1, 1, 1)):
+def blob(layer, radius, at, mat, scale=(1, 1, 1), soft=False):
+    """A low-poly ball; `soft` rounds it (more cuts, smooth shading) for canopies and hedges."""
     bm = bmesh.new()
-    bmesh.ops.create_icosphere(bm, subdivisions=1, radius=radius)
+    bmesh.ops.create_icosphere(bm, subdivisions=2 if soft else 1, radius=radius)
     mesh = bpy.data.meshes.new("blob")
     bm.to_mesh(mesh)
     bm.free()
+    if soft:
+        for p in mesh.polygons:
+            p.use_smooth = True
     return add(layer, "blob", mesh, at, mat, scale=scale)
 
 
@@ -265,11 +269,11 @@ def tree(layer, x, y, scale=1.0, haze=0.0, tone=None):
     leaf = material(colour, haze=haze)
     cyl(layer, 0.32 * scale, 3.2 * scale, (x, y, 0.15), trunk, verts=7)
     for dx, dy, dz, r in ((0, 0, 5.6, 2.8), (-1.9, 0.2, 4.7, 2.1), (1.9, -0.2, 4.9, 2.2), (0.3, -0.6, 7.2, 1.9)):
-        blob(layer, r * scale, (x + dx * scale, y + dy, dz * scale), leaf, (1, 1, 0.92))
+        blob(layer, r * scale, (x + dx * scale, y + dy, dz * scale), leaf, (1, 1, 0.92), soft=True)
 
 
 def bush(layer, x, y, r=0.9, tone=0x6F8A4E, haze=0.0):
-    blob(layer, r, (x, y, r * 0.6), material(tone, haze=haze), (1.2, 1, 0.85))
+    blob(layer, r, (x, y, r * 0.6), material(tone, haze=haze), (1.2, 1, 0.85), soft=True)
 
 
 def fence(layer, x0, x1, y, haze=0.0):
@@ -379,11 +383,19 @@ def build_street():
              tone=[0x93A86A, 0x7FA35F, 0xE3B45C, 0x6F8A4E][lot % 4] if lot != 2 else 0xD8653F)
     for lx in (-26, -1, 15, 30, 45):
         lamp("street", lx, r1 + 1.0)
-    for bx, by in ((-14, -12), (9, -12), (28, -12)):
-        box("street", (1.8, 0.7, 0.55), (bx, by, 0.18), material(WOOD), bevel=0.1)
-        box("street", (1.8, 0.12, 0.5), (bx, by + 0.3, 0.7), material(WOOD), bevel=0.04)
-    for hx in (-3, 19, 34):
-        bush("street", hx, -11.0, 0.9, 0x93A86A)
+
+
+def build_near():
+    """A trimmed hedge with a few flowers along the bottom edge, just outside the glass."""
+    y = -10.6
+    box("near", (80, 0.9, 0.9), (0, y, 0.0), material(0x6F8A4E, key="hedge"), bevel=0.25)
+    x = -38.0
+    while x < 38:
+        blob("near", 0.95, (x, y, 0.95), material(random.choice([0x6F8A4E, 0x7FA35F, 0x93A86A])), (1.2, 0.9, 0.9), soft=True)
+        if random.random() < 0.28:
+            blob("near", 0.16, (x + random.uniform(-0.3, 0.3), y - 0.75, 1.1 + random.uniform(0, 0.5)),
+                 material(random.choice([0xF4A7B4, 0xFBF1DE, 0xE3B45C, 0xE0554A])))
+        x += 1.5
 
 
 CARS_X = 0.0
@@ -445,6 +457,19 @@ def build_cars():
     add("cars", "catch", mesh, (15, 0, 0), material(0xFFFFFF)).is_shadow_catcher = True
 
 
+def build_sky():
+    """The night's moon and a few stars, far beyond everything else."""
+    if TIME != "night":
+        return
+    moon = material(0xFFF3D6, glow=6, glow_color=0xFFF3D6, key="moon")
+    blob("skyobj", 7.0, (-62, 300, 82), moon, soft=True)
+    star = material(0xFFF3D6, glow=14, glow_color=0xFFF3D6, key="star")
+    rng = random.Random(7)
+    for _ in range(46):
+        r = rng.choice([0.35, 0.5, 0.65])
+        blob("skyobj", r, (rng.uniform(-170, 170), 300, rng.uniform(45, 120)), star)
+
+
 def world():
     w = bpy.data.worlds.new("w")
     w.use_nodes = True
@@ -495,6 +520,7 @@ def camera(kind):
         cam.shift_y = 0.0
         return
     cam.lens = 30
+    cam.clip_end = 1000
     cam.sensor_width = 36
     cam.sensor_fit = "HORIZONTAL"
     cam.shift_y = -0.03
@@ -563,11 +589,13 @@ def setup_cycles():
 os.makedirs(OUT, exist_ok=True)
 setup_cycles()
 world()
-if any(l in ONLY for l in ("far", "mid", "street", "sky")):
+if any(l in ONLY for l in ("far", "mid", "street", "near", "sky")):
     build_far()
     log('far built', len(bpy.data.objects))
     build_mid()
     build_street()
+    build_near()
+    build_sky()
     log('built', len(bpy.data.objects), f'{time.time() - T0:.0f}s')
     camera("street")
     import json
@@ -575,8 +603,8 @@ if any(l in ONLY for l in ("far", "mid", "street", "sky")):
     if "sky" in ONLY:
         for c in COLLECTIONS.values():
             c.hide_render = True
-        render(f"sky_{TIME}", [], transparent=False)
-    for layer in ("far", "mid", "street"):
+        render(f"sky_{TIME}", ["skyobj"], transparent=False)
+    for layer in ("far", "mid", "street", "near"):
         if layer in ONLY:
             render(f"{layer}_{TIME}", [layer])
 if "cars" in ONLY:

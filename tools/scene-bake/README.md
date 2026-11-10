@@ -14,10 +14,11 @@ every side for parallax: `diorama.json`'s `visible` is the part the window shows
 
 | File | What |
 | --- | --- |
-| `sky_{day,dusk,night}.webp` | opaque gradient, no parallax |
+| `sky_{day,dusk,night}.webp` | opaque gradient (moon and stars at night), no parallax |
 | `far_*.webp` | hills, steeple, distant roofs and tree lines, parallax follow 0.2 (`ViewPlane.far`) |
 | `mid_*.webp` | the two rows of houses with lawns and driveways, the side street, follow 0.42 (`.middle`) |
 | `street_*.webp` | road, sidewalks, picket fences, mailboxes, front-yard trees, lamp posts, crossing, follow 0.62 (`.street`) |
+| `near_*.webp` | a hedge with flowers along the bottom edge, follow 0.85 (`.near`) |
 | `cars_*.webp` | 6 clay cars (sedan, SUV, pickup, twice) in one row (1280x213, six cells, all facing right); mirror them for the other direction |
 | `diorama.json` | sizes, visible rectangle, follow per layer, lanes and crossing |
 
