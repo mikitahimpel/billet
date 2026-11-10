@@ -316,7 +316,7 @@ private struct GameBar: View {
             track
             if !type.isAccessibilitySize { value }
         }
-        .font(.ourioCaption)
+        .font(.ourioHeadline)
         .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.m)
@@ -328,14 +328,14 @@ private struct GameBar: View {
 
     private var value: some View {
         Text(meter.detail ?? "\(percent)%")
-            .font(.ourioCaption)
+            .font(.ourioHeadline)
             .monospacedDigit()
             .contentTransition(.numericText())
     }
 
     private var track: some View {
         Capsule()
-            .fill(Ink.glassFill)
+            .fill(Ink.glassGlyphSecondary.opacity(0.35))
             .overlay(alignment: .leading) {
                 GeometryReader { proxy in
                     Capsule()
@@ -382,10 +382,10 @@ private struct ResultToast: View {
 extension MiniGame {
     fileprivate var symbol: String {
         switch self {
-        case .feed: "scalemass.fill"
+        case .feed: "fork.knife"
         case .water: "drop.fill"
-        case .laser: "dot.circle.and.hand.point.up.left.fill"
-        case .brush: "comb.fill"
+        case .laser: "tennisball.fill"
+        case .brush: "paintbrush.fill"
         }
     }
 

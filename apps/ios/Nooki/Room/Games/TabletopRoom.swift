@@ -93,8 +93,6 @@ final class TabletopRoom: CatRoom {
     private static func dress(_ pivot: Entity, as scenery: GameScenery) -> Entity {
         let g = pivot.group()
         let top = floorTop
-        // Wall props face +X; turned, they face the camera.
-        let onWall = simd_quatf.y(-.pi / 2)
         switch scenery {
         case .room, .rug:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
@@ -103,8 +101,6 @@ final class TabletopRoom: CatRoom {
             wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
             window(g, at: [0.2, 0.25, wallAt + 0.012])
             Props.bookStack(g, at: [0.14, top, backRow], tones: [0x6F8FB0, 0xE98A5B, 0x93A86A], rotation: .identity)
-            Props.picture(g, at: [-0.12, 0.2, wallAt + 0.012], width: 0.12, height: 0.09)
-            Array(g.children).last?.orientation = onWall
             Props.snakePlant(g, at: [-0.36, top, backRow])
             Props.plush(g, at: [0.36, top, backRow], rotation: .identity)
         case .kitchen:
