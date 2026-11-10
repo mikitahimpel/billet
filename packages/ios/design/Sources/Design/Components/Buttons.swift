@@ -121,8 +121,8 @@ public struct GlassIconButton<Content: View>: View {
       content
         .frame(width: Size.control, height: Size.control)
         .glass(.circle, role: .control)
-        .overlay(alignment: .topTrailing) { badgeView }
         .contentShape(.circle)
+        .glassControlBadge { badgeView }
     }
     .buttonStyle(.plain)
     .accessibilityLabel(label)
@@ -138,15 +138,13 @@ public struct GlassIconButton<Content: View>: View {
         .frame(width: 10, height: 10)
         .glassBadge(.blushPink)
         .offset(x: -3, y: 3)
-        .accessibilityHidden(true)
     case .count(let count):
       Text(count > 9 ? "9+" : "\(count)")
         .font(.ourioMicro.monospacedDigit())
         .padding(.horizontal, 5)
         .frame(minWidth: 18, minHeight: 18)
         .glassBadge(.blushPink)
-        .offset(x: 4, y: -4)
-        .accessibilityHidden(true)
+        .offset(x: GlassMetrics.badgeOverhang, y: -GlassMetrics.badgeOverhang)
     }
   }
 }
