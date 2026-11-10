@@ -151,7 +151,7 @@ struct MovieCard: View {
     }
 
     private func provider(name: String, extra: String?) -> some View {
-        HStack(spacing: 4) {
+        HStack(spacing: Space.xs) {
             Text(name)
             if let extra { Text(extra).foregroundStyle(Ink.textTertiary) }
         }

@@ -29,7 +29,7 @@ struct DateFilterSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 22) {
                     group("Quick picks") {
-                        HStack(spacing: 8) {
+                        HStack(spacing: Space.s) {
                             ForEach(DatePreset.all) { preset in
                                 FilterChip(preset.title, isSelected: filter == preset.filter) {
                                     withAnimation(.snappy(duration: 0.2)) { filter = preset.filter }
@@ -47,9 +47,9 @@ struct DateFilterSheet: View {
                         options(DateIdea.Length.allCases.map(DateFilter.Tag.length), columns: 3)
                     }
                 }
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Space.gutter)
                 .padding(.top, 18)
-                .padding(.bottom, 24)
+                .padding(.bottom, Space.section)
             }
             .softScrollEdges()
             .scrollIndicators(.hidden)
@@ -80,7 +80,7 @@ struct DateFilterSheet: View {
     }
 
     private func options(_ tags: [DateFilter.Tag], columns: Int) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: columns), spacing: 8) {
+        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s), count: columns), spacing: Space.s) {
             ForEach(tags, id: \.self) { tag in
                 option(tag)
             }
@@ -92,7 +92,7 @@ struct DateFilterSheet: View {
         return Button {
             withAnimation(.snappy(duration: 0.2)) { filter.toggle(tag) }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: Space.s) {
                 Image(systemName: tag.symbol)
                     .font(.ourioHeadline)
                     .foregroundStyle(selected ? Color.honey : Ink.textSecondary)

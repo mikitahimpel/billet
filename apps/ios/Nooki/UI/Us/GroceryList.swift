@@ -60,7 +60,7 @@ struct GrocerySectionLabel<Trailing: View>: View {
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             if let icon { UsIcon(glyph: icon, size: 26) }
             Text(title)
                 .font(.ourioHeadline)
@@ -70,7 +70,7 @@ struct GrocerySectionLabel<Trailing: View>: View {
         }
         .padding(.horizontal, 2)
         .padding(.top, top)
-        .padding(.bottom, 8)
+        .padding(.bottom, Space.s)
     }
 }
 
@@ -86,7 +86,7 @@ struct GroceryRow: View {
     var done = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             UsCheck(done: done)
             Text(item.text)
                 .font(.ourioHeadline)

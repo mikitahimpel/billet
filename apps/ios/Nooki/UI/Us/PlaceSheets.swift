@@ -174,7 +174,7 @@ struct AddPlaceSheet: View {
                                 .foregroundStyle(Ink.text)
                         }
                         .padding(.leading, 6)
-                        .padding(.trailing, 12)
+                        .padding(.trailing, Space.m)
                         .frame(minHeight: 34)
                         .background(Ink.surfaceRaised, in: .capsule)
                         .opacity(added ? 0.45 : 1)
@@ -263,7 +263,7 @@ struct BeenSheet: View {
         let countries = state.us.list(listID)?.beenCountries ?? []
         let ordinal = NumberFormatter.localizedString(
             from: NSNumber(value: countries.union([item.country ?? ""]).count), number: .ordinal)
-        HStack(spacing: 4) {
+        HStack(spacing: Space.xs) {
             if item.isCountry, !been, let code = item.country, !countries.contains(code) {
                 Text("Your \(ordinal) country together ·")
                 Text("+5 coins").foregroundStyle(Color.honey)
@@ -376,7 +376,7 @@ private struct MomentsPicker: View {
     @Binding var selection: [UUID]
 
     @Environment(\.dismiss) private var dismiss
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.xs), count: 3)
     private static let limit = 10
 
     var body: some View {
@@ -388,7 +388,7 @@ private struct MomentsPicker: View {
                            text: "Photos you share in Moments can go with a trip.")
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 4) {
+                    LazyVGrid(columns: columns, spacing: Space.xs) {
                         ForEach(moments.moments) { moment in
                             let picked = selection.contains(moment.id)
                             Button { toggle(moment.id) } label: {

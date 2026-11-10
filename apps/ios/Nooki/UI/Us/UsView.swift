@@ -45,7 +45,7 @@ struct UsView: View {
                 lists
             }
             .padding(.horizontal, hMargin)
-            .padding(.top, 4)
+            .padding(.top, Space.xs)
             .padding(.bottom, Space.l)
         }
         .scrollIndicators(.hidden)
@@ -77,7 +77,7 @@ struct UsView: View {
     private var drawGuess: DrawGuessModel { session?.drawGuess ?? unpairedRiddles }
 
     private var header: some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .center, spacing: Space.m) {
             Text("Us")
                 .font(.ourioLargeTitle)
                 .foregroundStyle(Ink.primary)

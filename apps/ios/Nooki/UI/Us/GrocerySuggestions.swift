@@ -29,7 +29,7 @@ struct GrocerySuggestions: View {
             let often = often(excluding: onList)
             if !often.isEmpty {
                 GrocerySectionLabel(title: "You often buy", top: suggestions.isEmpty ? 4 : 18)
-                WrapLayout(spacing: 8) {
+                WrapLayout(spacing: Space.s) {
                     ForEach(often, id: \.self) { text in
                         FilterChip(text, isSelected: false) { onAdd(text) }
                             .accessibilityLabel("Add \(text)")
@@ -43,7 +43,7 @@ struct GrocerySuggestions: View {
         Button {
             onAdd(suggestion.text)
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: suggestion.aisle.icon, size: 32)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(suggestion.text)

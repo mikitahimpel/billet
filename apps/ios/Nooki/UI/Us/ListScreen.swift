@@ -43,7 +43,7 @@ struct ListScreen: View {
         BilletSheet(list.title, subtitle: subtitle(of: list), scrolls: false) {
         ScrollViewReader { scroll in
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Space.m) {
                     if adding(to: list) {
                         GrocerySuggestions(draft: draft, list: list, history: state.us.groceries) {
                             add($0, to: list)
@@ -77,7 +77,7 @@ struct ListScreen: View {
                     }
                 }
                 .id(Self.top)
-                .padding(.horizontal, 20)
+                .padding(.horizontal, Space.gutter)
                 .padding(.top, 14)
                 .padding(.bottom, 40)
             }
@@ -94,7 +94,7 @@ struct ListScreen: View {
                         .submitLabel(.done)
                         .onSubmit { addItem(list) }
                         .onAppear { if focusesField { focused = true } }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, Space.gutter)
                         .padding(.top, 14)
                 }
             }
@@ -210,7 +210,7 @@ struct ListScreen: View {
     @ViewBuilder
     private func finishedSection(_ list: UsList) -> some View {
         if !list.finished.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: Space.s) {
                 Text("Done together")
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.textSecondary)
@@ -227,7 +227,7 @@ struct ListScreen: View {
     }
 
     private func itemRow(_ item: ListItem, list: UsList, doneStyle: Bool, showDate: Bool = false) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             checkButton(item, list: list, done: item.done != nil)
             UsIcon(glyph: ItemIcon.glyph(for: item.text, list: list.icon), size: 30)
                 .opacity(doneStyle ? 0.55 : 1)
@@ -288,8 +288,8 @@ struct ListScreen: View {
         Label("+5", systemImage: "star.fill")
             .font(.ourioMicro)
             .foregroundStyle(Color.honey)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, Space.s)
+            .padding(.vertical, Space.xs)
             .background(Color.honey.opacity(0.18), in: .capsule)
             .offset(y: rewardRising ? -26 : 0)
             .opacity(rewardRising ? 0 : 1)
@@ -356,7 +356,7 @@ struct NewListSheet: View {
 
     var body: some View {
         BilletSheet("New list", size: .mediumLarge, onConfirm: createCustom, canConfirm: canCreate) {
-        VStack(alignment: .leading, spacing: 16) {
+        VStack(alignment: .leading, spacing: Space.l) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                 ForEach(templates) { kind in
                     Button {
@@ -380,7 +380,7 @@ struct NewListSheet: View {
             Text("Or make your own")
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
-                .padding(.top, 4)
+                .padding(.top, Space.xs)
 
             HStack(spacing: 10) {
                 UsIcon(glyph: icon, size: 50)

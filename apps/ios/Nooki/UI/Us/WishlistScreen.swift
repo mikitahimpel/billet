@@ -19,14 +19,14 @@ struct WishlistScreen: View {
     var body: some View {
         BilletSheet("Wishlists", scrolls: false) {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: Space.gutter) {
                 chips
                 if mine { mineTab } else { partnerTab }
                 giftedSection
                 lovesSection
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 16)
+            .padding(.horizontal, Space.gutter)
+            .padding(.top, Space.l)
             .padding(.bottom, 40)
         }
         .scrollIndicators(.hidden)
@@ -58,7 +58,7 @@ struct WishlistScreen: View {
     }
 
     private var chips: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             FilterChip(String(localized: "Mine"), isSelected: mine) {
                 withAnimation(.snappy(duration: 0.25)) { mine = true }
             }
@@ -72,13 +72,13 @@ struct WishlistScreen: View {
 
     private var mineTab: some View {
         let wishes = us.wishes(of: viewer)
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: Space.m) {
             if us.surpriseComing(for: viewer) {
                 Label("\(otherName) is planning a surprise 🤫", systemImage: "gift.fill")
                     .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.accentText)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
+                    .padding(.horizontal, Space.m)
+                    .padding(.vertical, Space.s)
                     .background(Ink.surfaceRaised, in: .capsule)
             }
             if wishes.isEmpty {
@@ -116,7 +116,7 @@ struct WishlistScreen: View {
 
     private var partnerTab: some View {
         let wishes = us.wishes(of: other)
-        return VStack(alignment: .leading, spacing: 12) {
+        return VStack(alignment: .leading, spacing: Space.m) {
             if wishes.isEmpty {
                 EmptyState(
                     icon: .init(symbol: "gift.fill", tint: .coral),
@@ -130,7 +130,7 @@ struct WishlistScreen: View {
                 Text("Your picks stay secret. \(otherName) only sees that a surprise is coming.")
                     .font(.ourioCaption)
                     .foregroundStyle(Ink.textTertiary)
-                    .padding(.horizontal, 4)
+                    .padding(.horizontal, Space.xs)
             }
         }
     }
@@ -147,7 +147,7 @@ struct WishlistScreen: View {
                 Label("I'll get this", systemImage: "gift.fill")
                     .font(.ourioCallout.weight(.semibold))
                     .foregroundStyle(Ink.heroInk)
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, Space.l)
                     .frame(height: 36)
                     .background(Capsule().fill(.honeyGradient))
             }
@@ -166,7 +166,7 @@ struct WishlistScreen: View {
                     Text("Bought it")
                         .font(.ourioCaption.weight(.semibold))
                         .foregroundStyle(Ink.heroInk)
-                        .padding(.horizontal, 12)
+                        .padding(.horizontal, Space.m)
                         .frame(height: 30)
                         .background(Capsule().fill(.honeyGradient))
                 }
@@ -260,7 +260,7 @@ struct WishlistScreen: View {
                 Text("\(otherName) hasn't filled this in yet.")
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
-                    .padding(16)
+                    .padding(Space.l)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
             } else {
@@ -285,7 +285,7 @@ struct WishlistScreen: View {
                         .padding(.vertical, 10)
                     }
                 }
-                .padding(.horizontal, 16)
+                .padding(.horizontal, Space.l)
                 .padding(.vertical, 2)
                 .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
                 .contentShape(.rect)
@@ -305,8 +305,8 @@ private struct WishCard<Actions: View>: View {
     @State private var image: UIImage?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
+        VStack(alignment: .leading, spacing: Space.m) {
+            HStack(alignment: .top, spacing: Space.m) {
                 if let image {
                     Image(uiImage: image)
                         .resizable()
@@ -315,7 +315,7 @@ private struct WishCard<Actions: View>: View {
                         .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
                         .accessibilityHidden(true)
                 }
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     if wish.mostWanted {
                         Label("Most wanted", systemImage: "star.fill")
                             .font(.ourioMicro.weight(.semibold))
@@ -340,7 +340,7 @@ private struct WishCard<Actions: View>: View {
             }
             actions
         }
-        .padding(16)
+        .padding(Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(Ink.surface, in: .rect(cornerRadius: Radius.card, style: .continuous))
         .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))

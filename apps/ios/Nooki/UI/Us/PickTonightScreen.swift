@@ -113,7 +113,7 @@ struct PickTonightScreen: View {
                 LinearGradient(colors: [.clear, .black.opacity(0.8)], startPoint: .center, endPoint: .bottom)
             }
             .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: Space.xs) {
                     Text(card.name)
                         .ourioScaledFont(size: 26, weight: .bold, design: .rounded, relativeTo: .title)
                         .foregroundStyle(.white)

@@ -40,7 +40,7 @@ struct DateDoneSheet: View {
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, Space.s)
 
                     PhotosPicker(selection: $pick, matching: .images) {
                         photoSlot
@@ -52,7 +52,7 @@ struct DateDoneSheet: View {
                     }
 
                     PrimaryButton(photo == nil ? "Done" : "Done, add to Moments") { save() }
-                        .padding(.top, 4)
+                        .padding(.top, Space.xs)
                 }
         }
         .onChange(of: pick) { _, item in
@@ -85,7 +85,7 @@ struct DateDoneSheet: View {
                 }
                 .accessibilityLabel("Change photo")
         } else {
-            VStack(spacing: 8) {
+            VStack(spacing: Space.s) {
                 Image(systemName: "photo.badge.plus")
                     .font(.system(.title, weight: .semibold))
                     .foregroundStyle(Color.honey)
@@ -146,7 +146,7 @@ struct DatePlannerSheet: View {
 
     var body: some View {
         BilletSheet(DateIdea.idea(ideaID)?.title ?? "Plan a date", size: .mediumLarge, onConfirm: { save() }) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Space.m) {
                     SheetSubtitle(text: "Pick a day and what you'll do")
                     DatePicker("When", selection: $date, displayedComponents: [.date, .hourAndMinute])
                         .datePickerStyle(.compact)
@@ -157,11 +157,11 @@ struct DatePlannerSheet: View {
 
                     UsField(placeholder: "Place, e.g. our kitchen", text: $place)
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Space.s) {
                         Text("Who plans it")
                             .font(.ourioCaption.weight(.semibold))
                             .foregroundStyle(Ink.textSecondary)
-                        HStack(spacing: 8) {
+                        HStack(spacing: Space.s) {
                             ForEach([state.partners.0, state.partners.1], id: \.self) { initial in
                                 FilterChip(initial, isSelected: organizer == initial) {
                                     organizer = initial

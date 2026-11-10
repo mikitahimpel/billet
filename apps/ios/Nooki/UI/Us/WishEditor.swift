@@ -106,7 +106,7 @@ struct WishEditor: View {
                         .background(.black.opacity(0.45), in: .circle)
                 }
                 .buttonStyle(.plain)
-                .padding(8)
+                .padding(Space.s)
                 .accessibilityLabel("Remove picture")
             }
         }
@@ -193,7 +193,7 @@ struct WishEditor: View {
         }
         .font(.ourioCallout.weight(.semibold))
         .buttonStyle(.plain)
-        .padding(.horizontal, 4)
+        .padding(.horizontal, Space.xs)
         .padding(.top, 6)
     }
 

@@ -41,7 +41,7 @@ struct GroceryItemSheet: View {
                 .padding(.top, 18)
 
             GrocerySectionLabel(title: "Aisle")
-            WrapLayout(spacing: 8) {
+            WrapLayout(spacing: Space.s) {
                 ForEach(GroceryAisle.allCases) { choice in
                     FilterChip(choice.title, isSelected: choice == current) { aisle = choice }
                 }

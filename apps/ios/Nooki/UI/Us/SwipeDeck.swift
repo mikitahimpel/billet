@@ -47,11 +47,11 @@ struct SwipeDeck: View {
         return DateIdeaCard(idea: idea)
             .overlay(alignment: .topLeading) {
                 stamp("LOVE", tint: Color(hex: 0xE287A9), strength: top ? drag.width / Self.flingDistance : 0)
-                    .padding(24)
+                    .padding(Space.section)
             }
             .overlay(alignment: .topTrailing) {
                 stamp("NOPE", tint: Color(hex: 0x5B3A28), strength: top ? -drag.width / Self.flingDistance : 0)
-                    .padding(24)
+                    .padding(Space.section)
             }
             .scaleEffect(reduceMotion ? 1 : 1 - depth * 0.05, anchor: .bottom)
             .offset(y: reduceMotion ? 0 : depth * 12)
@@ -158,7 +158,7 @@ struct DateIdeaCard: View {
         let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
         DateScenePicture(art: idea.art)
             .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Space.s) {
                     Text(idea.title)
                         .font(.system(.title, design: .rounded, weight: .bold))
                         .foregroundStyle(.white)
@@ -173,9 +173,9 @@ struct DateIdeaCard: View {
                         tag(idea.cost.title, symbol: idea.cost.symbol)
                         tag(idea.time.title, symbol: idea.time.symbol)
                     }
-                    .padding(.top, 4)
+                    .padding(.top, Space.xs)
                 }
-                .padding(20)
+                .padding(Space.gutter)
             }
             .frame(maxWidth: .infinity)
             .frame(height: Self.height)
