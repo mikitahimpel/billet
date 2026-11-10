@@ -56,9 +56,11 @@ extension View {
     /// The header and the tab bar as the screen's top and bottom bars. On iOS 26 they are safe area bars with the
     /// soft scroll edge under them; before, safe area insets over a material fade when `fades`.
     @ViewBuilder
-    func bars(fades: Bool, @ViewBuilder top: () -> some View, @ViewBuilder bottom: () -> some View) -> some View {
+    func bars(fades: Bool, softEdges: Bool = true, @ViewBuilder top: () -> some View,
+              @ViewBuilder bottom: () -> some View) -> some View {
         if #available(iOS 26, *) {
             scrollEdgeEffectStyle(.soft, for: .vertical)
+                .scrollEdgeEffectHidden(!softEdges, for: .vertical)
                 .safeAreaBar(edge: .top, spacing: 12, content: top)
                 .safeAreaBar(edge: .bottom, content: bottom)
         } else {

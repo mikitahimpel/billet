@@ -201,7 +201,7 @@ struct PosterTile: View {
                 }
                 .padding(6)
             }
-            .shadow(color: .black.opacity(0.18), radius: 6, y: 3)
+            .perfShadow(color: .black.opacity(0.18), radius: 6, y: 3)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(both ? "\(item.text), you both want it" : item.text)
             .accessibilityAddTraits(.isButton)

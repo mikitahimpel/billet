@@ -216,13 +216,26 @@ public struct Page<Content: View>: View {
   }
 }
 
+extension EnvironmentValues {
+  /// False hides the scroll edge effects of `softScrollEdges()`, for Labs → Performance.
+  @Entry public var softScrollEdges = true
+}
+
 extension View {
   /// iOS 26 soft scroll edges; every scroll view uses this, `Page` and `BilletSheet` already do.
-  @ViewBuilder public func softScrollEdges() -> some View {
+  public func softScrollEdges() -> some View { modifier(SoftScrollEdges()) }
+}
+
+private struct SoftScrollEdges: ViewModifier {
+  @Environment(\.softScrollEdges) private var soft
+
+  func body(content: Content) -> some View {
     if #available(iOS 26, macOS 26, *) {
-      scrollEdgeEffectStyle(.soft, for: .top).scrollEdgeEffectStyle(.soft, for: .bottom)
+      content
+        .scrollEdgeEffectStyle(.soft, for: .top).scrollEdgeEffectStyle(.soft, for: .bottom)
+        .scrollEdgeEffectHidden(!soft, for: .all)
     } else {
-      self
+      content
     }
   }
 }
