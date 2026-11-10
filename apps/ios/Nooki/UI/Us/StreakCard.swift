@@ -4,6 +4,7 @@ import Design
 
 struct StreakCard: View {
     let store: StreakStore
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         // Ticks each minute so "hours left" and the midnight rollover stay current while the tab is open.
@@ -25,11 +26,9 @@ struct StreakCard: View {
                 } detail: {
                     Text(caption(status, now: now)).lineLimit(2)
                 } trailing: {
-                    Text(days == 1 ? "1 day" : "\(days) days")
-                        .font(.ourioTitle.monospacedDigit())
-                        .foregroundStyle(Ink.text)
-                        .contentTransition(.numericText())
+                    if !typeSize.isAccessibilitySize { count(days) }
                 }
+                if typeSize.isAccessibilitySize { count(days) }
 
                 if status == .restorable {
                     Button {
@@ -41,13 +40,18 @@ struct StreakCard: View {
                     .buttonStyle(PrimaryButtonStyle())
                 }
 
-                HStack(spacing: Space.s) {
-                    Badge(reached: milestone.reached)
-                    StatusPill(status: status, now: now)
-                    Spacer(minLength: 0)
-                    Label("Best \(streak.best)", systemImage: "trophy.fill")
-                        .font(.ourioCaption.monospacedDigit())
-                        .foregroundStyle(Ink.textSecondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Space.s) {
+                        Badge(reached: milestone.reached)
+                        StatusPill(status: status, now: now)
+                        Spacer(minLength: 0)
+                        best(streak.best)
+                    }
+                    VStack(alignment: .leading, spacing: Space.s) {
+                        Badge(reached: milestone.reached)
+                        StatusPill(status: status, now: now)
+                        best(streak.best)
+                    }
                 }
 
                 if let next = milestone.next {
@@ -61,6 +65,19 @@ struct StreakCard: View {
             }
         }
         .animation(.snappy(duration: 0.3), value: days)
+    }
+
+    private func count(_ days: Int) -> some View {
+        Text(days == 1 ? "1 day" : "\(days) days")
+            .font(.ourioTitle.monospacedDigit())
+            .foregroundStyle(Ink.text)
+            .contentTransition(.numericText())
+    }
+
+    private func best(_ best: Int) -> some View {
+        Label("Best \(best)", systemImage: "trophy.fill")
+            .font(.ourioCaption.monospacedDigit())
+            .foregroundStyle(Ink.textSecondary)
     }
 
     private func caption(_ status: LoveStreak.Status, now: Date) -> String {

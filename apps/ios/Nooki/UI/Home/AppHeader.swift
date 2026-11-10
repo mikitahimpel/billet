@@ -33,6 +33,7 @@ struct AppHeader<Below: View>: View {
                 below
             }
             .animation(.easeInOut(duration: 0.2), value: state.tab)
+            .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
         .onChange(of: state.invitedCode) { _, code in
             if code != nil, session?.isPaired == false { pairing = true }
