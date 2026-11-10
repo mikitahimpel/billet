@@ -88,7 +88,13 @@ private struct Catalog: View {
 
         SectionHeader("Stamps and seals")
         HStack {
-          ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, width: 32) }
+          ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, pinned: true) }
+        }
+        HStack(alignment: .bottom, spacing: Space.m) {
+          PostageStamp(.paw, size: .small)
+          PostageStamp(.moon, rare: true, pinned: true)
+          PostageStamp(.heart, size: .large, postmark: .now, pinned: true)
+          PostageStamp(.bloom, size: .large, rare: true, pinned: true)
         }
         HStack {
           ForEach(SealArt.allCases, id: \.self) { WaxSeal($0, size: 36) }

@@ -8,6 +8,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case cards
     case rows
     case status
+    case postage
     case fields
     case grid
     case callout
@@ -21,6 +22,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .cards: Self.cardsPage
             case .rows: Self.rowsPage
             case .status: Self.statusPage
+            case .postage: Self.postagePage
             case .fields: Self.fieldsPage
             case .grid: Self.gridPage
             case .callout: Self.calloutPage
@@ -132,6 +134,22 @@ enum GalleryPage: String, CaseIterable, Sendable {
         }
         // Glass controls sit in chrome, which caps its text size as the app's header does.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    }
+
+    /// Every stamp pinned in a row, the sizes, rare foil and a postmark, beside the seals of the same family.
+    @MainActor @ViewBuilder private static var postagePage: some View {
+        HStack(spacing: Space.m) {
+            ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, pinned: true) }
+        }
+        HStack(alignment: .bottom, spacing: Space.l) {
+            PostageStamp(.paw, size: .small)
+            PostageStamp(.moon, rare: true, pinned: true)
+            PostageStamp(.heart, size: .large, postmark: Date(timeIntervalSince1970: 1_762_776_000), pinned: true)
+            PostageStamp(.bloom, size: .large, rare: true, pinned: true)
+        }
+        HStack(spacing: Space.m) {
+            ForEach(SealArt.allCases, id: \.self) { WaxSeal($0, size: 36) }
+        }
     }
 
     @MainActor @ViewBuilder private static var fieldsPage: some View {

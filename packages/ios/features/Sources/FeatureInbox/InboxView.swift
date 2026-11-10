@@ -89,7 +89,9 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     #endif
     .scrollContentBackground(.hidden)
     .refreshable { await model.open() }
-    .safeAreaInset(edge: .top, spacing: 0) {
+    // Under the notice, which the header draws over it.
+    .sheetBarBacking()
+    .scrollHeader {
       notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
     }
   }
