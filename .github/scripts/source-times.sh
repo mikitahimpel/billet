@@ -17,7 +17,11 @@ derived=$1
 old=202601010000
 
 git ls-files -z | xargs -0 touch -t "$old"
-git ls-files -z | xargs -0 -n1 dirname | sort -u | tr '\n' '\0' | xargs -0 touch -t "$old"
+echo "Files stamped in ${SECONDS}s."
+# Every folder that holds a tracked file, each listed once; one dirname per file took minutes.
+git ls-files | awk -F/ '{ p = $1; for (i = 2; i < NF; i++) { print p; p = p "/" $i } if (NF > 1) print p }' \
+  | sort -u | tr '\n' '\0' | xargs -0 touch -t "$old"
+echo "Folders stamped in ${SECONDS}s."
 
 if [ ! -f "$derived/source-sha" ]; then
   echo "No restored DerivedData: a clean build."

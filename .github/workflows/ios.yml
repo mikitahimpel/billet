@@ -132,6 +132,9 @@ jobs:
       # every runner keep its outputs valid.
       - name: Restore the app build
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        env:
+          # A download that stalls (seen at 0.2 MB/s) gives up after 2 minutes and the build starts clean.
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
         with:
           # The same paths as the save below: the cache's version is derived from them.
           path: |
