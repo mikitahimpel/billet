@@ -82,8 +82,8 @@ struct CatAnimationTests {
             }
             #expect(walker.rest == pose)
         }
-        // Model units: 3 mm below the floor at most, and no splat moving more than 14 mm in a 60 fps frame. The tail's
-        // tip sweeping down to the floor is the quickest at about 12; a cut to another splat moves centimeters.
+        // Model units: 3 mm below the floor at most, and no splat moving more than 14 mm in a 60 fps frame. The tail
+        // sweeping round her side is the quickest at about 5; a cut to another splat moves centimeters.
         #expect(lowest > -0.003, "lowest \(lowest)")
         #expect(fastest < 0.014, "fastest \(fastest)")
     }

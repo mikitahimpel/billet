@@ -100,8 +100,8 @@ final class CatWalker {
     }
 
     /// Body postures as rig values; feet are offsets (up, back) from the rest paws in model units, `tail` lifts each
-    /// tail joint (negative lowers it) and `sway` swings it to her left; `shut` closes the lids, `neck` moves the head
-    /// in model units.
+    /// tail joint (negative lowers it), `sway` swings it to her left and `lean` rolls it over; `shut` closes the lids,
+    /// `neck` moves the head in model units.
     private struct Posture {
         var lift: Float = 0, back: Float = 0, pitch: Float = 0, bend: Float = 0, headPitch: Float = 0, seat: Float = 0
         var headYaw: Float = 0, headRoll: Float = 0, shut: Float = 0
@@ -109,18 +109,21 @@ final class CatWalker {
         var fore = SIMD2<Float>.zero, hind = SIMD2<Float>.zero
         var tail: [Float] = [0, 0, 0]
         var sway: [Float] = [0, 0, 0]
+        var lean: [Float] = [0, 0, 0]
 
         static let stand = Posture()
-        // Rump on the floor over hind legs folded at the hocks, chest up on straight fore legs, tail curled down behind
-        // her, the head level and raised over the chest so the collar shows; nothing goes below the floor on the way
-        // down from standing.
-        static let sit = Posture(lift: -0.014, back: -0.04, pitch: 0.5, bend: -0.34, headPitch: 0, seat: 1,
-                                 neck: [0, 0.02, -0.01], hind: [0, -0.14], tail: [2.84, -0.05, -0.32])
-        // Belly on the floor over legs folded under her, tail along the floor.
-        static let loaf = Posture(lift: -0.05, tail: [-1.3, -0.4, -0.2], sway: [0.5, 0.5, 0.4])
-        // The loaf with the chin down and turned, the tail along her side and the eyes shut.
-        static let sleep = Posture(lift: -0.05, headPitch: -0.35, headYaw: -0.4, headRoll: -0.3, shut: 1,
-                                   tail: [-1.3, -0.4, -0.2], sway: [0.8, 0.8, 0.7])
+        // As a cat sits seen side on: chest up on straight fore legs under the shoulders, rump on the floor over the
+        // folded hind legs, the head level over the chest, and the tail on the floor around her left side.
+        static let sit = Posture(lift: -0.028, back: -0.05, pitch: 0.7, seat: 1, neck: [0, 0.017, -0.011],
+                                 fore: [0, 0.02], hind: [0, -0.09], tail: [-0.25, 0.53, 0.16], sway: [0.04, -0.14, -0.18],
+                                 lean: [-1.1, -0.76, -0.29])
+        // The loaf: belly down, back rounded, fore paws tucked under the chest, the tail along her left side.
+        static let loaf = Posture(lift: -0.05, bend: -0.3, neck: [0, -0.008, 0.01], fore: [0, 0.08], hind: [0, -0.09],
+                                  tail: [-1.7, -0.09, -0.12], sway: [0.6, -0.67, -0.42], lean: [-0.37, -0.91, -0.56])
+        // Asleep in the loaf: chin down on the paws and turned toward the tail, eyes shut.
+        static let sleep = Posture(lift: -0.05, bend: -0.3, headPitch: -0.45, headYaw: -0.45, headRoll: -0.3, shut: 1,
+                                   neck: [0, -0.02, 0.012], fore: [0, 0.08], hind: [0, -0.09], tail: [-1.7, -0.09, -0.12],
+                                   sway: [0.6, -0.67, -0.42], lean: [-0.37, -0.91, -0.56])
 
         static func lying(_ lying: Lying) -> Posture { blend(blend(.sit, .loaf, lying.loaf), .sleep, lying.curl) }
 
@@ -132,7 +135,8 @@ final class CatWalker {
                     neck: simd_mix(a.neck, b.neck, SIMD3(repeating: t)),
                     fore: simd_mix(a.fore, b.fore, SIMD2(repeating: t)), hind: simd_mix(a.hind, b.hind, SIMD2(repeating: t)),
                     tail: zip(a.tail, b.tail).map { lerp($0, $1, t) },
-                    sway: zip(a.sway, b.sway).map { lerp($0, $1, t) })
+                    sway: zip(a.sway, b.sway).map { lerp($0, $1, t) },
+                    lean: zip(a.lean, b.lean).map { lerp($0, $1, t) })
         }
     }
 
@@ -452,7 +456,7 @@ final class CatWalker {
             let k = min(i, s.tail.count - 1)
             p.tail[i].sway = s.sway[k] + lerp((0.06 + 0.05 * fi) * sin(time * 1.6 - fi * 0.8), b.tailSway[i] * calm, r)
             p.tail[i].lift = s.tail[k] + 0.1 * gait.amount + b.tailLift[i] * r * calm + spring.lift
-            p.tail[i].lean = spring.lean
+            p.tail[i].lean = s.lean[k] + spring.lean
         }
         rig.pose = p
         rig.update()

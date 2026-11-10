@@ -13,8 +13,8 @@ nonisolated struct HeroArt: @unchecked Sendable {
     let ear: [UIImage]
 
     /// The patches' rectangles as fractions of the rest image, printed by the bake.
-    static let blinkRect = CGRect(x: 0.33796, y: 0.20208, width: 0.40741, height: 0.20556)
-    static let earRect = CGRect(x: 0.25926, y: 0.11111, width: 0.18889, height: 0.15764)
+    static let blinkRect = CGRect(x: 0.33519, y: 0.21042, width: 0.41111, height: 0.20625)
+    static let earRect = CGRect(x: 0.25926, y: 0.11944, width: 0.18889, height: 0.15764)
 
     /// Reads and decodes; it blocks, so it runs off the main actor.
     static func read(_ coat: CatCoat, from bundle: Bundle) -> HeroArt? {

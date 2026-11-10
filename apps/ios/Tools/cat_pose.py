@@ -7,9 +7,9 @@ for CatWalker's `Posture.sit` at rest; `lids` and `ear` close the lids and flick
 
 import numpy as np
 
-# CatWalker.Posture.sit: lift, back, pitch, bend, head seat, head shift, hind paw offset (up, back), tail lifts.
-SIT = dict(lift=-0.014, back=-0.04, pitch=0.5, bend=-0.34, seat=1.0, neck=(0.0, 0.02, -0.01), hind=(0.0, -0.14),
-           tail=(2.84, -0.05, -0.32))
+# CatWalker.Posture.sit: lift, back, pitch, bend, head seat, head shift, paw offsets (up, back), tail lift, sway, lean.
+SIT = dict(lift=-0.028, back=-0.05, pitch=0.7, bend=0.0, seat=1.0, neck=(0.0, 0.017, -0.011), fore=(0.0, 0.02),
+           hind=(0.0, -0.09), tail=(-0.25, 0.53, 0.16), sway=(0.04, -0.14, -0.18), lean=(-1.1, -0.76, -0.29))
 # CatWalker.seat: where she sits from the splat's origin; pictures frame her about it.
 SEAT = np.array([0.01, 0.0, -0.058])
 # CatRig.lidSwing and Gait.kneeFloor.
@@ -127,7 +127,9 @@ def sit_poses(rig, lids=0.0, ear=0.0):
     tail = [i for i, n in enumerate(names) if n.startswith("tail")]
     carried = hips
     for k, i in enumerate(tail):
-        carried = Pose.about(joint[i], axis("x", -SIT["tail"][min(k, len(SIT["tail"]) - 1)])).under(carried)
+        j = min(k, len(SIT["tail"]) - 1)
+        turn = qmul(qmul(axis("y", SIT["sway"][j]), axis("x", -SIT["tail"][j])), axis("z", SIT["lean"][j]))
+        carried = Pose.about(joint[i], turn).under(carried)
         poses[i] = carried
     posed = {index[n] for n in ("hips", "chest", "head", "earLeft", "earRight")} | set(tail)
     posed |= {i for i, n in enumerate(names) if n.startswith("lid")}
@@ -139,9 +141,9 @@ def sit_poses(rig, lids=0.0, ear=0.0):
         fore = bones[upper_i].get("parent") == "chest"
         parent = chest if fore else hips
         foot = leg["paw"].copy()
-        if not fore:
-            foot[1] += SIT["hind"][0]
-            foot[2] += SIT["hind"][1]
+        offset = SIT["fore" if fore else "hind"]
+        foot[1] += offset[0]
+        foot[2] += offset[1]
         foot = knee_above_floor(leg, parent.apply(leg["hip"]), foot)
         a, b, splay = solve_leg(leg["hip"], leg["knee"], leg["paw"], parent.inverse.apply(foot))
         upper = Pose.about(leg["hip"], qmul(axis("z", splay), axis("x", a))).under(parent)
