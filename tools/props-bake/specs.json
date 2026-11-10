@@ -1,733 +1,485 @@
 {
- "beanbag": {
-  "tris": 2500,
-  "fit": "width",
-  "size": 0.8,
-  "mount": "floor",
-  "title": "Bean bag",
-  "price": 26,
-  "dims": [
-   0.8,
-   0.8,
-   0.6
-  ],
-  "footprint": 0.85,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "soft"
- },
- "floorlamp": {
-  "tris": 1500,
-  "fit": "height",
-  "size": 1.5,
-  "mount": "floor",
-  "title": "Standing lamp",
-  "price": 24,
-  "dims": [
-   0.4,
-   0.4,
-   1.5
-  ],
-  "footprint": 0.6,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "throwblanket": {
-  "tris": 1500,
-  "fit": "width",
-  "size": 0.5,
-  "mount": "floor",
-  "title": "Knitted throw",
-  "price": 14,
-  "dims": [
-   0.5,
-   0.4,
-   0.12
-  ],
-  "footprint": 1,
-  "sit": true,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "soft"
- },
- "monstera": {
-  "tris": 3000,
-  "fit": "height",
-  "size": 1.1,
-  "mount": "floor",
-  "title": "Potted monstera",
-  "price": 18,
-  "dims": [
-   0.75,
-   0.75,
-   1.1
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "cactus": {
-  "tris": 1500,
-  "fit": "height",
-  "size": 0.18,
-  "mount": "floor",
-  "title": "Little cactus",
-  "price": 8,
-  "dims": [
-   0.12,
-   0.12,
-   0.18
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "smallItem"
- },
- "books": {
-  "tris": 1200,
-  "fit": "width",
-  "size": 0.28,
-  "mount": "floor",
-  "title": "Pile of books",
-  "price": 10,
-  "dims": [
-   0.28,
-   0.2,
-   0.2
-  ],
-  "footprint": 1,
-  "sit": true,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "soft"
- },
- "recordplayer": {
-  "tris": 2000,
-  "fit": "width",
-  "size": 0.42,
-  "mount": "floor",
-  "title": "Record player",
-  "price": 28,
-  "dims": [
-   0.42,
-   0.34,
-   0.13
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": null
- },
- "mugs": {
-  "tris": 1500,
-  "fit": "width",
-  "size": 0.22,
-  "mount": "floor",
-  "title": "Two mugs",
-  "price": 8,
-  "dims": [
-   0.22,
-   0.1,
-   0.1
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "smallItem"
- },
- "stringlights": {
-  "tris": 2500,
-  "fit": "width",
-  "size": 0.36,
-  "mount": "floor",
-  "title": "Coil of fairy lights",
-  "price": 12,
-  "dims": [
-   0.36,
-   0.36,
-   0.08
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": null
- },
- "rug": {
-  "tris": 800,
-  "fit": "width",
-  "size": 1.2,
-  "mount": "floor",
-  "title": "Woven rug",
-  "price": 20,
-  "dims": [
-   1.2,
-   1.2,
-   0.015
-  ],
-  "footprint": 0.85,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "rug"
- },
- "catbed": {
-  "tris": 2500,
-  "fit": "width",
-  "size": 0.5,
-  "mount": "floor",
-  "title": "Plush cat bed",
-  "price": 22,
-  "dims": [
-   0.5,
-   0.5,
-   0.18
-  ],
-  "footprint": 0.85,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "bed"
- },
- "desk": {
-  "tris": 2000,
-  "fit": "width",
-  "size": 1.0,
-  "mount": "floor",
-  "title": "Writing desk",
-  "price": 34,
-  "dims": [
-   1.0,
-   0.5,
-   0.75
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "armchair": {
-  "tris": 3000,
-  "fit": "width",
-  "size": 0.8,
-  "mount": "floor",
-  "title": "Round armchair",
-  "price": 32,
-  "dims": [
-   0.8,
-   0.75,
-   0.8
-  ],
-  "footprint": 0.9,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "soft"
- },
- "floorcushion-terracotta": {
-  "tris": 1200,
-  "fit": "width",
-  "size": 0.6,
-  "mount": "floor",
-  "title": "Terracotta floor cushion",
-  "price": 12,
-  "dims": [
-   0.6,
-   0.6,
-   0.15
-  ],
-  "footprint": 0.85,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "soft"
- },
- "floorcushion-sage": {
-  "tris": 1200,
-  "fit": "width",
-  "size": 0.6,
-  "mount": "floor",
-  "title": "Sage floor cushion",
-  "price": 12,
-  "dims": [
-   0.6,
-   0.6,
-   0.15
-  ],
-  "footprint": 0.9,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "soft"
- },
- "wallshelf": {
-  "tris": 2000,
-  "fit": "width",
-  "size": 0.6,
-  "mount": "wall",
-  "title": "Wall shelf",
-  "price": 16,
-  "dims": [
-   0.6,
-   0.2,
-   0.3
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "wall"
-  ],
-  "affordance": "shelf"
- },
- "frame-cat": {
-  "tris": 800,
-  "fit": "height",
-  "size": 0.4,
-  "mount": "wall",
-  "title": "Sleeping cat print",
-  "price": 12,
-  "dims": [
-   0.32,
-   0.03,
-   0.4
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "wall"
-  ],
-  "affordance": null
- },
- "frame-landscape": {
-  "tris": 800,
-  "fit": "width",
-  "size": 0.45,
-  "mount": "wall",
-  "title": "Sunset hills painting",
-  "price": 12,
-  "dims": [
-   0.45,
-   0.03,
-   0.35
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "wall"
-  ],
-  "affordance": null
- },
- "poster-moon": {
-  "tris": 800,
-  "fit": "height",
-  "size": 0.6,
-  "mount": "wall",
-  "title": "Moon poster",
-  "price": 10,
-  "dims": [
-   0.42,
-   0.02,
-   0.6
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "wall"
-  ],
-  "affordance": null
- },
- "poster-plants": {
-  "tris": 800,
-  "fit": "height",
-  "size": 0.6,
-  "mount": "wall",
-  "title": "Botanical poster",
-  "price": 10,
-  "dims": [
-   0.42,
-   0.02,
-   0.6
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "wall"
-  ],
-  "affordance": null
- },
- "clock": {
-  "tris": 1000,
-  "fit": "width",
-  "size": 0.32,
-  "mount": "wall",
-  "title": "Wall clock",
-  "price": 14,
-  "dims": [
-   0.32,
-   0.05,
-   0.32
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "wall"
-  ],
-  "affordance": null
- },
- "mirror": {
-  "tris": 1500,
-  "fit": "height",
-  "size": 1.6,
-  "mount": "floor",
-  "title": "Arched mirror",
-  "price": 26,
-  "dims": [
-   0.6,
-   0.3,
-   1.6
-  ],
-  "footprint": 0.8,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "fishtank": {
-  "tris": 3000,
-  "fit": "height",
-  "size": 0.7,
-  "mount": "floor",
-  "title": "Fish tank",
-  "price": 36,
-  "dims": [
-   0.5,
-   0.4,
-   0.7
-  ],
-  "footprint": 0.9,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "cattree": {
-  "tris": 3000,
-  "fit": "height",
-  "size": 1.1,
-  "mount": "floor",
-  "title": "Cat tree",
-  "price": 38,
-  "dims": [
-   0.6,
-   0.5,
-   1.1
-  ],
-  "footprint": 0.85,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "bed"
- },
- "scratchpost": {
-  "tris": 1500,
-  "fit": "height",
-  "size": 0.6,
-  "mount": "floor",
-  "title": "Scratching post",
-  "price": 16,
-  "dims": [
-   0.4,
-   0.4,
-   0.6
-  ],
-  "footprint": 0.8,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "fiddlefig": {
-  "tris": 3000,
-  "fit": "height",
-  "size": 1.5,
-  "mount": "floor",
-  "title": "Fiddle leaf fig",
-  "price": 22,
-  "dims": [
-   0.7,
-   0.7,
-   1.5
-  ],
-  "footprint": 0.8,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "pothos": {
-  "tris": 2500,
-  "fit": "height",
-  "size": 0.35,
-  "mount": "floor",
-  "title": "Trailing pothos",
-  "price": 12,
-  "dims": [
-   0.4,
-   0.4,
-   0.35
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": null
- },
- "succulents": {
-  "tris": 2000,
-  "fit": "width",
-  "size": 0.3,
-  "mount": "floor",
-  "title": "Succulent trio",
-  "price": 10,
-  "dims": [
-   0.3,
-   0.15,
-   0.15
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "smallItem"
- },
- "guitar": {
-  "tris": 2000,
-  "fit": "height",
-  "size": 1.0,
-  "mount": "floor",
-  "title": "Acoustic guitar",
-  "price": 30,
-  "dims": [
-   0.4,
-   0.35,
-   1.0
-  ],
-  "footprint": 0.7,
-  "sit": false,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": null
- },
- "teaset": {
-  "tris": 2000,
-  "fit": "width",
-  "size": 0.36,
-  "mount": "floor",
-  "title": "Tea set",
-  "price": 14,
-  "dims": [
-   0.36,
-   0.36,
-   0.2
-  ],
-  "footprint": 0.9,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "smallItem"
- },
- "radio": {
-  "tris": 1500,
-  "fit": "width",
-  "size": 0.32,
-  "mount": "floor",
-  "title": "Wooden radio",
-  "price": 18,
-  "dims": [
-   0.32,
-   0.15,
-   0.22
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "smallItem"
- },
- "globe": {
-  "tris": 2000,
-  "fit": "height",
-  "size": 0.36,
-  "mount": "floor",
-  "title": "Desk globe",
-  "price": 16,
-  "dims": [
-   0.25,
-   0.25,
-   0.36
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "smallItem"
- },
- "lavalamp": {
-  "tris": 1200,
-  "fit": "height",
-  "size": 0.4,
-  "mount": "floor",
-  "title": "Lava lamp",
-  "price": 18,
-  "glows": true,
-  "dims": [
-   0.14,
-   0.14,
-   0.4
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": null
- },
- "neonheart": {
-  "tris": 1200,
-  "fit": "width",
-  "size": 0.45,
-  "mount": "wall",
-  "title": "Neon heart",
-  "price": 24,
-  "glows": true,
-  "dims": [
-   0.45,
-   0.03,
-   0.4
-  ],
-  "footprint": 1,
-  "sit": false,
-  "surfaces": [
-   "wall"
-  ],
-  "affordance": null
- },
- "beanbag-sage": {
-  "tris": 2500,
-  "fit": "width",
-  "size": 0.8,
-  "mount": "floor",
-  "title": "Sage bean bag",
-  "price": 26,
-  "dims": [
-   0.8,
-   0.8,
-   0.6
-  ],
-  "footprint": 0.85,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "soft"
- },
- "beanbag-terracotta": {
-  "tris": 2500,
-  "fit": "width",
-  "size": 0.8,
-  "mount": "floor",
-  "title": "Terracotta bean bag",
-  "price": 26,
-  "dims": [
-   0.8,
-   0.8,
-   0.6
-  ],
-  "footprint": 0.85,
-  "sit": true,
-  "surfaces": [
-   "floor"
-  ],
-  "affordance": "soft"
- },
- "yarnbasket": {
-  "tris": 2000,
-  "fit": "width",
-  "size": 0.4,
-  "mount": "floor",
-  "title": "Basket of yarn",
-  "price": 12,
-  "dims": [
-   0.4,
-   0.4,
-   0.3
-  ],
-  "footprint": 0.85,
-  "sit": false,
-  "surfaces": [
-   "floor",
-   "top",
-   "seat"
-  ],
-  "affordance": "smallItem"
- }
+  "beanbag": {
+    "tris": 2500,
+    "fit": "width",
+    "size": 0.8,
+    "mount": "floor",
+    "title": "Bean bag",
+    "price": 26,
+    "dims": [0.8, 0.8, 0.6],
+    "footprint": 0.85,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "soft"
+  },
+  "floorlamp": {
+    "tris": 1500,
+    "fit": "height",
+    "size": 1.5,
+    "mount": "floor",
+    "title": "Standing lamp",
+    "price": 24,
+    "dims": [0.4, 0.4, 1.5],
+    "footprint": 0.6,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "throwblanket": {
+    "tris": 1500,
+    "fit": "width",
+    "size": 0.5,
+    "mount": "floor",
+    "title": "Knitted throw",
+    "price": 14,
+    "dims": [0.5, 0.4, 0.12],
+    "footprint": 1,
+    "sit": true,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "soft"
+  },
+  "monstera": {
+    "tris": 3000,
+    "fit": "height",
+    "size": 1.1,
+    "mount": "floor",
+    "title": "Potted monstera",
+    "price": 18,
+    "dims": [0.75, 0.75, 1.1],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "cactus": {
+    "tris": 1500,
+    "fit": "height",
+    "size": 0.18,
+    "mount": "floor",
+    "title": "Little cactus",
+    "price": 8,
+    "dims": [0.12, 0.12, 0.18],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "smallItem"
+  },
+  "books": {
+    "tris": 1200,
+    "fit": "width",
+    "size": 0.28,
+    "mount": "floor",
+    "title": "Pile of books",
+    "price": 10,
+    "dims": [0.28, 0.2, 0.2],
+    "footprint": 1,
+    "sit": true,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "soft"
+  },
+  "recordplayer": {
+    "tris": 2000,
+    "fit": "width",
+    "size": 0.42,
+    "mount": "floor",
+    "title": "Record player",
+    "price": 28,
+    "dims": [0.42, 0.34, 0.13],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": null
+  },
+  "mugs": {
+    "tris": 1500,
+    "fit": "width",
+    "size": 0.22,
+    "mount": "floor",
+    "title": "Two mugs",
+    "price": 8,
+    "dims": [0.22, 0.1, 0.1],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "smallItem"
+  },
+  "stringlights": {
+    "tris": 2500,
+    "fit": "width",
+    "size": 0.36,
+    "mount": "floor",
+    "title": "Coil of fairy lights",
+    "price": 12,
+    "dims": [0.36, 0.36, 0.08],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": null
+  },
+  "rug": {
+    "tris": 800,
+    "fit": "width",
+    "size": 1.2,
+    "mount": "floor",
+    "title": "Woven rug",
+    "price": 20,
+    "dims": [1.2, 1.2, 0.015],
+    "footprint": 0.85,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "rug"
+  },
+  "catbed": {
+    "tris": 2500,
+    "fit": "width",
+    "size": 0.5,
+    "mount": "floor",
+    "title": "Plush cat bed",
+    "price": 22,
+    "dims": [0.5, 0.5, 0.18],
+    "footprint": 0.85,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "bed"
+  },
+  "desk": {
+    "tris": 2000,
+    "fit": "width",
+    "size": 1.0,
+    "mount": "floor",
+    "title": "Writing desk",
+    "price": 34,
+    "dims": [1.0, 0.5, 0.75],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "armchair": {
+    "tris": 3000,
+    "fit": "width",
+    "size": 0.8,
+    "mount": "floor",
+    "title": "Round armchair",
+    "price": 32,
+    "dims": [0.8, 0.75, 0.8],
+    "footprint": 0.9,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "soft"
+  },
+  "floorcushion-terracotta": {
+    "tris": 1200,
+    "fit": "width",
+    "size": 0.6,
+    "mount": "floor",
+    "title": "Terracotta floor cushion",
+    "price": 12,
+    "dims": [0.6, 0.6, 0.15],
+    "footprint": 0.85,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "soft"
+  },
+  "floorcushion-sage": {
+    "tris": 1200,
+    "fit": "width",
+    "size": 0.6,
+    "mount": "floor",
+    "title": "Sage floor cushion",
+    "price": 12,
+    "dims": [0.6, 0.6, 0.15],
+    "footprint": 0.9,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "soft"
+  },
+  "wallshelf": {
+    "tris": 2000,
+    "fit": "width",
+    "size": 0.6,
+    "mount": "wall",
+    "title": "Wall shelf",
+    "price": 16,
+    "dims": [0.6, 0.2, 0.3],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["wall"],
+    "affordance": "shelf"
+  },
+  "frame-cat": {
+    "tris": 800,
+    "fit": "height",
+    "size": 0.4,
+    "mount": "wall",
+    "title": "Sleeping cat print",
+    "price": 12,
+    "dims": [0.32, 0.03, 0.4],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["wall"],
+    "affordance": null
+  },
+  "frame-landscape": {
+    "tris": 800,
+    "fit": "width",
+    "size": 0.45,
+    "mount": "wall",
+    "title": "Sunset hills painting",
+    "price": 12,
+    "dims": [0.45, 0.03, 0.35],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["wall"],
+    "affordance": null
+  },
+  "poster-moon": {
+    "tris": 800,
+    "fit": "height",
+    "size": 0.6,
+    "mount": "wall",
+    "title": "Moon poster",
+    "price": 10,
+    "dims": [0.42, 0.02, 0.6],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["wall"],
+    "affordance": null
+  },
+  "poster-plants": {
+    "tris": 800,
+    "fit": "height",
+    "size": 0.6,
+    "mount": "wall",
+    "title": "Botanical poster",
+    "price": 10,
+    "dims": [0.42, 0.02, 0.6],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["wall"],
+    "affordance": null
+  },
+  "clock": {
+    "tris": 1000,
+    "fit": "width",
+    "size": 0.32,
+    "mount": "wall",
+    "title": "Wall clock",
+    "price": 14,
+    "dims": [0.32, 0.05, 0.32],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["wall"],
+    "affordance": null
+  },
+  "mirror": {
+    "tris": 1500,
+    "fit": "height",
+    "size": 1.6,
+    "mount": "floor",
+    "title": "Arched mirror",
+    "price": 26,
+    "dims": [0.6, 0.3, 1.6],
+    "footprint": 0.8,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "fishtank": {
+    "tris": 3000,
+    "fit": "height",
+    "size": 0.7,
+    "mount": "floor",
+    "title": "Fish tank",
+    "price": 36,
+    "dims": [0.5, 0.4, 0.7],
+    "footprint": 0.9,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "cattree": {
+    "tris": 3000,
+    "fit": "height",
+    "size": 1.1,
+    "mount": "floor",
+    "title": "Cat tree",
+    "price": 38,
+    "dims": [0.6, 0.5, 1.1],
+    "footprint": 0.85,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "bed"
+  },
+  "scratchpost": {
+    "tris": 1500,
+    "fit": "height",
+    "size": 0.6,
+    "mount": "floor",
+    "title": "Scratching post",
+    "price": 16,
+    "dims": [0.4, 0.4, 0.6],
+    "footprint": 0.8,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "fiddlefig": {
+    "tris": 3000,
+    "fit": "height",
+    "size": 1.5,
+    "mount": "floor",
+    "title": "Fiddle leaf fig",
+    "price": 22,
+    "dims": [0.7, 0.7, 1.5],
+    "footprint": 0.8,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "pothos": {
+    "tris": 2500,
+    "fit": "height",
+    "size": 0.35,
+    "mount": "floor",
+    "title": "Trailing pothos",
+    "price": 12,
+    "dims": [0.4, 0.4, 0.35],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": null
+  },
+  "succulents": {
+    "tris": 2000,
+    "fit": "width",
+    "size": 0.3,
+    "mount": "floor",
+    "title": "Succulent trio",
+    "price": 10,
+    "dims": [0.3, 0.15, 0.15],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "smallItem"
+  },
+  "guitar": {
+    "tris": 2000,
+    "fit": "height",
+    "size": 1.0,
+    "mount": "floor",
+    "title": "Acoustic guitar",
+    "price": 30,
+    "dims": [0.4, 0.35, 1.0],
+    "footprint": 0.7,
+    "sit": false,
+    "surfaces": ["floor"],
+    "affordance": null
+  },
+  "teaset": {
+    "tris": 2000,
+    "fit": "width",
+    "size": 0.36,
+    "mount": "floor",
+    "title": "Tea set",
+    "price": 14,
+    "dims": [0.36, 0.36, 0.2],
+    "footprint": 0.9,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "smallItem"
+  },
+  "radio": {
+    "tris": 1500,
+    "fit": "width",
+    "size": 0.32,
+    "mount": "floor",
+    "title": "Wooden radio",
+    "price": 18,
+    "dims": [0.32, 0.15, 0.22],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "smallItem"
+  },
+  "globe": {
+    "tris": 2000,
+    "fit": "height",
+    "size": 0.36,
+    "mount": "floor",
+    "title": "Desk globe",
+    "price": 16,
+    "dims": [0.25, 0.25, 0.36],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "smallItem"
+  },
+  "lavalamp": {
+    "tris": 1200,
+    "fit": "height",
+    "size": 0.4,
+    "mount": "floor",
+    "title": "Lava lamp",
+    "price": 18,
+    "glows": true,
+    "dims": [0.14, 0.14, 0.4],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": null
+  },
+  "neonheart": {
+    "tris": 1200,
+    "fit": "width",
+    "size": 0.45,
+    "mount": "wall",
+    "title": "Neon heart",
+    "price": 24,
+    "glows": true,
+    "dims": [0.45, 0.03, 0.4],
+    "footprint": 1,
+    "sit": false,
+    "surfaces": ["wall"],
+    "affordance": null
+  },
+  "beanbag-sage": {
+    "tris": 2500,
+    "fit": "width",
+    "size": 0.8,
+    "mount": "floor",
+    "title": "Sage bean bag",
+    "price": 26,
+    "dims": [0.8, 0.8, 0.6],
+    "footprint": 0.85,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "soft"
+  },
+  "beanbag-terracotta": {
+    "tris": 2500,
+    "fit": "width",
+    "size": 0.8,
+    "mount": "floor",
+    "title": "Terracotta bean bag",
+    "price": 26,
+    "dims": [0.8, 0.8, 0.6],
+    "footprint": 0.85,
+    "sit": true,
+    "surfaces": ["floor"],
+    "affordance": "soft"
+  },
+  "yarnbasket": {
+    "tris": 2000,
+    "fit": "width",
+    "size": 0.4,
+    "mount": "floor",
+    "title": "Basket of yarn",
+    "price": 12,
+    "dims": [0.4, 0.4, 0.3],
+    "footprint": 0.85,
+    "sit": false,
+    "surfaces": ["floor", "top", "seat"],
+    "affordance": "smallItem"
+  }
 }
