@@ -327,10 +327,7 @@ struct HomeView: View {
     }
 
     private var petControls: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Above the portrait, with the arrow down at it, so the hint never covers her.
-            TipView(PetHint(), arrowEdge: .bottom)
-            TipView(TreatHint(), arrowEdge: .bottom)
+        VStack(alignment: .leading, spacing: Space.m) {
             if let homecoming {
                 HomecomingLabel(line: homecoming)
                     .transition(.opacity)

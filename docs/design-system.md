@@ -79,6 +79,9 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A tag: rarity, discount, count | `Chip(style: .tinted / .honey / .quiet)` |
 | A filter or category | `FilterChip` |
 | A price in coins | `PriceButton(price, was:)`; a deal's old price sits inside it |
+| A small action inside a card or toast (Place, Undo) | `PillButton(title, symbol:)`, 36 pt tall with a 44 pt tap area, the price tag's height |
+| A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
+| A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:)` on the note's face |
 
 ### Do and don't

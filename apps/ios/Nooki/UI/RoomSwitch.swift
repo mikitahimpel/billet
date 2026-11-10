@@ -23,7 +23,7 @@ struct RoomSwitch: View {
             .accessibilityLabel("Room")
             .accessibilityValue(state.room.title)
             .accessibilityHint("Tap to visit the other room")
-            .popoverTip(RoomsHint(), arrowEdge: .top)
+            .hint(RoomsHint(), arrowEdge: .top, target: Capsule())
         }
     }
 }

@@ -41,7 +41,8 @@ const checks = [
     fix: "A failed load or send is retried with RetryButton from the design package (docs/design-system.md).",
   },
   {
-    pattern: /\.padding\((?:\.\w+,\s*)?(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\)|\bspacing:\s*(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\b/g,
+    pattern:
+      /\.padding\((?:\.\w+,\s*)?(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\)|\bspacing:\s*(?:[1-9]\d*(?:\.\d+)?|0\.\d+)\b/g,
     baseline: join(here, "spacing-baseline.json"),
     what: "paddings or spacings written as numbers",
     fix: "Gaps and insets come from Space (xs…xl, gutter, section) or CardMetrics.padding (docs/design-system.md).",
