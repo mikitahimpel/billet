@@ -1,14 +1,20 @@
 import SwiftUI
 import Design
 
-/// The Shop's ink colours for notes and drawings, one card each in a wrapping grid: the colour, its name and the price
-/// pill, or "Yours" once the pair owns it. A buy plays the purchase moment like any other. The Shop opened at an ink
-/// (`openShop`) scrolls the page to the grid and rings that ink in honey.
+/// The Shop's ink colours for notes and drawings, one card each in a grid of three (two at the accessibility sizes):
+/// the colour, its name and the price pill, or "Yours" once the pair owns it. The name keeps one line and the bottom
+/// slot one control's height, so every card in a row is the same height. A buy plays the purchase moment like any
+/// other. The Shop opened at an ink (`openShop`) scrolls the page to the grid and rings that ink in honey.
 struct InkShelf: View {
     let state: HomeState
     var highlighted: String? = nil
 
-    private let columns = [GridItem(.adaptive(minimum: 104), spacing: Space.m, alignment: .top)]
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: Space.m, alignment: .top),
+              count: typeSize.isAccessibilitySize ? 2 : 3)
+    }
 
     var body: some View {
         LazyVGrid(columns: columns, spacing: Space.m) {
@@ -33,12 +39,16 @@ struct InkShelf: View {
             Text(ink.name)
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
-            if owned {
-                Chip("Yours", symbol: "checkmark")
-                    .frame(minHeight: 36)
-            } else {
-                Design.PriceButton(ink.price) { state.shop.buy(ink) }
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Group {
+                if owned {
+                    Chip("Yours", symbol: "checkmark")
+                } else {
+                    Design.PriceButton(ink.price) { state.shop.buy(ink) }
+                }
             }
+            .frame(minHeight: Size.control)
         }
         .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity)
