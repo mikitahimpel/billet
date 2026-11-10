@@ -69,8 +69,14 @@ final class WelcomeTests: XCTestCase {
                 return pair.count == 2 && pair[0] == key ? Int(pair[1]) : nil
             }.first ?? -1
         }
+        XCTAssertTrue((0..<500).contains(value("firstFrameMs")), summary)
+        // A GitHub runner's Simulator drops frames on its own (seen: 30 frames, one of them 133 ms), so there
+        // the timeline only has to play; smoothness is held on a Mac.
+        guard ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] == nil else {
+            XCTAssertGreaterThan(value("frames"), 0, summary)
+            return
+        }
         XCTAssertGreaterThan(value("frames"), 30, summary)
         XCTAssertEqual(value("janks"), 0, summary)
-        XCTAssertTrue((0..<500).contains(value("firstFrameMs")), summary)
     }
 }

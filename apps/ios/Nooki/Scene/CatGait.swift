@@ -45,6 +45,8 @@ final class Gait {
         var from = SIMD3<Float>.zero
         var swinging = false
         var done = true
+        /// How far through its swing the paw was when it left the floor: more than 0 when the walk set off mid-swing.
+        var start: Float = 0
     }
 
     /// 0 standing, 1 walking; eased so the body's rocking starts and stops softly.
@@ -101,6 +103,29 @@ final class Gait {
         return (turnUpper, wrap(lowerAngle - restLower - turnUpper), splay)
     }
 
+    /// Model-space height under which no knee or elbow goes: a leg's thickness, so a folded leg rests on the floor.
+    static let kneeFloor: Float = 0.026
+
+    /// Where `foot` must move, in model space, so the leg reaching it from `hip` (posed, model space) keeps its knee at
+    /// `kneeFloor` or above: once the knee would go lower it rests there, bent the way it bends at rest, and the paw
+    /// slides out along the floor in front of it, as a cat's hind paws do sitting and its fore paws lying down.
+    static func kneeAboveFloor(_ leg: CatRig.Leg, hip: SIMD3<Float>, foot: SIMD3<Float>) -> SIMD3<Float> {
+        func down(_ y: Float, _ z: Float) -> Float { atan2(z, -y) }
+        let upper = hypot(leg.knee.y - leg.hip.y, leg.knee.z - leg.hip.z)
+        let lower = hypot(leg.paw.y - leg.knee.y, leg.paw.z - leg.knee.z)
+        let behind: Float = down(leg.knee.y - leg.hip.y, leg.knee.z - leg.hip.z)
+            > down(leg.paw.y - leg.hip.y, leg.paw.z - leg.hip.z) ? 1 : -1
+        let dy = foot.y - hip.y, dz = foot.z - hip.z
+        let reach = min(max(hypot(dy, dz), abs(upper - lower) + 1e-4), upper + lower - 1e-4)
+        let opening = acos(min(max((upper * upper + reach * reach - lower * lower) / (2 * upper * reach), -1), 1))
+        let kneeY = hip.y - upper * cos(down(dy, dz) + behind * opening)
+        let drop = hip.y - kneeFloor
+        guard kneeY < kneeFloor, drop < upper else { return foot }
+        let kneeZ = hip.z + behind * (upper * upper - drop * drop).squareRoot()
+        let rise = foot.y - kneeFloor
+        return [foot.x, foot.y, kneeZ - behind * max(lower * lower - rise * rise, 0).squareRoot()]
+    }
+
     /// Advances the cycle and the paws. `stepping` keeps the paws moving even without ground speed (turning on the
     /// spot); without `planted` the paws ride with the body (in the air) and are set down again where they are.
     func update(_ dt: Float, _ frame: BodyFrame, stepping: Bool, planted: Bool) {
@@ -112,6 +137,10 @@ final class Gait {
                 legs[i].swinging = false
                 legs[i].done = true
             } else if moving {
+                if legs[i].done {
+                    let u = (phase + legs[i].offset).truncatingRemainder(dividingBy: 1)
+                    legs[i].start = max(u - Self.duty, 0) / (1 - Self.duty)
+                }
                 legs[i].done = false
             } else if !legs[i].swinging && !legs[i].done, let anchor = legs[i].anchor {
                 // Coming to a stop: a paw already under the body stays; the others take one more step.
@@ -132,6 +161,7 @@ final class Gait {
                 legs[i].from = legs[i].anchor ?? .zero
             } else if u < Self.duty && legs[i].swinging {
                 legs[i].swinging = false
+                legs[i].start = 0
                 legs[i].anchor = touchdown(legs[i], 1)
                 if !moving { legs[i].done = true }
             }
@@ -152,9 +182,11 @@ final class Gait {
         let w = (u - Self.duty) / (1 - Self.duty)
         let target = touchdown(leg, w)
         let step = simd_distance(leg.from, target) / frame.scale
-        var out = frame.toModel(simd_mix(leg.from, target, SIMD3(repeating: w * w * (3 - 2 * w))))
+        // Set off mid-swing, the paw still lifts from where it stands and only travels the rest of the swing.
+        let v = min(max((w - leg.start) / (1 - leg.start), 0), 1)
+        var out = frame.toModel(simd_mix(leg.from, target, SIMD3(repeating: v * v * (3 - 2 * v))))
         // A short settling step barely clears the floor.
-        out.y += lift * min(1, 0.3 + step / 0.03) * sin(w * .pi)
+        out.y += lift * min(1, 0.3 + step / 0.03) * sin(v * .pi)
         return out
     }
 

@@ -1,6 +1,7 @@
-"""Copies a USDZ with its MochiColor.jpg replaced by another image: Cat.usdz in a coat, for coat-portraits.sh.
+"""Copies a USDZ with its MochiColor.jpg replaced by another image: CatStanding.usdz in a coat, for coat-cards.sh and
+coat-portraits.sh.
 
-    python3 scripts/coats/coat-usdz.py Nooki/Resources/Cat.usdz Nooki/Resources/Coats/CatColor-ginger.jpg out.usdz
+    python3 scripts/coats/coat-usdz.py Nooki/Resources/CatStanding.usdz         Nooki/Resources/Coats/CatStandingColor-ginger.jpg out.usdz
 """
 import sys, zipfile
 src, tex, out = sys.argv[1:4]

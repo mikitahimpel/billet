@@ -47,12 +47,21 @@ private struct HintRing<T: HintTip, Target: InsettableShape>: ViewModifier {
             .overlay {
                 ZStack {
                     if showing {
+                        // A few pulses, then it holds: a ring that pulses for as long as the hint waits keeps
+                        // the header's glass redrawing every frame.
                         target
                             .strokeBorder(Color.honey, lineWidth: 2.5)
                             .padding(-Space.xs)
-                            .phaseAnimator(reduceMotion ? [1.0] : [1.0, 0.35]) { ring, opacity in
-                                ring.opacity(opacity)
-                            } animation: { _ in Motion.fade(Motion.standard) }
+                            .keyframeAnimator(initialValue: 1.0, repeating: false) { ring, opacity in
+                                ring.opacity(reduceMotion ? 1 : opacity)
+                            } keyframes: { _ in
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                                CubicKeyframe(0.35, duration: Motion.standard)
+                                CubicKeyframe(1, duration: Motion.standard)
+                            }
                             .transition(.opacity)
                     }
                 }

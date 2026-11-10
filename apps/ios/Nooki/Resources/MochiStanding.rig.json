@@ -277,6 +277,62 @@
     0.1795,
     -0.157
    ]
+  },
+  {
+   "name": "leftForePaw",
+   "parent": "leftForeLower",
+   "head": [
+    0.033,
+    0.022,
+    -0.118
+   ],
+   "tail": [
+    0.033,
+    0.008,
+    -0.142
+   ]
+  },
+  {
+   "name": "rightForePaw",
+   "parent": "rightForeLower",
+   "head": [
+    -0.033,
+    0.022,
+    -0.118
+   ],
+   "tail": [
+    -0.033,
+    0.008,
+    -0.142
+   ]
+  },
+  {
+   "name": "leftHindPaw",
+   "parent": "leftHindLower",
+   "head": [
+    0.038,
+    0.022,
+    0.062
+   ],
+   "tail": [
+    0.038,
+    0.008,
+    0.04
+   ]
+  },
+  {
+   "name": "rightHindPaw",
+   "parent": "rightHindLower",
+   "head": [
+    -0.038,
+    0.022,
+    0.061
+   ],
+   "tail": [
+    -0.038,
+    0.008,
+    0.04
+   ]
   }
  ],
  "eyes": [

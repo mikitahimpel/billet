@@ -305,7 +305,7 @@ struct HomeView: View {
         #if DEBUG || LABS_YES
         .overlay(alignment: .topTrailing) {
             if perfLab.state.meter {
-                PerfLabMeter(lab: perfLab)
+                PerfLabMeter(lab: perfLab, room: roomInput.visibility)
                     .padding(.trailing, Space.l)
                     .padding(.top, Space.xl * 2)
             }
@@ -482,7 +482,7 @@ struct HomeView: View {
             roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true)
+            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes))
     }
 
     private func handle(_ event: RoomEvent) {

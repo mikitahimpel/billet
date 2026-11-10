@@ -13,7 +13,7 @@ nonisolated extension CatCoat {
     }
 
     /// The poses that have coats; each is `<pose>.ply` with its `.skin` and `.rig.json` beside it.
-    static let poses = ["Mochi", "MochiStanding", "MochiLoaf", "MochiSleep"]
+    static let poses = ["MochiStanding"]
 
     /// The app itself for grey, else a Caches folder with each of `poses`' PLY in this coat, written once, beside links
     /// to the original skins and rigs. One folder per set of poses: a Bundle caches its folder's listing, so files
