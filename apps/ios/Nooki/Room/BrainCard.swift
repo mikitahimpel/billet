@@ -18,14 +18,14 @@ struct BrainCard: View {
     let director: CatDirector
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Space.s) {
             readout.allowsHitTesting(false)
             controls
         }
         .foregroundStyle(.white)
-        .padding(12)
+        .padding(Space.m)
         .frame(width: 210, alignment: .leading)
-        .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .cornerFill(.card, .black.opacity(0.55))
     }
 
     /// Labs controls: a tour of every state, the brain's clock, a neglected cat, and the couple's touches.

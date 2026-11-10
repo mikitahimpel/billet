@@ -269,15 +269,15 @@ struct HomeView: View {
                             RoomSwitch(state: state, select: select).transition(.opacity)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
+                    .padding(.horizontal, Space.l)
+                    .padding(.top, Space.xs)
                     .environment(\.glassRendering, barGlass)
                 }
             } bottom: {
                 if hud != .hidden {
                     TabBar(state: state)
                         .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
-                        .padding(.horizontal, 16)
+                        .padding(.horizontal, Space.l)
                         .environment(\.glassRendering, barGlass)
                 }
             }
@@ -314,7 +314,7 @@ struct HomeView: View {
         .overlay(alignment: .topLeading) {
             if brainCard && state.tab == .world {
                 RoomBrainCard(controller: room)
-                .padding(.leading, 16)
+                .padding(.leading, Space.l)
                 .padding(.top, 120)
             }
         }
@@ -350,9 +350,9 @@ struct HomeView: View {
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Space.xs)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Space.m)
         .padding(.bottom, 94)
         .transition(.opacity)
         .task(id: homecoming) {
@@ -517,7 +517,7 @@ private struct ShowcaseLabel: View {
         .padding(.vertical, Space.s)
         .frame(minHeight: 40)
         .glass(.capsule, role: .bar)
-        .frame(minHeight: 44)
+        .frame(minHeight: Size.control)
         .accessibilityLabel("Playing \(label)")
     }
 }

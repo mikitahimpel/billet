@@ -112,8 +112,8 @@ struct AddTitleSheet: View {
         return Button { add(title) } label: {
             HStack(spacing: Space.m) {
                 PosterImage(path: title.posterPath, title: title.title, size: .small, showsTitle: false)
-                    .frame(width: 44, height: 64)
-                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                    .frame(width: Size.control, height: 64)
+                    .corners(.inner)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title.title)
                         .font(.ourioHeadline)

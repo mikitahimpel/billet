@@ -125,7 +125,7 @@ struct PickTonightScreen: View {
                 }
                 .padding(Space.l)
             }
-            .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+            .corners(.card)
             .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(card.name), \(caption(card))")
@@ -280,7 +280,7 @@ private struct PickMatchScreen: View {
                     .foregroundStyle(Ink.secondary)
                 PosterImage(path: match.posterPath, title: match.name, size: .card)
                     .frame(width: 150, height: 225)
-                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                    .corners(.inner)
                     .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
                     .padding(.vertical, Space.s)
                 Text(match.name)

@@ -57,7 +57,7 @@ struct CollectionCard: View {
             .opacity(owns ? 1 : 0.4)
             .aspectRatio(1, contentMode: .fit)
             .frame(maxWidth: .infinity)
-            .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.inner, style: .continuous))
+            .cornerFill(.inner, Ink.surfaceRaised)
             .overlay(alignment: .bottomTrailing) {
                 if owns { OwnedCheck().offset(x: 3, y: 3) }
             }
@@ -95,6 +95,6 @@ struct CollectionCard: View {
             }
         }
         .padding(Space.m)
-        .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.inner, style: .continuous))
+        .cornerFill(.inner, Ink.surfaceRaised)
     }
 }

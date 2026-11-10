@@ -72,7 +72,7 @@ struct GameView: View {
                     .ourioScaledFont(size: 15, weight: .semibold)
                     .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     .foregroundStyle(Ink.glassGlyph)
-                    .frame(width: 44, height: 44)
+                    .frame(width: Size.control, height: Size.control)
                     .contentShape(.circle)
                     .background { Color.clear.glass(.circle, role: .bar).allowsHitTesting(false) }
             }
@@ -238,7 +238,7 @@ private struct HintCard: View {
         .padding(.horizontal, Space.l)
         .padding(.vertical, Space.m)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Ink.screen, in: .rect(cornerRadius: Radius.card, style: .continuous))
+        .cornerFill(.card, Ink.screen)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.updatesFrequently)
     }

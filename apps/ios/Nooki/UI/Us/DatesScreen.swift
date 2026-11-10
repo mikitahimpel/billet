@@ -156,7 +156,7 @@ struct DatesScreen: View {
                                         .padding(Space.s)
                                 }
                                 .frame(width: 104, height: 124)
-                                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+                                .corners(.card)
                         }
                         .buttonStyle(PressScaleStyle())
                     }
@@ -215,7 +215,7 @@ struct DatesScreen: View {
                 .frame(maxWidth: .infinity)
                 .frame(height: DateIdeaCard.height, alignment: .bottom)
                 .background { DateScenePicture() }
-                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+                .corners(.card)
 
                 PrimaryButton("Surprise us", symbol: "dice") { roll() }
                     .opacity(rolling ? 0.6 : 1)
@@ -240,7 +240,7 @@ struct DatesScreen: View {
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(height: Size.button)
                 .background(Ink.surfaceRaised, in: .capsule)
                 .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }

@@ -46,7 +46,7 @@ struct DailyGiftCard: View {
             Text("Free, once a day, for both of you")
         } else {
             // A real rotation: the next gift is the next local day's.
-            HStack(spacing: 4) {
+            HStack(spacing: Space.xs) {
                 Text("A new one in")
                 Text(timerInterval: Date.now...state.shop.offers.nextDay(after: .now), countsDown: true)
                     .monospacedDigit()
@@ -57,7 +57,7 @@ struct DailyGiftCard: View {
     private var box: some View {
         GiftBox(opened: !ready, opens: bursts, reward: reward)
             .frame(width: 56, height: 56)
-            .background(Ink.surfaceRaised, in: .rect(cornerRadius: Radius.inner, style: .continuous))
+            .cornerFill(.inner, Ink.surfaceRaised)
             .accessibilityHidden(true)
     }
 
@@ -153,7 +153,7 @@ private struct GiftBox: View {
             boxBody
             lid
         }
-        .frame(width: 44, height: 44)
+        .frame(width: Size.control, height: Size.control)
         .keyframeAnimator(initialValue: Shake(), trigger: opens) { content, shake in
             content
                 .rotationEffect(.degrees(reduceMotion ? 0 : shake.angle), anchor: .bottom)

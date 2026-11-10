@@ -202,7 +202,8 @@ public struct PriceButton: View {
   public var body: some View {
     Button(action: action) {
       HStack(alignment: .firstTextBaseline, spacing: Space.xs + 1) {
-        CoinIcon(size: 16).alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
+        CoinIcon(size: 16, relativeTo: .subheadline)
+          .alignmentGuide(.firstTextBaseline) { $0[.bottom] - 2 }
         Text(price, format: .number)
           .monospacedDigit()
         if let was {

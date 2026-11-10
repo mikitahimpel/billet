@@ -175,6 +175,6 @@ private struct Vignette: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: asRow ? .leading : .top)
         .padding(Space.s)
         .padding(.horizontal, asRow ? Space.xs : 0)
-        .background(Ink.surface, in: .rect(cornerRadius: Radius.card))
+        .cornerFill(.card, Ink.surface)
     }
 }

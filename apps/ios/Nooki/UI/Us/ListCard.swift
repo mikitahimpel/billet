@@ -95,7 +95,7 @@ private struct GroceryPeek: View {
 
     var body: some View {
         let open = list.open.sorted { $0.added > $1.added }
-        WrapLayout(spacing: Space.s) {
+        FlowRow(spacing: Space.s) {
             if open.isEmpty {
                 ForEach(Self.samples, id: \.self) { chip($0, icon: catalog.aisle(for: $0).icon) }
                 more("+")
@@ -156,7 +156,7 @@ private struct PosterPeek: View {
     private func poster(path: String?, title: String, both: Bool) -> some View {
         PosterImage(path: path, title: title, size: .grid, showsTitle: false)
             .frame(width: 46, height: 69)
-            .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+            .corners(.inner)
             .overlay(alignment: .topLeading) {
                 if both {
                     Text("♥")

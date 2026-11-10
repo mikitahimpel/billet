@@ -29,7 +29,7 @@ struct GrocerySuggestions: View {
             let often = often(excluding: onList)
             if !often.isEmpty {
                 GrocerySectionLabel(title: "You often buy", top: suggestions.isEmpty ? 4 : 18)
-                WrapLayout(spacing: Space.s) {
+                FlowRow(spacing: Space.s) {
                     ForEach(often, id: \.self) { text in
                         FilterChip(text, isSelected: false) { onAdd(text) }
                             .accessibilityLabel("Add \(text)")

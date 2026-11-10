@@ -48,10 +48,12 @@ enum GalleryPage: String, CaseIterable, Sendable {
 
     @MainActor @ViewBuilder private static var labelsPage: some View {
         SectionHeader("Daily deals", symbol: "tag.fill") { Text("New at midnight") }
-        HStack {
+        FlowRow {
             Chip("Rare", style: .tinted(.teal))
             Chip("−20%", style: .honey)
             Chip("Owned", symbol: "checkmark")
+            Chip("For the window", style: .quiet)
+            Chip("New", style: .honey)
         }
         HStack {
             FilterChip("Today", isSelected: true) {}
@@ -64,6 +66,9 @@ enum GalleryPage: String, CaseIterable, Sendable {
     @MainActor @ViewBuilder private static var cardsPage: some View {
         Card(warm: true) {
             CardHeader("Anniversary", detail: "In 12 days · Friday 21 November", symbol: "heart.fill")
+        }
+        Card {
+            CardHeader("A weekend away somewhere warm", detail: "3 ideas saved", symbol: "airplane", tint: .teal)
         }
         ContentCard("Weekend in Lisbon", subtitle: "Saved by both of you", chip: Chip("Plan", style: .honey)) {
             SecondaryButton("Edit", fullWidth: false) {}
@@ -86,6 +91,17 @@ enum GalleryPage: String, CaseIterable, Sendable {
             Row("Profile", detail: "Mikita", symbol: "person.fill") { RowChevron() }
             ToggleRow("Haptics", symbol: "hand.tap.fill", tint: .blushPink, isOn: .constant(true))
             Row("Erase all data", symbol: "trash.fill", destructive: true)
+        }
+        GroupedSection(header: "Labs") {
+            PickerRow("Window view", symbol: "window.casement", selection: .constant("Desk with Mochi")) {
+                Text("Desk with Mochi").tag("Desk with Mochi")
+                Text("Suburbia").tag("Suburbia")
+            }
+            PickerRow("Room lighting", symbol: "lightbulb.fill", selection: .constant("Follow the test")) {
+                Text("Follow the test").tag("Follow the test")
+            }
+            Row("Show hints again on the next launch", symbol: "lightbulb.fill") { RowChevron() }
+            ToggleRow("Streak at risk reminders", isOn: .constant(false))
         }
     }
 

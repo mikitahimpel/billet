@@ -73,7 +73,7 @@ struct DateDoneSheet: View {
                 .scaledToFill()
                 .frame(maxWidth: .infinity)
                 .frame(height: 260)
-                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+                .corners(.card)
                 .overlay(alignment: .bottomTrailing) {
                     Label("Change", systemImage: "photo")
                         .font(.ourioCaption.weight(.semibold))

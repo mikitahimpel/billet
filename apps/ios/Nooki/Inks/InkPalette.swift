@@ -55,7 +55,7 @@ struct InkPalette: View {
                     .foregroundStyle(label)
                 }
             }
-            .frame(minWidth: 34, minHeight: 44)
+            .frame(minWidth: 34, minHeight: Size.control)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(owned ? "\(ink.name) ink" : "Buy \(ink.name) ink, \(ink.price) coins")
