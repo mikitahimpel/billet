@@ -21,6 +21,16 @@ struct PairingCopyTests {
         #expect(PairingCopy.expiry(expiresAt: 1_000_000, now: now) == "This code has expired")
     }
 
+    @Test(arguments: [
+        (86_400, "Expires in 24 h"), (86_399, "Expires in 24 h"), (82_801, "Expires in 24 h"),
+        (82_800, "Expires in 23 h"), (3_601, "Expires in 2 h"), (3_600, "Expires in 1 h"),
+        (3_599, "Expires in 59:59"), (60, "Expires in 1:00"), (59, "Expires in 0:59"),
+    ])
+    func aDayLongCodeCountsInHoursUntilItsLastHour(left: Int, text: String) {
+        let now = Date(timeIntervalSince1970: 1_000)
+        #expect(PairingCopy.expiry(expiresAt: 1_000_000 + left * 1000, now: now) == text)
+    }
+
     @Test func everyFailureSaysOurioNotBillet() {
         for failure in [PairingFailure.invalidCode, .alreadyPaired, .signedOut, .unavailable] {
             #expect(!PairingCopy.message(for: failure).contains("Billet"))

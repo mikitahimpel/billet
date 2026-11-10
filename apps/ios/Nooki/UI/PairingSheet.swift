@@ -190,10 +190,12 @@ enum PairingCopy {
         return out
     }
 
-    /// "Expires in 9:41", or that it has expired. `expiresAt` is epoch milliseconds.
+    /// "Expires in 24 h" while an hour or more is left, counted in whole hours rounded up; then minutes and seconds,
+    /// "Expires in 9:41"; then that it has expired. `expiresAt` is epoch milliseconds.
     static func expiry(expiresAt: Int, now: Date) -> String {
         let seconds = Int((Double(expiresAt) / 1000 - now.timeIntervalSince1970).rounded(.down))
         guard seconds > 0 else { return "This code has expired" }
+        if seconds >= 3600 { return "Expires in \((seconds + 3599) / 3600) h" }
         return "Expires in \(seconds / 60):" + String(format: "%02d", seconds % 60)
     }
 }

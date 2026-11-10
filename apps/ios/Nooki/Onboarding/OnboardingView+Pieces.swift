@@ -70,18 +70,18 @@ extension OnboardingView {
         .rowCell()
     }
 
-    /// Pinned under every page: the primary, then a quiet secondary in a slot of its own, so the primary stays put
-    /// from page to page.
+    /// Pinned under every page, the primary always last, `Space.s` above the safe area, so it sits in the same place
+    /// on every page; a page's quiet secondary stacks above it and pushes nothing below.
     @ViewBuilder var actions: some View {
         if flow.page != .stopped {
-            VStack(spacing: Space.xs) {
-                primaryAction
+            VStack(spacing: Space.s) {
                 secondaryAction
-                    .frame(height: Size.control)
+                primaryAction
+                    .accessibilityIdentifier("onboarding.primary")
             }
             .padding(.horizontal, Space.gutter)
-            .padding(.top, Space.s)
-            .padding(.bottom, Space.xs)
+            .padding(.top, Space.m)
+            .padding(.bottom, Space.s)
             .modifier(WelcomeActionsReveal(start: flow.page == .welcome ? welcomeStart : nil))
         }
     }
@@ -125,7 +125,7 @@ extension OnboardingView {
                 .buttonStyle(QuietButtonStyle())
             }
         case .welcome, .join, .question, .stopped, .togetherSince, .catCoat, .catName, .notifications, .widget:
-            Color.clear
+            EmptyView()
         }
     }
 
