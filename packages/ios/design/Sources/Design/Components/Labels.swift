@@ -167,7 +167,7 @@ public struct FilterChip: View {
         .frame(minHeight: Size.control)
         .contentShape(.rect)
     }
-    .buttonStyle(.plain)
+    .buttonStyle(PressScaleStyle())
     .accessibilityAddTraits(isSelected ? .isSelected : [])
   }
 }
