@@ -119,12 +119,13 @@ private final class LinkTarget: NSObject {
 struct PerfLabMeter: View {
     let lab: PerfLab
     let room: RoomVisibility
+    let tabs: TabSwitchTimes
     @State private var meter = FrameMeter()
     @State private var energy = EnergyMeter()
     @State private var opened = false
 
     private var line: String {
-        [meter.reading?.line ?? "measuring…", energy.reading(room: room)?.line].compactMap { $0 }
+        [meter.reading?.line ?? "measuring…", energy.reading(room: room)?.line, tabs.line].compactMap { $0 }
             .joined(separator: "\n")
     }
 
@@ -146,7 +147,7 @@ struct PerfLabMeter: View {
             .accessibilityHint("Shows the performance switches")
 
             if opened {
-                PerfLabSwitches(lab: lab, reading: meter.reading, energy: energy.reading(room: room))
+                PerfLabSwitches(lab: lab, reading: meter.reading, energy: energy.reading(room: room), tabs: tabs)
                     .frame(maxWidth: 320)
                     .transition(.opacity)
             }
@@ -185,6 +186,7 @@ struct PerfLabSwitches: View {
     let lab: PerfLab
     var reading: FrameStats?
     var energy: EnergyStats?
+    var tabs: TabSwitchTimes?
 
     var body: some View {
         Card {
@@ -195,7 +197,7 @@ struct PerfLabSwitches: View {
                 HStack(spacing: Space.s) {
                     SecondaryButton("Copy settings", fullWidth: true) {
                         UIPasteboard.general.string = PerfLabMachine.summary(lab.state, reading: reading,
-                                                                             energy: energy)
+                                                                             energy: energy, tabs: tabs)
                     }
                     SecondaryButton("Reset", fullWidth: false) { lab.reset() }
                 }
