@@ -144,7 +144,6 @@ struct HomeView: View {
             if tab == .world { room.perfShown(state.room) }
             // A fade cut short by a quick return never comes back over a later switch.
             if tab == .world { worldLeaving = nil }
-            if tab != .world, hasRoomChoice { prepareRooms() }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
         .onChange(of: state.care.petPulse) {
@@ -456,16 +455,6 @@ struct HomeView: View {
             try? await Task.sleep(for: .milliseconds(300))
             if roomLive { worldSnapshot = nil }
             switchingRoom = false
-        }
-    }
-
-    /// The other rooms are built under a tab, once its page has faded in and holds still, so the first switch to
-    /// one doesn't build it in front of the cat.
-    private func prepareRooms() {
-        Task {
-            try? await Task.sleep(for: .milliseconds(700))
-            guard state.tab != .world else { return }
-            for kind in state.rooms.variant.kinds { room.prepare(kind.scene) }
         }
     }
 
