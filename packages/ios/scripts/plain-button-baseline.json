@@ -1,15 +1,8 @@
 {
-  "apps/ios/Nooki/Inks/InkPalette.swift": 1,
   "apps/ios/Nooki/Onboarding/OnboardingView+Pieces.swift": 1,
   "apps/ios/Nooki/Room/BrainCard.swift": 1,
   "apps/ios/Nooki/Room/Games/GameView.swift": 1,
   "apps/ios/Nooki/Scene/DioramaView.swift": 1,
-  "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 2,
-  "apps/ios/Nooki/UI/Composer/ComposerPostage.swift": 2,
-  "apps/ios/Nooki/UI/Draw/LockCanvasView.swift": 1,
-  "apps/ios/Nooki/UI/NoteComposer.swift": 2,
-  "apps/ios/Nooki/UI/ProfileHub.swift": 1,
   "apps/ios/OurioWidgets/Modules.swift": 4,
-  "packages/ios/core/Sources/DesignSystem/Components/Controls.swift": 1,
-  "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 1
+  "packages/ios/core/Sources/DesignSystem/Components/Controls.swift": 1
 }

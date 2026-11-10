@@ -91,7 +91,7 @@ struct NoteComposer: View {
                 .frame(width: Size.control, height: Size.control)
                 .background(model.drawing ? Color.honey : Ink.surface, in: .circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(model.drawing ? "Pen on" : "Pen off")
         .accessibilityHint("Switches between drawing and typing")
         .accessibilityIdentifier("composerPen")
@@ -126,7 +126,7 @@ struct NoteComposer: View {
                 .frame(width: Size.control, height: Size.control)
                 .background(Ink.surface, in: .circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Paper: \(model.kind.rawValue)")
         .accessibilityIdentifier("composerPaperKind")
     }

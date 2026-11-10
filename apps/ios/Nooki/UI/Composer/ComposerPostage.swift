@@ -57,7 +57,7 @@ struct PostagePicker: View {
             .frame(width: Size.control, height: Size.control)
             .background(Ink.surface, in: .circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Stamp and seal")
         .accessibilityValue(summary)
         .accessibilityIdentifier("composerPostage")
@@ -114,7 +114,7 @@ struct PostagePicker: View {
                 .background(selected ? Color.honey.opacity(0.22) : .clear, in: .circle)
                 .overlay { Circle().strokeBorder(selected ? Color.honey : .clear, lineWidth: 2) }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(name)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

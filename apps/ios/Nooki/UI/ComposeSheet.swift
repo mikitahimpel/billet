@@ -19,8 +19,8 @@ struct ComposeSheet: View {
 
     var body: some View {
         BilletSheet("New moment", size: .fit) {
-            VStack(spacing: 20) {
-                VStack(alignment: .leading, spacing: 10) {
+            VStack(spacing: Space.gutter) {
+                VStack(alignment: .leading, spacing: Space.m) {
                     Image(uiImage: film ?? image)
                         .resizable()
                         .scaledToFill()
@@ -36,8 +36,8 @@ struct ComposeSheet: View {
                             if text.count > 40 { caption = String(text.prefix(40)) }
                         }
                 }
-                .padding(12)
-                .padding(.bottom, 14)
+                .padding(Space.m)
+                .padding(.bottom, Space.l)
                 .background { PaperSheet(lift: PaperSheet.Lift(radius: 12, y: 8, opacity: 0.3)) }
                 .rotationEffect(.degrees(-2))
 

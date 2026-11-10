@@ -104,7 +104,7 @@ struct PetActions: View {
         LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s), count: 3), spacing: Space.s) {
             ForEach(actions) { action in
                 Button(action: action.run) {
-                    VStack(spacing: 6) {
+                    VStack(spacing: Space.s) {
                         Image(systemName: action.symbol)
                             .ourioScaledFont(size: 18, weight: .bold)
                             .dynamicTypeSize(...DynamicTypeSize.xxLarge)

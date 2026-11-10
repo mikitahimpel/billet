@@ -41,7 +41,7 @@ struct ProfileHub: View {
                         Row("Settings", symbol: "gearshape.fill", tint: UsTint.lilac.color) { RowChevron() }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowButtonStyle())
             }
         }
         .sheet(isPresented: $pairing) {
@@ -67,7 +67,7 @@ struct ProfileHub: View {
                     .offset(y: 8)
             }
             .padding(.bottom, Space.s)
-            VStack(spacing: 4) {
+            VStack(spacing: Space.xs) {
                 Text("\(state.profile.name(of: state.partners.0)) & \(state.profile.name(of: state.partners.1))")
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.text)

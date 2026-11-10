@@ -375,7 +375,7 @@ private struct WallStrip: View {
                 .labelStyle(.titleAndIcon)
                 .tint(.honey)
             Spacer(minLength: 0)
-            HStack(spacing: 4) {
+            HStack(spacing: Space.xs) {
                 ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
                     let moment = slot < store.pinned.count ? store.pinned[slot] : nil
                     RoundedRectangle(cornerRadius: 2)
