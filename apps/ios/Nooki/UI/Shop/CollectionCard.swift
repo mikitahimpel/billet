@@ -66,21 +66,22 @@ struct CollectionCard: View {
     }
 
     @ViewBuilder private var bonus: some View {
-        HStack(spacing: Space.s) {
-            Image(systemName: claimed ? "checkmark.seal.fill" : "sparkles")
-                .foregroundStyle(Color.honey)
-                .accessibilityHidden(true)
-            Group {
-                if claimed {
-                    Text("Bonus collected: \(collection.bonus) coins")
-                } else {
-                    Text("Complete it for \(collection.bonus) coins")
+        CardActions {
+            HStack(spacing: Space.s) {
+                Image(systemName: claimed ? "checkmark.seal.fill" : "sparkles")
+                    .foregroundStyle(Color.honey)
+                    .accessibilityHidden(true)
+                Group {
+                    if claimed {
+                        Text("Bonus collected: \(collection.bonus) coins")
+                    } else {
+                        Text("Complete it for \(collection.bonus) coins")
+                    }
                 }
+                .font(.ourioCallout)
+                .foregroundStyle(Ink.textSecondary)
             }
-            .font(.ourioCallout)
-            .foregroundStyle(Ink.textSecondary)
-            .frame(maxWidth: .infinity, alignment: .leading)
-
+        } trail: {
             if state.shop.canClaimBonus(collection) {
                 PrimaryButton("Collect", fullWidth: false) {
                     collecting = true
