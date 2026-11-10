@@ -78,9 +78,9 @@ library goes when it is empty. `AppGroup` and `SharedFile` are in core's `Persis
 in `MoodInterface` and takes its file as `load` and `save`, which `OurioShared` points at the App Group;
 `LatestDrawing`, `PushTokens`, `PushReceipt`, `PushPayload(push:)` and the reaction emoji are in `DrawInterface`;
 `Couple`, `PairMembers`, `CoupleStore` (with `load`, `save` and `photoURL`) and `CatProfile` are in `ProfileInterface`;
-the Us model, `UsStore`, `PendingListChange`, `DateCatalog`, `GroceryHistory`, `GroceryWords` and `Country` in
+the Us model, `UsStore`, `PendingListChange`, `DateCatalog`, `GroceryHistory`, `GroceryWords`, `Country` and `WishMedia` (iOS only) in
 `UsInterface`; `Moment`, `Note`, their stores and `InstantFilm` in `MomentsInterface` (iOS only: the photos
-are UIKit images). `WishMedia`, `BlurHash`, `Streak` and `Wallet` moved into the app, the only user.
+are UIKit images). `BlurHash`, `Streak` and `Wallet` moved into the app, the only user.
 What is left:
 
 | To | From `OurioShared` |
