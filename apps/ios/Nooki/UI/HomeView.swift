@@ -305,7 +305,7 @@ struct HomeView: View {
         #if DEBUG || LABS_YES
         .overlay(alignment: .topTrailing) {
             if perfLab.state.meter {
-                PerfLabMeter(lab: perfLab)
+                PerfLabMeter(lab: perfLab, room: roomInput.visibility)
                     .padding(.trailing, Space.l)
                     .padding(.top, Space.xl * 2)
             }
