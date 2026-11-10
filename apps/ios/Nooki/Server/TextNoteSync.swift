@@ -1,7 +1,9 @@
 import Foundation
+import MomentsInterface
 import OurioShared
 import Persistence
 import Transport
+import UsInterface
 import Wire
 
 /// Text notes between the two phones. A note written here goes up as a text note, keyed by its local id so a retry

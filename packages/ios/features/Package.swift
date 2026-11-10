@@ -57,6 +57,10 @@ let decor: Target = .target(
 let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
 let profileInterface: Target = .target(
   name: "ProfileInterface", dependencies: dependencies(["Persistence"]))
+let usInterface: Target = .target(
+  name: "UsInterface", dependencies: dependencies(["Persistence", "ProfileInterface", "Wire"]))
+let momentsInterface: Target = .target(
+  name: "MomentsInterface", dependencies: dependencies(["Persistence", "Wire"]))
 let drawInterface: Target = .target(
   name: "DrawInterface", dependencies: dependencies(["Persistence", "Wire"]))
 let mood: Target = .target(
@@ -75,7 +79,7 @@ let products =
   features + [
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
-    "ProfileInterface",
+    "ProfileInterface", "UsInterface", "MomentsInterface",
     "DecorInterface", "FeatureDecor",
   ]
 
@@ -92,7 +96,7 @@ let package = Package(
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
     + [
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
-      mood, drawInterface, profileInterface, decorInterface, decor,
+      mood, drawInterface, profileInterface, usInterface, momentsInterface, decorInterface, decor,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]

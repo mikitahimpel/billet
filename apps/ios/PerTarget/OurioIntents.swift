@@ -1,8 +1,10 @@
 import AppIntents
+import MomentsInterface
 import MoodInterface
 import OurioShared
 import Persistence
 import ProfileInterface
+import UsInterface
 import WidgetKit
 
 // One-tap actions on the widgets and controls. They live in both the app and the extension: the system runs the app's

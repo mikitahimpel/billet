@@ -1,7 +1,9 @@
+import MomentsInterface
 import OurioShared
 import ProfileInterface
 import Testing
 import UIKit
+import UsInterface
 @testable import Billet
 
 /// An avatar's square: whole, inside the photo, and high on a tall photo, where heads are.

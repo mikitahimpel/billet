@@ -1,9 +1,11 @@
 import FeatureGames
 import GamesInterface
+import MomentsInterface
 import OurioShared
 import RealityKit
 import SwiftUI
 import UIKit
+import UsInterface
 
 /// One finger on the game: where it is on screen, and its ray into the room's pivot space.
 struct GameTouch {

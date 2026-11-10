@@ -1,5 +1,6 @@
 import FeatureGames
 import FeatureMood
+import MomentsInterface
 import MoodInterface
 import Observation
 import OurioShared
@@ -8,6 +9,7 @@ import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design
+import UsInterface
 import WidgetKit
 
 enum HomeTab: CaseIterable {

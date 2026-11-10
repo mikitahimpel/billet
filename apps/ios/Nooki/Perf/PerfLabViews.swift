@@ -1,11 +1,13 @@
 #if DEBUG || LABS_YES
 import Design
+import MomentsInterface
 import OurioShared
 import QuartzCore
 import SwiftUI
 import Darwin
 import RoomInterface
 import UIKit
+import UsInterface
 
 /// Times every frame the screen shows while the meter is up, and reads them out twice a second over the last two
 /// seconds. It counts frames the app was late to hand over; a frame the GPU drops after that shows only by eye.

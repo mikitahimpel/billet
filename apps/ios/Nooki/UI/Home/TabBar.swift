@@ -1,8 +1,10 @@
+import MomentsInterface
 import OurioShared
 import PhotosUI
 import SwiftUI
 import Design
 import TipKit
+import UsInterface
 
 struct TabBar: View {
     let state: HomeState
