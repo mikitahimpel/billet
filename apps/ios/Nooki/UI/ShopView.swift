@@ -107,7 +107,7 @@ struct ShopView: View {
             HStack(spacing: Space.s) {
                 ForEach(ShopCategory.allCases) { category in
                     let isSelected = selected == category
-                    FilterChip(category.title, isSelected: isSelected) { selected = category }
+                    FilterChip(category.title, symbol: category.symbol, isSelected: isSelected) { selected = category }
                 }
             }
             .padding(.horizontal, Space.l)
