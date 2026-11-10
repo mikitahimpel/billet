@@ -19,6 +19,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     case shine
     /// Prints and shop cards drawn flat into one layer (`drawingGroup`), when on.
     case flatten
+    /// The dust drifting through the room.
+    case motes
 
     var title: String {
         switch self {
@@ -28,6 +30,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .shadows: "Shadows"
         case .shine: "Shine on rare cards"
         case .flatten: "Flatten prints and cards"
+        case .motes: "Dust motes in the room"
         }
     }
 
@@ -39,13 +42,14 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .shadows: "shadow"
         case .shine: "sparkles"
         case .flatten: "square.stack.3d.down.right"
+        case .motes: "sparkle"
         }
     }
 
     /// `flatten` is an extra step, not something shipped: it starts off, the others start on.
     var shippedOn: Bool {
         switch self {
-        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine: true
+        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .motes: true
         case .flatten: false
         }
     }

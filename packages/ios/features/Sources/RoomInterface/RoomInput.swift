@@ -24,15 +24,19 @@ public struct RoomInput: Equatable, Sendable {
   public var catName: String
   /// The partner has the app open on their phone.
   public var partnerHere: Bool
+  /// The dust drifting through the room. Its particles are stepped every frame the room is drawn,
+  /// so Labs can take them away.
+  public var motes: Bool
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
-    partnerHere: Bool = false
+    partnerHere: Bool = false, motes: Bool = true
   ) {
     self.scene = scene
     self.coat = coat
     self.visibility = visibility
     self.catName = catName
     self.partnerHere = partnerHere
+    self.motes = motes
   }
 }

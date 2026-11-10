@@ -82,6 +82,7 @@ private struct RoomStage: View {
         .onChange(of: visible) { _, visible in
             if !visible { controller.stop() }
         }
+        .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         // Her status is read once a second only while she can be seen; under a cover or a sheet that hides her it
         // waits, and the first look back reads it at once.
         .task(id: input.visibility == .visible && controller.hasHome) {
