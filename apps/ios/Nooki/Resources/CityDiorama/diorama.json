@@ -1,0 +1,62 @@
+{
+  "size": [
+    1280,
+    704
+  ],
+  "visible": {
+    "x": 0.0556,
+    "y": 0.0556,
+    "width": 0.8888,
+    "height": 0.8888
+  },
+  "times": [
+    "day",
+    "dusk",
+    "night"
+  ],
+  "layers": [
+    {
+      "name": "sky",
+      "file": "sky_{time}.webp",
+      "follow": 0.0
+    },
+    {
+      "name": "far",
+      "file": "far_{time}.webp",
+      "follow": 0.2
+    },
+    {
+      "name": "mid",
+      "file": "mid_{time}.webp",
+      "follow": 0.42
+    },
+    {
+      "name": "street",
+      "file": "street_{time}.webp",
+      "follow": 0.62
+    }
+  ],
+  "cars": {
+    "file": "cars_{time}.webp",
+    "cells": 6,
+    "faces": "right",
+    "lanes": [
+      {
+        "name": "far",
+        "y": 0.7604,
+        "scale": 0.7059,
+        "direction": -1
+      },
+      {
+        "name": "near",
+        "y": 0.793,
+        "scale": 0.7792,
+        "direction": 1
+      }
+    ],
+    "crossing": {
+      "left": 0.5627,
+      "right": 0.7118
+    }
+  }
+}
