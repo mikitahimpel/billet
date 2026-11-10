@@ -1,0 +1,19 @@
+{
+ "id": "cattree",
+ "name": "Cat tree",
+ "kind": "SOLID",
+ "width_m": 0.464,
+ "depth_m": 0.463,
+ "height_m": 0.549,
+ "footprint_cells": [
+  10,
+  10
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.549,
+ "anchors": [],
+ "tris": 3000,
+ "affordance": "bed",
+ "usdz_kb": 340
+}
