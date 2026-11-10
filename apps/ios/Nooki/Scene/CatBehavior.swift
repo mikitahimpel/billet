@@ -152,6 +152,16 @@ final class CatBehavior {
     /// Something she can be asked to do right away, to show each of her habits in turn.
     enum Act {
         case twitch, listen, slowBlink, yawn, flick, curl, groom
+        /// Her head shakes off a pounce: quick turns left and right, ears flapping.
+        case shake
+        /// The head tips over to one side, ears forward, and holds.
+        case tilt
+        /// The head bobs quickly and the tail tip twitches, at a bird behind the glass.
+        case chatter
+        /// The head follows something quick, from one side to the other.
+        case track
+        /// The head comes up and follows something small in the air.
+        case lookUp
         /// Dozes off for `seconds`: lids shut, head sinks, ears spread.
         case doze(Float)
     }
@@ -167,6 +177,38 @@ final class CatBehavior {
         case .curl: flick = (t, true, 1)
         case .groom: groom = (t, 5, Bool.random() ? -1 : 1)
         case .doze(let seconds): doze = (t, seconds)
+        case .shake: gesture = (.shake, t, Bool.random() ? -1 : 1)
+        case .tilt: gesture = (.tilt, t, Bool.random() ? -1 : 1)
+        case .chatter: gesture = (.chatter, t, Bool.random() ? -1 : 1)
+        case .track: gesture = (.track, t, Bool.random() ? -1 : 1)
+        case .lookUp: gesture = (.lookUp, t, Bool.random() ? -1 : 1)
+        }
+    }
+
+    private var gesture: (kind: Act, start: Float, side: Float)?
+
+    /// What the current gesture adds to the head and ears at `t`: yaw, pitch, roll, both ears forward, the tail tip.
+    private func gestureOffsets(_ t: Float) -> (yaw: Float, pitch: Float, roll: Float, ears: Float, tip: Float) {
+        guard let gesture else { return (0, 0, 0, 0, 0) }
+        let u = t - gesture.start
+        switch gesture.kind {
+        case .shake:
+            let fade = max(0, 1 - u / 0.9)
+            return (0.4 * sin(u * 34) * fade, 0, 0.1 * sin(u * 34 + 1) * fade, 0.5 * abs(sin(u * 34)) * fade, 0)
+        case .tilt:
+            let h = hold(t, gesture.start, 2.4)
+            return (0, 0.04 * h, 0.38 * gesture.side * h, -0.2 * h, 0)
+        case .chatter:
+            let h = hold(t, gesture.start, 3)
+            return (0, 0.14 * h + 0.05 * h * sin(u * 38), 0, -0.25 * h, 0.5 * h * sin(u * 17))
+        case .track:
+            let h = hold(t, gesture.start, 3.6)
+            return (gesture.side * 0.55 * h * cos(u / 3.6 * .pi), 0.05 * h, 0, -0.2 * h, 0)
+        case .lookUp:
+            let h = hold(t, gesture.start, 4)
+            return (0.25 * gesture.side * h * sin(u * 1.4), 0.3 * h, 0, -0.2 * h, 0)
+        case .twitch, .listen, .slowBlink, .yawn, .flick, .curl, .groom, .doze:
+            return (0, 0, 0, 0, 0)
         }
     }
 
@@ -288,6 +330,11 @@ final class CatBehavior {
             + washing * (0.07 * lick - 0.45) + 0.01 * noise(t * 0.7, 2)
         target.roll = roll * free + 0.32 * petting * sin(p * 3) + 0.2 * yawn + 0.2 * side * washing
         target.earsBack = 0.5 * petting + 0.35 * yawn + 0.25 * heard * behind + 0.15 * washing
+        let move = gestureOffsets(t)
+        target.yaw += move.yaw
+        target.pitch += move.pitch
+        target.roll += move.roll
+        target.earsBack += move.ears
 
         // Interest jumps with anything going on and fades over several seconds; contentment grows with pets and slowly
         // settles back.
@@ -369,6 +416,7 @@ final class CatBehavior {
         }
         let last = tailCount - 1
         if last >= 0 { target.tailSway[last] += 0.12 * mood.interest * noise(t * 2.5, 7) }
+        if last >= 0 { target.tailSway[last] += move.tip }
         if let flick, last >= 0 {
             if flick.curl { target.tailLift[last] += 0.5 * bump(t, flick.start, 3) }
             else { target.tailSway[last] += 0.5 * flick.side * bump(t, flick.start, 0.35) }
