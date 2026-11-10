@@ -20,7 +20,7 @@ final class BrushStage: GameStage {
     private let seat: SIMD3<Float>
     private let furTone: UInt32
     /// Radians her body turns from the player.
-    private static let turn: Float = 0.85
+    private static let turn: Float = 0.55
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -40,13 +40,13 @@ final class BrushStage: GameStage {
         seat = spots.at(0, -0.02)
         let facing = spots.toward * cos(Self.turn) - spots.right * sin(Self.turn)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + facing), id: "brush")
-        deck.say("Stroke her back, head to tail", for: 4)
+        deck.say("Stroke her back, head to tail")
         deck.show(0, "Groomed")
     }
 
     var focus: [SIMD3<Float>] {
         let l = spots.length
-        return [seat - spots.right * l * 0.8, seat + spots.right * l * 0.8, seat + [0, l * 0.9, 0], seat]
+        return [seat - spots.right * l * 0.6, seat + spots.right * l * 0.6, seat + [0, l * 0.9, 0], seat]
     }
 
     /// Her back, from the neck to the hips, where she is now.

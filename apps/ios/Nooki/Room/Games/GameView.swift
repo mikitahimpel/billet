@@ -135,6 +135,7 @@ struct GameSceneSwitch {
 private struct CueHand: View {
     let pointer: GamePointer
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var arrived = false
 
     var body: some View {
         let still = reduceMotion
@@ -154,6 +155,11 @@ private struct CueHand: View {
                 .stroke(Color.honey.opacity(0.7), style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [2, 9]))
             }
             hand
+        }
+        .opacity(arrived ? 1 : 0)
+        .task {
+            try? await Task.sleep(for: .milliseconds(400))
+            withAnimation(.easeOut(duration: 0.25)) { arrived = true }
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
