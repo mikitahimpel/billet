@@ -48,7 +48,9 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
     glass is tinted enough that nothing ghosts through it. Chips, a search field or a subtitle pinned over a
     sheet's list go in `.scrollHeader { }`, which pins them over the scroll view so the rows fade under them on
     the sheet's ground instead of being cut at their edge. `check-design.mjs` fails on a scroll view without
-    either in a file on the design package, and on any `.hard` edge.
+    either in a file on the design package, and on any `.hard` edge. In an opaque sheet the fade alone lets text
+    show behind the title, so `Page` and `BilletSheet` also lay the sheet's ground under its bar and fade it out
+    just below; a `List` in a sheet adds `.sheetBarBacking()` under its `.scrollHeader`.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
@@ -93,7 +95,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
 | A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
-| A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:)` on the note's face |
+| A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
+| A stamp on its own | `PostageStamp(_:size:rare:postmark:pinned:)`: `.small` in a control, `.regular` in a row, `.large` alone; `pinned` in a row, `postmark` once sent |
 
 ### Do and don't
 

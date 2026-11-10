@@ -81,6 +81,8 @@ public struct BilletSheet<Content: View>: View {
           Button("Keep editing", role: .cancel) {}
         }
     }
+    // On the stack, not its root, so the pages pushed onto it get it too.
+    .environment(\.backsSheetBar, ground == .opaque)
     .interactiveDismissDisabled(hasChanges ?? false)
     .tint(.honey)
     .presentationDetents(detents)
@@ -112,6 +114,7 @@ public struct BilletSheet<Content: View>: View {
       .scrollIndicators(.hidden)
       .scrollDismissesKeyboard(.interactively)
       .softScrollEdges()
+      .sheetBarBacking()
     } else {
       content
     }
@@ -213,6 +216,45 @@ public struct Page<Content: View>: View {
     .background(Ink.screen.ignoresSafeArea())
     .tint(.honey)
     .softScrollEdges()
+    .sheetBarBacking()
+  }
+}
+
+extension EnvironmentValues {
+  /// True inside an opaque `BilletSheet`'s stack, whose pages draw a ground under its bar.
+  @Entry var backsSheetBar = false
+}
+
+extension View {
+  /// The sheet's ground under its navigation bar, fading out just below it, so content scrolled
+  /// up never shows behind the title and its buttons. The soft edge alone is too faint there.
+  /// `Page` and a scrolling `BilletSheet` have it; a `List` in a sheet adds it.
+  public func sheetBarBacking() -> some View { modifier(SheetBarBacking()) }
+}
+
+private struct SheetBarBacking: ViewModifier {
+  @Environment(\.backsSheetBar) private var backs
+
+  func body(content: Content) -> some View {
+    content.overlay(alignment: .top) {
+      if backs {
+        GeometryReader { proxy in
+          let top = proxy.safeAreaInsets.top
+          let height = top + Space.l
+          LinearGradient(
+            stops: [
+              .init(color: Ink.screen, location: 0),
+              .init(color: Ink.screen, location: top / height),
+              .init(color: Ink.screen.opacity(0), location: 1),
+            ], startPoint: .top, endPoint: .bottom
+          )
+          .frame(height: height)
+          .offset(y: -top)
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+      }
+    }
   }
 }
 
