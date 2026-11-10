@@ -45,21 +45,27 @@ private struct HintRing<T: HintTip, Target: InsettableShape>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .overlay {
-                if showing {
-                    target
-                        .strokeBorder(Color.honey, lineWidth: 2.5)
-                        .padding(-Space.xs)
-                        .phaseAnimator(reduceMotion ? [1.0] : [1.0, 0.35]) { ring, opacity in
-                            ring.opacity(opacity)
-                        } animation: { _ in Motion.fade(Motion.standard) }
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                        .transition(.opacity)
+                ZStack {
+                    if showing {
+                        target
+                            .strokeBorder(Color.honey, lineWidth: 2.5)
+                            .padding(-Space.xs)
+                            .phaseAnimator(reduceMotion ? [1.0] : [1.0, 0.35]) { ring, opacity in
+                                ring.opacity(opacity)
+                            } animation: { _ in Motion.fade(Motion.standard) }
+                            .transition(.opacity)
+                    }
                 }
+                // Hidden as a whole, and animated from the task rather than by `.animation` on the control: inside
+                // the header's glass container either made iOS 27 report the container's merged frame for the
+                // Inbox (`TabBarTouchTests`).
+                .accessibilityHidden(true)
+                .allowsHitTesting(false)
             }
-            .animation(Motion.fade(), value: showing)
             .task {
-                for await shows in tip.shouldDisplayUpdates { showing = shows }
+                for await shows in tip.shouldDisplayUpdates {
+                    withAnimation(Motion.fade()) { showing = shows }
+                }
             }
     }
 }
