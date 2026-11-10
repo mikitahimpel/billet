@@ -1,0 +1,19 @@
+{
+ "id": "floorcushion-sage",
+ "name": "Sage floor cushion",
+ "kind": "FLAT",
+ "width_m": 0.3,
+ "depth_m": 0.299,
+ "height_m": 0.054,
+ "footprint_cells": [
+  6,
+  6
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.3,
+ "anchors": [],
+ "tris": 1200,
+ "affordance": "soft",
+ "usdz_kb": 135
+}

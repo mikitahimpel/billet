@@ -1,0 +1,19 @@
+{
+ "id": "box",
+ "name": "Cardboard box",
+ "kind": "SOLID",
+ "width_m": 0.286,
+ "depth_m": 0.299,
+ "height_m": 0.162,
+ "footprint_cells": [
+  6,
+  6
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.299,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": "hide",
+ "usdz_kb": 196
+}
