@@ -20,13 +20,18 @@ struct ShopView: View {
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
-                VStack(alignment: .leading, spacing: Space.section) {
-                    chips
-                    if selected == .today {
-                        today
-                    } else {
-                        grid(Catalog.items(in: selected))
-                            .padding(.horizontal, Space.l)
+                LazyVStack(alignment: .leading, spacing: Space.section, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        if selected == .today {
+                            today
+                        } else {
+                            grid(Catalog.items(in: selected))
+                                .padding(.horizontal, Space.l)
+                        }
+                    } header: {
+                        chips
+                            .padding(.vertical, Space.xs)
+                            .background(Ink.screen)
                     }
                 }
                 .padding(.top, Space.s)
