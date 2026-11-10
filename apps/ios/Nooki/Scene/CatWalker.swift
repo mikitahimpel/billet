@@ -35,10 +35,51 @@ private struct Breath {
     }
 }
 
+/// How far she lies down on the seated splat: `loaf` folds her fore legs and lowers her chest, `curl` then tucks her
+/// head down for sleep. Each follows its target as a critically damped spring, so it eases in and out without
+/// overshoot and turns smoothly when the target changes halfway.
+struct Lying {
+    var loaf: Float = 0, curl: Float = 0
+    private var loafSpeed: Float = 0, curlSpeed: Float = 0
+    // Per second; a change takes about 5 / rate seconds to settle.
+    static let rate: Float = 3.2
+
+    static func target(_ pose: NookiRestPose) -> (loaf: Float, curl: Float) {
+        switch pose {
+        case .sit: (0, 0)
+        case .loaf: (1, 0)
+        case .sleep: (1, 1)
+        }
+    }
+
+    mutating func update(_ dt: Float, toward pose: NookiRestPose) {
+        let goal = Self.target(pose)
+        let steps = max(Int(ceil(dt * 120)), 1)
+        let h = dt / Float(steps), w = Self.rate
+        for _ in 0..<steps {
+            loafSpeed += h * (w * w * (goal.loaf - loaf) - 2 * w * loafSpeed)
+            curlSpeed += h * (w * w * (goal.curl - curl) - 2 * w * curlSpeed)
+            loaf += h * loafSpeed
+            curl += h * curlSpeed
+        }
+    }
+
+    /// Eases from where she lies to sitting up, `u` from 0 to 1 of the way; `from` is where she was at `u` = 0.
+    mutating func rise(from: Lying, _ u: Float) {
+        let k = 1 - ease(u)
+        loaf = from.loaf * k
+        curl = from.curl * k
+        loafSpeed = 0
+        curlSpeed = 0
+    }
+
+    var isDown: Bool { loaf > 0.002 || curl > 0.002 }
+}
+
 /// Mochi on her two skeletons, ported from nooki-scene/src/three/catWalker.js and catSeat.js. Sitting she looks around,
-/// twitches her ears and waves her tail on the seated splat, and lies down in a loaf to doze when tired; given a route
-/// she swaps to the standing one crouched in the seated silhouette, gets up, walks and jumps along its waypoints, and
-/// sits down at the other end.
+/// twitches her ears and waves her tail on the seated splat, and lies down on it in a loaf or curled up asleep; given a
+/// route she swaps to the standing one crouched in the seated silhouette, gets up, walks and jumps along its
+/// waypoints, and sits down at the other end.
 final class CatWalker {
     struct Waypoint {
         enum Move { case walk, jump }
@@ -66,13 +107,11 @@ final class CatWalker {
         var tail: [Float] = [0, 0, 0]
 
         static let stand = Posture()
-        // Rump down on folded hind legs, chest up on straight fore legs, tail lying behind her: the seated splat's
-        // silhouette, with the head exactly where the seated splat has it, for the swap between the two.
-        static let sit = Posture(lift: -0.005, back: -0.005, pitch: 0.5, bend: -0.7, headPitch: 0, seat: 1, hind: [0, -0.035],
-                                 tail: [-1.1, -0.4, -0.2])
-        // Lying with her paws tucked under her and the tail along her side.
-        static let loaf = Posture(lift: -0.065, bend: 0.05, headPitch: 0.05, fore: [0, 0.035], hind: [0, -0.03],
-                                  tail: [-0.9, -0.3, -0.1])
+        // Rump on the floor over hind legs folded at the hocks, chest up on straight fore legs, tail curled down behind
+        // her: fitted to the seated splat's silhouette with nothing below the floor all the way down, and the head
+        // exactly where the seated splat has it, for the swap between the two.
+        static let sit = Posture(lift: -0.014, back: -0.04, pitch: 0.71, bend: -0.34, headPitch: 0, seat: 1,
+                                 hind: [0, -0.14], tail: [2.84, -0.05, -0.32])
 
         static func blend(_ a: Posture, _ b: Posture, _ t: Float) -> Posture {
             Posture(lift: lerp(a.lift, b.lift, t), back: lerp(a.back, b.back, t), pitch: lerp(a.pitch, b.pitch, t),
@@ -103,14 +142,10 @@ final class CatWalker {
     var directed = false {
         didSet { behavior.directed = directed }
     }
-    /// Her lying splats, the loaf and the curled sleep, cut to in one frame from sitting. Without one she lies down
-    /// in her loaf on the standing splat instead, and asks for it (`needsBody`); one that comes takes over.
-    private(set) var bodies: [NookiRestPose: CatRig]
-    var needsBody: ((NookiRestPose) -> Void)?
-    /// The body the brain has her rest in; `sit` whenever she is on the move.
+    /// The body the brain has her rest in; `sit` whenever she is on the move. Loaf and sleep are the seated splat lying
+    /// down, eased into by `lying`.
     private(set) var rest = NookiRestPose.sit
-    /// Seconds since the last cut between rest bodies, for the settle squash.
-    private var settleTime: Float = 10
+    private(set) var lying = Lying()
     /// The standing skeleton, posed every frame whichever splat shows.
     let standing: CatRig
     let seated: CatRig
@@ -147,7 +182,6 @@ final class CatWalker {
     private var seatAmount: Float = 1
     private var breath = Breath()
     private var effort: Float = 0
-    private var lying = false
     private var viewer: SIMD3<Float>?
     /// Where her spine bends sitting, and the floor under it, in the standing cat's model space.
     private let spine: SIMD3<Float>
@@ -156,12 +190,11 @@ final class CatWalker {
     /// `group` is what she moves and turns, `scale` turns model units into room units. She starts sitting at the
     /// route's end (or at `group` without a route) facing `rests[1]`; a route runs from the first resting spot to the
     /// second, `rests` being her yaws at those two spots.
-    init(group: Entity, standing: CatRig, seated: CatRig, bodies: [NookiRestPose: CatRig] = [:], scale: Float,
-         rests: [Float], route: [Waypoint] = [], wandering: Bool) {
+    init(group: Entity, standing: CatRig, seated: CatRig, scale: Float, rests: [Float], route: [Waypoint] = [],
+         wandering: Bool) {
         self.group = group
         self.standing = standing
         self.seated = seated
-        self.bodies = bodies.filter { $0.key != .sit }
         self.scale = scale
         self.wandering = wandering
         behavior = CatBehavior(tailJoints: seated.pose.tail.count)
@@ -198,56 +231,19 @@ final class CatWalker {
         behavior.pet()
     }
 
-    /// Rests her in `pose`: a lying splat is cut to in one frame with a little squash as she settles, as the web lab
-    /// does; without one she lies down in her loaf on the standing splat. Only while she is still.
+    /// Rests her in `pose`, lying down on the seated splat or sitting up on it. Only while she is still.
     func settle(_ pose: NookiRestPose) {
-        takeOver()
-        guard !moving, pose != rest else { return }
-        let from = rest
+        guard !moving else { return }
         rest = pose
-        if pose != .sit, bodies[pose] == nil { needsBody?(pose) }
-        if bodies[pose] != nil || bodies[from] != nil {
-            settleTime = 0
-            if lying { getUp() } else { fade(seatAmount) }
-        }
-        if bodies[pose] == nil {
-            if pose == .sit, lying { getUp() }
-            if pose != .sit, !lying { lieDown() }
-        }
-    }
-
-    /// Gives her a lying body loaded after she was built, or takes one she is not resting in back with nil.
-    func setBody(_ pose: NookiRestPose, _ rig: CatRig?) {
-        guard pose != .sit, rig != nil || pose != rest else { return }
-        bodies[pose] = rig
-        if let rig { rig.entity?.position = rig.mount }
-        takeOver()
-    }
-
-    /// A body that came while she lay in her loaf on the standing splat is cut to in one frame.
-    private func takeOver() {
-        guard !moving, lying, rest != .sit, bodies[rest] != nil else { return }
-        lying = false
-        posture = .sit
-        settleTime = 0
-        fade(1)
     }
 
     /// Gets up for a couple of paw pats on what she is on, and sits again.
     func pats() {
         guard !moving else { return }
-        leaveBody()
+        rest = .sit
         standUp()
         pat()
         sitDown()
-    }
-
-    /// Back from a lying splat to the seated one in one frame, before she gets up.
-    private func leaveBody() {
-        guard rest != .sit else { return }
-        if bodies[rest] != nil { settleTime = 0 }
-        rest = .sit
-        fade(seatAmount)
     }
 
     /// Model-space point she sees whoever watches her from.
@@ -260,7 +256,6 @@ final class CatWalker {
     /// once it lifts. The point lies in front of her eyes, toward the camera, shifted across the camera's view.
     func follow(_ offset: SIMD2<Float>?) {
         guard let offset, let viewer else { return behavior.lookAt(nil) }
-        let eyes = standing.eyes
         let back = simd_normalize(viewer - eyes)
         let right = simd_normalize(simd_cross([0, 1, 0], back))
         let up = simd_cross(back, right)
@@ -279,7 +274,7 @@ final class CatWalker {
         guard !moving, destination?.id != away?.id else { return }
         planYaw = yaw
         behavior.stir(0.2)
-        leaveBody()
+        rest = .sit
         standUp()
         if stretch { self.stretch() }
         let points = [Waypoint(at: home)] + (away?.path ?? [])
@@ -347,7 +342,6 @@ final class CatWalker {
 
     func update(_ dt: Float) {
         time += dt
-        settleTime += dt
         // Wandering she sets off now and then; otherwise she still comes home from wherever she was sent.
         if !directed, !moving, wandering && canTrip || away != nil {
             wait -= dt
@@ -367,10 +361,11 @@ final class CatWalker {
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
         }
         // Tired she lies down to doze, and gets up again once rested.
-        if !directed && !moving && !lying && behavior.drowse > 0.7 && behavior.mood.energy < 0.3 { lieDown() }
-        else if !directed && !moving && lying && behavior.mood.energy > 0.5 { getUp() }
-        takeOver()
-        behavior.napping = lying || rest != .sit
+        if !directed && !moving && rest == .sit && behavior.drowse > 0.7 && behavior.mood.energy < 0.3 { rest = .loaf }
+        else if !directed && !moving && rest != .sit && behavior.mood.energy > 0.5 { rest = .sit }
+        // On the move `rest` is `sit`, and standing up has already brought her up off the floor.
+        if !moving { lying.update(dt, toward: rest) }
+        behavior.napping = rest != .sit
         // Walking winds her a little, jumping more; resting she gets her breath back over half a minute or so.
         let winding: Float = free ? 0.6 : stepping ? 0.1 : 0
         effort = winding > 0 ? min(1, effort + winding * dt) : effort * exp(-dt / 12)
@@ -382,7 +377,7 @@ final class CatWalker {
         frame.at = group.position
         frame.yaw = yaw
         last = (group.position, yaw)
-        behavior.update(dt, eyes: standing.eyes)
+        behavior.update(dt, eyes: eyes)
         resting += ((moving ? 0 : 1) - resting) * (1 - exp(-dt * 4))
         pose(dt)
         updateSeat(headPitch: standing.pose.headPitch - posture.headPitch)
@@ -393,16 +388,19 @@ final class CatWalker {
     private func fade(_ amount: Float) {
         seatAmount = amount
         let resting = amount > 0.5
-        let body = bodies[rest] == nil ? nil : rest
-        seated.entity?.isEnabled = resting && body == nil
-        for (pose, rig) in bodies { rig.entity?.isEnabled = resting && body == pose }
+        seated.entity?.isEnabled = resting
         standing.entity?.isEnabled = !resting
     }
+
+    /// Which of her two splats shows: the seated one, sitting or lying on it.
+    var seatedShows: Bool { seatAmount > 0.5 }
+
+    /// Model-space point between the eyes of whichever splat shows, as posed last frame.
+    var eyes: SIMD3<Float> { seatedShows ? seated.eyes + seated.mount : standing.eyes }
 
     /// Shows whichever of her two splats this walker last showed; the rigs are shared with other rooms' walkers.
     func show() {
         seated.entity?.position = seated.mount
-        for rig in bodies.values { rig.entity?.position = rig.mount }
         fade(seatAmount)
     }
 
@@ -483,38 +481,45 @@ final class CatWalker {
         p.chestMove = local(s.chestMove)
         p.hipsMove = local(s.hipsMove)
         let lastJoint = p.tail.count - 1
+        // Lying, the tail lies still along her side; curled up asleep the head barely follows what she looks at.
+        let calm = 1 - 0.5 * lying.loaf - 0.3 * lying.curl
         for i in p.tail.indices {
-            p.tail[i].sway = 1.5 * b.tailSway[i]
-            p.tail[i].lift = i == lastJoint ? 0.6 * b.tailLift[i] : 0
+            p.tail[i].sway = 1.5 * b.tailSway[i] * calm
+            p.tail[i].lift = i == lastJoint ? 0.6 * b.tailLift[i] * calm : 0
         }
+        let still = 1 - 0.7 * lying.curl
+        p.headYaw *= still
+        p.headPitch *= still
+        p.headRoll *= still
+        lieDown(&p)
         seated.pose = p
         // The seated splat only needs skinning while it shows.
-        let body = bodies[rest]
-        if seatAmount > 0.5 && body == nil { seated.update() }
-        if let body { poseBody(body, like: p) }
+        if seatedShows { seated.update() }
     }
 
-    /// Poses a lying splat like the seated one: head and ears do what they do sitting, asleep barely, lids shut in
-    /// sleep, the tail only swaying; and settles it in with a short squash after the cut.
-    private func poseBody(_ rig: CatRig, like seat: CatRig.Posture) {
-        var p = rig.pose
-        let still: Float = rest == .sleep ? 0.3 : 1
-        p.headYaw = seat.headYaw * still
-        p.headPitch = seat.headPitch * still
-        p.headRoll = seat.headRoll * still
-        p.earLeft = seat.earLeft
-        p.earRight = seat.earRight
-        p.earsBack = seat.earsBack
-        p.earTurnLeft = seat.earTurnLeft
-        p.earTurnRight = seat.earTurnRight
-        p.lidLeft = rest == .sleep ? 1 : seat.lidLeft
-        p.lidRight = rest == .sleep ? 1 : seat.lidRight
-        for i in p.tail.indices where i < seat.tail.count { p.tail[i].sway = 0.5 * seat.tail[i].sway }
-        rig.pose = p
-        let squash = settleTime < 0.45 ? 0.1 * sin(settleTime / 0.45 * .pi) : 0
-        rig.entity?.scale = [1 + squash / 2, 1 - squash, 1 + squash / 2]
-        if seatAmount > 0.5 { rig.update() }
+    /// Lays the seated skeleton down as far as `lying` says: the chest tips forward about the front of her haunches
+    /// onto folded fore legs with the head kept level, and curled up the head sinks and tilts with the eyes shut.
+    private func lieDown(_ p: inout CatRig.Posture) {
+        let turn = Self.loafTurn * lying.loaf + Self.curlTurn * lying.curl
+        p.chestMove = Pose.about(Self.loafPivot, .x(-turn)).under(p.chestMove)
+        p.headPitch += turn - Self.sleepNod * lying.curl
+        p.headRoll += Self.sleepTilt * lying.curl
+        p.headShift.y -= Self.sleepDrop * lying.curl
+        p.lidLeft = max(p.lidLeft, lying.curl)
+        p.lidRight = max(p.lidRight, lying.curl)
+        for (i, leg) in seated.legs.enumerated() { p.feet[i] = leg.paw + [0, 0, Self.loafTuck * lying.loaf] }
     }
+
+    // The seated skeleton lying down, model units and radians: where the chest pivots (the front of her haunches on the
+    // floor), how far it tips in a loaf and further curled up, how far back the fore paws tuck, and the sleeping head's
+    // nod, tilt and drop.
+    static let loafPivot = SIMD3<Float>(-0.01, 0, 0.005)
+    static let loafTurn: Float = 0.5
+    static let curlTurn: Float = 0.08
+    static let loafTuck: Float = 0.045
+    static let sleepNod: Float = 0.35
+    static let sleepTilt: Float = 0.25
+    static let sleepDrop: Float = 0.02
 
     /// Minus the acceleration of the tail's root over the last frames, in model units and axes.
     private func tailForce(_ dt: Float) -> SIMD3<Float> {
@@ -585,12 +590,16 @@ final class CatWalker {
         }
     }
 
-    /// From the seated splat to the standing one crouched in its silhouette, then up; or up from a loaf.
+    /// Up off the floor onto her seat if she lies, from the seated splat to the standing one crouched in its silhouette,
+    /// then up.
     private func standUp() {
-        if lying {
-            lying = false
-            add(0.9) { [unowned self] u in posture = .blend(.loaf, .stand, ease(u)) }
-            return
+        if lying.isDown {
+            var from: Lying?
+            add(0.6 + 0.6 * max(lying.loaf, lying.curl)) { [unowned self] u in
+                let start = from ?? lying
+                from = start
+                lying.rise(from: start, u)
+            }
         }
         add(0.05) { [unowned self] u in fade(1 - u) }
         add(0.7) { [unowned self] u in posture = .blend(.sit, .stand, ease(u)) }
@@ -613,19 +622,6 @@ final class CatWalker {
             keyframes([(0, .stand), (0.6, bow), (0.6 + hold, bow), (length, .stand)], t)
             if t > 0.6 && t < 0.6 + hold { posture.lift += 0.0015 * sin(t * 50) }
         }
-    }
-
-    /// From sitting down into a loaf on the standing splat.
-    private func lieDown() {
-        add(0.05) { [unowned self] u in fade(1 - u) }
-        add(1.4) { [unowned self] u in posture = .blend(.sit, .loaf, ease(u)) }
-        add(0.01) { [unowned self] _ in lying = true }
-    }
-
-    private func getUp() {
-        lying = false
-        add(1) { [unowned self] u in posture = .blend(.loaf, .sit, ease(u)) }
-        add(0.05) { [unowned self] u in fade(u) }
     }
 
     private func sitDown() {

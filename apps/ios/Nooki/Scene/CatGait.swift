@@ -101,6 +101,29 @@ final class Gait {
         return (turnUpper, wrap(lowerAngle - restLower - turnUpper), splay)
     }
 
+    /// Model-space height under which no knee or elbow goes: a leg's thickness, so a folded leg rests on the floor.
+    static let kneeFloor: Float = 0.026
+
+    /// Where `foot` must move, in model space, so the leg reaching it from `hip` (posed, model space) keeps its knee at
+    /// `kneeFloor` or above: once the knee would go lower it rests there, bent the way it bends at rest, and the paw
+    /// slides out along the floor in front of it, as a cat's hind paws do sitting and its fore paws lying down.
+    static func kneeAboveFloor(_ leg: CatRig.Leg, hip: SIMD3<Float>, foot: SIMD3<Float>) -> SIMD3<Float> {
+        func down(_ y: Float, _ z: Float) -> Float { atan2(z, -y) }
+        let upper = hypot(leg.knee.y - leg.hip.y, leg.knee.z - leg.hip.z)
+        let lower = hypot(leg.paw.y - leg.knee.y, leg.paw.z - leg.knee.z)
+        let behind: Float = down(leg.knee.y - leg.hip.y, leg.knee.z - leg.hip.z)
+            > down(leg.paw.y - leg.hip.y, leg.paw.z - leg.hip.z) ? 1 : -1
+        let dy = foot.y - hip.y, dz = foot.z - hip.z
+        let reach = min(max(hypot(dy, dz), abs(upper - lower) + 1e-4), upper + lower - 1e-4)
+        let opening = acos(min(max((upper * upper + reach * reach - lower * lower) / (2 * upper * reach), -1), 1))
+        let kneeY = hip.y - upper * cos(down(dy, dz) + behind * opening)
+        let drop = hip.y - kneeFloor
+        guard kneeY < kneeFloor, drop < upper else { return foot }
+        let kneeZ = hip.z + behind * (upper * upper - drop * drop).squareRoot()
+        let rise = foot.y - kneeFloor
+        return [foot.x, foot.y, kneeZ - behind * max(lower * lower - rise * rise, 0).squareRoot()]
+    }
+
     /// Advances the cycle and the paws. `stepping` keeps the paws moving even without ground speed (turning on the
     /// spot); without `planted` the paws ride with the body (in the air) and are set down again where they are.
     func update(_ dt: Float, _ frame: BodyFrame, stepping: Bool, planted: Bool) {

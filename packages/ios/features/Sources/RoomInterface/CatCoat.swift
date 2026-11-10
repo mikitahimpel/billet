@@ -29,5 +29,5 @@ public enum CatCoat: String, CaseIterable, Sendable {
   public var avatar: String { self == .grey ? "MochiPortrait" : "MochiPortrait-\(rawValue)" }
 
   /// The poses that have coats; each is `<pose>.ply` with its `.skin` and `.rig.json` beside it.
-  public static let poses = ["Mochi", "MochiStanding", "MochiLoaf", "MochiSleep"]
+  public static let poses = ["Mochi", "MochiStanding"]
 }

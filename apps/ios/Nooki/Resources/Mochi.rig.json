@@ -165,6 +165,118 @@
     0.1795,
     -0.099
    ]
+  },
+  {
+   "name": "leftForeUpper",
+   "parent": "chest",
+   "head": [
+    0.011,
+    0.088,
+    -0.05
+   ],
+   "tail": [
+    0.011,
+    0.048,
+    -0.054
+   ]
+  },
+  {
+   "name": "leftForeLower",
+   "parent": "leftForeUpper",
+   "head": [
+    0.011,
+    0.048,
+    -0.054
+   ],
+   "tail": [
+    0.011,
+    0.014,
+    -0.062
+   ]
+  },
+  {
+   "name": "leftForePaw",
+   "parent": "leftForeLower",
+   "head": [
+    0.011,
+    0.022,
+    -0.058
+   ],
+   "tail": [
+    0.011,
+    0.008,
+    -0.078
+   ]
+  },
+  {
+   "name": "rightForeUpper",
+   "parent": "chest",
+   "head": [
+    -0.031,
+    0.088,
+    -0.05
+   ],
+   "tail": [
+    -0.031,
+    0.048,
+    -0.054
+   ]
+  },
+  {
+   "name": "rightForeLower",
+   "parent": "rightForeUpper",
+   "head": [
+    -0.031,
+    0.048,
+    -0.054
+   ],
+   "tail": [
+    -0.031,
+    0.014,
+    -0.062
+   ]
+  },
+  {
+   "name": "rightForePaw",
+   "parent": "rightForeLower",
+   "head": [
+    -0.031,
+    0.022,
+    -0.058
+   ],
+   "tail": [
+    -0.031,
+    0.008,
+    -0.078
+   ]
+  },
+  {
+   "name": "leftHindPaw",
+   "parent": "hips",
+   "head": [
+    0.022,
+    0.015,
+    -0.005
+   ],
+   "tail": [
+    0.022,
+    0.008,
+    -0.03
+   ]
+  },
+  {
+   "name": "rightHindPaw",
+   "parent": "hips",
+   "head": [
+    -0.05,
+    0.015,
+    -0.005
+   ],
+   "tail": [
+    -0.05,
+    0.008,
+    -0.03
+   ]
   }
  ],
  "eyes": [

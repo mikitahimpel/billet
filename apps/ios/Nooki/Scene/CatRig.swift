@@ -94,6 +94,8 @@ final class CatRig {
         /// Hangs from the chest; otherwise from the hips.
         let fore: Bool
         let upper, lower: Int
+        /// The paw's own bone, which stays flat on the floor however the leg bends.
+        let foot: Int?
     }
 
     nonisolated enum Failure: Error {
@@ -140,6 +142,8 @@ final class CatRig {
     let mount: SIMD3<Float>
     private(set) var headPose = Pose()
     private(set) var hipsPose = Pose()
+    /// Every bone's motion of model space as posed last frame, in the rig file's order.
+    private(set) var poses: [Pose] = []
 
     private let skinner: SplatSkinner?
     private var mesh: CatMeshRig?
@@ -149,6 +153,8 @@ final class CatRig {
     private let hips, chest, head, earLeft, earRight: Int
     private let lids: [(upper: Int, lower: Int)]
     private let tail: [Int]
+    /// Bones nothing above poses, such as the seated haunch's paws, with the parent each one rides on.
+    private let riders: [(bone: Int, parent: Int)]
 
     init(_ files: Files) throws {
         let rig = files.rig
@@ -184,9 +190,18 @@ final class CatRig {
         legs = try Gait.legOrder.filter { name in rig.bones.contains { $0.name == "\(name)Upper" } }.map { name in
             let upper = try bone("\(name)Upper"), lower = try bone("\(name)Lower")
             return Leg(name: name, hip: rig.bones[upper].head, knee: rig.bones[lower].head, paw: rig.bones[lower].tail,
-                       fore: rig.bones[upper].parent == "chest", upper: upper, lower: lower)
+                       fore: rig.bones[upper].parent == "chest", upper: upper, lower: lower,
+                       foot: rig.bones.firstIndex { $0.name == "\(name)Paw" })
         }
         pose = Posture(tail: tail.map { _ in TailJoint() }, feet: legs.map(\.paw))
+        let posed = Set([hips, chest, head, earLeft, earRight] + lids.flatMap { [$0.upper, $0.lower] } + tail
+            + legs.flatMap { [$0.upper, $0.lower] + ($0.foot.map { [$0] } ?? []) })
+        riders = try rig.bones.indices.filter { !posed.contains($0) }.compactMap { index in
+            guard let parent = rig.bones[index].parent else { return nil }
+            let up = try bone(parent)
+            guard up < index else { throw Failure.mismatch(rig.bones[index].name) }
+            return (index, up)
+        }
     }
 
     /// Model-space point between the eyes as posed last frame.
@@ -229,11 +244,16 @@ final class CatRig {
         }
         for (i, leg) in legs.enumerated() {
             let parent = leg.fore ? chestPose : hipsPose
-            let (a, b, splay) = Gait.solveLeg(hip: leg.hip, knee: leg.knee, paw: leg.paw, target: parent.inverse.apply(p.feet[i]))
+            let foot = Gait.kneeAboveFloor(leg, hip: parent.apply(leg.hip), foot: p.feet[i])
+            let (a, b, splay) = Gait.solveLeg(hip: leg.hip, knee: leg.knee, paw: leg.paw, target: parent.inverse.apply(foot))
             let upper = Pose.about(leg.hip, .z(splay) * .x(a)).under(parent)
+            let lower = Pose.about(leg.knee, .x(b)).under(upper)
             poses[leg.upper] = upper
-            poses[leg.lower] = Pose.about(leg.knee, .x(b)).under(upper)
+            poses[leg.lower] = lower
+            if let paw = leg.foot { poses[paw] = Pose(t: lower.apply(leg.paw) - leg.paw) }
         }
+        for rider in riders { poses[rider.bone] = poses[rider.parent] }
+        self.poses = poses
         guard skinning else { return }
         skinner?.run(poses.map(DualQuat.init))
         mesh?.update(poses)

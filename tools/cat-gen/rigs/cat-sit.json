@@ -14,9 +14,37 @@
     { "name": "lidLeft", "parent": "head", "head": [0.017, 0.193, -0.088], "tail": [0.017, 0.2055, -0.1], "part": "lidLeft" },
     { "name": "lidLeftLow", "parent": "head", "head": [0.017, 0.193, -0.088], "tail": [0.017, 0.1795, -0.1], "part": "lidLeftLow" },
     { "name": "lidRight", "parent": "head", "head": [-0.0375, 0.193, -0.087], "tail": [-0.0375, 0.2055, -0.099], "part": "lidRight" },
-    { "name": "lidRightLow", "parent": "head", "head": [-0.0375, 0.193, -0.087], "tail": [-0.0375, 0.1795, -0.099], "part": "lidRightLow" }
+    { "name": "lidRightLow", "parent": "head", "head": [-0.0375, 0.193, -0.087], "tail": [-0.0375, 0.1795, -0.099], "part": "lidRightLow" },
+    { "name": "leftForeUpper", "parent": "chest", "head": [0.011, 0.088, -0.05], "tail": [0.011, 0.048, -0.054], "part": "leftFore" },
+    { "name": "leftForeLower", "parent": "leftForeUpper", "head": [0.011, 0.048, -0.054], "tail": [0.011, 0.014, -0.062], "part": "leftFore" },
+    { "name": "leftForePaw", "parent": "leftForeLower", "head": [0.011, 0.022, -0.058], "tail": [0.011, 0.008, -0.078], "part": "leftForePaw" },
+    { "name": "rightForeUpper", "parent": "chest", "head": [-0.031, 0.088, -0.05], "tail": [-0.031, 0.048, -0.054], "part": "rightFore" },
+    { "name": "rightForeLower", "parent": "rightForeUpper", "head": [-0.031, 0.048, -0.054], "tail": [-0.031, 0.014, -0.062], "part": "rightFore" },
+    { "name": "rightForePaw", "parent": "rightForeLower", "head": [-0.031, 0.022, -0.058], "tail": [-0.031, 0.008, -0.078], "part": "rightForePaw" },
+    { "name": "leftHindPaw", "parent": "hips", "head": [0.022, 0.015, -0.005], "tail": [0.022, 0.008, -0.03], "part": "leftHindPaw" },
+    { "name": "rightHindPaw", "parent": "hips", "head": [-0.05, 0.015, -0.005], "tail": [-0.05, 0.008, -0.03], "part": "rightHindPaw" }
   ],
   "parts": {
+    "leftForePaw": [
+      { "normal": [0, -1, 0], "point": [0, 0.024, 0], "soft": 0.008 },
+      { "normal": [1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.006 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.036], "soft": 0.008 }
+    ],
+    "leftFore": [
+      { "normal": [0, -1, 0], "point": [0, 0.088, 0], "soft": 0.02 },
+      { "normal": [1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.006 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.036], "soft": 0.008 }
+    ],
+    "rightForePaw": [
+      { "normal": [0, -1, 0], "point": [0, 0.024, 0], "soft": 0.008 },
+      { "normal": [-1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.006 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.036], "soft": 0.008 }
+    ],
+    "rightFore": [
+      { "normal": [0, -1, 0], "point": [0, 0.088, 0], "soft": 0.02 },
+      { "normal": [-1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.006 },
+      { "normal": [0, 0, -1], "point": [0, 0, -0.036], "soft": 0.008 }
+    ],
     "lidLeft": [
       { "normal": [0, 1, 0], "point": [0, 0.1995, 0], "soft": 0.002 },
       { "center": [0.017, 0.1995, -0.1], "radii": [0.0155, 0.018, 0.03], "soft": 0.8 },
@@ -58,6 +86,19 @@
     "tail": [
       { "normal": [0, -1, 0], "point": [0, 0.045, 0], "soft": 0.012 },
       { "normal": [1, 0, 0.6], "point": [0.045, 0, 0.04], "soft": 0.012 }
+    ],
+    "leftHindPaw": [
+      { "normal": [0, -1, 0], "point": [0, 0.02, 0], "soft": 0.006 },
+      { "normal": [-1, 0, 0], "point": [0.034, 0, 0], "soft": 0.004 },
+      { "normal": [1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.006 },
+      { "normal": [0, 0, 1], "point": [0, 0, -0.034], "soft": 0.004 },
+      { "normal": [0, 0, -1], "point": [0, 0, 0.0], "soft": 0.01 }
+    ],
+    "rightHindPaw": [
+      { "normal": [0, -1, 0], "point": [0, 0.02, 0], "soft": 0.006 },
+      { "normal": [-1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.006 },
+      { "normal": [0, 0, 1], "point": [0, 0, -0.034], "soft": 0.004 },
+      { "normal": [0, 0, -1], "point": [0, 0, 0.0], "soft": 0.01 }
     ]
   }
 }

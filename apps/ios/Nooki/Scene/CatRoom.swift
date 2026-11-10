@@ -146,7 +146,6 @@ class CatRoom {
     /// spot above Mochi's head lands on screen. `viewer` is the camera.
     func start(updatesFrom content: RealityViewCameraContent, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
-        Self.shown = self
         adoptCat()
         subscription = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) { [weak self] event in
             guard let self, !paused else { return }
@@ -161,7 +160,6 @@ class CatRoom {
 
     /// Also ends any showcase.
     func stop() {
-        if Self.shown === self { Self.shown = nil }
         subscription?.cancel()
         subscription = nil
         guard let step = showcase.first else { return }
@@ -220,11 +218,9 @@ class CatRoom {
             ]))
             catGroup.components.set(InputTargetComponent())
 
-            let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, bodies: Self.bodies,
-                                   scale: scale, rests: rests, route: route, wandering: wandering)
+            let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, scale: scale,
+                                   rests: rests, route: route, wandering: wandering)
             walker.keepOut = catKeepOut
-            walker.needsBody = { Self.needBody($0) }
-            Self.rooms.add(self)
             self.walker = walker
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })
@@ -238,50 +234,11 @@ class CatRoom {
     /// Reloads her for the next room built, after her coat changed.
     static func forgetMochi() {
         mochi = nil
-        for load in bodyLoads.values { load.cancel() }
-        bodyLoads = [:]
-        bodies = [:]
-        rooms.removeAllObjects()
     }
 
     private struct Mochi {
         let standing: CatRig
         let seated: CatRig
-    }
-
-    /// Her lying bodies where splats are drawn (the meshes have none), shared by every room's walker like her other
-    /// rigs, loaded with her and kept. Without one she lies down on the standing splat with its legs folded under
-    /// her, which looks wrong, so `needBody` only stands in when one failed to load at launch.
-    private static var bodies: [NookiRestPose: CatRig] = [:]
-    private static var bodyLoads: [NookiRestPose: Task<Void, Never>] = [:]
-    private static let bodyFiles: [NookiRestPose: String] = [.loaf: "MochiLoaf", .sleep: "MochiSleep"]
-    /// Rooms with a walker, and the one on screen, which holds her entities.
-    private static let rooms = NSHashTable<CatRoom>.weakObjects()
-    private static weak var shown: CatRoom?
-    private static var catShadows = true
-
-    private static func needBody(_ pose: NookiRestPose) {
-        guard SplatLoader.isSupported, bodies[pose] == nil, bodyLoads[pose] == nil, let name = bodyFiles[pose] else { return }
-        bodyLoads[pose] = Task {
-            // A failed load stays in `bodyLoads`, so she lies on the standing splat instead of retrying every rest.
-            do {
-                let file = try await Task.detached {
-                    try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
-                }.value
-                guard !Task.isCancelled else { return }
-                let rig = try CatRig(file)
-                if let entity = rig.entity {
-                    entity.isEnabled = false
-                    castShadow(entity, catShadows)
-                }
-                bodies[pose] = rig
-                bodyLoads[pose] = nil
-                for room in rooms.allObjects { room.walker?.setBody(pose, rig) }
-                shown?.adoptCat()
-            } catch {
-                print("\(name) failed to load: \(error)")
-            }
-        }
     }
 
     private static func castShadow(_ entity: Entity, _ isOn: Bool = true) {
@@ -291,9 +248,8 @@ class CatRoom {
 
     /// For a perf run's `cost` step.
     func setCatShadow(_ isOn: Bool) {
-        Self.catShadows = isOn
         guard let walker else { return }
-        for entity in ([walker.standing, walker.seated] + walker.bodies.values).compactMap(\.entity) {
+        for entity in [walker.standing, walker.seated].compactMap(\.entity) {
             Self.castShadow(entity, isOn)
         }
     }
@@ -323,24 +279,6 @@ class CatRoom {
                 }
             }
             for entity in [standing.entity, seated.entity].compactMap({ $0 }) { castShadow(entity) }
-            // Her loaf and sleep come with her, so she never lies down before her lying body is there.
-            if drawn {
-                for (pose, name) in bodyFiles where bodies[pose] == nil {
-                    do {
-                        let file = try await Task.detached {
-                            try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
-                        }.value
-                        let rig = try CatRig(file)
-                        if let entity = rig.entity {
-                            entity.isEnabled = false
-                            castShadow(entity, catShadows)
-                        }
-                        bodies[pose] = rig
-                    } catch {
-                        print("\(name) failed to load: \(error)")
-                    }
-                }
-            }
             return Mochi(standing: standing, seated: seated)
         }
         mochi = task
@@ -350,7 +288,7 @@ class CatRoom {
     /// Lit by this room's ambient light and posed as this room's walker last left her.
     func adoptCat() {
         guard let walker else { return }
-        for rig in [walker.standing, walker.seated] + walker.bodies.values {
+        for rig in [walker.standing, walker.seated] {
             guard let entity = rig.entity, entity.parent !== catModel else { continue }
             catModel.addChild(entity)
             if let iblReceiver {
