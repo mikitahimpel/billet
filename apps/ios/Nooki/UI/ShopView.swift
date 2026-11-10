@@ -20,14 +20,18 @@ struct ShopView: View {
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
-                // Lazy, so a visit builds what is on screen, not every bundle and collection down the page.
-                LazyVStack(alignment: .leading, spacing: Space.section) {
-                    chips
-                    if selected == .today {
-                        today
-                    } else {
-                        grid(Catalog.items(in: selected))
-                            .padding(.horizontal, Space.l)
+                LazyVStack(alignment: .leading, spacing: Space.section, pinnedViews: [.sectionHeaders]) {
+                    Section {
+                        if selected == .today {
+                            today
+                        } else {
+                            grid(Catalog.items(in: selected))
+                                .padding(.horizontal, Space.l)
+                        }
+                    } header: {
+                        chips
+                            .padding(.vertical, Space.xs)
+                            .background(Ink.screen)
                     }
                 }
                 .padding(.top, Space.s)
@@ -108,7 +112,7 @@ struct ShopView: View {
             HStack(spacing: Space.s) {
                 ForEach(ShopCategory.allCases) { category in
                     let isSelected = selected == category
-                    FilterChip(category.title, isSelected: isSelected) { selected = category }
+                    FilterChip(category.title, symbol: category.symbol, isSelected: isSelected) { selected = category }
                 }
             }
             .padding(.horizontal, Space.l)

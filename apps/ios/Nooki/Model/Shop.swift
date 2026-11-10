@@ -15,6 +15,16 @@ enum ShopCategory: String, CaseIterable, Identifiable {
         case .room: "Room"
         }
     }
+
+    var symbol: String {
+        switch self {
+        case .today: "sparkles"
+        case .furniture: "chair.lounge.fill"
+        case .decor: "leaf.fill"
+        case .mochi: "pawprint.fill"
+        case .room: "house.fill"
+        }
+    }
 }
 
 struct ShopItem: Identifiable, Hashable {

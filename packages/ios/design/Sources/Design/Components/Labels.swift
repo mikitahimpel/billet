@@ -168,25 +168,32 @@ extension Chip.Style {
 
 public struct FilterChip: View {
   let title: String
+  let symbol: String?
   let isSelected: Bool
   let action: () -> Void
 
-  public init(_ title: String, isSelected: Bool, action: @escaping () -> Void) {
+  public init(
+    _ title: String, symbol: String? = nil, isSelected: Bool, action: @escaping () -> Void
+  ) {
     self.title = title
+    self.symbol = symbol
     self.isSelected = isSelected
     self.action = action
   }
 
   public var body: some View {
     Button(action: action) {
-      Text(title)
-        .font(.ourioCallout)
-        .foregroundStyle(isSelected ? Ink.heroInk : Ink.textSecondary)
-        .padding(.horizontal, 14)
-        .frame(minHeight: 34)
-        .background(isSelected ? Color.honey : Ink.surfaceRaised, in: .capsule)
-        .frame(minHeight: Size.control)
-        .contentShape(.rect)
+      HStack(spacing: Space.xs + 1) {
+        if let symbol { Image(systemName: symbol).imageScale(.small) }
+        Text(title)
+      }
+      .font(.ourioCallout)
+      .foregroundStyle(isSelected ? Ink.heroInk : Ink.textSecondary)
+      .padding(.horizontal, 14)
+      .frame(minHeight: 34)
+      .background(isSelected ? Color.honey : Ink.surfaceRaised, in: .capsule)
+      .frame(minHeight: Size.control)
+      .contentShape(.rect)
     }
     .buttonStyle(PressScaleStyle())
     .accessibilityAddTraits(isSelected ? .isSelected : [])
