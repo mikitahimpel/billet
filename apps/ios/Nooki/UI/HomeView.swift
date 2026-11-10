@@ -482,7 +482,7 @@ struct HomeView: View {
             roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true)
+            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes))
     }
 
     private func handle(_ event: RoomEvent) {
