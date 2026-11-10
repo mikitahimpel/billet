@@ -36,6 +36,7 @@ packages/ios/features          BilletFeatures, one pair of targets per feature
 ├── FeatureMood      MoodInterface        check-ins and the mood sync
 ├── FeatureInbox     InboxInterface       the activity Inbox
 ├── FeatureGames     GamesInterface       Who knows who, Draw & guess, the mini-games' rules
+├── FeatureDecor     DecorInterface       placing owned pieces in the room: grid, fit rules, the cat's way, the machine
 ├── FeatureDraw      DrawInterface        the lock-screen canvas, inks, drawing sync (FeatureCanvas today)
 ├── FeatureProfile   ProfileInterface     the couple, settings, variants, erase
 ├── FeatureOnboarding, FeaturePairing     as today, with OnboardingInterface
