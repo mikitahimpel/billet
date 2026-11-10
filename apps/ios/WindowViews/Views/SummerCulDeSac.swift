@@ -6,7 +6,7 @@ import SwiftUI
 struct SummerCulDeSac: ViewRecipe {
   static let streetBase: CGFloat = 48
   static let roadway = ViewRoad(
-    line: 53.4, kerb: streetBase, cars: ViewRhythm(seed: 421, slot: 40, chance: 0.5, length: 6...8),
+    line: 53.4, kerb: streetBase, cars: ViewRhythm(seed: 421, slot: 40, chance: 0, length: 6...8),
     length: 12)
   static let lamp = ViewStreetLamp(head: CGPoint(x: 18, y: 15), ground: streetBase)
   static let sprinkler = CGPoint(x: 34, y: 47)

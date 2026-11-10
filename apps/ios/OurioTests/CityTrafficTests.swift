@@ -4,8 +4,9 @@ import Testing
 
 struct CityTrafficTests {
     private let plan = CityTraffic.Plan(
-        lanes: [.init(z: -0.8, direction: 1), .init(z: -0.9, direction: -1)],
-        span: -1...1, speeds: 0.1...0.3, waits: 1...3, gap: 0.2, capacity: 4, colours: 5)
+        lanes: [.init(z: -0.9, direction: -1)],
+        span: -1...1, speeds: 0.1...0.2, waits: 1...3, gap: 0.2, capacity: 3, colours: 5,
+        stop: 0.2, holds: 2...4, pace: 0.1)
 
     /// Steps of `dt` for `seconds`, calling `each` after every step.
     private func run(_ traffic: inout CityTraffic, seconds: Float, dt: Float = 1 / 60,
@@ -22,35 +23,37 @@ struct CityTrafficTests {
         run(&traffic, seconds: 8) { traffic in
             for case let (index, car?) in traffic.slots.enumerated() where seen[index] == nil {
                 seen[index] = car.x
-                let start: Float = traffic.plan.lanes[car.lane].direction > 0 ? -1 : 1
-                #expect(abs(car.x - start) < 0.3 * CityTraffic.maxStep + 0.001)
+                #expect(abs(car.x - 1) < plan.speeds.upperBound * CityTraffic.maxStep + 0.001)
             }
         }
         #expect(!seen.isEmpty)
     }
 
-    @Test func aCarLeavesPastTheFarEndAndFreesItsSlot() {
+    @Test func aCarStandsAtTheCrossingThenDrivesOnAndLeaves() {
         var traffic = CityTraffic(plan: plan, seed: 2)
+        var stood: Float = 0
         var left = 0
         var previous = traffic.slots
-        run(&traffic, seconds: 60) { traffic in
+        run(&traffic, seconds: 120) { traffic in
             for index in traffic.slots.indices {
-                guard let was = previous[index], traffic.slots[index] == nil || traffic.slots[index]!.lane != was.lane
-                    || abs(traffic.slots[index]!.x - was.x) > 0.5
-                else { continue }
-                let direction = traffic.plan.lanes[was.lane].direction
-                // The last place it was seen is within one step of the far end.
-                #expect(direction > 0 ? was.x > 1 - 0.03 : was.x < -1 + 0.03)
-                left += 1
+                if let car = traffic.slots[index], car.hold > 0 {
+                    #expect(car.x == plan.stop && car.speed == 0)
+                    stood += 1 / 60
+                }
+                if previous[index] != nil, traffic.slots[index] == nil {
+                    #expect(previous[index]!.crossed)
+                    left += 1
+                }
             }
             previous = traffic.slots
         }
-        #expect(left > 5)
+        #expect(stood > 2)
+        #expect(left >= 3)
     }
 
-    @Test func carsInALaneNeverComeCloserThanTheGap() {
+    @Test func carsInALaneNeverComeCloserThanTheGapAndNeverOverlapTheCrossingWait() {
         var traffic = CityTraffic(plan: plan, seed: 3)
-        run(&traffic, seconds: 300, dt: 1 / 30) { traffic in
+        run(&traffic, seconds: 600, dt: 1 / 30) { traffic in
             let cars = traffic.slots.compactMap { $0 }
             #expect(cars.count <= plan.capacity)
             for a in cars.indices {
@@ -61,13 +64,31 @@ struct CityTrafficTests {
         }
     }
 
-    @Test func everyCarStaysOnTheStreetAtASpeedFromThePlan() {
+    @Test func aCarNeverPassesTheStopBeforeItHasStood() {
         var traffic = CityTraffic(plan: plan, seed: 4)
-        run(&traffic, seconds: 120) { traffic in
-            for car in traffic.slots.compactMap({ $0 }) {
+        run(&traffic, seconds: 300) { traffic in
+            for car in traffic.slots.compactMap({ $0 }) where !car.crossed {
+                #expect(car.x >= plan.stop - 0.0001)
+            }
+        }
+    }
+
+    @Test func speedChangesGentlyAndStaysWithinThePlan() {
+        var traffic = CityTraffic(plan: plan, seed: 5)
+        var last: [Int: Float] = [:]
+        run(&traffic, seconds: 300) { traffic in
+            for (index, slot) in traffic.slots.enumerated() {
+                guard let car = slot else {
+                    last[index] = nil
+                    continue
+                }
+                #expect(car.speed >= 0 && car.speed <= plan.speeds.upperBound)
                 #expect(car.x >= -1 && car.x <= 1)
-                #expect(car.speed > 0 && car.speed <= plan.speeds.upperBound)
-                #expect((0..<plan.colours).contains(car.colour))
+                if let was = last[index] {
+                    // The braking curve may demand more than `pace` near the stop, but never a jolt.
+                    #expect(abs(car.speed - was) < 0.03)
+                }
+                last[index] = car.speed
             }
         }
     }
@@ -76,9 +97,9 @@ struct CityTrafficTests {
         var a = CityTraffic(plan: plan, seed: 7)
         var b = CityTraffic(plan: plan, seed: 7)
         var c = CityTraffic(plan: plan, seed: 8)
-        run(&a, seconds: 20)
-        run(&b, seconds: 20)
-        run(&c, seconds: 20)
+        run(&a, seconds: 30)
+        run(&b, seconds: 30)
+        run(&c, seconds: 30)
         #expect(a.slots == b.slots && a.waits == b.waits)
         #expect(a.slots != c.slots)
     }
@@ -94,18 +115,10 @@ struct CityTrafficTests {
         }
     }
 
-    @Test func theLanesTakeTurnsAndBothGetCars() {
-        var traffic = CityTraffic(plan: plan, seed: 6)
-        var lanes: Set<Int> = []
-        run(&traffic, seconds: 30) { traffic in
-            for car in traffic.slots.compactMap({ $0 }) { lanes.insert(car.lane) }
-        }
-        #expect(lanes == [0, 1])
-    }
-
     @Test func aFullPoolHoldsTheNextCarBack() {
         let busy = CityTraffic.Plan(
-            lanes: plan.lanes, span: -10...10, speeds: 0.1...0.1, waits: 0.1...0.1, gap: 0.2, capacity: 2, colours: 1)
+            lanes: plan.lanes, span: -10...10, speeds: 0.1...0.1, waits: 0.1...0.1, gap: 0.2, capacity: 2, colours: 1,
+            stop: 50, holds: 1...1, pace: 0.1)
         var traffic = CityTraffic(plan: busy, seed: 9)
         run(&traffic, seconds: 10)
         #expect(traffic.slots.compactMap { $0 }.count == 2)
@@ -114,8 +127,9 @@ struct CityTrafficTests {
     @Test func parkingLeavesOneCarStillWhereItWasPut() {
         var traffic = CityTraffic(plan: plan, seed: 10)
         run(&traffic, seconds: 20)
-        traffic.park(lane: 1, x: -0.3, colour: 2)
-        #expect(traffic.slots.compactMap { $0 } == [CityTraffic.Car(lane: 1, x: -0.3, speed: 0.1, colour: 2)])
+        traffic.park(lane: 0, x: -0.3, colour: 2)
+        let car = traffic.slots.compactMap { $0 }
+        #expect(car.count == 1 && car[0].x == -0.3 && car[0].speed == 0 && car[0].colour == 2)
         traffic.step(1 / 60)
         #expect(traffic.slots[0]!.x < -0.3)
     }

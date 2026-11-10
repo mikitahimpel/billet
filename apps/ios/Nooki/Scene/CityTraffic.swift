@@ -3,7 +3,7 @@ import Pet
 
 /// The cars on the street behind the City room's window, as plain numbers: a fixed pool of slots, each free or a car at
 /// some point along its lane. The scene draws them; this knows nothing of RealityKit. Lengths are room units, times
-/// seconds.
+/// seconds. A car brakes smoothly for the one ahead and for the crossing, stands there a while, and pulls away.
 struct CityTraffic {
     struct Lane: Equatable {
         /// Across the street, in the room's pivot space.
@@ -16,8 +16,14 @@ struct CityTraffic {
         var lane: Int
         /// The car's middle along the street.
         var x: Float
-        /// Always positive; the lane gives the direction.
+        /// Now, never negative; the lane gives the direction.
         var speed: Float
+        /// The pace it drives at when the road ahead is clear.
+        var cruise: Float
+        /// Seconds it still stands at the crossing; zero when moving or not yet there.
+        var hold: Float
+        /// It has stopped at the crossing and gone on.
+        var crossed: Bool
         /// Into the scene's palette.
         var colour: Int
     }
@@ -33,6 +39,12 @@ struct CityTraffic {
         var gap: Float
         var capacity: Int
         var colours: Int
+        /// Where a car's middle stands at the crossing.
+        var stop: Float
+        /// How long it stands.
+        var holds: ClosedRange<Float>
+        /// Speed gained and lost per second.
+        var pace: Float
     }
 
     let plan: Plan
@@ -49,13 +61,15 @@ struct CityTraffic {
         var random = SplitMix64(seed: seed)
         // Staggered, so the lanes don't start together.
         var waits: [Float] = []
-        for _ in plan.lanes { waits.append(Float.random(in: 0...plan.waits.upperBound, using: &random)) }
+        for _ in plan.lanes { waits.append(Float.random(in: 0...plan.waits.lowerBound, using: &random)) }
         self.waits = waits
         self.random = random
     }
 
     /// The longest step taken at once, so a late frame doesn't jump a car past the one ahead.
     static let maxStep: Float = 0.1
+    /// How close to the stop a car must be to stand there.
+    static let arrival: Float = 0.002
 
     mutating func step(_ dt: Float) {
         let dt = min(max(dt, 0), Self.maxStep)
@@ -71,24 +85,46 @@ struct CityTraffic {
     /// One car standing still at `x` and the street otherwise empty, for Reduce Motion. Stepping again drives it on.
     mutating func park(lane: Int, x: Float, colour: Int) {
         for index in slots.indices { slots[index] = nil }
-        slots[0] = Car(lane: lane, x: x, speed: plan.speeds.lowerBound, colour: colour)
+        slots[0] = Car(lane: lane, x: x, speed: 0, cruise: plan.speeds.lowerBound, hold: 0, crossed: true,
+                       colour: colour)
     }
 
     private mutating func drive(_ dt: Float) {
         for index in slots.indices {
             guard var car = slots[index] else { continue }
             let direction = plan.lanes[car.lane].direction
-            var x = car.x + direction * car.speed * dt
-            // A faster car closes up on the one ahead and then keeps its pace.
-            if let ahead = leader(of: index) {
+            if car.hold > 0 {
+                car.hold -= dt
+                car.speed = 0
+                if car.hold <= 0 {
+                    car.hold = 0
+                    car.crossed = true
+                }
+                slots[index] = car
+                continue
+            }
+            let ahead = leader(of: index)
+            var room = Float.infinity
+            if !car.crossed { room = (plan.stop - car.x) * direction }
+            if let ahead { room = min(room, (ahead.x - car.x) * direction - plan.gap) }
+            // The speed from which the car can still stop in the room left, braking evenly.
+            let allowed = (2 * plan.pace * max(room, 0)).squareRoot()
+            let target = min(car.cruise, allowed)
+            car.speed = car.speed < target ? min(target, car.speed + plan.pace * dt) : target
+            car.x += direction * car.speed * dt
+            if let ahead {
                 let limit = ahead.x - direction * plan.gap
-                if (x - limit) * direction > 0 {
-                    x = limit
+                if (car.x - limit) * direction > 0 {
+                    car.x = limit
                     car.speed = min(car.speed, ahead.speed)
                 }
             }
-            car.x = x
-            let past = direction > 0 ? x > plan.span.upperBound : x < plan.span.lowerBound
+            if !car.crossed, (plan.stop - car.x) * direction <= Self.arrival {
+                car.x = plan.stop
+                car.speed = 0
+                car.hold = Float.random(in: plan.holds, using: &random)
+            }
+            let past = direction > 0 ? car.x > plan.span.upperBound : car.x < plan.span.lowerBound
             slots[index] = past ? nil : car
         }
     }
@@ -114,11 +150,12 @@ struct CityTraffic {
         let start = direction > 0 ? plan.span.lowerBound : plan.span.upperBound
         let blocked = slots.contains { car in
             guard let car, car.lane == lane else { return false }
-            return abs(car.x - start) < plan.gap
+            return abs(car.x - start) < plan.gap * 2
         }
         guard !blocked else { return false }
         let colour = Int.random(in: 0..<plan.colours, using: &random)
-        slots[free] = Car(lane: lane, x: start, speed: Float.random(in: plan.speeds, using: &random), colour: colour)
+        let cruise = Float.random(in: plan.speeds, using: &random)
+        slots[free] = Car(lane: lane, x: start, speed: cruise, cruise: cruise, hold: 0, crossed: false, colour: colour)
         return true
     }
 }

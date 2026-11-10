@@ -1,4 +1,5 @@
-/// One of Ourio's two rooms: the original diorama (`room`) and the City room with the big window.
+/// One of Ourio's two rooms: the living room (`room`, the original diorama) and the bedroom (`city`, with the bed and
+/// the big window). The ids are stored and reported, so they keep their first names.
 public enum OurioRoom: String, CaseIterable, Sendable {
   case room
   case city
@@ -20,7 +21,7 @@ public enum RoomsVariant: String, CaseIterable, Sendable, RemoteChoice {
     }
   }
 
-  /// Whether Home shows the Room/City switch, and the tip that explains it.
+  /// Whether Home shows the living room/bedroom switch, and the tip that explains it.
   public var hasRoomChoice: Bool { rooms.count > 1 }
 
   /// The room Home opens on.

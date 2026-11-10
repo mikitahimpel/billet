@@ -52,4 +52,13 @@ struct RoomsChoiceTests {
         #expect(rooms.variant == .both)
         #expect(RoomsChoice(defaults: store).variant == .both)
     }
+
+    @Test func theRoomsAreNamedAsPartsOfAHomeWhileTheirIdsStayPut() {
+        #expect(RoomKind.home.title == "Living room")
+        #expect(RoomKind.city.title == "Bedroom")
+        #expect(RoomKind.home.identifier == "Room")
+        #expect(RoomKind.city.identifier == "City")
+        #expect(RoomsVariant.roomOnly.title == "Living room only")
+        #expect(RoomsVariant.cityOnly.title == "Bedroom only")
+    }
 }

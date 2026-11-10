@@ -18,14 +18,18 @@ final class CityStreet {
     /// The street's height and its lanes' depth put the cars just above the sill on screen, where the window view's
     /// own street is, from the room's usual angle round to facing the window.
     static let ground: Float = 0.1
+    /// One lane, one way, a couple of cars at a time at a slow pace; they stand before the zebra crossing a while.
+    static let crossing: (x: Float, z: Float, half: SIMD3<Float>) = (-0.2, -0.95, [0.07, 0.006, 0.1])
     static let plan = CityTraffic.Plan(
-        lanes: [.init(z: -0.9, direction: -1), .init(z: -1.0, direction: 1)],
-        span: -1.7...0.9, speeds: 0.09...0.17, waits: 2.5...7, gap: 0.19, capacity: 4,
-        colours: Tone.paints.count)
+        lanes: [.init(z: -0.93, direction: -1)],
+        span: -1.7...0.9, speeds: 0.06...0.09, waits: 7...14, gap: 0.22, capacity: 2,
+        colours: Tone.paints.count, stop: crossing.x + crossing.half.x + size.x / 2 + 0.015, holds: 3...5,
+        pace: 0.05)
     /// Where Reduce Motion parks its one car: in the window at the room's usual angle.
     static let parking = (lane: 0, x: Float(-0.3), colour: 1)
 
     private let root: Entity
+    private let stripes: Entity
     private var traffic = CityTraffic(plan: plan, seed: 0xC17_CA25)
     private var cars: [Car] = []
     private let paints: [PhysicallyBasedMaterial]
@@ -48,16 +52,7 @@ final class CityStreet {
     }
 
     /// A car's box corners about the point it stands on.
-    private static let corners: [SIMD3<Float>] = {
-        let half = SIMD3<Float>(size.x / 2, size.y, size.z / 2)
-        var corners: [SIMD3<Float>] = []
-        for x: Float in [-1, 1] {
-            for y: Float in [0, 1] {
-                for z: Float in [-1, 1] { corners.append(SIMD3(x, y, z) * half) }
-            }
-        }
-        return corners
-    }()
+    private static let corners = box(SIMD3(size.x / 2, size.y, size.z / 2))
     private static let facing = (forward: simd_quatf.identity, back: simd_quatf.y(.pi))
 
     /// Under `pivot`; always built live, whatever the room's shell.
@@ -65,6 +60,13 @@ final class CityStreet {
         let root = pivot.group()
         root.components.set(ShellLive())
         self.root = root
+        let stripes = root.group(at: [Self.crossing.x, Self.ground, Self.crossing.z])
+        let paint = Clay.matte(0xF2E6D2, roughness: 0.9)
+        for index in -2...2 {
+            stripes.box(0.026, 0.004, Self.crossing.half.z * 1.8, r: 0.001, paint, at: [Float(index) * 0.05, 0.002, 0])
+        }
+        stripes.isEnabled = false
+        self.stripes = stripes
         let paints = Tone.paints.map { Clay.matte($0, roughness: 0.7) }
         self.paints = paints
         let cabin = Clay.matte(Tone.cabin, roughness: 0.35)
@@ -129,26 +131,42 @@ final class CityStreet {
     /// `project` takes pivot space to screen points.
     func gate(front frontCorners: [SIMD3<Float>], back backCorners: [SIMD3<Float>], window: [CGPoint],
               project: (SIMD3<Float>) -> CGPoint?) {
-        guard traffic.slots.contains(where: { $0 != nil }) else { return }
         Self.outline(frontCorners, into: &front, project)
         Self.outline(backCorners, into: &back, project)
         let hole = Self.bounds(window)
+        let ready = front.count == 4 && back.count == 4
+        let half = Self.crossing.half
+        stripes.isEnabled = ready && inView(of: [Self.crossing.x, Self.ground, Self.crossing.z],
+                                            Self.box(half), hole, project)
+        guard traffic.slots.contains(where: { $0 != nil }) else { return }
         for index in cars.indices {
             guard let state = traffic.slots[index] else { continue }
             let lane = Self.plan.lanes[state.lane]
             let origin = SIMD3<Float>(state.x, Self.ground, lane.z)
-            var shown = front.count == 4 && back.count == 4
-            var box = CGRect.null
-            for corner in Self.corners where shown {
-                guard let point = project(origin + corner) else {
-                    shown = false
-                    break
-                }
-                shown = BehindWall.contains(front, point) && BehindWall.contains(back, point)
-                box = box.union(CGRect(origin: point, size: .zero))
-            }
-            cars[index].entity.isEnabled = shown && box.intersects(hole)
+            cars[index].entity.isEnabled = ready && inView(of: origin, Self.corners, hole, project)
         }
+    }
+
+    /// Whether every corner lands inside both faces of the back wall on screen and the box meets the window.
+    private func inView(of origin: SIMD3<Float>, _ corners: [SIMD3<Float>], _ hole: CGRect,
+                        _ project: (SIMD3<Float>) -> CGPoint?) -> Bool {
+        var box = CGRect.null
+        for corner in corners {
+            guard let point = project(origin + corner),
+                  BehindWall.contains(front, point), BehindWall.contains(back, point) else { return false }
+            box = box.union(CGRect(origin: point, size: .zero))
+        }
+        return box.intersects(hole)
+    }
+
+    private static func box(_ half: SIMD3<Float>) -> [SIMD3<Float>] {
+        var corners: [SIMD3<Float>] = []
+        for x: Float in [-1, 1] {
+            for y: Float in [0, 1] {
+                for z: Float in [-1, 1] { corners.append(SIMD3(x, y, z) * half) }
+            }
+        }
+        return corners
     }
 
     private static func bounds(_ points: [CGPoint]) -> CGRect {

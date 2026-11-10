@@ -7,7 +7,7 @@ struct SnowyDecember: ViewRecipe {
   static let streetBase: CGFloat = 48
   static let roadway = ViewRoad(
     line: 53.4, kerb: streetBase,
-    cars: ViewRhythm(seed: 321, slot: 24, chance: 0.6, length: 4.4...6.4))
+    cars: ViewRhythm(seed: 321, slot: 24, chance: 0, length: 4.4...6.4))
   static let lamp = ViewStreetLamp(head: CGPoint(x: 12, y: 14), ground: streetBase)
   static let townTree = CGPoint(x: 86, y: 18)
 
