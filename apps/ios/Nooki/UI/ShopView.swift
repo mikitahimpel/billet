@@ -141,9 +141,8 @@ struct ShopView: View {
                 }
                 .accessibilityLabel("New deals at midnight")
             }
-            grid(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
+            dealsRow(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
-        .padding(.horizontal, Space.l)
         .id("deals")
 
         DailyGiftCard(state: state)
@@ -187,6 +186,21 @@ struct ShopView: View {
             .font(.ourioCaption)
             .foregroundStyle(Ink.textSecondary)
             .padding(.horizontal, Space.l)
+    }
+
+    /// The day's deals side by side in one row that scrolls sideways, each tile as wide as a grid tile on an iPhone.
+    private func dealsRow(_ items: [ShopItem]) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(alignment: .top, spacing: Space.m) {
+                ForEach(items) { item in
+                    ShopItemCard(item: item, state: state) { sheetItem = item }
+                        .frame(width: ShopLayout.dealWidth)
+                }
+            }
+            .padding(.horizontal, Space.l)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     private func grid(_ items: [ShopItem]) -> some View {

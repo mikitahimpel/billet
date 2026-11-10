@@ -193,3 +193,7 @@ private struct ShopAppear: ViewModifier {
             }
     }
 }
+
+enum ShopLayout {
+    static let dealWidth: CGFloat = 176
+}
