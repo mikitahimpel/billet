@@ -72,7 +72,7 @@ struct PerfLabMeter: View {
                     .background(Ink.surface, in: .capsule)
                     .overlay(Capsule().strokeBorder(Ink.hairline, lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Frame meter")
             .accessibilityValue(meter.reading?.line ?? "measuring")
             .accessibilityHint("Shows the performance switches")

@@ -306,8 +306,8 @@ struct HomeView: View {
         .overlay(alignment: .topTrailing) {
             if perfLab.state.meter {
                 PerfLabMeter(lab: perfLab)
-                    .padding(.trailing, 16)
-                    .padding(.top, 64)
+                    .padding(.trailing, Space.l)
+                    .padding(.top, Space.xl * 2)
             }
         }
         #endif
