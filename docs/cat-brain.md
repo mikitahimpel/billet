@@ -158,6 +158,48 @@ floor back above 0.5.
 - **Recent toys**: the toys this phone's finger played with, shown in the overlay and never
   folded, as the live touch is.
 
+## Stories, variety and habits
+
+A script is a small story with a look, a wind-up, the act and a settle, not one clip:
+
+| Story | Steps | When |
+|---|---|---|
+| Mote hunt | SpotMote → WindUp → Pounce → ShakeOff | Play; curious and playful cats |
+| Stalk | Stalk → WindUp → Pounce → ShakeOff | Play |
+| Dusk zoomies | WindUp → Zoomies → Skid | Play, weighted up round 19:00 and by boredom |
+| Street watch | WatchWindow → TrackMover → (Chatter) → WatchWindow | Watch |
+| Sunbeam wash | Bask → GroomPaw → GroomFlank | Groom, by day in clear weather, peaking at midday |
+| Gift | BringToy → DropToy → SlowBlink | Social, with a toy in reach |
+| Caught pushing | PushItem → GlanceBack | Mischief |
+| A note arrives | PerkUp → DashToDoor → CarryNote | React, from any note |
+| Heard a noise | Sit → HeardNoise → LookAround | Idle, rare |
+| Tail chase | ChaseTail | Play, rare |
+
+- **Sessions.** Play, explore, groom and social are played as a session of several scripts: after
+  one ends the cat goes on with the same group (80% of the time, a different script) until the
+  session's length is up (play 40-90 s, explore 25-50 s, groom 20-40 s, social 12-25 s), and only
+  hunger cuts it short. So a game is half a minute or more, not one six-second script.
+- **Variety.** The brain remembers the last eight scripts it played. One of the last two is
+  weighted ×0.12 and one of the last five ×0.5, so the same story does not come round at once.
+- **Rare things** (`CatBrain.rarities`) have a cooldown and a cap per day: a noise 40 minutes apart
+  and 6 a day, a tail chase 90 minutes and 3 a day. Over their cap they are not offered.
+- **Habits.** Seconds per group per local hour are kept. A new day starts with yesterday's
+  (rehearsed, like the favourite spot): an hour in which the cat mostly played is up to 1.8 times
+  likelier to be spent playing again. Rest is left to vitality.
+- **Statistics.** `CatLifeStatisticsTests` runs 24 simulated hours for several seeds, rooms and the
+  five temperaments (`CatLifeAudit`) and holds: no group over its share, at least four different
+  steps (two lively) in every waking hour, no step twice running, no long dull stretch, and the rare
+  things at their rate. `CAT_AUDIT=1 swift test --filter printsTheAudit` prints the full report.
+
+## Cat observatory
+
+Labs' brain card carries the observatory: the brain's speed (×1, ×10, ×60, a `CatClock` over the wall
+clock), buttons to force a group or send an event (feed, pet, play, note, sleep), the last twenty
+stretches of her life as a timeline with their lengths, and **Copy log**, which puts the clock, the
+top scores and the timeline on the pasteboard for the owner to paste. The scores are worked out only
+while the card is on screen; the brain itself looks four times a second (`CatDirector.thinkEvery`),
+and not at all while the room is paused.
+
 ## Brain debug
 
 **Brain debug** in Labs (The cat) puts a card on Home: the state stack, the
@@ -300,7 +342,9 @@ stateDiagram-v2
         [*] --> Loaf
         [*] --> LookAround
         [*] --> BellyUp
+        HeardNoise --> LookAround
         LookAround --> Sit
+        Sit --> HeardNoise
         Sit --> LookAround
         Sit --> [*]
         Loaf --> [*]
@@ -311,6 +355,7 @@ stateDiagram-v2
         [*] --> Wander
         [*] --> InspectFurniture
         InspectFurniture --> SniffObject
+        SniffObject --> Wander
         Wander --> SniffObject
         Wander --> [*]
         SniffObject --> [*]
@@ -328,11 +373,15 @@ stateDiagram-v2
       state Groom {
         [*] --> GroomPaw
         [*] --> GroomFlank
+        [*] --> Bask
+        Bask --> GroomPaw
         GroomFlank --> GroomTail
+        GroomPaw --> Bask
         GroomPaw --> GroomFlank
         GroomPaw --> [*]
         GroomFlank --> [*]
         GroomTail --> [*]
+        Bask --> [*]
       }
       state Eat {
         [*] --> WalkToBowl
@@ -361,20 +410,36 @@ stateDiagram-v2
         [*] --> Chase
         [*] --> BatObject
         [*] --> Zoomies
+        [*] --> SpotMote
+        [*] --> WindUp
+        [*] --> ChaseTail
         [*] --> Scratch
         Chase --> Pounce
         Pounce --> BatObject
         Pounce --> Chase
+        Pounce --> ShakeOff
+        SpotMote --> WindUp
         Stalk --> Pounce
+        Stalk --> WindUp
+        WindUp --> Pounce
+        WindUp --> Zoomies
+        Zoomies --> Skid
         Pounce --> [*]
         Chase --> [*]
         BatObject --> [*]
         Zoomies --> [*]
+        ShakeOff --> [*]
+        Skid --> [*]
+        ChaseTail --> [*]
         Scratch --> [*]
       }
       state Watch {
         [*] --> WatchWindow
         [*] --> WatchPartnerWindow
+        Chatter --> WatchWindow
+        TrackMover --> Chatter
+        TrackMover --> WatchWindow
+        WatchWindow --> TrackMover
         WatchWindow --> [*]
         WatchPartnerWindow --> [*]
       }
@@ -385,6 +450,7 @@ stateDiagram-v2
         [*] --> WaitByDoor
         [*] --> Sulk
         BringToy --> DropToy
+        DropToy --> SlowBlink
         SeekYou --> Rub
         SeekYou --> SlowBlink
         Rub --> [*]
@@ -397,16 +463,22 @@ stateDiagram-v2
         [*] --> PushItem
         [*] --> SitInCardigan
         [*] --> SitOnDesk
+        PushItem --> GlanceBack
         PushItem --> [*]
         SitInCardigan --> [*]
         SitOnDesk --> [*]
+        GlanceBack --> [*]
       }
       state React {
         [*] --> Startle
         [*] --> CuriousTilt
+        [*] --> PerkUp
         [*] --> CarryNote
+        DashToDoor --> CarryNote
+        PerkUp --> DashToDoor
         Startle --> [*]
         CuriousTilt --> [*]
+        PerkUp --> [*]
         CarryNote --> [*]
       }
       Idle --> Choose : script ends

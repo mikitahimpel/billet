@@ -13,39 +13,55 @@ extension CatBrain {
     let bored = life.needs.playful < low ? 1.0 : 0
     let lonely = life.needs.loved < low
     let happy = feeling == .happy
+    let clock = hour(at: t)
+    let dusk = Self.near(clock, 19, 1.8)
+    let midday = Self.near(clock, 13, 2.5)
+    let sunny = isSunny(at: t) && room.has(.window)
     let candidates: [([CatActivityStep], Double)] =
       switch group {
       case .idle:
         [
           ([.sit], 1), ([.loaf], 0.4 + p.lazy), ([.sit, .lookAround], 0.4 + p.curious),
           ([.lookAround, .sit], 0.3 + p.curious), ([.bellyUp], happy ? 1.2 + p.cuddly : 0),
+          ([.sit, .heardNoise, .lookAround], 0.5 + p.curious),
         ]
       case .explore:
         [
-          ([.wander, .sniffObject], 1), ([.wander], 0.6),
+          ([.wander, .sniffObject], 1), ([.wander], 0.4), ([.wander, .sniffObject, .wander], 1),
           ([.inspectFurniture, .sniffObject], novelPiece(at: t) != nil ? 4 : 0),
         ]
       case .groom:
         [
           ([.groomPaw], 1), ([.groomPaw, .groomFlank], 1), ([.groomFlank, .groomTail], 0.7),
           ([.groomPaw, .groomFlank, .groomTail], 0.4 + p.lazy),
+          ([.bask, .groomPaw, .groomFlank], sunny ? 1 + 4 * midday : 0),
+          ([.groomPaw, .bask], sunny ? 1 + 2 * midday : 0),
         ]
       case .eat: eatScripts(at: t, feeling: feeling)
       case .play:
         [
-          ([.stalk, .pounce], 1), ([.stalk, .pounce, .chase], 0.4 + p.bold),
+          ([.stalk, .pounce], 0.4), ([.stalk, .pounce, .chase], 0.3 + p.bold),
           ([.batObject], room.reachable(.toy) ? 0.8 : 0.3),
-          ([.zoomies], 0.2 + p.playful * 0.8 + 2 * bored * drama), ([.chase, .pounce], 0.5),
+          ([.zoomies], 0.1 + p.playful * 0.3 + bored * drama), ([.chase, .pounce], 0.4),
           ([.scratch], room.reachable(.soft) ? 0.15 + 1.5 * bored * drama : 0),
           ([.stalk, .pounce, .batObject], room.reachable(.toy) ? 0.3 + 1.5 * bored : 0),
+          ([.spotMote, .windUp, .pounce, .shakeOff], 0.6 + p.curious + p.playful),
+          ([.stalk, .windUp, .pounce, .shakeOff], 0.8 + p.bold),
+          ([.windUp, .zoomies, .skid], 0.3 + 2.5 * dusk + p.playful + 2 * bored * drama),
+          ([.chaseTail], 0.4 + p.playful),
         ]
-      case .watch: [([.watchWindow], 1), ([.watchPartnerWindow], away ? 1.5 : 0)]
+      case .watch:
+        [
+          ([.watchWindow], 0.5), ([.watchPartnerWindow], away ? 1.5 : 0),
+          ([.watchWindow, .trackMover, .watchWindow], 1.2),
+          ([.watchWindow, .trackMover, .chatter, .watchWindow], 0.5 + p.curious + p.vocal),
+        ]
       case .social:
         [
           ([.seekYou, .rub], 0.6 + p.cuddly), ([.slowBlink], 0.8),
           ([.seekYou, .slowBlink], 0.4 + p.vocal),
           (
-            [.bringToy, .dropToy],
+            [.bringToy, .dropToy, .slowBlink],
             room.reachable(.toy)
               ? 0.3 + p.playful * 0.5 + upbringing.playfulness + 2 * bored : 0
           ),
@@ -55,14 +71,14 @@ extension CatBrain {
         ]
       case .mischief:
         [
-          ([.pushItem], room.reachable(.smallItem) ? 0.5 + p.bold : 0),
+          ([.pushItem, .glanceBack], room.reachable(.smallItem) ? 0.5 + p.bold : 0),
           ([.sitInCardigan], room.reachable(.soft) ? (0.6 + p.cuddly) * stayOn : 0),
           ([.sitOnDesk], room.reachable(.desk) ? (0.6 + p.bold) * stayOn : 0),
         ]
       case .rest: [([.findNapSpot, .curl, .wake], 1)]
       case .react: [([.curiousTilt], 1)]
       }
-    let open = candidates.filter { $0.1 > 0 }
+    let open = candidates.map { ($0.0, $0.1 * variety($0.0, at: t)) }.filter { $0.1 > 0 }
     let total = open.reduce(0) { $0 + $1.1 }
     guard total > 0 else { return [.sit] }
     var left = dice(t, 5) * total
@@ -71,6 +87,35 @@ extension CatBrain {
       if left < 0 { return script }
     }
     return open.last?.0 ?? [.sit]
+  }
+
+  /// How many scripts the cat remembers having played.
+  static let scriptMemory = 8
+
+  /// Rare steps: seconds before one can come again, and how many a day. A script with one in it
+  /// is offered only when it is off cooldown and under its cap.
+  static let rarities: [CatActivityStep: (cooldown: Double, perDay: Int)] = [
+    .heardNoise: (2400, 6), .chaseTail: (5400, 3),
+  ]
+
+  /// Scales a script's weight for how lately it was played and for being rare: 0.12 if it was one
+  /// of the last two, a half if one of the last five, and 0 for a rare one that is resting.
+  func variety(_ script: [CatActivityStep], at t: Double) -> Double {
+    for step in script {
+      guard let rarity = Self.rarities[step] else { continue }
+      let log = rareLog[step] ?? []
+      if log.count >= rarity.perDay { return 0 }
+      if let last = log.last, t - last < rarity.cooldown { return 0 }
+    }
+    guard let index = scriptLog.lastIndex(of: script) else { return 1 }
+    let age = scriptLog.count - index
+    return age <= 2 ? 0.12 : age <= 5 ? 0.5 : 1
+  }
+
+  static func near(_ hour: Double, _ peak: Double, _ width: Double) -> Double {
+    var gap = abs(hour - peak).truncatingRemainder(dividingBy: 24)
+    if gap > 12 { gap = 24 - gap }
+    return exp(-(gap * gap) / (2 * width * width))
   }
 
   /// What a cat at the bowl does, by how hungry it is: a snack from a full bowl, waiting for the
@@ -140,7 +185,11 @@ extension CatBrain {
       room: effectiveRoom(at: t), weather: weather,
       recent: recent, awayHours: awayHours(at: t), hasNovelty: novelPiece(at: t) != nil,
       spotFondness: napSpots(at: t).map { memory.fondness($0.0) }.max() ?? 0,
-      upbringing: upbringing, mealtime: isMealtime(at: t), hunger: hunger)
+      upbringing: upbringing, mealtime: isMealtime(at: t), hunger: hunger,
+      habits: Dictionary(
+        uniqueKeysWithValues: CatActivityGroup.chosen.map {
+          ($0, memory.habit($0, hour: Int(hour(at: t))))
+        }))
   }
 
   /// Whether it is the hour the pair feeds it and it has not eaten yet.

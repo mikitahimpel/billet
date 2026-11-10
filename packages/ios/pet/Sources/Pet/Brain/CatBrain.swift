@@ -35,9 +35,19 @@ public struct CatBrain: Sendable {
   var lastSeen: [String: Double] = [:]
   private var born: Double
   var inspected = Set<String>()
+  /// The last scripts played, newest last, so a script does not come round again at once.
+  var scriptLog: [[CatActivityStep]] = []
+  /// When each rare step began today.
+  var rareLog: [CatActivityStep: [Double]] = [:]
+  /// The group being played as a session of several scripts, and when the session ends.
+  var session: (group: CatActivityGroup, end: Double)?
   /// Whether the sulk under way has ignored a touch already; the next one is forgiven.
   private var snubbed = false
   public private(set) var recent: [CatEpisode] = []
+  /// How many scripts utility has had the cat play, and how many of them were one of the last two
+  /// again: for tests and the debug card.
+  public private(set) var scriptsPlayed = 0
+  public private(set) var scriptsRepeated = 0
   public private(set) var transitions: [CatBrainTransition] = []
   /// The last utility scores worked out, in the order of ``CatActivityGroup/chosen``.
   public private(set) var scores: [CatUtilityScore] = []
@@ -162,6 +172,14 @@ public struct CatBrain: Sendable {
     }
   }
 
+  /// A debug nudge: plays a script of `group` now, as if utility had chosen it. It is this
+  /// brain's own and not part of the fold, so the next replay forgets it.
+  public mutating func force(_ group: CatActivityGroup) {
+    guard group != .react, echo == nil else { return }
+    finishGroup(at: time)
+    enter(group: group, at: time, cause: .event)
+  }
+
   // MARK: - Days
 
   /// The next local `dayStartHour` after `t`.
@@ -180,6 +198,9 @@ public struct CatBrain: Sendable {
     // Nothing the trajectory learned crosses the day line, so a fold from today's start gives
     // the same cat as one that has run for a week.
     inspected.removeAll(keepingCapacity: true)
+    scriptLog.removeAll(keepingCapacity: true)
+    rareLog.removeAll(keepingCapacity: true)
+    session = nil
     snubbed = false
     focus = NeedFocus(config: lifeConfig, seed: seed ^ 0x464F_4355_53)
     vitalitySince = t
@@ -211,7 +232,10 @@ public struct CatBrain: Sendable {
       countRest(at: t)
       echo = nil
       history = nil
-      enter(script: curled ? [.wake, .carryNote] : [.carryNote], at: t, cause: .event)
+      enter(
+        script: curled
+          ? [.wake, .perkUp, .dashToDoor, .carryNote] : [.perkUp, .dashToDoor, .carryNote],
+        at: t, cause: .event)
       if vitality == .asleep { moveVitality(to: .drowsy, at: t) }
     case .pet:
       if activity.step == .sulk, echo == nil {
@@ -352,12 +376,15 @@ public struct CatBrain: Sendable {
       let best = scores.max(by: { $0.score < $1.score }), best.group != group,
       best.score > max(current, 1e-6) * CatUtility.hysteresis
     else { return nil }
+    // A game or a wander in session is cut short only by hunger.
+    if let session, session.group == group, t < session.end, best.group != .eat { return nil }
     return best.group
   }
 
   private mutating func finishGroup(at t: Double) {
     let group = activity.step.group
     if let piece = activity.inspecting { inspected.insert(piece.id) }
+    memory.spent(group, hour: Int(hour(at: activity.groupStart)), seconds: t - activity.groupStart)
     recent.append(CatEpisode(group: group, start: activity.groupStart, end: t))
     if recent.count > config.recentCount { recent.removeFirst(recent.count - config.recentCount) }
   }
@@ -368,8 +395,33 @@ public struct CatBrain: Sendable {
       return
     }
     scores = CatUtility.scores(utilityInput(at: t))
+    if let group = continuing(at: t) {
+      enter(group: group, at: t, cause: cause)
+      return
+    }
     let group = CatUtility.choose(scores, roll: dice(t, 1))
+    if let length = Self.sessions[group] {
+      session = (group, t + BrainDice.range(length, dice(t, 14)))
+    } else {
+      session = nil
+    }
     enter(group: group, at: t, cause: cause)
+  }
+
+  /// How long a group is played over, in seconds, as scripts one after another, so the cat stays
+  /// with a game or a wander for a while rather than doing a little of everything.
+  static let sessions: [CatActivityGroup: ClosedRange<Double>] = [
+    .play: 40...90, .explore: 25...50, .groom: 20...40, .social: 12...25,
+  ]
+
+  /// The group just played, if its session is not over and the cat is still in the mood for it.
+  private func continuing(at t: Double) -> CatActivityGroup? {
+    guard let session, t < session.end, vitality == .awake, !life.asleep,
+      activity.step.group == session.group,
+      let mine = scores.first(where: { $0.group == session.group })?.score, mine > 0,
+      dice(t, 12) < 0.8
+    else { return nil }
+    return session.group
   }
 
   private mutating func enter(group: CatActivityGroup, at t: Double, cause: CatTransitionCause) {
@@ -377,7 +429,13 @@ public struct CatBrain: Sendable {
       enterRest(at: t, cause: cause)
       return
     }
-    enter(script: chooseScript(group, at: t), at: t, cause: cause)
+    let script = chooseScript(group, at: t)
+    scriptsPlayed += 1
+    if scriptLog.suffix(2).contains(script) { scriptsRepeated += 1 }
+    scriptLog.append(script)
+    if scriptLog.count > Self.scriptMemory { scriptLog.removeFirst() }
+    for step in script where Self.rarities[step] != nil { rareLog[step, default: []].append(t) }
+    enter(script: script, at: t, cause: cause)
   }
 
   private mutating func enterRest(at t: Double, cause: CatTransitionCause) {
