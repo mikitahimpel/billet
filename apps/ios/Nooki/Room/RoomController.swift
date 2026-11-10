@@ -37,6 +37,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     @ObservationIgnored private let usesStandIn: Bool
     @ObservationIgnored private lazy var standIn = CatRoom()
+    /// An empty room the room's view holds while no room can be seen (see `RoomStage`).
+    @ObservationIgnored private(set) lazy var offStage = CatRoom()
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var pins: [BoardPin] = []
     /// The scenery last picked for each game, for the next time it is played.

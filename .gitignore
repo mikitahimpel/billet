@@ -20,3 +20,4 @@ xcuserdata
 !.env.pass.analytics-read
 !.env.example
 admin-seed.sql
+packages/ios/design/Tests/Gallery/Recorded/
