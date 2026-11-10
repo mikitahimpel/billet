@@ -55,7 +55,7 @@ struct AddTitleSheet: View {
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, Space.m)
-            .padding(.bottom, 40)
+            .padding(.bottom, Space.xl + Space.s)
         }
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -74,7 +74,7 @@ struct AddTitleSheet: View {
                 }
                 .fieldSurface()
                 .padding(.horizontal, Space.gutter)
-                .padding(.top, 14)
+                .padding(.top, Space.l)
             }
         }
         }
@@ -134,7 +134,7 @@ struct AddTitleSheet: View {
             .frame(minHeight: 84)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .disabled(isAdded)
         .accessibilityLabel("\(title.title), \(TitleCaption.of(title))")
         .accessibilityHint(isAdded ? "Already on the list" : "Adds it to the list")
@@ -160,7 +160,7 @@ struct AddTitleSheet: View {
             .contentShape(.rect)
             .cardSurface()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 
     private func note(_ text: String) -> some View {

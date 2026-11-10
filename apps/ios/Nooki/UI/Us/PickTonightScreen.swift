@@ -157,7 +157,7 @@ struct PickTonightScreen: View {
                 .background(Circle().fill(honey ? AnyShapeStyle(.honeyGradient) : AnyShapeStyle(Ink.surfaceRaised)))
                 .shadow(color: .black.opacity(honey ? 0.2 : 0.08), radius: 8, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(label)
     }
 

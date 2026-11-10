@@ -69,6 +69,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | The main action | `PrimaryButton` (or `PrimaryButtonStyle` on a custom label) |
 | A quieter action | `SecondaryButton` |
 | On or off (Love, Pin to wall), or one of a row of choices | `ToggleButtonStyle(isOn:tint:)` |
+| A whole row that opens something | `RowButtonStyle()`: the row lights up while pressed; a card or tile takes `PressScaleStyle()` |
 | Try a failed load or send again | `RetryButton` under an `EmptyState` or in a card; `RetryButton(compact: true)` in a row |
 | A round control in a header | `GlassIconButton(symbol:label:badge:action:)` |
 | Any other surface that floats | `glass(_:role:)` inside the bar's `GlassGroup`; the main action `accentGlass()` |

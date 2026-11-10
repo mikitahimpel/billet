@@ -13,7 +13,7 @@ struct DateMatchOverlay: View {
             Color.black.opacity(0.6)
                 .ignoresSafeArea()
 
-            VStack(spacing: 10) {
+            VStack(spacing: Space.m) {
                 Text("It's a match!")
                     .font(.ourioLargeTitle)
                     .foregroundStyle(Ink.text)
@@ -26,7 +26,7 @@ struct DateMatchOverlay: View {
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.accentText)
 
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     Button(action: onKeep) {
                         Text("Keep swiping")
                             .font(.ourioHeadline)
@@ -35,7 +35,7 @@ struct DateMatchOverlay: View {
                             .frame(minHeight: 44)
                             .background(Ink.surfaceRaised, in: .capsule)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
 
                     Button(action: onPlan) {
                         Text("Plan it")
@@ -45,9 +45,9 @@ struct DateMatchOverlay: View {
                             .frame(minHeight: 44)
                             .background(Capsule().fill(.honeyGradient))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                 }
-                .padding(.top, 6)
+                .padding(.top, Space.s)
             }
             .padding(Space.section)
             .frame(maxWidth: 330)
@@ -88,7 +88,7 @@ struct DatePlanCard: View {
 
     private var content: some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            HStack(spacing: 10) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: hidden ? .init(symbol: "gift.fill", tint: .coral)
                                      : idea?.place.icon ?? .init(symbol: "heart.fill", tint: .blush), size: 42)
                 VStack(alignment: .leading, spacing: 2) {
@@ -167,7 +167,7 @@ struct DatePlanCard: View {
                 .frame(minHeight: 40)
                 .background(Color.honey.opacity(0.16), in: .capsule)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
         }
     }
 }

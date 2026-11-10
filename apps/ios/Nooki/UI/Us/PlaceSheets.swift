@@ -43,7 +43,7 @@ struct AddPlaceSheet: View {
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, Space.m)
-            .padding(.bottom, 40)
+            .padding(.bottom, Space.xl + Space.s)
         }
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -68,7 +68,7 @@ struct AddPlaceSheet: View {
                 }
                 .fieldSurface()
                 .padding(.horizontal, Space.gutter)
-                .padding(.top, 14)
+                .padding(.top, Space.l)
             }
         }
         .toolbar {
@@ -118,7 +118,7 @@ struct AddPlaceSheet: View {
             .frame(minHeight: 60)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .disabled(added)
         .accessibilityLabel(Country.name(code))
         .accessibilityHint(added ? "Already on the list" : "Adds it to the list")
@@ -154,7 +154,7 @@ struct AddPlaceSheet: View {
                 .contentShape(.rect)
                 .cardSurface()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
         }
     }
 
@@ -167,7 +167,7 @@ struct AddPlaceSheet: View {
                 ForEach(PopularPlace.all, id: \.self) { popular in
                     let added = popular.place == nil && onList(popular.country)
                     Button { add(popular) } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: Space.s) {
                             CountryFlag(code: popular.country, size: 20)
                             Text(popular.place ?? Country.name(popular.country))
                                 .font(.ourioCallout)
@@ -179,7 +179,7 @@ struct AddPlaceSheet: View {
                         .background(Ink.surfaceRaised, in: .capsule)
                         .opacity(added ? 0.45 : 1)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                     .disabled(added)
                 }
             }
@@ -308,7 +308,7 @@ struct BeenSheet: View {
             .cardSurface()
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 
     private func save() {
@@ -349,7 +349,7 @@ private struct MonthField: View {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(Ink.textTertiary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .accessibilityLabel("Leave out when")
             } else {
                 Button { month = TravelMonth(.now) } label: {
@@ -361,7 +361,7 @@ private struct MonthField: View {
                     }
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
             }
         }
         .pickerStyle(.menu)
@@ -399,10 +399,10 @@ private struct MomentsPicker: View {
                                     .overlay(alignment: .topTrailing) {
                                         UsCheck(done: picked)
                                             .background(Circle().fill(.black.opacity(picked ? 0 : 0.25)))
-                                            .padding(6)
+                                            .padding(Space.s)
                                     }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressScaleStyle())
                             .disabled(!picked && selection.count >= Self.limit)
                             .accessibilityLabel(moment.caption.isEmpty ? "Photo" : moment.caption)
                             .accessibilityAddTraits(picked ? .isSelected : [])
@@ -410,7 +410,7 @@ private struct MomentsPicker: View {
                     }
                     .padding(.horizontal, Space.gutter)
                     .padding(.top, Space.l)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, Space.xl + Space.s)
                 }
                 .softScrollEdges()
             }

@@ -31,7 +31,7 @@ struct GroceryList: View {
                     Button("Clear", action: onClear)
                         .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.accentText)
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleStyle())
                 }
                 card(bought, done: true)
             }
@@ -106,7 +106,7 @@ struct GroceryRow: View {
                 Monogram(partner: item.author, profile: profile, size: 20)
             }
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(minHeight: 52)
         .opacity(done ? 0.55 : 1)
         .contentShape(.rect)

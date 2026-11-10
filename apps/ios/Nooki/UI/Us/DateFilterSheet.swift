@@ -27,7 +27,7 @@ struct DateFilterSheet: View {
         BilletSheet("Filters", subtitle: fits == 1 ? "1 idea fits" : "\(fits) ideas fit", scrolls: false) {
         VStack(spacing: 0) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 22) {
+                VStack(alignment: .leading, spacing: Space.section) {
                     group("Quick picks") {
                         HStack(spacing: Space.s) {
                             ForEach(DatePreset.all) { preset in
@@ -48,7 +48,7 @@ struct DateFilterSheet: View {
                     }
                 }
                 .padding(.horizontal, Space.gutter)
-                .padding(.top, 18)
+                .padding(.top, Space.l)
                 .padding(.bottom, Space.section)
             }
             .softScrollEdges()
@@ -71,7 +71,7 @@ struct DateFilterSheet: View {
     }
 
     private func group(_ title: String, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: Space.m) {
             Text(title)
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
@@ -103,14 +103,14 @@ struct DateFilterSheet: View {
                     .minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Space.l)
             .frame(height: 50)
             .background(selected ? Color.honey.opacity(0.22) : Ink.surface,
                         in: .rect(cornerRadius: Radius.control, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
                 .stroke(selected ? Color.honey : Ink.separator, lineWidth: selected ? 1.5 : 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }

@@ -64,11 +64,11 @@ struct GrocerySuggestions: View {
                         .background(Circle().fill(.honeyGradient))
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Space.l)
             .frame(minHeight: 56)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .disabled(onList)
         .opacity(onList ? 0.55 : 1)
         .accessibilityLabel(onList ? "\(suggestion.text), already on the list" : "Add \(suggestion.text)")

@@ -34,7 +34,7 @@ struct CalendarScreen: View {
                 }
                 .padding(.horizontal, Space.gutter)
                 .padding(.top, Space.s)
-                .padding(.bottom, 40)
+                .padding(.bottom, Space.xl + Space.s)
             }
             .scrollIndicators(.hidden)
             .scrollHeader {
@@ -86,7 +86,7 @@ struct CalendarScreen: View {
             .padding(CardMetrics.padding)
             .cardSurface()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 }
 
@@ -111,9 +111,9 @@ private struct MonthGrid: View {
             }
             .font(.ourioHeadline)
             .foregroundStyle(Ink.text)
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
 
-            LazyVGrid(columns: columns, spacing: 6) {
+            LazyVGrid(columns: columns, spacing: Space.s) {
                 ForEach(weekdaySymbols, id: \.self) { d in
                     Text(d).font(.ourioMicro).foregroundStyle(Ink.textSecondary)
                 }
@@ -171,9 +171,9 @@ struct EventEditor: View {
 
     var body: some View {
         BilletSheet(isNew ? "New event" : "Edit event", onConfirm: save, canConfirm: canSave) {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.l) {
 
-            HStack(spacing: 10) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: event.icon, size: 50)
                 UsField(placeholder: "Birthday, trip, concert…", text: $event.title)
             }

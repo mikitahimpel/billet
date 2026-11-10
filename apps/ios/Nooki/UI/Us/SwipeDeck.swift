@@ -18,7 +18,7 @@ struct SwipeDeck: View {
     private var progress: CGFloat { min(1, abs(drag.width) / Self.flingDistance) }
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Space.l) {
             deckStack
             HStack(spacing: 28) {
                 passButton
@@ -67,7 +67,7 @@ struct SwipeDeck: View {
         Text(text)
             .font(.system(.title, design: .rounded, weight: .heavy))
             .foregroundStyle(tint)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, Space.m)
             .padding(.vertical, 3)
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
@@ -86,7 +86,7 @@ struct SwipeDeck: View {
                 .background(Ink.surfaceRaised, in: .circle)
                 .overlay(Circle().stroke(Ink.separator, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Pass")
     }
 
@@ -99,7 +99,7 @@ struct SwipeDeck: View {
                 .background(Circle().fill(.honeyGradient))
                 .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Love")
     }
 
@@ -168,7 +168,7 @@ struct DateIdeaCard: View {
                         .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 6) {
+                    HStack(spacing: Space.s) {
                         tag(idea.place.title, symbol: idea.place.icon.symbol)
                         tag(idea.cost.title, symbol: idea.cost.symbol)
                         tag(idea.time.title, symbol: idea.time.symbol)
@@ -189,8 +189,8 @@ struct DateIdeaCard: View {
         Label(text, systemImage: symbol)
             .font(.ourioMicro)
             .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, Space.m)
+            .padding(.vertical, Space.s)
             .background(.white.opacity(0.18), in: .capsule)
     }
 }

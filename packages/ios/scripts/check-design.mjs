@@ -51,7 +51,7 @@ const checks = [
     pattern: /\.buttonStyle\(\s*\.plain\s*\)/g,
     baseline: join(here, "plain-button-baseline.json"),
     what: "buttons with no pressed state (.buttonStyle(.plain))",
-    fix: "Use a design button (PrimaryButton, SecondaryButton, ToggleButtonStyle, RetryButton) or PressScaleStyle.",
+    fix: "Use a design button (PrimaryButton, SecondaryButton, ToggleButtonStyle, RetryButton), RowButtonStyle for a row, or PressScaleStyle.",
   },
   {
     pattern:

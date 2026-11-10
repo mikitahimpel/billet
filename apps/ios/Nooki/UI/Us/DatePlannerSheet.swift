@@ -22,9 +22,9 @@ struct DateDoneSheet: View {
 
     var body: some View {
         BilletSheet("How was it?", size: .fit) {
-                VStack(spacing: 14) {
+                VStack(spacing: Space.l) {
                     if let title = DateIdea.idea(plan.ideaID)?.title { SheetSubtitle(text: title) }
-                    HStack(spacing: 18) {
+                    HStack(spacing: Space.l) {
                         ForEach(1...3, id: \.self) { value in
                             Button {
                                 withAnimation(.snappy(duration: 0.2)) { hearts = value }
@@ -34,7 +34,7 @@ struct DateDoneSheet: View {
                                     .foregroundStyle(Color.blushPink)
                                     .symbolEffect(.bounce, value: hearts == value)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressScaleStyle())
                             .accessibilityLabel(value == 1 ? "1 heart" : "\(value) hearts")
                             .accessibilityAddTraits(value == hearts ? .isSelected : [])
                         }
@@ -45,7 +45,7 @@ struct DateDoneSheet: View {
                     PhotosPicker(selection: $pick, matching: .images) {
                         photoSlot
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
 
                     if photo != nil {
                         UsField(placeholder: "Caption", text: $caption)
@@ -78,10 +78,10 @@ struct DateDoneSheet: View {
                     Label("Change", systemImage: "photo")
                         .font(.ourioCaption.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, Space.m)
+                        .padding(.vertical, Space.s)
                         .background(.black.opacity(0.45), in: .capsule)
-                        .padding(10)
+                        .padding(Space.m)
                 }
                 .accessibilityLabel("Change photo")
         } else {

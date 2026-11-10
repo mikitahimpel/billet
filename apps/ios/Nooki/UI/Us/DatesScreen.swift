@@ -43,7 +43,7 @@ struct DatesScreen: View {
                 }
                 .padding(.horizontal, Space.gutter)
                 .padding(.top, Space.s)
-                .padding(.bottom, 40)
+                .padding(.bottom, Space.xl + Space.s)
             }
             .scrollIndicators(.hidden)
             .scrollHeader {
@@ -81,7 +81,7 @@ struct DatesScreen: View {
     private var swipeContent: some View {
         let deck = us.deck(for: state.viewer, filter: filter)
         let partner = state.profile.name(of: state.otherPartner)
-        return VStack(alignment: .leading, spacing: 14) {
+        return VStack(alignment: .leading, spacing: Space.l) {
             HStack(spacing: Space.s) {
                 Monogram(partner: state.viewer, profile: state.profile, size: 22)
                 Text(likedAlone != nil
@@ -142,7 +142,7 @@ struct DatesScreen: View {
         VStack(alignment: .leading, spacing: Space.s) {
             sectionTitle("To plan", caption: "You both loved these")
             ScrollView(.horizontal) {
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     ForEach(matches) { idea in
                         Button {
                             planner = PlannerTarget(ideaID: idea.id)
@@ -158,7 +158,7 @@ struct DatesScreen: View {
                                 .frame(width: 104, height: 124)
                                 .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleStyle())
                     }
                 }
             }
@@ -194,7 +194,7 @@ struct DatesScreen: View {
     // MARK: Surprise
 
     private var surpriseContent: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Space.l) {
             if let idea = surpriseIdea {
                 DateIdeaCard(idea: idea)
                 PrimaryButton("Plan it") {
@@ -244,7 +244,7 @@ struct DatesScreen: View {
                 .background(Ink.surfaceRaised, in: .capsule)
                 .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 
     private func roll() {
@@ -347,7 +347,7 @@ struct DatesScreen: View {
             Spacer(minLength: 0)
         }
         .padding(.horizontal, Space.gutter)
-        .padding(.top, 14)
+        .padding(.top, Space.l)
     }
 
     private var filterBar: some View {
@@ -369,12 +369,12 @@ struct DatesScreen: View {
             .padding(.horizontal, Space.gutter)
         }
         .scrollIndicators(.hidden)
-        .padding(.top, 10)
+        .padding(.top, Space.m)
     }
 
     private var filtersButton: some View {
         Button { filtersOpen = true } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: Space.s) {
                 Image(systemName: "line.3.horizontal.decrease")
                     .font(.ourioCaption.weight(.semibold))
                 Text("Filters")
@@ -394,7 +394,7 @@ struct DatesScreen: View {
             .background(Ink.surfaceRaised, in: .capsule)
             .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(filter.isEmpty ? "Filters" : "Filters, \(filter.tags.count) on")
     }
 
@@ -402,7 +402,7 @@ struct DatesScreen: View {
         Button {
             withAnimation(.snappy(duration: 0.2)) { filter.toggle(tag) }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: Space.s) {
                 Image(systemName: tag.symbol)
                     .font(.ourioMicro)
                 Text(tag.title)
@@ -416,7 +416,7 @@ struct DatesScreen: View {
             .frame(height: 34)
             .background(Color.honey.opacity(0.32), in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Remove \(tag.title)")
     }
 }

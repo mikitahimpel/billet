@@ -46,7 +46,7 @@ struct PlacesListBody: View {
     private var hero: some View {
         let summary = list.travelSummary
         return VStack(alignment: .leading, spacing: Space.m) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text("\(summary.been)")
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(Ink.text)
@@ -68,7 +68,7 @@ struct PlacesListBody: View {
     }
 
     private func legend(_ title: String, @ViewBuilder mark: () -> some View) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.s) {
             mark().frame(width: 10, height: 10)
             Text(title)
                 .font(.ourioCaption)
@@ -111,10 +111,10 @@ struct PlacesListBody: View {
             } label: {
                 UsCheck(done: been)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .accessibilityLabel(been ? "Mark as not been" : "Mark as been")
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(minHeight: 60)
         .contentShape(.rect)
         .onTapGesture { if been { mark(item) } }

@@ -63,7 +63,7 @@ struct MovieCard: View {
                 }
                 .padding(.horizontal, Space.gutter)
                 .padding(.top, 28)
-                .padding(.bottom, 40)
+                .padding(.bottom, Space.xl + Space.s)
             }
         }
         .softScrollEdges()
@@ -106,7 +106,7 @@ struct MovieCard: View {
             .frame(minHeight: 40, alignment: .top)
             .padding(.leading, 132)
             .padding(.trailing, Space.gutter)
-            .padding(.top, 10)
+            .padding(.top, Space.m)
         }
     }
 
@@ -157,7 +157,7 @@ struct MovieCard: View {
         }
         .font(.ourioCallout)
         .foregroundStyle(Ink.text)
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(minHeight: 34)
         .background(Ink.surfaceRaised, in: .capsule)
     }
@@ -196,10 +196,10 @@ struct MovieCard: View {
                 }
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.heroInk)
-                .padding(.horizontal, 14)
+                .padding(.horizontal, Space.l)
                 .frame(minHeight: 34)
                 .background(Color.honey, in: .capsule)
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
             }
         }
         .padding(CardMetrics.padding)
@@ -238,6 +238,6 @@ struct MovieCard: View {
                 .frame(minHeight: 50)
                 .background(Ink.surfaceRaised, in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 }

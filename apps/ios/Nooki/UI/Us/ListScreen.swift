@@ -78,8 +78,8 @@ struct ListScreen: View {
                 }
                 .id(Self.top)
                 .padding(.horizontal, Space.gutter)
-                .padding(.top, 14)
-                .padding(.bottom, 40)
+                .padding(.top, Space.l)
+                .padding(.bottom, Space.xl + Space.s)
             }
             .scrollIndicators(.hidden)
             .onChange(of: focused) { _, focused in
@@ -95,7 +95,7 @@ struct ListScreen: View {
                         .onSubmit { addItem(list) }
                         .onAppear { if focusesField { focused = true } }
                         .padding(.horizontal, Space.gutter)
-                        .padding(.top, 14)
+                        .padding(.top, Space.l)
                 }
             }
         }
@@ -214,7 +214,7 @@ struct ListScreen: View {
                 Text("Done together")
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.textSecondary)
-                    .padding(.top, 6)
+                    .padding(.top, Space.s)
                 VStack(spacing: 0) {
                     ForEach(Array(list.finished.enumerated()), id: \.element.id) { index, item in
                         if index > 0 { divider }
@@ -244,7 +244,7 @@ struct ListScreen: View {
             }
             Monogram(partner: item.author, profile: state.profile, size: 20)
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(minHeight: 52)
         .contentShape(.rect)
         .contextMenu {
@@ -263,7 +263,7 @@ struct ListScreen: View {
         } label: {
             UsCheck(done: done)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(done ? "Mark as not done" : "Mark as done")
     }
 
@@ -319,8 +319,8 @@ private struct RenameListSheet: View {
 
     var body: some View {
         BilletSheet("Rename list", size: .fit, onConfirm: save) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: Space.l) {
+                HStack(spacing: Space.m) {
                     UsIcon(glyph: icon, size: 50)
                     UsField(placeholder: "List name", text: $title)
                 }
@@ -357,12 +357,12 @@ struct NewListSheet: View {
     var body: some View {
         BilletSheet("New list", size: .mediumLarge, onConfirm: createCustom, canConfirm: canCreate) {
         VStack(alignment: .leading, spacing: Space.l) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 3), spacing: Space.m) {
                 ForEach(templates) { kind in
                     Button {
                         create(kind: kind, title: kind.defaultTitle, icon: kind.icon)
                     } label: {
-                        VStack(spacing: 6) {
+                        VStack(spacing: Space.s) {
                             UsIcon(glyph: kind.icon, size: 40)
                             Text(kind.defaultTitle)
                                 .font(.ourioMicro)
@@ -373,7 +373,7 @@ struct NewListSheet: View {
                         .frame(height: 92)
                         .cardSurface()
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                 }
             }
 
@@ -382,7 +382,7 @@ struct NewListSheet: View {
                 .foregroundStyle(Ink.textSecondary)
                 .padding(.top, Space.xs)
 
-            HStack(spacing: 10) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: icon, size: 50)
                 UsField(placeholder: "List name", text: $name)
             }

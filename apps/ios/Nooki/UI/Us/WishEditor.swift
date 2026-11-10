@@ -46,7 +46,7 @@ struct WishEditor: View {
 
     var body: some View {
         BilletSheet(existing == nil ? "New wish" : "Edit wish", onConfirm: { save() }, canConfirm: !trimmedTitle.isEmpty) {
-                VStack(alignment: .leading, spacing: 14) {
+                VStack(alignment: .leading, spacing: Space.l) {
                     SheetSubtitle(text: "Paste a link and we'll fill in the rest")
                     linkRow
                     if image != nil || loadingPreview { preview }
@@ -62,7 +62,7 @@ struct WishEditor: View {
     }
 
     private var linkRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Space.m) {
             UsField(placeholder: String(localized: "Link (optional)"), text: $link)
                 .keyboardType(.URL)
                 .textInputAutocapitalization(.never)
@@ -105,7 +105,7 @@ struct WishEditor: View {
                         .frame(width: 28, height: 28)
                         .background(.black.opacity(0.45), in: .circle)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .padding(Space.s)
                 .accessibilityLabel("Remove picture")
             }
@@ -168,7 +168,7 @@ struct WishEditor: View {
             }
             .fieldSurface()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .disabled(occasions.isEmpty && occasion == nil)
     }
 
@@ -189,12 +189,12 @@ struct WishEditor: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
-            .foregroundStyle(Color.red.opacity(0.85))
+            .foregroundStyle(Ink.destructive)
         }
         .font(.ourioCallout.weight(.semibold))
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .padding(.horizontal, Space.xs)
-        .padding(.top, 6)
+        .padding(.top, Space.s)
     }
 
     /// Waits for typing to settle, then asks the page for its title and picture. Only fills what is still empty.

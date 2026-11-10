@@ -95,7 +95,7 @@ private struct GroceryPeek: View {
 
     var body: some View {
         let open = list.open.sorted { $0.added > $1.added }
-        WrapLayout(spacing: 6) {
+        WrapLayout(spacing: Space.s) {
             if open.isEmpty {
                 ForEach(Self.samples, id: \.self) { chip($0, icon: catalog.aisle(for: $0).icon) }
                 more("+")
@@ -109,7 +109,7 @@ private struct GroceryPeek: View {
     }
 
     private func chip(_ text: String, icon: UsGlyph) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.s) {
             UsIcon(glyph: icon, size: 22)
             Text(text)
                 .font(.ourioCallout)
