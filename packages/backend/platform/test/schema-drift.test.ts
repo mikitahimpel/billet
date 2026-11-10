@@ -92,6 +92,8 @@ import {
   StoredOwnedInk,
   StoredOwnedItem,
   StoredWish,
+  StoredPlacement,
+  StoredLayoutLog,
   StoredGiftLoves,
   StoredGiftPlan,
   StoredGiftWish,
@@ -123,6 +125,8 @@ import {
   note,
   ownedInk,
   ownedItem,
+  placement,
+  layoutLog,
   reaction,
   room,
   wallet,
@@ -211,6 +215,8 @@ const checked = [
   ["users", users, StoredUser],
   ["wallet", wallet, StoredWallet],
   ["wish", wish, StoredWish],
+  ["placement", placement, StoredPlacement],
+  ["layout_log", layoutLog, StoredLayoutLog],
 ] as const;
 
 describe("tables match their Effect Schema", () => {

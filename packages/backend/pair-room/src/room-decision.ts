@@ -14,7 +14,13 @@ import { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { LoveStreak } from "@billet/contracts-domain/streak";
-import { CollectionId, GiftReward, PieceSetId, RoomItemId } from "@billet/contracts-domain/shop";
+import {
+  CollectionId,
+  GiftReward,
+  PieceSetId,
+  Placement,
+  RoomItemId,
+} from "@billet/contracts-domain/shop";
 import { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RiddleWrite } from "./riddle-rules.ts";
 import { RoomJoin } from "./room-command.ts";
@@ -42,6 +48,10 @@ export const RoomOutput = Schema.TaggedUnion({
   ItemsGranted: { items: Schema.Array(RoomItemId) },
   /** The pair's wishlist after a wish, or after a buy took pieces off it. */
   WishlistChanged: { wishlist: Schema.Array(RoomItemId) },
+  /** The pair's layout after a change, whole. */
+  LayoutChanged: { layout: Schema.Array(Placement) },
+  /** A layout change whose `id` the room already applied: nothing changes. */
+  LayoutRepeated: {},
   /** A wallet entry to store: coins care earned, or a spend. */
   CoinsEntered: { entry: CoinEntry },
   /** A buy whose `id` the room already holds: nothing is stored or charged again. */
@@ -135,6 +145,16 @@ export const RoomRejection = Schema.TaggedUnion({
   MoodNoteTooLong: {},
   /** A `GamePlayed` an app sent for a game the room journals itself, such as draw-guess. */
   RoomJournalsGame: {},
+  /** A placement the room will not take: the piece is not the pair's, or does not fit. */
+  LayoutRefused: {
+    reason: Schema.Literals([
+      "not-owned",
+      "unknown-piece",
+      "wrong-surface",
+      "outside-room",
+      "occupied",
+    ]),
+  },
   /** A restore of a streak that is alive, too short, out for longer than a day, or in cooldown. */
   StreakNotRestorable: {},
 });

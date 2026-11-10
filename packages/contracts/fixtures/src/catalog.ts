@@ -1182,6 +1182,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "not-enough-coins": ApiError.cases.NotEnoughCoins.make({ needed: 60, have: 25 }),
     "already-owned": ApiError.cases.AlreadyOwned.make({ itemId: "ink-rose" }),
     "collection-incomplete": ApiError.cases.CollectionIncomplete.make({ collection: cozyAutumn }),
+    "layout-refused": ApiError.cases.LayoutRefused.make({ reason: "occupied" }),
     "gift-taken": ApiError.cases.GiftTaken.make({ day: giftDay }),
     "bonus-taken": ApiError.cases.BonusTaken.make({ collection: cozyAutumn }),
     "cat-not-adopted": ApiError.cases.CatNotAdopted.make({}),

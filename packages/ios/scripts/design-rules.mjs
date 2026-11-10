@@ -249,14 +249,18 @@ function callee(code, at) {
   return code.slice(k + 1, end);
 }
 
-const roleGivers = /\.font\(|\.ourioScaledFont\(|\.buttonStyle\(\s*(?!\.)|\.labelStyle\(|\.tipViewStyle\(/;
+const roleGivers =
+  /\.font\(|\.ourioScaledFont\(|\.buttonStyle\(\s*(?!\.)|\.labelStyle\(|\.tipViewStyle\(/;
 
 function textWithoutRole(code, context = {}) {
   const components = context.components ?? new Set();
   const hits = [];
   for (const match of code.matchAll(/(?<![\w.])Text\(/g)) {
     const open = match.index + match[0].length - 1;
-    if (!roleGivers.test(chainAfter(code, closing(code, open))) && !roleAround(code, match.index, components)) {
+    if (
+      !roleGivers.test(chainAfter(code, closing(code, open))) &&
+      !roleAround(code, match.index, components)
+    ) {
       hits.push(match.index);
     }
   }
@@ -265,9 +269,18 @@ function textWithoutRole(code, context = {}) {
 
 /** Whether a call or closure around `at` gives its text a style, up to the declaration it is in. */
 function roleAround(code, at, components) {
-  for (let enclosing = enclosingOpen(code, at); enclosing >= 0; enclosing = enclosingOpen(code, enclosing)) {
+  for (
+    let enclosing = enclosingOpen(code, at);
+    enclosing >= 0;
+    enclosing = enclosingOpen(code, enclosing)
+  ) {
     if (components.has(callee(code, enclosing).split(".").pop())) return true;
-    if (code[enclosing] === "{" && /^(?:struct|func|var|init|extension|class|enum|protocol)\b/.test(precedingKeyword(code, enclosing))) {
+    if (
+      code[enclosing] === "{" &&
+      /^(?:struct|func|var|init|extension|class|enum|protocol)\b/.test(
+        precedingKeyword(code, enclosing),
+      )
+    ) {
       return false;
     }
     if (roleGivers.test(chainAfter(code, closing(code, enclosing)))) return true;
@@ -293,7 +306,10 @@ function precedingKeyword(code, at) {
   const lineStart = code.lastIndexOf("\n", at) + 1;
   const line = code.slice(lineStart, at).trim();
   if (!/\{$/.test(code.slice(lineStart, at + 1).trim())) return "";
-  return line.replace(/^(?:@\w+(?:\([^)]*\))?\s+|(?:public|private|fileprivate|internal|static|nonisolated|override|mutating)\s+)*/, "");
+  return line.replace(
+    /^(?:@\w+(?:\([^)]*\))?\s+|(?:public|private|fileprivate|internal|static|nonisolated|override|mutating)\s+)*/,
+    "",
+  );
 }
 
 /** Counts per rule for one file's source. */
@@ -401,7 +417,11 @@ function shrinkOnly({ root, base, baseline, allow }) {
   const show = (path) => {
     try {
       return JSON.parse(
-        execFileSync("git", ["show", `${base}:${path}`], { cwd: root, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] }),
+        execFileSync("git", ["show", `${base}:${path}`], {
+          cwd: root,
+          encoding: "utf8",
+          stdio: ["ignore", "pipe", "ignore"],
+        }),
       );
     } catch {
       return null;
@@ -414,7 +434,9 @@ function shrinkOnly({ root, base, baseline, allow }) {
       for (const [file, count] of Object.entries(files)) {
         const was = before[id]?.[file] ?? 0;
         if (count > was) {
-          problems.push(`baseline.json raises ${id} for ${file} from ${was} to ${count}; it may only shrink.`);
+          problems.push(
+            `baseline.json raises ${id} for ${file} from ${was} to ${count}; it may only shrink.`,
+          );
         }
       }
     }
@@ -422,13 +444,19 @@ function shrinkOnly({ root, base, baseline, allow }) {
   const allowBefore = show("packages/ios/design/lint/allow.json");
   if (allowBefore) {
     const added = Object.entries(allow).flatMap(([id, paths]) =>
-      paths.filter((path) => !(allowBefore[id] ?? []).includes(path)).map((path) => `${id} ${path}`),
+      paths
+        .filter((path) => !(allowBefore[id] ?? []).includes(path))
+        .map((path) => `${id} ${path}`),
     );
     if (added.length > 0) {
-      const changed = execFileSync("git", ["diff", "--name-only", base, "--", "packages/ios/design/Sources"], {
-        cwd: root,
-        encoding: "utf8",
-      }).trim();
+      const changed = execFileSync(
+        "git",
+        ["diff", "--name-only", base, "--", "packages/ios/design/Sources"],
+        {
+          cwd: root,
+          encoding: "utf8",
+        },
+      ).trim();
       if (!changed) {
         problems.push(
           `allow.json adds ${added.join(", ")} without a change to the design package; give the design package the component that makes the exception unneeded, or change it in the same PR.`,

@@ -40,7 +40,7 @@ describe("room migrations", () => {
     await runInDurableObject(room("fresh"), (_, state) => {
       expect(tables(state.storage)).toEqual(expect.arrayContaining(["room", "note"]));
       expect(tables(state.storage)).not.toContain("room_probe");
-      expect(history(state.storage)).toHaveLength(21);
+      expect(history(state.storage)).toHaveLength(22);
     });
   });
 
@@ -190,6 +190,7 @@ describe("room migrations", () => {
         "guess_answers",
         "guess_rounds",
         "guess_weeks",
+        "layout_log",
         "list_items",
         "list_keys",
         "lists",
@@ -198,6 +199,7 @@ describe("room migrations", () => {
         "note",
         "owned_ink",
         "owned_item",
+        "placement",
         "reaction",
         "riddle_guesses",
         "riddle_series",
@@ -206,7 +208,7 @@ describe("room migrations", () => {
         "wallet",
         "wish",
       ]);
-      expect(history(state.storage)).toHaveLength(21);
+      expect(history(state.storage)).toHaveLength(22);
     });
   });
 });

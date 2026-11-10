@@ -87,7 +87,23 @@ targets:
       - package: BilletPet
         products: [Pet, PetScene]
       - package: BilletFeatures
-        products: [FeatureCanvas, FeatureGames, FeatureInbox, FeatureMood, FeatureMoments, FeatureOnboarding, FeaturePairing, FeatureShop, DrawInterface, GamesInterface, MoodInterface, RoomInterface, ShopInterface, WidgetBridge]
+        products:
+          [
+            FeatureCanvas,
+            FeatureGames,
+            FeatureInbox,
+            FeatureMood,
+            FeatureMoments,
+            FeatureOnboarding,
+            FeaturePairing,
+            FeatureShop,
+            DrawInterface,
+            GamesInterface,
+            MoodInterface,
+            RoomInterface,
+            ShopInterface,
+            WidgetBridge,
+          ]
       - package: BilletPayments
         products: [Payments, PaymentsLive]
     entitlements:

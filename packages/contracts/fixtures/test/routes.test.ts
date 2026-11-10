@@ -43,6 +43,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/shop/buy",
       },
+      "changeLayout": {
+        "method": "POST",
+        "path": "/v1/shop/layout",
+      },
       "changeList": {
         "method": "POST",
         "path": "/v1/lists",
