@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import Persistence
 
 /// Grows by one each day the couple does something together (docs/love-streak.md); a whole missed day puts it out,
 /// and one missed day can be restored once a month.

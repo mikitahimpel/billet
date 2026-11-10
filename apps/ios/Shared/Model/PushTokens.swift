@@ -1,4 +1,5 @@
 import Foundation
+import Persistence
 
 /// The APNs tokens this phone has been given, kept in the App Group so the widget extension can hand its token to the
 /// app, which registers them with the server. `registered` remembers what the server already has.
