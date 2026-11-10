@@ -102,6 +102,9 @@ final class CityRoomScene: CatRoom {
         applyLight()
     }
 
+    /// `-cityHour 14` on launch holds the Bedroom at that hour, for looking at it by day.
+    private static let fixedHour: Float? = UserDefaults.standard.object(forKey: "cityHour") == nil ? nil : UserDefaults.standard.float(forKey: "cityHour")
+
     override var roomShowcase: [ShowcaseStep] {
         [.init(label: "Day and night", seconds: 14, start: { [unowned self] in clock = .cycle(seconds: 14) },
                end: { [unowned self] in clock = .live })]
@@ -112,7 +115,7 @@ final class CityRoomScene: CatRoom {
     override func tick(_ dt: Float) {
         super.tick(dt)
         switch clock {
-        case .live: hour = Daylight.localHour()
+        case .live: hour = Self.fixedHour ?? Daylight.localHour()
         case .cycle(let seconds): hour = (hour + dt * 24 / seconds).truncatingRemainder(dividingBy: 24)
         }
         light = Daylight.sample(hour)
@@ -126,12 +129,15 @@ final class CityRoomScene: CatRoom {
     private func applyLight() {
         appliedHour = hour
         let darkness = light.darkness
-        var sunLight = DirectionalLightComponent(color: Daylight.color(light.sun), intensity: 320 * light.lightIntensity)
+        // By day the light is as warm as the Living room's; at night it stays the moon's.
+        let warm = Daylight.rgb(0xFFE2BC), day = 1 - darkness
+        let sunColor = simd_mix(light.sun, warm, SIMD3(repeating: 0.5 * day))
+        var sunLight = DirectionalLightComponent(color: Daylight.color(sunColor), intensity: 320 * light.lightIntensity)
         sunLight.isRealWorldProxy = false
         sun.components.set(sunLight)
         sun.look(at: .zero, from: light.lightDirection * 3, relativeTo: pivot)
 
-        let fillColor = simd_mix(light.horizon, light.top, SIMD3(repeating: 0.4))
+        let fillColor = simd_mix(simd_mix(light.horizon, light.top, SIMD3(repeating: 0.4)), warm, SIMD3(repeating: 0.55 * day))
         fill.components.set(DirectionalLightComponent(color: Daylight.color(fillColor), intensity: 300 * (0.25 + 0.5 * (1 - darkness))))
         setPoint(skyLight, color: light.horizon, lumens: 2500 * (1 - darkness * 0.85), radius: 1.2)
 
@@ -295,6 +301,15 @@ final class CityRoomScene: CatRoom {
         }
         pivot.box(0.085, 0.065, 1.13, r: 0.015, wood, at: [-0.535, h + 0.02, -0.01])
         pivot.box(1.13, 0.065, 0.085, r: 0.015, wood, at: [-0.01, h + 0.02, -0.535])
+
+        // Snow resting on the beams, as on the Living room's.
+        let snow = matte(0xFFFBF5, roughness: 0.6)
+        pivot.box(0.12, 0.05, 0.42, r: 0.024, snow, at: [-0.535, h + 0.07, 0.22])
+        pivot.box(0.11, 0.04, 0.3, r: 0.019, snow, at: [-0.535, h + 0.065, -0.28])
+        pivot.sphere(0.04, snow, at: [-0.535, h + 0.075, 0.0], scale: [1.2, 0.8, 1.4])
+        pivot.box(0.44, 0.05, 0.12, r: 0.024, snow, at: [0.24, h + 0.07, -0.535])
+        pivot.box(0.26, 0.04, 0.11, r: 0.019, snow, at: [-0.3, h + 0.065, -0.535])
+        pivot.sphere(0.045, snow, at: [-0.535, h + 0.08, -0.535], scale: [1.3, 0.9, 1.3])
     }
 
     private func buildWindow() {
@@ -359,6 +374,9 @@ final class CityRoomScene: CatRoom {
     private func buildRug() {
         pivot.cylinder(0.006, 0.22, matte(Tone.rugEdge, roughness: 1), at: [0.04, 0.016, 0.2])
         pivot.cylinder(0.008, 0.2, matte(Tone.rug, roughness: 1), at: [0.04, 0.019, 0.2])
+        // Rings like the Living room's rug.
+        pivot.cylinder(0.009, 0.15, matte(0xEFC99C, roughness: 1), at: [0.04, 0.0195, 0.2])
+        pivot.cylinder(0.010, 0.11, matte(Tone.rug, roughness: 1), at: [0.04, 0.02, 0.2])
     }
 
     /// Along the back wall under the window, pillow on the left, blanket over the right.
