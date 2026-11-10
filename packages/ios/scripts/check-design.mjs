@@ -1,6 +1,7 @@
 // Fails when feature code outside the design package gains a raw `Color(red:`,
 // `.font(.system(size:`, numeric corner radius or hand-made "Try again" button, a card whose
-// content is not at `CardMetrics.padding`, or a scroll view with a hard edge (docs/design-system.md).
+// content is not at `CardMetrics.padding`, a scroll view with a hard edge, or a design button restyled
+// after its style (docs/design-system.md).
 // Baseline counts may only shrink; `--update` rewrites them after a cleanup. Run from anywhere in the
 // repository.
 import { readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -158,6 +159,24 @@ if (edgeViolations.length > 0) {
   console.error(edgeViolations.join("\n"));
   console.error(
     "Every scroll view fades under the bars with .softScrollEdges(), and under a sheet's chips or search with .scrollHeader { } (docs/design-system.md).",
+  );
+  failed = true;
+}
+
+// A design button keeps the package's type and colour: a `.font`, `.tint` or `.foregroundStyle` after
+// its style makes a one-off that no longer matches the other buttons.
+const restyled = [];
+for (const [file, text] of sources) {
+  for (const match of text.matchAll(
+    /\.buttonStyle\(\s*(Primary|Secondary|Quiet)ButtonStyle\([^)]*\)\s*\)\s*\.(font|tint|foregroundStyle)\(/g,
+  )) {
+    restyled.push(`${file}: a ${match[1]}ButtonStyle restyled by .${match[2]}`);
+  }
+}
+if (restyled.length > 0) {
+  console.error(restyled.join("\n"));
+  console.error(
+    "Use PrimaryButton, SecondaryButton or QuietButtonStyle as they are; add a variant to the design package if one is missing (docs/design-system.md).",
   );
   failed = true;
 }
