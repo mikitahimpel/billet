@@ -76,7 +76,7 @@ extension HomeView {
             }
             let sheet = state.composingNote != nil || state.drawing || state.showsProfile || state.showsInbox
                 || state.openedShopItem != nil
-            let buying = state.shop.lastPurchase?.canUndo(at: .now) == true
+            let buying = state.shop.lastPurchase?.momentShows(at: .now) == true
             return HintContext(
                 screen: screen, busy: sheet || buying || room.showcase != nil, hasRoomChoice: hasRoomChoice,
                 canAffordTreat: state.shop.coins >= ShopModel.treatPrice,

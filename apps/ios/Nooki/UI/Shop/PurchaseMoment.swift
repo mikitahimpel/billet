@@ -72,7 +72,7 @@ struct PurchaseMoment: View {
             if refused?.id == current.id { withAnimation(.spring(duration: 0.35)) { refused = nil } }
         }
         .task(id: shown?.id) {
-            // The card leaves when Undo would no longer work, counted from the buy itself.
+            // The card leaves when its Undo window ends, counted from the buy itself.
             guard let current = shown else { return }
             let left = Purchase.undoWindow - Date.now.timeIntervalSince(current.date)
             try? await Task.sleep(for: .seconds(max(0, left)))
@@ -110,11 +110,13 @@ struct PurchaseMoment: View {
                         .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                PillButton("Undo", symbol: "arrow.uturn.backward") {
-                    if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
+                if purchase.undoable {
+                    PillButton("Undo", symbol: "arrow.uturn.backward") {
+                        if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
+                    }
+                    .fixedSize()
+                    .accessibilityHint("Gives back \(purchase.cost) coins")
                 }
-                .fixedSize()
-                .accessibilityHint("Gives back \(purchase.cost) coins")
             }
         }
         .accessibilityElement(children: .contain)
