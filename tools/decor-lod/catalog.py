@@ -33,6 +33,9 @@ HAND = [
 ]
 PROP_SCALE = 0.8
 
+# What she cannot walk through is a plant's pot, not its leaves.
+CORE = {"monstera": (0.2, 0.2)}
+
 bounds = json.load(open(os.path.join(os.path.dirname(__file__), "bounds.json")))
 
 
@@ -51,6 +54,7 @@ CAT = {"armchair": "sofa", "armchair-round": "sofa", "beanbag": "sofa", "beanbag
 items = []
 for id, fit, size, mount, flat in HAND:
     width, depth, height = measured(f"Decor_{id}", fit, size)
+    width, depth = CORE.get(id, (width, depth))
     items.append(dict(id=id, model=f"Item_{id}", asset=f"Decor_{id}", fit=fit, size=size, mount=mount,
                       width=width, depth=0.0 if mount == "wall" else depth, flat=flat, height=height))
 for path in sorted(glob.glob(os.path.join(shop, "Item_*.json"))):

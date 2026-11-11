@@ -161,4 +161,34 @@ import Testing
       #expect(range.contains(longest), "\(id) is \(longest) m")
     }
   }
+
+  @Test func theArmchairAndTheMonsteraEachFitTheHomeRoom() {
+    for item in ["armchair", "monstera"] {
+      let layout = DecorLayout(stored: []).settled(owned: [item])
+      #expect(layout.isPlaced(item), "\(item) waits in the closet")
+      #expect(layout.placement(of: item).map { layout.accepts($0) } == true)
+    }
+  }
+
+  @Test func aPieceThatReallyCutsHerWayToTheTreeIsStillRefused() {
+    // The strip between her bed and the wall is the only way to the cat tree's foot.
+    for v in -3...3 {
+      let verdict = DecorLayout(stored: []).verdict(
+        Placement(item: "monstera", surface: .floor, u: 7, v: v))
+      #expect(verdict == .blocksWay, "u 7, v \(v)")
+    }
+    let blocked = DecorLayout(
+      placements: [Placement(item: "monstera", surface: .floor, u: 7, v: 0)], stored: [])
+    #expect(!blocked.occupancy().connects(from: DecorRoom.home.spawn, to: DecorRoom.home.anchors))
+  }
+
+  @Test func aPieceTheRoutesCanGoRoundIsPlaced() {
+    let layout = DecorLayout(stored: [])
+    let chair = Placement(item: "armchair", surface: .floor, u: -2, v: 6)
+    #expect(layout.accepts(chair))
+    let occupancy = layout.putting(chair).occupancy()
+    #expect(occupancy.connects(from: DecorRoom.home.spawn, to: DecorRoom.home.anchors))
+    let route = occupancy.route(from: DecorRoom.home.spawn, to: DecorRoom.home.anchors[0])
+    #expect(route != nil)
+  }
 }
