@@ -1,7 +1,7 @@
 ---
-import AppStoreBadge from "../../components/app-store-badge.astro";
 import CompareTable from "../../components/compare-table.astro";
-import GetApp from "../../components/get-app.astro";
+import EndCard from "../../components/end-card.astro";
+import StoreButton from "../../components/store-button.astro";
 import { alternatives, apps, checked, ourio } from "../../compare";
 import Page from "../../layouts/page.astro";
 
@@ -34,107 +34,90 @@ const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name
   title="Best couples apps for iPhone compared: Paired, Between and more · Ourio"
   description="Couples apps for iPhone side by side: Paired, Between, Locket Widget, Widgetable, Agapé, Lovewick, Cupla, SumOne and Ourio. Prices, Android support and features, from each app's own App Store page."
   schema={schema}
+  bodyClass="site-compare"
 >
-  <section class="container-page pt-10 pb-12 md:pt-14 md:pb-16">
-    <p class="eyebrow">Compare</p>
-    <h1 class="mt-5 max-w-[20ch] text-h2">Couples apps for iPhone, compared.</h1>
-    <p class="mt-6 max-w-[44rem] text-lead text-soft">
-      The best couples app depends on what you want from it. Paired and Agapé are built around daily questions, Between is a
-      private messenger, Locket and Widgetable live in widgets, Cupla is a shared planner. Ourio, the app this site is for,
-      is a free mix: a shared cat, Lock Screen drawings, games and a planner, with no subscription.
-    </p>
-    <p class="mt-4 text-small text-muted">
-      We make Ourio, so read this as our view. Prices and features come from each app's US App Store page and website,
-      checked <time datetime={checked.iso}>{checked.label}</time>; sources are at the bottom.
-    </p>
-  </section>
-
-  <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="by-need">
-    <div class="container-page">
-      <h2 id="by-need" class="text-h3">Which app for what</h2>
-      <div class="lit-panel mt-8 min-w-0 overflow-x-auto p-2 md:p-4">
-        <table class="w-full border-collapse text-left text-body">
-          <caption class="sr-only">Couples apps by what you want from them</caption>
-          <thead>
-            <tr class="border-b border-paper/15">
-              <th scope="col" class="px-3 py-3 font-extrabold">If you want</th>
-              <th scope="col" class="px-3 py-3 font-extrabold">Look at</th>
-            </tr>
-          </thead>
-          <tbody class="text-soft">
-            {
-              picks.map((pick) => (
-                <tr class="border-b border-paper/10 last:border-0">
-                  <td class="px-3 py-3">{pick.need}</td>
-                  <td class="px-3 py-3 font-bold text-paper">{pick.apps}</td>
-                </tr>
-              ))
-            }
-          </tbody>
-        </table>
-      </div>
+  <section class="wrap pg-hero pg-hero-solo">
+    <div class="pg-hero-copy">
+      <p class="eyebrow">Compare</p>
+      <h1>Couples apps for iPhone, compared.</h1>
+      <p class="lead">
+        The best couples app depends on what you want from it. Paired and Agapé are built around daily questions, Between is a
+        private messenger, Locket and Widgetable live in widgets, Cupla is a shared planner. Ourio, the app this site is for,
+        is a free mix: a shared cat, Lock Screen drawings, games and a planner, with no subscription.
+      </p>
+      <p class="pg-small">
+        We make Ourio, so read this as our view. Prices and features come from each app's US App Store page and website,
+        checked <time datetime={checked.iso}>{checked.label}</time>; sources are at the bottom.
+      </p>
     </div>
   </section>
 
-  <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="table">
-    <div class="container-page">
-      <h2 id="table" class="text-h3">Features and prices</h2>
-      <div class="mt-8">
-        <CompareTable apps={[ourio, ...apps]} caption="Couples apps for iPhone: price, Android and features." />
-      </div>
-    </div>
+  <section class="pg wrap" aria-labelledby="by-need">
+    <h2 id="by-need" class="pg-h2">Which app for what</h2>
+    <dl class="picks">
+      {
+        picks.map((pick) => (
+          <div>
+            <dt>{pick.need}</dt>
+            <dd>{pick.apps}</dd>
+          </div>
+        ))
+      }
+    </dl>
   </section>
 
-  <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="alternatives">
-    <div class="container-page">
-      <h2 id="alternatives" class="text-h3">Ourio as an alternative</h2>
-      <ul class="mt-8 grid gap-4 md:grid-cols-3 md:gap-5">
-        {
-          alternatives.map((page) => (
-            <li>
-              <a href={`/compare/${page.slug}/`} class="lit-panel block h-full p-6 transition-transform hover:-translate-y-0.5">
-                <span class="block text-[1.125rem] font-extrabold">{page.app} alternative</span>
-                <span class="mt-2 block text-small text-muted">{page.h1}</span>
-              </a>
-            </li>
-          ))
-        }
+  <section class="pg wrap" aria-labelledby="table">
+    <h2 id="table" class="pg-h2">Features and prices</h2>
+    <CompareTable apps={[ourio, ...apps]} caption="Couples apps for iPhone: price, Android and features." />
+  </section>
+
+  <section class="pg wrap" aria-labelledby="alternatives">
+    <h2 id="alternatives" class="pg-h2">Ourio as an alternative</h2>
+    <ul class="more more-3">
+      {
+        alternatives.map((page) => (
+          <li>
+            <a href={`/compare/${page.slug}/`}>
+              <span class="more-name">{page.app} alternative</span>
+              <span class="more-sum">{page.h1}</span>
+              <span class="more-go" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
+  </section>
+
+  <section class="pg wrap pg-aside" aria-labelledby="not">
+    <div class="txt">
+      <h2 id="not" class="pg-h2">Where Ourio falls short</h2>
+      <ul class="dots">
+        <li>iPhone only: every other app here also runs on Android.</li>
+        <li>No chat and no calls; Between has both.</li>
+        <li>No coaching content, like Paired's guided journeys.</li>
+        <li>New: no App Store ratings yet.</li>
       </ul>
     </div>
+    <div class="pg-aside-cta"><StoreButton /></div>
   </section>
 
-  <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="not">
-    <div class="container-page grid gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-center">
-      <div>
-        <h2 id="not" class="text-h3">Where Ourio falls short</h2>
-        <ul class="mt-4 space-y-2 text-body text-soft">
-          <li>iPhone only: every other app here also runs on Android.</li>
-          <li>No chat and no calls; Between has both.</li>
-          <li>No coaching content, like Paired's guided journeys.</li>
-          <li>New: no App Store ratings yet.</li>
-        </ul>
-      </div>
-      <AppStoreBadge qr class="md:justify-self-end" />
-    </div>
+  <section class="pg wrap" aria-labelledby="sources">
+    <h2 id="sources" class="pg-h2">Sources</h2>
+    <ul class="sources">
+      {
+        sources.map((source) => (
+          <li>
+            {source.name}:{" "}
+            <a href={source.url} rel="nofollow noopener">
+              {source.url.replace(/^https:\/\/(www\.)?/, "")}
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </section>
 
-  <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="sources">
-    <div class="container-page">
-      <h2 id="sources" class="text-h3">Sources</h2>
-      <ul class="mt-6 grid gap-2 text-small text-muted md:grid-cols-2">
-        {
-          sources.map((source) => (
-            <li class="min-w-0 break-words">
-              {source.name}:{" "}
-              <a href={source.url} rel="nofollow noopener" class="text-honey underline underline-offset-4">
-                {source.url.replace(/^https:\/\/(www\.)?/, "")}
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </div>
-  </section>
-
-  <GetApp />
+  <EndCard />
 </Page>
