@@ -4,7 +4,12 @@ import Testing
 
 @Suite struct DecorLayoutTests {
   @Test func theShopsPiecesAreAllPlaceable() {
-    #expect(DecorItem.all.count == 12)
+    #expect(DecorItem.all.count == 47)
+    #expect(Set(DecorItem.all.map(\.id)).count == DecorItem.all.count)
+    #expect(DecorItem.item(shopID: "windowseat")?.mount == .floor)
+    #expect(DecorItem.item(shopID: "clock")?.mount == .wall)
+    #expect(DecorItem.item(shopID: "floorcushion-sage")?.isFlat == true)
+    #expect(DecorItem.item(shopID: "desk")?.isFlat == false)
     #expect(DecorItem.item(shopID: "print")?.mount == .wall)
     #expect(DecorItem.item(shopID: "rug")?.isFlat == true)
     #expect(DecorItem.item(shopID: "treat-fish") == nil)
@@ -21,6 +26,15 @@ import Testing
     #expect(settled.placements.count == DecorLayout.maxPlaced)
     #expect(!settled.isPlaced(next))
     #expect(settled.stored.contains(next))
+  }
+
+  @Test func everyPieceIsASizeTheRoomCanHold() {
+    for item in DecorItem.all {
+      #expect(item.width > 0 && item.width <= 0.6, "\(item.id)")
+      #expect(
+        item.mount == .wall ? item.depth == 0 : item.depth > 0 && item.depth <= 0.6, "\(item.id)")
+      #expect(item.assetName.hasPrefix("Decor_") || item.assetName == "Item_\(item.id)")
+    }
   }
 
   @Test func aNewPieceGoesIntoTheRoomByItself() {

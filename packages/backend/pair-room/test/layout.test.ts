@@ -95,6 +95,18 @@ describe("arranging the room", () => {
     expect(accepted(first, place(2, spot("monstera", 0, 0))).state.layout).toHaveLength(2);
   });
 
+  it("knows the props of the catalog, a flat cushion is stood on, a wall clock hangs", () => {
+    const props: ActiveRoom = {
+      ...owning,
+      items: [piece("windowseat"), piece("floorcushion-sage"), piece("books"), piece("clock")],
+    };
+    const first = accepted(props, place(1, spot("floorcushion-sage", 0, 0))).state;
+    expect(accepted(first, place(2, spot("books", 0, 0))).state.layout).toHaveLength(2);
+    expect(accepted(first, place(3, spot("clock", 4, 0, "backWall"))).state.layout).toHaveLength(2);
+    expect(reason(props, place(4, spot("windowseat", 0, 0, "backWall")))).toBe("wrong-surface");
+    expect(reason(props, place(5, spot("hammock", 0, 0)))).toBe("not-owned");
+  });
+
   it("refuses a room not open", () => {
     expect(decide({ _tag: "Vacant" }, place(1, spot("armchair", 0, 0)))._tag).toBe("Rejected");
   });
