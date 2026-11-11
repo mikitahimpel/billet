@@ -1,9 +1,12 @@
 import Design
 import DrawInterface
 import FeatureInbox
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import UIKit
+import UsInterface
 import Wire
 
 /// FeatureInbox's sheet with what only the app knows: names, monograms, the cat's portrait, mood faces and the
@@ -13,10 +16,13 @@ struct InboxSheet: View {
     let state: HomeState
     /// Called with a row's target after the sheet has closed.
     var open: (ActivityTarget) -> Void
+    var opensModel = true
+    var now: () -> Date = { .now }
 
     var body: some View {
         let partner = state.profile.name(of: state.otherPartner)
-        InboxView(model: model, names: .app(partner: partner, cat: state.petName), open: open) { actor in
+        InboxView(model: model, names: .app(partner: partner, cat: state.petName), opensModel: opensModel, now: now,
+                  open: open) { actor in
             InboxAvatar(actor: actor, state: state)
         } face: { mood in
             MoodArt(mood: PartnerMood(rawValue: mood.rawValue), size: 24)

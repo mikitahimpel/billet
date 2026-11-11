@@ -4,6 +4,8 @@ import Foundation
 /// the camera.
 public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
   case home, tree, sill, ball, basket, bowl, front
+  /// Pieces the player stood in the room, each the first of its kind.
+  case sofa, windowSeat, post, catBed, crate
 
   /// Where the brain's piece of furniture is in Nooki's room, if anywhere.
   public init?(_ kind: RoomAffordance.Kind) {
@@ -14,6 +16,11 @@ public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
     case .shelf, .desk, .smallItem: self = .tree
     case .box: self = .basket
     case .soft: self = .home
+    case .sofa: self = .sofa
+    case .windowSeat: self = .windowSeat
+    case .scratchingPost: self = .post
+    case .catBed: self = .catBed
+    case .crate: self = .crate
     case .bowl: self = .bowl
     case .door: self = .front
     }
@@ -30,6 +37,11 @@ public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
         case .basket: RoomAffordance(id: "basket", kind: .box)
         case .bowl: RoomAffordance(id: "bowl", kind: .bowl)
         case .front: nil
+        case .sofa: RoomAffordance(id: "sofa", kind: .sofa)
+        case .windowSeat: RoomAffordance(id: "windowSeat", kind: .windowSeat)
+        case .post: RoomAffordance(id: "post", kind: .scratchingPost)
+        case .catBed: RoomAffordance(id: "catBed", kind: .catBed)
+        case .crate: RoomAffordance(id: "crate", kind: .crate)
         }
       })
   }
@@ -116,7 +128,7 @@ public struct NookiCatScript: Sendable {
 
   public let spots: Set<NookiSpot>
   /// Where she may rest: her bed and the window seat. The yarn basket and the toys are for play.
-  public static let beds: Set<NookiSpot> = [.home, .sill]
+  public static let beds: Set<NookiSpot> = [.home, .sill, .sofa, .windowSeat, .catBed, .crate]
   private var step: (step: CatActivityStep, start: Double)?
   private var look: NookiLook?
   private var drowse: Double?

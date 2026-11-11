@@ -1,6 +1,9 @@
 import Design
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import UsInterface
 import UserNotifications
 
 extension AppSettings {

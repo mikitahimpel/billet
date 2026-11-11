@@ -1,7 +1,10 @@
 import FeaturePairing
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 extension OnboardingView {

@@ -1,9 +1,13 @@
-import OurioShared
-import PetScene
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
-/// Every card is a `Card` that starts with a `CardHeader`; only the hero is warm.
+/// One warm hero (days together and the streak), three square actions, the games as posters on a shelf, the lists as
+/// rows.
 struct UsView: View {
     @Bindable var state: HomeState
 
@@ -11,8 +15,6 @@ struct UsView: View {
     /// The round for a build without a server, which has no partner to play with.
     @State private var unpaired = WhoKnowsModel(sync: nil, viewer: nil, catalog: [])
     @State private var unpairedRiddles = DrawGuessModel(sync: nil, viewer: nil, words: .bundled)
-    /// Where the page is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
-    @State private var position = ScrollPosition(edge: .top)
 
     enum Route: Identifiable, Hashable {
         case dates, whoKnows, drawGuess, wishlists, calendar, list(UUID), newList
@@ -30,32 +32,18 @@ struct UsView: View {
         }
     }
 
-    private let hMargin: CGFloat = Space.l
     private var us: UsStore { state.us }
 
     var body: some View {
         let upcoming = us.upcoming(togetherSince: state.togetherSince)
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.m) {
-                header
-                CountdownHero(next: upcoming.first, days: state.daysTogether) { state.usRoute = .calendar }
-                StreakCard(store: state.streak)
-                tiles(upcoming: upcoming.count)
-                games
-                lists
-            }
-            .padding(.horizontal, hMargin)
-            .padding(.top, Space.xs)
-            .padding(.bottom, Space.l)
+        TabPage {
+            StreakCard(store: state.streak, daysTogether: state.daysTogether)
+            tiles(next: upcoming.first)
+                .padding(.bottom, Space.l)
+            games
+                .padding(.bottom, Space.l)
+            lists
         }
-        .scrollIndicators(.hidden)
-        .scrollPosition($position)
-        .softScrollEdges()
-        .onAppear {
-            guard ScenePerf.isOn else { return }
-            OurioPerf.scrolls[.us] = { position.scrollTo(y: $0) }
-        }
-        .onDisappear { OurioPerf.scrolls[.us] = nil }
         .task(id: session?.isPaired) {
             await whoKnows.load()
             await drawGuess.load()
@@ -76,102 +64,28 @@ struct UsView: View {
     private var whoKnows: WhoKnowsModel { session?.whoKnows ?? unpaired }
     private var drawGuess: DrawGuessModel { session?.drawGuess ?? unpairedRiddles }
 
-    private var header: some View {
-        HStack(alignment: .center, spacing: Space.m) {
-            Text("Us")
-                .font(.ourioLargeTitle)
-                .foregroundStyle(Ink.primary)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-        }
-        .frame(height: Size.control)
+    private func tiles(next: Upcoming?) -> some View {
+        let matches = us.matches.count
+        let wishes = us.wishes(of: state.partners.0).count + us.wishes(of: state.partners.1).count
+        return ActionTiles([
+            ActionTile("Dates", status: Self.matchesLine(matches), symbol: "dice.fill",
+                       tint: UsTint.blush.color) { state.usRoute = .dates },
+            ActionTile("Wishlists", status: wishes == 1 ? "1 wish" : "\(wishes) wishes",
+                       symbol: "gift.fill", tint: UsTint.coral.color) { state.usRoute = .wishlists },
+            ActionTile("Calendar", status: next.map(Self.when) ?? "Nothing yet",
+                       symbol: "calendar", tint: UsTint.sky.color) { state.usRoute = .calendar },
+        ])
     }
 
-    private func tiles(upcoming: Int) -> some View {
-        VStack(spacing: Space.m) {
-            Button { state.usRoute = .dates } label: {
-                DatesTile(matches: us.matches.count, next: us.plannedSorted.first { $0.rating == nil })
-            }
-            .buttonStyle(PressScaleStyle())
-
-            HStack(spacing: Space.m) {
-                Button { state.usRoute = .wishlists } label: {
-                    SmallTile(icon: .init(symbol: "gift.fill", tint: .coral), title: "Wishlists",
-                              detail: "\(us.wishes(of: state.partners.0).count + us.wishes(of: state.partners.1).count) wishes")
-                }
-                .buttonStyle(PressScaleStyle())
-                Button { state.usRoute = .calendar } label: {
-                    SmallTile(icon: .init(symbol: "calendar", tint: .sky), title: "Calendar",
-                              detail: "\(upcoming) coming up")
-                }
-                .buttonStyle(PressScaleStyle())
-            }
-            .fixedSize(horizontal: false, vertical: true)
+    private static func matchesLine(_ matches: Int) -> String {
+        switch matches {
+        case 0: "Swipe ideas"
+        case 1: "1 match"
+        default: "\(matches) matches"
         }
     }
 
-    private var games: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            Text("Games")
-                .font(.ourioTitle)
-                .foregroundStyle(Ink.primary)
-                .accessibilityAddTraits(.isHeader)
-                .padding(.top, Space.s)
-
-            Button { state.usRoute = .whoKnows } label: {
-                WhoKnowsTile(model: whoKnows, me: state.profile.name(of: state.viewer),
-                             partner: state.profile.name(of: state.otherPartner))
-            }
-            .buttonStyle(PressScaleStyle())
-
-            Button { state.usRoute = .drawGuess } label: {
-                DrawGuessTile(model: drawGuess, partner: state.profile.name(of: state.otherPartner))
-            }
-            .buttonStyle(PressScaleStyle())
-        }
-    }
-
-    private var lists: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            HStack {
-                Text("Lists")
-                    .font(.ourioTitle)
-                    .foregroundStyle(Ink.primary)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer(minLength: 0)
-                PillButton("New list", symbol: "plus") { state.usRoute = .newList }
-            }
-            .padding(.top, Space.s)
-
-            let layout = UsListsLayout(lists: us.lists, partner: state.otherPartner)
-            ForEach(layout.cards) { list in
-                Button { state.usRoute = .list(list.id) } label: { ListCard(list: list, state: state) }
-                    .buttonStyle(PressScaleStyle())
-            }
-
-            if !layout.rows.isEmpty {
-                GroupedSection {
-                    ForEach(layout.rows) { list in
-                        Button { state.usRoute = .list(list.id) } label: { ListRow(list: list) }
-                            .buttonStyle(RowButtonStyle())
-                    }
-                }
-            }
-
-            Button { state.usRoute = .newList } label: { StartListCard() }
-                .buttonStyle(PressScaleStyle())
-        }
-    }
-}
-
-// MARK: - Pieces
-
-private struct CountdownHero: View {
-    let next: Upcoming?
-    let days: Int
-    var onTap: () -> Void
-
-    private func when(_ next: Upcoming) -> String {
+    private static func when(_ next: Upcoming) -> String {
         switch next.daysLeft {
         case 0: "Today"
         case 1: "Tomorrow"
@@ -179,120 +93,68 @@ private struct CountdownHero: View {
         }
     }
 
-    var body: some View {
-        Button(action: onTap) {
-            Card(warm: true) {
-                if let next {
-                    // The one line about time: when it is and how far away, and no second count beside it.
-                    CardHeader(next.title, detail: "\(when(next)) · \(next.date.formatted(.dateTime.weekday(.wide).day().month(.wide)))",
-                               symbol: next.icon.symbol, tint: next.icon.tint.color)
-                } else {
-                    CardHeader("Nothing planned yet", detail: "Day \(days) together", symbol: "calendar.badge.plus")
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var games: some View {
+        VStack(alignment: .leading, spacing: Space.m) {
+            SectionHeader("Games")
+            let partner = state.profile.name(of: state.otherPartner)
+            let posters = Group {
+                let whoKnowsStatus = WhoKnowsModel.status(whoKnows.phase, remaining: whoKnows.remaining,
+                                                          partner: partner)
+                PosterCard("Who knows who", status: whoKnowsStatus, emphasis: whoKnows.phase == .revealed,
+                           art: Image("WhoKnows-card")) {
+                    state.usRoute = .whoKnows
+                }
+                PosterCard("Draw & guess", status: drawGuessStatus(partner: partner),
+                           emphasis: drawGuess.phase == .guess, art: Image("DrawGuess-card")) {
+                    state.usRoute = .drawGuess
                 }
             }
-        }
-        .buttonStyle(PressScaleStyle())
-    }
-}
-
-private struct DatesTile: View {
-    let matches: Int
-    let next: PlannedDate?
-
-    var body: some View {
-        Card {
-            CardHeader("Date night", detail: detail, symbol: "dice.fill", tint: UsTint.blush.color)
-        }
-    }
-
-    private var detail: String {
-        if let next, let idea = DateIdea.idea(next.ideaID) {
-            return "Next: \(idea.title), \(next.date.formatted(.dateTime.day().month()))"
-        }
-        if matches > 0 { return "\(matches) \(matches == 1 ? "match" : "matches") waiting" }
-        return "Swipe ideas together or let \(CatProfile.name()) pick"
-    }
-}
-
-private struct WhoKnowsTile: View {
-    let model: WhoKnowsModel
-    let me: String
-    let partner: String
-
-    var body: some View {
-        Card {
-            CardHeader("Who knows who") {
-                CardArt(Image("WhoKnows-card"))
-            } detail: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(WhoKnowsModel.status(model.phase, remaining: model.remaining, partner: partner))
-                        .foregroundStyle(model.phase == .revealed ? Ink.accentText : Ink.textSecondary)
-                    if model.phase != .unpaired, let week = model.score?.week {
-                        Text(WhoKnowsModel.scoreLine(week, me: me, partner: partner))
-                            .monospacedDigit()
-                            .contentTransition(.numericText())
-                            .accessibilityLabel("This week: \(me) \(week.mine), \(partner) \(week.partner)")
+            if typeSize.isAccessibilitySize {
+                VStack(spacing: Space.m) { posters }
+            } else {
+                // Three fifths of the width each, so the next poster peeks in from the edge.
+                ScrollView(.horizontal) {
+                    HStack(alignment: .top, spacing: Space.m) {
+                        posters.containerRelativeFrame(.horizontal, count: 5, span: 3, spacing: Space.m)
                     }
+                    // Each poster as tall as its art and words, not the height the scroll view offers.
+                    .fixedSize(horizontal: false, vertical: true)
+                    .scrollTargetLayout()
                 }
-            } trailing: {
-                RowChevron()
+                .scrollTargetBehavior(.viewAligned)
+                .scrollIndicators(.hidden)
+                .scrollClipDisabled()
             }
         }
-        .accessibilityElement(children: .combine)
     }
-}
 
-private struct DrawGuessTile: View {
-    let model: DrawGuessModel
-    let partner: String
+    private func drawGuessStatus(partner: String) -> String {
+        DrawGuessModel.status(drawGuess.phase, partner: partner,
+                              letters: drawGuess.theirs?.shape.reduce(0, +) ?? 0, lastEnded: drawGuess.lastEnded,
+                              endedMine: drawGuess.lastEnded.map(drawGuess.isMine) ?? false)
+    }
 
-    var body: some View {
-        let phase = model.phase
-        Card {
-            CardHeader("Draw & guess") {
-                CardArt(Image("DrawGuess-card"))
-            } detail: {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(DrawGuessModel.status(phase, partner: partner, letters: model.theirs?.shape.reduce(0, +) ?? 0,
-                                               lastEnded: model.lastEnded,
-                                               endedMine: model.lastEnded.map(model.isMine) ?? false))
-                        .foregroundStyle(phase == .guess ? Ink.accentText : Ink.textSecondary)
-                    if phase != .unpaired, model.series > 0 {
-                        Text(DrawGuessModel.seriesLine(model.series))
-                            .monospacedDigit()
-                            .contentTransition(.numericText())
+    private var lists: some View {
+        VStack(alignment: .leading, spacing: Space.m) {
+            SectionHeader("Lists") {
+                PillButton("New list", symbol: "plus") { state.usRoute = .newList }
+            }
+            let layout = UsListsLayout(lists: us.lists, partner: state.otherPartner)
+            GroupedSection {
+                ForEach(layout.cards + layout.rows) { list in
+                    Button { state.usRoute = .list(list.id) } label: { ListRow(list: list) }
+                        .buttonStyle(RowButtonStyle())
+                }
+                if us.lists.isEmpty {
+                    Button { state.usRoute = .newList } label: {
+                        Row("Start a list", detail: "Gifts, recipes, a trip packing list…", symbol: "plus",
+                            tint: UsTint.honey.color) { RowChevron() }
                     }
-                }
-            } trailing: {
-                RowChevron()
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct SmallTile: View {
-    let icon: UsGlyph
-    let title: String
-    let detail: String
-
-    var body: some View {
-        Card {
-            VStack(alignment: .leading, spacing: Space.s) {
-                RowIcon(symbol: icon.symbol, tint: icon.tint.color, size: Size.cardMark)
-                VStack(alignment: .leading, spacing: Space.xs) {
-                    Text(title)
-                        .font(.ourioHeadline)
-                        .foregroundStyle(Ink.text)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Text(detail)
-                        .font(.ourioCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(2)
+                    .buttonStyle(RowButtonStyle())
                 }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         }
     }
 }

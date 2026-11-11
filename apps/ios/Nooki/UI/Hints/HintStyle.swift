@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import TipKit
+import UsInterface
 
 /// TipKit's look for every hint: the design package's `Callout` card in the app's theme. Its popover's arrow points
 /// at the control it is about, and that control is ringed (`hint(_:arrowEdge:target:)`).

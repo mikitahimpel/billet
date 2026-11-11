@@ -1,0 +1,19 @@
+{
+ "id": "poster-plants",
+ "name": "Botanical poster",
+ "kind": "FLAT",
+ "width_m": 0.205,
+ "depth_m": 0.025,
+ "height_m": 0.299,
+ "footprint_cells": [
+  5,
+  1
+ ],
+ "mount": "wall",
+ "fit": "height",
+ "size_m": 0.299,
+ "anchors": [],
+ "tris": 800,
+ "affordance": null,
+ "usdz_kb": 111
+}

@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import Transport
+import UsInterface
 import Wire
 
 /// With `riddle` it draws a Draw & guess word instead of a note: the word replaces the clock and Send hands the

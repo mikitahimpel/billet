@@ -60,6 +60,7 @@ import Testing
       "getShop": Routes.getShop,
       "placeOrder": Routes.placeOrder,
       "setWish": Routes.setWish,
+      "changeLayout": Routes.changeLayout,
       "openGift": Routes.openGift,
       "claimBonus": Routes.claimBonus,
       "earnCoins": Routes.earnCoins,

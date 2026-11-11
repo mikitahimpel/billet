@@ -1,6 +1,9 @@
 import Design
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
+import UsInterface
 
 /// Settings → Labs → Style: the design package's tokens and components, drawn by the same code the screens use,
 /// so docs/design-system.md can be checked on a device in either appearance.
@@ -58,7 +61,14 @@ struct StyleGallery: View {
             }
             GroupedSection(header: "Stamps and seals", inset: Space.l) {
                 HStack {
-                    ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, width: 32) }
+                    ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, pinned: true) }
+                }
+                .rowCell()
+                HStack(alignment: .bottom, spacing: Space.m) {
+                    PostageStamp(.paw, size: .small)
+                    PostageStamp(.moon, rare: true, pinned: true)
+                    PostageStamp(.heart, size: .large, postmark: .now, pinned: true)
+                    PostageStamp(.bloom, size: .large, rare: true, pinned: true)
                 }
                 .rowCell()
                 HStack {
@@ -74,10 +84,19 @@ struct StyleGallery: View {
                     Design.PriceButton(120) {}
                 }
             }
-            Card {
+            GroupedSection(header: "States", inset: Space.l) {
                 EmptyState(symbol: "photo.on.rectangle", title: "No moments yet", text: "Your first photo together will live here.") {
                     PrimaryButton("Add a moment", fullWidth: false) {}
                 }
+                LoadingState("Loading the Inbox")
+                ErrorState("Couldn't load the Inbox", text: "Check your connection and try again.") {}
+            }
+            Callout(symbol: "hand.wave.fill", title: "Say hi to Mochi", message: "Tap her in the room to pet her.", close: {})
+                .calloutBubble(pointer: CalloutPointer(edge: .top, position: 0.3))
+            Toast {
+                Label("Added to Moments", systemImage: "checkmark.circle.fill")
+                    .font(.ourioCallout)
+                    .foregroundStyle(Ink.text)
             }
         }
         .navigationTitle("Style")

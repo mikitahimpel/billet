@@ -1,6 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import TipKit
+import UsInterface
 
 /// `HintPlan` puts the planned hint's id in `HintStage.current` and each tip's rule matches only that id, so
 /// TipKit draws exactly the planned one. Copy is short and warm, at most two lines.

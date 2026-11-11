@@ -1,6 +1,9 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Testing
+import UsInterface
 import Wire
 @testable import Billet
 
@@ -40,6 +43,10 @@ import Wire
         #expect(next(HintContext(screen: .shop), seen: ["shop"]) == nil)
         #expect(next(HintContext(screen: .other)) == nil)
         #expect(next(HintContext(screen: .world), seen: ["pet", "add"]) == nil)
+    }
+
+    @Test func theMomentsHintWaitsForSomethingOnTheTab() {
+        #expect(next(HintContext(screen: .moments, momentsEmpty: true)) == nil)
     }
 
     @Test func aFeatureHintWaitsForItsFeature() {

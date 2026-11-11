@@ -1,8 +1,11 @@
 import AppIntents
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 import WidgetKit
 
 /// One module, padded and linked to its screen in the app.

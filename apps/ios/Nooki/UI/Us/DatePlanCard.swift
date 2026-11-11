@@ -1,7 +1,11 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PhotosUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
 struct DateMatchOverlay: View {
     let idea: DateIdea

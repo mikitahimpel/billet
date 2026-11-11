@@ -94,11 +94,9 @@ final class CityDioramaView: UIView {
         backgroundColor = .clear
         opening.mask = clip
         layer.addSublayer(opening)
-        for entry in CityDiorama.layers {
-            let stack = Stack(name: entry.name)
-            stacks.append(stack)
-            opening.addSublayer(stack.holder)
-        }
+        stacks = CityDiorama.layers.map { Stack(name: $0.name) }
+        // The cars go above the street and below a layer in front of them.
+        for stack in stacks where stack.name != "near" { opening.addSublayer(stack.holder) }
         for _ in 0..<CityDiorama.plan.capacity {
             let sprite = Sprite()
             sprite.holder.addSublayer(sprite.stack.holder)
@@ -106,6 +104,7 @@ final class CityDioramaView: UIView {
             sprites.append(sprite)
             opening.addSublayer(sprite.holder)
         }
+        for stack in stacks where stack.name == "near" { opening.addSublayer(stack.holder) }
         accessibilityElementsHidden = true
     }
 
@@ -253,7 +252,7 @@ final class CityDioramaView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
-        let street = home.blended(with: live, follow: CityDiorama.layers.last?.follow ?? 0)
+        let street = home.blended(with: live, follow: CityDiorama.layers.first { $0.name == "street" }?.follow ?? 0.62)
         let picture = street.rect(CityDiorama.imageRect)
         let window = Self.bounds(outline)
         for index in sprites.indices {
@@ -263,7 +262,7 @@ final class CityDioramaView: UIView {
                 continue
             }
             let lane = CityDiorama.plan.lanes[car.lane]
-            let scale = lane.direction < 0 ? CityDiorama.cars.farScale : CityDiorama.cars.nearScale
+            let scale = CityDiorama.cars.scales[car.lane]
             let width = picture.width * scale / CGFloat(CityDiorama.cars.cells)
             let height = picture.height * scale * 213 / CityDiorama.size.height
             let centre = CGPoint(

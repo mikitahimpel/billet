@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct CalendarScreen: View {
     let state: HomeState
@@ -102,12 +105,22 @@ private struct MonthGrid: View {
     var body: some View {
         VStack(spacing: Space.m) {
             HStack {
-                Button { shift(-1) } label: { Image(systemName: "chevron.left") }
+                Button { shift(-1) } label: {
+                    Image(systemName: "chevron.left")
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Previous month")
                 Spacer()
                 Text(month.formatted(.dateTime.month(.wide).year()))
                     .font(.ourioHeadline)
                 Spacer()
-                Button { shift(1) } label: { Image(systemName: "chevron.right") }
+                Button { shift(1) } label: {
+                    Image(systemName: "chevron.right")
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Next month")
             }
             .font(.ourioHeadline)
             .foregroundStyle(Ink.text)

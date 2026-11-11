@@ -1,10 +1,13 @@
 import FeatureGames
 import FeatureMood
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import TipKit
 import Transport
+import UsInterface
 import WidgetBridge
 import Wire
 
@@ -76,13 +79,14 @@ extension HomeView {
             }
             let sheet = state.composingNote != nil || state.drawing || state.showsProfile || state.showsInbox
                 || state.openedShopItem != nil
-            let buying = state.shop.lastPurchase?.canUndo(at: .now) == true
+            let buying = state.shop.lastPurchase?.momentShows(at: .now) == true
             return HintContext(
                 screen: screen, busy: sheet || buying || room.showcase != nil, hasRoomChoice: hasRoomChoice,
                 canAffordTreat: state.shop.coins >= ShopModel.treatPrice,
                 petted: state.care.petsGiven > 0,
                 added: !state.notes.notes.isEmpty || !state.moments.moments.isEmpty,
                 usedMoments: !state.moments.pinned.isEmpty,
+                momentsEmpty: state.moments.moments.isEmpty && state.notes.notes.isEmpty,
                 purchased: !state.shop.owned.isSubset(of: Wallet().owned),
                 switchedRooms: state.room == .city,
                 gaveTreat: state.care.treatsGiven > 0)

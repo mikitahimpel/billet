@@ -8,6 +8,8 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case cards
     case rows
     case status
+    case postage
+    case tiles
     case fields
     case grid
     case callout
@@ -21,6 +23,8 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .cards: Self.cardsPage
             case .rows: Self.rowsPage
             case .status: Self.statusPage
+            case .postage: Self.postagePage
+            case .tiles: Self.tilesPage
             case .fields: Self.fieldsPage
             case .grid: Self.gridPage
             case .callout: Self.calloutPage
@@ -134,9 +138,60 @@ enum GalleryPage: String, CaseIterable, Sendable {
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
+    /// Every stamp pinned in a row, the sizes, rare foil and a postmark, beside the seals of the same family.
+    @MainActor @ViewBuilder private static var postagePage: some View {
+        HStack(spacing: Space.m) {
+            ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, pinned: true) }
+        }
+        HStack(alignment: .bottom, spacing: Space.l) {
+            PostageStamp(.paw, size: .small)
+            PostageStamp(.moon, rare: true, pinned: true)
+            PostageStamp(.heart, size: .large, postmark: Date(timeIntervalSince1970: 1_762_776_000), pinned: true)
+            PostageStamp(.bloom, size: .large, rare: true, pinned: true)
+        }
+        HStack(spacing: Space.m) {
+            ForEach(SealArt.allCases, id: \.self) { WaxSeal($0, size: 36) }
+        }
+    }
+
+    /// A screen's few big actions, a ring toward a goal, and two posters of a shelf side by side.
+    @MainActor @ViewBuilder private static var tilesPage: some View {
+        ActionTiles([
+            ActionTile("Dates", status: "3 matches", symbol: "heart.fill", tint: .blushPink) {},
+            ActionTile("Wishes", status: "5 wishes", symbol: "gift.fill", tint: .honey) {},
+            ActionTile("Calendar", status: "In 12 days", symbol: "calendar", tint: .teal) {},
+        ])
+        // Side by side while they fit, stacked at accessibility sizes as the Us screen does.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Space.l) { rings }
+            VStack(alignment: .leading, spacing: Space.l) { rings }
+        }
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: Space.m) { posters }
+            VStack(spacing: Space.m) { posters }
+        }
+    }
+
+    @MainActor @ViewBuilder private static var rings: some View {
+        ProgressRing(value: 0) { Text("0").font(.ourioTitle) }
+        ProgressRing(value: 5.0 / 7) { Text("5").font(.ourioTitle) }
+    }
+
+    @MainActor @ViewBuilder private static var posters: some View {
+        PosterCard("Who knows who", status: "Your turn", emphasis: true, art: Image("WhoKnows-card")) {}
+            .frame(minWidth: 150)
+        PosterCard("Draw & guess", status: "Played yesterday", art: Image("DrawGuess-card")) {}
+            .frame(minWidth: 150)
+    }
+
     @MainActor @ViewBuilder private static var fieldsPage: some View {
         Field("A few words (optional)", text: .constant(""), axis: .vertical, lines: 1...3)
         FormField("Name", placeholder: "Your name", text: .constant("Mikita"), footer: "Your partner sees it.")
+        HStack {
+            LimitCounter(count: 12, limit: 40)
+            LimitCounter(count: 34, limit: 40)
+            LimitCounter(count: 40, limit: 40)
+        }
         FormField("Invite code", placeholder: "Code", text: .constant("K7QM"), error: "That code isn't working.")
     }
 

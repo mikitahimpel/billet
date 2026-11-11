@@ -15,17 +15,23 @@ public enum ShopMachine: Machine {
     /// Items and inks, as the wallet file keeps them together.
     public var owned: Set<String>
     public var wishlist: Set<String>
+    /// Where the pair stood its pieces; nil from a server before placements.
+    public var layout: [RoomPlacement]?
 
-    public init(balance: Int, owned: Set<String>, wishlist: Set<String>) {
+    public init(
+      balance: Int, owned: Set<String>, wishlist: Set<String>, layout: [RoomPlacement]? = nil
+    ) {
       self.balance = balance
       self.owned = owned
       self.wishlist = wishlist
+      self.layout = layout
     }
 
     public init(_ shop: ShopResponse) {
       balance = shop.balance
       owned = Set(shop.items.map(\.rawValue)).union(shop.inks.map(\.rawValue))
       wishlist = Set(shop.wishlist.map(\.rawValue))
+      layout = shop.layout
     }
   }
 
@@ -257,10 +263,13 @@ public enum ShopMachine: Machine {
         shop.ask = CoinsAsk(missing: order.cost - shop.coins, retry: order)
         return (.open(shop), [])
       }
-      let purchase = Purchase(order, id: id, added: added, at: at, stage: .undoable)
+      // Room pieces wait out their Undo window before the order; an ink has no Undo and goes at once.
+      let stage: Purchase.Stage = order.kind == .item ? .undoable : .ordering
+      let purchase = Purchase(order, id: id, added: added, at: at, stage: stage)
       shop.pending.append(purchase)
       shop.moment = .placed(purchase)
-      return (.open(shop), [.wait(id), .catNoticed])
+      let next: Output = stage == .undoable ? .wait(id) : .order(purchase)
+      return (.open(shop), [next, .catNoticed])
     case .treatTapped(let id, let at):
       let order = ShopOrder.treat(price: treatPrice)
       guard shop.coins >= treatPrice else {

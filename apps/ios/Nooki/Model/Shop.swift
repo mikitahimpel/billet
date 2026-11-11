@@ -1,8 +1,12 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
+import UsInterface
 
 enum ShopCategory: String, CaseIterable, Identifiable {
-    case today, furniture, decor, mochi, room
+    case today, furniture, decor, mochi, room, inks
 
     var id: Self { self }
 
@@ -13,6 +17,7 @@ enum ShopCategory: String, CaseIterable, Identifiable {
         case .decor: "Decor"
         case .mochi: "For \(CatProfile.name())"
         case .room: "Room"
+        case .inks: "Inks"
         }
     }
 
@@ -23,6 +28,7 @@ enum ShopCategory: String, CaseIterable, Identifiable {
         case .decor: "leaf.fill"
         case .mochi: "pawprint.fill"
         case .room: "house.fill"
+        case .inks: "paintpalette.fill"
         }
     }
 }

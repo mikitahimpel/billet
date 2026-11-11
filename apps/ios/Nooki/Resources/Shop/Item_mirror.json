@@ -1,0 +1,19 @@
+{
+ "id": "mirror",
+ "name": "Arched mirror",
+ "kind": "SOLID",
+ "width_m": 0.377,
+ "depth_m": 0.185,
+ "height_m": 0.801,
+ "footprint_cells": [
+  8,
+  4
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.801,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": null,
+ "usdz_kb": 179
+}

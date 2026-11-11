@@ -1,7 +1,11 @@
 import DrawInterface
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 import WidgetKit
 

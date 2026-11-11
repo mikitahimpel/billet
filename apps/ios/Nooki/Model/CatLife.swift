@@ -1,8 +1,12 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Pet
+import ProfileInterface
 import RoomInterface
 import Transport
+import UsInterface
 import Wire
 
 /// The two accounts whose care the cat counts, once this phone is paired.

@@ -1,3 +1,4 @@
+import DecorInterface
 import Foundation
 import GamesInterface
 import Pet
@@ -14,6 +15,19 @@ public enum RoomEvent: Equatable, Sendable {
   /// Back after hours away, and the partner cared for the cat meanwhile: what they did, oldest first. Sent once per
   /// homecoming, when the pair's journal has caught up.
   case partnerCared([LifeEvent])
+  /// A touch while the pieces are being arranged.
+  case decor(DecorGesture)
+}
+
+/// What the player did to the pieces in the room. A drag reports the snapped spot each time it
+/// changes, so the shell holds the arrangement and the room only draws it.
+public enum DecorGesture: Equatable, Sendable {
+  case tapped(String)
+  case tappedEmpty
+  case dragBegan(String)
+  case dragged(Placement)
+  case dropped
+  case cancelled
 }
 
 /// The room's commands. Every way in, apart from the host's input value.

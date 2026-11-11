@@ -1,0 +1,19 @@
+{
+ "id": "fishtank",
+ "name": "Fish tank",
+ "kind": "SURFACE",
+ "width_m": 0.342,
+ "depth_m": 0.348,
+ "height_m": 0.35,
+ "footprint_cells": [
+  7,
+  7
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.35,
+ "anchors": [],
+ "tris": 3000,
+ "affordance": null,
+ "usdz_kb": 368
+}

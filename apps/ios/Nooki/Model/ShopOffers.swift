@@ -1,6 +1,10 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import ShopInterface
+import UsInterface
 
 /// How rare a piece is. Only a frame and a label: every item is bought directly, never drawn at random.
 enum ShopRarity: String, CaseIterable, Codable {

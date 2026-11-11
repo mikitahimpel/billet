@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 struct WhoKnowsScreen: View {
@@ -97,8 +100,7 @@ struct WhoKnowsScreen: View {
     // MARK: Intro
 
     private func intro(_ round: GuessRound) -> some View {
-        VStack(spacing: Space.m) {
-            Spacer(minLength: 0)
+        FillingScroll {
             WhoKnowsArt(name: "WhoKnows-host", size: 200)
             Text(model.isSubject ? "Today's round is about you" : "Today's round is about \(partner)")
                 .font(.ourioTitle)
@@ -110,13 +112,11 @@ struct WhoKnowsScreen: View {
                 .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
-            Spacer(minLength: 0)
+        } bottom: {
             PrimaryButton("Let's go") {
                 withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .snappy(duration: 0.3)) { introRound = round.id }
             }
         }
-        .padding(.horizontal, Space.gutter)
-        .padding(.bottom, Space.l)
     }
 
     // MARK: Question
@@ -172,8 +172,7 @@ struct WhoKnowsScreen: View {
     // MARK: Waiting
 
     private var waiting: some View {
-        VStack(spacing: Space.m) {
-            Spacer(minLength: 0)
+        FillingScroll {
             WhoKnowsArt(name: "WhoKnows-waiting", size: 200)
             Text("Waiting for \(partner)")
                 .font(.ourioTitle)
@@ -191,9 +190,9 @@ struct WhoKnowsScreen: View {
                 .foregroundStyle(Ink.textSecondary)
                 .contentTransition(.numericText())
                 .animation(.snappy, value: model.partnerAnswered)
-            Spacer(minLength: 0)
+        } bottom: {
+            EmptyView()
         }
-        .padding(.horizontal, Space.gutter)
     }
 
     /// Date night, once this sheet has closed.
@@ -395,11 +394,11 @@ private struct WhoKnowsRevealStep: View {
         }
         return HStack(spacing: Space.m) {
             Image(systemName: symbol)
-                .font(.title3.weight(.semibold))
+                .font(.ourioTitle)
                 .foregroundStyle(tint)
             VStack(alignment: .leading, spacing: 2) {
                 Text(label)
-                    .font(.ourioMicro)
+                    .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
                 Text(text)
                     .font(.ourioHeadline)
@@ -447,13 +446,14 @@ private struct WhoKnowsProgress: View {
 private struct WhoKnowsOption: View {
     let letter: Int
     let text: String
+    @ScaledMetric(relativeTo: .headline) private var disc: CGFloat = 32
 
     var body: some View {
         HStack(spacing: Space.m) {
             Text(String(UnicodeScalar(UInt8(65 + letter))))
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.accentText)
-                .frame(width: 32, height: 32)
+                .frame(width: disc, height: disc)
                 .background(Circle().fill(Ink.surfaceRaised))
                 .accessibilityHidden(true)
             Text(text)
@@ -468,6 +468,30 @@ private struct WhoKnowsOption: View {
         .frame(maxWidth: .infinity, minHeight: 60, alignment: .leading)
         .cardSurface(radius: Radius.control)
         .contentShape(.rect(cornerRadius: Radius.control))
+    }
+}
+
+/// Centred in the sheet while it fits, scrolling when the words outgrow it, as at the largest text sizes; `bottom`
+/// stays under the scroll.
+private struct FillingScroll<Content: View, Bottom: View>: View {
+    @ViewBuilder var content: Content
+    @ViewBuilder var bottom: Bottom
+    @State private var height: CGFloat = 0
+
+    var body: some View {
+        VStack(spacing: Space.m) {
+            ScrollView {
+                VStack(spacing: Space.m) { content }
+                    .padding(.horizontal, Space.gutter)
+                    .frame(maxWidth: .infinity, minHeight: height)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .softScrollEdges()
+            .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
+            bottom
+                .padding(.horizontal, Space.gutter)
+        }
+        .padding(.bottom, Space.l)
     }
 }
 

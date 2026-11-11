@@ -1,4 +1,4 @@
-import OurioShared
+import ProfileInterface
 import SwiftUI
 import WidgetKit
 
@@ -12,5 +12,18 @@ struct PetMochiControl: ControlWidget {
         }
         .displayName("Pet Your Cat")
         .description("Your cat purrs, no need to open Ourio.")
+    }
+}
+
+/// Control Center and Lock Screen button: a hug for the partner.
+struct SendHugControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "com.ourio.app.hug") {
+            ControlWidgetButton(action: SendHugIntent()) {
+                Label("Send a Hug", systemImage: "heart.fill")
+            }
+        }
+        .displayName("Send a Hug")
+        .description("Lets your partner know you are thinking of them.")
     }
 }

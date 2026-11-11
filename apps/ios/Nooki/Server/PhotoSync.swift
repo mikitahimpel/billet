@@ -1,8 +1,11 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Persistence
 import Transport
 import UIKit
+import UsInterface
 import Wire
 
 /// Moments photos between the two phones. A photo taken here goes up to `POST /v1/media` as a JPEG and then as a photo

@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Payments
 import SwiftUI
 import Design
+import UsInterface
 import WidgetBridge
 import Wire
 

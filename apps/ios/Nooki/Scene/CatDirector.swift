@@ -75,7 +75,7 @@ final class CatDirector {
     }
 
     @ObservationIgnored private let walker: CatWalker
-    @ObservationIgnored private let spots: [NookiSpot: CatWalker.Destination]
+    @ObservationIgnored private var spots: [NookiSpot: CatWalker.Destination]
     @ObservationIgnored private let source: CatEventSource
     @ObservationIgnored private let analytics: CatAnalytics
     @ObservationIgnored private let defaults: UserDefaults
@@ -120,6 +120,19 @@ final class CatDirector {
             }
             return true
         }
+    }
+
+    /// The room's places changed, as the player stood a piece in it or took one away: the script and the brain's
+    /// room follow, and she keeps what she is doing.
+    func update(spots new: [NookiSpot: CatWalker.Destination]) {
+        guard Set(new.keys) != Set(spots.keys) else {
+            spots = new
+            return
+        }
+        spots = new
+        let available = Set(new.keys).union([.home])
+        script = NookiCatScript(spots: available)
+        runner.setRoom(NookiSpot.affordances(available), weather: runner.brain.weather)
     }
 
     // MARK: - The couple

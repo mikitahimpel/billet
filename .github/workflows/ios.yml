@@ -29,6 +29,10 @@ on:
         required: false
         default: ""
 
+env:
+  # The Debug builds' compilation cache (project.yml) is for a Mac's worktrees; a runner starts empty.
+  BILLET_COMPILATION_CACHE: "NO"
+
 concurrency:
   group: ios-${{ github.ref }}
   # A pull request's newer commit supersedes its running check. On main a running check finishes, or
@@ -152,7 +156,7 @@ jobs:
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 \
+            -maximum-test-execution-time-allowance 300 -showBuildTimingSummary \
             CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" \
             | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
@@ -160,6 +164,13 @@ jobs:
           fi
           grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)' \
             "$RUNNER_TEMP/app-tests.log" || true
+          # Where the build's minutes go on a runner: compiling, linking, asset catalogs, the Metal shader.
+          {
+            echo "### Build timing"
+            echo '```'
+            sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
           if [ "$status" != 0 ]; then
             echo "::group::Last 120 lines of the test log"
             tail -n 120 "$RUNNER_TEMP/app-tests.log"

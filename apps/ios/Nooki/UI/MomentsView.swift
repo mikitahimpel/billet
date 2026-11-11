@@ -1,10 +1,14 @@
 import DrawInterface
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PetScene
 import PhotosUI
+import ProfileInterface
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 import Wire
 
 // MARK: - Moments
@@ -19,10 +23,7 @@ struct MomentsView: View {
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
-    /// Where the feed is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
-    @State private var position = ScrollPosition(edge: .top)
 
-    private let hMargin: CGFloat = Space.l
     private let columnGap: CGFloat = Space.m
 
     private var store: MomentStore { state.moments }
@@ -34,33 +35,17 @@ struct MomentsView: View {
                 boardOverlay
             } else if store.moments.isEmpty {
                 VStack(spacing: 0) {
-                    header.padding(.horizontal, hMargin)
                     Spacer(minLength: 0)
                     EmptyMoments(pick: $pick)
                         .padding(.horizontal, Space.xl)
                     Spacer(minLength: 0)
                 }
-                .padding(.top, Space.xs)
-                .padding(.bottom, Space.l)
+                .tabContentInsets()
             } else {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: Space.l) {
-                        header
-                        WallStrip(store: store)
-                        feed
-                    }
-                    .padding(.horizontal, hMargin)
-                    .padding(.top, Space.xs)
-                    .padding(.bottom, Space.l)
+                TabPage {
+                    WallStrip(store: store)
+                    feed
                 }
-                .scrollIndicators(.hidden)
-                .scrollPosition($position)
-                .softScrollEdges()
-                .onAppear {
-                    guard ScenePerf.isOn else { return }
-                    OurioPerf.scrolls[.moments] = { position.scrollTo(y: $0) }
-                }
-                .onDisappear { OurioPerf.scrolls[.moments] = nil }
             }
         }
         .onChange(of: pick) { _, item in
@@ -145,12 +130,12 @@ struct MomentsView: View {
         }
     }
 
-    /// The board room shows underneath; only the header and, on an empty board, a hint sit over it.
+    /// The board room shows underneath; only its actions and, on an empty board, a hint sit over it.
     private var boardOverlay: some View {
         VStack(spacing: 0) {
-            header
-                .padding(.horizontal, hMargin)
-                .padding(.top, Space.xs)
+            boardActions
+                .padding(.horizontal, TabMetrics.side)
+                .padding(.top, TabMetrics.top)
             Spacer(minLength: 0)
             if notes.isEmpty, store.pinned.isEmpty {
                 Text("Leave a note or doodle for the board")
@@ -164,73 +149,34 @@ struct MomentsView: View {
         }
     }
 
-    private var subtitle: String? {
-        if state.momentsMode == .board {
-            let count = min(notes.count + store.pinned.count, BoardRoomScene.slots)
-            return count == 0 ? nil : "\(count) on the board"
-        }
-        return store.moments.isEmpty ? nil : "\(store.moments.count) \(store.moments.count == 1 ? "photo" : "photos")"
-    }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: Space.m) {
-            VStack(alignment: .leading, spacing: 1) {
-                titleMenu
-                if let subtitle {
-                    Text(subtitle)
-                        .font(.ourioCaption)
-                        .foregroundStyle(Ink.secondary)
-                }
+    /// Photos are added from the tab bar's +; the board keeps its own for doodles, which the + doesn't offer.
+    private var boardActions: some View {
+        HStack(spacing: Space.m) {
+            if !notes.isEmpty || !store.pinned.isEmpty {
+                Text("\(min(notes.count + store.pinned.count, BoardRoomScene.slots)) on the board")
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.secondary)
             }
-            .shadow(color: .black.opacity(0.25), radius: 4, y: 1)
 
             Spacer(minLength: 0)
 
-            if state.momentsMode == .board, !notes.isEmpty {
+            if !notes.isEmpty {
                 GlassIconButton(symbol: "clock.arrow.circlepath", label: "All notes") { showsHistory = true }
             }
 
-            // Photos are added from the tab bar's +; the board keeps its own for doodles, which the + doesn't offer.
-            if state.momentsMode == .board {
-                Menu {
-                    Button { state.composingNote = .write } label: {
-                        Label("Note", systemImage: "note.text")
-                        Text("+5")
-                    }
-                    Button { state.composingNote = .draw } label: {
-                        Label("Doodle", systemImage: "scribble")
-                        Text("+5")
-                    }
-                } label: { plus }
-                .accessibilityLabel("Add a note")
-            }
+            Menu {
+                Button { state.composingNote = .write } label: {
+                    Label("Note", systemImage: "note.text")
+                    Text("+5")
+                }
+                Button { state.composingNote = .draw } label: {
+                    Label("Doodle", systemImage: "scribble")
+                    Text("+5")
+                }
+            } label: { plus }
+            .accessibilityLabel("Add a note")
         }
         .frame(minHeight: Size.control)
-    }
-
-    /// The large title is the switch between the photo feed and the board, as in Photos and Notes.
-    private var titleMenu: some View {
-        Menu {
-            Picker("Show", selection: $state.momentsMode.animation(.snappy(duration: 0.25))) {
-                Label("Photos", systemImage: "photo.on.rectangle").tag(MomentsMode.photos)
-                Label("Board", systemImage: "square.grid.2x2").tag(MomentsMode.board)
-            }
-        } label: {
-            HStack(spacing: Space.xs + 2) {
-                Text("Moments")
-                    .font(.ourioLargeTitle)
-                    .foregroundStyle(Ink.primary)
-                Image(systemName: "chevron.down")
-                    .font(.ourioCallout.weight(.bold))
-                    .foregroundStyle(Ink.secondary)
-            }
-            .contentShape(.rect)
-        }
-        .menuOrder(.fixed)
-        .accessibilityLabel("Moments")
-        .accessibilityValue(state.momentsMode == .board ? "Board" : "Photos")
-        .accessibilityHint("Switches between Photos and Board")
-        .accessibilityIdentifier("momentsMode")
     }
 
     private var plus: some View {
@@ -276,9 +222,9 @@ private struct EmptyMoments: View {
                     Image(systemName: "photo.badge.plus")
                     Text("Add a photo")
                     Text("+10")
-                        .font(.ourioMicro)
+                        .font(.ourioCaption.weight(.semibold).monospacedDigit())
                         .padding(.horizontal, Space.s)
-                        .frame(height: 22)
+                        .padding(.vertical, Space.xs / 2)
                         .background(Ink.heroInk.opacity(0.12), in: .capsule)
                 }
                 .frame(maxWidth: .infinity)
@@ -324,8 +270,11 @@ struct MomentPrint: View {
         return reactions.theirs(note) ?? reactions.mine(note)
     }
 
+    static func stampWidth(_ width: CGFloat) -> CGFloat { max(StampSize.small.width, width * 0.15) }
+
     var body: some View {
         Polaroid(width: width, caption: moment.caption, byline: profile.byline(of: moment), undeveloped: undeveloped,
+                 captionLines: 2, markSpace: moment.noteID == nil ? 0 : Self.stampWidth(width) + width * 0.05,
                  captionEditor: captionEditor, captionFocus: captionFocus) {
             MomentPhoto(store: store, moment: moment, maxPixels: maxPixels, film: true)
         }
@@ -350,7 +299,13 @@ struct MomentPrint: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
+            // A print that went between the phones carries a stamp cancelled on its day, as a sent note does.
+            if moment.noteID != nil {
+                PostageStamp(moment.id.stampArt, width: Self.stampWidth(width), postmark: moment.date)
+                    .rotationEffect(.degrees(4))
+                    .padding(width * 0.05)
+                    .accessibilityHidden(true)
+            } else if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
                 UnsentMark(size: max(10, width * 0.05)).padding(width * 0.06)
             }
         }
@@ -364,36 +319,34 @@ struct MomentPrint: View {
     }
 }
 
-/// Pinned moments in wall order, so it's clear what Mochi's room shows.
+/// Pinned moments in wall order, so it's clear what Mochi's room shows: six small prints across the card, the empty
+/// slots as blank paper.
 private struct WallStrip: View {
     let store: MomentStore
 
     var body: some View {
-        HStack(spacing: Space.s) {
-            Label("On \(CatProfile.name())'s wall", systemImage: "house.fill")
-                .font(.ourioCallout)
-                .foregroundStyle(Ink.text)
-                .labelStyle(.titleAndIcon)
-                .tint(.honey)
-            Spacer(minLength: 0)
-            HStack(spacing: Space.xs) {
-                ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
-                    let moment = slot < store.pinned.count ? store.pinned[slot] : nil
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color(hex: 0xE9D6BC))
-                        .overlay {
-                            if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
-                        }
-                        .clipShape(.rect(cornerRadius: 2))
-                        .frame(width: 20, height: 20)
-                        .padding(2)
-                        .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 3))
+        Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                CardHeader("On \(CatProfile.name())'s wall",
+                           detail: "\(store.pinned.count) of \(MomentStore.wallSlots) · pin a photo to hang it",
+                           symbol: "house.fill", opens: false)
+                HStack(spacing: Space.s) {
+                    ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
+                        let moment = slot < store.pinned.count ? store.pinned[slot] : nil
+                        PolaroidPaper.blank
+                            .aspectRatio(1, contentMode: .fit)
+                            .overlay {
+                                if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
+                            }
+                            .clipped()
+                            .padding(Space.xs)
+                            .background { PaperSheet(lift: moment == nil ? nil : PaperSheet.Lift(radius: 2, y: 1)) }
+                            .rotationEffect(moment.map { $0.id.polaroidTilt } ?? .zero)
+                    }
                 }
+                .accessibilityHidden(true)
             }
         }
-        .padding(.horizontal, CardMetrics.padding)
-        .frame(height: 50)
-        .cardSurface()
     }
 }
 

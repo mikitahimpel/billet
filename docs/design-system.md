@@ -41,14 +41,17 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 12. **Icon tiles have one rule:** a full-tint glyph on the same tint at 16%, for every row. No tint is the
     accent (`Ink.accentText` glyph); destructive is `Ink.destructive` only.
 13. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
-    content; `GlassSegmented` is only the Living room | Bedroom switch.
+    content; `GlassSegmented` is only the Living room | Bedroom switch. The Shop's category row is navigation, not a
+    switch: pinned `FilterChip`s with an icon each.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
     `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
     `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
     glass is tinted enough that nothing ghosts through it. Chips, a search field or a subtitle pinned over a
     sheet's list go in `.scrollHeader { }`, which pins them over the scroll view so the rows fade under them on
     the sheet's ground instead of being cut at their edge. `check-design.mjs` fails on a scroll view without
-    either in a file on the design package, and on any `.hard` edge.
+    either in a file on the design package, and on any `.hard` edge. In an opaque sheet the fade alone lets text
+    show behind the title, so `Page` and `BilletSheet` also lay the sheet's ground under its bar and fade it out
+    just below; a `List` in a sheet adds `.sheetBarBacking()` under its `.scrollHeader`.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
@@ -59,6 +62,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | Need | Use |
 | --- | --- |
 | A sheet | `BilletSheet("Title", size:, onConfirm:) { content }` |
+| A tab's root (World, Moments, Shop, Us) | `TabPage { ... }`, or `.tabContentInsets()` on its own scroll view; no title of its own, the tab bar names it. A tab's switch (Living room \| Bedroom, Photos \| Board) is a `GlassSegmented` in the header's `below` slot, the same size and place on every tab |
 | A pushed or full screen of sections | `Page { ... }` |
 | A full screen with a main action | `Screen { content } primary: { } secondary: { }`; over art or a camera `.bottomActions(primary:secondary:)`; under a fixed header `ActionSlot` |
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
@@ -93,12 +97,17 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
 | A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
-| A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:)` on the note's face |
+| A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
+| A screen's few big actions side by side | `ActionTiles([ActionTile(title, status:, symbol:, tint:) {}])`: equal squares while every label fits on one line, a `GroupedSection` of rows otherwise |
+| A progress toward one goal, in a hero | `ProgressRing(value:tint:) { centre }` |
+| Something to open on a shelf that scrolls sideways, with art | `PosterCard(title, status:, emphasis:, art:) {}`, three fifths of the width each (`containerRelativeFrame(count: 5, span: 3)`), stacked at accessibility sizes |
+| A stamp on its own | `PostageStamp(_:size:rare:postmark:pinned:)`: `.small` in a control, `.regular` in a row, `.large` alone; `pinned` in a row, `postmark` once sent |
 
 ### Do and don't
 
 - Do give a sheet exactly one size: `.fit` for a few controls, `.medium` or `.large` for lists.
 - Do put an empty state in `.fit`, not in a large sheet.
+- Do mark a page pushed from a `.fit` sheet with `.expandsSheet()`, so the sheet rises to full height for it.
 - Do keep the toolbar to close or confirm.
 - Don't draw an `xmark` yourself, or add a `Button("Done")`.
 - Don't put `ContentUnavailableView` in a large sheet; it fills the space.
@@ -109,6 +118,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't stack chips or a field above a sheet's `ScrollView` in a `VStack`; the rows cut hard under them. Use
   `.scrollHeader`.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
+- Don't label a button with a bare symbol outside a toolbar: its tap area is the glyph. Frame the label
+  `Size.control` square with `.contentShape(.rect)`, or use `GlassIconButton` (check-design fails otherwise).
 - Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
   `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
 

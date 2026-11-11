@@ -1,7 +1,11 @@
 import FeaturePairing
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 /// Server questions are drawn by their kind, so a new question needs no app update.
@@ -145,6 +149,8 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, Space.s)
         .frame(height: Size.control + Space.s)
+        // Chrome in a row of a fixed height: capped as the app's header is.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private var showsHeader: Bool { flow.page != .welcome && flow.page != .stopped }
