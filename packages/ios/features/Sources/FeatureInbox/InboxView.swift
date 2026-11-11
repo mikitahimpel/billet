@@ -171,9 +171,10 @@ public struct InboxSignedOut: View {
   }
 }
 
-/// An Inbox row's frame: the avatar's side and the gap around the two lines.
+/// An Inbox row's frame: the avatar's side, the gap between its two lines and around them.
 private enum InboxRowMetrics {
   static let avatar: CGFloat = 40
+  static let lineGap: CGFloat = 2
   static let padding: CGFloat = Space.xs
 }
 
@@ -186,7 +187,7 @@ private struct InboxPlaceholderRow: View {
       Circle()
         .fill(Ink.surfaceRaised)
         .frame(width: InboxRowMetrics.avatar, height: InboxRowMetrics.avatar)
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: InboxRowMetrics.lineGap) {
         Text("Someone did something lovely").font(.ourioCallout.weight(.medium))
         Text("A minute ago").font(.ourioCaption)
       }
@@ -223,7 +224,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
               .offset(x: 4, y: 4)
           }
         }
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: InboxRowMetrics.lineGap) {
         Text(line.text)
           .font(.ourioCallout.weight(isNew ? .semibold : .medium))
           .foregroundStyle(Ink.text)
