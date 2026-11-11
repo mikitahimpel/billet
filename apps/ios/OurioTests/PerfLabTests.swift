@@ -8,10 +8,10 @@ import Testing
 struct PerfLabTests {
     typealias State = PerfLabMachine.State
 
-    @Test func everythingShipsOnButFlatten() {
+    @Test func everythingShipsOnButFlattenTheDustAndTheAntialiasing() {
         let state = State.shipped
         for suspect in PerfSuspect.allCases {
-            #expect(state.isOn(suspect) == (suspect != .flatten))
+            #expect(state.isOn(suspect) == ![.flatten, .motes, .msaa].contains(suspect))
         }
         #expect(!state.meter)
     }

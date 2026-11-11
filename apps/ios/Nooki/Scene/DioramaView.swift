@@ -1,4 +1,5 @@
 import RealityKit
+import RoomInterface
 import SwiftUI
 
 struct DioramaView: View {
@@ -6,6 +7,7 @@ struct DioramaView: View {
     /// Off-screen, the room stops animating and drawing.
     let paused: Bool
     let petPulse: Int
+    let rendering: RoomRendering
     var onPet: () -> Void
 
     @State private var rig = ZoomRig()
@@ -32,12 +34,23 @@ struct DioramaView: View {
         }
     }
 
+    /// The camera's own effects: the room has no use for blur, depth of field or grain, and each costs a pass.
+    private func apply(_ rendering: RoomRendering, to content: inout RealityViewCameraContent) {
+        content.renderingEffects.motionBlur = .disabled
+        content.renderingEffects.depthOfField = .disabled
+        content.renderingEffects.cameraGrain = .disabled
+        content.renderingEffects.antialiasing = rendering.antialiasing ? .multisample4X : .none
+        content.renderingEffects.dynamicRange = rendering.hdr ? .default : .standard
+    }
+
     var body: some View {
         RealityView { content in
             content.camera = .virtual
+            apply(rendering, to: &content)
             content.add(rig.camera)
             attach(scene, to: content)
         } update: { content in
+            apply(rendering, to: &content)
             // A new room swaps its root into this same view, so there is never a second renderer running.
             if !content.entities.contains(where: { $0 === scene.root }) { attach(scene, to: content) }
         }
@@ -57,7 +70,11 @@ struct DioramaView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
         }
-        .onChange(of: paused) { scene.paused = paused }
+        .onChange(of: paused) {
+            scene.paused = paused
+            // Out of the hierarchy, its endless float stops being animated behind a room nobody sees.
+            if paused { bubble.point = nil }
+        }
         .gesture(
             SpatialTapGesture()
                 .targetedToAnyEntity()
@@ -139,6 +156,7 @@ private final class ZoomRig {
     private var focusDistance: Float = 0.8
     private var photo: Float = 0
     private var photoPose: (center: SIMD3<Float>, normal: SIMD3<Float>)?
+    private var placed: (target: SIMD3<Float>, eye: SIMD3<Float>)?
 
     init() {
         camera.camera.fieldOfViewInDegrees = 22
@@ -170,6 +188,9 @@ private final class ZoomRig {
             target = simd_mix(target, photoPose.center, SIMD3(repeating: s))
             eye = simd_mix(eye, photoPose.center + photoPose.normal * focusDistance, SIMD3(repeating: s))
         }
+        // A pose written again is a camera that moved, to everything that follows it.
+        guard target != placed?.target || eye != placed?.eye else { return }
+        placed = (target, eye)
         camera.look(at: target, from: eye, relativeTo: nil)
     }
 }
