@@ -42,6 +42,6 @@ import Testing
     #expect(!OnScreen.contains(CGPoint(x: -1, y: 400), in: size))
     #expect(!OnScreen.contains(CGPoint(x: 195, y: 900), in: size))
     #expect(!OnScreen.contains(CGPoint(x: 5, y: 400), in: size, inset: 20))
-    #expect(!OnScreen.contains(CGPoint(x: 5, y: 5), in: .zero))
+    #expect(!OnScreen.contains(CGPoint(x: 5, y: 5), in: CGSize(width: 0, height: 0)))
   }
 }

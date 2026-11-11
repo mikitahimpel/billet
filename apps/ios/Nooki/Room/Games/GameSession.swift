@@ -121,9 +121,11 @@ final class GameSession {
     // MARK: - Her
 
     /// She stays in the frame: should her head be off screen while she sits still, she is shown again and sent back
-    /// to her seat.
+    /// to her seat. A position no room can show, or a cat nothing of whom is drawn, is the room's own `CatWatch`'s.
     private func keepInView(_ dt: Float) {
-        guard let walker = room.walker, let seat = stage?.seat, !walker.moving, let head else { return }
+        guard let walker = room.walker, let seat = stage?.seat, !walker.moving, CatWatch.isInRoom(walker.at), let head else {
+            return
+        }
         if OnScreen.contains(deck.project(head), in: lens) {
             unseen = 0
             return
