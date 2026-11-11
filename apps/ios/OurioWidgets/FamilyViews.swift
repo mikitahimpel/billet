@@ -68,13 +68,17 @@ private struct CareButton: View {
     var compact = false
 
     var body: some View {
-        Button(intent: intent) { label }
-            .buttonStyle(PressScaleStyle())
-            .widgetAccentable()
-            .accessibilityLabel(care == .feed ? "Feed \(catName)" : "Pet \(catName)")
+        Group {
+            if care == .feed {
+                Button(intent: FeedMochiIntent()) { label }
+            } else {
+                Button(intent: PetMochiIntent()) { label }
+            }
+        }
+        .buttonStyle(PressScaleStyle())
+        .widgetAccentable()
+        .accessibilityLabel(care == .feed ? "Feed \(catName)" : "Pet \(catName)")
     }
-
-    private var intent: any AppIntent { care == .feed ? FeedMochiIntent() : PetMochiIntent() }
 
     private var symbol: String { care == .feed ? "fork.knife" : "pawprint.fill" }
 

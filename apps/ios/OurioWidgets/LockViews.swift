@@ -202,10 +202,13 @@ struct CatLockView: View {
             .padding(.horizontal, Space.xs)
         default:
             // One tap does what she needs: a meal when she is hungry, a pet otherwise.
-            Button(intent: pose.care == .feed ? FeedMochiIntent() as any AppIntent : PetMochiIntent()) {
-                Image(systemName: pose.lockSymbol)
-                    .font(.ourioTitle)
-                    .widgetAccentable()
+            let symbol = Image(systemName: pose.lockSymbol).font(.ourioTitle).widgetAccentable()
+            Group {
+                if pose.care == .feed {
+                    Button(intent: FeedMochiIntent()) { symbol }
+                } else {
+                    Button(intent: PetMochiIntent()) { symbol }
+                }
             }
             .buttonStyle(PressScaleStyle())
             .accessibilityLabel("\(s.catName), \(pose.word.lowercased())")
