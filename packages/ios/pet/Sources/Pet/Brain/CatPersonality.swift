@@ -92,3 +92,29 @@ public enum StableHash {
     return hash
   }
 }
+
+extension CatPersonality.Trait {
+  public var title: String {
+    switch self {
+    case .curious: "Curious"
+    case .lazy: "Lazy"
+    case .cuddly: "Cuddly"
+    case .playful: "Playful"
+    case .bold: "Bold"
+    case .vocal: "Chatty"
+    }
+  }
+}
+
+extension CatPersonality {
+  /// The traits furthest from an even cat's, strongest first: what sets this one apart. A trait
+  /// below the middle is told by its opposite, so `high` says which way it leans.
+  public func standouts(_ count: Int = 2) -> [(trait: Trait, high: Bool)] {
+    let all = Trait.allCases.enumerated().sorted { a, b in
+      let da = abs(self[a.element] - 0.5)
+      let db = abs(self[b.element] - 0.5)
+      return da != db ? da > db : a.offset < b.offset
+    }
+    return all.prefix(max(0, count)).map { ($0.element, self[$0.element] >= 0.5) }
+  }
+}

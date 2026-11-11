@@ -3,34 +3,6 @@ import Pet
 import SwiftUI
 import Design
 
-/// How a need reads on screen: met, fine for now, or wanting something. A low need is an invitation, never a warning:
-/// nothing turns red, blinks or shakes.
-nonisolated enum NeedLevel: Hashable, CaseIterable, Sendable {
-    case content
-    case okay
-    case wants
-
-    /// Met from here up; the room's spoken status draws the same line.
-    static let contentFrom = 0.7
-    /// The brain's own line for a low need, so the screen and her behaviour agree.
-    static let wantsBelow = LifeConfig.standard.lowBelow
-
-    init(_ value: Double) {
-        switch value {
-        case Self.contentFrom...: self = .content
-        case Self.wantsBelow..<Self.contentFrom: self = .okay
-        default: self = .wants
-        }
-    }
-
-    /// The one need raised, on the sheet and as the badge on her portrait on Home: the lowest, while it wants something.
-    /// Only one, so the eye always lands on what comes first.
-    static func cue(_ needs: PetNeeds) -> PetNeed? {
-        let (need, value) = needs.lowest
-        return NeedLevel(value) == .wants ? need : nil
-    }
-}
-
 /// What a tap does for a need.
 nonisolated enum NeedCare: Hashable, Sendable {
     case game(MiniGame)
@@ -77,7 +49,9 @@ nonisolated enum NeedCare: Hashable, Sendable {
 }
 
 nonisolated extension PetNeed {
-    static let displayOrder: [PetNeed] = [.full, .rested, .playful, .loved]
+    /// Clockwise from the upper leading quarter of the ring round her portrait, so each need sits where its tile
+    /// does in the sheet's two columns.
+    static let ringOrder: [PetNeed] = [.full, .rested, .loved, .playful]
 
     var symbol: String {
         switch self {
@@ -88,10 +62,12 @@ nonisolated extension PetNeed {
         }
     }
 
-    /// Blush is love and hearts only; the rest are honey, told apart by their glyph.
+    /// One clay tint each, the same on her portrait's ring and on her sheet. Blush is love and hearts only.
     var tint: Color {
         switch self {
-        case .full, .rested, .playful: .honey
+        case .full: .honey
+        case .rested: .lilac
+        case .playful: .sage
         case .loved: .blushPink
         }
     }
@@ -113,52 +89,76 @@ nonisolated extension PetNeed {
         case .full, .playful, .loved: nil
         }
     }
+}
 
-    func word(_ level: NeedLevel) -> String {
-        switch (self, level) {
-        case (.full, .content): "Well fed"
-        case (.full, .okay): "Peckish"
-        case (.full, .wants): "Hungry"
-        case (.rested, .content): "Wide awake"
-        case (.rested, .okay): "Drowsy"
-        case (.rested, .wants): "Sleepy"
-        case (.playful, .content): "Had fun"
-        case (.playful, .okay): "Curious"
-        case (.playful, .wants): "Wants to play"
-        case (.loved, .content): "Adored"
-        case (.loved, .okay): "Cuddly"
-        case (.loved, .wants): "Wants a cuddle"
+nonisolated extension CatDayMoment.Kind {
+    var title: String {
+        switch self {
+        case .slept: "Slept"
+        case .napped: "Napped"
+        case .ate: "Ate"
+        case .played: "Played"
+        case .watched: "Watched"
+        case .explored: "Explored"
+        case .groomed: "Groomed"
+        case .mischief: "Mischief"
+        case .soughtYou: "Missed you"
+        case .playedTogether: "Played"
+        case .petted: "Cuddles"
+        case .gotNote: "Got a note"
         }
     }
 
-    /// The word, then the number the screen leaves out.
-    func spoken(_ value: Double) -> String {
-        "\(word(NeedLevel(value))), \(Int((value * 100).rounded())) percent"
+    var symbol: String {
+        switch self {
+        case .slept, .napped: "moon.zzz.fill"
+        case .ate: "fork.knife"
+        case .played: "tennisball.fill"
+        case .watched: "binoculars.fill"
+        case .explored: "pawprint.fill"
+        case .groomed: "sparkles"
+        case .mischief: "cup.and.saucer.fill"
+        case .soughtYou: "eyes"
+        case .playedTogether: "gamecontroller.fill"
+        case .petted: "heart.fill"
+        case .gotNote: "envelope.fill"
+        }
     }
 
-    func line(_ level: NeedLevel, name: String) -> String {
-        switch (self, level) {
-        case (.full, .content): "Happily full"
-        case (.full, .okay): "Could nibble something"
-        case (.full, .wants): "\(name) would love a meal"
-        case (.rested, .content): "Well rested"
-        case (.rested, .okay): "A little sleepy"
-        case (.rested, .wants): "\(name) would love a cozy nap"
-        case (.playful, .content): "Had a lovely play"
-        case (.playful, .okay): "Up for a game"
-        case (.playful, .wants): "\(name) would love to play"
-        case (.loved, .content): "Feels so loved"
-        case (.loved, .okay): "Glad you're here"
-        case (.loved, .wants): "\(name) would love a cuddle"
+    /// The tint of the need it fed, so the day reads against the gauges above it.
+    var tint: Color {
+        switch self {
+        case .slept, .napped: PetNeed.rested.tint
+        case .ate: PetNeed.full.tint
+        case .played, .playedTogether, .watched, .explored, .mischief: PetNeed.playful.tint
+        case .groomed: PetNeed.rested.tint
+        case .soughtYou, .petted, .gotNote: PetNeed.loved.tint
         }
     }
 }
 
-nonisolated extension PetNeeds {
-    /// Her mood in a few words, from her lowest need.
-    func moodLine(name: String) -> String {
-        let (need, value) = lowest
-        let level = NeedLevel(value)
-        return level == .content ? "Happy and cosy" : need.line(level, name: name)
+nonisolated extension CatDayMoment {
+    /// When it was, as the strip says it: the minute of something the couple did, the start of the hour of
+    /// something she did on her own, and for a night's sleep the hour she woke.
+    func time(in zone: TimeZone = .current, locale: Locale = .current) -> String {
+        let style = Date.FormatStyle(locale: locale, timeZone: zone).hour().minute()
+        switch kind {
+        case .slept: return "till " + Date(timeIntervalSince1970: until).formatted(style)
+        case .napped, .ate, .played, .watched, .explored, .groomed, .mischief, .soughtYou, .playedTogether, .petted,
+            .gotNote:
+            return Date(timeIntervalSince1970: at).formatted(style)
+        }
+    }
+}
+
+nonisolated extension CatTemperament {
+    var symbol: String {
+        switch self {
+        case .cuddler: "heart.fill"
+        case .explorer: "binoculars.fill"
+        case .diva: "crown.fill"
+        case .sleepyhead: "moon.zzz.fill"
+        case .clown: "tennisball.fill"
+        }
     }
 }

@@ -1,4 +1,6 @@
 import Design
+import Pet
+import RoomInterface
 import SwiftUI
 @testable import Billet
 
@@ -9,6 +11,9 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case cards
     case rows
     case status
+    case gauges
+    case mochi
+    case mochiAbout = "mochi-about"
     case postage
     case tiles
     case fields
@@ -24,6 +29,9 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .cards: Self.cardsPage
             case .rows: Self.rowsPage
             case .status: Self.statusPage
+            case .gauges: Self.gaugesPage
+            case .mochi: Self.mochiPage
+            case .mochiAbout: Self.mochiAboutPage
             case .postage: Self.postagePage
             case .tiles: Self.tilesPage
             case .fields: Self.fieldsPage
@@ -125,6 +133,66 @@ enum GalleryPage: String, CaseIterable, Sendable {
             ToggleRow("Streak at risk reminders", isOn: .constant(false))
         }
     }
+
+    /// The ring round an avatar, the bars, a raised tile beside one with a note, and a day's strip.
+    @MainActor @ViewBuilder private static var gaugesPage: some View {
+        HStack(spacing: Space.l) {
+            Circle().fill(Ink.surfaceRaised)
+                .frame(width: Size.button + Space.m, height: Size.button + Space.m)
+                .overlay {
+                    SegmentedRing([
+                        .init(value: 0.3, tint: .honey), .init(value: 0.9, tint: .lilac),
+                        .init(value: 0.75, tint: .blushPink), .init(value: 0.55, tint: .sage),
+                    ])
+                }
+            VStack(spacing: Space.s) {
+                MeterBar(value: 0.4)
+                MeterBar(value: 0.02, tint: .lilac)
+                MeterBar(value: 1, tint: .sage)
+            }
+        }
+        ItemGrid {
+            GaugeTile("Full", state: "Hungry", hint: "Would love a meal", value: 0.3, symbol: "fork.knife",
+                      emphasis: .raised, action: "Feed") {}
+            GaugeTile("Rested", state: "Wide awake", hint: "Fine for today", value: 0.9, symbol: "moon.zzz.fill",
+                      tint: .lilac, note: "Naps on her own")
+        }
+        MomentStrip([
+            StripMoment(id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7:00"),
+            StripMoment(id: "2", symbol: "fork.knife", tint: .honey, title: "Ate", time: "8:12"),
+            StripMoment(id: "3", symbol: "heart.fill", tint: .blushPink, title: "Cuddles", time: "12:40"),
+        ])
+    }
+
+    /// The top of Mochi's sheet with a fixed cat: her hero and her day. Her needs are the `gauges` page's tiles; the
+    /// whole sheet at the largest text size is taller than a drawing can be.
+    @MainActor @ViewBuilder private static var mochiPage: some View {
+        MochiHero(mood: fixedCat.needs?.moodLine(name: "Mochi") ?? "", level: 2, progress: 0.4, days: 2) {
+            PetPortrait(size: 88)
+        }
+        MochiDay(name: "Mochi", doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
+                 locale: Locale(identifier: "en_GB"))
+    }
+
+    @MainActor @ViewBuilder private static var mochiAboutPage: some View {
+        if let about = fixedCat.about { MochiNature(about: about) }
+    }
+
+    private static let fixedCat: CatStatus = {
+        // 04:00 UTC on 10 November 2026, the start of her day.
+        let dawn = 1_794_283_200.0
+        func hour(_ hour: Double) -> Double { dawn + (hour - 4) * 3600 }
+        return CatStatus(
+            needs: PetNeeds(full: 0.3, rested: 0.9, loved: 0.75, playful: 0.55), mind: .exploring,
+            about: CatAbout(
+                temperament: .explorer, personality: CatTemperament.explorer.archetype, favourite: .window,
+                day: [
+                    CatDayMoment(kind: .slept, at: hour(4), until: hour(7), exact: false),
+                    CatDayMoment(kind: .ate, at: hour(8.2), exact: true),
+                    CatDayMoment(kind: .napped, at: hour(14), until: hour(16), exact: false),
+                    CatDayMoment(kind: .playedTogether, at: hour(18.1), exact: true),
+                ]))
+    }()
 
     /// A raised row and a quiet one, a row with a note, and the badge on a round control.
     @MainActor @ViewBuilder private static var statusPage: some View {

@@ -28,6 +28,10 @@ extension Color {
   /// Honey that reads on dark, for marks drawn over a dark map or picture.
   public static let honeyBright = Color(hex: 0xFFE07A)
   public static let blushPink = Color(hex: 0xFF8FA3)
+  /// Night and rest. With `sage`, honey and blush, the four clay tints of the cat's needs.
+  public static let lilac = Color(hex: 0xB79BE0)
+  /// Play and the outdoors.
+  public static let sage = Color(hex: 0x9CBD76)
 
   /// A colour a drawing carries as `#RRGGBB`: the sender's ink, which may be one this build
   /// doesn't sell. Nil when the rest after the first character isn't hex.

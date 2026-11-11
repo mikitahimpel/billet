@@ -1,9 +1,12 @@
 ---
 import SiteFooter from "../components/site-footer.astro";
 import SiteHeader from "../components/site-header.astro";
+import SiteScript from "../components/site-script.astro";
 import { appStoreId } from "../config";
 import { pages } from "../site";
-import "../styles/global.css";
+import criticalHome from "../styles/critical-home.css?raw";
+import criticalSite from "../styles/critical-site.css?raw";
+import sheet from "../styles/global.css?url";
 
 interface Props {
   title: string;
@@ -13,8 +16,10 @@ interface Props {
   shareDescription?: string;
   // Extra schema.org nodes for this page; WebPage and its breadcrumb are added here.
   schema?: Record<string, unknown>[];
-  overlayHeader?: boolean;
-  mainClass?: string;
+  // The home page brings its own header (inside the story), first-screen styles and scripts.
+  home?: boolean;
+  // A class per page template on <body>: site-feature, site-faq, site-doc...
+  bodyClass?: string;
   // Kept out of search, the sitemap and the Markdown twins.
   noindex?: boolean;
 }
@@ -25,14 +30,14 @@ const {
   shareTitle = title,
   shareDescription = description,
   schema = [],
-  overlayHeader,
-  mainClass,
+  home = false,
+  bodyClass,
   noindex = false,
 } = Astro.props;
 const path = Astro.url.pathname;
 const canonical = new URL(path, Astro.site).href;
 const ogImage = new URL("/og.png", Astro.site).href;
-const home = new URL("/", Astro.site).href;
+const homeUrl = new URL("/", Astro.site).href;
 
 // The trail from home to this page, from the site's own page list: /features/games/ → Home › All features › Games.
 const trail = path
@@ -52,8 +57,8 @@ const structuredData = {
       name: title,
       description,
       inLanguage: "en-US",
-      isPartOf: { "@id": `${home}#website` },
-      about: { "@id": `${home}#app` },
+      isPartOf: { "@id": `${homeUrl}#website` },
+      about: { "@id": `${homeUrl}#app` },
     },
     ...(trail.length > 0
       ? [
@@ -78,7 +83,7 @@ const structuredData = {
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#2e1838" />
+    <meta name="theme-color" content="#0a0605" />
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex ? <meta name="robots" content="noindex" /> : <link rel="canonical" href={canonical} />}
@@ -105,31 +110,42 @@ const structuredData = {
     <meta name="twitter:image" content={ogImage} />
 
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
+    <slot name="head" />
+    <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <!-- The first screen's rules (a subset of global.css); the whole sheet loads without blocking the paint. -->
+    <style is:inline set:html={home ? criticalHome : criticalSite} />
+    <link rel="stylesheet" href={sheet} media="print" onload="this.media='all'" data-sheet />
+    <noscript><link rel="stylesheet" href={sheet} /></noscript>
+    <script is:inline>
+      // Hidden-before-entrance states hang off this class only. It comes off again if a script
+      // throws, or if the page script hasn't started within 4 s (blocked or failed to load).
+      (function () {
+        var html = document.documentElement;
+        var off = function () {
+          html.classList.remove("js");
+        };
+        html.classList.add("js");
+        addEventListener("error", off);
+        setTimeout(function () {
+          if (!html.classList.contains("js-ready")) off();
+        }, 4000);
+      })();
+    </script>
   </head>
-  <body>
-    <SiteHeader overlay={overlayHeader} />
-    <main class={mainClass ?? "overflow-x-clip"}>
+  <body class:list={[!home && "site", bodyClass]}>
+    {!home && <SiteHeader />}
+    <main>
       {
         trail.length > 0 && (
-          <nav aria-label="Breadcrumb" class="container-page pt-6 md:pt-8">
-            <ol class="flex flex-wrap items-center gap-x-2 text-label font-semibold text-muted">
+          <nav class="wrap crumbs" aria-label="Breadcrumb">
+            <ol>
               <li>
-                <a href="/" class="hover:text-paper">
-                  Home
-                </a>
+                <a href="/">Home</a>
               </li>
               {trail.map((page) => (
-                <li class="flex items-center gap-2">
-                  <span aria-hidden="true">›</span>
-                  {page.path === path ? (
-                    <span aria-current="page" class="text-soft">
-                      {page.label}
-                    </span>
-                  ) : (
-                    <a href={page.path} class="hover:text-paper">
-                      {page.label}
-                    </a>
-                  )}
+                <li>
+                  {page.path === path ? <span aria-current="page">{page.label}</span> : <a href={page.path}>{page.label}</a>}
                 </li>
               ))}
             </ol>
@@ -139,6 +155,15 @@ const structuredData = {
       <slot />
     </main>
     <SiteFooter />
+    <div class="grain" aria-hidden="true"></div>
+    <svg width="0" height="0" style="position: absolute" aria-hidden="true">
+      <symbol id="apple" viewBox="0 0 17 20">
+        <path
+          d="M14.1 10.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9C3.8 4.9 2.2 5.9 1.3 7.4c-1.8 3.2-.5 7.9 1.3 10.5.9 1.3 1.9 2.7 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.3 3.1-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.8-1.1-2.8-4.3ZM11.6 3.2c.7-.9 1.2-2 1.1-3.2-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.1.1 2.3-.6 3-1.5Z"
+        ></path>
+      </symbol>
+    </svg>
+    {!home && <SiteScript />}
     <slot name="after" />
   </body>
 </html>

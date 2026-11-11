@@ -1,4 +1,5 @@
 import CoreGraphics
+import simd
 import Foundation
 
 /// What the Bedroom's window shows as images: the numbers `Resources/CityDiorama/diorama.json` gives, and the
@@ -67,6 +68,26 @@ enum CityDiorama {
         case ..<21: let t = ramp(19, 21); return [0, 1 - t, t]
         default: return [0, 0, 1]
         }
+    }
+
+    /// The sky the window is backed with, top and horizon: clear blue by day, warm at dusk, deep plum at night. It fills
+    /// the whole opening, so no turn of the room ever shows what is behind the window.
+    static let skies: [(top: SIMD3<Float>, horizon: SIMD3<Float>)] = [
+        (rgb(0x4F9BE8), rgb(0xBFE1FF)), (rgb(0x4B4A86), rgb(0xFFB27A)), (rgb(0x1A1030), rgb(0x3B2346)),
+    ]
+
+    static func sky(hour: Float) -> (top: SIMD3<Float>, horizon: SIMD3<Float>) {
+        let w = weights(hour: hour)
+        var top = SIMD3<Float>.zero, horizon = SIMD3<Float>.zero
+        for index in skies.indices {
+            top += skies[index].top * w[index]
+            horizon += skies[index].horizon * w[index]
+        }
+        return (top, horizon)
+    }
+
+    private static func rgb(_ hex: UInt32) -> SIMD3<Float> {
+        SIMD3(Float((hex >> 16) & 0xFF), Float((hex >> 8) & 0xFF), Float(hex & 0xFF)) / 255
     }
 
     /// The opacity of each of the stacked images, bottom first, that cross-fades them by `weights`.
