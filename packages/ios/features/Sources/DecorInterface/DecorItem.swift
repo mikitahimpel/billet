@@ -1,5 +1,3 @@
-import Pet
-
 /// A shop piece the player can stand in the room: the model the scene draws and the room it takes.
 /// Sizes are metres, as the shop's catalog fixes them.
 public struct DecorItem: Equatable, Sendable, Identifiable {
@@ -18,9 +16,9 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   /// The shop's model, which the shop draws; the room draws `assetName`.
   public let model: String
 
-  /// The light copy the room draws: one mesh of at most `DecorItem.triangleBudget` triangles, from
-  /// `tools/decor-lod`.
-  public var assetName: String { "Decor_\(id)" }
+  /// The model the room draws: a light copy of at most `DecorItem.triangleBudget` triangles
+  /// (`tools/decor-lod`), or the prop's own model when it is that light already.
+  public let assetName: String
 
   public static let triangleBudget = 5_000
   /// Most mesh parts (one per material) a model may have.
@@ -38,11 +36,12 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   public let isFlat: Bool
 
   public init(
-    id: String, model: String, fit: Fit, size: Double, mount: Mount, width: Double, depth: Double,
-    isFlat: Bool = false
+    id: String, model: String, assetName: String, fit: Fit, size: Double, mount: Mount,
+    width: Double, depth: Double, isFlat: Bool = false
   ) {
     self.id = id
     self.model = model
+    self.assetName = assetName
     self.fit = fit
     self.size = size
     self.mount = mount
@@ -51,12 +50,13 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
     self.isFlat = isFlat
   }
 
-  /// The pieces the shop sells today. A treat, a style or a piece it does not list is nil.
+  /// The pieces the player can place, from `DecorCatalog.generated.swift`. A treat, a style or a piece
+  /// it does not list is nil.
   public static func item(shopID id: String) -> DecorItem? {
     table[id]
   }
 
-  public static var all: [DecorItem] { order.compactMap { table[$0] } }
+  public static var all: [DecorItem] { catalog }
 
   /// What the player can place out of everything owned, in the shop's order.
   public static func placeable(among owned: Set<String>) -> [DecorItem] {
@@ -67,30 +67,6 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   /// wait in the closet rather than standing a second one beside it.
   public static let starters: Set<String> = ["lamp", "rug"]
 
-  private static let order = [
-    "armchair", "bookcase", "donutbed", "lamp", "lantern", "monstera", "print", "rug", "teatable",
-    "tower", "yarn", "mouse",
-  ]
-
-  private static let footprints: [String: (width: Double, depth: Double)] = [
-    "armchair": (0.36, 0.3), "bookcase": (0.3, 0.12), "donutbed": (0.34, 0.34),
-    "lamp": (0.14, 0.14), "lantern": (0.1, 0.1), "monstera": (0.22, 0.22),
-    "print": (0.2, 0), "rug": (0.6, 0.6), "teatable": (0.26, 0.26), "tower": (0.2, 0.2),
-    "yarn": (0.12, 0.12), "mouse": (0.08, 0.05),
-  ]
-
-  private static let table: [String: DecorItem] = {
-    var items: [String: DecorItem] = [:]
-    for id in order {
-      guard let piece = ShopCatalog.standard.item("furniture-\(id)"),
-        case .furniture(let model, let fit, let size, let mount) = piece.look,
-        let space = footprints[id]
-      else { continue }
-      items[id] = DecorItem(
-        id: id, model: model, fit: fit == .width ? .width : .height, size: size,
-        mount: mount == .wall ? .wall : .floor, width: space.width, depth: space.depth,
-        isFlat: id == "rug")
-    }
-    return items
-  }()
+  private static let table: [String: DecorItem] = Dictionary(
+    uniqueKeysWithValues: catalog.map { ($0.id, $0) })
 }
