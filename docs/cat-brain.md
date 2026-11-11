@@ -132,9 +132,24 @@ The frame carries the feeling, a `voice` (meow, yowl, chirp) the room plays as t
 with a small thought bubble of what it wants, and `purring`. The room's sound is made in code and
 silent with the ringer off. When care ends a need, hearts rise over the cat.
 
-The needs card opens from the paw by the streak: bars for Food, Play, Love and Sleep, the mood in
-words ("Hangry 😾") and what the cat wants. The partner's meals and games show for a moment
-("Your partner fed Mochi 🐟"). `CatNudge` plans one local notification for the first time in the
+Her needs show on Home as a ring of four arcs round her portrait (`SegmentedRing`, one arc and one
+tint per need, the arc as long as the need is full) with a tag under it: "Needs", or what she asks
+for while a need is low. The ring pulses once when a need turns low. A tap opens her
+sheet (`MochiSheetContent`): her mood and level, a `GaugeTile` per need with its level, a word,
+the care it takes and when it next runs low (`NeedForecast`, the inverse of the life's own decay,
+taking her as staying awake or asleep as she is), her day and what kind of cat she is.
+
+Her day is told from the brain's diary (`CatDiary`: seconds per activity group for each local hour
+since the day began, sleep included, written as the day is folded, so a phone just launched holds
+the same diary as one open since dawn) and the couple's own care today. `CatDayStory.moments` turns
+the two into at most eight moments, oldest first: an hour counts for the group it mostly went to
+from ten minutes up, hours in a row spent the same way are one moment, a night's sleep that runs
+into the morning stays one, and what the couple did (a meal, a game, a pet, a note) keeps its own
+minute and replaces the hour it explains. Sitting about and reflexes are not told. The room hands
+this to the screens as `CatStatus.about` (`CatAbout`), with her type, her traits and her favourite
+spot.
+
+`CatNudge` plans one local notification for the first time in the
 next day the cat would be hangry or lonely, outside 22:00–08:30, at most two a day and four hours
 apart; every new event plans it again, so care from either phone moves or cancels it.
 
