@@ -34,7 +34,7 @@ extension LifeEvent.Kind {
     case .play: .play
     case .sleep: .sleep
     case .shoo: .shoo
-    case .note: nil
+    case .note, .overfeed: nil
     }
   }
 }

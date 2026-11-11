@@ -33,6 +33,8 @@ public struct LifeState: Hashable, Sendable {
   public var mood: Double
   /// The partner the pet misses, when one has cared for it much less than the other.
   public var missing: String?
+  /// Overfed within the last `stuffedHours`: she keeps away from the bowl.
+  public var stuffed = false
 }
 
 /// The pet's life as a pure function of events and time, the same on every phone and the widget.
@@ -60,6 +62,7 @@ public enum PetLife {
       fold.apply(event)
     }
     _ = fold.advance(from: t, to: end, step: step)
+    fold.now = end
     return fold.state
   }
 
@@ -108,6 +111,8 @@ private struct Fold {
   var asleep = false
   /// Seconds since 1970.
   var wokeAt = -Double.infinity
+  var stuffedUntil = -Double.infinity
+  var now = Double.infinity
 
   init(config: LifeConfig, context: LifeContext) {
     self.config = config
@@ -180,6 +185,11 @@ private struct Fold {
       return
     case .shoo:
       return
+    case .overfeed:
+      full = 1
+      playful = max(config.floor, playful - config.overfeedPlayfulDrop)
+      stuffedUntil = event.at.timeIntervalSince1970 + config.stuffedHours * 3600
+      return
     }
     asleep = false
     wokeAt = event.at.timeIntervalSince1970
@@ -219,6 +229,6 @@ private struct Fold {
     let missing = partners.first { most - (love[$0] ?? 0) >= config.missingGap }
     return LifeState(
       needs: needs, love: love, asleep: asleep, mood: needs.mood(weights: config.weights),
-      missing: missing)
+      missing: missing, stuffed: now < stuffedUntil)
   }
 }

@@ -83,7 +83,7 @@ public struct CatUpbringing: Hashable, Sendable {
       case .play: games += weight
       case .shoo: shoos += weight
       case .feed: meals.append(at)
-      case .note, .sleep: break
+      case .note, .sleep, .overfeed: break
       }
       if event.kind.isCare { cares.append(at) }
     }
@@ -234,7 +234,7 @@ extension LifeEvent.Kind {
   var isCare: Bool {
     switch self {
     case .feed, .pet, .play, .note: true
-    case .sleep, .shoo: false
+    case .sleep, .shoo, .overfeed: false
     }
   }
 }

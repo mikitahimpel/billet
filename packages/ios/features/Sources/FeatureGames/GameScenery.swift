@@ -27,7 +27,7 @@ public enum GameScenery: String, CaseIterable, Hashable, Sendable {
     switch game {
     case .feed, .water: [.kitchen]
     case .brush: [.rug, .kitchen, .garden]
-    case .laser: [.kitchen, .room]
+    case .laser: [.room]
     }
   }
 

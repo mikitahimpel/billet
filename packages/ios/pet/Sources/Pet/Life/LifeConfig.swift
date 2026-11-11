@@ -25,6 +25,9 @@ public struct LifeConfig: Hashable, Sendable {
   /// The exponent k of the diminishing return `n ← n + g·(1 − n)^k`.
   public var returns = 1.5
   public var feedGain = 0.6
+  /// How much Playful an overfed meal takes off, and how long she stays stuffed, off her food.
+  public var overfeedPlayfulDrop = 0.08
+  public var stuffedHours = 1.0
   public var petGain = 0.2
   public var playGain = 0.45
   /// A note fills Loved for both partners, more than anything else.

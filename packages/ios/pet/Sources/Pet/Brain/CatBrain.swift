@@ -272,6 +272,8 @@ public struct CatBrain: Sendable {
       if activity.step != .curl {
         enterRest(at: t, cause: .event)
       }
+    case .overfeed:
+      break
     case .shoo:
       // Off the desk or the cardigan with a start; elsewhere a shoo means nothing to it.
       guard activity.step.group == .mischief else { return }
