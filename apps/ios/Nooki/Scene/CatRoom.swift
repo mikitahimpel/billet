@@ -4,6 +4,7 @@ import WidgetInterface
 import WidgetUI
 import Pet
 import RealityKit
+import RoomInterface
 import SwiftUI
 import UsInterface
 
