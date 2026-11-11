@@ -16,7 +16,7 @@ public struct ProgressBar: View {
 
   public var body: some View {
     Capsule()
-      .fill(Ink.surfaceRaised)
+      .fill(Ink.well)
       .frame(height: Self.height)
       .overlay {
         // Scaled, not resized: the fill moves without laying the card out again.

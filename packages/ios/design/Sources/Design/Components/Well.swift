@@ -18,12 +18,12 @@ private struct WellSurface: ViewModifier {
 
   func body(content: Content) -> some View {
     content
-      .background(Ink.surfaceRaised, in: shape)
+      .background(Ink.well, in: shape)
       .overlay {
         shape
           .strokeBorder(
             LinearGradient(
-              colors: [Ink.separator, Ink.separator.opacity(0)], startPoint: .top,
+              colors: [Ink.wellShade, Ink.wellShade.opacity(0)], startPoint: .top,
               endPoint: .center),
             lineWidth: 1
           )

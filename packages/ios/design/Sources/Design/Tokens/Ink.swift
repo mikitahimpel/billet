@@ -77,6 +77,8 @@ public enum Ink {
   public static let surface = Palette.surface.color
   /// Selected rows, pressed cards, chips on a surface.
   public static let surfaceRaised = Palette.surfaceRaised.color
+  static let well = Palette.well.color
+  static let wellShade = Palette.wellShade.color
   public static let separator = Palette.separator.color
   /// The card's own fill, lit from above. Opaque.
   public static let cardFill = LinearGradient(
