@@ -2,7 +2,7 @@ import Foundation
 import RoomInterface
 
 extension CatRig.Files {
-    private init(rig: RigFile, splat: SplatLoader.File?, skin: [UInt8]?) {
+    nonisolated private init(rig: RigFile, splat: SplatLoader.File?, skin: [UInt8]?) {
         self.rig = rig
         self.splat = splat
         self.skin = skin
