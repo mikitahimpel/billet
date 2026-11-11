@@ -40,6 +40,7 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             HeroBackdrop()
+            if flow.page == .welcome { WarmBackdrop().transition(.opacity) }
             VStack(spacing: 0) {
                 header
                 page
