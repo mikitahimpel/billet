@@ -5,7 +5,7 @@ struct SwayEnvelope: Equatable {
     private static let rate: Float = 1.5
 
     private(set) var strength: Float = 0
-    private var quiet: Float = 0
+    private var quiet: Float = idleAfter
 
     mutating func update(dt: Float, active: Bool, enabled: Bool) {
         quiet = active ? 0 : quiet + dt
