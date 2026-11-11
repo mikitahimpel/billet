@@ -222,9 +222,9 @@ private struct EmptyMoments: View {
                     Image(systemName: "photo.badge.plus")
                     Text("Add a photo")
                     Text("+10")
-                        .font(.ourioMicro)
+                        .font(.ourioCaption.weight(.semibold).monospacedDigit())
                         .padding(.horizontal, Space.s)
-                        .frame(height: 22)
+                        .padding(.vertical, Space.xs / 2)
                         .background(Ink.heroInk.opacity(0.12), in: .capsule)
                 }
                 .frame(maxWidth: .infinity)
@@ -270,8 +270,11 @@ struct MomentPrint: View {
         return reactions.theirs(note) ?? reactions.mine(note)
     }
 
+    static func stampWidth(_ width: CGFloat) -> CGFloat { max(StampSize.small.width, width * 0.15) }
+
     var body: some View {
         Polaroid(width: width, caption: moment.caption, byline: profile.byline(of: moment), undeveloped: undeveloped,
+                 captionLines: 2, markSpace: moment.noteID == nil ? 0 : Self.stampWidth(width),
                  captionEditor: captionEditor, captionFocus: captionFocus) {
             MomentPhoto(store: store, moment: moment, maxPixels: maxPixels, film: true)
         }
@@ -296,7 +299,13 @@ struct MomentPrint: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
-            if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
+            // A print that went between the phones carries a stamp cancelled on its day, as a sent note does.
+            if moment.noteID != nil {
+                PostageStamp(moment.id.stampArt, width: Self.stampWidth(width), postmark: moment.date)
+                    .rotationEffect(.degrees(4))
+                    .padding(width * 0.05)
+                    .accessibilityHidden(true)
+            } else if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
                 UnsentMark(size: max(10, width * 0.05)).padding(width * 0.06)
             }
         }
@@ -310,36 +319,34 @@ struct MomentPrint: View {
     }
 }
 
-/// Pinned moments in wall order, so it's clear what Mochi's room shows.
+/// Pinned moments in wall order, so it's clear what Mochi's room shows: six small prints across the card, the empty
+/// slots as blank paper.
 private struct WallStrip: View {
     let store: MomentStore
 
     var body: some View {
-        HStack(spacing: Space.s) {
-            Label("On \(CatProfile.name())'s wall", systemImage: "house.fill")
-                .font(.ourioCallout)
-                .foregroundStyle(Ink.text)
-                .labelStyle(.titleAndIcon)
-                .tint(.honey)
-            Spacer(minLength: 0)
-            HStack(spacing: Space.xs) {
-                ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
-                    let moment = slot < store.pinned.count ? store.pinned[slot] : nil
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(Color(hex: 0xE9D6BC))
-                        .overlay {
-                            if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
-                        }
-                        .clipShape(.rect(cornerRadius: 2))
-                        .frame(width: 20, height: 20)
-                        .padding(2)
-                        .background(Color(hex: 0xFFFBF3), in: .rect(cornerRadius: 3))
+        Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                CardHeader("On \(CatProfile.name())'s wall",
+                           detail: "\(store.pinned.count) of \(MomentStore.wallSlots) · pin a photo to hang it",
+                           symbol: "house.fill", opens: false)
+                HStack(spacing: Space.s) {
+                    ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
+                        let moment = slot < store.pinned.count ? store.pinned[slot] : nil
+                        PolaroidPaper.blank
+                            .aspectRatio(1, contentMode: .fit)
+                            .overlay {
+                                if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
+                            }
+                            .clipped()
+                            .padding(Space.xs)
+                            .background { PaperSheet(lift: moment == nil ? nil : PaperSheet.Lift(radius: 2, y: 1)) }
+                            .rotationEffect(moment.map { $0.id.polaroidTilt } ?? .zero)
+                    }
                 }
+                .accessibilityHidden(true)
             }
         }
-        .padding(.horizontal, CardMetrics.padding)
-        .frame(height: 50)
-        .cardSurface()
     }
 }
 
