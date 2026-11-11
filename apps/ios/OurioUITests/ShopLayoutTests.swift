@@ -1,6 +1,6 @@
 import XCTest
 
-/// The Shop is one plain vertical scroll: only its category row scrolls sideways; no row of cards or inks does.
+/// The Shop is one plain vertical scroll: only its category row and the daily deals row scroll sideways.
 final class ShopLayoutTests: XCTestCase {
     @MainActor
     func testTheShopScrollsOnlyUpAndDown() throws {
@@ -13,10 +13,11 @@ final class ShopLayoutTests: XCTestCase {
         Thread.sleep(forTimeInterval: 8)
 
         XCTAssertTrue(app.staticTexts["Daily deals"].waitForExistence(timeout: 10), "Today should show")
+        let scrollers = "only the page, its category row and the deals row should scroll"
         for _ in 0..<3 {
-            XCTAssertLessThanOrEqual(app.scrollViews.count, 3, "only the page, its category row and the deals row should scroll")
+            XCTAssertLessThanOrEqual(app.scrollViews.count, 3, scrollers)
             app.swipeUp()
         }
-        XCTAssertLessThanOrEqual(app.scrollViews.count, 3, "only the page, its category row and the deals row should scroll")
+        XCTAssertLessThanOrEqual(app.scrollViews.count, 3, scrollers)
     }
 }
