@@ -51,12 +51,18 @@ public struct TileButton: View {
       Button(action: action) {
         HStack(spacing: Space.xs + 1) {
           CoinIcon(size: Size.pill / 2, relativeTo: .headline)
-          Text("Need \(missing, format: .number) more").monospacedDigit()
+          // The short form when the whole line would reach the capsule's border, as in a narrow tile.
+          ViewThatFits(in: .horizontal) {
+            Text("Need \(missing, format: .number) more")
+            Text("Need \(missing, format: .number)")
+          }
+          .monospacedDigit()
         }
         .lineLimit(1)
         .minimumScaleFactor(0.8)
         .font(.ourioHeadline)
         .foregroundStyle(Ink.text)
+        .padding(.horizontal, Space.m)
         .frame(maxWidth: .infinity, minHeight: Size.button)
         .background(Ink.surfaceRaised, in: .capsule)
         .overlay { Capsule().strokeBorder(Color.honey, lineWidth: 2) }

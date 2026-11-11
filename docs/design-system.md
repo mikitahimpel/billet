@@ -98,6 +98,9 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
+| A screen's few big actions side by side | `ActionTiles([ActionTile(title, status:, symbol:, tint:) {}])`: equal squares while every label fits on one line, a `GroupedSection` of rows otherwise |
+| A progress toward one goal, in a hero | `ProgressRing(value:tint:) { centre }` |
+| Something to open on a shelf that scrolls sideways, with art | `PosterCard(title, status:, emphasis:, art:) {}`, three fifths of the width each (`containerRelativeFrame(count: 5, span: 3)`), stacked at accessibility sizes |
 | A stamp on its own | `PostageStamp(_:size:rare:postmark:pinned:)`: `.small` in a control, `.regular` in a row, `.large` alone; `pinned` in a row, `postmark` once sent |
 
 ### Do and don't
