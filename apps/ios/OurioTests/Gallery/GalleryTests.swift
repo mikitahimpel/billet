@@ -27,35 +27,88 @@ import Testing
     }
 }
 
-/// The screens a change to the design package reaches most, each with fixed content. Onboarding's welcome draws
-/// drifting motes and the live hero cat, and the Shop's Today changes with the date, so neither is here.
+/// The screens a change to the design package reaches most, each with fixed content, and each phase of the two Us
+/// games. Onboarding's welcome draws drifting motes and the live hero cat, and the Shop's Today changes with the date,
+/// so neither is here.
 enum GalleryScreen: String, CaseIterable, Sendable {
     case inbox
     case inboxEmpty = "inbox-empty"
     case inboxFailed = "inbox-failed"
     case settings
+    case whoKnowsIntro = "whoknows-intro"
+    case whoKnowsAnswer = "whoknows-answer"
+    case whoKnowsGuess = "whoknows-guess"
+    case whoKnowsWaiting = "whoknows-waiting"
+    case whoKnowsRevealed = "whoknows-revealed"
+    case whoKnowsOffline = "whoknows-offline"
+    case whoKnowsUnpaired = "whoknows-unpaired"
+    case drawGuessGuess = "drawguess-guess"
+    case drawGuessWaiting = "drawguess-waiting"
+    case drawGuessDraw = "drawguess-draw"
+    case drawGuessSolved = "drawguess-solved"
+    case drawGuessOffline = "drawguess-offline"
+    case drawGuessUnpaired = "drawguess-unpaired"
 
-    @MainActor func loaded() async -> InboxModel? {
-        let scenario: InboxFixture.Scenario
-        switch self {
-        case .inbox: scenario = .items
-        case .inboxEmpty: scenario = .empty
-        case .inboxFailed: scenario = .failed
-        case .settings: return nil
-        }
-        let model = InboxFixture.model(scenario)
-        await model.open()
-        return model
+    enum Loaded {
+        case inbox(InboxModel)
+        case whoKnows(WhoKnowsModel)
+        case drawGuess(DrawGuessModel)
+        case settings
     }
 
-    @MainActor @ViewBuilder func view(_ model: InboxModel?) -> some View {
+    @MainActor func loaded() async -> Loaded {
         switch self {
-        case .inbox, .inboxEmpty, .inboxFailed:
-            if let model {
-                NavigationStack { InboxSheet(model: model, state: HomeState(stores: .live()), open: { _ in }, opensModel: false) }
+        case .inbox: return await inbox(.items)
+        case .inboxEmpty: return await inbox(.empty)
+        case .inboxFailed: return await inbox(.failed)
+        case .settings: return .settings
+        case .whoKnowsIntro: return .whoKnows(await GameFixture.whoKnows(.intro))
+        case .whoKnowsAnswer: return .whoKnows(await GameFixture.whoKnows(.answering))
+        case .whoKnowsGuess: return .whoKnows(await GameFixture.whoKnows(.guessing))
+        case .whoKnowsWaiting: return .whoKnows(await GameFixture.whoKnows(.waiting))
+        case .whoKnowsRevealed: return .whoKnows(await GameFixture.whoKnows(.revealed))
+        case .whoKnowsOffline: return .whoKnows(await GameFixture.whoKnows(.offline))
+        case .whoKnowsUnpaired: return .whoKnows(await GameFixture.whoKnows(.unpaired))
+        case .drawGuessGuess: return .drawGuess(await GameFixture.drawGuess(.guessing))
+        case .drawGuessWaiting: return .drawGuess(await GameFixture.drawGuess(.waiting))
+        case .drawGuessDraw: return .drawGuess(await GameFixture.drawGuess(.drawing))
+        case .drawGuessSolved: return .drawGuess(await GameFixture.drawGuess(.solved))
+        case .drawGuessOffline: return .drawGuess(await GameFixture.drawGuess(.offline))
+        case .drawGuessUnpaired: return .drawGuess(await GameFixture.drawGuess(.unpaired))
+        }
+    }
+
+    @MainActor private func inbox(_ scenario: InboxFixture.Scenario) async -> Loaded {
+        let model = InboxFixture.model(scenario)
+        await model.open()
+        return .inbox(model)
+    }
+
+    @MainActor @ViewBuilder func view(_ loaded: Loaded) -> some View {
+        switch loaded {
+        case .inbox(let model):
+            NavigationStack {
+                InboxSheet(model: model, state: HomeState(stores: .live()), open: { _ in }, opensModel: false)
             }
+        case .whoKnows(let model):
+            NavigationStack { WhoKnowsScreen(state: HomeState(stores: .live()), model: model) }
+                // The intro shows until this phone has seen the round; a store of its own keeps it unseen on every run.
+                .defaultAppStorage(Self.freshStorage())
+                // A reveal pops in on appear; drawn without animation it is always at rest.
+                .transaction { $0.animation = nil }
+        case .drawGuess(let model):
+            NavigationStack { DrawGuessScreen(state: HomeState(stores: .live()), model: model) }
+                // The drawing replays over a few seconds; with Reduce Motion it is drawn whole at once.
+                .environment(\._accessibilityReduceMotion, true)
+                .transaction { $0.animation = nil }
         case .settings:
             NavigationStack { SettingsView(state: HomeState(stores: .live())) {} }
         }
+    }
+
+    private static func freshStorage() -> UserDefaults {
+        let suite = "gallery.screen"
+        UserDefaults().removePersistentDomain(forName: suite)
+        return UserDefaults(suiteName: suite) ?? UserDefaults()
     }
 }
