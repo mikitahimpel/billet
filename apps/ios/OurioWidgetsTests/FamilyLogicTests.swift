@@ -117,4 +117,13 @@ struct FamilyLogicTests {
         #expect(Set(poses.map(\.lockSymbol)).count == poses.count)
         #expect(Set(PartnerMood.allCases.map(\.lockSymbol)).count == PartnerMood.allCases.count)
     }
+
+    @Test func sentLabelsStayTrueUntilTheNextReload() {
+        let cal = Calendar.current
+        let mood = MoodCheckIn(mood: .happy, date: noon.addingTimeInterval(-600))
+        let yesterday = MoodCheckIn(mood: .happy, date: cal.date(byAdding: .day, value: -1, to: noon) ?? noon)
+        #expect(PartnerNews.mood(mood).sentLabel(relativeTo: noon) != "Yesterday")
+        #expect(PartnerNews.mood(yesterday).sentLabel(relativeTo: noon) == "Yesterday")
+        #expect(!PartnerNews.mood(mood).sentLabel(relativeTo: noon).contains("ago"))
+    }
 }
