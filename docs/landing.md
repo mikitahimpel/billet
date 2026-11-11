@@ -10,6 +10,12 @@ pnpm --filter @billet/landing dev     # http://pc:4321 with --host 0.0.0.0
 pnpm --filter @billet/landing build   # apps/landing/dist, with a Markdown twin beside every page
 ```
 
+## Markdown twins
+
+The build writes `index.md` beside every page. `functions/_middleware.js` serves it at the page's
+own URL to a request that asks for `text/markdown`, names it in each page's `Link` header, and
+sends `X-Robots-Tag: noindex` on every `*.pages.dev` host, so only the custom domain is indexed.
+
 ## Images
 
 The room render and Mochi's loop are pre-sized in `public/room/` (AVIF and WebP at 1000, 1600 and
