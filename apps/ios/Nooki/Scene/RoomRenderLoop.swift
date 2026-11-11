@@ -65,6 +65,10 @@ final class RoomRenderLoop: RoomSurface {
 
     func project(_ point: SIMD3<Float>) -> CGPoint? { camera.project(point) }
 
+    func unproject(_ point: CGPoint, ontoPlane plane: simd_float4x4) -> SIMD3<Float>? {
+        camera.unproject(point, ontoPlane: plane)
+    }
+
     private func startLink() {
         if let link {
             link.isPaused = false

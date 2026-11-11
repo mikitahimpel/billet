@@ -32,7 +32,7 @@ struct DioramaView: View {
 
     private func drive(_ scene: CatRoom, on surface: any RoomSurface, rig: ZoomRig) {
         scene.paused = paused
-        scene.unprojector = { point, plane in content.unproject(point, from: .local, to: .scene, ontoPlane: plane) }
+        scene.unprojector = { point, plane in surface.unproject(point, ontoPlane: plane) }
         scene.onFocusChange = { focused in withAnimation(.easeOut(duration: 0.3)) { photoFocused = focused } }
         let bubble = bubble
         scene.start(on: surface, viewer: rig.camera, beforeProjecting: { dt in

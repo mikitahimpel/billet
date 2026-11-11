@@ -9,6 +9,8 @@ protocol RoomSurface {
     func updates(_ handler: @escaping (SceneEvents.Update) -> Void) -> EventSubscription
     /// Where `point`, in world space, falls in the surface's own points.
     func project(_ point: SIMD3<Float>) -> CGPoint?
+    /// Where the ray through a point of the surface meets a plane (the xz plane of `plane`), in world space.
+    func unproject(_ point: CGPoint, ontoPlane plane: simd_float4x4) -> SIMD3<Float>?
 }
 
 extension RealityViewCameraContent: RoomSurface {
@@ -17,6 +19,10 @@ extension RealityViewCameraContent: RoomSurface {
     }
 
     func project(_ point: SIMD3<Float>) -> CGPoint? { project(point: point, to: .local) }
+
+    func unproject(_ point: CGPoint, ontoPlane plane: simd_float4x4) -> SIMD3<Float>? {
+        unproject(point, from: .local, to: .scene, ontoPlane: plane)
+    }
 }
 
 /// A perspective camera looking down its own -z, over a surface `size` points across: the projection `RealityView`
@@ -39,6 +45,17 @@ struct RoomCamera: Equatable {
         let world = transform * SIMD4<Float>(local, 0)
         return (SIMD3(transform.columns.3.x, transform.columns.3.y, transform.columns.3.z),
                 simd_normalize(SIMD3(world.x, world.y, world.z)))
+    }
+
+    /// The ray through a point of the surface against the plane through `plane`'s origin with its y axis as the normal.
+    func unproject(_ point: CGPoint, ontoPlane plane: simd_float4x4) -> SIMD3<Float>? {
+        let ray = ray(through: point)
+        let origin = SIMD3<Float>(plane.columns.3.x, plane.columns.3.y, plane.columns.3.z)
+        let normal = simd_normalize(SIMD3<Float>(plane.columns.1.x, plane.columns.1.y, plane.columns.1.z))
+        let facing = simd_dot(ray.direction, normal)
+        guard abs(facing) > 1e-6 else { return nil }
+        let t = simd_dot(origin - ray.origin, normal) / facing
+        return t > 0 ? ray.origin + ray.direction * t : nil
     }
 
     /// Nil behind the camera.

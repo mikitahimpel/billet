@@ -69,3 +69,21 @@ struct RoomCameraTests {
         #expect(room.target(at: CGPoint(x: 5, y: 5), camera: camera) == nil)
     }
 }
+
+@MainActor
+struct RoomCameraPlaneTests {
+    @Test func theCenterRayMeetsTheFloorWhereTheCameraLooks() throws {
+        let eye = PerspectiveCamera()
+        eye.look(at: [0, 0, 0], from: [0, 1, 2], relativeTo: nil)
+        let camera = RoomCamera(transform: eye.transformMatrix(relativeTo: nil), fovDegrees: 22,
+                                size: CGSize(width: 400, height: 400))
+        let floor = try #require(camera.unproject(CGPoint(x: 200, y: 200), ontoPlane: matrix_identity_float4x4))
+        #expect(simd_distance(floor, .zero) < 1e-4)
+        // Looking above the horizon never meets the floor.
+        let sky = PerspectiveCamera()
+        sky.look(at: [0, 3, -5], from: [0, 1, 2], relativeTo: nil)
+        let up = RoomCamera(transform: sky.transformMatrix(relativeTo: nil), fovDegrees: 22,
+                            size: CGSize(width: 400, height: 400))
+        #expect(up.unproject(CGPoint(x: 200, y: 200), ontoPlane: matrix_identity_float4x4) == nil)
+    }
+}
