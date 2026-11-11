@@ -66,12 +66,25 @@ enum Palette {
   static let screen = Adaptive(light: RGBA(hex: 0xFBF3E8), dark: RGBA(hex: 0x2A1A12))
   static let surface = Adaptive(light: RGBA(hex: 0xFFFFFF), dark: RGBA(hex: 0x3B2C25))
   static let surfaceRaised = Adaptive(light: RGBA(hex: 0xF3E6D6), dark: RGBA(hex: 0x46352C))
+  /// A card is lit from above: `surfaceTop` to `surfaceBottom`, with `cardRimTop` on its upper edge.
+  static let surfaceTop = Adaptive(light: RGBA(hex: 0xFFFFFF), dark: RGBA(hex: 0x4E3B30))
+  static let surfaceBottom = Adaptive(light: RGBA(hex: 0xFFF7EC), dark: RGBA(hex: 0x3D2D24))
+  static let warmTop = Adaptive(light: RGBA(hex: 0xFFEEDA), dark: RGBA(hex: 0x644431))
+  static let warmBottom = Adaptive(light: RGBA(hex: 0xFFE2C2), dark: RGBA(hex: 0x4A3326))
+  static let warmGlow = Adaptive(light: RGBA(hex: 0xFFD9A6), dark: RGBA(hex: 0x765034))
+  static let cardRimTop = Adaptive(
+    light: RGBA(hex: 0xFFFFFF), dark: RGBA(hex: 0xFFECD2, opacity: 0.24))
+  static let cardRimBottom = Adaptive(
+    light: RGBA(hex: 0x3A2114, opacity: 0.07), dark: RGBA(hex: 0xFFECD2, opacity: 0.04))
+  /// Warm brown on cream, never black; nearly black on the dark screen, where only a deep one shows.
+  static let cardShadow = Adaptive(
+    light: RGBA(hex: 0x5A2E12, opacity: 0.16), dark: RGBA(hex: 0x0A0400, opacity: 0.5))
   static let separator = Adaptive(
     light: RGBA(hex: 0x3A2114, opacity: 0.12), dark: RGBA(hex: 0xFFFFFF, opacity: 0.14))
   static let text = Adaptive(
     light: RGBA(hex: 0x3A2114), dark: RGBA(hex: 0xFFFFFF, opacity: 0.96))
   static let textSecondary = Adaptive(
-    light: RGBA(hex: 0x7A5A45), dark: RGBA(hex: 0xFFFFFF, opacity: 0.72))
+    light: RGBA(hex: 0x6B4A36), dark: RGBA(hex: 0xF3E3D0, opacity: 0.86))
   static let textTertiary = Adaptive(
     light: RGBA(hex: 0x3A2114, opacity: 0.45), dark: RGBA(hex: 0xFFFFFF, opacity: 0.5))
   static let accentText = Adaptive(light: RGBA(hex: 0x974A18), dark: honey)

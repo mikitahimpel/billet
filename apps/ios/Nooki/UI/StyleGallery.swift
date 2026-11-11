@@ -93,6 +93,16 @@ struct StyleGallery: View {
             }
             Callout(symbol: "hand.wave.fill", title: "Say hi to Mochi", message: "Tap her in the room to pet her.", close: {})
                 .calloutBubble(pointer: CalloutPointer(edge: .top, position: 0.3))
+            Card(state: .selected) {
+                CardHeader("Selected", detail: "A honey ring in place of the highlight edge", symbol: "checkmark",
+                           opens: false)
+            }
+            Card(state: .disabled) {
+                Text("Disabled").font(.ourioHeadline).foregroundStyle(Ink.disabledText)
+            }
+            PosterCard("Who knows who", status: "Your turn", emphasis: true, action: {}) {
+                GamePoster(game: .whoKnows)
+            }
             Toast {
                 Label("Added to Moments", systemImage: "checkmark.circle.fill")
                     .font(.ourioCallout)

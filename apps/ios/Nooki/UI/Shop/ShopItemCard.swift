@@ -24,7 +24,7 @@ struct ShopItemCard: View {
     }
 
     var body: some View {
-        ItemCard(item.name, open: onTap) {
+        ItemCard(item.name, tag: ItemTag(item.rarity.title, color: item.rarity.tint), open: onTap) {
             art
         } leadingBadge: {
             if isDeal, !owned {

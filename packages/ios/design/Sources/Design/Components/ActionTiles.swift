@@ -50,8 +50,8 @@ public struct ActionTiles: View {
   }
 
   private func square(_ tile: ActionTile) -> some View {
-    VStack(alignment: .leading, spacing: Space.xs) {
-      RowIcon(symbol: tile.symbol, tint: tile.tint, size: 32)
+    VStack(alignment: .leading, spacing: Space.xxs) {
+      RowIcon(symbol: tile.symbol, tint: tile.tint, size: Size.tileMark, style: .clay)
       Spacer(minLength: Space.s)
       Text(tile.title)
         .font(.ourioHeadline)
