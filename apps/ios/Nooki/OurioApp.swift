@@ -17,6 +17,10 @@ struct OurioApp: App {
     @State private var home: HomeState
 
     init() {
+        #if LABS_YES
+        // Metal reads it when it first draws; the Info.plist key (MetalHudEnabled) asks for the same.
+        setenv("MTL_HUD_ENABLED", "1", 1)
+        #endif
         NavigationBarStyle.prepare()
         // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.
         URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 64 << 20)

@@ -20,15 +20,6 @@ enum WidgetSlot: String, AppEnum {
     }
 }
 
-enum CircularShows: String, AppEnum {
-    case together, countdown
-
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Shows"
-    static let caseDisplayRepresentations: [CircularShows: DisplayRepresentation] = [
-        .together: "Days together", .countdown: "Days to next event",
-    ]
-}
-
 /// One of the couple's lists, for the List module.
 struct ListEntity: AppEntity {
     let id: UUID
@@ -57,25 +48,6 @@ protocol OurioConfiguration: WidgetConfigurationIntent {
     var listID: UUID? { get }
 }
 
-struct CornerConfiguration: OurioConfiguration {
-    static let title: LocalizedStringResource = "Our Corner"
-
-    @Parameter(title: "Left", default: .mood) var left: WidgetSlot
-    @Parameter(title: "Right", default: .list) var right: WidgetSlot
-    @Parameter(title: "List") var list: ListEntity?
-
-    var listID: UUID? { list?.id }
-}
-
-struct MochiConfiguration: OurioConfiguration {
-    static let title: LocalizedStringResource = "Ourio"
-
-    @Parameter(title: "Next to the Cat", default: .smart) var slot: WidgetSlot
-    @Parameter(title: "List") var list: ListEntity?
-
-    var listID: UUID? { list?.id }
-}
-
 struct ModuleConfiguration: OurioConfiguration {
     static let title: LocalizedStringResource = "Block"
 
@@ -84,12 +56,4 @@ struct ModuleConfiguration: OurioConfiguration {
     @Parameter(title: "List") var list: ListEntity?
 
     var listID: UUID? { list?.id }
-}
-
-struct AccessoryConfiguration: OurioConfiguration {
-    static let title: LocalizedStringResource = "Us"
-
-    @Parameter(title: "Round widget shows", default: .countdown) var circular: CircularShows
-
-    var listID: UUID? { nil }
 }

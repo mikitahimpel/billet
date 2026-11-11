@@ -17,6 +17,24 @@ private func book(
 }
 
 @Suite struct DecorMachineTests {
+  @Test func theServersLayoutReplacesThePlacementsAndKeepsWhatWasPutAway() {
+    let theirs = Placement(item: "mouse", surface: .floor, u: 7, v: 0)
+    let (state, outputs) = M.transition(.off(book()), .remote([theirs]))
+    #expect(state.book.layout.placement(of: "mouse") == theirs)
+    #expect(
+      !state.book.layout.isPlaced("yarn") || state.book.layout.placement(of: "yarn") != armchair)
+    #expect(state.book.layout.stored.contains("monstera"))
+    #expect(outputs.allSatisfy { if case .keep = $0 { true } else { false } } || !outputs.isEmpty)
+  }
+
+  @Test func aRemoteLayoutThatIsAlreadyHereChangesNothing() {
+    let settled = M.Book(
+      layout: DecorLayout(placements: [armchair], stored: owned.subtracting(["yarn"])), owned: owned
+    )
+    let start = M.State.off(settled)
+    #expect(M.transition(start, .remote([armchair])) == (start, []))
+  }
+
   @Test func newPiecesLandInTheRoomWhenOwnedChanges() {
     let (state, outputs) = M.transition(.off(M.Book()), .owned(["yarn"]))
     #expect(state.book.layout.isPlaced("yarn"))

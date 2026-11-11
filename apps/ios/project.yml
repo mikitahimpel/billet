@@ -70,6 +70,9 @@ targets:
         # What the build carries, for check-archive.sh: the store (mock or storekit) and Labs (YES or NO).
         BilletPayments: $(BILLET_PAYMENTS_MODE)
         BilletLabs: $(BILLET_LABS_MODE)
+        # The Metal Performance HUD (fps, GPU ms) over the app, in builds that carry Labs: YES there, NO in the one
+        # App Review and the App Store get (check-archive.sh checks it). OurioApp also sets MTL_HUD_ENABLED in Labs.
+        MetalHudEnabled: $(BILLET_LABS_MODE)
         # The invite step scans the partner's QR code (Onboarding/InviteScanner).
         NSCameraUsageDescription: Ourio uses the camera to scan the invite code on your partner's screen.
         # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename
@@ -156,6 +159,9 @@ targets:
     platform: iOS
     sources:
       - path: OurioWidgets
+      # The files the app keeps the streak and the wallet in, which the widgets read.
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       - path: Shared
       - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
@@ -276,6 +282,8 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       - path: PerTarget
     # Wire, Ink and the interfaces come from the app it is loaded into, as for OurioTests: linking them here as well
     # makes Xcode build them as frameworks, and OurioTests then finds none of their symbols.

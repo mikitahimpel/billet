@@ -16,6 +16,20 @@ public enum RoomVisibility: Equatable, Sendable {
   case hidden
 }
 
+/// What the room's renderer is asked to draw. Each is a cost per pixel, every frame, that a phone's own screen may not
+/// show.
+public struct RoomRendering: Equatable, Sendable {
+  /// Four samples a pixel on the edges of the clay shapes.
+  public var antialiasing: Bool
+  /// The wide colour range the glow and bloom are drawn in.
+  public var hdr: Bool
+
+  public init(antialiasing: Bool = false, hdr: Bool = true) {
+    self.antialiasing = antialiasing
+    self.hdr = hdr
+  }
+}
+
 /// Which pieces stand where, and whether the player is arranging them.
 public struct RoomDecor: Equatable, Sendable {
   public enum Mode: Equatable, Sendable {
@@ -51,15 +65,19 @@ public struct RoomInput: Equatable, Sendable {
   public var catName: String
   /// The partner has the app open on their phone.
   public var partnerHere: Bool
-  /// The dust drifting through the room. Its particles are stepped every frame the room is drawn,
-  /// so Labs can take them away.
+  /// The dust drifting through the room. Its particles are stepped every frame the room is drawn, so
+  /// it is off unless Labs turns it on.
   public var motes: Bool
+  /// The room turning slowly under the sun and its lights pulsing. Off, nothing in it moves but the cat, so a
+  /// still frame can be told from a swaying one.
+  public var sway: Bool
   public var decor: RoomDecor
+  public var rendering: RoomRendering
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
-    partnerHere: Bool = false, motes: Bool = true,
-    decor: RoomDecor = RoomDecor()
+    partnerHere: Bool = false, motes: Bool = false, sway: Bool = true,
+    decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering()
   ) {
     self.scene = scene
     self.coat = coat
@@ -67,6 +85,8 @@ public struct RoomInput: Equatable, Sendable {
     self.catName = catName
     self.partnerHere = partnerHere
     self.motes = motes
+    self.sway = sway
     self.decor = decor
+    self.rendering = rendering
   }
 }

@@ -65,6 +65,14 @@ struct SettingsView: View {
                 .disabled(hintsReset)
             }
 
+            GroupedSection(header: "Widgets",
+                           footer: "Mochi, your days together, your partner and more, for the Home Screen and the Lock Screen.") {
+                NavigationLink { WidgetsGalleryView() } label: {
+                    Row("Widget gallery", symbol: "rectangle.on.rectangle", tint: UsTint.honey.color) { RowChevron() }
+                }
+                .buttonStyle(PressScaleStyle())
+            }
+
             GroupedSection(header: "Reminders",
                          footer: "One note at 8 pm on a day your love streak would go out at midnight.") {
                 ToggleRow("Streak at risk", symbol: "flame.fill", tint: UsTint.coral.color, isOn: $streakNudge)

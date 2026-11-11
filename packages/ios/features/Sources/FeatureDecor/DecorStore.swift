@@ -37,12 +37,16 @@ public struct DecorServices: Sendable {
   public var storage: DecorStorage
   /// A tap of the haptic motor and the like; the app decides what each feedback is.
   public var feedback: @MainActor @Sendable (DecorMachine.Feedback) -> Void
+  /// A change the player made, for the server.
+  public var share: @MainActor @Sendable (DecorLayout) -> Void
 
   public init(
-    storage: DecorStorage, feedback: @escaping @MainActor @Sendable (DecorMachine.Feedback) -> Void
+    storage: DecorStorage, feedback: @escaping @MainActor @Sendable (DecorMachine.Feedback) -> Void,
+    share: @escaping @MainActor @Sendable (DecorLayout) -> Void = { _ in }
   ) {
     self.storage = storage
     self.feedback = feedback
+    self.share = share
   }
 }
 
@@ -53,7 +57,10 @@ extension Store where M == DecorMachine {
     let layout = services.storage.load() ?? DecorLayout()
     return DecorStore(initial: .off(DecorMachine.Book(layout: layout))) { output in
       switch output {
-      case .save(let layout): services.storage.save(layout)
+      case .save(let layout):
+        services.storage.save(layout)
+        await services.share(layout)
+      case .keep(let layout): services.storage.save(layout)
       case .feedback(let kind): await services.feedback(kind)
       }
       return nil

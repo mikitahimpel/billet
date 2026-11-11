@@ -228,23 +228,23 @@ final class CityRoomScene: CatRoom {
 
     // MARK: - The window on screen
 
-    override func start(updatesFrom content: RealityViewCameraContent, viewer: Entity,
+    override func start(on surface: any RoomSurface, viewer: Entity,
                         beforeProjecting: @escaping (Float) -> Void, onFrame: @escaping (CGPoint?) -> Void) {
-        super.start(updatesFrom: content, viewer: viewer, beforeProjecting: beforeProjecting) { [weak self] head in
+        super.start(on: surface, viewer: viewer, beforeProjecting: beforeProjecting) { [weak self] head in
             onFrame(head)
-            self?.placeWindow(content)
+            self?.placeWindow(surface)
         }
     }
 
     /// Tells the flat view where the window is on screen this frame, after the camera has moved: the glass as it is
     /// and as it would be with the room unturned, which the planes' parallax runs between, and the hole in the wall's
     /// front face, which the view is clipped to. The wall around the hole, drawn over the view, hides its edges.
-    private func placeWindow(_ content: RealityViewCameraContent) {
+    private func placeWindow(_ surface: any RoomSurface) {
         let o = opening
         let corners: [SIMD2<Float>] = [[o.left, o.top], [o.right, o.top], [o.right, o.bottom], [o.left, o.bottom]]
         let glass = corners.map { SIMD3<Float>($0.x, $0.y, -0.54) }
         let face = corners.map { SIMD3<Float>($0.x, $0.y, -0.5) }
-        let project = { (point: SIMD3<Float>) in content.project(point: point, to: .local) }
+        let project = { (point: SIMD3<Float>) in surface.project(point) }
         let window = glass.compactMap { project(pivot.convert(position: $0, to: nil)) }
         let home = glass.compactMap { project(root.convert(position: $0, to: nil)) }
         let hole = face.compactMap { project(pivot.convert(position: $0, to: nil)) }

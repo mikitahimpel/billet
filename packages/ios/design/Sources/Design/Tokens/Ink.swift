@@ -94,6 +94,9 @@ public enum Ink {
   public static let hairline = Color.white.opacity(0.14)
   /// The text colour on honey.
   public static let heroInk = Palette.heroInk.color
+  /// Print and stamp paper: the same warm white in either appearance, as a polaroid is.
+  public static let paper = Color(hex: 0xFFFBF2)
+  public static let paperEdge = Color(hex: 0xEADFCB)
   /// Light enough that the room still shows through, warm enough that the glass never turns grey.
   public static let glassTint = Color(hex: 0xF2A65E, opacity: 0.16)
 }

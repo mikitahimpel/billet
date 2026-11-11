@@ -15,57 +15,94 @@ struct DrawingLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: DrawingAttributes.self) { context in
             DrawingActivityBanner(state: context.state, partner: CoupleStore().couple.other)
-                .activityBackgroundTint(Color.black.opacity(0.25))
+                .activityBackgroundTint(Ink.surface)
+                .activitySystemActionForegroundColor(Ink.text)
                 .widgetURL(DeepLink.draw.url)
         } dynamicIsland: { context in
             let partner = CoupleStore().couple.other
             return DynamicIsland {
+                DynamicIslandExpandedRegion(.leading) {
+                    PartnerDot(initial: partner, size: 32)
+                }
                 DynamicIslandExpandedRegion(.center) {
                     DrawingTile(state: context.state, margin: 0.08)
                         .frame(height: 96)
-                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .clipShape(RoundedRectangle(cornerRadius: Radius.inner, style: .continuous))
+                        .accessibilityLabel("A drawing from \(partner)")
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    Text("\(partner) drew on your lock screen")
-                        .font(.ourioCaption.weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.9))
+                    HStack {
+                        Text("\(partner) drew you something")
+                            .font(.ourioCaption.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .lineLimit(1)
+                        Spacer(minLength: Space.s)
+                        DrawBackPill()
+                    }
                 }
             } compactLeading: {
-                Image(systemName: "scribble.variable")
-                    .foregroundStyle(LockWallpaper(paper: context.state.paper).colors[1])
+                Image(systemName: "scribble.variable").foregroundStyle(Color.honey)
             } compactTrailing: {
-                Text(partner.prefix(1))
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                PartnerDot(initial: partner, size: 20)
             } minimal: {
-                Image(systemName: "scribble.variable")
-                    .foregroundStyle(LockWallpaper(paper: context.state.paper).colors[1])
+                Image(systemName: "scribble.variable").foregroundStyle(Color.honey)
             }
+            .keylineTint(Color.honey)
             .widgetURL(DeepLink.draw.url)
         }
     }
 }
 
-/// The lock-screen banner: the drawing on its wallpaper beside who sent it.
+/// Their initial on a honey dot: the one honey mark of the activity, so the island reads as theirs at a glance.
+private struct PartnerDot: View {
+    let initial: String
+    let size: CGFloat
+
+    var body: some View {
+        Text(initial.prefix(1))
+            .font(.ourioMicro)
+            .foregroundStyle(Ink.heroInk)
+            .frame(width: size, height: size)
+            .background(Color.honey, in: .circle)
+            .accessibilityHidden(true)
+    }
+}
+
+private struct DrawBackPill: View {
+    var body: some View {
+        Text("Draw back")
+            .font(.ourioMicro)
+            .foregroundStyle(Ink.heroInk)
+            .padding(.horizontal, Space.m)
+            .frame(height: Size.pill)
+            .background(Color.honey, in: .capsule)
+    }
+}
+
+/// The lock-screen banner: the drawing as a print on its wallpaper beside who sent it, and the way to answer.
 private struct DrawingActivityBanner: View {
     let state: DrawingAttributes.ContentState
     let partner: String
 
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: Space.l) {
             DrawingTile(state: state, margin: 0.1)
                 .frame(width: 132, height: 104)
-                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text("From \(partner)")
+                .clipShape(RoundedRectangle(cornerRadius: Radius.inner, style: .continuous))
+                .padding(Space.xs)
+                .background(Ink.paper, in: RoundedRectangle(cornerRadius: Radius.inner + Space.xs, style: .continuous))
+                .rotationEffect(.degrees(-2))
+            VStack(alignment: .leading, spacing: Space.s) {
+                Text("\(partner) drew you something")
                     .font(.ourioHeadline)
-                Text("Tap to draw one back")
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                    .opacity(0.8)
+                    .foregroundStyle(Ink.text)
+                    .lineLimit(2)
+                DrawBackPill()
             }
-            .foregroundStyle(.white)
             Spacer(minLength: 0)
         }
-        .padding(14)
+        .padding(Space.l)
+        .accessibilityElement(children: .combine)
     }
 }
 

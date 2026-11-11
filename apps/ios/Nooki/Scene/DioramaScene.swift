@@ -73,21 +73,32 @@ final class DioramaScene: CatRoom {
         loadFurniture()
     }
 
+    private var flameClock = Throttle(interval: 1.0 / 30)
+    private var bulbClock = Throttle(interval: 0.1)
+    private var flameSteps = 0
+
     override func tick(_ dt: Float) {
         super.tick(dt)
         let t = time
 
-        let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
-        flame.scale = Self.flameRadius * [0.85, 1.45 * flicker, 0.85]
-        // The flame shape flickers every frame; its light every third is enough.
-        if frame.isMultiple(of: 3), var light = candleLight.components[PointLightComponent.self] {
-            light.intensity = 450 * flicker
-            candleLight.components.set(light)
-        }
-
-        for (i, bulb) in bulbs.enumerated() {
-            let s = 1 + 0.22 * sin(t * 2.1 + Float(i) * 1.3)
-            bulb.scale = .init(repeating: Self.bulbRadius * s)
+        if swaying {
+            if flameClock.fires(dt) {
+                let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
+                flame.scale = Self.flameRadius * [0.85, 1.45 * flicker, 0.85]
+                // Its light needs half as many steps as its shape.
+                flameSteps += 1
+                if flameSteps.isMultiple(of: 2), var light = candleLight.components[PointLightComponent.self] {
+                    light.intensity = 450 * flicker
+                    candleLight.components.set(light)
+                }
+            }
+            // A bulb's pulse takes seconds; ten steps a second read as continuous.
+            if bulbClock.fires(dt) {
+                for (i, bulb) in bulbs.enumerated() {
+                    let s = 1 + 0.22 * sin(t * 2.1 + Float(i) * 1.3)
+                    bulb.scale = .init(repeating: Self.bulbRadius * s)
+                }
+            }
         }
 
         // Toys hop with each of her two pats, the ball rolling a little, then settle.

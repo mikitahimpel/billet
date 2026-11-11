@@ -177,6 +177,10 @@ extension APIClient {
         try await http.perform(
           try await json(Routes.setWish, signed: true, body: body), as: ShopResponse.self)
       },
+      changeLayout: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.changeLayout, signed: true, body: body), as: LayoutResponse.self)
+      },
       openGift: { (body) async throws(TransportError) in
         try await http.perform(
           try await json(Routes.openGift, signed: true, body: body), as: OpenGiftResponse.self)

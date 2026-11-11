@@ -64,11 +64,15 @@ private struct RoomStage: View {
                 // it a few seconds later, so a room moved into a new one after that draws nothing until relaunch.
                 // While no room can be seen it holds an empty one, paused and transparent. A RealityView renders every
                 // frame while it exists, so it also shrinks to one point: each of those frames is next to nothing.
-                DioramaView(scene: visible ? scene : controller.offStage, paused: !visible || controller.corner != nil,
-                            petPulse: controller.petPulse) {
+                // On its own renderer the view is never freed and its frames stop while it is not shown, so it stays
+                // full size and keeps its room.
+                let loop = controller.loop
+                DioramaView(scene: visible || loop != nil ? scene : controller.offStage,
+                            paused: !visible || controller.corner != nil, petPulse: controller.petPulse,
+                            rendering: input.rendering, loop: loop) {
                     controller.petted()
                 }
-                .frame(width: visible ? nil : 1, height: visible ? nil : 1)
+                .frame(width: visible || loop != nil ? nil : 1, height: visible || loop != nil ? nil : 1)
                 .allowsHitTesting(visible && controller.game == nil)
                 .opacity(visible ? 1 : 0)
                 .accessibilityHidden(true)
@@ -85,6 +89,7 @@ private struct RoomStage: View {
         }
         .onChange(of: input.decor, initial: true) { _, decor in controller.showDecor(decor) }
         .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
+        .onChange(of: input.sway, initial: true) { _, sway in controller.setSway(sway) }
         // Her status is read once a second only while she can be seen; under a cover or a sheet that hides her it
         // waits, and the first look back reads it at once.
         .task(id: input.visibility == .visible && controller.hasHome) {

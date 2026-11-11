@@ -1,3 +1,4 @@
+import DecorInterface
 import SwiftUI
 import Design
 
@@ -11,10 +12,15 @@ struct ShopItemCard: View {
     @State private var shortTaps = 0
 
     private var owned: Bool { state.shop.owned.contains(item.id) }
+    private var standing: ShopPriceFace.Standing {
+        guard DecorItem.item(shopID: item.id) != nil else { return .notPlaceable }
+        return state.decor.state.layout.isPlaced(item.id) ? .room : .closet
+    }
     private var price: Int { state.shop.price(of: item) }
     private var isDeal: Bool { price < item.price }
     private var face: ShopPriceFace {
-        ShopPriceFace(price: price, was: item.price, coins: state.shop.coins, owned: owned)
+        ShopPriceFace(
+            price: price, was: item.price, coins: state.shop.coins, owned: owned, standing: standing)
     }
 
     var body: some View {
@@ -35,6 +41,7 @@ struct ShopItemCard: View {
                 case .askForCoins:
                     shortTaps += 1
                     _ = state.shop.buy(item)
+                case .place: state.decorate(item.id)
                 case .none: break
                 }
             }

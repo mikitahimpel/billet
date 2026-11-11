@@ -36,6 +36,8 @@
 	</array>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>MetalHudEnabled</key>
+	<string>$(BILLET_LABS_MODE)</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Ourio uses the camera to scan the invite code on your partner's screen.</string>
 	<key>UILaunchScreen</key>
