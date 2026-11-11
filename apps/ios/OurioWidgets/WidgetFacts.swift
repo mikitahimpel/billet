@@ -179,3 +179,11 @@ enum FamilyTimeline {
         return kept
     }
 }
+
+/// Whether the viewer's own check-in today is the hug.
+enum HugState {
+    static func sent(_ s: OurioSnapshot) -> Bool {
+        guard let mine = s.myMood else { return false }
+        return mine.mood == .missing && Calendar.current.isDate(mine.date, inSameDayAs: s.date)
+    }
+}

@@ -100,4 +100,21 @@ struct FamilyLogicTests {
         let dates = FamilyTimeline.entryDates(from: noon, activity: WidgetActivity(), moods: [:], drawing: drawing(age: 3600))
         #expect(dates.contains(sent.addingTimeInterval(PartnerNews.drawingNews)))
     }
+
+    @Test func theHugShowsSentOnlyForTodaysMissingYou() {
+        var s = snapshot()
+        #expect(!HugState.sent(s))
+        s.myMood = MoodCheckIn(mood: .missing, date: noon.addingTimeInterval(-600))
+        #expect(HugState.sent(s))
+        s.myMood = MoodCheckIn(mood: .happy, date: noon.addingTimeInterval(-600))
+        #expect(!HugState.sent(s))
+        s.myMood = MoodCheckIn(mood: .missing, date: noon.addingTimeInterval(-2 * 86_400))
+        #expect(!HugState.sent(s))
+    }
+
+    @Test func everyStateHasADistinctLockGlyph() {
+        let poses: [MochiPose] = [.purring, .asleep, .waiting, .chirpy, .napping, .quiet, .idle]
+        #expect(Set(poses.map(\.lockSymbol)).count == poses.count)
+        #expect(Set(PartnerMood.allCases.map(\.lockSymbol)).count == PartnerMood.allCases.count)
+    }
 }

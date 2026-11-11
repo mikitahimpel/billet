@@ -97,6 +97,22 @@ struct WidgetGalleryTests {
                 }
             }
         }
+        for (device, circular, rectangular, inline) in [
+            ("pm", CGSize(width: 76, height: 76), CGSize(width: 172, height: 76), CGSize(width: 260, height: 22)),
+            ("se", CGSize(width: 72, height: 72), CGSize(width: 157, height: 72), CGSize(width: 230, height: 22)),
+        ] {
+            let sizes: [(String, CGSize, WidgetFamily)] = [
+                ("circular", circular, .accessoryCircular), ("rectangular", rectangular, .accessoryRectangular),
+                ("inline", inline, .accessoryInline),
+            ]
+            for (label, size, family) in sizes {
+                let e = entry(waiting, drawn)
+                pieces.append(("lock-us-\(label)-\(device)", size, AnyView(UsLockView(entry: e, family: family))))
+                pieces.append(("lock-streak-\(label)-\(device)", size, AnyView(StreakLockView(entry: e, family: family))))
+                pieces.append(("lock-cat-\(label)-\(device)", size, AnyView(CatLockView(entry: e, family: family))))
+                pieces.append(("lock-partner-\(label)-\(device)", size, AnyView(PartnerLockView(entry: e, family: family))))
+            }
+        }
         pieces += [
             ("block-small", Self.small, AnyView(ModuleView(module: .mood, snapshot: day, smart: true))),
             ("drawing-small", Self.small, AnyView(DrawingWidgetView(entry: drawing))),
