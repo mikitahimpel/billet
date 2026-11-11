@@ -165,6 +165,6 @@ let package = Package(
     targets: [
       "FeatureCanvas", "FeatureCanvasTests", "FeatureInbox", "FeatureInboxTests",
       "FeatureOnboardingTests",
-      "WidgetBridge", "WidgetBridgeTests",
+      "WidgetBridge", "WidgetBridgeTests", "WidgetUI",
     ])
 #endif
