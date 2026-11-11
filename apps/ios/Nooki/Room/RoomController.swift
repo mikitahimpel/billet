@@ -1,3 +1,4 @@
+import DecorInterface
 import FeatureGames
 import GamesInterface
 import Observation
@@ -42,6 +43,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private(set) lazy var offStage = CatRoom()
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var motes = true
+    @ObservationIgnored let decorStage = DecorStage()
+    @ObservationIgnored var decor = RoomDecor()
+    @ObservationIgnored var decorRetries = 0
     @ObservationIgnored private var pins: [BoardPin] = []
     /// The scenery last picked for each game, for the next time it is played.
     @ObservationIgnored private var picked: [MiniGame: GameScenery] = [:]
@@ -70,7 +74,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
         guard home == nil, !usesStandIn else { return }
         let room = DioramaScene()
         home = room
+        room.pivot.addChild(decorStage.root)
         wire(room)
+        showDecor(decor)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }
     }
 
@@ -186,6 +192,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func petted() { emit.yield(.catPetted) }
+
+    func decorTouched(_ gesture: DecorGesture) { emit.yield(.decor(gesture)) }
 
     func careAsked() { emit.yield(.careAsked) }
 

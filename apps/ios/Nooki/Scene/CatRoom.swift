@@ -1,3 +1,4 @@
+import DecorInterface
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -24,6 +25,13 @@ class CatRoom {
         didSet { root.isEnabled = !paused }
     }
     var isPlayingGame = false
+    /// Screen point to world point on a plane (a transform whose Y axis is its normal); set by the view that draws
+    /// the room, for the arranging of its pieces.
+    var unprojector: ((CGPoint, simd_float4x4) -> SIMD3<Float>?)?
+    /// The floor she cannot cross, which her walks between destinations go around.
+    var avoid: Occupancy? {
+        didSet { walker?.avoid = avoid }
+    }
 
     private(set) var catGroup = Entity()
     private var catBody = Entity()
@@ -228,6 +236,7 @@ class CatRoom {
             walker.keepOut = catKeepOut
             walker.needsBody = { Self.needBody($0) }
             Self.rooms.add(self)
+            walker.avoid = avoid
             self.walker = walker
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })

@@ -104,15 +104,15 @@ final class DioramaScene: CatRoom {
 
     override func tapped(_ entity: Entity) {
         guard !isShowcasing else { return }
-        if entity === ball { send(to: ballVisit) }
-        if entity === basket { send(to: basketVisit) }
+        if entity === ball, !cutOff.contains(.ball) { send(to: ballVisit) }
+        if entity === basket, !cutOff.contains(.basket) { send(to: basketVisit) }
     }
 
     override func doubleTapped(_ entity: Entity) {
         if let photo = entity.children.first(where: { $0.name == Self.photoName }) { return focus(on: photo) }
         guard !isShowcasing, let walker else { return }
         if entity === tree { send(to: walker.main) }
-        if entity === sill { send(to: sillVisit) }
+        if entity === sill, !cutOff.contains(.sill) { send(to: sillVisit) }
         if entity === bed { send(to: nil) }
     }
 
@@ -124,12 +124,15 @@ final class DioramaScene: CatRoom {
         director?.sent(to: spot)
     }
 
+    /// Visits a piece the player stood in the room has cut off; she does not go there.
+    var cutOff: Set<NookiSpot> = []
+
     override var catSpots: [NookiSpot: CatWalker.Destination] {
         var spots: [NookiSpot: CatWalker.Destination] = [:]
         spots[.tree] = walker?.main
-        spots[.sill] = sillVisit
-        spots[.ball] = ballVisit
-        spots[.basket] = basketVisit
+        if !cutOff.contains(.sill) { spots[.sill] = sillVisit }
+        if !cutOff.contains(.ball) { spots[.ball] = ballVisit }
+        if !cutOff.contains(.basket) { spots[.basket] = basketVisit }
         return spots
     }
 

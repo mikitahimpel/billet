@@ -94,6 +94,7 @@ targets:
         products:
           [
             FeatureCanvas,
+            FeatureDecor,
             FeatureGames,
             FeatureInbox,
             FeatureMood,
@@ -101,6 +102,7 @@ targets:
             FeatureOnboarding,
             FeaturePairing,
             FeatureShop,
+            DecorInterface,
             DrawInterface,
             GamesInterface,
             MomentsInterface,

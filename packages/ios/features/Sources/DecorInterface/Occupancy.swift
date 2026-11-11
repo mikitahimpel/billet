@@ -7,16 +7,28 @@ public struct Occupancy: Equatable, Sendable {
   public typealias Point = (x: Double, z: Double)
 
   /// Cells run from `-reach` to `reach`, so 19 across at 5 cm.
-  static let reach = 9
+  public static let reach = 9
   static let side = 2 * reach + 1
   /// How far past a piece's edge she keeps, so she does not brush it.
   static let clearance = 0.04
 
   private var blocked: [Bool]
+  /// Share of the floor the pieces themselves leave open, without the margin she keeps.
+  public let bareShare: Double
 
   init(spans: [Span]) {
     blocked = Array(repeating: false, count: Self.side * Self.side)
+    var covered = Array(repeating: false, count: Self.side * Self.side)
     for span in spans {
+      for v in -Self.reach...Self.reach {
+        for u in -Self.reach...Self.reach
+        where abs(DecorGrid.metres(u) - span.x) < span.halfX
+          && abs(DecorGrid.metres(v) - span.z) < span.halfZ
+        {
+          covered[Self.index(u, v)] = true
+        }
+      }
+
       for v in -Self.reach...Self.reach {
         for u in -Self.reach...Self.reach {
           let dx = abs(DecorGrid.metres(u) - span.x)
@@ -27,6 +39,7 @@ public struct Occupancy: Equatable, Sendable {
         }
       }
     }
+    bareShare = Double(covered.filter { !$0 }.count) / Double(covered.count)
   }
 
   public static func == (a: Occupancy, b: Occupancy) -> Bool { a.blocked == b.blocked }
@@ -66,7 +79,8 @@ public struct Occupancy: Equatable, Sendable {
 
   /// Whether she can walk from `start` to every one of `targets`.
   public func connects(from start: Point, to targets: [Point]) -> Bool {
-    let here = (u: DecorGrid.cell(start.x), v: DecorGrid.cell(start.z))
+    let from = nearestFree(to: start) ?? start
+    let here = (u: DecorGrid.cell(from.x), v: DecorGrid.cell(from.z))
     let open = reachable(from: here)
     return targets.allSatisfy {
       open.contains(Self.index(DecorGrid.cell($0.x), DecorGrid.cell($0.z)))
@@ -121,7 +135,7 @@ public struct Occupancy: Equatable, Sendable {
   }
 
   /// Whether a straight walk crosses no blocked cell.
-  func clear(from a: Point, to b: Point) -> Bool {
+  public func clear(from a: Point, to b: Point) -> Bool {
     let length = hypot(b.x - a.x, b.z - a.z)
     let steps = max(1, Int(length / (DecorGrid.step / 2)))
     for step in 0...steps {

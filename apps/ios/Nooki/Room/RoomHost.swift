@@ -76,12 +76,14 @@ private struct RoomStage: View {
                 .ignoresSafeArea()
 
                 if visible, controller.game == nil { CatVoice(name: input.catName, controller: controller) }
+                if visible, controller.game == nil, input.decor.isArranging { DecorTouchLayer(controller: controller) }
             }
         }
         // The room's view no longer drives a room it doesn't show; the next look starts it again.
         .onChange(of: visible) { _, visible in
             if !visible { controller.stop() }
         }
+        .onChange(of: input.decor, initial: true) { _, decor in controller.showDecor(decor) }
         .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         // Her status is read once a second only while she can be seen; under a cover or a sheet that hides her it
         // waits, and the first look back reads it at once.
