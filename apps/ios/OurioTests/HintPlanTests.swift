@@ -45,6 +45,10 @@ import Wire
         #expect(next(HintContext(screen: .world), seen: ["pet", "add"]) == nil)
     }
 
+    @Test func theMomentsHintWaitsForSomethingOnTheTab() {
+        #expect(next(HintContext(screen: .moments, momentsEmpty: true)) == nil)
+    }
+
     @Test func aFeatureHintWaitsForItsFeature() {
         let world = HintContext(screen: .world)
         #expect(next(world, seen: ["pet", "add"]) == nil)

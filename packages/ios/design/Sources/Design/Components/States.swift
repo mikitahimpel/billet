@@ -22,11 +22,34 @@ public struct ErrorState: View {
   }
 }
 
+/// A load in progress, in the place and size of the `EmptyState` it becomes.
+public struct LoadingState: View {
+  let title: String
+
+  public init(_ title: String = "Loading") { self.title = title }
+
+  public var body: some View {
+    VStack(spacing: Space.m) {
+      ProgressView()
+        .controlSize(.large)
+      Text(title)
+        .font(.ourioCallout)
+        .foregroundStyle(Ink.textSecondary)
+        .multilineTextAlignment(.center)
+    }
+    .padding(.horizontal, Space.xl)
+    .padding(.vertical, Space.xl)
+    .frame(maxWidth: .infinity)
+    .accessibilityElement(children: .combine)
+  }
+}
+
 #Preview("Error state") {
   BothSchemes {
     VStack(spacing: Space.l) {
       EmptyState(symbol: "tray", title: "All quiet", text: "Notes and gifts show up here.")
       ErrorState(text: "Check the connection and try again.") {}
+      LoadingState("Loading the Inbox")
     }
   }
 }
