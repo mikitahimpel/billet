@@ -326,8 +326,15 @@ private struct HeaderGround: View {
       .mask {
         VStack(spacing: 0) {
           Color.black
-          LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
-            .frame(height: Space.xl)
+          // Mostly gone by halfway, so a row's edge never shows as a sliver under the header.
+          LinearGradient(
+            stops: [
+              .init(color: .black, location: 0), .init(color: .black.opacity(0.7), location: 0.4),
+              .init(color: .clear, location: 1),
+            ],
+            startPoint: .top, endPoint: .bottom
+          )
+          .frame(height: Space.xl)
         }
       }
       .padding(.bottom, -Space.xl)
