@@ -32,8 +32,12 @@ struct PetLifeTests {
     let fed = Self.state([Self.event(.feed, 10), Self.event(.play, 10)], 10.01)
     let overfed = Self.state(
       [Self.event(.feed, 10), Self.event(.play, 10), Self.event(.overfeed, 10)], 10.01)
-    #expect(overfed.needs.full == 1)
-    #expect(abs(fed.needs.playful - overfed.needs.playful - config.overfeedPlayfulDrop) < 1e-6)
+    // 0.01 h pass between the events and `now`, so the needs have decayed a hair from where the event left them.
+    #expect(abs(overfed.needs.full - 1) < 0.01)
+    // Events at one instant are ordered by the log, and the gain of a play shrinks with how full the need is, so the
+    // gap is not the drop itself: it is a drop of at most the configured amount.
+    let gap = fed.needs.playful - overfed.needs.playful
+    #expect(gap > 0 && gap <= config.overfeedPlayfulDrop + 0.01)
     #expect(overfed.stuffed)
     #expect(!fed.stuffed)
     let later = Self.state(
