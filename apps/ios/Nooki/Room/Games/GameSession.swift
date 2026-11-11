@@ -128,7 +128,7 @@ final class GameSession {
         case .finger:
             guard let finger, let head, let at = deck.project(head) else { return }
             room.follow(CGSize(width: finger.x - at.x, height: finger.y - at.y))
-        case .player: room.follow(.zero)
+        case .player: room.follow(stage?.glance ?? .zero)
         case .free: room.follow(nil)
         }
     }

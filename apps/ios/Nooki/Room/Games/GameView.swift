@@ -62,7 +62,7 @@ struct GameView: View {
         VStack(spacing: Space.m) {
             HStack(spacing: Space.s) {
                 GameTitle(game: session.game)
-                SceneMenu(scenes: scenes, select: move)
+                if scenes.options.count > 1 { SceneMenu(scenes: scenes, select: move) }
                 Spacer(minLength: 0)
                 // The glass sits behind the label and takes no touch itself: over the RealityKit room a glass view
                 // on the Button swallows the tap.
