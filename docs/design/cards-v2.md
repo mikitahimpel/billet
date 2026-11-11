@@ -32,7 +32,7 @@ and the Games posters were photoreal renders next to a clay room.
 | Fill, top to bottom | `#FFFFFF` → `#FFF7EC` | `#4E3B30` → `#3D2D24` |
 | Highlight edge, 1 pt inside | `#FFFFFF` → `#3A2114` 7% by mid-height | `#FFECD2` 24% → 4% |
 | Shadow, contact | y 1, blur 1 | y 1, blur 1 |
-| Shadow, ambient | y 6, blur 9, `#5A2E12` 16% | y 6, blur 9, `#0A0400` 50% |
+| Shadow, ambient | y 6, blur 9, `#8A5A2B` 16% | y 6, blur 9, `#0A0400` 50% |
 | Hero (`warm`) | `#FFEEDA` → `#FFE2C2`, a pool of `#FFD9A6` from the top trailing corner | `#644431` → `#4A3326`, pool `#765034` |
 
 The light is the Living room's lamp: above, warm. In dark the highlight edge is what separates a card from
@@ -49,7 +49,8 @@ the screen; in light the shadow does, and it is brown, never black. One screen h
 | `Radius.sheet` | 44 | 48 | `card + Space.gutter` |
 | badge | circle | `0.32 × side` | 44 → 14, 36 → 11.5 |
 
-Corners stay concentric (`MetricsTests`). The badge is a squircle so that it nests in the card's corner and
+Corners stay concentric (`MetricsTests`). A card's radius is never more than 38% of its height, so a card of
+one row (54 pt) keeps a 20 pt corner and stays a card, not a capsule. The badge is a squircle so that it nests in the card's corner and
 holds a larger glyph than a circle of the same side.
 
 ## Icon badge
@@ -139,6 +140,14 @@ tiles' badges are clay at 36 pt; the lists' are wells.
 The photoreal `WhoKnows-card` and `DrawGuess-card` images leave the shelf.
 
 ## Review
+
+The recorded gallery pages (SE, Pro Max, the largest text size) went through the same reviewer. Taken: the
+one-row capsule, the ribbon in line with the status under it, a poster's cast kept in a centred square when the
+scene is wider, a warmer shadow on cream. Left for a follow-up, all older than this change: marks, chips and the
+rarity dot do not grow with the text size; a `Row`'s title wraps under a long picker value; a detail line
+truncates at accessibility sizes; the 2 pt honey ring is about 2:1 on cream and leans on the content to say
+"selected".
+
 
 The mocks went through the design reviewer. Taken: no coloured rarity rim (it collided with Selected and
 put honey on a tile four times); wells for list rows; a stronger warm hero; smaller tile badges; one prop and a

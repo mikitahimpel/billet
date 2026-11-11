@@ -43,9 +43,8 @@ public struct PosterCard<Art: View>: View {
             .font(.ourioCallout.weight(emphasis ? .semibold : .medium))
             .foregroundStyle(emphasis ? Ink.accentText : Ink.textSecondary)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, CardMetrics.padding - Space.m)
         }
-        .padding([.horizontal, .bottom], Space.m)
+        .padding([.horizontal, .bottom], CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .topLeading)
       }
       .cardSurface()
@@ -116,6 +115,8 @@ public struct PosterScene: View {
     GeometryReader { proxy in
       let width = proxy.size.width
       let height = proxy.size.height
+      // The cast keeps its square in the middle; a wider scene only has more wall.
+      let left = (width - height) / 2
       ZStack {
         Rectangle().fill(
           LinearGradient(
@@ -128,8 +129,8 @@ public struct PosterScene: View {
             colors: [tone.light, tone.light.opacity(0)], center: tone.lightCentre,
             startRadiusFraction: 0, endRadiusFraction: 0.6))
         switch framing {
-        case .closeUp: closeUp(width: width, height: height)
-        case .seated: seated(width: width, height: height)
+        case .closeUp: closeUp(left: left, side: height)
+        case .seated: seated(left: left, side: height, width: width)
         }
       }
       .frame(width: width, height: height)
@@ -138,25 +139,25 @@ public struct PosterScene: View {
     .accessibilityHidden(true)
   }
 
-  @ViewBuilder private func closeUp(width: CGFloat, height: CGFloat) -> some View {
-    cat(height: height * 1.5)
-      .position(x: width * 0.5 - height * 0.09, y: height * 0.66)
-    let side = height * 0.34
-    switch prop {
+  @ViewBuilder private func closeUp(left: CGFloat, side: CGFloat) -> some View {
+    cat(height: side * 1.5)
+      .position(x: left + side * 0.41, y: side * 0.66)
+    let prop = side * 0.34
+    switch self.prop {
     case .note(let symbol)?:
-      note(symbol, width: side)
+      note(symbol, width: prop)
         .rotationEffect(.degrees(8))
-        .position(x: width * 0.91 - side / 2, y: height * 0.83 - side * 0.6)
+        .position(x: left + side * 0.91 - prop / 2, y: side * 0.83 - prop * 0.6)
     case .clay(let image)?:
       image.resizable().scaledToFit()
-        .frame(width: side * 1.3, height: side * 1.3)
-        .position(x: width * 0.94 - side * 0.65, y: height * 0.86 - side * 0.65)
+        .frame(width: prop * 1.3, height: prop * 1.3)
+        .position(x: left + side * 0.94 - prop * 0.65, y: side * 0.86 - prop * 0.65)
     case nil:
       EmptyView()
     }
   }
 
-  @ViewBuilder private func seated(width: CGFloat, height: CGFloat) -> some View {
+  @ViewBuilder private func seated(left: CGFloat, side: CGFloat, width: CGFloat) -> some View {
     let floor = Ellipse()
     floor.fill(
       LinearGradient(
@@ -168,19 +169,19 @@ public struct PosterScene: View {
           colors: [.white.opacity(0.3), .white.opacity(0)], startPoint: .top, endPoint: .center),
         lineWidth: 2)
     }
-    .frame(width: width * 1.6, height: height * 0.62)
-    .position(x: width / 2, y: height * 1.03)
-    let catX = width * 0.5 + height * 0.126
-    let side = height * 0.56
-    switch prop {
+    .frame(width: width * 1.6, height: side * 0.62)
+    .position(x: width / 2, y: side * 1.03)
+    let catX = left + side * 0.626
+    let prop = side * 0.56
+    switch self.prop {
     case .clay(let image)?:
       image.resizable().scaledToFit()
-        .frame(width: side, height: side)
-        .position(x: side * 0.47, y: height * 0.87 - side / 2)
+        .frame(width: prop, height: prop)
+        .position(x: left + prop * 0.47, y: side * 0.87 - prop / 2)
     case .note(let symbol)?:
-      note(symbol, width: height * 0.3)
+      note(symbol, width: side * 0.3)
         .rotationEffect(.degrees(-8))
-        .position(x: width * 0.07 + height * 0.15, y: height * 0.3)
+        .position(x: left + side * 0.22, y: side * 0.3)
     case nil:
       EmptyView()
     }
@@ -189,10 +190,10 @@ public struct PosterScene: View {
         EllipticalGradient(
           colors: [tone.floorBottom.mix(with: Ink.heroInk, by: 0.6).opacity(0.5), .clear])
       )
-      .frame(width: height * 0.46, height: height * 0.09)
-      .position(x: catX, y: height * 0.8)
-    cat(height: height * 0.84)
-      .position(x: catX, y: height * 0.49)
+      .frame(width: side * 0.46, height: side * 0.09)
+      .position(x: catX, y: side * 0.8)
+    cat(height: side * 0.84)
+      .position(x: catX, y: side * 0.49)
   }
 
   @ViewBuilder private func cat(height: CGFloat) -> some View {

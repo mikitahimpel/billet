@@ -78,7 +78,7 @@ enum Palette {
     light: RGBA(hex: 0x3A2114, opacity: 0.07), dark: RGBA(hex: 0xFFECD2, opacity: 0.04))
   /// Warm brown on cream, never black; nearly black on the dark screen, where only a deep one shows.
   static let cardShadow = Adaptive(
-    light: RGBA(hex: 0x5A2E12, opacity: 0.16), dark: RGBA(hex: 0x0A0400, opacity: 0.5))
+    light: RGBA(hex: 0x8A5A2B, opacity: 0.16), dark: RGBA(hex: 0x0A0400, opacity: 0.5))
   static let separator = Adaptive(
     light: RGBA(hex: 0x3A2114, opacity: 0.12), dark: RGBA(hex: 0xFFFFFF, opacity: 0.14))
   static let text = Adaptive(

@@ -29,9 +29,7 @@ private struct CardSurface: ViewModifier {
   let warm: Bool
   let state: CardState
 
-  private var shape: RoundedRectangle {
-    RoundedRectangle(cornerRadius: radius, style: .continuous)
-  }
+  private var shape: CardShape { CardShape(radius: radius) }
 
   func body(content: Content) -> some View {
     content
@@ -76,6 +74,25 @@ private struct CardSurface: ViewModifier {
     case .disabled:
       EmptyView()
     }
+  }
+}
+
+/// The card's outline. A card not much taller than two of its corners would turn into a capsule, so
+/// its corners tighten with its height and a one-row card stays a card.
+struct CardShape: InsettableShape {
+  var radius: CGFloat
+  var inset: CGFloat = 0
+
+  static let heightShare: CGFloat = 0.38
+
+  func path(in rect: CGRect) -> Path {
+    let fitted = min(radius, rect.height * Self.heightShare)
+    return RoundedRectangle(cornerRadius: max(0, fitted - inset), style: .continuous)
+      .path(in: rect.insetBy(dx: inset, dy: inset))
+  }
+
+  func inset(by amount: CGFloat) -> CardShape {
+    CardShape(radius: radius, inset: inset + amount)
   }
 }
 
