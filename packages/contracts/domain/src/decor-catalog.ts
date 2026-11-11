@@ -14,7 +14,7 @@ export const footprints: Readonly<Record<string, Footprint>> = {
   donutbed: { width: 0.4, depth: 0.402, mount: "floor", flat: false },
   lamp: { width: 0.207, depth: 0.207, mount: "floor", flat: false },
   lantern: { width: 0.07, depth: 0.07, mount: "floor", flat: false },
-  monstera: { width: 0.34, depth: 0.337, mount: "floor", flat: false },
+  monstera: { width: 0.2, depth: 0.2, mount: "floor", flat: false },
   print: { width: 0.174, depth: 0.0, mount: "wall", flat: false },
   rug: { width: 0.6, depth: 0.6, mount: "floor", flat: true },
   teatable: { width: 0.212, depth: 0.212, mount: "floor", flat: false },

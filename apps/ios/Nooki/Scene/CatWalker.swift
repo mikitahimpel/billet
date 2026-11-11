@@ -359,13 +359,27 @@ final class CatWalker {
 
     /// Back along the way she came, each leg crossed the way it was reached, until she stands on `points[index]`.
     private func retrace(_ points: [Waypoint], downTo index: Int) {
-        for i in stride(from: points.count - 1, to: index, by: -1) { leg(points[i].at, points[i - 1].at, points[i].move) }
+        for i in stride(from: points.count - 1, to: index, by: -1) {
+            walk(from: points[i].at, to: points[i - 1].at, points[i].move)
+        }
+    }
+
+    /// One leg, a walk along the floor going round what the player stood in the way (found when she sets off).
+    private func walk(from: SIMD3<Float>, to: SIMD3<Float>, _ move: Waypoint.Move) {
+        guard move == .walk, avoid != nil, from.y < floorTop, to.y < floorTop else {
+            return leg(from, to, move)
+        }
+        var at = from
+        for corner in detour(from, to) + [to] {
+            leg(at, corner, .walk)
+            at = corner
+        }
     }
 
     private func follow(_ destination: Destination, from index: Int, at start: SIMD3<Float>) {
         var from = start
         for point in destination.path[index...] {
-            leg(from, point.at, point.move)
+            walk(from: from, to: point.at, point.move)
             from = point.at
         }
         if let arrive = destination.arrive { add(0.01) { _ in arrive() } }

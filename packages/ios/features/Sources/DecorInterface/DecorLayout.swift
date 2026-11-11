@@ -137,11 +137,7 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     }
     if placement.surface == .floor, !item.isFlat {
       let occupancy = putting(placement).occupancy(in: room)
-      let bare = room.occupancy(solid: [])
-      let cutLeg = room.legs.contains {
-        bare.clear(from: $0.from, to: $0.to) && !occupancy.clear(from: $0.from, to: $0.to)
-      }
-      if occupancy.bareShare < room.minimumFree || cutLeg
+      if occupancy.bareShare < room.minimumFree
         || !occupancy.connects(from: room.spawn, to: room.anchors)
       {
         return .blocksWay
@@ -165,10 +161,9 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   public func canVisit(_ name: String, in room: DecorRoom = .home) -> Bool {
     guard let stop = room.visits[name] else { return false }
     let here = occupancy(in: room)
-    let bare = room.occupancy(solid: [])
-    // Her walk out is a straight line to the stop; it counts as open when the room itself leaves it open
-    // and no piece has been stood across it.
-    return !bare.clear(from: room.spawn, to: stop) || here.clear(from: room.spawn, to: stop)
+    // She walks round what is in the way, so the visit is open while a way to the stop is.
+    let spot = room.occupancy(solid: []).nearestFree(to: stop) ?? stop
+    return here.connects(from: room.spawn, to: [spot])
   }
 
   /// The closest spot to `placement`, on the same surface, where it fits; nil when none does.
