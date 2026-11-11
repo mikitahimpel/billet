@@ -1,3 +1,8 @@
+/// What the cat does with a placed piece: curl up on a sofa, a window seat, a bed or in a crate, or scratch a post.
+public enum CatUse: String, CaseIterable, Sendable {
+  case sofa, windowSeat, post, catBed, crate
+}
+
 /// A shop piece the player can stand in the room: the model the scene draws and the room it takes.
 /// Sizes are metres, as the shop's catalog fixes them.
 public struct DecorItem: Equatable, Sendable, Identifiable {
@@ -34,10 +39,14 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   public let depth: Double
   /// A rug lies on the floor: other pieces stand on it, so it never blocks one.
   public let isFlat: Bool
+  /// How high it stands, in metres.
+  public let height: Double
+  /// What the cat does with it, if anything.
+  public let cat: CatUse?
 
   public init(
     id: String, model: String, assetName: String, fit: Fit, size: Double, mount: Mount,
-    width: Double, depth: Double, isFlat: Bool = false
+    width: Double, depth: Double, isFlat: Bool = false, height: Double = 0.2, cat: CatUse? = nil
   ) {
     self.id = id
     self.model = model
@@ -48,6 +57,8 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
     self.width = width
     self.depth = depth
     self.isFlat = isFlat
+    self.height = height
+    self.cat = cat
   }
 
   /// The pieces the player can place, from `DecorCatalog.generated.swift`. A treat, a style or a piece

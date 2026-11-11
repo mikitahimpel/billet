@@ -138,12 +138,18 @@ final class DioramaScene: CatRoom {
     /// Visits a piece the player stood in the room has cut off; she does not go there.
     var cutOff: Set<NookiSpot> = []
 
+    /// Places she can use at the pieces the player stood in the room.
+    var placedSpots: [NookiSpot: CatWalker.Destination] = [:] {
+        didSet { director?.update(spots: catSpots) }
+    }
+
     override var catSpots: [NookiSpot: CatWalker.Destination] {
         var spots: [NookiSpot: CatWalker.Destination] = [:]
         spots[.tree] = walker?.main
         if !cutOff.contains(.sill) { spots[.sill] = sillVisit }
         if !cutOff.contains(.ball) { spots[.ball] = ballVisit }
         if !cutOff.contains(.basket) { spots[.basket] = basketVisit }
+        spots.merge(placedSpots) { current, _ in current }
         return spots
     }
 
