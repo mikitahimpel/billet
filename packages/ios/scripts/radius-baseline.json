@@ -1,7 +1,7 @@
 {
   "apps/ios/Nooki/UI/BoardFaces.swift": 1,
   "apps/ios/Nooki/UI/Composer/ComposerPaper.swift": 2,
-  "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 7,
+  "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 5,
   "apps/ios/Nooki/UI/Moments/Polaroid.swift": 1,
   "apps/ios/Nooki/UI/MomentsView.swift": 1,
   "apps/ios/Nooki/UI/Shop/DailyGiftCard.swift": 2,
