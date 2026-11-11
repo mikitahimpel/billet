@@ -4,8 +4,9 @@ import UIKit
 
 @MainActor
 @Suite struct ThumbnailsTests {
-    @Test(arguments: Catalog.items.map(\.thumbnail))
-    func everyCatalogItemHasADecodableBundledPicture(name: String) {
-        #expect(Thumbnails.image(name, maxPixels: 128) != nil)
+    @Test func everyCatalogItemHasADecodableBundledPicture() {
+        for item in Catalog.items {
+            #expect(Thumbnails.image(item.thumbnail, maxPixels: 128) != nil, "\(item.thumbnail)")
+        }
     }
 }
