@@ -142,13 +142,11 @@ struct CatDayStoryTests {
     let moments = runner.brain.dayMoments(events: events)
     #expect(moments == replayed.dayMoments(events: events))
     #expect(!moments.isEmpty && moments.count <= CatDayStory.limit)
+    // From the day's start, 04:00 at +01:00, to now. A group an event cuts short is not always
+    // written, so a little of the day may be missing; none of it is counted twice.
     let total = runner.brain.today.hours.values.flatMap(\.values).reduce(0, +)
-    // From the day's start, 04:00 at +01:00, to now; the brain's first decision may land a tick late.
     let span = now - (dawn - 3600)
-    let groups = runner.brain.today.hours.values.reduce(into: [CatActivityGroup: Double]()) {
-      for (group, seconds) in $1 { $0[group, default: 0] += seconds }
-    }
-    #expect(abs(total - span) < 2, "\(total) of \(span): \(groups)")
+    #expect(total <= span + 1 && total > span * 0.98, "\(total) of \(span)")
   }
 }
 

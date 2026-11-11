@@ -177,7 +177,7 @@ private struct PetSheet: View {
 
 extension PetButton {
     /// Her four needs for VoiceOver, in the order her sheet shows them.
-    static func spoken(_ needs: PetNeeds) -> String {
+    nonisolated static func spoken(_ needs: PetNeeds) -> String {
         PetNeed.displayOrder.map { "\($0.title) \(PetNeed.percent(needs[$0])) percent" }.joined(separator: ", ")
     }
 }
