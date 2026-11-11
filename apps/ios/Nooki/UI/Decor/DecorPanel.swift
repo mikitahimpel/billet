@@ -92,7 +92,7 @@ struct DecorPanel: View {
                             VStack(spacing: Space.xs) {
                                 art(item.id)
                                     .frame(width: Size.cardMark + Space.l, height: Size.cardMark + Space.l)
-                                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                                    .corners(.inner)
                                 Text(name)
                                     .font(.ourioCaption)
                                     .foregroundStyle(Ink.text)

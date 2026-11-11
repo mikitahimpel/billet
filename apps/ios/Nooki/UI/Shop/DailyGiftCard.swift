@@ -47,15 +47,16 @@ struct DailyGiftCard: View {
         } else {
             // A real rotation: the next gift is the next local day's.
             // On one line while it fits; at large sizes the countdown takes its own line instead of breaking.
+            let lead = Text("A new one in")
             let countdown = Text(timerInterval: Date.now...state.shop.offers.nextDay(after: .now), countsDown: true)
                 .monospacedDigit()
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Space.xs) {
-                    Text("A new one in")
+                    lead
                     countdown
                 }
                 VStack(alignment: .leading, spacing: 0) {
-                    Text("A new one in")
+                    lead
                     countdown
                 }
             }
