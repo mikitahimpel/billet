@@ -29,6 +29,7 @@ public struct RoundButton: View {
       Image(systemName: symbol)
         .font(.ourioHeadline)
         .foregroundStyle(glyph)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .frame(width: Size.control, height: Size.control)
         .background { Circle().fill(fill) }
         .contentShape(.circle)
@@ -48,7 +49,7 @@ public struct RoundButton: View {
   private var fill: AnyShapeStyle {
     guard isEnabled else { return AnyShapeStyle(Ink.disabledFill) }
     switch style {
-    case .quiet: return AnyShapeStyle(Ink.surfaceRaised)
+    case .quiet: return AnyShapeStyle(Ink.well)
     case .honey: return Ink.accentFace
     }
   }

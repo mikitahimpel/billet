@@ -12,6 +12,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case rows
     case status
     case gauges
+    case kit
     case mochi
     case mochiAbout = "mochi-about"
     case postage
@@ -30,6 +31,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .rows: Self.rowsPage
             case .status: Self.statusPage
             case .gauges: Self.gaugesPage
+            case .kit: Self.kitPage
             case .mochi: Self.mochiPage
             case .mochiAbout: Self.mochiAboutPage
             case .postage: Self.postagePage
@@ -135,6 +137,29 @@ enum GalleryPage: String, CaseIterable, Sendable {
     }
 
     /// The ring round an avatar, the bars, a raised tile beside one with a note, and a day's strip.
+    /// The one-system kit: a well, a hairline, a progress bar and the round control, on a card.
+    @MainActor @ViewBuilder private static var kitPage: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                Text("A well in a card").font(.ourioHeadline).foregroundStyle(Ink.text)
+                Text("Pressed in, with a hairline of shade on its upper edge.")
+                    .font(.ourioCaption).foregroundStyle(Ink.textSecondary)
+                Color.clear.frame(height: Size.control).frame(maxWidth: .infinity).wellSurface()
+                Hairline()
+                ProgressBar(value: 0)
+                ProgressBar(value: 3, total: 8)
+                ProgressBar(value: 1, tint: .blushPink)
+            }
+        }
+        Card {
+            HStack(spacing: Space.m) {
+                RoundButton(symbol: "plus", label: "Add", style: .honey) {}
+                RoundButton(symbol: "arrow.uturn.backward", label: "Undo") {}
+                RoundButton(symbol: "checkmark", label: "Added") {}.disabled(true)
+            }
+        }
+    }
+
     @MainActor @ViewBuilder private static var gaugesPage: some View {
         HStack(spacing: Space.l) {
             Circle().fill(Ink.surfaceRaised)

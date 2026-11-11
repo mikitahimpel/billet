@@ -150,7 +150,7 @@ public struct GroupedSection<Content: View, Footer: View>: View {
         Group(subviews: content) { rows in
           ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
             if index > 0 {
-              Rectangle().fill(Ink.separator).frame(height: 0.5).padding(.leading, inset)
+              Hairline(inset: inset)
             }
             row
           }
