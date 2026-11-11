@@ -7,12 +7,16 @@ public struct CatLifeSample: Hashable, Sendable {
   public var asleep: Bool
   /// `rhythm·s(h) + tiredness·(1 − Rested)`, the needs engine's sleep pressure.
   public var pressure: Double
+  /// Overfed within the hour: she keeps away from the bowl.
+  public var stuffed: Bool
 
-  public init(needs: PetNeeds, mood: Double, asleep: Bool, pressure: Double) {
+  public init(needs: PetNeeds, mood: Double, asleep: Bool, pressure: Double, stuffed: Bool = false)
+  {
     self.needs = needs
     self.mood = mood
     self.asleep = asleep
     self.pressure = pressure
+    self.stuffed = stuffed
   }
 }
 
@@ -63,7 +67,8 @@ public struct CatLifeSampler: Sendable {
       config.rhythmWeight * PetLife.sleepiness(hour: hour, config: config)
       + config.tirednessWeight * (1 - state.needs.rested)
     let sample = CatLifeSample(
-      needs: state.needs, mood: state.mood, asleep: state.asleep, pressure: pressure)
+      needs: state.needs, mood: state.mood, asleep: state.asleep, pressure: pressure,
+      stuffed: state.stuffed)
     if cache.count > 512 { cache.removeAll(keepingCapacity: true) }
     cache[key] = sample
     return sample

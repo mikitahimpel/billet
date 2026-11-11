@@ -196,6 +196,55 @@ struct GameResultTests {
     #expect(result.events == [.fed(grams: 41), .gamePlayed(game: "feed", score: 90, won: true)])
   }
 
+  @Test func theOverfeedTableTakesMoreTheFurtherPastTheZone() {
+    // Target 40: zone 38...42, room 10, hard cap 52.
+    #expect(FeedPenalty.hardCap(target: 40) == 52)
+    #expect(FeedPenalty.over(target: 40, food: 42) == nil)
+    #expect(FeedPenalty.over(target: 40, food: 10) == nil)
+    #expect(FeedPenalty.over(target: 40, food: 43) == FeedPenalty(score: 30, tier: 0))
+    #expect(FeedPenalty.over(target: 40, food: 47) == FeedPenalty(score: 30, tier: 0))
+    #expect(FeedPenalty.over(target: 40, food: 48) == FeedPenalty(score: 0, tier: 1))
+    #expect(FeedPenalty.over(target: 40, food: 52) == FeedPenalty(score: 0, tier: 1))
+    let scores = FeedPenalty.tiers.map(\.score)
+    #expect(scores == scores.sorted(by: >))
+    #expect(FeedPenalty.tiers.map(\.upTo) == [0.5, 1])
+  }
+
+  @Test func theOverfeedTableRejectsWhatIsNotAWeight() {
+    #expect(FeedPenalty.over(target: 40, food: -5) == nil)
+    #expect(FeedPenalty.over(target: 40, food: .nan) == nil)
+    #expect(FeedPenalty.over(target: 40, food: .infinity) == nil)
+    // Past the cap counts as the cap; a portion off the range is moved onto it.
+    #expect(FeedPenalty.over(target: 40, food: 900) == FeedPenalty(score: 0, tier: 1))
+    #expect(FeedPenalty.over(target: 5, food: 29) == FeedPenalty(score: 30, tier: 0))
+    #expect(FeedPenalty.hardCap(target: 5) == FeedPenalty.hardCap(target: 25))
+    #expect(FeedTask(target: 40).hardCap == 52)
+  }
+
+  @Test func anOverfedBowlPaysLittleAndSaysSo() {
+    let mild = GameResult.feed(target: 40, food: 45)
+    #expect(mild.tooMuch)
+    #expect(mild.score == 30)
+    #expect(mild.line == "Too much! She's stuffed")
+    #expect(mild.events == [.fed(grams: 45), .gamePlayed(game: "feed", score: 30, won: true)])
+    #expect(GameResult.feed(target: 40, food: 51).score == 0)
+    let fine = GameResult.feed(target: 40, food: 42)
+    #expect(!fine.tooMuch)
+    #expect(fine.score == 80)
+    // Under the zone it is no overfeed, only a smaller reward.
+    #expect(!GameResult.feed(target: 40, food: 30).tooMuch)
+    #expect(!GameResult.feed(target: 40, food: -3).tooMuch)
+  }
+
+  @Test func aPuddleIsAMildTooMuchForWater() {
+    var bowl = WaterBowl()
+    bowl.pour(flow: 1, dt: WaterBowl.fillTime)
+    #expect(!GameResult.water(bowl).tooMuch)
+    bowl.pour(flow: 1, dt: 10)
+    #expect(GameResult.water(bowl).tooMuch)
+    #expect(GameResult.water(bowl).line.hasPrefix("Too much!"))
+  }
+
   @Test func eachGameGoesToTheJournalItsOwnWay() {
     #expect(
       GameResult(game: .brush, score: 100).events == [

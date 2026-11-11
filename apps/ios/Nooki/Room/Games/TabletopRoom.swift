@@ -135,10 +135,27 @@ final class TabletopRoom: CatRoom {
         g.picture("kitchen_floor", width: kitchenFloor.width, height: kitchenFloor.depth, lying: true,
                   at: [0, floorTop + 0.001, back + kitchenFloor.depth / 2],
                   margin: (left: 1.5, right: 1.5, top: 0, bottom: 1.5))
-        g.picture("kitchen_wall", width: kitchenWallSize.width, height: kitchenWallSize.height, lying: false,
-                  at: [0, floorTop + kitchenWallSize.height / 2, back],
-                  margin: (left: 1.2, right: 1.2, top: 1.0, bottom: 0))
+        // The counter's cabinets stand forward of the wall and its splashback, on a layer of their own, so a lean of the
+        // camera moves the three against each other.
+        let size = kitchenWallSize
+        let split = counterTop
+        let wallRows = (split - overlap)...1
+        let wallHeight = size.height * (1 - wallRows.lowerBound)
+        g.picture("kitchen_wall", width: size.width, height: wallHeight, lying: false,
+                  at: [0, floorTop + size.height * wallRows.lowerBound + wallHeight / 2, back],
+                  margin: (left: 1.2, right: 1.2, top: 1.0, bottom: 0), rows: wallRows)
+        let counterHeight = size.height * split
+        g.picture("kitchen_wall", width: size.width, height: counterHeight, lying: false,
+                  at: [0, floorTop + counterHeight / 2, back + counterForward],
+                  margin: (left: 1.2, right: 1.2, top: 0, bottom: 0.3), rows: 0...split)
+        g.contactBlob(at: [0, floorTop, back + counterForward + 0.06], width: 1.6, depth: 0.14)
     }
+
+    /// Where the counter's top edge sits in the wall image, from its bottom, and how far the wall piece reaches down
+    /// behind it, as shares of the image's height.
+    private static let counterTop: Float = 0.228
+    private static let overlap: Float = 0.04
+    private static let counterForward: Float = 0.07
 
     private static func wall(_ g: Entity, tone: UInt32, skirting: UInt32) {
         g.box(1.6, 1.2, 0.02, r: 0.004, Clay.matte(tone, roughness: 0.9), at: [0, floorTop + 0.6, wallAt])
@@ -173,6 +190,8 @@ struct TabletopView: View {
                 content.add(room.root)
                 room.start(on: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
             }
+            // A soft shade at the corners: the corner reads as a space, the middle stays as bright as it was.
+            RadialGradient(colors: [.clear, Color.honeyDeep.opacity(0.22)], center: .center, startRadius: 220, endRadius: 560)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
@@ -193,11 +212,11 @@ extension Entity {
     }()
 
     /// A bundled image on unlit quads: standing and facing +z, or lying on the floor with its top toward -z, centered
-    /// on `position`. `margin` carries the image's edge pixels on past its border, stretched, so the picture bleeds
+    /// on `position`. `rows` is the share of the image's height shown, from its bottom edge (0) to its top (1). `margin` carries the image's edge pixels on past its border, stretched, so the picture bleeds
     /// off the screen however wide or tall the phone's frame is.
     @discardableResult
     func picture(_ name: String, width: Float, height: Float, lying: Bool, at position: SIMD3<Float>,
-                 margin: (left: Float, right: Float, top: Float, bottom: Float)) -> Entity? {
+                 margin: (left: Float, right: Float, top: Float, bottom: Float), rows: ClosedRange<Float> = 0...1) -> Entity? {
         guard let url = Bundle.main.url(forResource: name, withExtension: "webp"),
               let image = UIImage(contentsOfFile: url.path)?.cgImage,
               let texture = try? TextureResource(image: image, options: .init(semantic: .color)) else { return nil }
@@ -210,7 +229,8 @@ extension Entity {
         func vertex(_ a: Float, _ b: Float) -> (SIMD3<Float>, SIMD2<Float>) {
             let u = min(max((a + width / 2) / width, 0.002), 0.998)
             let t = min(max((b + height / 2) / height, 0.002), 0.998)
-            return (lying ? [a, 0, -b] : [a, b, 0], [u, topIsOne ? t : 1 - t])
+            let row = rows.lowerBound + t * (rows.upperBound - rows.lowerBound)
+            return (lying ? [a, 0, -b] : [a, b, 0], [u, topIsOne ? row : 1 - row])
         }
         for column in 0..<3 {
             for row in 0..<3 where across[column + 1] - across[column] > 0.0001 && up[row + 1] - up[row] > 0.0001 {

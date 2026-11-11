@@ -5,9 +5,11 @@ import RealityKit
 import SwiftUI
 import UIKit
 
-/// Fill her bowl: hold anywhere and the bag tips over it; let go and it stops. A ring of beads across the bowl's front
-/// fills with the kibble, a green zone on it is the portion her card asks for, and the bag stops by itself at the zone's
-/// far end, so nothing overshoots. Once the bowl is in the zone, Feed serves it and she eats, looking up at the player.
+/// Fill her bowl, which stands on a kitchen scale: hold anywhere and the bag tips over it; let go and it stops. A ring
+/// of beads across the bowl's front fills with the kibble and a green zone on it is the portion her card asks for; the
+/// scale's display reads the grams in the bowl. Past the zone the bag keeps pouring, red, up to the cap, and a bowl
+/// served that full leaves her stuffed (`FeedPenalty`). Once the bowl is in the zone, Feed serves it and she eats,
+/// looking up at the player.
 @MainActor
 final class FeedStage: GameStage {
     /// One kibble in the air, from `from` into the bowl at `to`.
@@ -21,6 +23,8 @@ final class FeedStage: GameStage {
 
     private static let kibbleTones: [UInt32] = [0x8A5528, 0x9E6530, 0x7A4622, 0xB07A3E]
     private static let bowlHeight: Float = 0.03
+    /// The scale's body under the bowl: width, depth and height in metres, its display on the front face.
+    private static let scaleSize = SIMD3<Float>(0.21, 0.026, 0.17)
     private static let bowlRadius: Float = 0.05
     private static let ringRadius: Float = 0.074
     private static let beads = 36
@@ -43,8 +47,15 @@ final class FeedStage: GameStage {
     private let bag: Entity
     private var ring: [ModelEntity] = []
     private let materials: (empty: PhysicallyBasedMaterial, filled: PhysicallyBasedMaterial, zone: PhysicallyBasedMaterial,
-                            zoneFilled: PhysicallyBasedMaterial)
+                            zoneFilled: PhysicallyBasedMaterial, over: PhysicallyBasedMaterial,
+                            overFilled: PhysicallyBasedMaterial)
     private var shownBeads = -1
+    private let readout = Entity()
+    private let readoutMaterials = (ok: UnlitMaterial(color: UIColor(hex: 0xC8F7B0)),
+                                    over: UnlitMaterial(color: UIColor(hex: 0xFFB59E)))
+    private var shownGrams = -1
+    private var shownOver = false
+    private var pickedUp = false
 
     private var food: Double = 0
     private var holding: Float?
@@ -56,10 +67,17 @@ final class FeedStage: GameStage {
     private var capped = false
     private var served: Float?
     private var servedPile = 0
+    private var stuffed = false
+    private var sinceBlink: Float = 0
+    private var loafed = false
     private var shownHint = ""
 
-    /// The most the bowl takes: the far end of the zone.
-    private var cap: Double { Double(task.target + task.tolerance) }
+    /// The most the bowl takes.
+    private var cap: Double { Double(task.hardCap) }
+    private var zoneEnd: Double { Double(task.target + task.tolerance) }
+
+    /// How far the camera leans toward the bowl while the bag pours.
+    var push: Float { tip }
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -68,14 +86,16 @@ final class FeedStage: GameStage {
         root = room.pivot.group()
         task = FeedTask(full: room.director?.needs?.full ?? 0.5)
         name = CatProfile.name()
-        bowlAt = spots.at(0, 0.02)
+        bowlAt = spots.at(0, 0.04, up: Self.scaleSize.y)
         bagRest = spots.at(0.2, -0.05, up: 0.13)
         bagPour = bowlAt + spots.right * 0.045 + [0, 0.115, 0]
+
 
         var empty = Clay.matte(0xFFF3E2, roughness: 0.5)
         empty.blending = .transparent(opacity: .init(floatLiteral: 0.55))
         materials = (empty, Clay.matte(0xF2A65E, roughness: 0.4), Clay.matte(0xA9C27E, roughness: 0.5),
-                     Clay.matte(0x6F8A4E, roughness: 0.4))
+                     Clay.matte(0x6F8A4E, roughness: 0.4), Clay.matte(0xE8A08A, roughness: 0.5),
+                     Clay.matte(0xC4503A, roughness: 0.4))
 
         bowl = root.group(at: bowlAt)
         bowl.cylinder(0.006, Self.bowlRadius + 0.004, Clay.matte(0xD8653F, roughness: 0.4), at: [0, 0.003, 0])
@@ -95,9 +115,11 @@ final class FeedStage: GameStage {
         }
         bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward)
 
+        buildScale()
         buildRing()
         let seat = spots.at(0, -0.13)
-        root.contactBlob(at: bowlAt, width: 0.17, depth: 0.12)
+        root.contactBlob(at: spots.at(0, 0.04), width: 0.3, depth: 0.25)
+        root.contactBlob(at: bowlAt, width: 0.15, depth: 0.12)
         root.contactBlob(at: spots.at(0.2, -0.05), width: 0.14, depth: 0.1)
         root.contactBlob(at: seat, width: 0.24, depth: 0.16)
         room.send(to: seat, facing: spots.facingPlayer, id: "feed-watch")
@@ -110,10 +132,10 @@ final class FeedStage: GameStage {
          spots.at(0, -0.13, up: 0.1), spots.at(0, -0.6, up: 0.4)]
     }
 
-    var action: String? { served == nil && isReady ? "Feed" : nil }
+    var action: String? { served == nil && canServe ? "Feed" : nil }
 
     var cue: GameCue? {
-        guard served == nil, !isReady, food == 0 else { return nil }
+        guard served == nil, !canServe, food == 0 else { return nil }
         return GameCue(step: 0, gesture: .hold, at: bagRest + [0, -0.06, 0])
     }
 
@@ -128,6 +150,14 @@ final class FeedStage: GameStage {
         return false
     }
 
+    private var isOver: Bool {
+        if case .tooMuch = task.check(food: food) { return true }
+        return false
+    }
+
+    /// In the zone, or past it: past it is served too, and costs.
+    private var canServe: Bool { isReady || isOver }
+
     // MARK: - Touch
 
     func began(_ touch: GameTouch) {
@@ -140,7 +170,7 @@ final class FeedStage: GameStage {
     func ended(_ touch: GameTouch?) { holding = nil }
 
     func act() {
-        guard served == nil, isReady else { return }
+        guard served == nil, canServe else { return }
         serve()
     }
 
@@ -154,18 +184,19 @@ final class FeedStage: GameStage {
         drawBag()
         if pouring, tip > 0.85 { pourFlow(dt) }
         fly(dt)
-        if let time = served { eat(time + dt) }
+        if let time = served { eat(time + dt, dt: dt) }
         drawRing()
+        drawReadout()
         deck.show(min(food / Double(max(task.target, 1)), 1), "Bowl", detail: "\(Int(food.rounded())) / \(task.target) g")
         if served == nil { say(hint) }
     }
 
     private var hint: String {
-        if capped { return "That's the line. Tap Feed" }
+        if capped { return "The bowl is full: she'll be stuffed" }
         switch task.check(food: food) {
         case .ready: return "Right there. Let go, tap Feed"
         case .tooLittle(let grams): return food < 1 ? "Hold to pour \(name)'s \(task.target) g, stop in the green" : "\(grams) g to go"
-        case .tooMuch: return "That's the line. Tap Feed"
+        case .tooMuch: return "Too much! She'll be stuffed"
         }
     }
 
@@ -178,13 +209,18 @@ final class FeedStage: GameStage {
     private func pourFlow(_ dt: Float) {
         let held = Double(holding ?? 0)
         // Quicker the longer it is held, slower toward the end so the line is easy to stop on.
-        let rate = (9 + min(held, 2) * 5) * min(1, max((cap - food) / 9, 0.3))
+        let rate = (9 + min(held, 2) * 5) * min(1, max((zoneEnd - food) / 9, 0.3))
         debt += rate * Double(dt)
         while debt >= Self.piece, food + Double(flights.count) < cap {
             debt -= Self.piece
             drop()
         }
-        if food + Double(flights.count) >= cap, !capped {
+        let poured = food + Double(flights.count)
+        if poured > zoneEnd + 0.5, !pickedUp {
+            pickedUp = true
+            deck.thump()
+        }
+        if poured >= cap, !capped {
             capped = true
             debt = 0
             deck.thump()
@@ -261,12 +297,58 @@ final class FeedStage: GameStage {
         guard filled != shownBeads else { return }
         shownBeads = filled
         let zoneStart = Int(Double(task.target - task.tolerance) / cap * Double(Self.beads))
+        let zoneStop = Int((zoneEnd / cap * Double(Self.beads)).rounded(.up))
         for (i, bead) in ring.enumerated() {
-            let inZone = i >= zoneStart
             let on = i < filled
-            let material = inZone ? (on ? materials.zoneFilled : materials.zone) : (on ? materials.filled : materials.empty)
+            let material: PhysicallyBasedMaterial
+            if i >= zoneStop {
+                material = on ? materials.overFilled : materials.over
+            } else if i >= zoneStart {
+                material = on ? materials.zoneFilled : materials.zone
+            } else {
+                material = on ? materials.filled : materials.empty
+            }
             bead.model?.materials = [material]
         }
+    }
+
+    // MARK: - The scale
+
+    /// A kitchen scale under the bowl: a brushed-steel platform on a slate body with a bezel, a display on its front
+    /// face that reads the grams in the bowl in real text, and a foot at each corner.
+    private func buildScale() {
+        let size = Self.scaleSize
+        let body = root.group(at: bowlAt - [0, size.y, 0])
+        body.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward)
+        body.box(size.x, size.y - 0.006, size.z, r: 0.008, Clay.matte(0x5E6B78, roughness: 0.5), at: [0, (size.y - 0.006) / 2, 0])
+        body.box(size.x - 0.012, 0.006, size.z - 0.012, r: 0.004, Clay.matte(0xD6DEE4, roughness: 0.3), at: [0, size.y - 0.003, 0])
+        body.box(0.1, 0.0015, 0.1, r: 0.04, Clay.matte(0xC3CDD5, roughness: 0.3), at: [0, size.y + 0.0004, 0])
+        let front = size.z / 2 + 0.0008
+        body.box(0.108, 0.02, 0.003, r: 0.004, Clay.matte(0x2B323A, roughness: 0.4), at: [0, size.y / 2 - 0.002, front])
+        readout.position = [0, size.y / 2 - 0.0035, front + 0.0018]
+        body.addChild(readout)
+        let text = ModelEntity(mesh: .generateBox(size: 0.0001), materials: [readoutMaterials.ok])
+        readout.addChild(text)
+        for x: Float in [-1, 1] {
+            for z: Float in [-1, 1] {
+                body.cylinder(0.004, 0.007, Clay.matte(0x2B323A, roughness: 0.8), at: [x * (size.x / 2 - 0.016), 0.002, z * (size.z / 2 - 0.016)])
+            }
+        }
+    }
+
+    /// The display's digits: re-set only when the grams (or the zone's colour) change, since each is a new mesh.
+    private func drawReadout() {
+        let grams = Int(food.rounded())
+        let over = isOver
+        guard grams != shownGrams || over != shownOver, let text = readout.children.first as? ModelEntity else { return }
+        shownGrams = grams
+        shownOver = over
+        let mesh = MeshResource.generateText(
+            "\(grams) g", extrusionDepth: 0.0003, font: .monospacedSystemFont(ofSize: 0.013, weight: .bold),
+            containerFrame: .zero, alignment: .center, lineBreakMode: .byClipping)
+        text.model = ModelComponent(mesh: mesh, materials: [over ? readoutMaterials.over : readoutMaterials.ok])
+        let bounds = mesh.bounds
+        text.position = [-bounds.center.x, -bounds.center.y, 0]
     }
 
     // MARK: - Dinner
@@ -275,20 +357,38 @@ final class FeedStage: GameStage {
         served = 0
         servedPile = pile.count
         let result = GameResult.feed(target: task.target, food: food)
-        deck.say(task.check(food: food) == .ready(perfect: true) ? "Exactly \(task.target) g!" : "\(Int(food.rounded())) g: just right", for: 1.5)
-        deck.cheer(big: true)
+        if result.tooMuch {
+            deck.say("Too much! \(name) is stuffed", for: 1.8)
+            deck.thump()
+        } else {
+            deck.say(task.check(food: food) == .ready(perfect: true) ? "Exactly \(task.target) g!" : "\(Int(food.rounded())) g: just right", for: 1.5)
+            deck.cheer(big: true)
+        }
+        stuffed = result.tooMuch
         deck.result = result
     }
 
     /// The pile goes down over a few seconds.
-    private func eat(_ time: Float) {
+    private func eat(_ time: Float, dt: Float) {
         served = time
-        let left = Int(Float(servedPile) * max(0, 1 - (time - 0.8) / 4))
+        let left = Int(Float(servedPile) * max(0, 1 - (time - 0.8) / (stuffed ? 6 : 4)))
         while pile.count > left { pile.removeLast().removeFromParent() }
+        guard stuffed, time > 2.5 else { return }
+        if !loafed {
+            loafed = true
+            room.walker?.settle(.loaf)
+            room.walker?.behavior.perform(.yawn)
+        }
+        sinceBlink += dt
+        if sinceBlink > 2.2 {
+            sinceBlink = 0
+            room.walker?.behavior.perform(.slowBlink)
+        }
     }
 
     func tearDown() {
         root.removeFromParent()
+        if loafed { room.walker?.settle(.sit) }
         room.walker?.go(to: nil)
     }
 }

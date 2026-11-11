@@ -27,6 +27,35 @@ struct PetLifeTests {
     return PetLife.state(events: events, now: at(hours), context: context, config: config)
   }
 
+  @Test func anOverfeedFillsHerTakesPlayfulOffAndKeepsHerOffTheBowlForAnHour() {
+    let config = LifeConfig.standard
+    let fed = Self.state([Self.event(.feed, 10), Self.event(.play, 10)], 10.01)
+    let overfed = Self.state(
+      [Self.event(.feed, 10), Self.event(.play, 10), Self.event(.overfeed, 10)], 10.01)
+    #expect(overfed.needs.full == 1)
+    #expect(abs(fed.needs.playful - overfed.needs.playful - config.overfeedPlayfulDrop) < 1e-6)
+    #expect(overfed.stuffed)
+    #expect(!fed.stuffed)
+    let later = Self.state(
+      [Self.event(.feed, 10), Self.event(.overfeed, 10)], 10 + config.stuffedHours + 0.1)
+    #expect(!later.stuffed)
+  }
+
+  @Test func aStuffedCatScoresEatNearlyNothing() {
+    let start = Self.at(8).timeIntervalSince1970
+    func eat(stuffed: Bool) -> Double {
+      let life = CatLifeSample(
+        needs: PetNeeds(full: 0.1, rested: 0.8, loved: 0.8, playful: 0.8), mood: 0.5, asleep: false,
+        pressure: 0.1, stuffed: stuffed)
+      let brain = CatBrain(
+        seed: 1, personality: .even, room: RoomAffordances([]), start: start, life: life,
+        utcOffset: 0)
+      return CatUtility.score(.eat, brain.utilityInput(at: start)).score
+    }
+    #expect(eat(stuffed: true) <= eat(stuffed: false) * CatUtility.stuffedEat + 1e-12)
+    #expect(eat(stuffed: false) > 0)
+  }
+
   @Test func decayFallsTowardTheFloorFastWhenFullAndSlowWhenLow() {
     let config = LifeConfig.standard
     let high = 1 - PetLife.decay(1, toward: config.floor, hours: 2, tau: config.fullHours)

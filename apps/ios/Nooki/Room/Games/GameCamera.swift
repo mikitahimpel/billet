@@ -67,7 +67,11 @@ final class GameCamera {
     var focus: [SIMD3<Float>] = []
     /// How much of the screen's narrower side they fill.
     var fill: Float = 0.9
+    /// A lean toward the center, 0...1: the camera comes in a little and slides aside, so what stands near it moves
+    /// against the wall behind.
+    var push: Float = 0
     var viewport = CGSize(width: 390, height: 844)
+    private var rest: (back: SIMD3<Float>, side: SIMD3<Float>)?
     private var amount: Float = 0
     private var goal: Float = 1
     private var onGone: (() -> Void)?
@@ -109,7 +113,13 @@ final class GameCamera {
         guard let camera, let room, !focus.isEmpty else { return }
         let base = camera.transformMatrix(relativeTo: nil)
         let eye = SIMD3(base.columns.3.x, base.columns.3.y, base.columns.3.z)
-        let back = simd_normalize(SIMD3(base.columns.2.x, base.columns.2.y, base.columns.2.z))
+        // The camera is placed once in a corner, so what it was turned to before it leaned is kept, and the lean is
+        // measured from there each frame.
+        if push < 0.001 || rest == nil {
+            rest = (simd_normalize(SIMD3(base.columns.2.x, base.columns.2.y, base.columns.2.z)),
+                    simd_normalize(SIMD3(base.columns.0.x, base.columns.0.y, base.columns.0.z)))
+        }
+        guard let (back, side) = rest else { return }
         let points: [SIMD3<Float>] = focus.map { room.pivot.convert(position: $0, to: nil) }
         let center: SIMD3<Float> = points.reduce(SIMD3<Float>.zero, +) / Float(points.count)
         let radius: Float = points.map { simd_length($0 - center) }.max() ?? 0.1
@@ -117,8 +127,8 @@ final class GameCamera {
         let tanHalf = tan((lens?.fieldOfViewInDegrees ?? 22) * .pi / 360)
         let aspect = Float(viewport.width / max(viewport.height, 1))
         let narrow = tanHalf * min(aspect, 1)
-        let distance = max(radius, 0.05) / (narrow * fill)
-        let goalEye: SIMD3<Float> = center + back * distance
+        let distance = max(radius, 0.05) / (narrow * fill) * (1 - 0.1 * push)
+        let goalEye: SIMD3<Float> = center + back * distance + side * (0.035 * push)
         let s: Float = amount * amount * (3 - 2 * amount)
         let blend = SIMD3<Float>(repeating: s)
         // Where the rig is looking: anywhere along its line of sight, as far out as the game's center will be.

@@ -16,6 +16,9 @@ public struct LifeEvent: Codable, Hashable, Identifiable, Sendable {
     case sleep
     /// `by` shooed the cat off where it sat, the desk or the cardigan.
     case shoo
+    /// A meal past her portion: she is stuffed. It stays on this phone, a game's reaction to
+    /// the meal that went to the room as `fed`.
+    case overfeed
   }
 
   /// The ID of the room frame that carried it, so the same event from two paths counts once.
