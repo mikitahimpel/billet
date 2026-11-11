@@ -89,8 +89,21 @@ public struct BilletSheet<Content: View>: View {
     .interactiveDismissDisabled(hasChanges ?? false)
     .tint(.honey)
     .presentationDetents(detents)
-    .presentationDragIndicator(.visible)
+    .presentationDragIndicator(Look.current == .dusk ? .hidden : .visible)
+    .overlay(alignment: .top) { grabber }
     .presentationBackground { groundView }
+  }
+
+  /// Dusk draws its own grabber, warm like the rest of the chrome; Classic keeps the system's grey one.
+  @ViewBuilder private var grabber: some View {
+    if Look.current == .dusk {
+      Capsule()
+        .fill(Ink.selectionRim)
+        .frame(width: 36, height: 5)
+        .padding(.top, 6)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
   }
 
   @ViewBuilder private var groundView: some View {

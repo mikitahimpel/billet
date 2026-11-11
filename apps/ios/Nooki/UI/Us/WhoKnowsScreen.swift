@@ -301,7 +301,7 @@ private struct WhoKnowsReveal: View {
             }
             .frame(height: 56)
             Text("\(points)")
-                .font(.ourioLargeTitle.monospacedDigit())
+                .font(.ourioLargeTitleDigits)
                 .foregroundStyle(Ink.text)
             Text(name)
                 .font(.ourioCallout)

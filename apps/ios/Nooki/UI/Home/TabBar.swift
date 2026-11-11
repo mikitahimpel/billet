@@ -84,6 +84,7 @@ struct TabBar: View {
             let selected = hovered ?? state.tab
             Capsule()
                 .fill(Ink.glassSelection)
+                .overlay { Capsule().strokeBorder(Ink.selectionRim, lineWidth: 1) }
                 .frame(width: slot)
                 .modifier(SlidingPill(tab: selected, slides: !reduceMotion))
                 .offset(x: slot * CGFloat(selected.order))
@@ -92,9 +93,12 @@ struct TabBar: View {
 
     private func item(_ tab: HomeTab) -> some View {
         let shown = (hovered ?? state.tab) == tab
+        let dusk = Look.current == .dusk
         return VStack(spacing: 3) {
-            Image(systemName: tab.symbol).ourioScaledFont(size: 18, weight: .semibold)
-            Text(tab.title).ourioScaledFont(size: 11, weight: .medium, relativeTo: .caption2)
+            Image(systemName: dusk ? tab.symbol(filled: shown) : tab.symbol)
+                .ourioScaledFont(size: 18, weight: .semibold, design: dusk ? .rounded : .default)
+            Text(tab.title)
+                .ourioScaledFont(size: 11, weight: dusk && shown ? .semibold : .medium, relativeTo: .caption2)
         }
         // The bar keeps its height: past this size its labels show in the large content viewer instead.
         .dynamicTypeSize(...DynamicTypeSize.xLarge)

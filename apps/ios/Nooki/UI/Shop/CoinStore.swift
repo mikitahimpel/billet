@@ -196,7 +196,7 @@ private struct PackCard: View {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
                         Text(pack.stamps.formatted())
-                            .font(.ourioTitle.monospacedDigit())
+                            .font(.ourioTitleDigits)
                             .foregroundStyle(Ink.text)
                         Text("coins")
                             .font(.ourioCallout)

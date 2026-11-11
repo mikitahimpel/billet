@@ -20,6 +20,16 @@ extension HomeTab {
         }
     }
 
+    /// Dusk's bar: the chosen tab's symbol fills in, the rest stay outlined.
+    func symbol(filled: Bool) -> String {
+        switch self {
+        case .world: filled ? "house.fill" : "house"
+        case .moments: filled ? "photo.fill.on.rectangle.fill" : "photo.on.rectangle"
+        case .shop: filled ? "bag.fill" : "bag"
+        case .us: filled ? "heart.fill" : "heart"
+        }
+    }
+
     var order: Int { Self.allCases.firstIndex(of: self) ?? 0 }
 
     /// The tab whose slot holds `x` on a row of slots `width` wide, `x` from the row's leading edge; past the ends

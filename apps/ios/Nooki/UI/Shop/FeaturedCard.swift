@@ -132,7 +132,7 @@ private struct DiscountRibbon: View {
     var body: some View {
         VStack(spacing: 0) {
             Text("−\(percent)%")
-                .font(.ourioTitle.monospacedDigit())
+                .font(.ourioTitleDigits)
             Text("save \(saves)")
                 .font(.ourioMicro.monospacedDigit())
         }

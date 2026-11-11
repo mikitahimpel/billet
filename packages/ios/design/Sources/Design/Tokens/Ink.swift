@@ -118,4 +118,10 @@ public enum Ink {
   public static let headerScrim = Palette.roomBackdrop.color
   /// Behind the room: its glow, centre out, ending on the warm dark of `headerScrim`.
   public static let roomGlow = Palette.current.backdrop.map(\.color)
+  /// A honey control's fill: flat honey, or in Dusk the face lit from above, as clay catches a lamp.
+  public static let accentFace: AnyShapeStyle =
+    Look.current == .dusk ? AnyShapeStyle(.honeyFace) : AnyShapeStyle(Color.honey)
+  /// The hairline round a selected segment or tab; nothing in Classic, where the fill alone marks it.
+  public static let selectionRim: Color =
+    Look.current == .dusk ? Palette.honey.color.opacity(0.35) : .clear
 }

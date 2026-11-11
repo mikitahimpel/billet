@@ -60,8 +60,7 @@ struct StreakCard: View {
     private var together: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text(daysTogether, format: .number)
-                .ourioScaledFont(size: 56, weight: .bold, design: .rounded, relativeTo: .largeTitle)
-                .monospacedDigit()
+                .font(.ourioHeroDigits)
                 .foregroundStyle(Ink.text)
                 .dynamicTypeSize(...DynamicTypeSize.accessibility2)
             Text(daysTogether == 1 ? "day together" : "days together")
@@ -75,7 +74,7 @@ struct StreakCard: View {
             VStack(spacing: 0) {
                 Flame(days: days, lit: lit)
                 Text(days, format: .number)
-                    .font(.ourioTitle.monospacedDigit())
+                    .font(.ourioTitleDigits)
                     .foregroundStyle(Ink.text)
                     .contentTransition(.numericText())
                 Text("streak")
