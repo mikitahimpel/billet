@@ -26,8 +26,7 @@ struct CollectionCard: View {
                     .foregroundStyle(Ink.accentText)
                     .contentTransition(.numericText())
             }
-            ProgressView(value: Double(have), total: Double(collection.itemIDs.count))
-                .tint(.honey)
+            ProgressBar(value: Double(have), total: Double(collection.itemIDs.count))
                 .accessibilityLabel("\(have) of \(collection.itemIDs.count) collected")
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s), count: 4), spacing: Space.s) {
@@ -36,13 +35,14 @@ struct CollectionCard: View {
                 }
             }
 
+            Hairline()
             bonus
         }
         .padding(CardMetrics.padding)
         .cardSurface()
         .perfFlattened()
         .haptic(.success, trigger: claims)
-        .animation(.spring(duration: 0.35), value: have)
+        .animation(Motion.spring(), value: have)
     }
 
     private func slot(_ item: ShopItem) -> some View {
@@ -57,7 +57,7 @@ struct CollectionCard: View {
             .opacity(owns ? 1 : 0.4)
             .aspectRatio(1, contentMode: .fit)
             .frame(maxWidth: .infinity)
-            .cornerFill(.inner, Ink.surfaceRaised)
+            .wellSurface()
             .overlay(alignment: .bottomTrailing) {
                 if owns { OwnedCheck().offset(x: 3, y: 3) }
             }
@@ -94,7 +94,5 @@ struct CollectionCard: View {
                 .disabled(collecting)
             }
         }
-        .padding(Space.m)
-        .cornerFill(.inner, Ink.surfaceRaised)
     }
 }

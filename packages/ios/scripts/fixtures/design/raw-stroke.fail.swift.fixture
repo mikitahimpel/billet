@@ -1,0 +1,7 @@
+struct Bad: View {
+  var body: some View {
+    Card { EmptyView() }
+      .overlay { Capsule().strokeBorder(Color.honey, lineWidth: 2) }
+      .overlay { Circle().stroke(Ink.separator) }
+  }
+}

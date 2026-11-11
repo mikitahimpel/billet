@@ -1,0 +1,9 @@
+struct Bad: View {
+  var body: some View {
+    VStack {
+      Text("Flat").padding(CardMetrics.padding).cornerFill(.card, tone)
+      Image(systemName: "plus").background(Ink.surfaceRaised, in: .circle)
+      List { Text("Row").listRowBackground(Ink.surface) }
+    }
+  }
+}

@@ -84,11 +84,8 @@ struct PlusHero: View {
             PrimaryButton(on ? "Turn off (test)" : "Try Ourio Plus · \(PlusPass.price) / month") { on.toggle() }
                 .accessibilityIdentifier("plusMock")
         } else {
-            Text("\(PlusPass.price) / month · coming soon")
-                .font(.ourioHeadline)
-                .foregroundStyle(Ink.textSecondary)
-                .frame(maxWidth: .infinity, minHeight: Size.button)
-                .background(Ink.surfaceRaised, in: .capsule)
+            PrimaryButton("\(PlusPass.price) / month · coming soon") {}
+                .disabled(true)
         }
     }
 }

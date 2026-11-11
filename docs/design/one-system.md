@@ -75,7 +75,7 @@ get a card each. A calendar's upcoming dates are rows of one list, so they are o
 | a filter or category over a list | `FilterChip`s in `.scrollHeader { }` | chips stacked over a `ScrollView` |
 | the tools of a full-screen canvas | `glass(.control)` in one `GlassGroup` | `warmGlass` on a sheet |
 | where content meets a bar | the system scroll edge effect, soft, through `.ourioScrollEdges()` (it replaces `.softScrollEdges()`); the scaffolds apply it | a hard edge, a gradient mask or a blur of your own |
-| a round control on content, not over a scene (add to a list, next photo) | `IconButton(symbol:label:style:)`: clay, opaque | glass; a `Circle().fill(…)` |
+| a round control on content, not over a scene (add to a list, next photo) | `RoundButton(symbol:label:style:)`: clay, opaque | glass; a `Circle().fill(…)` |
 
 Large titles are not used. A tab's name is its tab bar item; a sheet's title is the toolbar's inline title;
 a section's is `SectionHeader`.
@@ -214,9 +214,9 @@ The kit is the only easy way, and the lint is the only door.
 | `flat-surface` | `.cornerFill(`, `Ink.surface`, `Ink.surfaceRaised`, `.listRowBackground(` in feature code | this system |
 | `raw-stroke` | `.stroke(`, `.strokeBorder(` in feature code | this system |
 
-Every rule has a baseline per file in `packages/ios/design/lint/baseline.json` that may only shrink. A
+Art that draws with strokes and fills by nature (`Scene`, `Room`, `Perf`) is exempt from these two in
+`lint/allow.json`. Every rule has a baseline per file in `packages/ios/design/lint/baseline.json` that may only shrink. A
 migrated area ends at zero for `flat-surface`, `raw-stroke`, `corner-shape` and `shadow`; art files keep
 their counts until their chrome is migrated, and nothing new may be added to them. Next, in this order: a
 `raw-motion` rule for curves, a `content-list` rule for `List`, and moving the app-side kits
-(`Us/ListRow.swift`, `Us/ListCard.swift`, `UsKit.swift`'s `UsIcon`, `Kit/ProgressCapsule.swift`,
-`ShopKit.swift`'s `OwnedCheck`) into the package or onto its components.
+(`Us/ListRow.swift`, `Us/ListCard.swift`, `UsKit.swift`'s `UsIcon`, `ShopKit.swift`'s `OwnedCheck`) into the package or onto its components.
