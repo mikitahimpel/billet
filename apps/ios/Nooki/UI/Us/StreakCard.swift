@@ -82,10 +82,8 @@ struct StreakCard: View {
                         .foregroundStyle(Ink.text)
                         .contentTransition(.numericText())
                 }
-                .padding(Space.xs)
-                .background(Ink.surface, in: .circle)
             }
-            Text(days == 1 ? "day streak" : "days streak")
+            Text("day streak")
                 .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
                 .lineLimit(1)
@@ -148,7 +146,7 @@ private struct Flame: View {
                     .opacity(lit ? 1 : 0.65)
             }
         }
-        .font(.ourioTitle)
+        .font(.ourioLargeTitleDigits)
         .accessibilityHidden(true)
     }
 }
