@@ -18,11 +18,14 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   let notice: (EdgeInsets) -> Notice
   /// False for a model that was opened already, as the gallery's.
   let opensModel: Bool
+  /// The clock the days and the "4 minutes ago" lines are read against.
+  let now: () -> Date
 
   @Environment(\.dismiss) private var dismiss
 
   public init(
     model: InboxModel, names: InboxLine.Names, opensModel: Bool = true,
+    now: @escaping () -> Date = { .now },
     open: @escaping (ActivityTarget) -> Void,
     @ViewBuilder avatar: @escaping (ActivityActor) -> Avatar,
     @ViewBuilder face: @escaping (CheckInMood) -> Face,
@@ -35,6 +38,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     self.face = face
     self.notice = notice
     self.opensModel = opensModel
+    self.now = now
   }
 
   public var body: some View {
@@ -71,7 +75,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
 
   private func list(_ page: InboxMachine.Page) -> some View {
     List {
-      ForEach(InboxDay.group(page.items), id: \.day) { day in
+      ForEach(InboxDay.group(page.items, now: now()), id: \.day) { day in
         Section(day.title) {
           ForEach(day.items, id: \.id) { item in
             row(item, isNew: page.fresh.contains(item.id))
@@ -114,7 +118,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   @ViewBuilder private func row(_ item: ActivityItem, isNew: Bool) -> some View {
     let rowView = InboxRow(
       item: item, line: InboxLine(item, names: names), isNew: isNew, avatar: avatar(item.actor),
-      face: face)
+      face: face, now: now)
     if let target = item.target {
       Button {
         dismiss()
@@ -157,6 +161,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
   let isNew: Bool
   let avatar: Avatar
   let face: (CheckInMood) -> Face
+  let now: () -> Date
 
   var body: some View {
     HStack(spacing: Space.m) {
@@ -182,9 +187,11 @@ private struct InboxRow<Avatar: View, Face: View>: View {
           .font(.ourioCallout.weight(isNew ? .semibold : .medium))
           .foregroundStyle(Ink.text)
           .fixedSize(horizontal: false, vertical: true)
-        Text(date, format: .relative(presentation: .named))
-          .font(.ourioCaption)
-          .foregroundStyle(Ink.textSecondary)
+        TimelineView(.everyMinute) { _ in
+          Text(Self.ago(date, now: now()))
+            .font(.ourioCaption)
+            .foregroundStyle(Ink.textSecondary)
+        }
       }
       Spacer(minLength: 0)
       if isNew {
@@ -199,4 +206,11 @@ private struct InboxRow<Avatar: View, Face: View>: View {
   }
 
   private var date: Date { Date(timeIntervalSince1970: TimeInterval(item.at) / 1000) }
+
+  /// "4 minutes ago", "yesterday".
+  static func ago(_ date: Date, now: Date) -> String {
+    let formatter = RelativeDateTimeFormatter()
+    formatter.dateTimeStyle = .named
+    return formatter.localizedString(for: date, relativeTo: now)
+  }
 }
