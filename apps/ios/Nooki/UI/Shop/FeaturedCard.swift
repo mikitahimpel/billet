@@ -62,10 +62,9 @@ struct FeaturedCard: View {
         }
         .padding(CardMetrics.padding)
         .background {
-            // The glow is the card's shape's own, so the countdown ticking inside never redraws it.
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .fill(ShopInk.lamplight)
-                .perfShadow(color: ShopInk.coral.opacity(0.4), radius: 18, y: 8)
+                .cardShadow()
         }
         .overlay {
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)

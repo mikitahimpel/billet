@@ -41,7 +41,13 @@ public struct TileButton: View {
         .font(.ourioHeadline)
         .foregroundStyle(Ink.heroInk)
         .frame(maxWidth: .infinity, minHeight: Size.button)
-        .background(Color.honey, in: .capsule)
+        .background(.honeyFace, in: .capsule)
+        .overlay {
+          Capsule().strokeBorder(
+            LinearGradient(
+              colors: [.white.opacity(0.5), .white.opacity(0)], startPoint: .top, endPoint: .center),
+            lineWidth: 1)
+        }
         .contentShape(.capsule)
       }
       .buttonStyle(LipButtonStyle())

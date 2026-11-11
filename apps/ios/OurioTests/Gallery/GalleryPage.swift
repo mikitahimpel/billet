@@ -1,5 +1,6 @@
 import Design
 import SwiftUI
+@testable import Billet
 
 /// One page per family of design components, each in its usual states. A new public component gets a place on one.
 enum GalleryPage: String, CaseIterable, Sendable {
@@ -83,6 +84,12 @@ enum GalleryPage: String, CaseIterable, Sendable {
         }
         Card {
             CardHeader("A weekend away somewhere warm", detail: "3 ideas saved", symbol: "airplane", tint: .teal)
+        }
+        Card(state: .selected) {
+            CardHeader("Friday evening", detail: "Selected", symbol: "checkmark", opens: false)
+        }
+        Card(state: .disabled) {
+            Text("Booked by someone else").font(.ourioHeadline).foregroundStyle(Ink.disabledText)
         }
         ContentCard("Weekend in Lisbon", subtitle: "Saved by both of you", chip: Chip("Plan", style: .honey)) {
             SecondaryButton("Edit", fullWidth: false) {}
@@ -178,10 +185,14 @@ enum GalleryPage: String, CaseIterable, Sendable {
     }
 
     @MainActor @ViewBuilder private static var posters: some View {
-        PosterCard("Who knows who", status: "Your turn", emphasis: true, art: Image("WhoKnows-card")) {}
-            .frame(minWidth: 150)
-        PosterCard("Draw & guess", status: "Played yesterday", art: Image("DrawGuess-card")) {}
-            .frame(minWidth: 150)
+        PosterCard("Who knows who", status: "Your turn", emphasis: true, action: {}) {
+            GamePoster(game: .whoKnows, coat: .grey)
+        }
+        .frame(minWidth: 150)
+        PosterCard("Draw & guess", status: "Played yesterday", action: {}) {
+            GamePoster(game: .drawGuess, coat: .grey)
+        }
+        .frame(minWidth: 150)
     }
 
     @MainActor @ViewBuilder private static var fieldsPage: some View {
@@ -198,10 +209,10 @@ enum GalleryPage: String, CaseIterable, Sendable {
     @MainActor @ViewBuilder private static var gridPage: some View {
         ItemGrid {
             ForEach(["Cat tower", "Window seat with a long name", "Lamp"], id: \.self) { name in
-                ItemCard(name, subtitle: "Cosy in any corner", open: {}) {
+                ItemCard(name, tag: ItemTag("Legendary", color: Ink.rarityLegendary.tint), open: {}) {
                     Ink.surfaceRaised.corners(.inner)
                 } leadingBadge: {
-                    Chip("Legendary", style: .tinted(.orange))
+                    EmptyView()
                 } trailingBadge: {
                     Chip("−20%", style: .honey)
                 } footer: {

@@ -1,24 +1,13 @@
 import SwiftUI
 
-extension View {
-  /// `warm` is for a screen's hero card. Also the container shape, so a `ConcentricRectangle`
-  /// inside follows its corners.
-  public func cardSurface(radius: CGFloat = Radius.card, warm: Bool = false) -> some View {
-    let shape = RoundedRectangle(cornerRadius: radius, style: .continuous)
-    return background {
-      shape.fill(Ink.surface)
-      if warm { shape.fill(Color.honey.opacity(0.14)) }
-    }
-    .containerShape(shape)
-  }
-}
-
 public struct Card<Content: View>: View {
   let warm: Bool
+  let state: CardState
   let content: Content
 
-  public init(warm: Bool = false, @ViewBuilder content: () -> Content) {
+  public init(warm: Bool = false, state: CardState = .rest, @ViewBuilder content: () -> Content) {
     self.warm = warm
+    self.state = state
     self.content = content()
   }
 
@@ -26,13 +15,11 @@ public struct Card<Content: View>: View {
     content
       .padding(CardMetrics.padding)
       .frame(maxWidth: .infinity, alignment: .leading)
-      .cardSurface(warm: warm)
+      .cardSurface(warm: warm, state: state)
   }
 }
 
-/// Every card that opens something starts with it.
-/// The one card that floats: a passing note over the screen, such as a purchase with its Undo. A
-/// hairline rim and a soft shadow lift it off whatever scrolls underneath.
+/// The one card that floats: a passing note over the screen, such as a purchase with its Undo.
 public struct Toast<Content: View>: View {
   let content: Content
 
@@ -43,14 +30,10 @@ public struct Toast<Content: View>: View {
       .padding(CardMetrics.padding)
       .frame(maxWidth: .infinity, alignment: .leading)
       .cardSurface()
-      .overlay {
-        RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-          .strokeBorder(Ink.separator, lineWidth: 1)
-      }
-      .shadow(color: .black.opacity(0.18), radius: 10, y: 3)
   }
 }
 
+/// Every card that opens something starts with it.
 public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
   let title: String
   let leading: Leading
@@ -96,7 +79,7 @@ public struct CardHeader<Leading: View, Detail: View, Trailing: View>: View {
   }
 
   private var words: some View {
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: Space.xxs) {
       Text(title)
         .font(.ourioHeadline)
         .foregroundStyle(Ink.text)
@@ -113,7 +96,7 @@ extension CardHeader where Leading == RowIcon, Detail == Text?, Trailing == RowC
     _ title: String, detail: String? = nil, symbol: String, tint: Color? = nil, opens: Bool = true
   ) {
     self.init(title) {
-      RowIcon(symbol: symbol, tint: tint, size: Size.cardMark)
+      RowIcon(symbol: symbol, tint: tint, size: Size.cardMark, style: .clay)
     } detail: {
       detail.map { Text($0) }
     } trailing: {
@@ -283,28 +266,77 @@ extension Row where Trailing == EmptyView {
   }
 }
 
-/// No tint means the accent, whose glyph is `Ink.accentText` so it reads on the wash in both
-/// themes.
+/// A symbol on a rounded tile. `clay` is the mark of a card or a tile: filled with its tint, lit at
+/// the top and shaded at the foot, the glyph in the tint's own deep shade. `well` is the quiet mark
+/// of a row in a list. No tint means the accent.
 public struct RowIcon: View {
-  static let washOpacity = 0.16
+  public enum Style: Hashable, Sendable {
+    case clay
+    case well
+  }
+
+  static let washOpacity = 0.2
+  static let cornerFraction = 0.32
+  static let glyphFraction = 0.5
 
   let symbol: String
   let tint: Color?
   let size: CGFloat
+  let style: Style
+  @Environment(\.colorScheme) private var colorScheme
 
-  public init(symbol: String, tint: Color? = nil, size: CGFloat = 34) {
+  public init(symbol: String, tint: Color? = nil, size: CGFloat = 34, style: Style = .well) {
     self.symbol = symbol
     self.tint = tint
     self.size = size
+    self.style = style
   }
+
+  private var shape: RoundedRectangle {
+    RoundedRectangle(cornerRadius: size * Self.cornerFraction, style: .continuous)
+  }
+
+  private var base: Color { tint ?? .honey }
+  private var deep: Color { base.mix(with: Ink.heroInk, by: 0.7) }
 
   public var body: some View {
     Image(systemName: symbol)
-      .font(.system(size: size * 0.44, weight: .semibold))
-      .foregroundStyle(tint ?? Ink.accentText)
+      .font(.system(size: size * Self.glyphFraction, weight: .semibold))
+      .foregroundStyle(glyph)
       .frame(width: size, height: size)
-      .background((tint ?? .honey).opacity(Self.washOpacity), in: .circle)
+      .background { face }
       .accessibilityHidden(true)
+  }
+
+  private var glyph: Color {
+    switch style {
+    case .clay:
+      return deep
+    case .well:
+      guard let tint else { return Ink.accentText }
+      return colorScheme == .dark
+        ? tint.mix(with: .white, by: 0.15) : tint.mix(with: Ink.heroInk, by: 0.45)
+    }
+  }
+
+  @ViewBuilder private var face: some View {
+    switch style {
+    case .clay:
+      shape.fill(
+        LinearGradient(
+          colors: [base.mix(with: Ink.paper, by: 0.38), base], startPoint: .top, endPoint: .bottom))
+      shape.strokeBorder(
+        LinearGradient(
+          stops: [
+            .init(color: .white.opacity(0.4), location: 0),
+            .init(color: .white.opacity(0), location: 0.45),
+            .init(color: deep.opacity(0.3), location: 1),
+          ], startPoint: .top, endPoint: .bottom),
+        lineWidth: 1.5)
+    case .well:
+      shape.fill(base.opacity(Self.washOpacity))
+      shape.strokeBorder(base.opacity(0.22), lineWidth: 1)
+    }
   }
 }
 

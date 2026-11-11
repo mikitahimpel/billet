@@ -19,9 +19,13 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
    chevron. Never "Done" or "Cancel" text, never a hand-drawn circle. With `hasChanges:` confirm stays disabled
    until something changed, closing asks "Discard changes?" and a swipe down is blocked meanwhile. A count under
    the title is `subtitle:`, in the same slot.
-4. **One card, one inset.** Cards and grouped sections use `Radius.card` on `Ink.surface`, padded by
+4. **One card, one inset.** Cards and grouped sections are `cardSurface()` at `Radius.card`
+   ([cards-v2.md](design/cards-v2.md): an opaque fill lit from above, a 1 pt highlight edge, one pre-rendered
+   shadow), padded by
    `CardMetrics.padding` (`check-design.mjs` fails on a `.cardSurface()` padded by anything else on every side); screens and sheets keep `Space.gutter` (20) at the sides, 16 over the room. A card that opens
-   something starts with `CardHeader`. No gradients, rims or shadows on a card; the hero is only `warm`.
+   something starts with `CardHeader`. The surface's gradient, edge and shadow are the package's; feature code adds
+   none of its own, and a card with its own fill takes `.cardShadow()`. One `warm` card per screen. No blur or
+   material on a card.
 5. **One shape language** (see [Shape](#shape)): corners come from `Radius`, fields from `Field`, and nothing in
    feature code writes a radius as a number. CI fails on a new one (`check-design.mjs`, `radius-baseline.json`).
 6. **One primary action per screen:** `PrimaryButton`, honey, full width. Next to it `SecondaryButton`. A
@@ -38,8 +42,10 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 11. **One glass, three roles** (below): every floating surface is `glass(_:role:)` or `accentGlass()`, tinted
     `Ink.glassFill` with `Ink.glassGlyph`, never white on clear glass: both adapt to the theme and pass 4.5:1 over
     the dark room, a bright room and the city. The coin has a dark ring so it never melts into honey.
-12. **Icon tiles have one rule:** a full-tint glyph on the same tint at 16%, for every row. No tint is the
-    accent (`Ink.accentText` glyph); destructive is `Ink.destructive` only.
+12. **Icon tiles are `RowIcon`, in two styles.** `.clay` is the mark of a card, a tile or an empty state: a
+    rounded tile filled with its tint, the glyph in the tint's deep shade. `.well` is a row's quiet mark: the
+    glyph on the tint at 20%. No tint is the accent; destructive is `Ink.destructive` only. A list of rows stays
+    quiet, so a screen never shows more than a few clay tiles.
 13. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
     content; `GlassSegmented` is only the Living room | Bedroom switch. The Shop's category row is navigation, not a
     switch: pinned `FilterChip`s with an icon each.
@@ -67,12 +73,12 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A full screen with a main action | `Screen { content } primary: { } secondary: { }`; over art or a camera `.bottomActions(primary:secondary:)`; under a fixed header `ActionSlot` |
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
 | A row | `Row(title, detail:, symbol:, tint:) { trailing }`, `ToggleRow`, `PickerRow`, `RowChevron` |
-| Any other content on a card | `Card { ... }` or `.cardSurface()` |
+| Any other content on a card | `Card { ... }` or `.cardSurface()`; `state: .selected / .disabled` for a card that is chosen or can't be |
 | A state read at a glance that a tap acts on (the cat's needs) | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. The state is a word, never a bar or a percentage (VoiceOver gets the number through `value:`); only a state that wants something now is `.raised` |
 | What an avatar or a round control wants, while it matters | `SymbolBadge(symbol:tint:)` at its top trailing corner; nothing when nothing is wanted |
 | A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
 | Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
-| A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, open:) { art } leadingBadge: trailingBadge: footer: }` |
+| A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, tag:, open:) { art } leadingBadge: trailingBadge: footer: }`; `tag: ItemTag(title, color:)` is its kind (a rarity) as a dot and a word |
 | A picture or tile clipped to the scale | `.corners(.card / .inner / .control)`, a tile's fill `.cornerFill(.inner, style)` |
 | The top of a card | `CardHeader(title, detail:, symbol:, tint:)`, or with `leading:` / `detail:` / `trailing:` views; art goes in `CardArt` |
 | A text field | `Field(placeholder, text:, axis:, lines:, font:, failed:)` |
@@ -100,7 +106,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
 | A screen's few big actions side by side | `ActionTiles([ActionTile(title, status:, symbol:, tint:) {}])`: equal squares while every label fits on one line, a `GroupedSection` of rows otherwise |
 | A progress toward one goal, in a hero | `ProgressRing(value:tint:) { centre }` |
-| Something to open on a shelf that scrolls sideways, with art | `PosterCard(title, status:, emphasis:, art:) {}`, three fifths of the width each (`containerRelativeFrame(count: 5, span: 3)`), stacked at accessibility sizes |
+| Something to open on a shelf that scrolls sideways, with art | `PosterCard(title, status:, emphasis:, action:) { PosterScene(tone:framing:hero:prop:) }`, the title on a paper ribbon over the art, three fifths of the width each (`containerRelativeFrame(count: 5, span: 3)`), stacked at accessibility sizes |
 | A stamp on its own | `PostageStamp(_:size:rare:postmark:pinned:)`: `.small` in a control, `.regular` in a row, `.large` alone; `pinned` in a row, `postmark` once sent |
 
 ### Do and don't
@@ -211,12 +217,13 @@ on `.calloutBubble(pointer:)`.
 | Token | Use |
 | --- | --- |
 | `Ink.screen`, `Ink.surface`, `Ink.surfaceRaised`, `Ink.separator` | backgrounds and hairlines, adaptive |
+| `Ink.cardFill`, `.honeyFace` | the card's own gradient and a honey button's lit face; feature code reaches them through `cardSurface()` and the buttons |
 | `Ink.text`, `.textSecondary`, `.textTertiary`, `.accentText` | text, adaptive |
 | `Ink.glassFill`, `.glassGlyph`, `.glassGlyphSecondary`, `.glassRim`, `.glassSelection` | the glass roles, adaptive |
 | `Ink.disabledFill`, `.disabledText`, `.destructive` | disabled buttons, destructive text and tiles |
 | `Ink.primary`, `.secondary`, `.glassTint` | white on the dark full-screen canvas's warm glass only |
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
-| `.ourioLargeTitle` `.ourioTitle` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles |
+| `.ourioLargeTitle` `.ourioTitle` `.ourioValue` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles; `ourioMicro` is 12 pt, the smallest text in the app |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 | `Motion.*` | every animation, see Motion |
 
@@ -255,7 +262,7 @@ relations, so a redesign changes a token, not the screens.
 | Token | Value | Use |
 | --- | --- | --- |
 | `Radius.sheet` | `card + Space.gutter` | the system sheet's corner, which iOS draws; content at the gutter is a `card` |
-| `Radius.card` | 24 | every card, grouped section, tile, panel and large picture on a screen or sheet |
+| `Radius.card` | 28 | every card, grouped section, tile, panel and large picture on a screen or sheet |
 | `Radius.inner` | `card − CardMetrics.padding` | what sits inside a card's padding: thumbnails, posters, peeks, small grid tiles |
 | `Radius.control` | `Size.button / 2` | every text field and choice row: a one-line field is the buttons' capsule |
 
@@ -264,8 +271,8 @@ relations, so a redesign changes a token, not the screens.
 - A card is the container shape for what is inside it, so an iOS 26 `ConcentricRectangle` there follows its
   corners. Prefer `Radius.inner` where the inset is the card padding, which is why a card's content always
   sits at `CardMetrics.padding`: art in a tile padded tighter has corners squarer than the card's.
-- One card family: `Card`, `CardMetrics.padding`, `CardHeader` with a `Size.cardMark` icon (`RowIcon`) or
-  `CardArt`, the title in `.ourioHeadline` over a `.ourioCaption` line, a `RowChevron` when it opens something.
+- One card family: `Card`, `CardMetrics.padding`, `CardHeader` with a `Size.cardMark` clay icon (`RowIcon`) or
+  `CardArt`, the title in `.ourioHeadline` over a `.ourioCaption` line `Space.xxs` under it, a `RowChevron` when it opens something.
   The screen's hero differs only by `warm`.
 - Art (paper, pens, gift boxes, window views, widgets) may keep its own drawn corners; those files are in
   `packages/ios/scripts/radius-baseline.json` and may only shrink.

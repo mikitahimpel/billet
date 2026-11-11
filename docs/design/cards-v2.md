@@ -19,8 +19,8 @@ and the Games posters were photoreal renders next to a clay room.
 
 - **Opaque.** No blur, no material, no glass on a card. Everything below is a gradient fill or a stroke.
 - **Drawn once.** The shadow is rendered one time per appearance into a nine-slice image and stretched under
-  each card, so a scroll moves textures and never runs a blur. A poster's scene is flattened with
-  `drawingGroup`. Nothing animates at rest; no `repeatForever`, no timeline.
+  each card, so a scroll moves textures and never runs a blur. A poster's scene is two gradients, flat shapes
+  and two pictures. Nothing animates at rest; no `repeatForever`, no timeline.
 - **No text under 12 pt**, and secondary text at 4.5:1 or better on every card fill (`ContrastTests`).
 
 ## Surface
@@ -32,8 +32,8 @@ and the Games posters were photoreal renders next to a clay room.
 | Fill, top to bottom | `#FFFFFF` → `#FFF7EC` | `#4E3B30` → `#3D2D24` |
 | Highlight edge, 1 pt inside | `#FFFFFF` → `#3A2114` 7% by mid-height | `#FFECD2` 24% → 4% |
 | Shadow, contact | y 1, blur 1 | y 1, blur 1 |
-| Shadow, ambient | y 6, blur 9, `#5A2E12` 16% | y 6, blur 9, `#0A0400` 50% |
-| Hero (`warm`) | `#FFEEDA` → `#FFE2C2`, a pool of `#FFD9A6` from the top trailing corner | `#644431` → `#4A3326`, pool `#7A5236` |
+| Shadow, ambient | y 6, blur 9, `#8A5A2B` 16% | y 6, blur 9, `#0A0400` 50% |
+| Hero (`warm`) | `#FFEEDA` → `#FFE2C2`, a pool of `#FFD9A6` from the top trailing corner | `#644431` → `#4A3326`, pool `#765034` |
 
 The light is the Living room's lamp: above, warm. In dark the highlight edge is what separates a card from
 the screen; in light the shadow does, and it is brown, never black. One screen has one `warm` card.
@@ -49,7 +49,8 @@ the screen; in light the shadow does, and it is brown, never black. One screen h
 | `Radius.sheet` | 44 | 48 | `card + Space.gutter` |
 | badge | circle | `0.32 × side` | 44 → 14, 36 → 11.5 |
 
-Corners stay concentric (`MetricsTests`). The badge is a squircle so that it nests in the card's corner and
+Corners stay concentric (`MetricsTests`). A card's radius is never more than 38% of its height, so a card of
+one row (54 pt) keeps a 20 pt corner and stays a card, not a capsule. The badge is a squircle so that it nests in the card's corner and
 holds a larger glyph than a circle of the same side.
 
 ## Icon badge
@@ -58,7 +59,7 @@ holds a larger glyph than a circle of the same side.
 
 - **`.clay`**: the mark of a card or a tile (`CardHeader`, `ActionTiles`, `EmptyState`, a raised `StatusRow`).
   A tile filled with its tint, lighter at the top; a 1.5 pt inside stroke that is white at the top and the
-  tint's deep shade at the foot (the lit edge and the shaded one, with no blur); the glyph at 54% of the side
+  tint's deep shade at the foot (the lit edge and the shaded one, with no blur); the glyph at 50% of the side
   (was 44%) in the deep shade of the same tint, so it reads as pressed into the clay. The same in light and dark.
 - **`.well`**: the quiet mark of a row in a list (`Row`, a quiet `StatusRow`). The tint at 20% with a hairline
   inner edge, the glyph in the tint (deepened on light surfaces).
@@ -122,7 +123,7 @@ tiles' badges are clay at 36 pt; the lists' are wells.
 `PosterCard(title, status:, emphasis:) { PosterScene(...) }`.
 
 - **Scene.** `PosterScene(tone:framing:hero:prop:)`: a wall gradient, one radial pool of light, and for a
-  seated cat a curved clay floor with a lit lip and a flat contact ellipse under her. Square, flattened.
+  seated cat a curved clay floor with a lit lip and a flat contact ellipse under her. Square.
 - **Cast.** `Hero-<coat>.webp`, so the poster shows the couple's own cat, and one prop: `.note(symbol:)`, a
   paper card with one glyph, or `.clay(Image)`, a shop `Item_*.webp` standing on the floor.
 - **Framing.** `.closeUp` crops her chest-up at 150% with the prop in front of her; `.seated` shows her whole
@@ -139,6 +140,14 @@ tiles' badges are clay at 36 pt; the lists' are wells.
 The photoreal `WhoKnows-card` and `DrawGuess-card` images leave the shelf.
 
 ## Review
+
+The recorded gallery pages (SE, Pro Max, the largest text size) went through the same reviewer. Taken: the
+one-row capsule, the ribbon in line with the status under it, a poster's cast kept in a centred square when the
+scene is wider, a warmer shadow on cream. Left for a follow-up, all older than this change: marks, chips and the
+rarity dot do not grow with the text size; a `Row`'s title wraps under a long picker value; a detail line
+truncates at accessibility sizes; the 2 pt honey ring is about 2:1 on cream and leans on the content to say
+"selected".
+
 
 The mocks went through the design reviewer. Taken: no coloured rarity rim (it collided with Selected and
 put honey on a tile four times); wells for list rows; a stronger warm hero; smaller tile badges; one prop and a

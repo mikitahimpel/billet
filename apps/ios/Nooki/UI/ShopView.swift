@@ -157,6 +157,8 @@ struct ShopView: View {
             .padding(.horizontal, Space.l)
         }
         .scrollIndicators(.hidden)
+        // The tiles' shadows reach past the row's own height.
+        .scrollClipDisabled()
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 

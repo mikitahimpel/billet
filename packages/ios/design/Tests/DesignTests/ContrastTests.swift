@@ -12,11 +12,24 @@ import Testing
 
   @Test(arguments: Appearance.allCases)
   func textReadsOnEverySurface(_ appearance: Appearance) {
-    for surface in [Palette.screen, Palette.surface, Palette.surfaceRaised] {
+    let surfaces = [
+      Palette.screen, Palette.surface, Palette.surfaceRaised, Palette.surfaceTop,
+      Palette.surfaceBottom,
+    ]
+    for surface in surfaces {
       #expect(ratio(Palette.text, over: surface, appearance) >= 7)
       #expect(ratio(Palette.textSecondary, over: surface, appearance) >= 4.5)
       #expect(ratio(Palette.accentText, over: surface, appearance) >= 4.5)
       #expect(ratio(Palette.destructive, over: surface, appearance) >= 4.5)
+    }
+  }
+
+  /// The hero card carries words and numbers, never accent or destructive text.
+  @Test(arguments: Appearance.allCases)
+  func wordsReadOnTheWarmCard(_ appearance: Appearance) {
+    for surface in [Palette.warmTop, Palette.warmBottom, Palette.warmGlow] {
+      #expect(ratio(Palette.text, over: surface, appearance) >= 6)
+      #expect(ratio(Palette.textSecondary, over: surface, appearance) >= 4.5)
     }
   }
 

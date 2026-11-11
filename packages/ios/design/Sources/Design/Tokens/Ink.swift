@@ -57,6 +57,11 @@ extension Ink {
 }
 
 extension ShapeStyle where Self == LinearGradient {
+  /// A honey button's face, lit from above.
+  public static var honeyFace: LinearGradient {
+    LinearGradient(colors: [Color(hex: 0xFFC27D), .honey], startPoint: .top, endPoint: .bottom)
+  }
+
   public static var honeyGradient: LinearGradient {
     LinearGradient(
       colors: [Color(hex: 0xFFC27D), .honeyDeep], startPoint: .topLeading, endPoint: .bottomTrailing
@@ -72,6 +77,15 @@ public enum Ink {
   /// Selected rows, pressed cards, chips on a surface.
   public static let surfaceRaised = Palette.surfaceRaised.color
   public static let separator = Palette.separator.color
+  /// The card's own fill, lit from above. Opaque.
+  public static let cardFill = LinearGradient(
+    colors: [Palette.surfaceTop.color, Palette.surfaceBottom.color], startPoint: .top,
+    endPoint: .bottom)
+  static let warmFill = LinearGradient(
+    colors: [Palette.warmTop.color, Palette.warmBottom.color], startPoint: .top, endPoint: .bottom)
+  static let warmGlow = Palette.warmGlow.color
+  static let cardRimTop = Palette.cardRimTop.color
+  static let cardRimBottom = Palette.cardRimBottom.color
   public static let text = Palette.text.color
   public static let textSecondary = Palette.textSecondary.color
   /// Placeholders, never body text or a disabled label that must be read.

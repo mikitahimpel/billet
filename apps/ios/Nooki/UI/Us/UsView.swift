@@ -71,7 +71,7 @@ struct UsView: View {
             ActionTile("Dates", status: Self.matchesLine(matches), symbol: "dice.fill",
                        tint: UsTint.blush.color) { state.usRoute = .dates },
             ActionTile("Wishlists", status: wishes == 1 ? "1 wish" : "\(wishes) wishes",
-                       symbol: "gift.fill", tint: UsTint.coral.color) { state.usRoute = .wishlists },
+                       symbol: "gift.fill", tint: UsTint.honey.color) { state.usRoute = .wishlists },
             ActionTile("Calendar", status: next.map(Self.when) ?? "Nothing yet",
                        symbol: "calendar", tint: UsTint.sky.color) { state.usRoute = .calendar },
         ])
@@ -103,12 +103,12 @@ struct UsView: View {
                 let whoKnowsStatus = WhoKnowsModel.status(whoKnows.phase, remaining: whoKnows.remaining,
                                                           partner: partner)
                 PosterCard("Who knows who", status: whoKnowsStatus, emphasis: whoKnows.phase == .revealed,
-                           art: Image("WhoKnows-card")) {
-                    state.usRoute = .whoKnows
+                           action: { state.usRoute = .whoKnows }) {
+                    GamePoster(game: .whoKnows)
                 }
                 PosterCard("Draw & guess", status: drawGuessStatus(partner: partner),
-                           emphasis: drawGuess.phase == .guess, art: Image("DrawGuess-card")) {
-                    state.usRoute = .drawGuess
+                           emphasis: drawGuess.phase == .guess, action: { state.usRoute = .drawGuess }) {
+                    GamePoster(game: .drawGuess)
                 }
             }
             if typeSize.isAccessibilitySize {

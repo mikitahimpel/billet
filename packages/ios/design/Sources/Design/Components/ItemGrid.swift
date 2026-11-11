@@ -4,10 +4,12 @@ import SwiftUI
 /// line (three at accessibility sizes), a subtitle that always takes two lines, and a footer (a price, a buy or an owned state) at the bottom. In a grid
 /// every tile of a row has the row's height, so the footers line up. With `open`, the art and the
 /// title are one button and the footer stays its own. The art draws its own `Radius.inner` corners
-/// (it is their container shape), so a glow around it is not cut off.
+/// (it is their container shape). `tag` names what kind of thing it is, such as its rarity, with a
+/// dot of that kind's colour; it takes the subtitle's place.
 public struct ItemCard<Art: View, Leading: View, Trailing: View, Footer: View>: View {
   let title: String
   let subtitle: String?
+  let tag: ItemTag?
   let open: (hint: String, action: () -> Void)?
   let art: Art
   let leading: Leading
@@ -17,12 +19,14 @@ public struct ItemCard<Art: View, Leading: View, Trailing: View, Footer: View>: 
 
   /// - Parameter opens: Read by VoiceOver for `open`, as in "Opens Cat tower".
   public init(
-    _ title: String, subtitle: String? = nil, opens: String? = nil, open: (() -> Void)? = nil,
-    @ViewBuilder art: () -> Art, @ViewBuilder leadingBadge: () -> Leading,
-    @ViewBuilder trailingBadge: () -> Trailing, @ViewBuilder footer: () -> Footer
+    _ title: String, subtitle: String? = nil, tag: ItemTag? = nil, opens: String? = nil,
+    open: (() -> Void)? = nil, @ViewBuilder art: () -> Art,
+    @ViewBuilder leadingBadge: () -> Leading, @ViewBuilder trailingBadge: () -> Trailing,
+    @ViewBuilder footer: () -> Footer
   ) {
     self.title = title
     self.subtitle = subtitle
+    self.tag = tag
     self.open = open.map { (opens ?? "Opens \(title)", $0) }
     self.art = art()
     self.leading = leadingBadge()
@@ -55,13 +59,22 @@ public struct ItemCard<Art: View, Leading: View, Trailing: View, Footer: View>: 
         .aspectRatio(ItemCardMetrics.artAspect, contentMode: .fit)
         .containerShape(.rect(cornerRadius: Radius.inner, style: .continuous))
         .overlay(alignment: .top) { badges }
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: Space.xxs) {
         Text(title)
           .font(.ourioHeadline)
           .foregroundStyle(Ink.text)
           // At accessibility sizes one line holds a few letters of a name.
           .lineLimit(typeSize.isAccessibilitySize ? 3 : 1)
-        if let subtitle {
+        if let tag {
+          HStack(spacing: Space.xs) {
+            Circle().fill(tag.color).frame(width: Space.s, height: Space.s)
+              .accessibilityHidden(true)
+            Text(tag.title)
+              .font(.ourioMicro)
+              .foregroundStyle(Ink.textSecondary)
+              .lineLimit(1)
+          }
+        } else if let subtitle {
           Text(subtitle)
             .font(.ourioCaption)
             .foregroundStyle(Ink.textSecondary)
@@ -91,13 +104,23 @@ public struct ItemCard<Art: View, Leading: View, Trailing: View, Footer: View>: 
   }
 }
 
+public struct ItemTag: Sendable {
+  let title: String
+  let color: Color
+
+  public init(_ title: String, color: Color) {
+    self.title = title
+    self.color = color
+  }
+}
+
 extension ItemCard where Leading == EmptyView, Trailing == EmptyView {
   public init(
-    _ title: String, subtitle: String? = nil, opens: String? = nil, open: (() -> Void)? = nil,
-    @ViewBuilder art: () -> Art, @ViewBuilder footer: () -> Footer
+    _ title: String, subtitle: String? = nil, tag: ItemTag? = nil, opens: String? = nil,
+    open: (() -> Void)? = nil, @ViewBuilder art: () -> Art, @ViewBuilder footer: () -> Footer
   ) {
     self.init(
-      title, subtitle: subtitle, opens: opens, open: open, art: art,
+      title, subtitle: subtitle, tag: tag, opens: opens, open: open, art: art,
       leadingBadge: { EmptyView() }, trailingBadge: { EmptyView() }, footer: footer)
   }
 }
@@ -174,10 +197,10 @@ struct EqualGridLayout: Layout {
       ItemGrid {
         ForEach(["Cat tower", "Window seat, long name", "Lamp", "Rug", "Plant"], id: \.self) {
           name in
-          ItemCard(name, subtitle: "Cosy in any corner", open: {}) {
+          ItemCard(name, tag: ItemTag("Legendary", color: Ink.rarityLegendary.tint), open: {}) {
             Ink.surfaceRaised
           } leadingBadge: {
-            Chip("Legendary", style: .tinted(.orange))
+            EmptyView()
           } trailingBadge: {
             Chip("−20%", style: .honey)
           } footer: {
