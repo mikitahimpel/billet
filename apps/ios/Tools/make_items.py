@@ -3,7 +3,7 @@
 Run:
   blender -b --python Tools/make_items.py -- Nooki/Resources/Shop [item_id ...]
 
-Writes Item_<id>.usdz and Item_<id>.png (1024², transparent, soft contact shadow) into the
+Writes Item_<id>.usdz and Item_<id>.webp (1024², transparent, soft contact shadow, lossy q90; needs cwebp) into the
 output folder. Pass item ids to rebuild only those.
 
 Style rules: rounded "clay" shapes from beveled primitives,
@@ -15,6 +15,7 @@ Blender space: Z up, items face -Y, units are meters at real-world size.
 import math
 import os
 import random
+import subprocess
 import sys
 
 import bpy
@@ -537,5 +538,8 @@ if __name__ == "__main__":
         _materials.clear()
         build()
         export_usdz(os.path.join(OUT_DIR, f"Item_{item_id}.usdz"))
-        render_thumbnail(os.path.join(OUT_DIR, f"Item_{item_id}.png"), SUN_PITCH.get(item_id, 22.0))
+        png = os.path.join(OUT_DIR, f"Item_{item_id}.png")
+        render_thumbnail(png, SUN_PITCH.get(item_id, 22.0))
+        subprocess.run(["cwebp", "-q", "90", "-alpha_q", "95", "-m", "6", "-quiet", png, "-o", png[:-4] + ".webp"], check=True)
+        os.remove(png)
         print("ITEM", item_id)
