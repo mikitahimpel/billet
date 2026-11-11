@@ -14,9 +14,9 @@ final class ShopLayoutTests: XCTestCase {
 
         XCTAssertTrue(app.staticTexts["Daily deals"].waitForExistence(timeout: 10), "Today should show")
         for _ in 0..<3 {
-            XCTAssertLessThanOrEqual(app.scrollViews.count, 2, "only the page and its category row should scroll")
+            XCTAssertLessThanOrEqual(app.scrollViews.count, 3, "only the page, its category row and the deals row should scroll")
             app.swipeUp()
         }
-        XCTAssertLessThanOrEqual(app.scrollViews.count, 2, "only the page and its category row should scroll")
+        XCTAssertLessThanOrEqual(app.scrollViews.count, 3, "only the page, its category row and the deals row should scroll")
     }
 }
