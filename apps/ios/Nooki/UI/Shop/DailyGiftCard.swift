@@ -46,10 +46,18 @@ struct DailyGiftCard: View {
             Text("Free, once a day, for both of you")
         } else {
             // A real rotation: the next gift is the next local day's.
-            HStack(spacing: Space.xs) {
-                Text("A new one in")
-                Text(timerInterval: Date.now...state.shop.offers.nextDay(after: .now), countsDown: true)
-                    .monospacedDigit()
+            // On one line while it fits; at large sizes the countdown takes its own line instead of breaking.
+            let countdown = Text(timerInterval: Date.now...state.shop.offers.nextDay(after: .now), countsDown: true)
+                .monospacedDigit()
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Space.xs) {
+                    Text("A new one in")
+                    countdown
+                }
+                VStack(alignment: .leading, spacing: 0) {
+                    Text("A new one in")
+                    countdown
+                }
             }
         }
     }
