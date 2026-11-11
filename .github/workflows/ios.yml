@@ -98,7 +98,7 @@ jobs:
   app:
     if: inputs.shots == ''
     runs-on: xcode-27
-    timeout-minutes: 45
+    timeout-minutes: 65
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -134,8 +134,10 @@ jobs:
 
       - name: App tests (Simulator)
         # A hung UI test must not hold a runner for an hour; each test is also capped below. On main the build
-        # takes about 22 minutes without the compilation cache and the UI tests about 10 more.
-        timeout-minutes: 40
+        # takes about 22 minutes without the compilation cache and the UI tests 10 to 17 more (a busy runner
+        # took 39.5 of the 40 minutes this step once had and a slower one was cut off in the last test), so
+        # the cap sits well above a slow but healthy run.
+        timeout-minutes: 60
         run: |
           (cd apps/ios && xcodegen generate --quiet)
           udid="$TEST_SIMULATOR"

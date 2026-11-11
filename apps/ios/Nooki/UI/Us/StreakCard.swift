@@ -70,17 +70,24 @@ struct StreakCard: View {
     }
 
     private func ring(days: Int, lit: Bool, next: Int?) -> some View {
-        ProgressRing(value: next.map { Double(days) / Double($0) } ?? 1) {
-            VStack(spacing: 0) {
-                Flame(days: days, lit: lit)
-                Text(days, format: .number)
-                    .font(.ourioTitleDigits)
-                    .foregroundStyle(Ink.text)
-                    .contentTransition(.numericText())
-                Text("streak")
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
+        VStack(spacing: Space.xs) {
+            ProgressRing(
+                value: next.map { Double(days) / Double($0) } ?? 1,
+                tint: Color(light: .honeyDeep, dark: .honeyBright)
+            ) {
+                VStack(spacing: 0) {
+                    Flame(days: days, lit: lit)
+                    Text(days, format: .number)
+                        .font(.ourioTitleDigits)
+                        .foregroundStyle(Ink.text)
+                        .contentTransition(.numericText())
+                }
             }
+            Text("day streak")
+                .font(.ourioCaption)
+                .foregroundStyle(Ink.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
     }
 
@@ -116,23 +123,30 @@ struct StreakCard: View {
 
 // MARK: - Pieces
 
-/// Flame that warms with the streak: orange, pink from 30 days, purple from 100. Fades while today doesn't count yet.
+/// Flame that warms with the streak: orange, pink from 30 days, purple from 100. At 0 it is an outline, a flame
+/// waiting to be lit; while today doesn't count yet it is a little quieter.
 private struct Flame: View {
     let days: Int
     let lit: Bool
 
     private var colors: [Color] {
-        if days == 0 { return [Color(hex: 0xBFB3AA), Color(hex: 0x8C7D72)] }
         if days >= 100 { return [Color(hex: 0xD9B8FF), Color(hex: 0x8A5CFF)] }
         if days >= 30 { return [Color(hex: 0xFFB3C4), Color(hex: 0xFF5C8A)] }
         return [Color(hex: 0xFFD27A), Color(hex: 0xFF6A3D)]
     }
 
     var body: some View {
-        Image(systemName: "flame.fill")
-            .font(.ourioHeadline)
-            .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
-            .opacity(lit || days == 0 ? 1 : 0.45)
-            .accessibilityHidden(true)
+        Group {
+            if days == 0 {
+                Image(systemName: "flame")
+                    .foregroundStyle(Ink.textSecondary)
+            } else {
+                Image(systemName: "flame.fill")
+                    .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
+                    .opacity(lit ? 1 : 0.65)
+            }
+        }
+        .font(.ourioLargeTitleDigits)
+        .accessibilityHidden(true)
     }
 }

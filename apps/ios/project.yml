@@ -165,6 +165,8 @@ targets:
       - path: Nooki/Model/Streak.swift
       - path: Nooki/Model/Wallet.swift
       - path: Shared
+        # Places' flags and map are for the app's world map only.
+        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
       - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
@@ -204,7 +206,7 @@ targets:
       - path: OurioNotifications
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
-        # Places' flags and map are for the app and its widgets.
+        # Places' flags and map are for the app's world map only.
         excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
@@ -242,7 +244,7 @@ targets:
     sources:
       - path: OurioShare
       - path: Shared
-        # Places' flags and map are for the app and its widgets.
+        # Places' flags and map are for the app's world map only.
         excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
