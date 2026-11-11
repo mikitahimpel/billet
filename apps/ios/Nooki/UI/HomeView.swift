@@ -381,6 +381,7 @@ struct HomeView: View {
                     GlassIconButton(
                         symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
                     ) { state.decor.send(.opened(item: nil)) }
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                     .accessibilityIdentifier("decorate")
                 }
             }
