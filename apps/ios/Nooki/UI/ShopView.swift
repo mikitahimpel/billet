@@ -8,7 +8,6 @@ import Design
 struct ShopView: View {
     let state: HomeState
 
-    @State private var selected: ShopCategory = .today
     @State private var sheetItem: ShopItem?
     @State private var sheetSet: SetChoice?
     /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
@@ -18,25 +17,19 @@ struct ShopView: View {
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
-                LazyVStack(alignment: .leading, spacing: Space.section, pinnedViews: [.sectionHeaders]) {
-                    Section {
-                        switch selected {
-                        case .today:
-                            today
-                        case .inks:
-                            InkShelf(state: state, highlighted: highlightedInk)
-                        case .furniture, .decor, .mochi, .room:
-                            grid(Catalog.items(in: selected))
-                                .padding(.horizontal, Space.l)
-                        }
-                    } header: {
-                        chips
-                            .padding(.bottom, Space.xs)
-                            .background(Ink.screen)
+                LazyVStack(alignment: .leading, spacing: Space.section) {
+                    switch state.shopCategory {
+                    case .today:
+                        today
+                    case .inks:
+                        InkShelf(state: state, highlighted: highlightedInk)
+                    case .furniture, .decor, .mochi, .room:
+                        grid(Catalog.items(in: state.shopCategory))
+                            .padding(.horizontal, Space.l)
                     }
                 }
                 .tabContentInsets()
-                .animation(.spring(duration: 0.35), value: selected)
+                .animation(.spring(duration: 0.35), value: state.shopCategory)
             }
             .scrollIndicators(.hidden)
             .onScrollPhaseChange { _, phase in
@@ -48,7 +41,7 @@ struct ShopView: View {
                 guard let focus else { return }
                 switch focus {
                 case .ink(let id):
-                    selected = .inks
+                    state.shopCategory = .inks
                     Task {
                         highlightedInk = id
                         state.shopFocus = nil
@@ -56,7 +49,7 @@ struct ShopView: View {
                         withAnimation(.easeOut(duration: 0.4)) { if highlightedInk == id { highlightedInk = nil } }
                     }
                 case .item(let id):
-                    selected = .today
+                    state.shopCategory = .today
                     sheetItem = Catalog.item(id)
                     state.shopFocus = nil
                 }
@@ -87,31 +80,12 @@ struct ShopView: View {
             await Thumbnails.prefetch(names, maxPixels: 512)
             await Thumbnails.prefetch(names, maxPixels: 256)
         }
-        .haptic(.selection, trigger: selected)
         .sheet(item: $sheetItem) { item in
             ItemSheet(item: item, state: state)
         }
         .sheet(item: $sheetSet) { choice in
             SetSheet(state: state, pieces: choice.pieces)
         }
-    }
-
-    // MARK: Categories
-
-    /// The categories in one row that scrolls sideways; the page under it only scrolls up and down.
-    private var chips: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: Space.s) {
-                ForEach(ShopCategory.allCases) { category in
-                    let isSelected = selected == category
-                    FilterChip(category.title, symbol: category.symbol, isSelected: isSelected) { selected = category }
-                }
-            }
-            .padding(.horizontal, Space.l)
-            .padding(.vertical, 2)
-        }
-        .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     // MARK: Today
@@ -204,4 +178,29 @@ struct ShopView: View {
         await Thumbnails.prefetch(deals, maxPixels: 512)
     }
 
+}
+
+/// The Shop's shelves in one row that scrolls sideways, in the header's slot under its controls: pinned with the
+/// header, over the page's own soft edge, so no band is drawn behind them.
+struct ShopChips: View {
+    @Bindable var state: HomeState
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: Space.s) {
+                ForEach(ShopCategory.allCases) { category in
+                    FilterChip(category.title, symbol: category.symbol, isSelected: state.shopCategory == category) {
+                        state.shopCategory = category
+                    }
+                }
+            }
+            .padding(.horizontal, Space.l)
+            .padding(.vertical, 2)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        // Edge to edge: the header pads its row by `Space.l`, the chips scroll out from under the screen's edges.
+        .padding(.horizontal, -Space.l)
+        .haptic(.selection, trigger: state.shopCategory)
+    }
 }

@@ -1,7 +1,8 @@
 import Foundation
 import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import Transport
 import UsInterface

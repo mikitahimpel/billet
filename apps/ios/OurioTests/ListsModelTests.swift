@@ -1,6 +1,7 @@
 import Foundation
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
 import Testing
 import Transport

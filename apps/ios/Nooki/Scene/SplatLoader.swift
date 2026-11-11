@@ -1,6 +1,7 @@
 import CoreGraphics
 import Foundation
 import Metal
+import os
 import RealityKit
 
 /// A loaded splat: the entity drawing it, the buffer it draws from and the file's own splats.
@@ -35,12 +36,18 @@ nonisolated enum SplatLoader {
 
     private static let fields = "x y z scale_0 scale_1 scale_2 rot_0 rot_1 rot_2 rot_3 opacity f_dc_0 f_dc_1 f_dc_2"
 
+    private static let meshOnly = OSAllocatedUnfairLock(initialState: false)
+
+    /// Labs → Performance draws the cat as meshes even where splats work, to tell what the splats cost. Read when
+    /// she loads, so it holds from the next launch.
+    static func setMeshOnly(_ on: Bool) { meshOnly.withLock { $0 = on } }
+
     /// RealityKit renders splats only from iOS 27 on Apple7-family GPUs, and the simulator SDK has no splat API at all.
     static var isSupported: Bool {
         #if targetEnvironment(simulator)
         false
         #else
-        guard #available(iOS 27, *) else { return false }
+        guard #available(iOS 27, *), !meshOnly.withLock({ $0 }) else { return false }
         return MTLCreateSystemDefaultDevice()?.supportsFamily(.apple7) ?? false
         #endif
     }

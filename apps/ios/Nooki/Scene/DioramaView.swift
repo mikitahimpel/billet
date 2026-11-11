@@ -1,4 +1,5 @@
 import RealityKit
+import RoomInterface
 import SwiftUI
 
 struct DioramaView: View {
@@ -6,6 +7,9 @@ struct DioramaView: View {
     /// Off-screen, the room stops animating and drawing.
     let paused: Bool
     let petPulse: Int
+    let rendering: RoomRendering
+    /// Draws the room with its own renderer and frame loop in place of a `RealityView`, when there is one.
+    var loop: RoomRenderLoop?
     var onPet: () -> Void
 
     @State private var rig = ZoomRig()
@@ -18,10 +22,20 @@ struct DioramaView: View {
     private func attach(_ scene: CatRoom, to content: RealityViewCameraContent) {
         for entity in Array(content.entities) where entity !== rig.camera { content.remove(entity) }
         content.add(scene.root)
+        drive(scene, on: content, rig: rig)
+    }
+
+    private func attach(_ scene: CatRoom, to loop: RoomRenderLoop) {
+        loop.show(scene)
+        drive(scene, on: loop, rig: loop.rig)
+    }
+
+    private func drive(_ scene: CatRoom, on surface: any RoomSurface, rig: ZoomRig) {
         scene.paused = paused
+        scene.unprojector = { point, plane in surface.unproject(point, ontoPlane: plane) }
         scene.onFocusChange = { focused in withAnimation(.easeOut(duration: 0.3)) { photoFocused = focused } }
         let bubble = bubble
-        scene.start(updatesFrom: content, viewer: rig.camera, beforeProjecting: { dt in
+        scene.start(on: surface, viewer: rig.camera, beforeProjecting: { dt in
             rig.update(dt: dt, framing: scene.framing, focusDistance: scene.focusDistance,
                        yaw: scene.settledYaw, focus: scene.catFocus, photo: scene.photoPose)
         }) { projected in
@@ -31,15 +45,54 @@ struct DioramaView: View {
         }
     }
 
-    var body: some View {
-        RealityView { content in
-            content.camera = .virtual
-            content.add(rig.camera)
-            attach(scene, to: content)
-        } update: { content in
-            // A new room swaps its root into this same view, so there is never a second renderer running.
-            if !content.entities.contains(where: { $0 === scene.root }) { attach(scene, to: content) }
+    private func tapped(_ entity: Entity) {
+        if scene.focusedPhoto != nil { return scene.unfocusPhoto() }
+        // HomeView plays the purr when the pet lands, the same way for taps and widget pets.
+        guard scene.isCat(entity) else { return scene.tapped(entity) }
+        onPet()
+    }
+
+    private func doubleTapped(_ entity: Entity) {
+        if scene.focusedPhoto != nil { return scene.unfocusPhoto() }
+        scene.doubleTapped(entity)
+    }
+
+    @ViewBuilder private var canvas: some View {
+        if let loop {
+            RoomCanvas(loop: loop)
+                .onChange(of: ObjectIdentifier(scene), initial: true) { attach(scene, to: loop) }
+                .onChange(of: rendering.antialiasing, initial: true) { loop.setAntialiasing(rendering.antialiasing) }
+                // A room that stopped while covered or hidden is the same scene when it comes back, so this is where
+                // it starts again.
+                .onChange(of: paused, initial: true) {
+                    loop.setRunning(!paused)
+                    if !paused { attach(scene, to: loop) }
+                }
+        } else {
+            RealityView { content in
+                content.camera = .virtual
+                apply(rendering, to: &content)
+                content.add(rig.camera)
+                attach(scene, to: content)
+            } update: { content in
+                apply(rendering, to: &content)
+                // A new room swaps its root into this same view, so there is never a second renderer running.
+                if !content.entities.contains(where: { $0 === scene.root }) { attach(scene, to: content) }
+            }
         }
+    }
+
+    /// The camera's own effects: the room has no use for blur, depth of field or grain, and each costs a pass.
+    private func apply(_ rendering: RoomRendering, to content: inout RealityViewCameraContent) {
+        content.renderingEffects.motionBlur = .disabled
+        content.renderingEffects.depthOfField = .disabled
+        content.renderingEffects.cameraGrain = .disabled
+        content.renderingEffects.antialiasing = rendering.antialiasing ? .multisample4X : .none
+        content.renderingEffects.dynamicRange = rendering.hdr ? .default : .standard
+    }
+
+    var body: some View {
+        canvas
         .overlay { BubbleOverlay(spot: bubble, pulse: petPulse).opacity(photoFocused ? 0 : 1) }
         .overlay(alignment: .bottom) {
             if photoFocused {
@@ -56,24 +109,35 @@ struct DioramaView: View {
                 .transition(.opacity.combined(with: .scale(scale: 0.9)))
             }
         }
-        .onChange(of: paused) { scene.paused = paused }
+        .onChange(of: paused) {
+            scene.paused = paused
+            // Out of the hierarchy, its endless float stops being animated behind a room nobody sees.
+            if paused { bubble.point = nil }
+        }
         .gesture(
             SpatialTapGesture()
                 .targetedToAnyEntity()
-                .onEnded { value in
-                    if scene.focusedPhoto != nil { return scene.unfocusPhoto() }
-                    // HomeView plays the purr when the pet lands, the same way for taps and widget pets.
-                    guard scene.isCat(value.entity) else { return scene.tapped(value.entity) }
-                    onPet()
-                }
+                .onEnded { value in tapped(value.entity) },
+            including: loop == nil ? .all : .none
         )
         .simultaneousGesture(
             SpatialTapGesture(count: 2)
                 .targetedToAnyEntity()
-                .onEnded { value in
-                    if scene.focusedPhoto != nil { return scene.unfocusPhoto() }
-                    scene.doubleTapped(value.entity)
-                }
+                .onEnded { value in doubleTapped(value.entity) },
+            including: loop == nil ? .all : .none
+        )
+        // With no view to hit-test, the same taps are found with a ray from the camera.
+        .gesture(
+            SpatialTapGesture().onEnded { value in
+                if let loop, let entity = scene.target(at: value.location, camera: loop.camera) { tapped(entity) }
+            },
+            including: loop == nil ? .none : .all
+        )
+        .simultaneousGesture(
+            SpatialTapGesture(count: 2).onEnded { value in
+                if let loop, let entity = scene.target(at: value.location, camera: loop.camera) { doubleTapped(entity) }
+            },
+            including: loop == nil ? .none : .all
         )
         // Taps on empty space, which the entity-targeted gestures never see, also leave a photo.
         .simultaneousGesture(SpatialTapGesture().onEnded { _ in scene.unfocusPhoto() })
@@ -129,7 +193,7 @@ private struct BubbleOverlay: View {
 
 /// Holds the single camera entity and eases its pose toward the requested zoom every frame.
 @MainActor
-private final class ZoomRig {
+final class ZoomRig {
     let camera = PerspectiveCamera()
     var targetZoom: Float = 0.25
     private var zoom: Float = 0.25
@@ -138,6 +202,7 @@ private final class ZoomRig {
     private var focusDistance: Float = 0.8
     private var photo: Float = 0
     private var photoPose: (center: SIMD3<Float>, normal: SIMD3<Float>)?
+    private var placed: (target: SIMD3<Float>, eye: SIMD3<Float>)?
 
     init() {
         camera.camera.fieldOfViewInDegrees = 22
@@ -169,6 +234,9 @@ private final class ZoomRig {
             target = simd_mix(target, photoPose.center, SIMD3(repeating: s))
             eye = simd_mix(eye, photoPose.center + photoPose.normal * focusDistance, SIMD3(repeating: s))
         }
+        // A pose written again is a camera that moved, to everything that follows it.
+        guard target != placed?.target || eye != placed?.eye else { return }
+        placed = (target, eye)
         camera.look(at: target, from: eye, relativeTo: nil)
     }
 }

@@ -1,6 +1,7 @@
 import ActivityKit
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import SwiftUI
 import Design

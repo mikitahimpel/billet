@@ -1,6 +1,7 @@
 import AudioToolbox
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import UsInterface

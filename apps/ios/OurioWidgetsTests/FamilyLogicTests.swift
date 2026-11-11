@@ -1,7 +1,7 @@
 import Foundation
 import DrawInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
 import Testing
 import Wire
 

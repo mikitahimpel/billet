@@ -155,6 +155,11 @@ enum GalleryPage: String, CaseIterable, Sendable {
     @MainActor @ViewBuilder private static var fieldsPage: some View {
         Field("A few words (optional)", text: .constant(""), axis: .vertical, lines: 1...3)
         FormField("Name", placeholder: "Your name", text: .constant("Mikita"), footer: "Your partner sees it.")
+        HStack {
+            LimitCounter(count: 12, limit: 40)
+            LimitCounter(count: 34, limit: 40)
+            LimitCounter(count: 40, limit: 40)
+        }
         FormField("Invite code", placeholder: "Code", text: .constant("K7QM"), error: "That code isn't working.")
     }
 

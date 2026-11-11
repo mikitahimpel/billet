@@ -1,6 +1,7 @@
 import FeatureOnboarding
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Pet
 import ProfileInterface
 import RoomInterface
@@ -43,10 +44,14 @@ struct SettingsView: View {
     var body: some View {
         Page {
             GroupedSection(header: "General",
+                         footer: "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
+                ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
+            }
+
+            GroupedSection(header: "Hints",
                          footer: hintsReset
                              ? "The hints start over the next time you open Ourio."
-                             : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
-                ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
+                             : "Shows the tips again, one at a time, from the next launch.") {
                 Button { hintsReset = true } label: {
                     Row("Show hints again", symbol: "lightbulb.fill", tint: UsTint.sun.color) {
                         if hintsReset {
@@ -110,7 +115,7 @@ struct SettingsView: View {
                                + "with an anonymous key kept in your iCloud Keychain, without your name or email.") {
                 Row("Stays on this iPhone", symbol: "lock.fill", tint: UsTint.sage.color)
                 Button(role: .destructive) { confirmingErase = true } label: {
-                    Row("Erase All Data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
+                    Row("Erase all data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
                 }
                 .buttonStyle(PressScaleStyle())
             }
@@ -204,10 +209,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Erase all data?", isPresented: $confirmingErase, titleVisibility: .visible) {
-            Button("Erase All Data", role: .destructive) {
+            Button("Erase all data", role: .destructive) {
                 dismiss()
                 erase()
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Your profile, photos, moments, lists, wishes and dates will be deleted from this phone. "
                  + "This can't be undone.")

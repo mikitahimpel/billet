@@ -2,7 +2,8 @@ import ActivityKit
 import DrawInterface
 import Foundation
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
 import PetScene
 import Transport
