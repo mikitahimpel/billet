@@ -13,7 +13,7 @@ import WidgetKit
 struct MochiFamilyWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "com.ourio.app.cat", provider: FamilyProvider()) { entry in
-            MochiFamilyView(entry: entry).familyGround()
+            FamilyBody { MochiFamilyView(entry: entry, family: $0) }.familyGround()
         }
         .configurationDisplayName("Mochi")
         .description("Your cat, how she is right now, and a pet button.")
@@ -25,7 +25,7 @@ struct MochiFamilyWidget: Widget {
 struct UsFamilyWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "com.ourio.app.us", provider: FamilyProvider()) { entry in
-            UsFamilyView(entry: entry).familyGround().widgetURL(DeepLink.calendar.url)
+            FamilyBody { UsFamilyView(entry: entry, family: $0) }.familyGround().widgetURL(DeepLink.calendar.url)
         }
         .configurationDisplayName("Days together")
         .description("Your days together, the next date and the streak.")
@@ -37,7 +37,7 @@ struct UsFamilyWidget: Widget {
 struct PartnerFamilyWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "com.ourio.app.partner", provider: FamilyProvider()) { entry in
-            PartnerFamilyView(entry: entry).familyGround().widgetURL(DeepLink.inbox.url)
+            FamilyBody { PartnerFamilyView(entry: entry, family: $0) }.familyGround().widgetURL(DeepLink.inbox.url)
         }
         .configurationDisplayName("From your partner")
         .description("Their latest drawing or mood, with a tap to reply.")
@@ -49,7 +49,7 @@ struct PartnerFamilyWidget: Widget {
 struct CoinsFamilyWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "com.ourio.app.coins", provider: FamilyProvider()) { entry in
-            CoinsFamilyView(entry: entry).familyGround().widgetURL(DeepLink.room.url)
+            FamilyBody { CoinsFamilyView(entry: entry, family: $0) }.familyGround().widgetURL(DeepLink.room.url)
         }
         .configurationDisplayName("Coins")
         .description("Your coins and how far Mochi's care has come.")
@@ -61,7 +61,7 @@ struct CoinsFamilyWidget: Widget {
 struct MemoryFamilyWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "com.ourio.app.memory", provider: FamilyProvider(loadsPhoto: true)) { entry in
-            MemoryFamilyView(entry: entry).familyGround().widgetURL(DeepLink.moments.url)
+            FamilyBody { MemoryFamilyView(entry: entry, family: $0) }.familyGround().widgetURL(DeepLink.moments.url)
         }
         .configurationDisplayName("Memory")
         .description("A pinned moment, printed like a photo.")
@@ -74,13 +74,23 @@ struct MemoryFamilyWidget: Widget {
 struct DayFamilyWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: "com.ourio.app.day", provider: FamilyProvider()) { entry in
-            DayFamilyView(entry: entry).familyGround()
+            FamilyBody { DayFamilyView(entry: entry, family: $0) }.familyGround()
         }
         .configurationDisplayName("Our day")
         .description("Mochi, your days together and your partner, in one.")
         .supportedFamilies([.systemLarge])
         .contentMarginsDisabled()
     }
+}
+
+/// Hands the widget's family to a view that takes it as a parameter, so a bigger widget can lay a smaller one out.
+struct FamilyBody<Content: View>: View {
+    let content: (WidgetFamily) -> Content
+    @Environment(\.widgetFamily) private var family
+
+    init(@ViewBuilder content: @escaping (WidgetFamily) -> Content) { self.content = content }
+
+    var body: some View { content(family) }
 }
 
 // MARK: - Ground
@@ -227,7 +237,7 @@ private struct MochiPortrait: View {
 
 struct MochiFamilyView: View {
     let entry: FamilyEntry
-    @Environment(\.widgetFamily) private var family
+    let family: WidgetFamily
 
     private var s: OurioSnapshot { entry.snapshot }
     private var pose: MochiPose { MochiPose.pose(s, drawing: entry.facts.drawing) }
@@ -306,7 +316,7 @@ private extension PartnerNews {
 
 struct UsFamilyView: View {
     let entry: FamilyEntry
-    @Environment(\.widgetFamily) private var family
+    let family: WidgetFamily
 
     private var s: OurioSnapshot { entry.snapshot }
     private var streak: StreakGlance { StreakGlance(entry.facts.streak, on: s.date) }
@@ -414,7 +424,7 @@ private struct Bar: View {
 
 struct PartnerFamilyView: View {
     let entry: FamilyEntry
-    @Environment(\.widgetFamily) private var family
+    let family: WidgetFamily
 
     private var s: OurioSnapshot { entry.snapshot }
     private var news: PartnerNews? { PartnerNews.latest(s, drawing: entry.facts.drawing) }
@@ -487,7 +497,7 @@ struct PartnerFamilyView: View {
 
 struct CoinsFamilyView: View {
     let entry: FamilyEntry
-    @Environment(\.widgetFamily) private var family
+    let family: WidgetFamily
 
     private var glance: CoinsGlance { CoinsGlance(entry.facts.wallet) }
 
@@ -539,7 +549,7 @@ struct CoinsFamilyView: View {
 
 struct MemoryFamilyView: View {
     let entry: FamilyEntry
-    @Environment(\.widgetFamily) private var family
+    let family: WidgetFamily
 
     private var photo: UIImage? { entry.momentImage.flatMap(UIImage.init(data:)) }
     private var caption: String { entry.snapshot.moment?.caption ?? "" }
@@ -612,14 +622,15 @@ struct MemoryFamilyView: View {
 
 struct DayFamilyView: View {
     let entry: FamilyEntry
+    var family: WidgetFamily = .systemLarge
 
     var body: some View {
         VStack(spacing: 0) {
-            MochiFamilyView(entry: entry).environment(\.widgetFamily, .systemMedium)
+            MochiFamilyView(entry: entry, family: .systemMedium)
                 .frame(height: 170)
             HStack(spacing: 0) {
-                Link(destination: DeepLink.calendar.url) { UsFamilyView(entry: entry).environment(\.widgetFamily, .systemSmall) }
-                Link(destination: DeepLink.inbox.url) { PartnerFamilyView(entry: entry).environment(\.widgetFamily, .systemSmall) }
+                Link(destination: DeepLink.calendar.url) { UsFamilyView(entry: entry, family: .systemSmall) }
+                Link(destination: DeepLink.inbox.url) { PartnerFamilyView(entry: entry, family: .systemSmall) }
             }
             .frame(maxHeight: .infinity)
         }

@@ -75,24 +75,24 @@ struct WidgetGalleryTests {
                 ("small", small, .systemSmall), ("medium", medium, .systemMedium), ("large", large, .systemLarge),
             ]
             for (label, size, family) in sizes {
-                func add(_ name: String, _ entry: FamilyEntry, _ view: (FamilyEntry) -> AnyView) {
-                    pieces.append(("\(name)-\(label)-\(device)", size, AnyView(view(entry).environment(\.widgetFamily, family))))
+                func add(_ name: String, _ entry: FamilyEntry, _ view: (FamilyEntry, WidgetFamily) -> AnyView) {
+                    pieces.append(("\(name)-\(label)-\(device)", size, AnyView(view(entry, family))))
                 }
-                add("mochi", entry(waiting, drawn)) { AnyView(MochiFamilyView(entry: $0)) }
+                add("mochi", entry(waiting, drawn)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
                 if device == "pm" {
-                    add("mochi-night", entry(evening, facts)) { AnyView(MochiFamilyView(entry: $0)) }
-                    add("mochi-purring", entry(purring, facts)) { AnyView(MochiFamilyView(entry: $0)) }
+                    add("mochi-night", entry(evening, facts)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("mochi-purring", entry(purring, facts)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
                 }
-                add("us", entry(day, facts)) { AnyView(UsFamilyView(entry: $0)) }
+                add("us", entry(day, facts)) { AnyView(UsFamilyView(entry: $0, family: $1)) }
                 if family != .systemLarge {
-                    add("partner", entry(day, drawn)) { AnyView(PartnerFamilyView(entry: $0)) }
-                    add("partner-mood", entry(waiting, facts)) { AnyView(PartnerFamilyView(entry: $0)) }
-                    add("partner-empty", entry(day, empty)) { AnyView(PartnerFamilyView(entry: $0)) }
-                    add("coins", entry(day, facts)) { AnyView(CoinsFamilyView(entry: $0)) }
+                    add("partner", entry(day, drawn)) { AnyView(PartnerFamilyView(entry: $0, family: $1)) }
+                    add("partner-mood", entry(waiting, facts)) { AnyView(PartnerFamilyView(entry: $0, family: $1)) }
+                    add("partner-empty", entry(day, empty)) { AnyView(PartnerFamilyView(entry: $0, family: $1)) }
+                    add("coins", entry(day, facts)) { AnyView(CoinsFamilyView(entry: $0, family: $1)) }
                 }
-                add("memory", entry(day, facts, photo: true)) { AnyView(MemoryFamilyView(entry: $0)) }
+                add("memory", entry(day, facts, photo: true)) { AnyView(MemoryFamilyView(entry: $0, family: $1)) }
                 if family == .systemLarge {
-                    add("day", entry(waiting, drawn)) { AnyView(DayFamilyView(entry: $0)) }
+                    add("day", entry(waiting, drawn)) { AnyView(DayFamilyView(entry: $0, family: $1)) }
                 }
             }
         }
