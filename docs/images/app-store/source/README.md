@@ -18,15 +18,18 @@ app's SF Pro Rounded and the colours are `Palette.swift`'s.
 
 ## The set
 
+Ordered by what matters most to a couple deciding to install: the shared home, the daily streak, Moments,
+then Mochi and the everyday tools. The first three are what App Store search results show.
+
 | # | Sells | Headline | Screen |
 | --- | --- | --- | --- |
-| 1 | What it is | A tiny home just for *us two* | Home: the room with Mochi |
-| 2 | The pet you share | Raise a kitty *together* | Mochi's sheet |
-| 3 | Everyday use | One list, *both* phones | Groceries by aisle |
-| 4 | Movie night | Movie night, *sorted* | To watch posters with "both" badges |
-| 5 | Plans and trips | Every trip, on *one map* | Places to go: map, flags |
-| 6 | The spark | Keep the *spark* going | Us: days together, streak (card enlarged) |
-| 7 | Moments | Little moments, *kept* | Moments: Mochi's wall and photos |
+| 1 | What it is | A cozy home for *us two* | Home: the room with Mochi |
+| 2 | The daily habit | Keep the *spark* alive | Us: days together, love streak (card enlarged) |
+| 3 | Sharing moments | Share your *little moments* | Moments: Mochi's wall and photos |
+| 4 | The pet you share | Raise a kitty *together* | Mochi's sheet |
+| 5 | Movie night | Pick a movie you *both* want | To watch posters with "both" badges |
+| 6 | Trips | Dream up your *next trip* | Places to go: map, flags |
+| 7 | Everyday use | One list, *both* phones | Groceries by aisle |
 | 8 | Make it yours | Make the room *yours* | Shop: Today |
 
 Shot 4 shows no real films: the To watch titles are made up, and their posters in `posters/` were made with
