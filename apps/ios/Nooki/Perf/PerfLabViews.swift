@@ -232,6 +232,26 @@ struct PerfLabPage: View {
     }
 }
 
+/// The tier the room draws at now and the control that holds it at one.
+private struct QualityTierPicker: View {
+    let lab: PerfLab
+
+    var body: some View {
+        let forced = lab.state.forcedTier
+        VStack(alignment: .leading, spacing: Space.xs) {
+            Text("Quality tier: \(lab.tier.title)\(forced == nil ? " (follows heat and Low Power Mode)" : " (forced)")")
+                .font(.ourioMicro)
+                .foregroundStyle(Ink.textSecondary)
+            Picker("Quality tier", selection: Binding(get: { forced }, set: { lab.force($0) })) {
+                Text("Auto").tag(RoomQualityTier?.none)
+                ForEach(RoomQualityTier.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
+            }
+            .pickerStyle(.segmented)
+            .font(.ourioMicro)
+        }
+    }
+}
+
 /// Each suspect's switch, the copy line and a reset, in one card: on Home under the meter and in Settings › Labs.
 struct PerfLabSwitches: View {
     let lab: PerfLab
@@ -245,6 +265,7 @@ struct PerfLabSwitches: View {
                 ForEach(PerfSuspect.allCases, id: \.self) { suspect in
                     ToggleRow(suspect.title, symbol: suspect.symbol, tint: UsTint.honey.color, isOn: lab.binding(suspect))
                 }
+                QualityTierPicker(lab: lab)
                 Text(lab.day?.line ?? "MetricKit: no day delivered yet; the system sends one about once a day.")
                     .font(.ourioMicro)
                     .foregroundStyle(Ink.textSecondary)
