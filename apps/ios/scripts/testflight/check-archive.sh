@@ -1,5 +1,5 @@
 #!/bin/bash
-# Checks a Release archive before TestFlight: bundle IDs, version 0.1.0, build number, team 2666YPBJTB signing;
+# Checks a Release archive before TestFlight: bundle IDs (the app and its three extensions), version 0.1.0, build number, team 2666YPBJTB signing;
 # DEMO_HOST is the app's BilletAPIHost and nowhere in git history; StoreKit store, no mock store, and Labs as
 # EXPECT_LABS says (NO unless the run asked for a Labs build).
 #   check-archive.sh <path.xcarchive> <build-number>  (repository root, full history; never prints the host)
@@ -39,6 +39,8 @@ check_bundle() {
 
 check_bundle "$app" com.ourio.app
 check_bundle "$app/PlugIns/OurioWidgets.appex" com.ourio.app.widget
+check_bundle "$app/PlugIns/OurioNotifications.appex" com.ourio.app.notification-service
+check_bundle "$app/PlugIns/OurioShare.appex" com.ourio.app.share
 
 payments=$(plist "$app" BilletPayments)
 labs=$(plist "$app" BilletLabs)
