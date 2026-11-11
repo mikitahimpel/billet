@@ -89,6 +89,9 @@ public enum DecorMachine: Machine {
     case owned(Set<String>)
     /// The room read from where it is kept.
     case loaded(DecorLayout)
+    /// The pair's layout as the server holds it (a partner's change, or this phone's own refused): it replaces the
+    /// placements and leaves what was put in the closet.
+    case remote([Placement])
     /// Start arranging, with `item` chosen when it is given: a piece in the closet goes into the room
     /// first.
     case opened(item: String?)
@@ -108,7 +111,10 @@ public enum DecorMachine: Machine {
   }
 
   public enum Output: Equatable, Sendable {
+    /// Keep it and tell the server.
     case save(DecorLayout)
+    /// Keep it on this phone only: it came from the server.
+    case keep(DecorLayout)
     case feedback(Feedback)
   }
 
@@ -131,6 +137,10 @@ public enum DecorMachine: Machine {
       (.selected, .loaded(let layout)),
       (.moving, .loaded(let layout)):
       return loading(layout, in: state)
+
+    case (.off, .remote(let spots)), (.closet, .remote(let spots)), (.selected, .remote(let spots)),
+      (.moving, .remote(let spots)):
+      return receiving(spots, in: state)
 
     case (.off(let book), .opened(let item)), (.closet(let book), .opened(let item)),
       (.selected(let book, _), .opened(let item)):
@@ -251,6 +261,24 @@ public enum DecorMachine: Machine {
     case .off, .closet, .selected: next = with(book, in: state)
     }
     return (next, settled == layout ? [] : [.save(settled)])
+  }
+
+  private static func receiving(_ spots: [Placement], in state: State) -> (State, [Output]) {
+    var book = state.book
+    let settled = book.layout.replacing(placements: spots).keeping(owned: book.owned)
+      .settled(owned: book.owned)
+    guard settled != book.layout else { return (state, []) }
+    book.layout = settled
+    let next: State
+    switch state {
+    case .moving(_, let item, _, _):
+      next = book.layout.isPlaced(item) ? .selected(book, item: item) : .closet(book)
+    case .off, .closet, .selected: next = with(book, in: state)
+    }
+    // A piece the server did not know of, such as a new purchase, goes up as a change.
+    let known = Set(spots.map(\.item))
+    let local = settled.placements.contains { !known.contains($0.item) }
+    return (next, [local ? .save(settled) : .keep(settled)])
   }
 
   private static func opening(_ item: String?, in book: Book) -> (State, [Output]) {
