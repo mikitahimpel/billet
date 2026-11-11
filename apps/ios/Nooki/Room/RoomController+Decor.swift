@@ -28,6 +28,7 @@ extension RoomController {
         if Set(places.keys) != Set(home.placedSpots.keys) || places.values.map(\.id) != home.placedSpots.values.map(\.id) {
             home.placedSpots = places
         }
+        home.arrange(next.layout)
     }
 
     /// Where the cat goes to use each kind of piece the player stood: round whatever is in the way to the floor

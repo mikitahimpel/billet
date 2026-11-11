@@ -11,6 +11,7 @@ struct DecorPanel: View {
 
     private var machine: DecorMachine.State { state.decor.state }
     private var selected: String? { machine.selection }
+    @State private var confirmingReset = false
 
     var body: some View {
         Card {
@@ -42,6 +43,10 @@ struct DecorPanel: View {
                     .lineLimit(2)
             }
             Spacer(minLength: 0)
+            if machine.book.undo != nil {
+                PillButton("Undo", symbol: "arrow.uturn.backward") { state.decor.send(.undone) }
+                    .accessibilityIdentifier("decorUndo")
+            }
             Button("Done") { done() }
                 .buttonStyle(PrimaryButtonStyle(fullWidth: false))
                 .accessibilityIdentifier("decorDone")
@@ -49,6 +54,15 @@ struct DecorPanel: View {
     }
 
     private var hint: String {
+        switch machine.book.notice {
+        case .noRoomToTurn: return "There's no room to turn it. Put it away?"
+        case .slid: return "It didn't fit there, so it slid to the nearest spot."
+        case .swapped: return "Changed places."
+        case .rejected: return "That doesn't fit there."
+        case .lastRest: return "\(state.petName) needs a bed or a sofa to rest on."
+        case .reset: return "The room is as it first was."
+        case nil: break
+        }
         switch machine.verdict {
         case .fits:
             selected == nil ? "Tap a piece, or place one below." : "Drag to move. Tap the floor for your closet."
@@ -80,9 +94,12 @@ struct DecorPanel: View {
     @ViewBuilder private var closet: some View {
         let items = machine.book.closet
         if items.isEmpty {
-            Text("Everything you own is in the room. Buy more in the Shop.")
-                .font(.ourioCaption)
-                .foregroundStyle(Ink.textSecondary)
+            VStack(alignment: .leading, spacing: Space.s) {
+                Text("Everything is in the room. Tap a piece to move, turn or put it away.")
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.textSecondary)
+                resetButton
+            }
         } else {
             ScrollView(.horizontal) {
                 HStack(spacing: Space.s) {
@@ -111,7 +128,19 @@ struct DecorPanel: View {
             }
             .scrollIndicators(.hidden)
             .fixedSize(horizontal: false, vertical: true)
+            resetButton
         }
+    }
+
+    private var resetButton: some View {
+        PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
+            .accessibilityIdentifier("decorReset")
+            .confirmationDialog("Put everything back where it first stood?", isPresented: $confirmingReset, titleVisibility: .visible) {
+                Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("The furniture goes back to its first places. What you bought is placed again where it fits.")
+            }
     }
 
     private func art(_ id: String) -> some View {

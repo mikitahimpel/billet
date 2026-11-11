@@ -3,7 +3,8 @@
 Run:
   blender -b --python Tools/make_room.py -- Nooki/Resources/Room [name ...]
 
-Writes Room_<name>.usdz. The furniture is modelled in the room's own coordinates (meters, floor top at
+Writes Room_<name>.usdz (furniture: what never moves; ball, yarn: toys) and Base_<name>.usdz, one per piece of the
+room's own furniture that the player can move (name `Base_<piece>` selects one). The furniture is modelled in the room's own coordinates (meters, floor top at
 y = 0.014, the room spanning x and z -0.5...0.5), so the app adds it at the pivot's origin as it is; the toys are
 modelled around their own origin, because the app moves them. Objects named Glow_<part> stay separate: the app
 gives them its emissive material (see DioramaScene.glows). Everything else in a file is joined into one mesh.
@@ -162,6 +163,10 @@ def window():
     for dy in (-0.06, 0.06):
         rbox((0.014, 0.014, 0.335), (-0.472, cy + dy, cz), wood, bevel=0.004)
 
+
+
+def window_seat():
+    wood, light = mat(WOOD, rough=0.6), mat(WOOD_LIGHT, rough=0.6)
     # The deep sill Mochi sits on, with a rounded nose, an apron under it and two corbels.
     rbox((0.19, 0.022, 0.42), (-0.41, 0.262, 0.0), light, bevel=0.007)
     rbox((0.024, 0.034, 0.4), (-0.322, 0.238, 0.0), wood, bevel=0.008)
@@ -372,9 +377,26 @@ def wires():
 
 
 def furniture():
-    for build in (window, nightstand, corner_plant, shelf, stool_lamp, cat_tree, bed, rug, basket, bowls, picture,
-                  floor_books, wires):
+    """What never moves: the round window, the shelf, the picture, the fairy lights' wire."""
+    for build in (window, shelf, picture, wires):
         build()
+
+
+# The room's own furniture, one file each: `Base_<name>.usdz`, its origin on the floor (y 0 at the boards' top) at
+# the middle of the cell the piece stands in when the room is as it always was (grid cells of 5 cm, as
+# tools/decor-lod/catalog.py BASE). A holder at that cell's middle, on the floor, puts it where it stood.
+PIECES = {
+    "windowseat": (window_seat, (-8, 0)),
+    "nightstand": (nightstand, (-8, 7)),
+    "plant": (corner_plant, (-8, -8)),
+    "lamp": (stool_lamp, (-2, -8)),
+    "cattree": (cat_tree, (7, -7)),
+    "bowls": (bowls, (2, -7)),
+    "donutbed": (bed, (1, -1)),
+    "basket": (basket, (7, 7)),
+    "books": (floor_books, (4, 8)),
+    "rug": (rug, (0, 1)),
+}
 
 
 # ---------------------------------------------------------------- toys, around their own origin
@@ -421,6 +443,15 @@ def join_solid():
     named(bpy.context.object, "Solid")
 
 
+def move_origin(u, v):
+    """Shifts everything so the origin is the middle of cell (u, v) on the boards, baked into the meshes."""
+    delta = Vector((-u * 0.05, v * 0.05, -FLOOR))
+    for o in bpy.context.scene.objects:
+        o.location += delta
+    bpy.ops.object.select_all(action="SELECT")
+    bpy.ops.object.transform_apply(location=True, rotation=False, scale=False)
+
+
 for name, build in FILES.items():
     if ONLY and name not in ONLY:
         continue
@@ -430,3 +461,14 @@ for name, build in FILES.items():
     join_solid()
     kit.export_usdz(os.path.join(OUT_DIR, f"Room_{name}.usdz"))
     print("ROOM", name)
+
+for name, (build, (u, v)) in PIECES.items():
+    if ONLY and f"Base_{name}" not in ONLY:
+        continue
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    kit._materials.clear()
+    build()
+    join_solid()
+    move_origin(u, v)
+    kit.export_usdz(os.path.join(OUT_DIR, f"Base_{name}.usdz"))
+    print("BASE", name)

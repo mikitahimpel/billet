@@ -1,4 +1,74 @@
 {
+  "Base_basket": {
+    "depth": 0.174,
+    "dx": 0.02,
+    "dz": 0.01,
+    "height": 0.0926,
+    "width": 0.174
+  },
+  "Base_books": {
+    "depth": 0.1282,
+    "dx": 0.0006,
+    "dz": -0.0002,
+    "height": 0.043,
+    "width": 0.1444
+  },
+  "Base_bowls": {
+    "depth": 0.09,
+    "dx": 0.007,
+    "dz": -0.02,
+    "height": 0.03,
+    "width": 0.2
+  },
+  "Base_cattree": {
+    "depth": 0.2,
+    "dx": 0.0113,
+    "dz": -0.01,
+    "height": 0.3868,
+    "width": 0.2026
+  },
+  "Base_donutbed": {
+    "depth": 0.3522,
+    "dx": 0.0102,
+    "dz": 0.0115,
+    "height": 0.0955,
+    "width": 0.3495
+  },
+  "Base_lamp": {
+    "depth": 0.1244,
+    "dx": 0.0,
+    "dz": -0.0202,
+    "height": 0.2865,
+    "width": 0.124
+  },
+  "Base_nightstand": {
+    "depth": 0.23,
+    "dx": 0.0137,
+    "dz": -0.02,
+    "height": 0.2942,
+    "width": 0.2173
+  },
+  "Base_plant": {
+    "depth": 0.142,
+    "dx": 0.0,
+    "dz": -0.0,
+    "height": 0.4072,
+    "width": 0.142
+  },
+  "Base_rug": {
+    "depth": 0.666,
+    "dx": 0.0,
+    "dz": -0.01,
+    "height": 0.0115,
+    "width": 0.666
+  },
+  "Base_windowseat": {
+    "depth": 0.42,
+    "dx": -0.0075,
+    "dz": -0.0,
+    "height": 0.3097,
+    "width": 0.195
+  },
   "Decor_armchair": {
     "depth": 0.75,
     "height": 0.84,

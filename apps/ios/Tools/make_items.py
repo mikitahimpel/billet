@@ -42,6 +42,7 @@ def mat(hex_color, rough=0.8, emit=0.0, sheen=0.0):
     if key in _materials:
         return _materials[key]
     m = bpy.data.materials.new(f"M_{hex_color:06X}")
+    m.use_nodes = True
     bsdf = m.node_tree.nodes["Principled BSDF"]
     bsdf.inputs["Base Color"].default_value = rgba(hex_color)
     bsdf.inputs["Roughness"].default_value = rough
