@@ -32,7 +32,7 @@ enum MochiPose: Equatable {
     static func pose(_ s: OurioSnapshot, drawing: LatestDrawing?) -> MochiPose {
         if s.isPurring { return .purring }
         if s.isNight { return .asleep }
-        if PartnerNews.latest(s, drawing: drawing) != nil { return .waiting }
+        if PartnerNews.freshDrawing(s, drawing: drawing) != nil { return .waiting }
         switch s.freshPartnerMood?.mood {
         case .sleepy: return .napping
         case .happy: return .chirpy
@@ -59,7 +59,7 @@ enum MochiPose: Equatable {
         case .purring: return "Love received"
         case .asleep: return "Lamps are on"
         case .waiting:
-            if case .drawing = PartnerNews.latest(s, drawing: drawing) { return "\(s.partner) drew you something" }
+            if PartnerNews.freshDrawing(s, drawing: drawing) != nil { return "\(s.partner) drew you something" }
             return "\(s.partner) is missing you"
         case .chirpy: return "\(s.partner) is happy"
         case .napping: return "\(s.partner) is sleepy"
@@ -84,13 +84,16 @@ enum PartnerNews: Equatable {
     /// How long a drawing stays news on the Home Screen.
     static let drawingNews: TimeInterval = 24 * 3600
 
+    static func freshDrawing(_ s: OurioSnapshot, drawing: LatestDrawing?) -> PartnerNews? {
+        guard let drawing else { return nil }
+        let age = s.date.timeIntervalSince(drawing.sentAt)
+        return age >= 0 && age < drawingNews && !drawing.strokes.isEmpty ? .drawing(drawing) : nil
+    }
+
     /// A drawing from the last day or a check-in that is still fresh, whichever is newer; a drawing without strokes
     /// isn't news.
     static func latest(_ s: OurioSnapshot, drawing: LatestDrawing?) -> PartnerNews? {
-        let drawn = drawing.flatMap { drawing -> PartnerNews? in
-            let age = s.date.timeIntervalSince(drawing.sentAt)
-            return age >= 0 && age < drawingNews && !drawing.strokes.isEmpty ? .drawing(drawing) : nil
-        }
+        let drawn = freshDrawing(s, drawing: drawing)
         let felt = s.freshPartnerMood.map(PartnerNews.mood)
         switch (drawn, felt) {
         case (let drawn?, let felt?): return drawn.date >= felt.date ? drawn : felt
