@@ -18,6 +18,9 @@ extension PushPayload {
     switch self {
     case .reaction(_, _, let reaction): "Reacted \(reaction.emoji) to your photo"
     case .alert(_, _, nil, nil, _): "Sent you a photo"
+    case .streak(_, true, let streak):
+      "Lit today's flame: \(streak.days) \(streak.days == 1 ? "day" : "days") in a row 🔥"
+    case .streak(_, false, _): "Did their part today. Your turn to light the flame."
     case .alert, .widget, .liveActivity: nil
     }
   }

@@ -9,6 +9,8 @@ public enum PushPayload: Codable, Hashable, Sendable {
     paper: PaperColor? = nil)
   /// To a photo's author.
   case reaction(noteId: NoteId, by: UserId, reaction: PhotoReaction)
+  /// To the partner whose turn it is (`lit` false), or who went first (`lit` true); `you` is them.
+  case streak(you: UserId, lit: Bool, streak: PairStreak)
   /// Always carries the strokes: a Live Activity has no network.
   case liveActivity(
     noteId: NoteId, author: UserId, compact: CompactStrokes, paper: PaperColor? = nil)
@@ -22,11 +24,21 @@ public enum PushPayload: Codable, Hashable, Sendable {
     case paper
     case by
     case reaction
+    case you
+    case lit
+    case streak
   }
 
   public init(from decoder: any Decoder) throws {
     let container = try decoder.container(keyedBy: CodingKeys.self)
     let tag = try container.decode(String.self, forKey: .tag)
+    if tag == "Streak" {
+      self = .streak(
+        you: try container.decode(UserId.self, forKey: .you),
+        lit: try container.decode(Bool.self, forKey: .lit),
+        streak: try container.decode(PairStreak.self, forKey: .streak))
+      return
+    }
     let noteId = try container.decode(NoteId.self, forKey: .noteId)
     if tag == "Reaction" {
       self = .reaction(
@@ -75,6 +87,12 @@ public enum PushPayload: Codable, Hashable, Sendable {
       try container.encode(noteId, forKey: .noteId)
       try container.encode(by, forKey: .by)
       try container.encode(reaction, forKey: .reaction)
+      return
+    case .streak(let you, let lit, let streak):
+      try container.encode("Streak", forKey: .tag)
+      try container.encode(you, forKey: .you)
+      try container.encode(lit, forKey: .lit)
+      try container.encode(streak, forKey: .streak)
       return
     }
     try container.encode(fields.0, forKey: .noteId)

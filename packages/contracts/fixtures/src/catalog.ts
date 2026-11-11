@@ -263,6 +263,7 @@ const yarn = Schema.decodeSync(RoomItemId)("yarn");
 const readingNook = Schema.decodeSync(PieceSetId)("reading-nook");
 const cozyAutumn = Schema.decodeSync(CollectionId)("cozy-autumn");
 const giftDay = Schema.decodeSync(LocalDay)("2026-11-05");
+const dayBeforeGift = Schema.decodeSync(LocalDay)("2026-11-04");
 const earnRef = Schema.decodeSync(EarnRef);
 const earnEntry = decodeCoinEntry({
   id: "earn:6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
@@ -1339,6 +1340,12 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("LoveStreak", LoveStreak, {
     default: { days: 0, best: 0 },
     alive: { days: 12, best: 30, lastDay: giftDay, restoredOn: giftDay },
+    "half-lit": {
+      days: 4,
+      best: 9,
+      lastDay: dayBeforeGift,
+      marks: [{ user: alice, day: giftDay }],
+    },
   }),
   fixture("StreakResponse", StreakResponse, {
     default: { streak: { days: 4, best: 4, lastDay: giftDay } },
@@ -1604,10 +1611,23 @@ export const catalog: ReadonlyArray<Fixture> = [
     "streak-changed": ServerMessage.cases.StreakChanged.make({
       streak: { days: 12, best: 30, lastDay: giftDay, restoredOn: giftDay },
     }),
+    "streak-changed-half-lit": ServerMessage.cases.StreakChanged.make({
+      streak: { days: 12, best: 30, lastDay: dayBeforeGift, marks: [{ user: bob, day: giftDay }] },
+    }),
   }),
   fixture("PushPayload", PushPayload, {
     "widget-with-compact": PushPayload.cases.Widget.make({ noteId, author: alice, compact }),
     "widget-without-compact": PushPayload.cases.Widget.make({ noteId, author: bob }),
+    "streak-turn": PushPayload.cases.Streak.make({
+      you: alice,
+      lit: false,
+      streak: { days: 4, best: 9, lastDay: dayBeforeGift, marks: [{ user: bob, day: giftDay }] },
+    }),
+    "streak-lit": PushPayload.cases.Streak.make({
+      you: bob,
+      lit: true,
+      streak: { days: 5, best: 9, lastDay: giftDay },
+    }),
     "alert-with-compact": PushPayload.cases.Alert.make({ noteId, author: alice, compact }),
     "alert-without-compact": PushPayload.cases.Alert.make({ noteId, author: bob }),
     "widget-text": PushPayload.cases.Widget.make({

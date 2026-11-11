@@ -89,6 +89,8 @@ import {
   reactionDeliveryId,
   riddleDeliveryId,
   riddleEndDeliveryId,
+  streakLitDeliveryId,
+  streakTurnDeliveryId,
   sendPushLane,
   type PushLaneSettings,
 } from "./apns-lanes.ts";
@@ -264,6 +266,12 @@ export class PairRoom extends DurableObject {
             return guesser === undefined
               ? undefined
               : { drawer, guesser, word, tries, state: state._tag };
+          },
+          streak: async () => {
+            const room = await this.snapshot();
+            return room._tag === "Active"
+              ? { streak: room.streak, members: room.members.map((member) => member.user) }
+              : undefined;
           },
           recipient: async (note) => {
             const room = await this.snapshot();
@@ -575,7 +583,8 @@ export class PairRoom extends DurableObject {
   }
 
   /**
-   * Counts `by`'s day in the streak and tells every socket that follows it; a milestone moves the
+   * Marks `by`'s day and tells every socket that follows the streak. The partner hears it's their
+   * turn, or that the day lit; a lit day's coins go to shop followers, and a milestone moves the
    * partner's Inbox count.
    */
   async recordStreakDay(by: UserId, request: RecordStreakDayRequest): Promise<RoomDecision> {
@@ -584,8 +593,18 @@ export class PairRoom extends DurableObject {
       "PairRoom.recordStreakDay",
     );
     this.pushStreak(decision);
+    if (decision._tag !== "Accepted") return decision;
+    for (const output of decision.outputs) {
+      if (output._tag !== "StreakChanged") continue;
+      if (output.waiting !== undefined) {
+        await this.enqueueDeliveries(streakTurnDeliveryId(output.waiting, by));
+      }
+      if (output.lit !== undefined) {
+        await this.enqueueDeliveries(streakLitDeliveryId(output.lit, by));
+      }
+    }
+    await this.pushShop(decision);
     if (
-      decision._tag === "Accepted" &&
       decision.outputs.some(
         (output) => output._tag === "StreakChanged" && output.reached !== undefined,
       )
@@ -848,6 +867,12 @@ export class PairRoom extends DurableObject {
     }
     await this.demoBotDoes(bot.bot, action).catch((error: unknown) =>
       this.run(() => Effect.logWarning("demo bot action failed", error)),
+    );
+    // A real partner's phone marks their streak day after each of these; without it the owner's day never lit. The
+    // bot has no clock of its own, so its day is the cat's.
+    const utcOffsetSeconds = room._tag === "Active" ? (room.cat?.profile.utcOffsetSeconds ?? 0) : 0;
+    await this.recordStreakDay(bot.bot, { at: this.clock(), utcOffsetSeconds }).catch(
+      (error: unknown) => this.run(() => Effect.logWarning("demo bot streak failed", error)),
     );
   }
 

@@ -164,7 +164,9 @@ final class ServerSession {
                         guessProgress: { [weak self] in self?.whoKnows.progressed(round: $0, answered: $1) },
                         guessRevealed: { [weak self] in self?.whoKnows.revealed(round: $0, reveal: $1, score: $2) },
                         riddle: { [weak self] in self?.drawGuess.changed($0) },
-                        streak: { [weak self] in self?.streak?.received(LoveStreak($0)) },
+                        streak: { [weak self] in
+                            self?.streak?.received(LoveStreak($0, you: (try? accounts.load())?.record.userID))
+                        },
                         catEntry: { [weak self] in self?.catEntry?($0) },
                         lastCatSeq: { [weak self] in self?.lastCatSeq?() },
                         presence: { [weak self] in self?.partnerPresence = $0 }))

@@ -27,6 +27,8 @@ export const room = sqliteTable(
     // The pair's local days, YYYY-MM-DD: the last one that counted, and the last restore.
     streakLastDay: text("streak_last_day"),
     streakRestoredOn: text("streak_restored_on"),
+    // The days after the last lit one that only one partner did yet: `StreakMark`s as JSON.
+    streakMarks: text("streak_marks"),
     lastReactionRev: integer("last_reaction_rev"),
     // The pair's local day it last opened the daily gift on; null before the first.
     giftDay: text("gift_day"),

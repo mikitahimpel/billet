@@ -44,8 +44,10 @@ import {
 } from "@billet/contracts-domain/shop";
 import {
   emptyStreak,
-  recordStreakDay,
+  markStreakDay,
   restoreStreak,
+  streakDayCoins,
+  streakMilestoneCoins,
   streakMilestones,
 } from "@billet/contracts-domain/streak";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
@@ -729,11 +731,21 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       // A phone that was offline reports a day late; more than a day back, or ahead of the room's
       // clock, is held to that bound.
       const happenedAt = Math.min(Math.max(command.happenedAt, at - streakReportWindow), at);
-      const streak = recordStreakDay(room.streak, localDayOf(happenedAt, utcOffsetSeconds));
+      const day = localDayOf(happenedAt, utcOffsetSeconds);
+      const members = [room.members[0].user, room.members[1].user] as const;
+      const streak = markStreakDay(room.streak, members, by, day);
       if (streak === room.streak) return accepted(room);
+      if (streak.lastDay !== day || streak.lastDay === room.streak.lastDay) {
+        return accepted({ ...room, streak }, [
+          RoomOutput.cases.StreakChanged.make({ streak, by, at, waiting: day }),
+        ]);
+      }
       const reached = streakMilestones.includes(streak.days) ? { reached: streak.days } : {};
-      return accepted({ ...room, streak }, [
-        RoomOutput.cases.StreakChanged.make({ streak, by, at, ...reached }),
+      const coins = streakDayCoins + (streakMilestoneCoins[streak.days] ?? 0);
+      const entry = coinEntry(`earn:streak:${day}`, "earn", coins, day, at);
+      return accepted(withCoins({ ...room, streak }, coins), [
+        RoomOutput.cases.StreakChanged.make({ streak, by, at, lit: day, ...reached }),
+        RoomOutput.cases.CoinsEntered.make({ entry }),
       ]);
     }
     case "RestoreStreak": {
