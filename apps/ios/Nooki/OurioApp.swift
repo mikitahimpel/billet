@@ -18,8 +18,8 @@ struct OurioApp: App {
 
     init() {
         #if LABS_YES
-        // Metal reads it when it first draws; the Info.plist key (MetalHudEnabled) asks for the same.
-        setenv("MTL_HUD_ENABLED", "1", 1)
+        // Metal reads it when it first draws; Labs > Performance switches it, and it starts off.
+        if PerfLabMachine.State.saved(in: .standard).isOn(.metalHud) { setenv("MTL_HUD_ENABLED", "1", 1) }
         #endif
         NavigationBarStyle.prepare()
         // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.

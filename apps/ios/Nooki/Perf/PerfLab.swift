@@ -33,6 +33,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     /// The room drawn by our own renderer and frame loop, at 30 frames a second when nothing moves and none when it
     /// is not on screen, in place of RealityView. A spike; read at launch.
     case ownLoop
+    /// Metal's performance overlay (fps, GPU ms) over the app; read at launch, off unless switched on.
+    case metalHud
 
     var title: String {
         switch self {
@@ -48,6 +50,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .msaa: "Antialiasing (4 samples)"
         case .hdr: "HDR rendering"
         case .ownLoop: "Room on its own 30 fps loop (spike; next launch)"
+        case .metalHud: "Metal HUD overlay (fps, GPU; next launch)"
         }
     }
 
@@ -65,6 +68,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .msaa: "square.dashed"
         case .hdr: "sun.max"
         case .ownLoop: "gauge.with.dots.needle.33percent"
+        case .metalHud: "chart.xyaxis.line"
         }
     }
 
@@ -73,7 +77,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     var shippedOn: Bool {
         switch self {
         case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .sway, .hdr: true
-        case .flatten, .motes, .msaa, .ownLoop: false
+        case .flatten, .motes, .msaa, .ownLoop, .metalHud: false
         }
     }
 }
