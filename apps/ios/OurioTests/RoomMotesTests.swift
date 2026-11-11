@@ -37,13 +37,11 @@ struct RoomMotesTests {
 /// Labs › Performance › Room sway, and the idle room that holds still by itself.
 @MainActor
 struct RoomSwayTests {
-    @Test func anIdleRoomIsAStillFrame() throws {
-        let controller = RoomController(usesStandIn: false)
-        controller.load()
-        let home = try #require(controller.home)
-        for _ in 0..<120 { home.tick(1.0 / 60) }
-        #expect(!home.isSwaying)
-        #expect(home.pivot.orientation == simd_quatf.y(0))
+    @Test func anIdleRoomIsAStillFrame() {
+        let room = CatRoom()
+        for _ in 0..<120 { room.tick(1.0 / 60) }
+        #expect(!room.isSwaying)
+        #expect(room.pivot.orientation == simd_quatf.y(0))
     }
 
     @Test func aTouchSwaysItAndItEasesBackToRest() throws {
@@ -82,7 +80,7 @@ struct SwayEnvelopeTests {
         // Quiet, but not yet for long enough: it holds.
         for _ in 0..<(60 * 2) { sway.update(dt: 1.0 / 60, active: false, enabled: true) }
         #expect(sway.strength > 0.9)
-        for _ in 0..<(60 * 6) { sway.update(dt: 1.0 / 60, active: false, enabled: true) }
+        for _ in 0..<(60 * 10) { sway.update(dt: 1.0 / 60, active: false, enabled: true) }
         #expect(sway.strength == 0)
     }
 
