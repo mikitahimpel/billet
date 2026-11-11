@@ -40,6 +40,7 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             HeroBackdrop()
+            if flow.page == .welcome { WarmBackdrop().transition(.opacity) }
             VStack(spacing: 0) {
                 header
                 page
@@ -216,7 +217,7 @@ struct OnboardingView: View {
         // the page scrolls with a smaller cat.
         ViewThatFits(in: .vertical) {
             coatPage(stage: nil)
-            ScrollView { coatPage(stage: 200) }.softScrollEdges()
+            ScrollView { coatPage(stage: 200) }.ourioScrollEdges()
                 .scrollBounceBehavior(.basedOnSize)
         }
     }
@@ -503,7 +504,7 @@ struct MochiSays: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
-                .cornerFill(.card, Ink.surface)
+                .cardSurface()
         }
     }
 }

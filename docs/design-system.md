@@ -4,6 +4,9 @@ One look for the whole app: native iOS 26 with a warm honey accent. Everything b
 package `packages/ios/design` (module `Design`); `Settings → Labs → Style` draws it on a device. Read this
 before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 
+The model behind the rules, clay for content and glass for chrome, is [design/one-system.md](design/one-system.md);
+where the app stands against it is [design/audit-2026-11-11.md](design/audit-2026-11-11.md).
+
 `docs/design.md` is the old Little House design and does not describe the app.
 
 ## Rules
@@ -50,14 +53,14 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
     content; `GlassSegmented` is only the Living room | Bedroom switch. The Shop's category row is navigation, not a
     switch: pinned `FilterChip`s with an icon each.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
-    `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
-    `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
-    glass is tinted enough that nothing ghosts through it. Chips, a search field or a subtitle pinned over a
-    sheet's list go in `.scrollHeader { }`, which pins them over the scroll view so the rows fade under them on
-    the sheet's ground instead of being cut at their edge. `check-design.mjs` fails on a scroll view without
-    either in a file on the design package, and on any `.hard` edge. In an opaque sheet the fade alone lets text
-    show behind the title, so `Page` and `BilletSheet` also lay the sheet's ground under its bar and fade it out
-    just below; a `List` in a sheet adds `.sheetBarBacking()` under its `.scrollHeader`.
+    `.ourioScrollEdges()`: the system's iOS 26 scroll edge effect, the same at the top and the bottom, as in the
+    system's own sheets. `Page`, `BilletSheet`, `TabPage` and Home's bars already apply it. Content at rest starts
+    below the bar, so only what has scrolled under it softens. Before iOS 26 Home's bars draw the fade themselves.
+    Never a hard edge, and never a gradient or ground of your own laid under a bar: it shows as a band. Chips, a
+    search field or a subtitle pinned over a sheet's list go in `.scrollHeader { }`: the system draws no edge
+    effect under such a bar in a sheet, so it lays the sheet's ground behind the header and the title bar and
+    fades it out over `Space.xl` below, and the rows sink away under it. `check-design.mjs` fails on a scroll view without either in a file on the design package,
+    and on `.scrollEdgeEffectStyle` or `.scrollEdgeEffectHidden` outside the design package.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
@@ -74,12 +77,20 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
 | A row | `Row(title, detail:, symbol:, tint:) { trailing }`, `ToggleRow`, `PickerRow`, `RowChevron` |
 | Any other content on a card | `Card { ... }` or `.cardSurface()`; `state: .selected / .disabled` for a card that is chosen or can't be |
-| A state read at a glance that a tap acts on (the cat's needs) | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. The state is a word, never a bar or a percentage (VoiceOver gets the number through `value:`); only a state that wants something now is `.raised` |
+| A state read at a glance that a tap acts on, in a list | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. Only a state that wants something now is `.raised` |
+| A level read at a glance that a tap acts on (the cat's needs) | `GaugeTile(title, state:, hint:, value:, symbol:, tint:, emphasis:, action:) { }` in an `ItemGrid`: a ring that fills to the level round its glyph, the percentage, the state in a word, what comes next ("Hungry in about 2 h") and the care as a pill; `note:` when nothing can be done. One tint per level; only the one that wants something now is `.raised`, and only it takes the accent |
+| Several levels at once round an avatar | `SegmentedRing([.init(value:tint:)])`: an arc each, clockwise from the upper leading quarter, in the order their tiles have on the sheet the avatar opens |
+| A progress along a line (a level, a trait) | `MeterBar(value:tint:)` |
+| A day or a history as a few marks in order | `MomentStrip([StripMoment(id:symbol:tint:title:time:)])`: a card that scrolls sideways under faded edges and opens at the latest; a list at accessibility sizes |
 | What an avatar or a round control wants, while it matters | `SymbolBadge(symbol:tint:)` at its top trailing corner; nothing when nothing is wanted |
 | A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
 | Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
 | A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, tag:, open:) { art } leadingBadge: trailingBadge: footer: }`; `tag: ItemTag(title, color:)` is its kind (a rarity) as a dot and a word |
-| A picture or tile clipped to the scale | `.corners(.card / .inner / .control)`, a tile's fill `.cornerFill(.inner, style)` |
+| A picture clipped to the scale | `.corners(.card / .inner / .control)` |
+| A recess in a card: an art slot, a thumbnail's backdrop, an inset note | `.wellSurface()`; never a fill of your own, and never a card in a card |
+| A line between two rows you lay out yourself on one card | `Hairline(inset:)`; `GroupedSection` draws its own |
+| Progress toward one goal, as a bar in a card | `ProgressBar(value:total:tint:)`, with an `.accessibilityLabel` |
+| A round control on content (add to a list, the next picture) | `RoundButton(symbol:label:style:)`, `.honey` for the screen's one accent; over the room or a canvas it is `GlassIconButton` |
 | The top of a card | `CardHeader(title, detail:, symbol:, tint:)`, or with `leading:` / `detail:` / `trailing:` views; art goes in `CardArt` |
 | A text field | `Field(placeholder, text:, axis:, lines:, font:, failed:)` |
 | A labelled field with its error or footnote | `FormField(label, placeholder:, text:, footer:, error:)` |
@@ -119,6 +130,9 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't put `ContentUnavailableView` in a large sheet; it fills the space.
 - Don't force `.colorScheme(.light)` on a card to make it pop; use `Ink.surface`.
 - Don't write a radius as a number, or pick one by eye; see [Shape](#shape).
+- Don't fill a shape behind content yourself (`.cornerFill`, `.background(Ink.surface…)`, `Ink.surfaceRaised`,
+  `.listRowBackground`): a slab is `cardSurface()`, a recess in it `.wellSurface()`. `check-design.mjs` counts
+  them (`flat-surface`), and a stroke of your own (`raw-stroke`).
 - Don't draw a field with `TextField` + `.background(...)`; use `Field` or `.fieldSurface()`.
 - Don't make a "Try again" `Button` of your own; `check-design.mjs` fails on one (`retry-baseline.json`).
 - Don't stack chips or a field above a sheet's `ScrollView` in a `VStack`; the rows cut hard under them. Use
@@ -190,7 +204,7 @@ on `.calloutBubble(pointer:)`.
 
 - `packages/ios/scripts/check-design.mjs` (CI, `ios:format:check`) runs the rules in `design-rules.mjs` over
   feature code: raw colours, non-`.ourio` fonts, numeric paddings and heights, hand-made corners, shadows,
-  blurs and materials, `GeometryReader`, system or plain button styles, TipKit without the Hint style, and Text
+  flat fills, strokes, blurs and materials, `GeometryReader`, system or plain button styles, TipKit without the Hint style, and Text
   without a text style. Each file may keep at most its count in `packages/ios/design/lint/baseline.json`, which
   only shrinks (`node packages/ios/scripts/check-design.mjs --update` lowers it after a cleanup, never raises it).
   `lint/allow.json` exempts a path from one rule and grows only together with a change to the design package.
@@ -206,6 +220,8 @@ on `.calloutBubble(pointer:)`.
 - `Color(...)`, `.white`, `.black` or a system colour for UI; `.font(.system...)`, `.headline` and friends.
 - `RoundedRectangle`, `.cornerRadius`, `.clipShape(.rect(cornerRadius:))`: use `Card`, `.cardSurface()`,
   `.corners(_:)`.
+- `.cornerFill`, `Ink.surface` or `Ink.surfaceRaised` as a fill, `.listRowBackground`, `.stroke`, `.strokeBorder`:
+  content sits on `cardSurface()` or in `.wellSurface()`.
 - `.shadow`, `.blur`, a `Material`, `.glassEffect` of your own (`Toast` and `glass(_:role:)` have theirs);
   `GeometryReader` for layout.
 - `.buttonStyle(.plain / .bordered / .borderedProminent)` on a visible button; a hand-made toast, hint or
@@ -223,6 +239,7 @@ on `.calloutBubble(pointer:)`.
 | `Ink.disabledFill`, `.disabledText`, `.destructive` | disabled buttons, destructive text and tiles |
 | `Ink.primary`, `.secondary`, `.glassTint` | white on the dark full-screen canvas's warm glass only |
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
+| `Color.lilac`, `.sage` | with honey and blush, the clay tints of the cat's four needs (Rested, Playful, Full, Loved); never a button or text |
 | `.ourioLargeTitle` `.ourioTitle` `.ourioValue` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles; `ourioMicro` is 12 pt, the smallest text in the app |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 | `Motion.*` | every animation, see Motion |

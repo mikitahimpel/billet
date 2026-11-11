@@ -1,8 +1,9 @@
 ---
-import { Image } from "astro:assets";
+import { getImage } from "astro:assets";
 import appIcon from "../assets/app-icon.png";
 import waiting from "../assets/art/whoknows-waiting.webp";
-import GetApp from "../components/get-app.astro";
+import Art from "../components/art.astro";
+import EndCard from "../components/end-card.astro";
 import Page from "../layouts/page.astro";
 
 // Steps of apps/ios/Nooki/Onboarding and packages/backend/pairing: a 10-character code, valid for 24 hours.
@@ -43,45 +44,50 @@ const schema = [
     step: steps.map((step, i) => ({ "@type": "HowToStep", position: i + 1, name: step.name, text: step.text })),
   },
 ];
+const icon = await getImage({ src: appIcon, width: 192, format: "webp" });
 ---
 
 <Page
   title="How Ourio works: pair two iPhones with one code"
   description="How to set up Ourio, the couples app: install it, pick your cat, send your partner a 10-character invite code valid for 24 hours, and share one room. Plus how to unpair."
   schema={schema}
+  bodyClass="site-how"
 >
-  <section class="container-page grid items-center gap-12 pt-10 pb-16 md:pt-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-20">
-    <div>
+  <section class="wrap pg-hero">
+    <div class="pg-hero-copy">
       <p class="eyebrow">How it works</p>
-      <h1 class="mt-5 max-w-[16ch] text-h2">Two phones, one code, one room.</h1>
-      <p class="mt-6 max-w-[38rem] text-lead text-soft">
+      <h1>Two phones, one code, one room.</h1>
+      <p class="lead">
         Setting up Ourio takes about two minutes. One of you installs it and gets a 10-character invite code; the other
         enters that code within 24 hours. From then on you share one room, one cat and everything you make for each other.
         A room holds exactly two people.
       </p>
     </div>
-    <figure class="relative grid place-items-center">
-      <div class="lamp-glow absolute inset-0" aria-hidden="true"></div>
-      <Image src={waiting} alt="Mochi waiting beside a phone on a cushion" widths={[360, 720, 1080]} sizes="(min-width: 1024px) 400px, 70vw" class="relative max-h-[22rem] w-auto" loading="eager" />
-    </figure>
+    <Art
+      picture={{ src: waiting, alt: "Mochi waiting beside a phone on a cushion", kind: "cutout" }}
+      class="pg-hero-art"
+      eager
+    />
   </section>
 
-  <section class="container-page pb-16 md:pb-24" aria-labelledby="steps">
+  <section class="pg wrap" aria-labelledby="steps">
     <h2 id="steps" class="sr-only">Steps</h2>
-    <ol class="grid gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-3">
+    <ol class="pg-steps n6 reveal">
       {
         steps.map((step, i) => (
-          <li class="lit-panel flex flex-col p-6 md:p-8">
-            <span class="font-mono text-label text-honey tabular-nums">{String(i + 1).padStart(2, "0")}</span>
-            <h3 class="mt-2 text-[1.375rem] leading-tight font-extrabold">{step.name}</h3>
-            <p class="mt-3 text-body text-soft">{step.text}</p>
+          <li>
+            <span class="step-n" aria-hidden="true">
+              {String(i + 1).padStart(2, "0")}
+            </span>
+            <h3>{step.name}</h3>
+            <p>{step.text}</p>
+            {i === 0 && (
+              <img class="step-icon" src={icon.src} alt="" width="64" height="64" loading="lazy" decoding="async" />
+            )}
             {i === 3 && (
-              <span class="mt-5 self-start rounded-plate bg-plate px-4 py-3 font-mono text-[1.25rem] leading-none tracking-[0.1em] text-honey" aria-hidden="true">
+              <span class="code-chip" aria-hidden="true">
                 7KQM2&thinsp;XWPRD
               </span>
-            )}
-            {i === 0 && (
-              <Image src={appIcon} alt="" widths={[64, 128]} sizes="64px" class="mt-5 size-16 rounded-[15px]" />
             )}
           </li>
         ))
@@ -89,28 +95,30 @@ const schema = [
     </ol>
   </section>
 
-  <section class="border-t border-paper/10 py-16 md:py-24">
-    <div class="container-page grid gap-10 md:grid-cols-2 md:gap-16">
-      <div>
-        <h2 class="text-h3">What you share once you're paired</h2>
-        <p class="mt-4 text-body text-soft">
+  <div class="pg wrap pg-cols">
+    <section class="pg-col">
+      <div class="txt">
+        <h2 class="pg-h2">What you share once you're paired</h2>
+        <p>
           One room and one cat, one coin balance, your Moments, notes and drawings, the Us tab's lists, wishlists, calendar
           and date ideas, your love streak and the games. Everything one of you does shows up on the other phone, often on
           the Lock Screen through a widget.
         </p>
-        <a href="/features/" class="mt-5 inline-block font-bold text-honey underline underline-offset-4">See every feature</a>
+        <a class="pg-link" href="/features/">See every feature</a>
       </div>
-      <div>
-        <h2 class="text-h3">Unpairing, blocking and starting again</h2>
-        <p class="mt-4 text-body text-soft">
+    </section>
+    <section class="pg-col">
+      <div class="txt">
+        <h2 class="pg-h2">Unpairing, blocking and starting again</h2>
+        <p>
           In Settings, Unpair ends the pair for both of you; you can pair again with a new code. The shared room, with its
           notes, photos, cat and activity, is deleted, and each of you keeps what you bought and half the coins. Block partner
           also stops the two of you pairing again, and Report partner tells us what happened.
         </p>
-        <a href="/help/#unpair" class="mt-5 inline-block font-bold text-honey underline underline-offset-4">Help with unpairing</a>
+        <a class="pg-link" href="/help/#unpair">Help with unpairing</a>
       </div>
-    </div>
-  </section>
+    </section>
+  </div>
 
-  <GetApp title="Your room is ready." />
+  <EndCard title="Your room is ready." />
 </Page>

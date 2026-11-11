@@ -21,6 +21,7 @@ struct OurioWidgetBundle: WidgetBundle {
         CatLockWidget()
         PartnerLockWidget()
         PetMochiControl()
+        FeedMochiControl()
         SendHugControl()
         NoteAccessoryWidget()
         NewNoteControl()

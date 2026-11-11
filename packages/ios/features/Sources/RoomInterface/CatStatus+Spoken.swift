@@ -3,10 +3,12 @@ import Pet
 extension CatStatus {
   /// What VoiceOver says of her: what she is doing and, when a need is not met, what she would like.
   public var spoken: String {
-    let doing = mind.map(Self.doing) ?? "Settling in"
     guard let needs, let wish = Self.wish(needs.lowest) else { return doing }
     return "\(doing), \(wish)"
   }
+
+  /// What she is doing, in a word or two.
+  public var doing: String { mind.map(Self.doing) ?? "Settling in" }
 
   private static func doing(_ mind: CatMind) -> String {
     switch mind {

@@ -1,6 +1,4 @@
 import { fileURLToPath } from "node:url";
-import react from "@astrojs/react";
-import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 import { writeMarkdownTwins } from "./scripts/ai/build-markdown.mjs";
 import { siteUrl } from "./src/config";
@@ -10,7 +8,6 @@ export default defineConfig({
   // Every page is a folder (/faq/ → /faq/index.html), so its Markdown twin sits beside it at /faq/index.md.
   trailingSlash: "always",
   integrations: [
-    react(),
     {
       name: "markdown-twins",
       hooks: {
@@ -21,5 +18,4 @@ export default defineConfig({
     },
   ],
   devToolbar: { enabled: false },
-  vite: { plugins: [tailwindcss()] },
 });

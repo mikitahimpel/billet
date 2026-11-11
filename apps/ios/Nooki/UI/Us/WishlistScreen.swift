@@ -268,14 +268,14 @@ struct WishlistScreen: View {
                 Text("\(otherName) hasn't filled this in yet.")
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
-                    .padding(Space.l)
+                    .padding(CardMetrics.padding)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .cornerFill(.card, Ink.surface)
+                    .cardSurface()
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.label) { index, row in
                         if index > 0 {
-                            Rectangle().fill(Ink.separator).frame(height: 1)
+                            Hairline()
                         }
                         let value = loves[keyPath: row.keyPath]
                         HStack(alignment: .firstTextBaseline, spacing: Space.m) {
@@ -294,8 +294,8 @@ struct WishlistScreen: View {
                     }
                 }
                 .padding(.horizontal, Space.l)
-                .padding(.vertical, 2)
-                .cornerFill(.card, Ink.surface)
+                .padding(.vertical, Space.xxs)
+                .cardSurface()
                 .contentShape(.rect)
                 .onTapGesture { if mine { editingLoves = true } }
             }
@@ -348,10 +348,10 @@ private struct WishCard<Actions: View>: View {
             }
             actions
         }
-        .padding(Space.l)
+        .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cornerFill(.card, Ink.surface)
-        .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .cardSurface()
+        .contentShape(.rect)
         .task(id: wish) { await loadImage() }
     }
 

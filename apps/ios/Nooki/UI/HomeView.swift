@@ -90,7 +90,10 @@ struct HomeView: View {
         .onChange(of: state.shop.owned, initial: true) { _, owned in state.decor.send(.owned(owned)) }
         .onChange(of: state.shop.serverLayout, initial: true) { _, layout in
             state.decorSync.client = { [weak session] in session?.shopSync }
-            state.decorSync.heard(layout)
+            state.decorSync.heard(layout, stowed: state.shop.serverStowed)
+        }
+        .onChange(of: state.shop.serverStowed) { _, stowed in
+            state.decorSync.heard(state.shop.serverLayout, stowed: stowed)
         }
         .task {
             if let item = UserDefaults.standard.string(forKey: "decorate") { state.decor.send(.opened(item: item == "closet" ? nil : item)) }
@@ -229,7 +232,7 @@ struct HomeView: View {
         ZStack {
             // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
             // and the glass over them never redraw a moving backdrop every frame.
-            WarmBackdrop(drifts: roomOnScreen)
+            WarmBackdrop(drifts: roomOnScreen && perfLab.isOn(.drift) && perfLab.tier.plan.sway)
 
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
             RoomHost(input: roomInput, controller: room).equatable()
@@ -403,6 +406,7 @@ struct HomeView: View {
         case .active:
             // The first call is launch, where every store has just been read.
             state.refresh(reloading: old != phase)
+            for _ in 0..<state.takeWidgetFeeds() { room.feed() }
             room.appOpened()
             visitHints()
             Task {
@@ -514,13 +518,18 @@ struct HomeView: View {
     private var barGlass: GlassRendering { perfLab.isOn(.barGlass) ? hud.glass : .flat }
 
     private var roomInput: RoomInput {
+        let plan = perfLab.tier.plan
         let visibility: RoomVisibility =
-            roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
+            roomOnScreen && !plan.still ? .visible : (showsRoom ? .covered : .hidden)
+        let rate = perfLab.isOn(.splatRate) ? 30 : 0
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes),
-            sway: perfLab.isOn(.sway), decor: roomDecor,
-            rendering: RoomRendering(antialiasing: perfLab.isOn(.msaa), hdr: perfLab.isOn(.hdr)))
+            catName: state.petName, partnerHere: session?.partnerHere == true,
+            motes: perfLab.isOn(.motes) && plan.motes,
+            sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,
+            rendering: RoomRendering(
+                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr),
+                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0))
     }
 
     private var arranging: Bool { state.decor.state.isArranging }

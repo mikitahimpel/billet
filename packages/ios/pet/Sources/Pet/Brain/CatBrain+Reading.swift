@@ -33,6 +33,23 @@ extension CatBrain {
       purring: purrs(interaction))
   }
 
+  /// Today so far, the stretch under way included.
+  public var today: CatDiary {
+    var diary = diary
+    diary.spent(activity.step.group, from: activity.groupStart, to: time, utcOffset: utcOffset)
+    return diary
+  }
+
+  /// Today as a few moments, oldest first: what it did on its own and what `events` did with it.
+  public func dayMoments(events: some Sequence<LifeEvent>) -> [CatDayMoment] {
+    CatDayStory.moments(
+      diary: today, events: events,
+      dayStart: Self.dayStart(before: time, utcOffset: utcOffset, config: config), now: time,
+      utcOffset: utcOffset)
+  }
+
+  public var asleep: Bool { vitality == .asleep }
+
   /// The needs as of the last time the brain looked at its life.
   public var needs: PetNeeds { life.needs }
 

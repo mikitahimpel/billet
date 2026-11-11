@@ -1,17 +1,17 @@
 ---
-import { Image } from "astro:assets";
 import gaveUp from "../assets/art/drawguess-giveup.webp";
+import Art from "../components/art.astro";
 import Page from "../layouts/page.astro";
 ---
 
-<Page title="Page not found · Ourio" description="This page isn't in Ourio's room." noindex>
-  <section class="container-page flex flex-col items-center py-20 text-center md:py-28">
-    <Image src={gaveUp} alt="Mochi looking at a crumpled sheet of paper" widths={[240, 480]} sizes="240px" class="max-h-64 w-auto" loading="eager" />
-    <h1 class="mt-6 text-h2">Mochi can't find that page.</h1>
-    <p class="mt-5 max-w-[30rem] text-lead text-soft">It may have moved. Try the home page or the list of features.</p>
-    <div class="mt-8 flex flex-wrap justify-center gap-3">
-      <a href="/" class="rounded-full bg-gold px-6 py-3 font-extrabold text-ink">Home</a>
-      <a href="/features/" class="rounded-full bg-raised px-6 py-3 font-extrabold">All features</a>
+<Page title="Page not found · Ourio" description="This page isn't in Ourio's room." noindex bodyClass="site-lost">
+  <section class="wrap lost">
+    <Art picture={{ src: gaveUp, alt: "Mochi looking at a crumpled sheet of paper", kind: "cutout" }} eager />
+    <h1>Mochi can't find that page.</h1>
+    <p class="lead">It may have moved. Try the home page or the list of features.</p>
+    <div class="lost-btns">
+      <a class="btn btn-gold" href="/">Home</a>
+      <a class="btn btn-ghost" href="/features/">All features</a>
     </div>
   </section>
 </Page>

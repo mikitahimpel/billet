@@ -88,8 +88,8 @@ struct HomeStores {
                 storage: .appGroup(.directory(AppGroup.container)),
                 feedback: { feedback in
                     switch feedback {
-                    case .placed: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                    case .blocked, .rejected: UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    case .placed, .slid, .swapped, .reset: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    case .blocked, .rejected, .noRoomToTurn, .lastRest: UINotificationFeedbackGenerator().notificationOccurred(.warning)
                     }
                 },
                 share: { [weak decorSync] in decorSync?.push($0) }))
@@ -258,6 +258,14 @@ final class HomeState {
         guard pets > 0 else { return }
         activity.save()
         for _ in 0..<min(pets, 5) { care.pet() }
+    }
+
+    /// The meals given from a widget since the last look, for her room to serve.
+    func takeWidgetFeeds() -> Int {
+        var activity = WidgetActivity.load()
+        let feeds = activity.takePendingFeeds()
+        if feeds > 0 { activity.save() }
+        return min(feeds, 2)
     }
 
     /// Deletes every store's files from the app group (or Documents) and this phone's preferences; the caller starts

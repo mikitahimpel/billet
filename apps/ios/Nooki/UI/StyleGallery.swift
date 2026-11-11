@@ -45,6 +45,17 @@ struct StyleGallery: View {
                 StatusRow("Rest", state: "Wide awake", symbol: "moon.zzz.fill", note: "Naps on her own")
                 StatusRow("Love", state: "Adored", symbol: "heart.fill", tint: .blushPink, action: "Pet") {}
             }
+            ItemGrid {
+                GaugeTile("Full", state: "Hungry", hint: "Would love a meal", value: 0.3, symbol: "fork.knife",
+                          emphasis: .raised, action: "Feed") {}
+                GaugeTile("Rested", state: "Wide awake", hint: "Fine for today", value: 0.9, symbol: "moon.zzz.fill",
+                          tint: .lilac, note: "Naps on her own")
+            }
+            MomentStrip([
+                StripMoment(id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7"),
+                StripMoment(id: "2", symbol: "fork.knife", tint: .honey, title: "Ate", time: "8:12"),
+                StripMoment(id: "3", symbol: "heart.fill", tint: .blushPink, title: "Cuddles", time: "12:40"),
+            ])
             GroupedSection(header: "Chips", inset: Space.l) {
                 HStack {
                     ForEach(["Today", "Cats", "Rooms"].indices, id: \.self) { index in

@@ -32,47 +32,18 @@ struct WidgetFacts: Equatable {
     }
 }
 
-/// How Mochi is, in one word, from what the couple did. She is never sad, whatever the couple does or doesn't do.
-enum MochiPose: Equatable {
-    case purring, asleep, waiting, chirpy, napping, quiet, idle
-
-    static func pose(_ s: OurioSnapshot, drawing: LatestDrawing?) -> MochiPose {
-        if s.isPurring { return .purring }
-        if s.isNight { return .asleep }
-        if PartnerNews.freshDrawing(s, drawing: drawing) != nil { return .waiting }
-        switch s.freshPartnerMood?.mood {
-        case .sleepy: return .napping
-        case .happy: return .chirpy
-        case .busy: return .quiet
-        case .missing: return .waiting
-        case nil: return .idle
-        }
-    }
-
-    var word: String {
-        switch self {
-        case .purring: "Purring"
-        case .asleep: "Asleep"
-        case .waiting: "Waiting"
-        case .chirpy: "Chirpy"
-        case .napping: "Napping"
-        case .quiet: "Keeping quiet"
-        case .idle: "Sitting pretty"
-        }
+extension MochiPose {
+    static func pose(_ s: OurioSnapshot, drawing: LatestDrawing?, want: CatNeedsGlance.Want? = nil) -> MochiPose {
+        pose(isPurring: s.isPurring, isNight: s.isNight, freshDrawing: PartnerNews.freshDrawing(s, drawing: drawing) != nil,
+             partnerMood: s.freshPartnerMood?.mood, want: want)
     }
 
     func line(_ s: OurioSnapshot, drawing: LatestDrawing?) -> String {
-        switch self {
-        case .purring: return "Love received"
-        case .asleep: return "Lamps are on"
-        case .waiting:
-            if PartnerNews.freshDrawing(s, drawing: drawing) != nil { return "\(s.partner) drew you something" }
-            return "\(s.partner) is missing you"
-        case .chirpy: return "\(s.partner) is happy"
-        case .napping: return "\(s.partner) is sleepy"
-        case .quiet: return "\(s.partner) is busy"
-        case .idle: return "Say hi"
-        }
+        line(partner: s.partner, freshDrawing: PartnerNews.freshDrawing(s, drawing: drawing) != nil)
+    }
+
+    func speech(_ s: OurioSnapshot, drawing: LatestDrawing?) -> String {
+        speech(partner: s.partner, freshDrawing: PartnerNews.freshDrawing(s, drawing: drawing) != nil)
     }
 }
 
@@ -210,6 +181,10 @@ struct FamilyEntry: TimelineEntry {
     let facts: WidgetFacts
     let momentImage: Data?
     let momentDate: Date?
+    /// What she asks for now, from the needs the app last wrote and the care given from a widget since.
+    var want: CatNeedsGlance.Want?
+
+    var pose: MochiPose { MochiPose.pose(snapshot, drawing: facts.drawing, want: want) }
 }
 
 
@@ -251,13 +226,13 @@ extension LatestDrawing {
 extension FamilyEntry {
     /// What the in-app gallery and the placeholder draw: a plausible afternoon, nothing from the couple's stores.
     static func sample(now: Date = .now, mood: PartnerMood? = .missing, drawing: Bool = false, photo: Bool = false,
-                       purring: Bool = false) -> FamilyEntry {
+                       purring: Bool = false, want: CatNeedsGlance.Want? = nil) -> FamilyEntry {
         var snapshot = OurioSnapshot.sample(now: now)
         snapshot.partnerMood = mood.map { MoodCheckIn(mood: $0, date: now.addingTimeInterval(-1200)) }
         snapshot.isPurring = purring
         return FamilyEntry(date: now, snapshot: snapshot, facts: .sample(now: now, drawing: drawing),
                            momentImage: photo ? SamplePhoto.jpeg() : nil,
-                           momentDate: photo ? now.addingTimeInterval(-40 * 86_400) : nil)
+                           momentDate: photo ? now.addingTimeInterval(-40 * 86_400) : nil, want: want)
     }
 }
 

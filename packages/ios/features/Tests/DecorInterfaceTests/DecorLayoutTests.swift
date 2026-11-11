@@ -4,7 +4,7 @@ import Testing
 
 @Suite struct DecorLayoutTests {
   @Test func theShopsPiecesAreAllPlaceable() {
-    #expect(DecorItem.all.count == 47)
+    #expect(DecorItem.all.filter { !$0.isBase }.count == 47)
     #expect(Set(DecorItem.all.map(\.id)).count == DecorItem.all.count)
     #expect(DecorItem.item(shopID: "windowseat")?.mount == .floor)
     #expect(DecorItem.item(shopID: "clock")?.mount == .wall)
@@ -16,7 +16,7 @@ import Testing
   }
 
   @Test func aFullRoomLeavesTheNextPieceInTheCloset() {
-    let ids = DecorItem.all.map(\.id)
+    let ids = DecorItem.all.filter { !$0.isBase }.map(\.id)
     var layout = DecorLayout(stored: [])
     for (index, id) in ids.prefix(DecorLayout.maxPlaced).enumerated() {
       layout = layout.putting(Placement(item: id, surface: .floor, u: index, v: 0))
@@ -29,7 +29,7 @@ import Testing
   }
 
   @Test func everyPieceIsASizeTheRoomCanHold() {
-    for item in DecorItem.all {
+    for item in DecorItem.all where !item.isBase {
       #expect(item.width > 0 && item.width <= 0.6, "\(item.id)")
       #expect(
         item.mount == .wall ? item.depth == 0 : item.depth > 0 && item.depth <= 0.6, "\(item.id)")
@@ -128,7 +128,7 @@ import Testing
   /// The room is about 0.4 of real size, its walls 0.8 m high and its floor 1 m across: a piece that is not a
   /// plausible size there swallows the room (a lamp as wide as the armchair did).
   @Test func everyPieceIsASensibleSizeForTheRoom() {
-    for item in DecorItem.all {
+    for item in DecorItem.all where !item.isBase {
       let biggest = max(item.width, item.depth, item.mount == .wall ? 0 : item.height)
       #expect(biggest >= 0.04, "\(item.id) is too small to see")
       if item.mount == .wall {
@@ -179,7 +179,7 @@ import Testing
     }
     let blocked = DecorLayout(
       placements: [Placement(item: "monstera", surface: .floor, u: 7, v: 0)], stored: [])
-    #expect(!blocked.occupancy().connects(from: DecorRoom.home.spawn, to: DecorRoom.home.anchors))
+    #expect(!blocked.reachesAnchors())
   }
 
   @Test func aPieceTheRoutesCanGoRoundIsPlaced() {
@@ -187,8 +187,9 @@ import Testing
     let chair = Placement(item: "armchair", surface: .floor, u: -2, v: 6)
     #expect(layout.accepts(chair))
     let occupancy = layout.putting(chair).occupancy()
-    #expect(occupancy.connects(from: DecorRoom.home.spawn, to: DecorRoom.home.anchors))
-    let route = occupancy.route(from: DecorRoom.home.spawn, to: DecorRoom.home.anchors[0])
+    let next = layout.putting(chair)
+    #expect(next.reachesAnchors())
+    let route = occupancy.route(from: next.spawn(), to: next.anchors()[0])
     #expect(route != nil)
   }
 }

@@ -85,7 +85,6 @@ final class TabletopRoom: CatRoom {
         switch scenery {
         case .room, .rug: (0xFFE2B8, 320, 0xFFE7C4, 0xB97A45)
         case .kitchen: (0xFFF0D8, 340, 0xFFF4E4, 0xC9A27A)
-        case .garden: (0xFFF4DC, 380, 0xE8F2D8, 0x8F9A5E)
         }
     }
 
@@ -95,7 +94,9 @@ final class TabletopRoom: CatRoom {
         let g = pivot.group()
         let top = floorTop
         switch scenery {
-        case .room, .rug:
+        case .rug:
+            rugCorner(g)
+        case .room:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
             g.cylinder(0.002, 0.42, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, 0.02])
             g.cylinder(0.0024, 0.36, Clay.matte(0xE9C9A0, roughness: 1), at: [0, top + 0.0012, 0.02])
@@ -106,23 +107,33 @@ final class TabletopRoom: CatRoom {
             Props.plush(g, at: [0.36, top, backRow], rotation: .identity)
         case .kitchen:
             break
-        case .garden:
-            g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xB98A5E, roughness: 0.8), at: [0, 0, 0])
-            for z in stride(from: Float(-0.36), through: 0.4, by: 0.08) {
-                g.box(1.2, 0.002, 0.004, r: 0.001, Clay.matte(0x9C7048, roughness: 1), at: [0, top + 0.001, z])
-            }
-            // A hedge for a wall, in soft lumps.
-            g.box(1.6, 0.3, 0.1, r: 0.04, Clay.matte(0x6F8A4E, roughness: 1), at: [0, top + 0.15, wallAt])
-            for i in 0..<9 {
-                let x = -0.64 + Float(i) * 0.16
-                g.sphere(0.09, Clay.matte(i % 2 == 0 ? 0x93A86A : 0x7F9A5A, roughness: 1),
-                         at: [x, top + 0.3, wallAt + 0.01], scale: [1, 0.8, 0.7])
-            }
-            Props.snakePlant(g, at: [-0.36, top, -0.3], pot: 0xD8653F)
-            Props.cactus(g, at: [0.36, top, -0.3])
-            Props.toyMouse(g, at: [0.3, top, 0.02], rotation: .identity)
         }
         return g
+    }
+
+    /// The brush's corner: a warm rug under her, two walls, and a cushion, a basket, a plant and a lamp set round the
+    /// edge of what the close camera shows. A few clay primitives and baked blobs, nothing that casts a shadow.
+    private static func rugCorner(_ g: Entity) {
+        let top = floorTop
+        let side: Float = -0.27
+        g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
+        g.cylinder(0.002, 0.3, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0024, 0.25, Clay.matte(0xE9B8A0, roughness: 1), at: [0, top + 0.0012, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0028, 0.17, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0014, -0.02], scale: [1.25, 1, 1])
+        wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
+        let left = g.group(at: [side, 0, 0], rotation: .y(.pi / 2))
+        left.box(1.2, 1.2, 0.02, r: 0.004, Clay.matte(0xEBD3B4, roughness: 0.9), at: [0, top + 0.6, 0])
+        left.box(1.2, 0.03, 0.012, r: 0.003, Clay.matte(0xE6CDAE, roughness: 0.8), at: [0, top + 0.015, 0.014])
+        window(g, at: [0.12, 0.27, wallAt + 0.012])
+        g.contactBlob(at: [-0.2, top, wallAt + 0.04], width: 0.12, depth: 0.1)
+        Props.lamp(g, at: [-0.2, top, wallAt + 0.05])
+        g.contactBlob(at: [0.19, top, wallAt + 0.05], width: 0.1, depth: 0.09)
+        Props.snakePlant(g, at: [0.19, top, wallAt + 0.05], pot: 0xD8653F)
+        g.contactBlob(at: [-0.19, top, -0.2], width: 0.14, depth: 0.12)
+        Props.basket(g, at: [-0.19, top, -0.2])
+        g.contactBlob(at: [0.2, top, -0.2], width: 0.14, depth: 0.12)
+        Props.cushion(g, at: [0.2, top, -0.2], tone: 0xE98A5B)
+        Props.bookStack(g, at: [0.0, top, wallAt + 0.06], tones: [0x6F8FB0, 0xE98A5B, 0x93A86A], rotation: .identity)
     }
 
     private static func wall(_ g: Entity, tone: UInt32, skirting: UInt32) {
