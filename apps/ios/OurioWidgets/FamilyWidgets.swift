@@ -142,6 +142,8 @@ private struct PetPill: View {
         Button(intent: PetMochiIntent()) {
             Label("Pet", systemImage: "pawprint.fill")
                 .font(.ourioCaption.weight(.bold))
+                .lineLimit(1)
+                .fixedSize()
                 .foregroundStyle(Ink.heroInk)
                 .padding(.horizontal, Space.m)
                 .frame(height: Size.pill)
@@ -200,7 +202,7 @@ private struct MochiPortrait: View {
             portrait
                 .frame(width: size * 0.9, height: size * 0.9)
                 .scaleEffect(pose == .purring ? 1.04 : 1)
-            mark.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+            mark.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(size * 0.04)
         }
         .frame(width: size, height: size)
         .accessibilityElement(children: .ignore)
@@ -264,23 +266,24 @@ struct MochiFamilyView: View {
     private var mood: PartnerMood? { PartnerNews.latest(s, drawing: entry.facts.drawing).flatMap(\.mood) }
 
     var body: some View {
-        Group {
+        GeometryReader { geo in
             switch family {
-            case .systemMedium: medium
-            case .systemLarge: large
-            default: small
+            case .systemMedium: medium(geo.size)
+            case .systemLarge: large(geo.size)
+            default: small(geo.size)
             }
         }
         .widgetURL(DeepLink.room.url)
     }
 
-    private var small: some View {
+    /// The portrait scales with the widget: a small iPhone's widgets are a sixth smaller than a Pro Max's.
+    private func small(_ size: CGSize) -> some View {
         ZStack(alignment: .bottomTrailing) {
-            MochiPortrait(snapshot: s, pose: pose, size: 128, partnerMood: mood)
+            MochiPortrait(snapshot: s, pose: pose, size: min(size.width, size.height) * 0.68, partnerMood: mood)
                 .offset(x: Space.s, y: Space.s)
             VStack(alignment: .leading, spacing: Space.xs) {
-                Text(pose.word).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(2)
-                Text(line).font(.ourioMicro).foregroundStyle(Ink.textSecondary).lineLimit(2)
+                Text(pose.word).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.8)
+                Text(line).font(.ourioMicro).foregroundStyle(Ink.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
                 Spacer(minLength: 0)
                 LevelChip(level: entry.facts.wallet.level)
             }
@@ -289,7 +292,7 @@ struct MochiFamilyView: View {
         }
     }
 
-    private var medium: some View {
+    private func medium(_ size: CGSize) -> some View {
         HStack(spacing: Space.m) {
             VStack(alignment: .leading, spacing: Space.xs) {
                 HStack(spacing: Space.s) {
@@ -304,12 +307,12 @@ struct MochiFamilyView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            MochiPortrait(snapshot: s, pose: pose, size: 146, partnerMood: mood)
+            MochiPortrait(snapshot: s, pose: pose, size: size.height * 0.82, partnerMood: mood)
         }
         .padding(Space.l)
     }
 
-    private var large: some View {
+    private func large(_ size: CGSize) -> some View {
         VStack(spacing: Space.m) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: Space.xs) {
@@ -320,7 +323,7 @@ struct MochiFamilyView: View {
                 LevelChip(level: entry.facts.wallet.level)
             }
             Spacer(minLength: 0)
-            MochiPortrait(snapshot: s, pose: pose, size: 232, partnerMood: mood)
+            MochiPortrait(snapshot: s, pose: pose, size: min(size.width * 0.66, size.height * 0.52), partnerMood: mood)
             Spacer(minLength: 0)
             HStack(spacing: Space.s) {
                 PetPill(catName: s.catName)
@@ -400,7 +403,7 @@ struct UsFamilyView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(Space.m)
-        .background(Ink.surface, in: ContainerRelativeShape())
+        .background(Ink.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }
 
@@ -473,7 +476,7 @@ struct PartnerFamilyView: View {
         } else {
             VStack(spacing: Space.s) {
                 card.frame(maxHeight: .infinity)
-                Text(s.partner).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(1)
+                Text("From \(s.partner)").font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(1)
                 if news != nil { ReplyPill() }
             }
             .padding(Space.m)
@@ -494,7 +497,7 @@ struct PartnerFamilyView: View {
             RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
                 .fill(Ink.paper)
                 .overlay { RoundedRectangle(cornerRadius: Radius.inner, style: .continuous).stroke(Ink.paperEdge, lineWidth: 1) }
-            content.padding(Space.s)
+            content.padding(Space.s).frame(maxWidth: .infinity, maxHeight: .infinity)
             PostageStamp(.heart, size: .regular)
                 .rotationEffect(.degrees(6))
                 .offset(x: Space.xs, y: -Space.xs)
@@ -566,7 +569,7 @@ struct CoinsFamilyView: View {
         .frame(width: 140, alignment: .leading)
         .padding(Space.m)
         .frame(maxHeight: .infinity)
-        .background(Ink.surface, in: ContainerRelativeShape())
+        .background(Ink.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
     }
 }
 

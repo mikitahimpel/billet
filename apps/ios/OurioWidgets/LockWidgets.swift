@@ -92,10 +92,14 @@ struct UsLockView: View {
     var body: some View {
         switch family {
         case .accessoryInline:
-            Label {
-                if let next = s.next { Text("\(s.daysTogether) days · \(next.title) \(next.daysLeft == 0 ? "today" : "in \(next.daysLeft)d")") }
-                else { Text("\(s.daysTogether) days together") }
-            } icon: { Image(systemName: "heart.fill") }
+            ViewThatFits {
+                if let next = s.next {
+                    Label("\(s.daysTogether) days · \(next.daysLeft == 0 ? "today" : "\(next.daysLeft)d to go")",
+                          systemImage: "heart.fill")
+                }
+                Label("\(s.daysTogether) days together", systemImage: "heart.fill")
+                Label("\(s.daysTogether) days", systemImage: "heart.fill")
+            }
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 0) {
                 Label("Day \(s.daysTogether)", systemImage: "heart.fill")
