@@ -20,19 +20,23 @@ enum Clay {
         let roughness: Float
     }
 
-    private static let matteMade = OSAllocatedUnfairLock(initialState: [Key: PhysicallyBasedMaterial]())
+    private struct Made: @unchecked Sendable {
+        var materials: [Key: PhysicallyBasedMaterial] = [:]
+    }
+
+    private static let matteMade = OSAllocatedUnfairLock(initialState: Made())
 
     /// One material per tone and roughness, handed out again to every box of it, so RealityKit sees the same material
     /// on a hundred meshes and not a hundred of them.
     static func matte(_ hex: UInt32, roughness: Float = 0.82) -> PhysicallyBasedMaterial {
         let key = Key(hex: hex, roughness: roughness)
         return matteMade.withLock { made in
-            if let m = made[key] { return m }
+            if let m = made.materials[key] { return m }
             var m = PhysicallyBasedMaterial()
             m.baseColor = .init(tint: UIColor(hex: hex))
             m.roughness = .init(floatLiteral: roughness)
             m.metallic = .init(floatLiteral: 0)
-            made[key] = m
+            made.materials[key] = m
             return m
         }
     }
