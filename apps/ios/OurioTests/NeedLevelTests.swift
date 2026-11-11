@@ -1,3 +1,4 @@
+import Foundation
 import GamesInterface
 import Pet
 import Testing

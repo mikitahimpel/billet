@@ -169,7 +169,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
 
     /// Mochi's whole sheet with a fixed cat: one need raised, a day of six moments, an Explorer.
     @MainActor @ViewBuilder private static var mochiPage: some View {
-        MochiSheetContent(name: "Mochi", status: mochi, level: 2, progress: 0.4, days: 2, zone: .gmt, care: { _ in }) {
+        MochiSheetContent(name: "Mochi", status: fixedCat, level: 2, progress: 0.4, days: 2, zone: .gmt, care: { _ in }) {
             PetPortrait(size: 88)
         } extraCare: {
             FlowRow {
@@ -180,7 +180,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
         }
     }
 
-    private static let mochi: CatStatus = {
+    private static let fixedCat: CatStatus = {
         // 04:00 UTC on 10 November 2026, the start of her day.
         let dawn = 1_794_283_200.0
         func hour(_ hour: Double) -> Double { dawn + (hour - 4) * 3600 }
