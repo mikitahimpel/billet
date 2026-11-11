@@ -9,8 +9,12 @@ import WidgetKit
 @main
 struct OurioWidgetBundle: WidgetBundle {
     var body: some Widget {
-        CornerWidget()
-        MochiWidget()
+        MochiFamilyWidget()
+        UsFamilyWidget()
+        PartnerFamilyWidget()
+        CoinsFamilyWidget()
+        MemoryFamilyWidget()
+        DayFamilyWidget()
         BlockWidget()
         UsAccessoryWidget()
         PetMochiControl()
@@ -18,50 +22,6 @@ struct OurioWidgetBundle: WidgetBundle {
         NewNoteControl()
         DrawingWidget()
         DrawingLiveActivity()
-    }
-}
-
-/// Large: Mochi's room on top, two blocks of the couple's choice below.
-struct CornerWidget: Widget {
-    var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "com.ourio.app.corner", intent: CornerConfiguration.self,
-                               provider: OurioProvider<CornerConfiguration>()) { entry in
-            VStack(spacing: 0) {
-                Link(destination: DeepLink.room.url) { MochiRoom(snapshot: entry.snapshot) }
-                    .frame(maxHeight: .infinity)
-                Hairline()
-                HStack(spacing: 0) {
-                    Block(slot: entry.configuration.left, entry: entry)
-                    Hairline(vertical: true)
-                    Block(slot: entry.configuration.right, entry: entry)
-                }
-                .frame(height: 158)
-            }
-            .containerBackground(Ink.screen, for: .widget)
-        }
-        .configurationDisplayName("Our Corner")
-        .description("Your cat's room with two blocks of your choice.")
-        .supportedFamilies([.systemLarge])
-        .contentMarginsDisabled()
-    }
-}
-
-/// Medium: Mochi next to the smart slot or a fixed block.
-struct MochiWidget: Widget {
-    var body: some WidgetConfiguration {
-        AppIntentConfiguration(kind: "com.ourio.app.mochi", intent: MochiConfiguration.self,
-                               provider: OurioProvider<MochiConfiguration>()) { entry in
-            HStack(spacing: 0) {
-                Link(destination: DeepLink.room.url) { MochiRoom(snapshot: entry.snapshot, showsCaption: false) }
-                Hairline(vertical: true)
-                Block(slot: entry.configuration.slot, entry: entry)
-            }
-            .containerBackground(Ink.screen, for: .widget)
-        }
-        .configurationDisplayName("Ourio")
-        .description("Your cat and what matters right now.")
-        .supportedFamilies([.systemMedium])
-        .contentMarginsDisabled()
     }
 }
 

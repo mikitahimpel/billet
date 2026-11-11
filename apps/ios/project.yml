@@ -159,6 +159,9 @@ targets:
     platform: iOS
     sources:
       - path: OurioWidgets
+      # The files the app keeps the streak and the wallet in, which the widgets read.
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       - path: Shared
       - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
@@ -279,6 +282,8 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       - path: PerTarget
     # Wire, Ink and the interfaces come from the app it is loaded into, as for OurioTests: linking them here as well
     # makes Xcode build them as frameworks, and OurioTests then finds none of their symbols.
