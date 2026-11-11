@@ -30,9 +30,10 @@ struct RoomSwitch: View {
 }
 
 /// Photos | Board, the Moments tab's switch: the same control, size and place as the World's `RoomSwitch`, in the
-/// header's glass container.
+/// header's glass container. On the board its buttons end the same row, at the header buttons' size.
 struct MomentsSwitch: View {
     @Bindable var state: HomeState
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GlassSegmented(
@@ -44,5 +45,13 @@ struct MomentsSwitch: View {
         .accessibilityLabel("Moments")
         .accessibilityValue(state.momentsMode == .board ? "Board" : "Photos")
         .accessibilityHint("Switches between Photos and Board")
+        // Over the row's end, so the switch stays centred whichever mode is on.
+        .overlay(alignment: .trailing) {
+            if state.momentsMode == .board {
+                BoardActions(state: state).transition(.opacity)
+            }
+        }
+        .frame(height: Size.control)
+        .animation(reduceMotion ? nil : Motion.spring(Motion.quick), value: state.momentsMode)
     }
 }
