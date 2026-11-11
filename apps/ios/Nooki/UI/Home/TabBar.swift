@@ -65,7 +65,8 @@ struct TabBar: View {
                     .accessibilityHidden(true)
             }
         }
-        .sensoryFeedback(.selection, trigger: hovered ?? state.tab)
+        // A light tap rather than the selection tick, which is too faint to feel through a switch of the whole page.
+        .haptic(.tap, trigger: hovered ?? state.tab)
     }
 
     /// The tab whose slot holds `x`, measured from the capsule's leading edge; past the ends it is the first or last.

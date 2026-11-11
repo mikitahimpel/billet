@@ -191,7 +191,7 @@ extension CatBrain {
       room: effectiveRoom(at: t), weather: weather,
       recent: recent, awayHours: awayHours(at: t), hasNovelty: novelPiece(at: t) != nil,
       spotFondness: napSpots(at: t).map { memory.fondness($0.0) }.max() ?? 0,
-      upbringing: upbringing, mealtime: isMealtime(at: t), hunger: hunger,
+      upbringing: upbringing, mealtime: isMealtime(at: t), stuffed: life.stuffed, hunger: hunger,
       habits: Dictionary(
         uniqueKeysWithValues: CatActivityGroup.chosen.map {
           ($0, memory.habit($0, hour: Int(hour(at: t))))

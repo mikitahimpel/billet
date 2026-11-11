@@ -28,7 +28,7 @@ struct FeaturedCard: View {
             Button { openSet(offer) } label: {
                 art
                     .frame(maxWidth: .infinity)
-                    .frame(height: 196)
+                    .frame(height: ShopLayout.featuredArt)
                     .contentShape(.rect)
             }
             .buttonStyle(PressScaleStyle())

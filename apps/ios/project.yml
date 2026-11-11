@@ -50,6 +50,11 @@ targets:
       # Activity, whose metadata each target extracts from its own sources.
       - path: Shared
       - path: PerTarget
+      # The widgets' views, drawn live by the widget gallery in Settings.
+      - path: OurioWidgets/WidgetFacts.swift
+      - path: OurioWidgets/FamilyViews.swift
+      - path: OurioWidgets/LockViews.swift
+      - path: OurioWidgets/Theme.swift
       # The date ideas the build ships with: the server's own catalog file (packages/ios/features/Sources/UsInterface/DateCatalog.swift).
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
@@ -70,9 +75,6 @@ targets:
         # What the build carries, for check-archive.sh: the store (mock or storekit) and Labs (YES or NO).
         BilletPayments: $(BILLET_PAYMENTS_MODE)
         BilletLabs: $(BILLET_LABS_MODE)
-        # The Metal Performance HUD (fps, GPU ms) over the app, in builds that carry Labs: YES there, NO in the one
-        # App Review and the App Store get (check-archive.sh checks it). OurioApp also sets MTL_HUD_ENABLED in Labs.
-        MetalHudEnabled: $(BILLET_LABS_MODE)
         # The invite step scans the partner's QR code (Onboarding/InviteScanner).
         NSCameraUsageDescription: Ourio uses the camera to scan the invite code on your partner's screen.
         # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename

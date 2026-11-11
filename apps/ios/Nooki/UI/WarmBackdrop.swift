@@ -55,18 +55,21 @@ struct WarmBackdrop: View {
 
 extension View {
     /// The header and the tab bar as the screen's top and bottom bars. On iOS 26 they are safe area bars with the
-    /// soft scroll edge under them; before, safe area insets over a material fade when `fades`.
+    /// soft scroll edge under them; before, safe area insets over a material fade. With `fades` (a tab root, not the
+    /// room) the header sits on `HeaderScrim` either way.
     @ViewBuilder
     func bars(fades: Bool, softEdges: Bool = true, @ViewBuilder top: () -> some View,
               @ViewBuilder bottom: () -> some View) -> some View {
         if #available(iOS 26, *) {
             scrollEdgeEffectStyle(.soft, for: .vertical)
                 .scrollEdgeEffectHidden(!softEdges, for: .vertical)
-                .safeAreaBar(edge: .top, spacing: Space.m, content: top)
+                .safeAreaBar(edge: .top, spacing: Space.m) {
+                    top().background { if fades { HeaderScrim() } }
+                }
                 .safeAreaBar(edge: .bottom, content: bottom)
         } else {
             safeAreaInset(edge: .top, spacing: Space.m) {
-                top().background { if fades { EdgeFade(edge: .top) } }
+                top().background { if fades { HeaderScrim() } }
             }
             .safeAreaInset(edge: .bottom) {
                 bottom().background { if fades { EdgeFade(edge: .bottom) } }

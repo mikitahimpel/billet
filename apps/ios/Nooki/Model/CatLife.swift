@@ -287,7 +287,7 @@ final class CatLife: CatEventSource {
         }
     }
 
-    /// What a touch here is in the journal. A note is the room's to record, with the note itself.
+    /// What a touch here is in the journal. A note is the room's to record, with the note itself; an overfeed stays on this phone.
     static func event(for kind: LifeEvent.Kind) -> CatEvent? {
         switch kind {
         case .feed: .fed(grams: labsTreatGrams)
@@ -295,7 +295,7 @@ final class CatLife: CatEventSource {
         case .play: .played
         case .sleep: .slept
         case .shoo: .shooed
-        case .note: nil
+        case .note, .overfeed: nil
         }
     }
 }

@@ -187,6 +187,8 @@ private struct ShopAppear: ViewModifier {
 
 enum ShopLayout {
     static let dealWidth: CGFloat = 176
+    /// Low enough that on a Pro Max the deals under the featured set end above the tab bar before any scroll.
+    static let featuredArt: CGFloat = 140
 }
 
 /// A deal card's width: a fixed one that shows the next card peeking in, and at accessibility sizes most of the row,

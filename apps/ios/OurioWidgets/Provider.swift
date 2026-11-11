@@ -63,14 +63,6 @@ struct Stores {
     }
 }
 
-struct FamilyEntry: TimelineEntry {
-    let date: Date
-    let snapshot: OurioSnapshot
-    let facts: WidgetFacts
-    let momentImage: Data?
-    let momentDate: Date?
-}
-
 /// The family widgets: no configuration, one timeline of a few entries a day (FamilyTimeline).
 struct FamilyProvider: TimelineProvider {
     var loadsPhoto = false
@@ -96,27 +88,5 @@ struct FamilyProvider: TimelineProvider {
         let configured: OurioEntry<ModuleConfiguration> = stores.entry(at: date, configuration: ModuleConfiguration())
         return FamilyEntry(date: date, snapshot: configured.snapshot, facts: facts, momentImage: configured.momentImage,
                            momentDate: stores.moment?.date)
-    }
-}
-
-extension OurioSnapshot {
-    /// Gallery and placeholder data: a plausible evening, nothing from the couple's real stores.
-    static func sample(now: Date = .now) -> OurioSnapshot {
-        let cal = Calendar.current
-        return OurioSnapshot(
-            date: now, viewer: "L", partner: "M", daysTogether: 127,
-            next: NextEvent(title: "4 months together", icon: .init(symbol: "sparkles", tint: .sun),
-                            date: cal.date(byAdding: .day, value: 18, to: now) ?? now, daysLeft: 18),
-            partnerMood: MoodCheckIn(mood: .missing, date: now.addingTimeInterval(-1200)),
-            myMood: nil,
-            list: ListPreview(id: UUID(), title: "Groceries", icon: ListKind.groceries.icon,
-                              items: [.init(id: UUID(), text: "Oat milk", author: "M", done: false),
-                                      .init(id: UUID(), text: "Cat treats", author: "L", done: false),
-                                      .init(id: UUID(), text: "Lemons", author: "M", done: true)],
-                              openCount: 2, partnerAddedToday: false),
-            planned: nil,
-            idea: IdeaPreview(id: 1, title: "Blanket fort cinema", pitch: "Build a fort, pick a movie, no phones allowed inside",
-                              matched: true),
-            moment: nil, isPurring: false, isNight: isNight(now))
     }
 }

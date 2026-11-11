@@ -58,6 +58,8 @@ protocol GameStage: AnyObject {
     var cue: GameCue? { get }
     /// Where she glances from her head, in points on screen, instead of at the player; nil for the usual gaze.
     var glance: CGSize? { get }
+    /// 0...1: how far the camera leans in toward the game's center, for a game that has a moment to look at.
+    var push: Float { get }
     func act()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
@@ -67,6 +69,7 @@ extension GameStage {
     var action: String? { nil }
     var cue: GameCue? { nil }
     var glance: CGSize? { nil }
+    var push: Float { 0 }
     func act() {}
 }
 

@@ -37,14 +37,6 @@ struct WidgetGalleryTests {
     static let afternoon = Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: .now) ?? .now
     static let night = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: .now) ?? .now
 
-    /// The pieces the in-app widget gallery shows, by the asset each is saved as (WidgetShowcase).
-    static let previewAssets = [
-        "mochi-medium-pm": "WidgetMochi", "us-medium-pm": "WidgetUs", "partner-medium-pm": "WidgetPartner",
-        "coins-medium-pm": "WidgetCoins", "memory-medium-pm": "WidgetMemory", "day-large-pm": "WidgetDay",
-        "lock-us-rectangular-pm": "WidgetLockUs", "lock-streak-rectangular-pm": "WidgetLockStreak",
-        "lock-cat-rectangular-pm": "WidgetLockCat", "lock-partner-rectangular-pm": "WidgetLockPartner",
-    ]
-
     @Test func rendersTheGallery() throws {
         let day = OurioSnapshot.sample(now: Self.afternoon)
         let evening = OurioSnapshot.sample(now: Self.night)
@@ -145,21 +137,6 @@ struct WidgetGalleryTests {
                 let image = try #require(renderer.uiImage)
                 #expect(image.size.width == size.width + 24)
                 rendered += 1
-
-                if let asset = Self.previewAssets[name], mode == .fullColor,
-                   let folder = ProcessInfo.processInfo.environment["BILLET_WIDGET_PREVIEWS"] {
-                    let clean = view
-                        .frame(width: size.width, height: size.height)
-                        .background(WidgetGallery.background)
-                        .environment(\.colorScheme, scheme)
-                        .environment(\.widgetRenderingMode, mode)
-                    let cleanRenderer = ImageRenderer(content: clean)
-                    cleanRenderer.scale = 2
-                    let preview = try #require(cleanRenderer.uiImage)
-                    let directory = URL(fileURLWithPath: folder, isDirectory: true)
-                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-                    try #require(SamplePNG.encode(preview)).write(to: directory.appending(path: "\(asset)-\(look).png"))
-                }
 
                 guard let folder = ProcessInfo.processInfo.environment["BILLET_SAMPLES"] else { continue }
                 let directory = URL(fileURLWithPath: folder, isDirectory: true).appending(path: "widgets")

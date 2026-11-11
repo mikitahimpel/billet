@@ -101,7 +101,7 @@ extension CatPersonality {
       case .pet: pet += weight
       case .note: note += weight
       case .feed: feed += weight
-      case .sleep, .shoo: break
+      case .sleep, .shoo, .overfeed: break
       }
     }
     func move(_ amount: Double) -> Double { min(max(amount, -Self.driftLimit), Self.driftLimit) }
