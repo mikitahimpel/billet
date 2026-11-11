@@ -20,6 +20,8 @@ struct ComposeSheet: View {
     @State private var film: UIImage?
     @FocusState private var focused: Bool
 
+    static let captionLimit = 40
+
     var body: some View {
         BilletSheet("New moment", size: .fit) {
             VStack(spacing: Space.gutter) {
@@ -36,13 +38,17 @@ struct ComposeSheet: View {
                         .submitLabel(.done)
                         .frame(width: 220)
                         .onChange(of: caption) { _, text in
-                            if text.count > 40 { caption = String(text.prefix(40)) }
+                            if text.count > Self.captionLimit { caption = String(text.prefix(Self.captionLimit)) }
                         }
                 }
                 .padding(Space.m)
                 .padding(.bottom, Space.l)
                 .background { PaperSheet(lift: PaperSheet.Lift(radius: 12, y: 8, opacity: 0.3)) }
                 .rotationEffect(.degrees(-2))
+
+                LimitCounter(count: caption.count, limit: Self.captionLimit)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.top, -Space.m)
 
                 PrimaryButton("Add to Moments · +10") {
                     onSave(caption.trimmingCharacters(in: .whitespacesAndNewlines))

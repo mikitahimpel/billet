@@ -83,6 +83,11 @@ struct NoteComposer: View {
             PenHolder(style: style, state: state, selection: $model.ink) { dismiss() }
         }
         .padding(.vertical, Space.s)
+        .overlay(alignment: .topTrailing) {
+            LimitCounter(count: model.text.count, limit: NoteStore.maxLength, warnFrom: NoteStore.maxLength - 30)
+                .padding(.horizontal, Space.gutter)
+                .offset(y: -Space.l)
+        }
         .animation(.snappy(duration: 0.2), value: model.hasInk)
     }
 
