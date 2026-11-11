@@ -86,7 +86,11 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 | A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
 | Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
 | A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, tag:, open:) { art } leadingBadge: trailingBadge: footer: }`; `tag: ItemTag(title, color:)` is its kind (a rarity) as a dot and a word |
-| A picture or tile clipped to the scale | `.corners(.card / .inner / .control)`, a tile's fill `.cornerFill(.inner, style)` |
+| A picture clipped to the scale | `.corners(.card / .inner / .control)` |
+| A recess in a card: an art slot, a thumbnail's backdrop, an inset note | `.wellSurface()`; never a fill of your own, and never a card in a card |
+| A line between two rows you lay out yourself on one card | `Hairline(inset:)`; `GroupedSection` draws its own |
+| Progress toward one goal, as a bar in a card | `ProgressBar(value:total:tint:)`, with an `.accessibilityLabel` |
+| A round control on content (add to a list, the next picture) | `RoundButton(symbol:label:style:)`, `.honey` for the screen's one accent; over the room or a canvas it is `GlassIconButton` |
 | The top of a card | `CardHeader(title, detail:, symbol:, tint:)`, or with `leading:` / `detail:` / `trailing:` views; art goes in `CardArt` |
 | A text field | `Field(placeholder, text:, axis:, lines:, font:, failed:)` |
 | A labelled field with its error or footnote | `FormField(label, placeholder:, text:, footer:, error:)` |
@@ -126,6 +130,9 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 - Don't put `ContentUnavailableView` in a large sheet; it fills the space.
 - Don't force `.colorScheme(.light)` on a card to make it pop; use `Ink.surface`.
 - Don't write a radius as a number, or pick one by eye; see [Shape](#shape).
+- Don't fill a shape behind content yourself (`.cornerFill`, `.background(Ink.surface…)`, `Ink.surfaceRaised`,
+  `.listRowBackground`): a slab is `cardSurface()`, a recess in it `.wellSurface()`. `check-design.mjs` counts
+  them (`flat-surface`), and a stroke of your own (`raw-stroke`).
 - Don't draw a field with `TextField` + `.background(...)`; use `Field` or `.fieldSurface()`.
 - Don't make a "Try again" `Button` of your own; `check-design.mjs` fails on one (`retry-baseline.json`).
 - Don't stack chips or a field above a sheet's `ScrollView` in a `VStack`; the rows cut hard under them. Use
@@ -197,7 +204,7 @@ on `.calloutBubble(pointer:)`.
 
 - `packages/ios/scripts/check-design.mjs` (CI, `ios:format:check`) runs the rules in `design-rules.mjs` over
   feature code: raw colours, non-`.ourio` fonts, numeric paddings and heights, hand-made corners, shadows,
-  blurs and materials, `GeometryReader`, system or plain button styles, TipKit without the Hint style, and Text
+  flat fills, strokes, blurs and materials, `GeometryReader`, system or plain button styles, TipKit without the Hint style, and Text
   without a text style. Each file may keep at most its count in `packages/ios/design/lint/baseline.json`, which
   only shrinks (`node packages/ios/scripts/check-design.mjs --update` lowers it after a cleanup, never raises it).
   `lint/allow.json` exempts a path from one rule and grows only together with a change to the design package.
@@ -213,6 +220,8 @@ on `.calloutBubble(pointer:)`.
 - `Color(...)`, `.white`, `.black` or a system colour for UI; `.font(.system...)`, `.headline` and friends.
 - `RoundedRectangle`, `.cornerRadius`, `.clipShape(.rect(cornerRadius:))`: use `Card`, `.cardSurface()`,
   `.corners(_:)`.
+- `.cornerFill`, `Ink.surface` or `Ink.surfaceRaised` as a fill, `.listRowBackground`, `.stroke`, `.strokeBorder`:
+  content sits on `cardSurface()` or in `.wellSurface()`.
 - `.shadow`, `.blur`, a `Material`, `.glassEffect` of your own (`Toast` and `glass(_:role:)` have theirs);
   `GeometryReader` for layout.
 - `.buttonStyle(.plain / .bordered / .borderedProminent)` on a visible button; a hand-made toast, hint or

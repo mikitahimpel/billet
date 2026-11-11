@@ -66,7 +66,7 @@ struct DailyGiftCard: View {
     private var box: some View {
         GiftBox(opened: !ready, opens: bursts, reward: reward)
             .frame(width: 56, height: 56)
-            .cornerFill(.inner, Ink.surfaceRaised)
+            .wellSurface()
             .accessibilityHidden(true)
     }
 
