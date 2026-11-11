@@ -30,7 +30,8 @@ const checks = [
   },
   {
     pattern:
-      /\b(?:cornerRadius|(?:top|bottom)(?:Leading|Trailing)Radius)\s*:\s*[\d.]|cardSurface\(\s*radius:\s*[\d.]/g,
+      // A RealityKit mesh's `cornerRadius` is a bevel in metres, not a corner on screen.
+      /(?<!MeshResource\.generate\w*\([^)]*)\b(?:cornerRadius|(?:top|bottom)(?:Leading|Trailing)Radius)\s*:\s*[\d.]|cardSurface\(\s*radius:\s*[\d.]/g,
     baseline: join(here, "radius-baseline.json"),
     what: "corner radii written as numbers",
     fix: "Corners come from Radius (card, inner, control) or Field / Card (docs/design-system.md#shape).",
@@ -170,7 +171,8 @@ if (edgeViolations.length > 0) {
 const tabRoots = /\/Nooki\/UI\/(MomentsView|ShopView|Us\/UsView|HomeView)\.swift$/;
 const tabTitles = [];
 for (const [file, text] of sources) {
-  if (tabRoots.test(file) && /\.ourioLargeTitle\b/.test(text)) tabTitles.push(`${file}: a tab root draws a large title`);
+  if (tabRoots.test(file) && /\.ourioLargeTitle\b/.test(text))
+    tabTitles.push(`${file}: a tab root draws a large title`);
 }
 if (tabTitles.length > 0) {
   console.error(tabTitles.join("\n"));
