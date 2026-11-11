@@ -126,8 +126,7 @@ struct BakedShellTests {
     /// The shells that ship were baked from the rooms as built now. Fails after a change to a room's static boxes
     /// until `scripts/bake-room/bake.sh` has been run again.
     @Test func theBakedShellsAreUpToDate() throws {
-        let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
-            .deletingLastPathComponent().deletingLastPathComponent()
+        let repo = Repo.root
         let recorded = try JSONDecoder().decode(
             [String: String].self, from: Data(contentsOf: repo.appending(path: "scripts/bake-room/sources.json")))
         for name in Self.rooms {
