@@ -32,7 +32,7 @@ struct DecorPanel: View {
 
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Space.xs) {
                 Text("Decorate")
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
@@ -95,12 +95,15 @@ struct DecorPanel: View {
                         } footer: {
                             Chip("Place", symbol: "plus", style: .honey)
                         }
-                        .frame(width: 140, height: 190)
+                        // Two and a half across, so the half card says the strip scrolls.
+                        .containerRelativeFrame(.horizontal, count: 5, span: 2, spacing: Space.m)
                     }
                 }
+                .scrollTargetLayout()
             }
+            .scrollTargetBehavior(.viewAligned)
             .scrollIndicators(.hidden)
-            .frame(height: 190)
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
