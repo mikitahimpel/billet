@@ -256,7 +256,6 @@
     "apps/ios/Nooki/UI/Us/UsKit.swift": 2,
     "apps/ios/Nooki/UI/Us/WhoKnowsScreen.swift": 2,
     "apps/ios/Nooki/UI/Us/WorldMap.swift": 3,
-    "packages/ios/features/Sources/FeatureCanvas/LiveRoomMachine.swift": 2,
     "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 1
   },
   "blur-material": {

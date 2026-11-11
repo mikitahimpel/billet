@@ -141,7 +141,8 @@ export const rules = [
     id: "raw-stroke",
     what: "strokes of our own",
     fix: "A card's edge, a well's and a selected ring are the design package's (cardSurface(state:), .wellSurface()); a line between rows is Hairline.",
-    pattern: /\.stroke(?:Border)?\(/g,
+    // Called on a shape or a drawing context; an enum case named `.stroke(` is not one.
+    pattern: /(?<=[)\]}]\s*|\w|\w[ \t]*\n\s*)\.stroke(?:Border)?\(/g,
   },
   {
     id: "blur-material",
