@@ -31,6 +31,7 @@ struct SettingsView: View {
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
     @AppStorage(ComposerStyle.key) private var composerStyle = ComposerStyle.standard
+    @AppStorage(Look.key) private var look = Look.classic
     @Environment(PerfLab.self) private var perfLab: PerfLab?
     @State private var confirmingErase = false
     @State private var demoBusy = false
@@ -141,7 +142,7 @@ struct SettingsView: View {
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
                              + "heard. All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
-                             + "them baked, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
+                             + "them baked, from the next launch. Look is the app's colours and faces, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
                              + "the controls over the room after a few seconds without a touch. Coins come from the dev "
                              + "server's mock store, into the pair's wallet.") {
                 if let session {
@@ -155,6 +156,9 @@ struct SettingsView: View {
                     Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
+                PickerRow("Look", symbol: "moon.stars.fill", tint: UsTint.honey.color, selection: $look) {
+                    ForEach(Look.allCases, id: \.self) { Text($0.title).tag($0) }
+                }
                 if let perfLab {
                     NavigationLink { PerfLabPage(lab: perfLab) } label: {
                         Row("Performance", symbol: "speedometer", tint: UsTint.sage.color) { RowChevron() }

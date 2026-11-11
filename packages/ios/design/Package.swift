@@ -8,7 +8,7 @@ let package = Package(
   platforms: [.iOS(.v18), .macOS(.v15)],
   products: [.library(name: "Design", targets: ["Design"])],
   targets: [
-    .target(name: "Design"),
+    .target(name: "Design", resources: [.copy("Resources/Fonts")]),
     .testTarget(name: "DesignTests", dependencies: ["Design"]),
   ],
   swiftLanguageModes: [.v6]
