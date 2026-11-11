@@ -1,0 +1,10 @@
+struct Good: View {
+  var body: some View {
+    VStack {
+      Text("Lamplit").padding(CardMetrics.padding).cardSurface()
+      Color.clear.wellSurface()
+      IconButton(symbol: "plus", label: "Add") {}
+      Text("Page").background(Ink.screen)
+    }
+  }
+}

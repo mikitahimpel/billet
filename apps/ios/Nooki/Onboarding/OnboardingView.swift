@@ -503,7 +503,7 @@ struct MochiSays: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
-                .cornerFill(.card, Ink.surface)
+                .cardSurface()
         }
     }
 }

@@ -214,9 +214,9 @@ The kit is the only easy way, and the lint is the only door.
 | `flat-surface` | `.cornerFill(`, `Ink.surface`, `Ink.surfaceRaised`, `.listRowBackground(` in feature code | this system |
 | `raw-stroke` | `.stroke(`, `.strokeBorder(` in feature code | this system |
 
-Every rule has a baseline per file in `packages/ios/design/lint/baseline.json` that may only shrink. A
+Art that draws with strokes and fills by nature (`Scene`, `Room`, `Perf`) is exempt from these two in
+`lint/allow.json`. Every rule has a baseline per file in `packages/ios/design/lint/baseline.json` that may only shrink. A
 migrated area ends at zero for `flat-surface`, `raw-stroke`, `corner-shape` and `shadow`; art files keep
 their counts until their chrome is migrated, and nothing new may be added to them. Next, in this order: a
 `raw-motion` rule for curves, a `content-list` rule for `List`, and moving the app-side kits
-(`Us/ListRow.swift`, `Us/ListCard.swift`, `UsKit.swift`'s `UsIcon`, `Kit/ProgressCapsule.swift`,
-`ShopKit.swift`'s `OwnedCheck`) into the package or onto its components.
+(`Us/ListRow.swift`, `Us/ListCard.swift`, `UsKit.swift`'s `UsIcon`, `ShopKit.swift`'s `OwnedCheck`) into the package or onto its components.
