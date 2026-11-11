@@ -50,14 +50,14 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
     content; `GlassSegmented` is only the Living room | Bedroom switch. The Shop's category row is navigation, not a
     switch: pinned `FilterChip`s with an icon each.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
-    `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
-    `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
-    glass is tinted enough that nothing ghosts through it. Chips, a search field or a subtitle pinned over a
-    sheet's list go in `.scrollHeader { }`, which pins them over the scroll view so the rows fade under them on
-    the sheet's ground instead of being cut at their edge. `check-design.mjs` fails on a scroll view without
-    either in a file on the design package, and on any `.hard` edge. In an opaque sheet the fade alone lets text
-    show behind the title, so `Page` and `BilletSheet` also lay the sheet's ground under its bar and fade it out
-    just below; a `List` in a sheet adds `.sheetBarBacking()` under its `.scrollHeader`.
+    `.ourioScrollEdges()`: the system's iOS 26 scroll edge effect, the same at the top and the bottom, as in the
+    system's own sheets. `Page`, `BilletSheet`, `TabPage` and Home's bars already apply it. Content at rest starts
+    below the bar, so only what has scrolled under it softens. Before iOS 26 Home's bars draw the fade themselves.
+    Never a hard edge, and never a gradient or ground of your own laid under a bar: it shows as a band. Chips, a
+    search field or a subtitle pinned over a sheet's list go in `.scrollHeader { }`: the system draws no edge
+    effect under such a bar in a sheet, so it lays the sheet's ground behind the header and the title bar and
+    fades it out over `Space.xl` below, and the rows sink away under it. `check-design.mjs` fails on a scroll view without either in a file on the design package,
+    and on `.scrollEdgeEffectStyle` or `.scrollEdgeEffectHidden` outside the design package.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new

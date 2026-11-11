@@ -84,7 +84,6 @@ public struct BilletSheet<Content: View>: View {
         }
     }
     // On the stack, not its root, so the pages pushed onto it get it too.
-    .environment(\.backsSheetBar, ground == .opaque)
     .environment(\.expandSheet, SheetExpansion { expand() })
     .interactiveDismissDisabled(hasChanges ?? false)
     .tint(.honey)
@@ -129,8 +128,7 @@ public struct BilletSheet<Content: View>: View {
       .scrollBounceBehavior(.basedOnSize)
       .scrollIndicators(.hidden)
       .scrollDismissesKeyboard(.interactively)
-      .softScrollEdges()
-      .sheetBarBacking()
+      .ourioScrollEdges()
     } else {
       content
     }
@@ -237,14 +235,11 @@ public struct Page<Content: View>: View {
     .scrollDismissesKeyboard(.interactively)
     .background(Ink.screen.ignoresSafeArea())
     .tint(.honey)
-    .softScrollEdges()
-    .sheetBarBacking()
+    .ourioScrollEdges()
   }
 }
 
 extension EnvironmentValues {
-  /// True inside an opaque `BilletSheet`'s stack, whose pages draw a ground under its bar.
-  @Entry var backsSheetBar = false
   @Entry var expandSheet = SheetExpansion {}
 }
 
@@ -269,47 +264,14 @@ extension View {
   public func expandsSheet() -> some View { modifier(ExpandsSheet()) }
 }
 
-extension View {
-  /// The sheet's ground under its navigation bar, fading out just below it, so content scrolled
-  /// up never shows behind the title and its buttons. The soft edge alone is too faint there.
-  /// `Page` and a scrolling `BilletSheet` have it; a `List` in a sheet adds it.
-  public func sheetBarBacking() -> some View { modifier(SheetBarBacking()) }
-}
-
-private struct SheetBarBacking: ViewModifier {
-  @Environment(\.backsSheetBar) private var backs
-
-  func body(content: Content) -> some View {
-    content.overlay(alignment: .top) {
-      if backs {
-        GeometryReader { proxy in
-          let top = proxy.safeAreaInsets.top
-          let height = top + Space.l
-          LinearGradient(
-            stops: [
-              .init(color: Ink.screen, location: 0),
-              .init(color: Ink.screen, location: top / height),
-              .init(color: Ink.screen.opacity(0), location: 1),
-            ], startPoint: .top, endPoint: .bottom
-          )
-          .frame(height: height)
-          .offset(y: -top)
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-      }
-    }
-  }
-}
-
 extension EnvironmentValues {
-  /// False hides the scroll edge effects of `softScrollEdges()`, for Labs → Performance.
+  /// False hides the scroll edge effects of `ourioScrollEdges()`, for Labs → Performance.
   @Entry public var softScrollEdges = true
 }
 
 extension View {
   /// iOS 26 soft scroll edges; every scroll view uses this, `Page` and `BilletSheet` already do.
-  public func softScrollEdges() -> some View { modifier(SoftScrollEdges()) }
+  public func ourioScrollEdges() -> some View { modifier(SoftScrollEdges()) }
 }
 
 private struct SoftScrollEdges: ViewModifier {
@@ -328,8 +290,8 @@ private struct SoftScrollEdges: ViewModifier {
 
 extension View {
   /// Pins `header` (a sheet's chips, search field or subtitle) over the top of this scroll view. The
-  /// content scrolls under it and fades out there as it does under the bars, on the sheet's own
-  /// ground, instead of being cut at the header's lower edge. Applies `softScrollEdges()`.
+  /// content starts below it and, scrolled up, fades out under it on the sheet's own ground instead
+  /// of meeting its text. Applies `ourioScrollEdges()`.
   public func scrollHeader<Header: View>(@ViewBuilder _ header: () -> Header) -> some View {
     modifier(ScrollHeader(header: header()))
   }
@@ -341,17 +303,42 @@ private struct ScrollHeader<Header: View>: ViewModifier {
 
   func body(content: Content) -> some View {
     if #available(iOS 26, macOS 26, *) {
+      // The system's edge effect is not drawn under a bar inside a sheet's navigation stack, so the
+      // header carries the sheet's ground itself, up through the title bar and fading out below.
       content
-        .safeAreaBar(edge: .top, spacing: 0) { header }
-        .softScrollEdges()
+        .ourioScrollEdges()
+        .safeAreaBar(edge: .top, spacing: 0) { header.background { HeaderGround(ground: ground) } }
     } else {
-      content.safeAreaInset(edge: .top, spacing: 0) { header.background { groundView } }
+      content.safeAreaInset(edge: .top, spacing: 0) {
+        header.background { HeaderGround(ground: ground) }
+      }
     }
   }
+}
 
-  @ViewBuilder private var groundView: some View {
+/// The sheet's ground behind a pinned header and the title bar above it, fading out over
+/// `Space.xl` below the header, so rows scrolled up sink away instead of meeting a line.
+private struct HeaderGround: View {
+  let ground: SheetGroundStyle
+
+  var body: some View {
+    fill
+      .mask {
+        VStack(spacing: 0) {
+          Color.black
+          LinearGradient(colors: [.black, .clear], startPoint: .top, endPoint: .bottom)
+            .frame(height: Space.xl)
+        }
+      }
+      .padding(.bottom, -Space.xl)
+      .ignoresSafeArea(edges: .top)
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+  }
+
+  @ViewBuilder private var fill: some View {
     switch ground {
-    case .opaque: Ink.screen
+    case .opaque: Rectangle().fill(Ink.screen)
     case .glass: Rectangle().fill(.ultraThinMaterial)
     }
   }
