@@ -77,6 +77,10 @@ extension MochiPose {
         switch self {
         case .purring: "heart.fill"
         case .asleep: "moon.zzz.fill"
+        case .hungry: "fork.knife"
+        case .drowsy: "zzz"
+        case .cuddly: "hand.raised.fill"
+        case .playful: "tennisball.fill"
         case .waiting: "envelope.fill"
         case .chirpy: "music.note"
         case .napping: "zzz"
@@ -180,7 +184,7 @@ struct CatLockView: View {
     let entry: FamilyEntry
     let family: WidgetFamily
     private var s: OurioSnapshot { entry.snapshot }
-    private var pose: MochiPose { MochiPose.pose(s, drawing: entry.facts.drawing) }
+    private var pose: MochiPose { entry.pose }
 
     var body: some View {
         switch family {
@@ -192,15 +196,19 @@ struct CatLockView: View {
                     .font(.ourioHeadline)
                     .widgetAccentable()
                     .lineLimit(1)
-                Text(pose.line(s, drawing: entry.facts.drawing)).font(.ourioCaption).foregroundStyle(.secondary).lineLimit(2)
+                Text(pose.speech(s, drawing: entry.facts.drawing)).font(.ourioCaption).foregroundStyle(.secondary).lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Space.xs)
         default:
-            Image(systemName: pose.lockSymbol)
-                .font(.ourioTitle)
-                .widgetAccentable()
-                .accessibilityLabel("\(s.catName), \(pose.word.lowercased())")
+            // One tap does what she needs: a meal when she is hungry, a pet otherwise.
+            Button(intent: pose.care == .feed ? FeedMochiIntent() as any AppIntent : PetMochiIntent()) {
+                Image(systemName: pose.lockSymbol)
+                    .font(.ourioTitle)
+                    .widgetAccentable()
+            }
+            .buttonStyle(PressScaleStyle())
+            .accessibilityLabel("\(s.catName), \(pose.word.lowercased())")
         }
     }
 }

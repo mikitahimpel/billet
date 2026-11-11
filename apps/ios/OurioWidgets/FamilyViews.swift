@@ -37,44 +37,69 @@ private struct FamilyGround: ViewModifier {
 
 // MARK: - Pieces
 
-private struct LevelChip: View {
-    let level: Int
+/// Clay and wells come from the design kit; the tinted and clear Home Screens redraw everything in one tint, where a
+/// slab would turn into a flat block, so they get the bare content on the system's own ground.
+private struct WidgetSlab: ViewModifier {
+    @Environment(\.widgetRenderingMode) private var mode
 
-    var body: some View {
-        Text("Lv \(level)")
-            .font(.ourioMicro)
-            .monospacedDigit()
-            .foregroundStyle(Ink.heroInk)
-            .padding(.horizontal, Space.s)
-            .padding(.vertical, Space.xs)
-            .background(Color.honey, in: .capsule)
-            .widgetAccentable()
-            .accessibilityLabel("Level \(level)")
+    func body(content: Content) -> some View {
+        if mode == .fullColor { content.cardSurface() } else { content }
     }
 }
 
-/// The one honey control of a widget that has one.
-private struct PetPill: View {
+private struct WidgetWell: ViewModifier {
+    @Environment(\.widgetRenderingMode) private var mode
+
+    func body(content: Content) -> some View {
+        if mode == .fullColor { content.wellSurface() } else { content.corners(.inner) }
+    }
+}
+
+extension View {
+    fileprivate func slab() -> some View { modifier(WidgetSlab()) }
+    fileprivate func well() -> some View { modifier(WidgetWell()) }
+}
+
+/// The one honey control of a widget that has one: what Mochi needs most, a meal when she is hungry, a pet otherwise.
+private struct CareButton: View {
+    let care: MochiPose.Care
     let catName: String
+    /// Only the glyph, for the small widget.
+    var compact = false
 
     var body: some View {
-        Button(intent: PetMochiIntent()) {
-            Label("Pet", systemImage: "pawprint.fill")
+        Button(intent: intent) { label }
+            .buttonStyle(PressScaleStyle())
+            .widgetAccentable()
+            .accessibilityLabel(care == .feed ? "Feed \(catName)" : "Pet \(catName)")
+    }
+
+    private var intent: any AppIntent { care == .feed ? FeedMochiIntent() : PetMochiIntent() }
+
+    private var symbol: String { care == .feed ? "fork.knife" : "pawprint.fill" }
+
+    @ViewBuilder
+    private var label: some View {
+        if compact {
+            Image(systemName: symbol)
+                .font(.ourioHeadline)
+                .foregroundStyle(Ink.heroInk)
+                .frame(width: Size.control, height: Size.control)
+                .background(Color.honey, in: .circle)
+        } else {
+            Label(care == .feed ? "Feed" : "Pet", systemImage: symbol)
                 .font(.ourioCaption.weight(.bold))
                 .lineLimit(1)
                 .fixedSize()
                 .foregroundStyle(Ink.heroInk)
                 .padding(.horizontal, Space.m)
-                .frame(height: Size.pill)
+                .frame(height: Size.control)
                 .background(Color.honey, in: .capsule)
         }
-        .buttonStyle(PressScaleStyle())
-        .widgetAccentable()
-        .accessibilityLabel("Pet \(catName)")
     }
 }
 
-/// A quiet second button beside Pet: a hug for the partner, filled once it is sent today.
+/// A quiet second button beside the care button: a hug for the partner, filled once it is sent today.
 private struct HugButton: View {
     let sent: Bool
     let partner: String
@@ -84,8 +109,8 @@ private struct HugButton: View {
             Image(systemName: sent ? "heart.fill" : "heart")
                 .font(.ourioHeadline)
                 .foregroundStyle(sent ? Color.blushPink : Ink.text)
-                .frame(width: Size.pill, height: Size.pill)
-                .background(Ink.surface, in: .circle)
+                .frame(width: Size.control, height: Size.control)
+                .slab()
         }
         .buttonStyle(PressScaleStyle())
         .widgetAccentable(sent)
@@ -103,34 +128,105 @@ private struct ReplyLine: View {
     }
 }
 
-/// Mochi on her disc, the room's colour at night; her state shows as a mark on the disc, not as a different cat.
-private struct CatDisc: View {
-    let snapshot: OurioSnapshot
-    let pose: MochiPose
-    let size: CGFloat
-    var partnerMood: PartnerMood?
-    @Environment(\.widgetRenderingMode) private var mode
+private struct LevelChip: View {
+    let level: Int
 
     var body: some View {
-        ZStack {
-            if mode == .fullColor {
-                Circle().fill(pose == .asleep ? WidgetScene.room(night: true)[0] : Ink.surfaceRaised)
-            }
-            portrait
-                .frame(width: size * 0.8, height: size * 0.8)
-                .scaleEffect(pose == .purring ? 1.04 : 1)
-                .frame(width: size, height: size, alignment: .bottom)
-                .clipShape(Circle())
-            mark.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(size * 0.02)
+        Chip("Lv \(level)", style: .quiet)
+            .monospacedDigit()
+            .accessibilityLabel("Level \(level)")
+    }
+}
+
+/// What she says, on a small clay label beside her.
+private struct SpeechBubble: View {
+    let text: String
+    var font: Font = .ourioMicro
+
+    var body: some View {
+        Text(text)
+            .font(font)
+            .foregroundStyle(Ink.text)
+            .lineLimit(2)
+            .multilineTextAlignment(.leading)
+            .padding(.horizontal, Space.m)
+            .padding(.vertical, Space.s)
+            .slab()
+            .accessibilityHidden(true)
+    }
+}
+
+/// Her empty bowl, when she is hungry: a small clay prop at her feet.
+private struct Bowl: View {
+    var body: some View {
+        ZStack(alignment: .top) {
+            UnevenRoundedRectangle(bottomLeadingRadius: Space.m, bottomTrailingRadius: Space.m)
+                .fill(Color.honeyDeep)
+                .frame(width: 40, height: 18)
+                .offset(y: 7)
+            Ellipse().fill(Color.honey).frame(width: 44, height: 14)
+            Ellipse().fill(Ink.surfaceRaised).frame(width: 34, height: 9).offset(y: Space.xxs)
         }
-        .frame(width: size, height: size)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(snapshot.catName), \(pose.word.lowercased())")
+        .frame(width: 44, height: 26)
+        .widgetAccentable()
+        .accessibilityHidden(true)
+    }
+}
+
+/// Mochi in her well, the room's colour at night; her state shows as a mark on the well and a prop, not as a different cat.
+private struct MochiStage: View {
+    let entry: FamilyEntry
+    var showsSpeech = true
+    var speechFont: Font = .ourioMicro
+    var showsWord = false
+    /// The care button sits on the stage in the small widget, where there is no room for it beside.
+    var carries = false
+    @Environment(\.widgetRenderingMode) private var mode
+
+    private var s: OurioSnapshot { entry.snapshot }
+    private var pose: MochiPose { entry.pose }
+    private var mood: PartnerMood? { PartnerNews.latest(s, drawing: entry.facts.drawing).flatMap(\.mood) }
+
+    var body: some View {
+        GeometryReader { geo in
+            let side = min(geo.size.width, geo.size.height)
+            ZStack {
+                portrait
+                    .frame(width: side * 0.78, height: side * 0.78)
+                    .scaleEffect(pose == .purring ? 1.04 : 1, anchor: .bottom)
+                    .opacity(pose == .asleep ? 0.8 : 1)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                    .offset(y: Space.s)
+                if pose == .hungry {
+                    Bowl().frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading).padding(Space.s)
+                }
+                if showsSpeech {
+                    SpeechBubble(text: pose.speech(s, drawing: entry.facts.drawing), font: speechFont)
+                        .frame(maxWidth: geo.size.width * 0.72, maxHeight: .infinity, alignment: .topLeading)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(Space.s)
+                }
+                mark.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(Space.s)
+                if showsWord {
+                    Chip(pose.word, style: pose == .hungry ? .honey : .quiet)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
+                        .padding(Space.s)
+                }
+                if carries {
+                    CareButton(care: pose.care, catName: s.catName, compact: true)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                        .padding(Space.xs)
+                }
+            }
+        }
+        .well()
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(s.catName), \(pose.word.lowercased())")
     }
 
     @ViewBuilder
     private var portrait: some View {
-        if let image = UIImage(named: snapshot.catAvatar) ?? UIImage(named: "CatDisc") {
+        if let image = UIImage(named: s.catAvatar) ?? UIImage(named: "MochiPortrait") {
             Image(uiImage: image)
                 .resizable()
                 .widgetAccentedRenderingMode(.accented)
@@ -143,33 +239,52 @@ private struct CatDisc: View {
     @ViewBuilder
     private var mark: some View {
         switch pose {
-        case .purring:
-            Image(systemName: "heart.fill")
-                .font(.ourioHeadline)
-                .foregroundStyle(Color.blushPink)
-                .widgetAccentable()
-        case .asleep:
-            Image(systemName: "moon.zzz.fill")
-                .font(.ourioHeadline)
-                .foregroundStyle(Color.honey)
-                .widgetAccentable()
+        case .purring: RowIcon(symbol: "heart.fill", tint: .blushPink, size: Size.tileMark, style: .clay).widgetAccentable()
+        case .asleep: RowIcon(symbol: "moon.zzz.fill", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
+        case .hungry: EmptyView()
+        case .drowsy, .napping: RowIcon(symbol: "zzz", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
+        case .cuddly: RowIcon(symbol: "hand.raised.fill", tint: .blushPink, size: Size.tileMark, style: .clay).widgetAccentable()
+        case .playful: RowIcon(symbol: "tennisball.fill", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
         case .waiting:
-            if let partnerMood {
-                MoodArt(mood: partnerMood, size: size * 0.24)
+            if let mood {
+                MoodArt(mood: mood, size: Size.tileMark)
             } else {
-                Image(systemName: "envelope.fill")
-                    .font(.ourioHeadline)
-                    .foregroundStyle(Color.honey)
-                    .widgetAccentable()
+                RowIcon(symbol: "envelope.fill", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
             }
-        case .chirpy:
-            Image(systemName: "music.note")
-                .font(.ourioHeadline)
-                .foregroundStyle(Color.honey)
-                .widgetAccentable()
-        case .napping, .quiet, .idle:
-            EmptyView()
+        case .chirpy: RowIcon(symbol: "music.note", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
+        case .quiet, .idle: EmptyView()
         }
+    }
+}
+
+/// The flame: the streak's number, a bar to the next milestone, and a word when today still counts.
+private struct StreakTile: View {
+    let glance: StreakGlance
+
+    var body: some View {
+        HStack(spacing: Space.m) {
+            Image(systemName: "flame.fill")
+                .font(.ourioTitle)
+                .foregroundStyle(glance.status == .cold ? Ink.textTertiary : Color.honey)
+                .widgetAccentable()
+            VStack(alignment: .leading, spacing: Space.xs) {
+                HStack {
+                    Text(glance.count > 0 ? "Day \(glance.count)" : "No streak")
+                        .font(.ourioHeadline)
+                        .monospacedDigit()
+                        .foregroundStyle(Ink.text)
+                    Spacer(minLength: 0)
+                    Text(glance.caption)
+                        .font(.ourioMicro)
+                        .foregroundStyle(glance.isAtRisk ? Ink.accentText : Ink.textSecondary)
+                        .lineLimit(1)
+                }
+                ProgressBar(value: glance.progress).widgetAccentable()
+            }
+        }
+        .padding(Space.m)
+        .slab()
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -178,77 +293,68 @@ private struct CatDisc: View {
 struct MochiFamilyView: View {
     let entry: FamilyEntry
     let family: WidgetFamily
-    /// Inside the Our day widget, where Pet is the one honey mark.
+    /// Inside the Our day widget, where the care button is the one honey mark.
     var calm = false
 
     private var s: OurioSnapshot { entry.snapshot }
-    private var pose: MochiPose { MochiPose.pose(s, drawing: entry.facts.drawing) }
+    private var pose: MochiPose { entry.pose }
     private var line: String { pose.line(s, drawing: entry.facts.drawing) }
-    private var mood: PartnerMood? { PartnerNews.latest(s, drawing: entry.facts.drawing).flatMap(\.mood) }
+    private var streak: StreakGlance { StreakGlance(entry.facts.streak, on: s.date) }
 
     var body: some View {
-        GeometryReader { geo in
+        Group {
             switch family {
-            case .systemMedium: medium(geo.size)
-            case .systemLarge: large(geo.size)
-            default: small(geo.size)
+            case .systemMedium: medium
+            case .systemLarge: large
+            default: small
             }
         }
         .widgetURL(DeepLink.room.url)
     }
 
-    /// The portrait scales with the widget: a small iPhone's widgets are a sixth smaller than a Pro Max's.
-    private func small(_ size: CGSize) -> some View {
-        ZStack(alignment: .bottomTrailing) {
-            CatDisc(snapshot: s, pose: pose, size: min(size.width, size.height) * 0.68, partnerMood: mood)
-                .offset(x: Space.s, y: Space.s)
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text(pose.word).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.8)
-                Text(line).font(.ourioMicro).foregroundStyle(Ink.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
-                LevelChip(level: entry.facts.wallet.level)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .padding(Space.m)
-        }
+    private var small: some View {
+        MochiStage(entry: entry, carries: true)
+            .padding(Space.s)
     }
 
-    private func medium(_ size: CGSize) -> some View {
+    private var medium: some View {
         HStack(spacing: Space.m) {
+            MochiStage(entry: entry, showsSpeech: false)
+                .aspectRatio(1, contentMode: .fit)
             VStack(alignment: .leading, spacing: Space.xs) {
                 HStack(spacing: Space.s) {
                     Text(pose.word).font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
                     if !calm { LevelChip(level: entry.facts.wallet.level) }
                 }
-                Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(2)
+                SpeechBubble(text: pose.speech(s, drawing: entry.facts.drawing), font: .ourioCaption)
+                Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(1)
                 Spacer(minLength: 0)
                 HStack(spacing: Space.s) {
-                    PetPill(catName: s.catName)
+                    CareButton(care: pose.care, catName: s.catName)
                     if !calm { HugButton(sent: HugState.sent(s), partner: s.partner) }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            CatDisc(snapshot: s, pose: pose, size: size.height * 0.82, partnerMood: mood)
         }
-        .padding(Space.l)
+        .padding(Space.m)
     }
 
-    private func large(_ size: CGSize) -> some View {
+    private var large: some View {
         VStack(spacing: Space.m) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: Space.xxs) {
                     Text(pose.word).font(.ourioLargeTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
                     Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(1)
                 }
                 Spacer(minLength: 0)
                 LevelChip(level: entry.facts.wallet.level)
             }
-            Spacer(minLength: 0)
-            CatDisc(snapshot: s, pose: pose, size: min(size.width * 0.66, size.height * 0.52), partnerMood: mood)
-            Spacer(minLength: 0)
+            MochiStage(entry: entry, speechFont: .ourioCaption)
+            StreakTile(glance: streak)
             HStack(spacing: Space.s) {
-                PetPill(catName: s.catName)
+                CareButton(care: pose.care, catName: s.catName)
                 HugButton(sent: HugState.sent(s), partner: s.partner)
+                Spacer(minLength: 0)
             }
         }
         .padding(Space.l)
@@ -278,12 +384,12 @@ struct UsFamilyView: View {
                 days.frame(maxWidth: .infinity)
                 nextTile
             }
-            .padding(Space.l)
+            .padding(Space.m)
         case .systemLarge:
             VStack(spacing: Space.m) {
                 days.frame(maxHeight: .infinity)
-                nextTile.frame(height: 96)
-                StreakRow(glance: streak)
+                nextTile.frame(height: 112)
+                StreakTile(glance: streak)
             }
             .padding(Space.l)
         default:
@@ -310,16 +416,22 @@ struct UsFamilyView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// How close the next date is: a bar that fills over the last month before it.
+    static let countdownDays = 30
+
     @ViewBuilder
     private var nextTile: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
             if let next = s.next {
-                Image(systemName: next.icon.symbol).font(.ourioHeadline).foregroundStyle(Ink.accentText).widgetAccentable()
+                RowIcon(symbol: next.icon.symbol, tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
                 Spacer(minLength: 0)
                 Text(next.title).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(2)
                 Text(next.daysLeft == 0 ? "Today" : "in \(next.daysLeft) \(next.daysLeft == 1 ? "day" : "days")")
                     .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
+                ProgressBar(value: Double(Self.countdownDays - min(next.daysLeft, Self.countdownDays)),
+                            total: Double(Self.countdownDays))
+                    .widgetAccentable()
             } else {
                 Spacer(minLength: 0)
                 Text("Add a date in Us").font(.ourioHeadline).foregroundStyle(Ink.textSecondary)
@@ -327,48 +439,7 @@ struct UsFamilyView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(Space.m)
-        .background(Ink.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
-    }
-}
-
-private struct StreakRow: View {
-    let glance: StreakGlance
-
-    var body: some View {
-        HStack(spacing: Space.m) {
-            Image(systemName: "flame.fill")
-                .font(.ourioTitle)
-                .foregroundStyle(glance.status == .cold ? Ink.textTertiary : Color.honey)
-                .widgetAccentable()
-            VStack(alignment: .leading, spacing: Space.xs) {
-                HStack {
-                    Text(glance.count > 0 ? "Day \(glance.count)" : "No streak")
-                        .font(.ourioHeadline)
-                        .monospacedDigit()
-                        .foregroundStyle(Ink.text)
-                    Spacer(minLength: 0)
-                    Text(glance.caption).font(.ourioMicro).foregroundStyle(Ink.textSecondary).lineLimit(1)
-                }
-                Bar(value: glance.progress)
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-private struct Bar: View {
-    let value: Double
-
-    var body: some View {
-        Capsule()
-            .fill(Ink.separator)
-            .frame(height: Space.s + Space.xs)
-            .overlay(alignment: .leading) {
-                GeometryReader { geo in
-                    Capsule().fill(Color.honey).frame(width: max(Space.s + Space.xs, geo.size.width * value))
-                }
-            }
-            .widgetAccentable()
+        .slab()
     }
 }
 
@@ -391,7 +462,10 @@ struct PartnerFamilyView: View {
                         Text(news.sentLabel(relativeTo: s.date)).font(.ourioCaption).foregroundStyle(Ink.textSecondary)
                     }
                     Spacer(minLength: 0)
-                    ReplyLine()
+                    HStack(spacing: Space.s) {
+                        HugButton(sent: HugState.sent(s), partner: s.partner)
+                        ReplyLine()
+                    }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .privacySensitive()
@@ -485,7 +559,7 @@ struct CoinsFamilyView: View {
         VStack(alignment: .leading, spacing: Space.s) {
             Text("Care level").font(.ourioMicro).foregroundStyle(Ink.textSecondary)
             Text("Lv \(glance.level)").font(.ourioTitle).monospacedDigit().foregroundStyle(Ink.accentText).widgetAccentable()
-            Bar(value: glance.progress)
+            ProgressBar(value: glance.progress).widgetAccentable()
             Text("\(Int((glance.progress * 100).rounded()))% to Lv \(glance.level + 1)")
                 .font(.ourioMicro)
                 .foregroundStyle(Ink.textSecondary)
@@ -493,7 +567,7 @@ struct CoinsFamilyView: View {
         .frame(width: 124, alignment: .leading)
         .padding(Space.m)
         .frame(maxHeight: .infinity)
-        .background(Ink.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .slab()
     }
 }
 
@@ -539,9 +613,11 @@ struct MemoryFamilyView: View {
                             .scaledToFill()
                             .privacySensitive()
                     } else {
-                        Ink.surfaceRaised.overlay {
-                            Image(systemName: "photo.on.rectangle.angled").font(.ourioTitle).foregroundStyle(Ink.textTertiary)
-                        }
+                        Image(systemName: "photo.on.rectangle.angled")
+                            .font(.ourioTitle)
+                            .foregroundStyle(Ink.textTertiary)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .well()
                     }
                 }
                 .clipShape(RoundedRectangle(cornerRadius: Space.xs, style: .continuous))

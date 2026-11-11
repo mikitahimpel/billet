@@ -260,6 +260,14 @@ final class HomeState {
         for _ in 0..<min(pets, 5) { care.pet() }
     }
 
+    /// The meals given from a widget since the last look, for her room to serve.
+    func takeWidgetFeeds() -> Int {
+        var activity = WidgetActivity.load()
+        let feeds = activity.takePendingFeeds()
+        if feeds > 0 { activity.save() }
+        return min(feeds, 2)
+    }
+
     /// Deletes every store's files from the app group (or Documents) and this phone's preferences; the caller starts
     /// over with a fresh HomeState. The account stays: its record shares the folder, and its token in the Keychain
     /// would otherwise outlive it, signing the phone out halfway.

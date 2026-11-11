@@ -58,9 +58,10 @@ struct WidgetGalleryTests {
             wallet: Wallet(coins: 240, level: 4, progress: 0.6, wishlist: ["rug-moss", "lamp-star"]),
             drawing: nil)
         let drawn = WidgetFacts(streak: facts.streak, wallet: facts.wallet, drawing: drawing.drawing)
-        func entry(_ snapshot: OurioSnapshot, _ facts: WidgetFacts, photo: Bool = false) -> FamilyEntry {
+        func entry(_ snapshot: OurioSnapshot, _ facts: WidgetFacts, photo: Bool = false,
+                   want: CatNeedsGlance.Want? = nil) -> FamilyEntry {
             FamilyEntry(date: snapshot.date, snapshot: snapshot, facts: facts, momentImage: photo ? Self.photo() : nil,
-                        momentDate: photo ? snapshot.date.addingTimeInterval(-40 * 86_400) : nil)
+                        momentDate: photo ? snapshot.date.addingTimeInterval(-40 * 86_400) : nil, want: want)
         }
         var waiting = day
         waiting.partnerMood = MoodCheckIn(mood: .missing, date: day.date.addingTimeInterval(-600))
@@ -83,6 +84,8 @@ struct WidgetGalleryTests {
                 if device == "pm" {
                     add("mochi-night", entry(evening, facts)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
                     add("mochi-purring", entry(purring, facts)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("mochi-hungry", entry(day, facts, want: .food)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("mochi-cuddly", entry(day, facts, want: .love)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
                 }
                 add("us", entry(day, facts)) { AnyView(UsFamilyView(entry: $0, family: $1)) }
                 if family != .systemLarge {
@@ -110,6 +113,8 @@ struct WidgetGalleryTests {
                 pieces.append(("lock-us-\(label)-\(device)", size, AnyView(UsLockView(entry: e, family: family))))
                 pieces.append(("lock-streak-\(label)-\(device)", size, AnyView(StreakLockView(entry: e, family: family))))
                 pieces.append(("lock-cat-\(label)-\(device)", size, AnyView(CatLockView(entry: e, family: family))))
+                pieces.append(("lock-cat-hungry-\(label)-\(device)", size,
+                               AnyView(CatLockView(entry: entry(day, drawn, want: .food), family: family))))
                 pieces.append(("lock-partner-\(label)-\(device)", size, AnyView(PartnerLockView(entry: e, family: family))))
             }
         }

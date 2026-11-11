@@ -403,6 +403,7 @@ struct HomeView: View {
         case .active:
             // The first call is launch, where every store has just been read.
             state.refresh(reloading: old != phase)
+            for _ in 0..<state.takeWidgetFeeds() { room.feed() }
             room.appOpened()
             visitHints()
             Task {
