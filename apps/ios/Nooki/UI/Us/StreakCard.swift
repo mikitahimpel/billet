@@ -27,26 +27,16 @@ struct StreakCard: View {
 
         return Card(warm: true) {
             VStack(alignment: .leading, spacing: Space.m) {
-                HStack(alignment: .center, spacing: Space.m) {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text(daysTogether, format: .number)
-                            .ourioScaledFont(size: 56, weight: .bold, design: .rounded, relativeTo: .largeTitle)
-                            .monospacedDigit()
-                            .foregroundStyle(Ink.text)
-                            .dynamicTypeSize(...DynamicTypeSize.accessibility2)
-                        Text(daysTogether == 1 ? "day together" : "days together")
-                            .font(.ourioHeadline)
-                            .foregroundStyle(Ink.textSecondary)
+                // Side by side while "days together" keeps its line; the ring goes under it at the largest sizes.
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .center, spacing: Space.m) {
+                        together
+                        Spacer(minLength: 0)
+                        ring(days: days, lit: status == .done, next: next)
                     }
-                    Spacer(minLength: 0)
-                    ProgressRing(value: next.map { Double(days) / Double($0) } ?? 1) {
-                        VStack(spacing: 0) {
-                            Flame(days: days, lit: status == .done)
-                            Text(days, format: .number)
-                                .font(.ourioTitle.monospacedDigit())
-                                .foregroundStyle(Ink.text)
-                                .contentTransition(.numericText())
-                        }
+                    VStack(alignment: .leading, spacing: Space.m) {
+                        together
+                        ring(days: days, lit: status == .done, next: next)
                     }
                 }
                 line(status, days: days, next: next)
@@ -65,6 +55,31 @@ struct StreakCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label(days: days, next: next))
         .animation(.snappy(duration: 0.3), value: days)
+    }
+
+    private var together: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(daysTogether, format: .number)
+                .ourioScaledFont(size: 56, weight: .bold, design: .rounded, relativeTo: .largeTitle)
+                .monospacedDigit()
+                .foregroundStyle(Ink.text)
+                .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+            Text(daysTogether == 1 ? "day together" : "days together")
+                .font(.ourioHeadline)
+                .foregroundStyle(Ink.textSecondary)
+        }
+    }
+
+    private func ring(days: Int, lit: Bool, next: Int?) -> some View {
+        ProgressRing(value: next.map { Double(days) / Double($0) } ?? 1) {
+            VStack(spacing: 0) {
+                Flame(days: days, lit: lit)
+                Text(days, format: .number)
+                    .font(.ourioTitle.monospacedDigit())
+                    .foregroundStyle(Ink.text)
+                    .contentTransition(.numericText())
+            }
+        }
     }
 
     /// Its lead words in full ink, the rest quieter.

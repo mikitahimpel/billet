@@ -119,6 +119,8 @@ struct UsView: View {
                     HStack(alignment: .top, spacing: Space.m) {
                         posters.containerRelativeFrame(.horizontal, count: 5, span: 3, spacing: Space.m)
                     }
+                    // Each poster as tall as its art and words, not the height the scroll view offers.
+                    .fixedSize(horizontal: false, vertical: true)
                     .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.viewAligned)

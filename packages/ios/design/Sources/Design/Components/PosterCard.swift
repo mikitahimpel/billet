@@ -8,6 +8,7 @@ public struct PosterCard: View {
   let emphasis: Bool
   let art: Image
   let action: () -> Void
+  @Environment(\.dynamicTypeSize) private var typeSize
 
   public init(
     _ title: String, status: String, emphasis: Bool = false, art: Image,
@@ -24,8 +25,9 @@ public struct PosterCard: View {
     Button(action: action) {
       VStack(alignment: .leading, spacing: 0) {
         Color.clear
-          .aspectRatio(4 / 5, contentMode: .fit)
-          .overlay { art.resizable().scaledToFill() }
+          // Wider at accessibility sizes, where posters stack full width and the words need the room.
+          .aspectRatio(typeSize.isAccessibilitySize ? 3 / 2 : 4 / 5, contentMode: .fit)
+          .overlay(alignment: .top) { art.resizable().scaledToFill() }
           .clipped()
           .accessibilityHidden(true)
         VStack(alignment: .leading, spacing: Space.xs) {
@@ -39,7 +41,7 @@ public struct PosterCard: View {
         }
         .padding(.top, Space.m)
         .padding([.horizontal, .bottom], CardMetrics.padding)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, alignment: .topLeading)
       }
       .cardSurface()
       .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
