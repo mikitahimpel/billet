@@ -12,6 +12,7 @@ struct BuyButton: View {
     var fills = false
 
     @State private var shakes = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         if let quote {
@@ -26,7 +27,8 @@ struct BuyButton: View {
                 _ = buy()
             }
             .keyframeAnimator(initialValue: CGFloat(0), trigger: shakes) { content, x in
-                content.offset(x: x)
+                // With Reduce Motion the warning is the haptic alone.
+                content.offset(x: reduceMotion ? 0 : x)
             } keyframes: { _ in
                 KeyframeTrack {
                     LinearKeyframe(-5, duration: 0.05)

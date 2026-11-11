@@ -118,6 +118,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't stack chips or a field above a sheet's `ScrollView` in a `VStack`; the rows cut hard under them. Use
   `.scrollHeader`.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
+- Don't label a button with a bare symbol outside a toolbar: its tap area is the glyph. Frame the label
+  `Size.control` square with `.contentShape(.rect)`, or use `GlassIconButton` (check-design fails otherwise).
 - Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
   `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
 
