@@ -67,12 +67,14 @@ final class WaterStage: GameStage {
 
         // Behind the bowl, facing the player.
         let seat = spots.at(0, -0.13)
+        root.contactBlob(at: bowlAt, width: 0.15, depth: 0.11)
+        root.contactBlob(at: seat, width: 0.24, depth: 0.16)
         room.send(to: seat, facing: spots.facingPlayer, id: "water-watch")
         say(hint)
     }
 
     var focus: [SIMD3<Float>] {
-        [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], bowlAt + spots.toward * 0.08, spots.at(0, -0.13, up: 0.12)]
+        [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], bowlAt + spots.toward * 0.08, spots.at(0, -0.13, up: 0.12), spots.at(0, -0.6, up: 0.4)]
     }
 
     var action: String? { bowl.canServe && !holding && !served ? "Serve" : nil }

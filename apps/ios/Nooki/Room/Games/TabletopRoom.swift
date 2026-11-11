@@ -104,20 +104,8 @@ final class TabletopRoom: CatRoom {
             Props.snakePlant(g, at: [-0.36, top, backRow])
             Props.plush(g, at: [0.36, top, backRow], rotation: .identity)
         case .kitchen:
-            g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xE9DCC8, roughness: 0.6), at: [0, 0, 0])
-            g.box(0.44, 0.004, 0.3, r: 0.002, Clay.matte(0x9DB08A, roughness: 1), at: [0, top + 0.002, 0.03])
-            wall(g, tone: 0xDDE6DA, skirting: 0xC8D3C4)
-            // A run of cupboards under a wooden counter, with a shelf of jars above.
-            g.box(1.0, 0.15, 0.1, r: 0.006, Clay.matte(0xF3E6D2, roughness: 0.6), at: [0, top + 0.075, wallAt + 0.06])
-            g.box(1.02, 0.014, 0.12, r: 0.004, Clay.matte(0xB46C3C, roughness: 0.6), at: [0, top + 0.157, wallAt + 0.06])
-            for x: Float in [-0.36, -0.12, 0.12, 0.36] {
-                g.sphere(0.006, Clay.matte(0xB46C3C), at: [x, top + 0.12, wallAt + 0.112])
-            }
-            g.box(0.5, 0.01, 0.06, r: 0.003, Clay.matte(0xB46C3C, roughness: 0.6), at: [-0.1, 0.32, wallAt + 0.03])
-            for (i, tone) in [UInt32(0xF0663A), 0xF2A65E, 0x6F8FB0].enumerated() {
-                g.cylinder(0.05, 0.018, Clay.matte(tone, roughness: 0.4), at: [-0.26 + Float(i) * 0.08, 0.35, wallAt + 0.03])
-            }
-            Props.catBowls(g, at: [0.36, top, -0.3], rotation: .identity)
+            g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xD9AE78, roughness: 0.8), at: [0, 0, 0])
+            kitchen(g)
         case .garden:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xB98A5E, roughness: 0.8), at: [0, 0, 0])
             for z in stride(from: Float(-0.36), through: 0.4, by: 0.08) {
@@ -135,6 +123,19 @@ final class TabletopRoom: CatRoom {
             Props.toyMouse(g, at: [0.3, top, 0.02], rotation: .identity)
         }
         return g
+    }
+
+    /// The kitchen's baked wall and floor: two unlit pictures, the wall standing behind the rug the cat sits on.
+    static let kitchenWall: Float = -0.7
+    private static let kitchenFloor: (width: Float, depth: Float) = (1.68, 1.26)
+    private static let kitchenWallSize: (width: Float, height: Float) = (0.8, 0.88)
+
+    private static func kitchen(_ g: Entity) {
+        let back = kitchenWall
+        g.picture("kitchen_floor", width: kitchenFloor.width, height: kitchenFloor.depth, lying: true,
+                  at: [0, floorTop + 0.001, back + kitchenFloor.depth / 2])
+        g.picture("kitchen_wall", width: kitchenWallSize.width, height: kitchenWallSize.height, lying: false,
+                  at: [0, floorTop + kitchenWallSize.height / 2, back])
     }
 
     private static func wall(_ g: Entity, tone: UInt32, skirting: UInt32) {
@@ -174,5 +175,24 @@ struct TabletopView: View {
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+extension Entity {
+    /// A bundled image on an unlit quad: standing and facing +z, or lying on the floor with its top toward -z.
+    @discardableResult
+    func picture(_ name: String, width: Float, height: Float, lying: Bool, at position: SIMD3<Float>,
+                 transparent: Bool = false) -> ModelEntity? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "webp"),
+              let image = UIImage(contentsOfFile: url.path)?.cgImage,
+              let texture = try? TextureResource(image: image, options: .init(semantic: .color)) else { return nil }
+        var material = UnlitMaterial(applyPostProcessToneMap: false)
+        material.color = .init(tint: .white, texture: .init(texture))
+        if transparent { material.blending = .transparent(opacity: .init(floatLiteral: 1)) }
+        let mesh = lying ? MeshResource.generatePlane(width: width, depth: height) : MeshResource.generatePlane(width: width, height: height)
+        let quad = ModelEntity(mesh: mesh, materials: [material])
+        quad.position = position
+        addChild(quad)
+        return quad
     }
 }
