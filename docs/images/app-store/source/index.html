@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Ourio App Store screenshots</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Caveat+Brush&display=block"
+      rel="stylesheet"
+    />
+    <style>
+      /* The app's own type: SF Pro Rounded, read from macOS. */
+      @font-face {
+        font-family: "Ourio Rounded";
+        src: url("file:///System/Library/Fonts/SFNSRounded.ttf");
+        font-weight: 100 1000;
+      }
+
+      /* One slide = one 1290 × 2796 canvas (App Store 6.9" slot, 6.7" size). render.sh picks the
+     slide with #1, #2…; with no hash every slide is shown side by side for review. */
+      :root {
+        --w: 1290px;
+        --h: 2796px;
+        /* Palette.swift */
+        --cream: #fbf3e8;
+        --raised: #f3e6d6;
+        --honey: #f2a65e;
+        --hero-ink: #3a2114;
+        --accent-text: #974a18;
+        --room: #2a1a12;
+        --coin: #ffd25a;
+        /* layout grid shared by every slide */
+        --m: 84px; /* side margin: chips align to it */
+        --copy-top: 210px; /* every headline is two lines */
+        --phone-top: 780px; /* every phone starts at the same height */
+        --band: 1060px; /* first row of chips, over the phone */
+        --row: 220px;
+        --base: 1980px; /* lower rows */
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      html,
+      body {
+        background: #e9e2d8;
+      }
+      body {
+        font-family: "Ourio Rounded", ui-rounded, system-ui, sans-serif;
+        color: var(--hero-ink);
+      }
+      .deck {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 80px;
+        padding: 80px;
+      }
+      body.single .deck {
+        padding: 0;
+        gap: 0;
+      }
+      body.single .slide:not(.on) {
+        display: none;
+      }
+
+      .slide {
+        position: relative;
+        width: var(--w);
+        height: var(--h);
+        overflow: hidden;
+        background:
+          radial-gradient(900px 700px at 15% 4%, rgba(255, 255, 255, 0.75), transparent 70%),
+          radial-gradient(1000px 900px at 100% 38%, rgba(242, 166, 94, 0.45), transparent 70%),
+          radial-gradient(1200px 1000px at 0% 92%, rgba(242, 166, 94, 0.55), transparent 70%),
+          linear-gradient(180deg, #fdf6ec 0%, #f9e3c8 48%, #f4c48f 100%);
+      }
+      body:not(.single) .slide {
+        border-radius: 90px;
+      }
+      .slide.night {
+        background:
+          radial-gradient(900px 700px at 20% 4%, rgba(242, 166, 94, 0.22), transparent 70%),
+          radial-gradient(1100px 900px at 100% 45%, rgba(242, 166, 94, 0.16), transparent 70%),
+          linear-gradient(180deg, #3b2419 0%, #2a1a12 55%, #1b1410 100%);
+        color: var(--cream);
+      }
+
+      .copy {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: var(--copy-top);
+        text-align: center;
+        padding: 0 var(--m);
+        z-index: 5;
+      }
+      .eyebrow {
+        display: inline-flex;
+        align-items: center;
+        gap: 18px;
+        font-weight: 700;
+        font-size: 46px;
+        color: var(--accent-text);
+        margin-bottom: 34px;
+      }
+      .night .eyebrow {
+        color: var(--honey);
+      }
+      .eyebrow .paw {
+        width: 46px;
+        height: 46px;
+      }
+      h1 {
+        font-weight: 800;
+        font-size: 128px;
+        line-height: 1.04;
+        letter-spacing: -2.5px;
+      }
+      h1 .s {
+        position: relative;
+        display: inline-block;
+        font-family: "Caveat Brush", cursive;
+        font-weight: 400;
+        color: var(--accent-text);
+        font-size: 1.2em;
+        letter-spacing: 0;
+        line-height: 0.9;
+        transform: rotate(-2deg);
+      }
+      .night h1 .s {
+        color: var(--honey);
+      }
+      /* hand-drawn honey underline under the script word */
+      h1 .s::after {
+        content: "";
+        position: absolute;
+        left: -4%;
+        right: -4%;
+        bottom: -24px;
+        height: 38px;
+        background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 40' preserveAspectRatio='none'%3E%3Cpath d='M6 26 C 90 10, 210 8, 394 18 M 30 34 C 140 22, 260 20, 360 28' fill='none' stroke='%23F2A65E' stroke-width='7' stroke-linecap='round'/%3E%3C/svg%3E")
+          center/100% 100% no-repeat;
+      }
+
+      /* iPhone 17 Pro frame around a 1206 × 2622 Simulator capture; it runs off the bottom. */
+      .phone {
+        position: absolute;
+        left: 50%;
+        top: var(--phone-top);
+        width: 990px;
+        aspect-ratio: 1206 / 2622;
+        transform: translateX(-50%);
+        border-radius: 148px;
+        padding: 26px;
+        background: linear-gradient(145deg, #4a4038, #17120f 40%, #352d27 80%, #0f0c0a);
+        box-shadow:
+          0 60px 120px rgba(90, 45, 10, 0.38),
+          inset 0 0 0 3px rgba(255, 255, 255, 0.18);
+        z-index: 2;
+      }
+      .night .phone {
+        box-shadow:
+          0 60px 140px rgba(0, 0, 0, 0.6),
+          0 0 0 2px rgba(242, 166, 94, 0.25),
+          inset 0 0 0 3px rgba(255, 255, 255, 0.18);
+      }
+      .phone .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        border-radius: 124px;
+        overflow: hidden;
+        background: #000;
+      }
+      .phone .screen img {
+        width: 100%;
+        display: block;
+      }
+      .phone .screen::after {
+        /* the hardware island the capture leaves out */
+        content: "";
+        position: absolute;
+        top: 1.35%;
+        left: 50%;
+        width: 31.5%;
+        height: 3.4%;
+        transform: translateX(-50%);
+        background: #000;
+        border-radius: 999px;
+      }
+
+      /* Chips sit on rows of the grid: left or right edge on the margin, one of two tilts. */
+      .chip,
+      .float {
+        position: absolute;
+        z-index: 4;
+        transform: rotate(var(--tilt, 0deg));
+      }
+      .l {
+        left: var(--m);
+      }
+      .r {
+        right: var(--m);
+      }
+      .t1 {
+        --tilt: -3deg;
+      }
+      .t2 {
+        --tilt: 3deg;
+      }
+      .row0 {
+        top: var(--band);
+      }
+      .row1 {
+        top: calc(var(--band) + var(--row));
+      }
+      .b0 {
+        top: var(--base);
+      }
+      .b1 {
+        top: calc(var(--base) + var(--row));
+      }
+      .b2 {
+        top: calc(var(--base) + 2 * var(--row));
+      }
+      .chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 22px;
+        padding: 30px 48px;
+        border-radius: 999px;
+        font-weight: 700;
+        font-size: 50px;
+        background: #fff;
+        color: var(--hero-ink);
+        box-shadow: 0 30px 60px rgba(110, 55, 15, 0.28);
+        white-space: nowrap;
+      }
+      .chip.honey {
+        background: var(--honey);
+        color: var(--hero-ink);
+      }
+      .chip .em {
+        font-size: 56px;
+        line-height: 1;
+      }
+      .chip.wide {
+        left: 70px;
+        right: 70px;
+        justify-content: center;
+        padding: 52px 48px;
+      }
+      .chip .dot {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--honey);
+      }
+      .float {
+        filter: drop-shadow(0 36px 56px rgba(90, 45, 10, 0.38));
+      }
+      .float img {
+        display: block;
+        width: 100%;
+      }
+      .pop {
+        --tilt: -2deg;
+      }
+      .pop img {
+        border-radius: 72px;
+        box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.08);
+      }
+      .chip svg.coin {
+        width: 58px;
+        height: 58px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="deck">
+      <!-- 1 · what it is: a little home the two of you share -->
+      <section class="slide night" id="s1">
+        <div class="copy">
+          <div class="eyebrow">For the two of you</div>
+          <h1>A tiny home<br />just for <span class="s">us two</span></h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/home.png" /></div>
+        </div>
+        <div class="chip l b0 t1"><span class="em">🏡</span>One shared room</div>
+        <div class="chip r b1 t2"><span class="em">💛</span>Always in sync</div>
+      </section>
+
+      <!-- 2 · the pet you raise together -->
+      <section class="slide" id="s2">
+        <div class="copy">
+          <div class="eyebrow">Your cat, Mochi</div>
+          <h1>Raise a kitty<br /><span class="s">together</span></h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/cat.png" /></div>
+        </div>
+        <div class="float pop" style="width: 1090px; left: 100px; top: 1476px">
+          <img src="assets/cat-card.png" />
+        </div>
+        <div class="chip l row0 t1"><span class="em">🐟</span>Feed, play, cuddle</div>
+        <div class="chip r b1 t2">
+          <svg class="coin" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10.5" fill="#FFD25A" stroke="#3A2114" stroke-width="2" />
+            <path
+              d="M12 6.6l1.6 3.4 3.7.4-2.8 2.5.8 3.7L12 14.7l-3.3 1.9.8-3.7-2.8-2.5 3.7-.4z"
+              fill="#3A2114"
+            /></svg
+          >Earn coins as a team
+        </div>
+      </section>
+
+      <!-- 3 · shared lists that are actually useful -->
+      <section class="slide" id="s3">
+        <div class="copy">
+          <div class="eyebrow">Shared lists</div>
+          <h1>One list,<br /><span class="s">both</span> phones</h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/lists.png" /></div>
+        </div>
+        <div class="chip r row0 t2"><span class="em">🛒</span>Sorted by aisle</div>
+        <div class="chip l b2 t1"><span class="dot"></span>See who added what</div>
+      </section>
+
+      <!-- 4 · movie night -->
+      <section class="slide" id="s4">
+        <div class="copy">
+          <div class="eyebrow">To watch</div>
+          <h1>Movie night,<br /><span class="s">sorted</span></h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/watch.png" /></div>
+        </div>
+        <div class="chip l row1 t1"><span class="em">💛</span>See what you both want</div>
+        <div class="chip r b1 t2"><span class="em">🍿</span>Movies and shows</div>
+      </section>
+
+      <!-- 5 · places to go -->
+      <section class="slide" id="s5">
+        <div class="copy">
+          <div class="eyebrow">Places to go</div>
+          <h1>Every trip,<br />on <span class="s">one map</span></h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/places.png" /></div>
+        </div>
+        <div class="chip r t2" style="top: 1590px"><span class="em">🗺️</span>Where you’ve been</div>
+        <div class="chip l b1 t1"><span class="em">✈️</span>Where to go next</div>
+      </section>
+
+      <!-- 6 · days together and the streak -->
+      <section class="slide" id="s6">
+        <div class="copy">
+          <div class="eyebrow">Days together</div>
+          <h1>Keep the<br /><span class="s">spark</span> going</h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/us.png" /></div>
+        </div>
+        <div class="float pop" style="width: 1100px; left: 95px; top: 1054px">
+          <img src="assets/us-card.png" />
+        </div>
+        <div class="chip r b0 t2"><span class="em">🔥</span>A daily love streak</div>
+        <div class="chip wide t1" style="top: 2400px">
+          <span class="em">🎲</span>Date ideas, wishlists, games
+        </div>
+      </section>
+
+      <!-- 7 · moments -->
+      <section class="slide" id="s7">
+        <div class="copy">
+          <div class="eyebrow">Moments</div>
+          <h1>Little moments,<br /><span class="s">kept</span></h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/moments.png" /></div>
+        </div>
+        <div class="chip r b0 t2"><span class="em">📸</span>Send a photo</div>
+        <div class="chip l row0 t1"><span class="em">🖼️</span>Hang it on Mochi’s wall</div>
+      </section>
+
+      <!-- 8 · decorate -->
+      <section class="slide night" id="s8">
+        <div class="copy">
+          <div class="eyebrow">Shop</div>
+          <h1>Make the room<br /><span class="s">yours</span></h1>
+        </div>
+        <div class="phone">
+          <div class="screen"><img src="assets/shop.png" /></div>
+        </div>
+        <div class="chip r row0 t2"><span class="em">🛋️</span>New decor every day</div>
+        <div class="chip l b1 t1">
+          <svg class="coin" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10.5" fill="#FFD25A" stroke="#3A2114" stroke-width="2" />
+            <path
+              d="M12 6.6l1.6 3.4 3.7.4-2.8 2.5.8 3.7L12 14.7l-3.3 1.9.8-3.7-2.8-2.5 3.7-.4z"
+              fill="#3A2114"
+            /></svg
+          >Spend coins you earn
+        </div>
+      </section>
+    </div>
+    <script>
+      const n = location.hash.slice(1);
+      if (n) {
+        document.body.classList.add("single");
+        document.getElementById("s" + n)?.classList.add("on");
+      }
+    </script>
+  </body>
+</html>
