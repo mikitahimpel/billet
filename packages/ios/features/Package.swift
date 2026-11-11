@@ -40,7 +40,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureMoodTests", ["FeatureMood", "MoodInterface", "Transport", "Wire"]),
   ("ProfileInterfaceTests", ["ProfileInterface"]),
   ("DecorInterfaceTests", ["DecorInterface"]),
-  ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence"]),
+  ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Wire"]),
 ]
 
 let games: Target = .target(
@@ -53,7 +53,7 @@ let inbox: Target = .target(
 let decorInterface: Target = .target(name: "DecorInterface", dependencies: dependencies(["Pet"]))
 let decor: Target = .target(
   name: "FeatureDecor",
-  dependencies: dependencies(["DecorInterface", "BilletKit", "Persistence"]))
+  dependencies: dependencies(["DecorInterface", "BilletKit", "Persistence", "Wire"]))
 let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
 let profileInterface: Target = .target(
   name: "ProfileInterface", dependencies: dependencies(["Persistence"]))
