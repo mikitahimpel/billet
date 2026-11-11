@@ -38,5 +38,7 @@ domains. Check the list when adding an SDK or an API Apple lists as required-rea
 
 - Name is declared collected because onboarding stores it with the account; `docs/privacy.md` used
   to say contact info is not collected. Say so in the policy (the draft does) or stop storing it.
-- In-app account deletion is not in the app yet (`deleteAccount` exists in the client and server
-  only). The App Store requires it for an app with accounts.
+- In-app account deletion is in Settings (`PartnerAndAccountSections.swift`, `DELETE /v1/account`).
+  The app sends no Sign in with Apple authorization code with it, because the build has no screen
+  that links Apple (`SaveAccountCard` is not used by the app target); see
+  [release-checklist.md](release-checklist.md).
