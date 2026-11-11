@@ -26,7 +26,7 @@ import Testing
     #expect((plan.top?.height ?? 0) > 0.1)
     let occupancy = layout([sofa]).occupancy()
     #expect(!occupancy.isBlocked(at: plan.approach))
-    #expect(occupancy.connects(from: DecorRoom.home.spawn, to: [plan.approach]))
+    #expect(occupancy.connects(from: layout([sofa]).spawn(), to: [plan.approach]))
   }
 
   @Test func aPostIsStoodBesideAndNotClimbed() {
@@ -61,7 +61,7 @@ import Testing
     let plans = shut.catSpots()
     if let plan = plans.first {
       let occupancy = shut.occupancy()
-      #expect(occupancy.connects(from: DecorRoom.home.spawn, to: [plan.approach]))
+      #expect(occupancy.connects(from: shut.spawn(), to: [plan.approach]))
     }
   }
 }

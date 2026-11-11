@@ -7,10 +7,12 @@ import Testing
 
   @Test func theRoomAsItComesLeavesHerAWayToEverywhereShesGoes() {
     let occupancy = DecorLayout().occupancy(in: room)
-    #expect(occupancy.connects(from: room.spawn, to: room.anchors))
+    let layout = DecorLayout()
+    #expect(layout.reachesAnchors())
+    #expect(occupancy.connects(from: layout.spawn(), to: layout.anchors()))
     #expect(occupancy.bareShare > 0.5)
-    #expect(!occupancy.isBlocked(at: room.spawn))
-    for anchor in room.anchors { #expect(!occupancy.isBlocked(at: anchor)) }
+    #expect(!occupancy.isBlocked(at: layout.spawn()))
+    for anchor in layout.anchors() { #expect(!occupancy.isBlocked(at: anchor)) }
   }
 
   @Test func aSolidPieceBlocksItsCellsAndAFlatOneDoesNot() {
