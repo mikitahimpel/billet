@@ -1,7 +1,8 @@
 import FeatureGames
 import GamesInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Pet
 import SwiftUI
 import Design

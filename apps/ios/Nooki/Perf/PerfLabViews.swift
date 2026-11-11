@@ -1,7 +1,8 @@
 #if DEBUG || LABS_YES
 import Design
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import QuartzCore
 import SwiftUI
 import Darwin

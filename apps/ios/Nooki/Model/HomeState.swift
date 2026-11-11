@@ -5,7 +5,8 @@ import FeatureMood
 import MomentsInterface
 import MoodInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
 import ProfileInterface
 import RoomInterface

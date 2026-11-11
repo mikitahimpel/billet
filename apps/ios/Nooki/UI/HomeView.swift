@@ -3,7 +3,8 @@ import FeatureDecor
 import FeatureGames
 import FeatureInbox
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import RoomInterface
 import SwiftUI

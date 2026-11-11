@@ -1,6 +1,7 @@
 import BilletKit
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Foundation
 import UsInterface
 

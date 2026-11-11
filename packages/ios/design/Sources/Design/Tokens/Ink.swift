@@ -25,7 +25,16 @@ extension Color {
 
   public static let honey = Color(hex: 0xF2A65E)
   public static let honeyDeep = Color(hex: 0xD9784A)
+  /// Honey that reads on dark, for marks drawn over a dark map or picture.
+  public static let honeyBright = Color(hex: 0xFFE07A)
   public static let blushPink = Color(hex: 0xFF8FA3)
+
+  /// A colour a drawing carries as `#RRGGBB`: the sender's ink, which may be one this build
+  /// doesn't sell. Nil when the rest after the first character isn't hex.
+  public init?(drawnInk hex: String) {
+    guard let value = UInt32(hex.dropFirst(), radix: 16) else { return nil }
+    self.init(hex: value)
+  }
 }
 
 /// A rarity's colours: `tint` for rings and glows, `light` and `edge` for the soft backdrop behind art. The backdrop
