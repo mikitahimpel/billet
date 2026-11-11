@@ -1,7 +1,7 @@
 import DrawInterface
 import Foundation
 import MoodInterface
-import OurioShared
+import WidgetInterface
 import Persistence
 
 /// What the family widgets draw besides the snapshot: the streak, the wallet and the partner's latest drawing, read

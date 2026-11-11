@@ -1,40 +1,33 @@
-import CoreMotion
 import FeatureGames
 import GamesInterface
-import MomentsInterface
-import OurioShared
 import ProfileInterface
 import RealityKit
 import SwiftUI
 import UIKit
-import UsInterface
 
-/// Weigh the food: tap the bowl onto the scale, press TARE or not, and pour what her card asks. Kibble goes in by
-/// tipping the bag (drag; fast drops a clump), the scoop (tap), one by one (tap the bag) or a phone shake. Drag the
-/// bowl to tip some back, or tap it for one out. Feed works once within tolerance; then Mochi eats.
+/// Fill her bowl: hold anywhere and the bag tips over it; let go and it stops. A ring of beads across the bowl's front
+/// fills with the kibble, a green zone on it is the portion her card asks for, and the bag stops by itself at the zone's
+/// far end, so nothing overshoots. Once the bowl is in the zone, Feed serves it and she eats, looking up at the player.
 @MainActor
 final class FeedStage: GameStage {
-    private enum Grip {
-        case bag(start: CGPoint)
-        case bowl(start: CGPoint)
-        case tare, scoop
-    }
-
-    /// One kibble in the air, from `from` to `to`, landing in the bowl (`into`) or back in the bag.
+    /// One kibble in the air, from `from` into the bowl at `to`.
     private struct Flight {
         let entity: ModelEntity
         let from: SIMD3<Float>
         let to: SIMD3<Float>
-        var time: Float = 0
+        var time: Float
         let length: Float
-        let grams: Double
-        let into: Bool
     }
 
-    private static let platformY: Float = 0.034
     private static let kibbleTones: [UInt32] = [0x8A5528, 0x9E6530, 0x7A4622, 0xB07A3E]
     private static let bowlHeight: Float = 0.03
-    private static let bowlRadius: Float = 0.048
+    private static let bowlRadius: Float = 0.05
+    private static let ringRadius: Float = 0.074
+    private static let beads = 36
+    /// Grams one kibble on screen stands for.
+    private static let piece: Double = 1
+    /// How long a touch has to rest before the bag tips, so a brush of the screen pours nothing.
+    private static let grace: Float = 0.1
 
     private let room: CatRoom
     private let deck: GameDeck
@@ -42,43 +35,31 @@ final class FeedStage: GameStage {
     private let root: Entity
     private let task: FeedTask
     private let name: String
-    private var scale = KibbleScale()
-    private var rng = SystemRandomNumberGenerator()
 
-    private let scaleAt: SIMD3<Float>
-    private let bowlHome: SIMD3<Float>
-    private let bagAt: SIMD3<Float>
-    private let scoopAt: SIMD3<Float>
-    private let tareAt: SIMD3<Float>
+    private let bowlAt: SIMD3<Float>
+    private let bagRest: SIMD3<Float>
+    private let bagPour: SIMD3<Float>
     private let bowl: Entity
     private let bag: Entity
-    private let tareButton: ModelEntity
-    private let display: ModelEntity
-    private var displayTexture: TextureResource?
-    private var shownText = ""
+    private var ring: [ModelEntity] = []
+    private let materials: (empty: PhysicallyBasedMaterial, filled: PhysicallyBasedMaterial, zone: PhysicallyBasedMaterial,
+                            zoneFilled: PhysicallyBasedMaterial)
+    private var shownBeads = -1
 
-    private var grip: Grip?
-    private var bagAngle: Float = 0
-    private var bagWant: Float = 0
-    private var bowlTilt: Float = 0
-    private var sinceClump: Double = 9
-    private var pourDebt: Double = 0
-    private var backDebt: Double = 0
+    private var food: Double = 0
+    private var holding: Float?
+    private var tip: Float = 0
+    private var debt: Double = 0
     private var flights: [Flight] = []
-    /// In the order it landed.
     private var pile: [ModelEntity] = []
-    private var bowlMove: (from: SIMD3<Float>, to: SIMD3<Float>, time: Float)?
-    private var shown: Double = 0
-    private var settle: Float = 0
-    private var sinceWobble: Float = 0
     private var sinceTap: Float = 0
-    private var eating: Float?
-    /// The kibble in the bowl when dinner was served.
-    private var served = 0
-    private var started = false
+    private var capped = false
+    private var served: Float?
+    private var servedPile = 0
+    private var shownHint = ""
 
-    private let motion = CMMotionManager()
-    private var sinceShake: Float = 1
+    /// The most the bowl takes: the far end of the zone.
+    private var cap: Double { Double(task.target + task.tolerance) }
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -87,254 +68,147 @@ final class FeedStage: GameStage {
         root = room.pivot.group()
         task = FeedTask(full: room.director?.needs?.full ?? 0.5)
         name = CatProfile.name()
-        scaleAt = spots.at(0, 0.03)
-        bowlHome = spots.at(-0.15, 0.07)
-        bagAt = spots.at(0.16, -0.02)
-        scoopAt = spots.at(0.14, 0.12)
+        bowlAt = spots.at(0, 0.02)
+        bagRest = spots.at(0.2, -0.05, up: 0.13)
+        bagPour = bowlAt + spots.right * 0.045 + [0, 0.115, 0]
 
-        // The scale: a cream shell, a steel platform, a green display and the TARE button toward the camera.
-        let base = root.group(at: scaleAt, rotation: simd_quatf(from: [0, 0, 1], to: spots.toward))
-        base.box(0.15, 0.026, 0.19, r: 0.012, Clay.matte(0xFFF3E2, roughness: 0.45), at: [0, 0.013, 0])
-        var steel = PhysicallyBasedMaterial()
-        steel.baseColor = .init(tint: UIColor(red: 0.84, green: 0.86, blue: 0.87, alpha: 1))
-        steel.metallic = 0.65
-        steel.roughness = 0.28
-        base.cylinder(0.005, 0.064, steel, at: [0, Self.platformY - 0.0025, -0.015])
-        base.box(0.094, 0.006, 0.04, r: 0.004, Clay.matte(0x3A3530, roughness: 0.5), at: [0, 0.027, 0.075])
-        display = base.model(.generatePlane(width: 0.08, depth: 0.03), UnlitMaterial(color: UIColor(red: 0.72, green: 0.79, blue: 0.64, alpha: 1)),
-                             at: [-0.004, 0.0305, 0.075])
-        tareButton = base.cylinder(0.005, 0.0085, Clay.matte(0xE0554A, roughness: 0.5), at: [-0.058, 0.028, 0.072])
-        tareAt = base.convert(position: [-0.058, 0.028, 0.072], to: room.pivot)
+        var empty = Clay.matte(0xFFF3E2, roughness: 0.5)
+        empty.blending = .transparent(opacity: .init(floatLiteral: 0.55))
+        materials = (empty, Clay.matte(0xF2A65E, roughness: 0.4), Clay.matte(0xA9C27E, roughness: 0.5),
+                     Clay.matte(0x6F8A4E, roughness: 0.4))
 
-        bowl = root.group(at: bowlHome)
-        bowl.cylinder(Self.bowlHeight, Self.bowlRadius, Clay.matte(0x6F8FB0, roughness: 0.4), at: [0, Self.bowlHeight / 2, 0])
-        bowl.cylinder(0.001, Self.bowlRadius - 0.004, Clay.matte(0xFFF3E2, roughness: 0.35), at: [0, Self.bowlHeight + 0.0006, 0])
+        bowl = root.group(at: bowlAt)
+        bowl.cylinder(0.006, Self.bowlRadius + 0.004, Clay.matte(0xD8653F, roughness: 0.4), at: [0, 0.003, 0])
+        bowl.cylinder(Self.bowlHeight - 0.006, Self.bowlRadius, Clay.matte(0xE98A5B, roughness: 0.4),
+                      at: [0, 0.006 + (Self.bowlHeight - 0.006) / 2, 0])
+        bowl.cylinder(0.004, Self.bowlRadius + 0.003, Clay.matte(0xFFF3E2, roughness: 0.35), at: [0, Self.bowlHeight - 0.002, 0])
+        bowl.cylinder(0.001, Self.bowlRadius - 0.006, Clay.matte(0x7A4A2A, roughness: 0.9), at: [0, Self.bowlHeight + 0.0004, 0])
 
-        // The bag of kibble, standing, tipped about its mouth toward the scale.
-        bag = root.group(at: bagAt + [0, 0.15, 0])
-        bag.box(0.1, 0.15, 0.07, r: 0.014, Clay.matte(0xD9B48A, roughness: 0.9), at: [0, -0.075, 0])
-        bag.box(0.07, 0.07, 0.002, r: 0.001, Clay.matte(0xE0554A, roughness: 0.8), at: [0, -0.085, 0.036])
-        bag.box(0.094, 0.004, 0.064, r: 0.002, Clay.matte(0x5A3A22, roughness: 1), at: [0, -0.0005, 0])
+        // The bag stands on the floor by its mouth's pivot, kraft paper with a cream label and a paw.
+        bag = root.group(at: bagRest)
+        bag.box(0.085, 0.13, 0.05, r: 0.012, Clay.matte(0xC96F4A, roughness: 0.85), at: [0, -0.065, 0])
+        bag.box(0.085, 0.014, 0.036, r: 0.005, Clay.matte(0xA8573A, roughness: 0.9), at: [0, -0.004, 0])
+        bag.box(0.052, 0.056, 0.002, r: 0.008, Clay.matte(0xFFF3E2, roughness: 0.7), at: [0, -0.07, 0.026])
+        bag.sphere(0.0085, Clay.matte(0xC96F4A), at: [0, -0.078, 0.0275], scale: [1.2, 1, 0.3])
+        for x: Float in [-0.0135, -0.0045, 0.0045, 0.0135] {
+            bag.sphere(0.0042, Clay.matte(0xC96F4A), at: [x, -0.063 + (abs(x) < 0.01 ? 0.004 : 0), 0.0275], scale: [1, 1, 0.3])
+        }
         bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward)
 
-        let scoop = root.group(at: scoopAt)
-        scoop.cylinder(0.02, 0.018, Clay.matte(0xE98A5B, roughness: 0.5), at: [0, 0.01, 0])
-        scoop.box(0.05, 0.008, 0.01, r: 0.004, Clay.matte(0xE98A5B, roughness: 0.5), at: [0.04, 0.012, 0])
-
-        let seat = spots.at(0, -0.17)
-        room.send(to: seat, facing: GameSpots.yaw(from: seat, to: scaleAt), id: "feed-watch")
-        deck.say("Tap the bowl to weigh \(name)'s \(task.target) g")
-        drawDisplay(force: true)
-
-        if motion.isDeviceMotionAvailable {
-            motion.deviceMotionUpdateInterval = 1 / 30
-            motion.startDeviceMotionUpdates()
-        }
+        buildRing()
+        let seat = spots.at(0, -0.13)
+        root.contactBlob(at: bowlAt, width: 0.17, depth: 0.12)
+        root.contactBlob(at: spots.at(0.2, -0.05), width: 0.14, depth: 0.1)
+        root.contactBlob(at: seat, width: 0.24, depth: 0.16)
+        room.send(to: seat, facing: spots.facingPlayer, id: "feed-watch")
+        deck.say("Hold to pour \(name)'s \(task.target) g, stop in the green")
+        drawRing()
     }
 
     var focus: [SIMD3<Float>] {
-        [bowlHome - spots.right * 0.04, bagAt + spots.right * 0.05 + [0, 0.16, 0], scaleAt + spots.toward * 0.1,
-         spots.at(0, -0.17, up: 0.1)]
+        [bowlAt - spots.right * 0.1, bagRest + spots.right * 0.05 + [0, 0.02, 0], bowlAt + spots.toward * 0.08,
+         spots.at(0, -0.13, up: 0.1), spots.at(0, -0.6, up: 0.4)]
     }
 
-    var action: String? { started && eating == nil ? "Feed" : nil }
+    var action: String? { served == nil && isReady ? "Feed" : nil }
 
     var cue: GameCue? {
-        guard eating == nil, bowlMove == nil else { return nil }
-        guard scale.bowlOnScale else { return GameCue(step: 0, gesture: .tap, at: bowlAt + [0, Self.bowlHeight, 0]) }
-        if case .ready = task.check(food: scale.food) { return nil }
-        return GameCue(step: 1, gesture: .drag(to: scaleAt + [0, 0.08, 0]), at: bagAt + [0, 0.1, 0])
+        guard served == nil, !isReady, food == 0 else { return nil }
+        return GameCue(step: 0, gesture: .hold, at: bagRest + [0, -0.06, 0])
     }
 
-    /// Where the bowl's food sits: on the platform or at home.
-    private var bowlAt: SIMD3<Float> { bowl.position }
-    private var onScaleSpot: SIMD3<Float> { scaleAt - spots.toward * 0.015 + [0, Self.platformY, 0] }
+    /// Looks down at the bowl for a bite, then up at the player.
+    var glance: CGSize? {
+        guard let served else { return nil }
+        return served.truncatingRemainder(dividingBy: 2.6) < 1.8 ? CGSize(width: 0, height: 120) : nil
+    }
+
+    private var isReady: Bool {
+        if case .ready = task.check(food: food) { return true }
+        return false
+    }
+
+    // MARK: - Touch
 
     func began(_ touch: GameTouch) {
-        guard eating == nil else { return }
-        if touch.distance(to: tareAt) < 0.022 {
-            grip = .tare
-        } else if touch.distance(to: bowlAt + [0, 0.015, 0]) < 0.06 {
-            grip = .bowl(start: touch.point)
-        } else if touch.distance(to: scoopAt + [0, 0.01, 0]) < 0.04 {
-            grip = .scoop
-        } else if touch.distance(to: bagAt + [0, 0.08, 0]) < 0.08 {
-            grip = .bag(start: touch.point)
-        }
+        guard served == nil else { return }
+        holding = 0
     }
 
-    func moved(_ touch: GameTouch) {
-        switch grip {
-        case .bag(let start):
-            // Dragging toward the scale (left) tips the bag further.
-            let pulled = max(0, start.x - touch.point.x) + max(0, touch.point.y - start.y) * 0.5
-            bagWant = min(2.2, Float(pulled / 90))
-        case .bowl(let start):
-            // Lifted toward the bag, the bowl tips some kibble back.
-            let pushed = max(0, touch.point.x - start.x)
-            bowlTilt = min(1.6, Float(pushed / 80))
-        default: break
-        }
-    }
+    func moved(_ touch: GameTouch) {}
 
-    func ended(_ touch: GameTouch?) {
-        defer {
-            grip = nil
-            bagWant = 0
-            bowlTilt = 0
-        }
-        guard let grip, eating == nil else { return }
-        let moved = touch.map { touch -> CGFloat in
-            switch grip {
-            case .bag(let start), .bowl(let start): hypot(touch.point.x - start.x, touch.point.y - start.y)
-            default: 0
-            }
-        } ?? 0
-        switch grip {
-        case .tare:
-            scale.pressTare()
-            tareButton.position.y = 0.026
-            deck.tap(0.8)
-            settle = 0.15
-            started = true
-            if scale.bowlOnScale { deck.say("\(name) needs \(task.target) g. Now pour", for: 3) }
-        case .bowl where moved < 14:
-            if !scale.bowlOnScale {
-                moveBowl(to: onScaleSpot)
-                scale.putBowl(onScale: true)
-                settle = 0.4
-                started = true
-                deck.cheer()
-                deck.say("Tip the bag to pour. TARE zeroes the scale", for: 3)
-            } else if scale.food >= KibbleScale.kibbleGrams {
-                takeOne()
-            }
-        case .scoop:
-            let grams = KibblePour.scoop(using: &rng)
-            for _ in 0..<Int((grams / KibbleScale.kibbleGrams).rounded()) { pour(from: scoopAt + [0, 0.05, 0], spread: 0.6) }
-            started = true
-            deck.tap()
-        case .bag where moved < 14:
-            pour(from: mouth, spread: 0.2)
-            started = true
-            deck.tap(0.4)
-        default: break
-        }
-    }
+    func ended(_ touch: GameTouch?) { holding = nil }
 
     func act() {
-        guard eating == nil else { return }
-        switch task.check(food: scale.food) {
-        case .ready(let perfect):
-            deck.say(perfect ? "Exactly \(task.target) g!" : "\(Int(scale.food.rounded())) g: close enough", for: 1.5)
-            serve()
-        default:
-            deck.say(task.advice(food: scale.food), for: 2.2)
-            deck.tap(0.3)
-        }
+        guard served == nil, isReady else { return }
+        serve()
     }
+
+    // MARK: - Frame
 
     func update(_ dt: Float) {
         sinceTap += dt
-        sinceClump += Double(dt)
-        sinceShake += dt
-        tareButton.position.y += (0.028 - tareButton.position.y) * min(1, dt * 10)
-        updateBag(dt)
-        updateBowl(dt)
-        shakeCheck()
+        if let held = holding { holding = held + dt }
+        let pouring = served == nil && !capped && (holding ?? 0) > Self.grace
+        tip += ((pouring ? 1 : 0) - tip) * min(1, dt * 7)
+        drawBag()
+        if pouring, tip > 0.85 { pourFlow(dt) }
         fly(dt)
-        updateDisplay(dt)
-        let grams = Int(scale.food.rounded())
-        deck.show(min(scale.food / Double(max(task.target, 1)), 1), "Bowl", detail: "\(grams) / \(task.target) g")
-        if let time = eating {
-            eat(time: time + dt)
+        if let time = served { eat(time + dt) }
+        drawRing()
+        deck.show(min(food / Double(max(task.target, 1)), 1), "Bowl", detail: "\(Int(food.rounded())) / \(task.target) g")
+        if served == nil { say(hint) }
+    }
+
+    private var hint: String {
+        if capped { return "That's the line. Tap Feed" }
+        switch task.check(food: food) {
+        case .ready: return "Right there. Let go, tap Feed"
+        case .tooLittle(let grams): return food < 1 ? "Hold to pour \(name)'s \(task.target) g, stop in the green" : "\(grams) g to go"
+        case .tooMuch: return "That's the line. Tap Feed"
         }
     }
 
-    // MARK: - Pouring
+    private func say(_ text: String) {
+        guard text != shownHint else { return }
+        shownHint = text
+        deck.say(text)
+    }
 
-    private var mouth: SIMD3<Float> { bag.convert(position: [0, 0, 0], to: room.pivot) }
-
-    private func updateBag(_ dt: Float) {
-        let before = bagAngle
-        bagAngle += (bagWant - bagAngle) * min(1, dt * 8)
-        bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward) * simd_quatf(angle: bagAngle, axis: [0, 0, 1])
-        let turnRate = Double(abs(bagAngle - before) / max(dt, 1e-3))
-        let flow = KibblePour.flow(angle: Double(bagAngle))
-        if flow > 0 {
-            started = true
-            pourDebt += flow * Double(dt)
-            while pourDebt >= KibbleScale.kibbleGrams {
-                pourDebt -= KibbleScale.kibbleGrams
-                pour(from: mouth, spread: 0.4)
-            }
-            if sinceTap > 0.08 {
-                sinceTap = 0
-                deck.tap(CGFloat(0.2 + flow / 40))
-            }
+    private func pourFlow(_ dt: Float) {
+        let held = Double(holding ?? 0)
+        // Quicker the longer it is held, slower toward the end so the line is easy to stop on.
+        let rate = (9 + min(held, 2) * 5) * min(1, max((cap - food) / 9, 0.3))
+        debt += rate * Double(dt)
+        while debt >= Self.piece, food + Double(flights.count) < cap {
+            debt -= Self.piece
+            drop()
         }
-        if let clump = KibblePour.clump(turnRate: turnRate, angle: Double(bagAngle), sinceLast: sinceClump, using: &rng) {
-            sinceClump = 0
-            for _ in 0..<Int((clump / KibbleScale.kibbleGrams).rounded()) { pour(from: mouth, spread: 0.9) }
-            deck.say("Whoops, a clump!", for: 1.4)
+        if food + Double(flights.count) >= cap, !capped {
+            capped = true
+            debt = 0
             deck.thump()
         }
-    }
-
-    private func updateBowl(_ dt: Float) {
-        if var move = bowlMove {
-            move.time = min(1, move.time + dt * 2.5)
-            let s = move.time * move.time * (3 - 2 * move.time)
-            bowl.position = simd_mix(move.from, move.to, SIMD3(repeating: s)) + [0, 0.05 * sin(s * .pi), 0]
-            bowlMove = move.time < 1 ? move : nil
-        }
-        let tilt = bowlTilt
-        bowl.orientation = simd_quatf(angle: -tilt * 0.6, axis: simd_normalize(spots.toward))
-        let back = KibblePour.back(tilt: Double(tilt))
-        guard back > 0, scale.food > 0 else { return }
-        backDebt += back * Double(dt)
-        while backDebt >= KibbleScale.kibbleGrams, scale.food >= KibbleScale.kibbleGrams {
-            backDebt -= KibbleScale.kibbleGrams
-            takeOne()
+        if sinceTap > 0.08 {
+            sinceTap = 0
+            deck.tap(CGFloat(0.25 + min(rate, 20) / 40))
         }
     }
 
-    /// A shake of the phone loosens a kibble or three from the bag.
-    private func shakeCheck() {
-        guard let acceleration = motion.deviceMotion?.userAcceleration, sinceShake > 0.25 else { return }
-        let strength = sqrt(acceleration.x * acceleration.x + acceleration.y * acceleration.y + acceleration.z * acceleration.z)
-        guard strength > 1.2 else { return }
-        sinceShake = 0
-        started = true
-        let grams = KibblePour.shake(strength: min((strength - 1.2) / 1.5, 1), using: &rng)
-        for _ in 0..<Int((grams / KibbleScale.kibbleGrams).rounded()) { pour(from: mouth, spread: 0.3) }
-        deck.tap(0.7)
+    private func drawBag() {
+        let s = tip * tip * (3 - 2 * tip)
+        bag.position = simd_mix(bagRest, bagPour, SIMD3(repeating: s))
+        bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward) * simd_quatf(angle: 1.55 * s, axis: [0, 0, 1])
     }
 
-    private func moveBowl(to target: SIMD3<Float>) {
-        bowlMove = (bowl.position, target, 0)
-    }
+    private var mouth: SIMD3<Float> { bag.position }
 
-    private func pour(from start: SIMD3<Float>, spread: Float) {
-        guard flights.count < 90 else { return }
-        let kibble = root.sphere(0.0042, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),
-                                 at: start, scale: [1, 0.6, 1])
-        let slot = pileSlot(pile.count + flights.filter(\.into).count)
-        flights.append(Flight(entity: kibble, from: start + SIMD3(Float.random(in: -0.01...0.01) * spread, 0, 0),
-                              to: slot, length: Float.random(in: 0.28...0.42), grams: KibbleScale.kibbleGrams, into: true))
-    }
-
-    /// Takes the top kibble out of the bowl, back to the bag.
-    private func takeOne() {
-        guard let kibble = pile.popLast() else { return }
-        scale.add(-KibbleScale.kibbleGrams)
-        settle = 0.25
-        let start = kibble.position(relativeTo: root)
-        kibble.removeFromParent()
-        root.addChild(kibble)
-        kibble.position = start
-        flights.append(Flight(entity: kibble, from: start, to: mouth, length: 0.35, grams: 0, into: false))
-        deck.tap(0.3)
+    private func drop() {
+        let kibble = root.sphere(0.0052, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),
+                                 at: mouth, scale: [1, 0.65, 1])
+        let slot = slot(pile.count + flights.count)
+        flights.append(Flight(entity: kibble, from: mouth + spots.right * Float.random(in: -0.004...0.004), to: slot, time: 0,
+                              length: Float.random(in: 0.22...0.32)))
     }
 
     private func fly(_ dt: Float) {
@@ -342,108 +216,78 @@ final class FeedStage: GameStage {
             flights[index].time += dt
             let flight = flights[index]
             let u = min(1, flight.time / flight.length)
-            let arc: Float = flight.into ? 0.03 : 0.06
-            flight.entity.position = simd_mix(flight.from, flight.to, SIMD3(repeating: u)) + [0, arc * sin(u * .pi), 0]
+            flight.entity.position = simd_mix(flight.from, flight.to, SIMD3(repeating: u * u))
             guard u >= 1 else { continue }
             flights.remove(at: index)
-            if flight.into {
-                // Settles into the pile, which rides with the bowl from now on.
-                let local = bowl.convert(position: flight.to, from: root)
-                flight.entity.removeFromParent()
-                bowl.addChild(flight.entity)
-                flight.entity.position = local
-                pile.append(flight.entity)
-                scale.add(flight.grams)
-                settle = 0.25
-            } else {
-                flight.entity.removeFromParent()
-            }
+            let local = bowl.convert(position: flight.to, from: root)
+            flight.entity.removeFromParent()
+            bowl.addChild(flight.entity)
+            flight.entity.position = local
+            pile.append(flight.entity)
+            food += Self.piece
         }
     }
 
     /// Where the `index`th kibble rests in the bowl, in `root`'s space: a spiral that rises as it fills.
-    private func pileSlot(_ index: Int) -> SIMD3<Float> {
-        let layer = index / 40
-        let k = Float(index % 40)
-        let angle = k * 2.4
-        let r = (Self.bowlRadius - 0.01) * (k / 40).squareRoot()
-        let local = SIMD3<Float>(r * cos(angle), 0.009 + Float(layer) * 0.0045 + (1 - r / Self.bowlRadius) * 0.002, r * sin(angle))
-        let target = bowlMove?.to ?? bowl.position
-        return target + local
+    private func slot(_ index: Int) -> SIMD3<Float> {
+        let layer = index / 28
+        let k = Float(index % 28)
+        let r = (Self.bowlRadius - 0.012) * (k / 28).squareRoot()
+        let local = SIMD3<Float>(r * cos(k * 2.4), Self.bowlHeight - 0.004 + Float(layer) * 0.0042, r * sin(k * 2.4))
+        return bowlAt + local
     }
 
-    // MARK: - The display
+    // MARK: - The ring
 
-    private func updateDisplay(_ dt: Float) {
-        settle = max(0, settle - dt)
-        let reading = Double(scale.reading)
-        if settle > 0 {
-            // A real scale wobbles a gram or two before it settles, about ten times a second: each new number is a
-            // texture drawn on the main thread.
-            sinceWobble += dt
-            guard sinceWobble >= 0.1 else { return }
-            sinceWobble = 0
-            shown = reading + Double(Int.random(in: -1...1))
-        } else {
-            shown = reading
+    /// A row of beads across the bowl's front, from her left to her right: empty, filled with the pour, and green over
+    /// the zone with a taller one at the portion itself.
+    private func buildRing() {
+        let sweep: Float = 2.1
+        for i in 0..<Self.beads {
+            let a = -sweep + 2 * sweep * (Float(i) + 0.5) / Float(Self.beads)
+            let r = Self.ringRadius
+            let target = beadOfTarget == i
+            let bead = root.sphere(target ? 0.0078 : 0.0055, materials.empty,
+                                   at: bowlAt + spots.right * (r * sin(a)) + spots.toward * (r * cos(a)) + [0, target ? 0.005 : 0.0035, 0],
+                                   scale: target ? [1, 1.4, 1] : [1, 0.8, 1])
+            ring.append(bead)
         }
-        drawDisplay(force: false)
     }
 
-    private func drawDisplay(force: Bool) {
-        let text = "\(Int(shown))"
-        guard force || text != shownText else { return }
-        shownText = text
-        let tared = scale.isTared
-        let renderer = ImageRenderer(content:
-            ZStack(alignment: .trailing) {
-                Color(red: 0.72, green: 0.79, blue: 0.64)
-                HStack(alignment: .lastTextBaseline, spacing: 4) {
-                    if tared { Text("→0←").font(.system(size: 18, weight: .bold)).padding(.trailing, 8) }
-                    Text(text).font(.system(size: 64, weight: .bold, design: .monospaced))
-                    Text("g").font(.system(size: 26, weight: .bold, design: .monospaced))
-                }
-                .foregroundStyle(Color(red: 0.13, green: 0.19, blue: 0.11))
-                .padding(.trailing, 14)
-            }
-            .frame(width: 256, height: 96))
-        renderer.scale = 1
-        guard let image = renderer.cgImage else { return }
-        if let displayTexture {
-            try? displayTexture.replace(withImage: image, options: .init(semantic: .color))
-        } else if let texture = try? TextureResource(image: image, options: .init(semantic: .color)) {
-            displayTexture = texture
-            var material = UnlitMaterial()
-            material.color = .init(tint: .white, texture: .init(texture))
-            display.model?.materials = [material]
+    private var beadOfTarget: Int { min(Self.beads - 1, Int(Double(task.target) / cap * Double(Self.beads))) }
+
+    private func drawRing() {
+        let filled = Int((food / cap * Double(Self.beads)).rounded(.down))
+        guard filled != shownBeads else { return }
+        shownBeads = filled
+        let zoneStart = Int(Double(task.target - task.tolerance) / cap * Double(Self.beads))
+        for (i, bead) in ring.enumerated() {
+            let inZone = i >= zoneStart
+            let on = i < filled
+            let material = inZone ? (on ? materials.zoneFilled : materials.zone) : (on ? materials.filled : materials.empty)
+            bead.model?.materials = [material]
         }
     }
 
     // MARK: - Dinner
 
     private func serve() {
-        eating = 0
-        served = pile.count
-        let result = GameResult.feed(target: task.target, food: scale.food)
-        scale.putBowl(onScale: false)
-        let dinner = spots.at(-0.02, -0.11)
-        moveBowl(to: dinner)
-        let seat = dinner - spots.right * 0.09
-        room.send(to: [seat.x, spots.floor, seat.z], facing: GameSpots.yaw(from: seat, to: dinner), id: "feed-eat")
+        served = 0
+        servedPile = pile.count
+        let result = GameResult.feed(target: task.target, food: food)
+        deck.say(task.check(food: food) == .ready(perfect: true) ? "Exactly \(task.target) g!" : "\(Int(food.rounded())) g: just right", for: 1.5)
         deck.cheer(big: true)
         deck.result = result
     }
 
-    /// She eats: the pile goes down over a few seconds once she is at the bowl.
-    private func eat(time: Float) {
-        eating = time
-        guard room.walker?.moving == false, time > 1 else { return }
-        let left = Int(Float(served) * max(0, 1 - (time - 1) / 3.6))
+    /// The pile goes down over a few seconds.
+    private func eat(_ time: Float) {
+        served = time
+        let left = Int(Float(servedPile) * max(0, 1 - (time - 0.8) / 4))
         while pile.count > left { pile.removeLast().removeFromParent() }
     }
 
     func tearDown() {
-        motion.stopDeviceMotionUpdates()
         root.removeFromParent()
         room.walker?.go(to: nil)
     }

@@ -3,12 +3,10 @@ import GamesInterface
 import RealityKit
 import UIKit
 
-/// Fresh water: hold anywhere to pour from the jug and let go on the line. Past the brim it spills into a puddle;
-/// rub the puddle to wipe it up, or drag the bowl to tip some back out. Served, Mochi comes over and drinks.
+/// Fresh water: hold anywhere to pour from the jug and let go on the line. The jug stops by itself just past the line, so
+/// the bowl never spills; let go in the band or tap Serve and Mochi, sitting behind the bowl, drinks.
 @MainActor
 final class WaterStage: GameStage {
-    private enum Grip { case pour, wipe, tip }
-
     private static let bowlRadius: Float = 0.042
     private static let bowlHeight: Float = 0.026
     private static let floorInside: Float = 0.005
@@ -23,15 +21,12 @@ final class WaterStage: GameStage {
     private let water: ModelEntity
     private let jug: Entity
     private let stream: ModelEntity
-    private let puddle: ModelEntity
-    private let puddleAt: SIMD3<Float>
     private var bowl = WaterBowl()
-    private var grip: Grip?
-    private var lastWipe: SIMD3<Float>?
+    private var holding = false
     private var flow: Float = 0
     private var sinceTap: Float = 0
-    private var flicked = false
     private var served = false
+    private var drinking: Float = 0
     private var shownHint: String?
 
     init(room: CatRoom, deck: GameDeck) {
@@ -39,8 +34,7 @@ final class WaterStage: GameStage {
         self.deck = deck
         spots = GameSpots(room: room)
         root = room.pivot.group()
-        bowlAt = spots.at(0.02, 0.05)
-        puddleAt = bowlAt + spots.toward * 0.07 - spots.right * 0.03
+        bowlAt = spots.at(0, 0.02)
 
         let bowlGroup = root.group(at: bowlAt)
         bowlGroup.cylinder(Self.bowlHeight, Self.bowlRadius, Clay.matte(0x6F8FB0, roughness: 0.4),
@@ -70,82 +64,56 @@ final class WaterStage: GameStage {
         jug.orientation = simd_quatf(from: [1, 0, 0], to: spots.right)
         stream = root.cylinder(1, 0.0025, waterMaterial, at: bowlAt)
         stream.isEnabled = false
-        puddle = root.cylinder(0.0012, 1, waterMaterial, at: puddleAt + [0, 0.0006, 0])
-        puddle.isEnabled = false
 
-        // Behind the bowl, facing it.
+        // Behind the bowl, facing the player.
         let seat = spots.at(0, -0.13)
-        room.send(to: seat, facing: GameSpots.yaw(from: seat, to: bowlAt), id: "water-watch")
-        say(bowl.hint)
+        root.contactBlob(at: bowlAt, width: 0.15, depth: 0.11)
+        root.contactBlob(at: seat, width: 0.24, depth: 0.16)
+        room.send(to: seat, facing: spots.facingPlayer, id: "water-watch")
+        say(hint)
     }
 
     var focus: [SIMD3<Float>] {
-        [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], puddleAt, spots.at(0, -0.13, up: 0.12)]
+        [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], bowlAt + spots.toward * 0.08, spots.at(0, -0.13, up: 0.12), spots.at(0, -0.6, up: 0.4)]
     }
 
-    var action: String? { bowl.canServe && grip != .pour && !served ? "Serve" : nil }
+    var action: String? { bowl.canServe && !holding && !served ? "Serve" : nil }
 
     func act() { serve() }
 
     var cue: GameCue? {
-        guard !served else { return nil }
-        if bowl.puddle > WaterBowl.dry { return GameCue(step: 2, gesture: .rub, at: puddleAt) }
-        if bowl.isOverLine { return GameCue(step: 3, gesture: .hold, at: bowlAt + [0, Self.bowlHeight, 0]) }
-        if bowl.canServe { return nil }
+        guard !served, !bowl.canServe else { return nil }
         return GameCue(step: 1, gesture: .hold, at: jug.position + [0, 0.035, 0])
     }
 
-    func began(_ touch: GameTouch) {
-        guard !served else { return }
-        if bowl.puddle > WaterBowl.dry, let floor = touch.onPlane(y: spots.floor),
-           simd_distance(floor, puddleAt) < puddleRadius + 0.03 {
-            grip = .wipe
-            lastWipe = floor
-        } else if bowl.level > 0.05, touch.distance(to: bowlAt + [0, 0.015, 0]) < 0.05 {
-            grip = .tip
-        } else {
-            grip = .pour
-        }
-    }
+    var glance: CGSize? { served && drinking.truncatingRemainder(dividingBy: 2.6) < 1.8 ? CGSize(width: 0, height: 120) : nil }
 
-    func moved(_ touch: GameTouch) {
-        guard grip == .wipe, let floor = touch.onPlane(y: spots.floor) else { return }
-        if let lastWipe { bowl.wipe(Double(simd_distance(floor, lastWipe)) * 0.6) }
-        lastWipe = floor
-        if sinceTap > 0.1 {
-            sinceTap = 0
-            deck.stroke()
-        }
-    }
+    func began(_ touch: GameTouch) { holding = !served }
+
+    func moved(_ touch: GameTouch) {}
 
     func ended(_ touch: GameTouch?) {
-        let was = grip
-        grip = nil
-        lastWipe = nil
-        // Let go on the line with the floor dry: served.
-        if was == .pour, bowl.canServe, bowl.puddle <= WaterBowl.dry, !bowl.isSpilling { serve() }
+        let was = holding
+        holding = false
+        // Let go on the line: served.
+        if was, bowl.canServe, !served { serve() }
     }
 
     func update(_ dt: Float) {
         deck.show(min(bowl.level / WaterBowl.line, 1), "Water level")
         sinceTap += dt
-        flow += ((grip == .pour && !served ? 1 : 0) - flow) * min(1, dt * 6)
+        if served { drinking += dt }
+        let full = bowl.level >= WaterBowl.line + WaterBowl.band * 0.8
+        flow += ((holding && !served && !full ? 1 : 0) - flow) * min(1, dt * 6)
         if flow < 0.01 { flow = 0 }
         bowl.pour(flow: Double(flow), dt: Double(dt))
-        if grip == .tip { bowl.pourOut(dt: Double(dt)) }
         if flow > 0.1, sinceTap > 0.09 {
             sinceTap = 0
             deck.tap(CGFloat(0.25 + 0.4 * flow))
         }
-        if bowl.isOverLine, !flicked {
-            flicked = true
-            room.walker?.behavior.perform(.flick)
-        }
         draw()
-        if !served { say(bowl.hint) }
+        if !served { say(hint) }
     }
-
-    private var puddleRadius: Float { min(0.075, 0.012 + Float(bowl.puddle).squareRoot() * 0.12) }
 
     private func draw() {
         let level = Float(bowl.level)
@@ -169,9 +137,11 @@ final class WaterStage: GameStage {
         stream.position = (spout + bottom) / 2
         stream.scale = [width, drop, width]
         stream.orientation = .identity
-        puddle.isEnabled = bowl.puddle > WaterBowl.dry / 4
-        let r = puddleRadius
-        puddle.scale = [r, 0.0012, r]
+    }
+
+    private var hint: String {
+        if bowl.canServe { return "Right there. Let go" }
+        return bowl.level < 0.05 ? "Hold to pour, stop on the blue line" : "A little more"
     }
 
     private func say(_ text: String) {
@@ -183,13 +153,8 @@ final class WaterStage: GameStage {
     private func serve() {
         guard bowl.canServe, !served else { return }
         served = true
-        grip = nil
-        deck.say(bowl.rating == .perfect ? "Perfect!" : bowl.rating == .good ? "Good!" : "A bit much… she drinks anyway",
-                 for: 1.6)
-        let drink = bowlAt - spots.toward * 0.1
-        room.send(to: [drink.x, spots.floor, drink.z], facing: GameSpots.yaw(from: drink, to: bowlAt), id: "water-drink") {
-            [weak self] in self?.room.walker?.behavior.perform(.slowBlink)
-        }
+        holding = false
+        deck.say(bowl.rating == .perfect ? "Perfect!" : "Good!", for: 1.6)
         deck.cheer(big: true)
         deck.result = GameResult.water(bowl)
     }

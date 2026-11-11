@@ -57,7 +57,7 @@ let decor: Target = .target(
 let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
 let profileInterface: Target = .target(
   name: "ProfileInterface", dependencies: dependencies(["Persistence"]))
-// Moved from the app's OurioShared library, which builds with Xcode's approachable concurrency: a
+// Moved from the app, which builds with Xcode's approachable concurrency: a
 // nonisolated async method runs on its caller's actor, so the app's stores can call it from the UI.
 let fromTheApp: [SwiftSetting] = [.enableUpcomingFeature("NonisolatedNonsendingByDefault")]
 
@@ -66,6 +66,18 @@ let usInterface: Target = .target(
   swiftSettings: fromTheApp)
 let momentsInterface: Target = .target(
   name: "MomentsInterface", dependencies: dependencies(["Persistence", "Wire"]),
+  swiftSettings: fromTheApp)
+// What the widgets show and the App Group files they share with the app and the other extensions.
+let widgetInterface: Target = .target(
+  name: "WidgetInterface",
+  dependencies: dependencies([
+    "MoodInterface", "Persistence", "ProfileInterface", "UsInterface", "Wire",
+  ]),
+  swiftSettings: fromTheApp)
+// The views the widgets and the app both draw.
+let widgetUI: Target = .target(
+  name: "WidgetUI",
+  dependencies: dependencies(["Design", "DrawInterface", "Ink", "WidgetInterface", "Wire"]),
   swiftSettings: fromTheApp)
 let drawInterface: Target = .target(
   name: "DrawInterface", dependencies: dependencies(["Persistence", "Wire"]))
@@ -79,13 +91,14 @@ let shop: Target = .target(
 // The room itself is in the app, where RealityKit is.
 let gamesInterface: Target = .target(name: "GamesInterface", dependencies: dependencies(["Wire"]))
 let roomInterface: Target = .target(
-  name: "RoomInterface", dependencies: dependencies(["GamesInterface", "Pet", "BilletKit"]))
+  name: "RoomInterface",
+  dependencies: dependencies(["GamesInterface", "DecorInterface", "Pet", "BilletKit"]))
 
 let products =
   features + [
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
-    "ProfileInterface", "UsInterface", "MomentsInterface",
+    "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
     "DecorInterface", "FeatureDecor",
   ]
 
@@ -102,7 +115,9 @@ let package = Package(
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
     + [
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
-      mood, drawInterface, profileInterface, usInterface, momentsInterface, decorInterface, decor,
+      mood, drawInterface, profileInterface, usInterface, momentsInterface, widgetInterface,
+      widgetUI,
+      decorInterface, decor,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
   swiftLanguageModes: [.v6]

@@ -1,4 +1,5 @@
 import Design
+import FeatureInbox
 import Foundation
 import SwiftUI
 import Testing
@@ -16,9 +17,12 @@ import Testing
     }
 
     @Test(arguments: GalleryScreen.allCases, Snapshot.Variant.allCases)
-    func screen(_ screen: GalleryScreen, _ variant: Snapshot.Variant) throws {
+    func screen(_ screen: GalleryScreen, _ variant: Snapshot.Variant) async throws {
         let name = "screen-\(screen.rawValue)-\(variant.rawValue)"
-        let image = try #require(Snapshot.render(screen.view, variant: variant, fits: false), "\(name) drew nothing")
+        // A task of the view never runs while the drawing waits on the run loop, so a screen that loads is given the
+        // answer it would have by the time it is drawn.
+        let model = await screen.loaded()
+        let image = try #require(Snapshot.render(screen.view(model), variant: variant, fits: false), "\(name) drew nothing")
         try Snapshot.match(image, name: name)
     }
 }
@@ -27,13 +31,28 @@ import Testing
 /// drifting motes and the live hero cat, and the Shop's Today changes with the date, so neither is here.
 enum GalleryScreen: String, CaseIterable, Sendable {
     case inbox
+    case inboxEmpty = "inbox-empty"
+    case inboxFailed = "inbox-failed"
     case settings
 
-    @MainActor @ViewBuilder var view: some View {
+    @MainActor func loaded() async -> InboxModel? {
+        let scenario: InboxFixture.Scenario
         switch self {
-        case .inbox:
-            NavigationStack {
-                InboxSheet(model: InboxFixture.model(), state: HomeState(stores: .live())) { _ in }
+        case .inbox: scenario = .items
+        case .inboxEmpty: scenario = .empty
+        case .inboxFailed: scenario = .failed
+        case .settings: return nil
+        }
+        let model = InboxFixture.model(scenario)
+        await model.open()
+        return model
+    }
+
+    @MainActor @ViewBuilder func view(_ model: InboxModel?) -> some View {
+        switch self {
+        case .inbox, .inboxEmpty, .inboxFailed:
+            if let model {
+                NavigationStack { InboxSheet(model: model, state: HomeState(stores: .live()), open: { _ in }, opensModel: false) }
             }
         case .settings:
             NavigationStack { SettingsView(state: HomeState(stores: .live())) {} }
