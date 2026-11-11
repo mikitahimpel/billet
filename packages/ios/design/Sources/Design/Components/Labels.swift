@@ -191,7 +191,7 @@ public struct FilterChip: View {
       .foregroundStyle(isSelected ? Ink.heroInk : Ink.textSecondary)
       .padding(.horizontal, 14)
       .frame(minHeight: 34)
-      .background(isSelected ? Color.honey : Ink.surfaceRaised, in: .capsule)
+      .background(isSelected ? Ink.accentFace : AnyShapeStyle(Ink.surfaceRaised), in: .capsule)
       .frame(minHeight: Size.control)
       .contentShape(.rect)
     }
