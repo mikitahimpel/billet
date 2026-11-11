@@ -97,6 +97,9 @@ final class FeedStage: GameStage {
 
         buildRing()
         let seat = spots.at(0, -0.13)
+        root.contactBlob(at: bowlAt, width: 0.17, depth: 0.12)
+        root.contactBlob(at: spots.at(0.2, -0.05), width: 0.14, depth: 0.1)
+        root.contactBlob(at: seat, width: 0.24, depth: 0.16)
         room.send(to: seat, facing: spots.facingPlayer, id: "feed-watch")
         deck.say("Hold to pour \(name)'s \(task.target) g, stop in the green")
         drawRing()
@@ -104,7 +107,7 @@ final class FeedStage: GameStage {
 
     var focus: [SIMD3<Float>] {
         [bowlAt - spots.right * 0.1, bagRest + spots.right * 0.05 + [0, 0.02, 0], bowlAt + spots.toward * 0.08,
-         spots.at(0, -0.13, up: 0.1)]
+         spots.at(0, -0.13, up: 0.1), spots.at(0, -0.6, up: 0.4)]
     }
 
     var action: String? { served == nil && isReady ? "Feed" : nil }
@@ -244,7 +247,7 @@ final class FeedStage: GameStage {
             let a = -sweep + 2 * sweep * (Float(i) + 0.5) / Float(Self.beads)
             let r = Self.ringRadius
             let target = beadOfTarget == i
-            let bead = root.sphere(target ? 0.0062 : 0.0042, materials.empty,
+            let bead = root.sphere(target ? 0.0078 : 0.0055, materials.empty,
                                    at: bowlAt + spots.right * (r * sin(a)) + spots.toward * (r * cos(a)) + [0, target ? 0.005 : 0.0035, 0],
                                    scale: target ? [1, 1.4, 1] : [1, 0.8, 1])
             ring.append(bead)

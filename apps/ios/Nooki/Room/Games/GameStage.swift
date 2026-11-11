@@ -183,3 +183,29 @@ extension CatRoom {
             id: id, path: [.init(at: spot, move: .jump)], rest: yaw, play: play, arrive: arrive))
     }
 }
+
+extension Entity {
+    private static let blobTexture: TextureResource? = {
+        let size = CGSize(width: 128, height: 128)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let colors = [UIColor(white: 0, alpha: 0.4).cgColor, UIColor(white: 0, alpha: 0).cgColor] as CFArray
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) else {
+                return
+            }
+            context.cgContext.drawRadialGradient(gradient, startCenter: CGPoint(x: 64, y: 64), startRadius: 0,
+                                                 endCenter: CGPoint(x: 64, y: 64), endRadius: 64, options: [])
+        }
+        return image.cgImage.flatMap { try? TextureResource(image: $0, options: .init(semantic: .color)) }
+    }()
+
+    /// A soft contact shadow on the floor under a prop: a baked blob, no light and no shadow map.
+    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float) {
+        guard let texture = Self.blobTexture else { return }
+        var material = UnlitMaterial(applyPostProcessToneMap: false)
+        material.color = .init(tint: .white, texture: .init(texture))
+        material.blending = .transparent(opacity: .init(floatLiteral: 1))
+        let blob = ModelEntity(mesh: .generatePlane(width: width, depth: depth), materials: [material])
+        blob.position = position + [0, 0.0015, 0]
+        addChild(blob)
+    }
+}
