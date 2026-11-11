@@ -8,10 +8,10 @@ import Testing
 struct PerfLabTests {
     typealias State = PerfLabMachine.State
 
-    @Test func everythingShipsOnButFlattenTheDustAndTheAntialiasing() {
+    @Test func everythingShipsOnButTheExtraStepsTheDustAndTheAntialiasing() {
         let state = State.shipped
         for suspect in PerfSuspect.allCases {
-            #expect(state.isOn(suspect) == ![.flatten, .motes, .msaa, .ownLoop, .metalHud].contains(suspect))
+            #expect(state.isOn(suspect) == ![.flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate].contains(suspect))
         }
         #expect(!state.meter)
     }
@@ -22,6 +22,9 @@ struct PerfLabTests {
         (State(changed: [.shadows, .shine]), .set(.shadows, on: true), State(changed: [.shine])),
         (State(changed: [.flatten]), .set(.flatten, on: false), .shipped),
         (.shipped, .meter(true), State(meter: true)),
+        (.shipped, .force(.serious), State(forcedTier: .serious)),
+        (State(forcedTier: .serious), .force(nil), .shipped),
+        (State(forcedTier: .serious), .force(.fair), State(forcedTier: .fair)),
         (State(meter: true), .meter(false), .shipped),
         (State(changed: [.barGlass, .scrollEdges], meter: true), .reset, .shipped),
     ]
@@ -39,6 +42,8 @@ struct PerfLabTests {
         (State(changed: [.pageGlass]), .set(.pageGlass, on: false)),
         (State(changed: [.flatten]), .set(.flatten, on: true)),
         (.shipped, .meter(false)),
+        (.shipped, .force(nil)),
+        (State(forcedTier: .fair), .force(.fair)),
         (State(meter: true), .meter(true)),
         (.shipped, .reset),
     ]
@@ -55,6 +60,10 @@ struct PerfLabTests {
         #expect(PerfLabMachine.summary(.shipped, reading: nil) == "Perf lab: as shipped")
         #expect(PerfLabMachine.summary(State(changed: [.shine, .barGlass, .flatten]), reading: reading)
             == "Perf lab: barGlass off, shine off, flatten on · 60 fps, p95 16.7 ms, 0 dropped")
+    }
+
+    @Test func theCopyLineNamesAForcedTier() {
+        #expect(PerfLabMachine.summary(State(forcedTier: .serious), reading: nil) == "Perf lab: tier serious forced")
     }
 
     @Test func theCopyLineEndsWithTheEnergyReading() {

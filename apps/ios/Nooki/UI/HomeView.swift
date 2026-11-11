@@ -232,7 +232,7 @@ struct HomeView: View {
         ZStack {
             // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
             // and the glass over them never redraw a moving backdrop every frame.
-            WarmBackdrop(drifts: roomOnScreen)
+            WarmBackdrop(drifts: roomOnScreen && perfLab.isOn(.drift) && perfLab.tier.plan.sway)
 
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
             RoomHost(input: roomInput, controller: room).equatable()
@@ -517,13 +517,18 @@ struct HomeView: View {
     private var barGlass: GlassRendering { perfLab.isOn(.barGlass) ? hud.glass : .flat }
 
     private var roomInput: RoomInput {
+        let plan = perfLab.tier.plan
         let visibility: RoomVisibility =
-            roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
+            roomOnScreen && !plan.still ? .visible : (showsRoom ? .covered : .hidden)
+        let rate = perfLab.isOn(.splatRate) ? 30 : 0
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes),
-            sway: perfLab.isOn(.sway), decor: roomDecor,
-            rendering: RoomRendering(antialiasing: perfLab.isOn(.msaa), hdr: perfLab.isOn(.hdr)))
+            catName: state.petName, partnerHere: session?.partnerHere == true,
+            motes: perfLab.isOn(.motes) && plan.motes,
+            sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,
+            rendering: RoomRendering(
+                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr),
+                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0))
     }
 
     private var arranging: Bool { state.decor.state.isArranging }

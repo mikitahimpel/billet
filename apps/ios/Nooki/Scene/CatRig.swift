@@ -338,6 +338,13 @@ final class SplatSkinner {
     }
     nonisolated static let stats = Mutex(Stats())
 
+    /// The shortest time between two passes, in seconds; 0 runs one whenever a bone moved.
+    private nonisolated static let interval = Mutex<Double>(0)
+    private var lastPass = 0.0
+
+    /// Lets passes run at most `hertz` times a second; 0 lifts the limit.
+    nonisolated static func limit(toHertz hertz: Int) { interval.withLock { $0 = hertz > 0 ? 1 / Double(hertz) : 0 } }
+
     /// One device, queue and compiled pipeline for every skinner.
     private static let gpu: (device: any MTLDevice, queue: any MTLCommandQueue, pipeline: any MTLComputePipelineState)? = {
         guard let device = MTLCreateSystemDefaultDevice(),
@@ -363,6 +370,11 @@ final class SplatSkinner {
 
     /// `bones` in skin order, at most a few hundred.
     func run(_ bones: [DualQuat]) {
+        let now = ProcessInfo.processInfo.systemUptime
+        if now - lastPass < Self.interval.withLock({ $0 }) {
+            Self.stats.withLock { $0.skipped += 1 }
+            return
+        }
         if bones.count == skinned.count, zip(bones, skinned).allSatisfy({ a, b in
             max(simd_abs(a.real - b.real).max(), simd_abs(a.dual - b.dual).max()) < Self.drift
         }) {
@@ -385,5 +397,6 @@ final class SplatSkinner {
         }
         commands.commit()
         skinned = bones
+        lastPass = now
     }
 }
