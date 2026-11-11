@@ -1,3 +1,4 @@
+import os
 import RealityKit
 import UIKit
 
@@ -14,12 +15,26 @@ extension UIColor {
 
 /// Clay-like materials: matte, slightly warm.
 enum Clay {
+    private struct Key: Hashable {
+        let hex: UInt32
+        let roughness: Float
+    }
+
+    private static let matteMade = OSAllocatedUnfairLock(initialState: [Key: PhysicallyBasedMaterial]())
+
+    /// One material per tone and roughness, handed out again to every box of it, so RealityKit sees the same material
+    /// on a hundred meshes and not a hundred of them.
     static func matte(_ hex: UInt32, roughness: Float = 0.82) -> PhysicallyBasedMaterial {
-        var m = PhysicallyBasedMaterial()
-        m.baseColor = .init(tint: UIColor(hex: hex))
-        m.roughness = .init(floatLiteral: roughness)
-        m.metallic = .init(floatLiteral: 0)
-        return m
+        let key = Key(hex: hex, roughness: roughness)
+        return matteMade.withLock { made in
+            if let m = made[key] { return m }
+            var m = PhysicallyBasedMaterial()
+            m.baseColor = .init(tint: UIColor(hex: hex))
+            m.roughness = .init(floatLiteral: roughness)
+            m.metallic = .init(floatLiteral: 0)
+            made[key] = m
+            return m
+        }
     }
 
     static func glow(_ hex: UInt32, intensity: Float) -> PhysicallyBasedMaterial {

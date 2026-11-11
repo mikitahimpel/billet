@@ -26,6 +26,10 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     case splatCat
     /// The room swaying under the sun and the bulbs and flame pulsing; off, a still room.
     case sway
+    /// Four samples a pixel on the room's edges.
+    case msaa
+    /// The room drawn in the wide colour range; off, the standard one.
+    case hdr
 
     var title: String {
         switch self {
@@ -38,6 +42,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .motes: "Dust motes in the room"
         case .splatCat: "Cat as splats (mesh when off; next launch)"
         case .sway: "Room sway and light pulse"
+        case .msaa: "Antialiasing (4 samples)"
+        case .hdr: "HDR rendering"
         }
     }
 
@@ -52,14 +58,17 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .motes: "sparkle"
         case .splatCat: "cat"
         case .sway: "waveform.path"
+        case .msaa: "square.dashed"
+        case .hdr: "sun.max"
         }
     }
 
-    /// `flatten` is an extra step, not something shipped: it starts off, the others start on.
+    /// `flatten` is an extra step, not something shipped; the dust and the antialiasing are cut, and start off. The
+    /// others start on.
     var shippedOn: Bool {
         switch self {
-        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .motes, .splatCat, .sway: true
-        case .flatten: false
+        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .sway, .hdr: true
+        case .flatten, .motes, .msaa: false
         }
     }
 }

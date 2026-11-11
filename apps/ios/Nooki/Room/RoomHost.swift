@@ -65,7 +65,7 @@ private struct RoomStage: View {
                 // While no room can be seen it holds an empty one, paused and transparent. A RealityView renders every
                 // frame while it exists, so it also shrinks to one point: each of those frames is next to nothing.
                 DioramaView(scene: visible ? scene : controller.offStage, paused: !visible || controller.corner != nil,
-                            petPulse: controller.petPulse) {
+                            petPulse: controller.petPulse, rendering: input.rendering) {
                     controller.petted()
                 }
                 .frame(width: visible ? nil : 1, height: visible ? nil : 1)

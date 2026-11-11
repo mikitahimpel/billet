@@ -49,6 +49,11 @@ class CatRoom {
     private(set) var frame = 0
     /// Whether the room turns a little under the sun and its lights pulse; off, they hold where they are.
     var swaying = true
+    private var sway = SwayEnvelope()
+    private var turned: simd_quatf?
+    private var touchedAt: Float = -10
+    /// Whether the room is swaying, or still easing to rest.
+    var isSwaying: Bool { sway.strength > 0 }
     private var yaw: Float = 0
     private var targetYaw: Float = 0
     private var purrStart: Float = -10
@@ -81,6 +86,7 @@ class CatRoom {
 
     func setYaw(_ value: Float) {
         targetYaw = min(max(value, -yawLimit), yawLimit)
+        touchedAt = time
     }
 
     func isCat(_ entity: Entity) -> Bool {
@@ -153,6 +159,7 @@ class CatRoom {
     /// `offset` is points from her head on screen; nil stops her.
     func follow(_ offset: CGSize?) {
         walker?.follow(offset.map { SIMD2<Float>(Float($0.width), Float($0.height)) / 400 })
+        if offset != nil { touchedAt = time }
     }
 
     /// Hands the frame time to `beforeProjecting` first (the camera follows `settledYaw`), then reports where the
@@ -191,7 +198,14 @@ class CatRoom {
         let t = time
 
         yaw += (targetYaw - yaw) * min(1, dt * 8)
-        pivot.orientation = .y(yaw + (swaying ? 0.035 * sin(t * 0.35) : 0))
+        sway.update(dt: dt, active: walker?.moving == true || t - touchedAt < 1 || isShowcasing || isPlayingGame,
+                    enabled: swaying)
+        // Setting an orientation, even the same one, makes every entity under it move; a still room sets none.
+        let turn = simd_quatf.y(yaw + 0.035 * sway.strength * sin(t * 0.35))
+        if turn != turned {
+            turned = turn
+            pivot.orientation = turn
+        }
 
         director?.paused = isShowcasing || isPlayingGame
         director?.update(dt)

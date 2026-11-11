@@ -498,7 +498,8 @@ struct HomeView: View {
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
             catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes),
-            sway: perfLab.isOn(.sway), decor: roomDecor)
+            sway: perfLab.isOn(.sway), decor: roomDecor,
+            rendering: RoomRendering(antialiasing: perfLab.isOn(.msaa), hdr: perfLab.isOn(.hdr)))
     }
 
     private var roomDecor: RoomDecor {
