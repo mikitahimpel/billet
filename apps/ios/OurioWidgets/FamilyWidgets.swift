@@ -175,15 +175,13 @@ private struct HugButton: View {
     }
 }
 
-private struct ReplyPill: View {
+/// The whole widget is the tap target, so this says so in plain words rather than drawing a button.
+private struct ReplyLine: View {
     var body: some View {
         Text("Tap to reply")
             .font(.ourioMicro)
-            .foregroundStyle(Ink.heroInk)
-            .padding(.horizontal, Space.s)
-            .padding(.vertical, Space.xs)
-            .background(Color.honey, in: .capsule)
-            .widgetAccentable()
+            .foregroundStyle(Ink.textSecondary)
+            .lineLimit(1)
     }
 }
 
@@ -201,9 +199,11 @@ private struct MochiPortrait: View {
                 Circle().fill(pose == .asleep ? WidgetScene.room(night: true)[0] : Ink.surfaceRaised)
             }
             portrait
-                .frame(width: size * 0.9, height: size * 0.9)
+                .frame(width: size * 0.8, height: size * 0.8)
                 .scaleEffect(pose == .purring ? 1.04 : 1)
-            mark.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(size * 0.04)
+                .frame(width: size, height: size, alignment: .bottom)
+                .clipShape(Circle())
+            mark.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(size * 0.02)
         }
         .frame(width: size, height: size)
         .accessibilityElement(children: .ignore)
@@ -260,6 +260,8 @@ private struct MochiPortrait: View {
 struct MochiFamilyView: View {
     let entry: FamilyEntry
     let family: WidgetFamily
+    /// Inside the Our day widget, where Pet is the one honey mark.
+    var calm = false
 
     private var s: OurioSnapshot { entry.snapshot }
     private var pose: MochiPose { MochiPose.pose(s, drawing: entry.facts.drawing) }
@@ -298,13 +300,13 @@ struct MochiFamilyView: View {
             VStack(alignment: .leading, spacing: Space.xs) {
                 HStack(spacing: Space.s) {
                     Text(pose.word).font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
-                    LevelChip(level: entry.facts.wallet.level)
+                    if !calm { LevelChip(level: entry.facts.wallet.level) }
                 }
                 Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(2)
                 Spacer(minLength: 0)
                 HStack(spacing: Space.s) {
                     PetPill(catName: s.catName)
-                    HugButton(sent: HugState.sent(s), partner: s.partner)
+                    if !calm { HugButton(sent: HugState.sent(s), partner: s.partner) }
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -346,6 +348,7 @@ private extension PartnerNews {
 struct UsFamilyView: View {
     let entry: FamilyEntry
     let family: WidgetFamily
+    var calm = false
 
     private var s: OurioSnapshot { entry.snapshot }
     private var streak: StreakGlance { StreakGlance(entry.facts.streak, on: s.date) }
@@ -372,11 +375,13 @@ struct UsFamilyView: View {
 
     private var days: some View {
         VStack(spacing: 0) {
-            Image(systemName: "heart.fill").font(.ourioHeadline).foregroundStyle(Color.blushPink).widgetAccentable()
+            if !calm {
+                Image(systemName: "heart.fill").font(.ourioHeadline).foregroundStyle(Color.blushPink).widgetAccentable()
+            }
             Text("\(s.daysTogether)")
                 .font(.ourioNumber)
                 .monospacedDigit()
-                .foregroundStyle(Ink.accentText)
+                .foregroundStyle(calm ? Ink.text : Ink.accentText)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
                 .widgetAccentable()
@@ -468,7 +473,7 @@ struct PartnerFamilyView: View {
                         Text("\(Text(news.date, style: .relative)) ago").font(.ourioCaption).foregroundStyle(Ink.textSecondary)
                     }
                     Spacer(minLength: 0)
-                    ReplyPill()
+                    ReplyLine()
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .privacySensitive()
@@ -478,7 +483,7 @@ struct PartnerFamilyView: View {
             VStack(spacing: Space.s) {
                 card.frame(maxHeight: .infinity)
                 Text("From \(s.partner)").font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(1)
-                if news != nil { ReplyPill() }
+                if news != nil { ReplyLine() }
             }
             .padding(Space.m)
         }
@@ -501,7 +506,7 @@ struct PartnerFamilyView: View {
             content.padding(Space.s).frame(maxWidth: .infinity, maxHeight: .infinity)
             PostageStamp(.heart, size: .regular)
                 .rotationEffect(.degrees(6))
-                .offset(x: Space.xs, y: -Space.xs)
+                .padding(Space.xs)
         }
         .rotationEffect(.degrees(-2))
         .accessibilityHidden(news == nil)
@@ -552,7 +557,7 @@ struct CoinsFamilyView: View {
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
-            Text(glance.caption).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(1)
+            Text(glance.caption).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(2).minimumScaleFactor(0.85)
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(glance.coins) coins")
@@ -567,7 +572,7 @@ struct CoinsFamilyView: View {
                 .font(.ourioMicro)
                 .foregroundStyle(Ink.textSecondary)
         }
-        .frame(width: 140, alignment: .leading)
+        .frame(width: 124, alignment: .leading)
         .padding(Space.m)
         .frame(maxHeight: .infinity)
         .background(Ink.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
@@ -589,11 +594,8 @@ struct MemoryFamilyView: View {
             HStack(spacing: Space.l) {
                 print.frame(width: 140)
                 VStack(alignment: .leading, spacing: Space.xs) {
-                    Text(caption.isEmpty ? "Together" : caption).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(3)
-                    if let date = entry.momentDate {
-                        Text(date, format: .dateTime.day().month(.wide).year())
-                            .font(.ourioCaption).foregroundStyle(Ink.textSecondary)
-                    }
+                    Text(caption.isEmpty ? "A moment together" : caption)
+                        .font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(3).minimumScaleFactor(0.8)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .privacySensitive()
@@ -634,7 +636,7 @@ struct MemoryFamilyView: View {
         .padding(.bottom, Space.s)
         .background(Ink.paper, in: RoundedRectangle(cornerRadius: Space.s, style: .continuous))
         .overlay(alignment: .topTrailing) {
-            PostageStamp(.paw, size: .regular).rotationEffect(.degrees(8)).offset(x: Space.s, y: -Space.s)
+            PostageStamp(.paw, size: .regular).rotationEffect(.degrees(8)).padding(Space.s)
         }
         .rotationEffect(.degrees(-2))
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -655,10 +657,10 @@ struct DayFamilyView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            MochiFamilyView(entry: entry, family: .systemMedium)
+            MochiFamilyView(entry: entry, family: .systemMedium, calm: true)
                 .frame(height: 170)
             HStack(spacing: 0) {
-                Link(destination: DeepLink.calendar.url) { UsFamilyView(entry: entry, family: .systemSmall) }
+                Link(destination: DeepLink.calendar.url) { UsFamilyView(entry: entry, family: .systemSmall, calm: true) }
                 Link(destination: DeepLink.inbox.url) { PartnerFamilyView(entry: entry, family: .systemSmall) }
             }
             .frame(maxHeight: .infinity)

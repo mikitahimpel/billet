@@ -115,6 +115,7 @@ struct UsLockView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Space.xs)
         default:
             VStack(spacing: 0) {
                 Image(systemName: "heart.fill").font(.ourioMicro)
@@ -145,6 +146,7 @@ struct StreakLockView: View {
                 Gauge(value: glance.progress) { EmptyView() }.gaugeStyle(.accessoryLinearCapacity)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Space.xs)
         default:
             Gauge(value: glance.progress) {
                 Image(systemName: "flame.fill")
@@ -178,6 +180,7 @@ struct CatLockView: View {
                 Text(pose.line(s, drawing: entry.facts.drawing)).font(.ourioCaption).foregroundStyle(.secondary).lineLimit(2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Space.xs)
         default:
             Image(systemName: pose.lockSymbol)
                 .font(.ourioTitle)
@@ -224,6 +227,7 @@ struct PartnerLockView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, Space.xs)
             .privacySensitive()
         default:
             Image(systemName: symbol)
