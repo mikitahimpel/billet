@@ -1,5 +1,7 @@
 import Foundation
-import simd
+#if canImport(simd)
+  import simd
+#endif
 
 /// What a touch in the room landed on, as a room finds it from the touch's first point.
 public enum CatTouchTarget: Hashable, Sendable {

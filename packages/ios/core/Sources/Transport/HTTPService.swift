@@ -1,6 +1,10 @@
 import Foundation
 import Wire
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 public struct HTTPService: Sendable {
   public var send: @Sendable (HTTPRequest) async throws(TransportError) -> HTTPResponse
 

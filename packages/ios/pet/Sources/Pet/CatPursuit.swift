@@ -1,5 +1,7 @@
 import Foundation
-import simd
+#if canImport(simd)
+  import simd
+#endif
 
 /// The cat going after a moving toy: watch, stalk or run, wiggle, pounce, then bat, carry back
 /// or try again. The room reports the toy each frame and shows the result as a ``CatTrip/Pose``.

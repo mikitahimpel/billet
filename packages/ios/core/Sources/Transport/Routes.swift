@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 public struct Route: Equatable, Sendable {
   public let method: HTTPMethod
   public let path: String

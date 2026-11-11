@@ -6,11 +6,15 @@ public enum AppGroup {
 
   /// Falls back to Documents when the build isn't signed with the group, so the app still works without widgets.
   public static let container: URL = {
-    let documents = URL.documentsDirectory
-    guard let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id)
-    else { return documents }
-    moveLegacyFolders(from: documents, to: group)
-    return group
+    #if os(Linux)
+      return FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    #else
+      let documents = URL.documentsDirectory
+      guard let group = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: id)
+      else { return documents }
+      moveLegacyFolders(from: documents, to: group)
+      return group
+    #endif
   }()
 
   /// Builds before the widgets kept their stores in the app's Documents; move them over once.
