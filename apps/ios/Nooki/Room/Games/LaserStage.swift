@@ -29,7 +29,8 @@ final class LaserStage: GameStage {
         self.room = room
         self.deck = deck
         spots = GameSpots(room: room)
-        root = room.pivot.group()
+        let root = room.pivot.group()
+        self.root = root
         laser = LaserPlay(length: Double(spots.length), floor: spots.area)
         dot = root.group()
         dot.cylinder(0.0015, 0.0055, Clay.glow(0xFF3B30, intensity: 8), at: .zero)
