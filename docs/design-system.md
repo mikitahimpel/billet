@@ -107,6 +107,7 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 
 - Do give a sheet exactly one size: `.fit` for a few controls, `.medium` or `.large` for lists.
 - Do put an empty state in `.fit`, not in a large sheet.
+- Do mark a page pushed from a `.fit` sheet with `.expandsSheet()`, so the sheet rises to full height for it.
 - Do keep the toolbar to close or confirm.
 - Don't draw an `xmark` yourself, or add a `Button("Done")`.
 - Don't put `ContentUnavailableView` in a large sheet; it fills the space.
