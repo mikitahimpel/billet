@@ -76,7 +76,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   private func list(_ page: InboxMachine.Page) -> some View {
     frame {
       ForEach(InboxDay.group(page.items, now: now()), id: \.day) { day in
-        Section(day.title) {
+        GroupedSection(header: day.title, inset: 0) {
           ForEach(day.items, id: \.id) { item in
             row(item, isNew: page.fresh.contains(item.id))
               .onAppear {
@@ -84,7 +84,6 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
               }
           }
         }
-        .listRowBackground(Ink.surface)
       }
     }
     .refreshable { await model.open() }
@@ -94,10 +93,9 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   /// the size of real ones, so the page swaps rows in place instead of moving under the finger.
   private var placeholderList: some View {
     frame {
-      Section("Today") {
+      GroupedSection(header: "Today", inset: 0) {
         ForEach(0..<InboxPlaceholderRow.count, id: \.self) { _ in InboxPlaceholderRow() }
       }
-      .listRowBackground(Ink.surface)
       .redacted(reason: .placeholder)
       .accessibilityElement(children: .ignore)
       .accessibilityLabel("Loading the Inbox")
@@ -105,17 +103,18 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   }
 
   private func frame(@ViewBuilder rows: () -> some View) -> some View {
-    List { rows() }
-      #if os(iOS)
-        .listStyle(.insetGrouped)
-      #endif
-      .scrollContentBackground(.hidden)
-      .scrollHeader {
-        VStack(spacing: 0) {
-          if case .stale = model.sheet { staleNotice }
-          notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
-        }
+    ScrollView {
+      LazyVStack(spacing: Space.l) { rows() }
+        .padding(.horizontal, Space.gutter)
+        .padding(.vertical, Space.l)
+    }
+    .scrollIndicators(.hidden)
+    .scrollHeader {
+      VStack(spacing: 0) {
+        if case .stale = model.sheet { staleNotice }
+        notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
       }
+    }
   }
 
   private var staleNotice: some View {
@@ -142,7 +141,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
       } label: {
         HStack {
           rowView
-          RowChevron()
+          RowChevron().padding(.trailing, Space.l)
         }
       }
       .buttonStyle(RowButtonStyle())
@@ -184,15 +183,16 @@ private struct InboxPlaceholderRow: View {
 
   var body: some View {
     HStack(spacing: Space.m) {
-      Circle()
-        .fill(Ink.surfaceRaised)
+      Color.clear
         .frame(width: InboxRowMetrics.avatar, height: InboxRowMetrics.avatar)
+        .wellSurface(.control)
       VStack(alignment: .leading, spacing: InboxRowMetrics.lineGap) {
         Text("Someone did something lovely").font(.ourioCallout.weight(.medium))
         Text("A minute ago").font(.ourioCaption)
       }
       Spacer(minLength: 0)
     }
+    .padding(.horizontal, Space.l)
     .padding(.vertical, InboxRowMetrics.padding)
   }
 }
@@ -243,6 +243,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
           .accessibilityLabel("New")
       }
     }
+    .padding(.horizontal, Space.l)
     .padding(.vertical, InboxRowMetrics.padding)
     .accessibilityElement(children: .combine)
   }

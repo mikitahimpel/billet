@@ -67,6 +67,9 @@ struct Tones: Equatable, Sendable {
   var screen: Adaptive
   var surface: Adaptive
   var surfaceRaised: Adaptive
+  /// A recess in a card: darker than the card's foot in dark, with `wellShade` on its upper edge.
+  var well: Adaptive
+  var wellShade: Adaptive
   /// A card is lit from above: `surfaceTop` to `surfaceBottom`, with `cardRimTop` on its upper edge.
   var surfaceTop: Adaptive
   var surfaceBottom: Adaptive
@@ -109,6 +112,9 @@ enum Palette {
     screen: Adaptive(light: RGBA(hex: 0xFBF3E8), dark: RGBA(hex: 0x2A1A12)),
     surface: Adaptive(light: RGBA(hex: 0xFFFFFF), dark: RGBA(hex: 0x3B2C25)),
     surfaceRaised: Adaptive(light: RGBA(hex: 0xF3E6D6), dark: RGBA(hex: 0x46352C)),
+    well: Adaptive(light: RGBA(hex: 0xF3E6D6), dark: RGBA(hex: 0x2F211A)),
+    wellShade: Adaptive(
+      light: RGBA(hex: 0x3A2114, opacity: 0.14), dark: RGBA(hex: 0x0A0400, opacity: 0.45)),
     surfaceTop: Adaptive(light: RGBA(hex: 0xFFFFFF), dark: RGBA(hex: 0x4E3B30)),
     surfaceBottom: Adaptive(light: RGBA(hex: 0xFFF7EC), dark: RGBA(hex: 0x3D2D24)),
     warmTop: Adaptive(light: RGBA(hex: 0xFFEEDA), dark: RGBA(hex: 0x644431)),
@@ -159,6 +165,8 @@ enum Palette {
     tones.screen.dark = RGBA(hex: 0x110A07)
     tones.surface.dark = RGBA(hex: 0x24170F)
     tones.surfaceRaised.dark = RGBA(hex: 0x33231A)
+    tones.well.dark = RGBA(hex: 0x150D08)
+    tones.wellShade.dark = RGBA(hex: 0x000000, opacity: 0.5)
     tones.surfaceTop.dark = RGBA(hex: 0x2E1E15)
     tones.surfaceBottom.dark = RGBA(hex: 0x1F140D)
     tones.warmTop.dark = RGBA(hex: 0x4A2E18)
@@ -202,6 +210,8 @@ enum Palette {
   static var screen: Adaptive { current.screen }
   static var surface: Adaptive { current.surface }
   static var surfaceRaised: Adaptive { current.surfaceRaised }
+  static var well: Adaptive { current.well }
+  static var wellShade: Adaptive { current.wellShade }
   static var surfaceTop: Adaptive { current.surfaceTop }
   static var surfaceBottom: Adaptive { current.surfaceBottom }
   static var warmTop: Adaptive { current.warmTop }

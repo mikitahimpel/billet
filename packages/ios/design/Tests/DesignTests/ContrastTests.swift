@@ -24,7 +24,7 @@ import Testing
   @Test(arguments: Case.all)
   func textReadsOnEverySurface(_ c: Case) {
     let t = c.tones
-    let surfaces = [t.screen, t.surface, t.surfaceRaised, t.surfaceTop, t.surfaceBottom]
+    let surfaces = [t.screen, t.surface, t.surfaceRaised, t.well, t.surfaceTop, t.surfaceBottom]
     for surface in surfaces {
       #expect(ratio(t.text, over: surface, c) >= 7)
       #expect(ratio(t.textSecondary, over: surface, c) >= 4.5)
