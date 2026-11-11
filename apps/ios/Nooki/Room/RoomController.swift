@@ -340,7 +340,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     func refreshStatus() {
         let director = current?.director
-        let next = CatStatus(rounding: director?.needs, mind: director?.mind)
+        let next = CatStatus(rounding: director?.needs, mind: director?.mind, about: director?.about)
         if next != status { status = next }
         publishNeeds(director?.needs)
     }

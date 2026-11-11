@@ -90,7 +90,10 @@ struct HomeView: View {
         .onChange(of: state.shop.owned, initial: true) { _, owned in state.decor.send(.owned(owned)) }
         .onChange(of: state.shop.serverLayout, initial: true) { _, layout in
             state.decorSync.client = { [weak session] in session?.shopSync }
-            state.decorSync.heard(layout)
+            state.decorSync.heard(layout, stowed: state.shop.serverStowed)
+        }
+        .onChange(of: state.shop.serverStowed) { _, stowed in
+            state.decorSync.heard(state.shop.serverLayout, stowed: stowed)
         }
         .task {
             if let item = UserDefaults.standard.string(forKey: "decorate") { state.decor.send(.opened(item: item == "closet" ? nil : item)) }

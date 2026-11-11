@@ -170,6 +170,9 @@ export const PairShop = Schema.Struct({
   bonuses: Schema.Array(CollectionId),
   /** Where the pair stood its pieces; absent from a room that never placed one. */
   layout: Schema.optionalKey(Schema.Array(Placement)),
+  /** The room's own furniture the pair put away (`base-` pieces); the rest of it stands where the room has it
+   * unless `layout` moved it. Absent from a server before the furniture could be moved. */
+  stowed: Schema.optionalKey(Schema.Array(RoomItemId)),
 });
 export type PairShop = typeof PairShop.Type;
 

@@ -153,6 +153,7 @@ export const RoomRejection = Schema.TaggedUnion({
       "wrong-surface",
       "outside-room",
       "occupied",
+      "last-rest",
     ]),
   },
   /** A restore of a streak that is alive, too short, out for longer than a day, or in cooldown. */

@@ -32,6 +32,7 @@ import {
   note,
   ownedInk,
   layoutLog,
+  stowedPiece,
   ownedItem,
   placement,
   reaction,
@@ -311,6 +312,7 @@ const roomFrom = (
   moods: ReadonlyArray<MoodCheckIn>,
   layout: ReadonlyArray<PlacementRow>,
   layoutIds: ReadonlyArray<string>,
+  stowed: ReadonlyArray<string>,
 ): RoomState =>
   decodeRoom(
     row === undefined
@@ -341,6 +343,7 @@ const roomFrom = (
             quarterTurns,
           })),
           layoutLog: layoutIds,
+          stowed,
           bonuses,
           // In the members' order, as the room keeps them.
           moods: [row.firstUser, row.secondUser].flatMap((user) =>
@@ -393,9 +396,22 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(mood),
         db.select().from(placement).orderBy(asc(placement.position)),
         db.select().from(layoutLog).orderBy(asc(layoutLog.position)),
+        db.select().from(stowedPiece).orderBy(asc(stowedPiece.position)),
       ]).pipe(
         Effect.map(
-          ([[row], [catRow], inks, items, wishes, [walletRow], bonuses, moods, placed, logged]) =>
+          ([
+            [row],
+            [catRow],
+            inks,
+            items,
+            wishes,
+            [walletRow],
+            bonuses,
+            moods,
+            placed,
+            logged,
+            stowed,
+          ]) =>
             roomFrom(
               row,
               catRow,
@@ -407,6 +423,7 @@ export const SqliteRoomStore = Layer.effect(
               moodsFrom(moods),
               placed,
               logged.map(({ changeId }) => changeId),
+              stowed.map(({ itemId }) => itemId),
             ),
         ),
         Effect.orDie,
@@ -470,6 +487,10 @@ export const SqliteRoomStore = Layer.effect(
               yield* tx.delete(layoutLog);
               for (const [position, changeId] of state.layoutLog.entries()) {
                 yield* tx.insert(layoutLog).values({ changeId, position });
+              }
+              yield* tx.delete(stowedPiece);
+              for (const [position, itemId] of state.stowed.entries()) {
+                yield* tx.insert(stowedPiece).values({ itemId, position });
               }
               yield* tx.delete(wish);
               for (const [position, itemId] of state.wishlist.entries()) {

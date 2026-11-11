@@ -14,6 +14,8 @@ public struct CatBrain: Sendable {
   public private(set) var personality: CatPersonality
   /// Where it likes to rest, from yesterday and today.
   public private(set) var memory: CatMemory
+  /// What it has done since the day began, the stretch under way left out.
+  var diary = CatDiary()
   /// Learned from how the partners treat it, as of today's start.
   public private(set) var upbringing: CatUpbringing
   public private(set) var room: RoomAffordances
@@ -195,6 +197,7 @@ public struct CatBrain: Sendable {
     echo = nil
     history = nil
     recent.removeAll(keepingCapacity: true)
+    diary = CatDiary()
     // Nothing the trajectory learned crosses the day line, so a fold from today's start gives
     // the same cat as one that has run for a week.
     inspected.removeAll(keepingCapacity: true)
@@ -387,6 +390,7 @@ public struct CatBrain: Sendable {
     let group = activity.step.group
     if let piece = activity.inspecting { inspected.insert(piece.id) }
     memory.spent(group, hour: Int(hour(at: activity.groupStart)), seconds: t - activity.groupStart)
+    diary.spent(group, from: activity.groupStart, to: t, utcOffset: utcOffset)
     recent.append(CatEpisode(group: group, start: activity.groupStart, end: t))
     if recent.count > config.recentCount { recent.removeFirst(recent.count - config.recentCount) }
   }

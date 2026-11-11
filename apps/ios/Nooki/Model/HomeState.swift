@@ -88,8 +88,8 @@ struct HomeStores {
                 storage: .appGroup(.directory(AppGroup.container)),
                 feedback: { feedback in
                     switch feedback {
-                    case .placed: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                    case .blocked, .rejected: UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    case .placed, .slid, .swapped, .reset: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    case .blocked, .rejected, .noRoomToTurn, .lastRest: UINotificationFeedbackGenerator().notificationOccurred(.warning)
                     }
                 },
                 share: { [weak decorSync] in decorSync?.push($0) }))

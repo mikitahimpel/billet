@@ -160,7 +160,7 @@ struct WhoKnowsScreen: View {
             .transition(reduceMotion ? .opacity : .asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
                                                                removal: .move(edge: .leading).combined(with: .opacity)))
         }
-        .softScrollEdges()
+        .ourioScrollEdges()
         .animation(reduceMotion ? .easeOut(duration: 0.2) : .snappy(duration: 0.3), value: question.id)
     }
 
@@ -224,10 +224,10 @@ private struct WhoKnowsReveal: View {
                         .id(step)
                         .transition(reduceMotion ? .opacity : .push(from: .trailing))
                 }
-                .softScrollEdges()
+                .ourioScrollEdges()
                 PrimaryButton(step + 1 < reveal.count ? "Next" : "See the score") { advance() }
             } else {
-                ScrollView { summary }.softScrollEdges()
+                ScrollView { summary }.ourioScrollEdges()
                 PrimaryButton("See them again") { withAnimation(animation) { step = 0 } }
             }
         }
@@ -486,7 +486,7 @@ private struct FillingScroll<Content: View, Bottom: View>: View {
                     .frame(maxWidth: .infinity, minHeight: height)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .softScrollEdges()
+            .ourioScrollEdges()
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             bottom
                 .padding(.horizontal, Space.gutter)

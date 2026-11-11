@@ -9,6 +9,7 @@ import ShopInterface
 import Transport
 import UsInterface
 import Wire
+import Wire
 
 /// The Shop's store around `ShopMachine` (FeatureShop), with the wallet file, the cat and the day's prices.
 /// Only the server changes coins: every buy, treat, gift, bonus and earn is a request to it, and the balance
@@ -31,6 +32,8 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     @ObservationIgnored private var store: ShopStore!
     /// Where the pair stood its pieces, as the room last said; nil until it has said, or from a server without it.
     private(set) var serverLayout: [RoomPlacement]?
+    /// The room's own furniture the pair put away, as the room last said.
+    private(set) var serverStowed: [RoomItemId]?
     /// Rooms the wallet file has let go of, so leaving one can wait for it.
     private var left = 0
 
@@ -48,6 +51,7 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
                 mirror: { [weak self] in
                     guard self?.isSynced == true else { return }
                     self?.serverLayout = $0.layout
+                    self?.serverStowed = $0.stowed
                     wallet.mirror(coins: $0.balance, owned: $0.owned, wishlist: $0.wishlist)
                 },
                 mirrorBalance: { [weak self] in
