@@ -1,6 +1,11 @@
 import FeatureMood
-import OurioShared
+import MomentsInterface
+import MoodInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import Transport
+import UsInterface
 import Wire
 
 extension MoodSync {

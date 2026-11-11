@@ -1,0 +1,7 @@
+struct Bad: View {
+  var body: some View {
+    Image("a").cornerRadius(8)
+    Image("b").clipShape(.rect(cornerRadius: Radius.inner))
+    RoundedRectangle(cornerRadius: Radius.card).fill(Ink.surface)
+  }
+}

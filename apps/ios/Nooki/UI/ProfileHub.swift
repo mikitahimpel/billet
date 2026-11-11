@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct ProfileHub: View {
     let state: HomeState
@@ -16,11 +19,12 @@ struct ProfileHub: View {
     }
 
     var body: some View {
-        BilletSheet("Profile", size: .mediumLarge, scrolls: false) {
-            Page {
+        // As tall as its two or three rows; a page pushed from it rises to full height.
+        BilletSheet("Profile", size: .fit) {
+            VStack(alignment: .leading, spacing: Space.section) {
                 couple
                 GroupedSection {
-                    NavigationLink { ProfileEditor(profile: state.profile) } label: {
+                    NavigationLink { ProfileEditor(profile: state.profile).expandsSheet() } label: {
                         Row("Edit profile", symbol: "person.2.fill", tint: UsTint.sky.color) { RowChevron() }
                     }
                     if canInvite {
@@ -37,11 +41,12 @@ struct ProfileHub: View {
                             dismiss()
                             erase()
                         }
+                        .expandsSheet()
                     } label: {
                         Row("Settings", symbol: "gearshape.fill", tint: UsTint.lilac.color) { RowChevron() }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(RowButtonStyle())
             }
         }
         .sheet(isPresented: $pairing) {
@@ -67,7 +72,7 @@ struct ProfileHub: View {
                     .offset(y: 8)
             }
             .padding(.bottom, Space.s)
-            VStack(spacing: 4) {
+            VStack(spacing: Space.xs) {
                 Text("\(state.profile.name(of: state.partners.0)) & \(state.profile.name(of: state.partners.1))")
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.text)

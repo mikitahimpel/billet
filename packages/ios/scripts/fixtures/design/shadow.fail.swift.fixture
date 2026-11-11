@@ -1,0 +1,5 @@
+struct Bad: View {
+  var body: some View {
+    Card { EmptyView() }.shadow(color: Ink.text, radius: 12, y: 4)
+  }
+}

@@ -32,10 +32,15 @@ final class GameCloseTests: XCTestCase {
         let close = app.buttons["Close"]
         XCTAssertTrue(close.waitForExistence(timeout: 30), "the \(game) game should open")
         if swipe {
-            // Below the status bar, where the game's swipe starts (its top 140 pt): a drag from inside the status bar
-            // is the system's, pulling down Notification Center, and never reaches the app.
-            let from = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.1))
-            from.press(forDuration: 0.05, thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.45)))
+            // In the game's swipe band (its top 140 pt) but below the scene switch, which takes a drag that starts on
+            // it, and below the status bar, whose drags pull down Notification Center and never reach the app.
+            let segments = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH 'gameScene'"))
+            let switchBottom = segments.allElementsBoundByIndex.map(\.frame.maxY).max()
+            let y = (switchBottom ?? app.frame.height * 0.1 - 12) + 12
+            XCTAssertLessThan(y, 140, "the swipe band should reach below the scene switch")
+            let origin = app.coordinate(withNormalizedOffset: .zero)
+            let from = origin.withOffset(CGVector(dx: app.frame.midX, dy: y))
+            from.press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: app.frame.midX, dy: y + 300)))
         } else {
             close.tap()
         }

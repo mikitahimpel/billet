@@ -1,0 +1,19 @@
+{
+ "id": "armchair-round",
+ "name": "Round armchair",
+ "kind": "SOLID",
+ "width_m": 0.4,
+ "depth_m": 0.389,
+ "height_m": 0.369,
+ "footprint_cells": [
+  9,
+  8
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.4,
+ "anchors": [],
+ "tris": 3000,
+ "affordance": "soft",
+ "usdz_kb": 329
+}

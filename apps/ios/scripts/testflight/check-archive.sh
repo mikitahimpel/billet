@@ -48,6 +48,8 @@ case $expect_labs in
   YES) [ "$labs" = YES ] || fail "Labs is '$labs' in the app, not YES: build with BILLET_LABS=YES" ;;
   *) fail "Labs: EXPECT_LABS is '$expect_labs', not YES or NO" ;;
 esac
+hud=$(plist "$app" MetalHudEnabled)
+[ "$hud" = "$labs" ] || fail "the Metal HUD key is '$hud', not '$labs' like BILLET_LABS says"
 binary="$app/$(plist "$app" CFBundleExecutable)"
 if [ ! -f "$binary" ]; then
   fail "missing the app's binary"

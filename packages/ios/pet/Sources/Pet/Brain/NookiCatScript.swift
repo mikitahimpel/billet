@@ -4,6 +4,8 @@ import Foundation
 /// the camera.
 public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
   case home, tree, sill, ball, basket, bowl, front
+  /// Pieces the player stood in the room, each the first of its kind.
+  case sofa, windowSeat, post, catBed, crate
 
   /// Where the brain's piece of furniture is in Nooki's room, if anywhere.
   public init?(_ kind: RoomAffordance.Kind) {
@@ -14,6 +16,11 @@ public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
     case .shelf, .desk, .smallItem: self = .tree
     case .box: self = .basket
     case .soft: self = .home
+    case .sofa: self = .sofa
+    case .windowSeat: self = .windowSeat
+    case .scratchingPost: self = .post
+    case .catBed: self = .catBed
+    case .crate: self = .crate
     case .bowl: self = .bowl
     case .door: self = .front
     }
@@ -30,6 +37,11 @@ public enum NookiSpot: String, CaseIterable, Codable, Hashable, Sendable {
         case .basket: RoomAffordance(id: "basket", kind: .box)
         case .bowl: RoomAffordance(id: "bowl", kind: .bowl)
         case .front: nil
+        case .sofa: RoomAffordance(id: "sofa", kind: .sofa)
+        case .windowSeat: RoomAffordance(id: "windowSeat", kind: .windowSeat)
+        case .post: RoomAffordance(id: "post", kind: .scratchingPost)
+        case .catBed: RoomAffordance(id: "catBed", kind: .catBed)
+        case .crate: RoomAffordance(id: "crate", kind: .crate)
         }
       })
   }
@@ -52,8 +64,28 @@ public enum NookiRestPose: String, CaseIterable, Codable, Hashable, Sendable {
 /// A short thing the cat does where it is, one of Nooki's habits.
 public enum NookiAct: String, CaseIterable, Codable, Hashable, Sendable {
   case yawn, slowBlink, listen, twitch, flick, curl, pats
+  /// Gestures of the head and ears that work in any body.
+  case shake, tilt, chatter, track, lookUp
+  /// Gets up and crouches low, rump wiggling, before a pounce or a dash.
+  case crouch
+  /// A quick hop forward on the paws, as onto a mote.
+  case pounce
+  /// Spins on the spot after her own tail.
+  case spin
   /// Washes her chest in short licks, head down; it stands in for eating too.
   case groom
+}
+
+extension NookiAct {
+  /// Whether the act is done from sitting up: pats and a head bent down, a crouch, a hop, a spin.
+  public var needsSitting: Bool {
+    switch self {
+    case .pats, .groom, .crouch, .pounce, .spin: true
+    case .yawn, .slowBlink, .listen, .twitch, .flick, .curl, .shake, .tilt, .chatter, .track,
+      .lookUp:
+      false
+    }
+  }
 }
 
 /// Where the cat looks between its own glances.
@@ -96,7 +128,7 @@ public struct NookiCatScript: Sendable {
 
   public let spots: Set<NookiSpot>
   /// Where she may rest: her bed and the window seat. The yarn basket and the toys are for play.
-  public static let beds: Set<NookiSpot> = [.home, .sill]
+  public static let beds: Set<NookiSpot> = [.home, .sill, .sofa, .windowSeat, .catBed, .crate]
   private var step: (step: CatActivityStep, start: Double)?
   private var look: NookiLook?
   private var drowse: Double?
@@ -135,15 +167,24 @@ public struct NookiCatScript: Sendable {
     switch step {
     case .yawn: .yawn
     case .slowBlink, .rub, .lickLips: .slowBlink
-    case .startle, .curiousTilt, .watchPartnerWindow: .listen
+    case .startle, .watchPartnerWindow, .heardNoise, .perkUp: .listen
+    case .curiousTilt, .skid: .tilt
+    case .trackMover: .track
+    case .chatter: .chatter
+    case .spotMote: .lookUp
+    case .windUp: .crouch
+    case .shakeOff: .shake
+    case .chaseTail: .spin
+    case .glanceBack: .slowBlink
     case .stalk, .sniffObject: .twitch
     case .dropToy, .sulk: .flick
     case .bellyUp: .curl
-    case .knead, .batObject, .pounce, .pawBowl, .scratch, .knockOff, .pushItem: .pats
+    case .pounce: .pounce
+    case .knead, .batObject, .pawBowl, .scratch, .knockOff, .pushItem: .pats
     case .groomPaw, .groomFlank, .groomTail, .eat: .groom
     case .sit, .loaf, .lookAround, .wander, .inspectFurniture, .findNapSpot, .curl, .wake,
       .walkToBowl, .waitByBowl, .beg, .yowl, .flop, .chase, .zoomies, .watchWindow, .seekYou,
-      .bringToy, .waitByDoor, .sitInCardigan, .sitOnDesk, .carryNote:
+      .bringToy, .waitByDoor, .sitInCardigan, .sitOnDesk, .carryNote, .bask, .dashToDoor:
       nil
     }
   }
@@ -223,7 +264,7 @@ public struct NookiCatScript: Sendable {
     }
     // Pats and a head bent down need her sitting; her face and tail do the rest in any body.
     if newStep, frame.stack.interaction == nil, let act = Self.act(frame.stack.step),
-      resting == .sit || (act != .pats && act != .groom)
+      resting == .sit || !act.needsSitting
     {
       intents.append(.act(act))
     }

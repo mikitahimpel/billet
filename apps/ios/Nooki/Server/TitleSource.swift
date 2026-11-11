@@ -1,6 +1,9 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Transport
+import UsInterface
 import Wire
 
 /// Films and shows from TMDB through the billet server, for the To watch list, in the phone's language and with

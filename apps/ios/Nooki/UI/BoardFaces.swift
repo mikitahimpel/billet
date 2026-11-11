@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 
 enum BoardFaces {
     /// The newest `BoardRoomScene.slots` cards, newest first: the notes and doodles, and the photos pinned to the wall
@@ -76,7 +79,7 @@ private struct NoteFace: View {
             PaperSheet(color: Color(hex: note.paper.hex), cornerRadius: 0)
 
             if let doodle {
-                Image(uiImage: doodle).resizable().scaledToFit().padding(12)
+                Image(uiImage: doodle).resizable().scaledToFit().padding(Space.m)
             } else {
                 Text(note.text)
                     .font(.custom("Noteworthy-Bold", size: 26))

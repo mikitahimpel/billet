@@ -84,6 +84,75 @@ public enum ShopOffer: Codable, Hashable, Sendable {
   }
 }
 
+/// Where a piece stands: `surface` is `floor`, `backWall` or `leftWall`; `u` and `v` are grid cells of 5 cm
+/// from the room's middle, `v` being 0 on a wall.
+public struct RoomPlacement: Codable, Hashable, Sendable {
+  public let item: RoomItemId
+  public let surface: String
+  public let u: Int
+  public let v: Int
+  public let quarterTurns: Int
+
+  public init(item: RoomItemId, surface: String, u: Int, v: Int, quarterTurns: Int) {
+    self.item = item
+    self.surface = surface
+    self.u = u
+    self.v = v
+    self.quarterTurns = quarterTurns
+  }
+}
+
+/// `POST /v1/shop/layout`: stands a piece, moves it (the same `Place`) or puts it back (`Unplace`).
+public enum LayoutChange: Codable, Hashable, Sendable {
+  case place(RoomPlacement)
+  case unplace(RoomItemId)
+
+  private enum CodingKeys: String, CodingKey {
+    case tag = "_tag"
+    case placement
+    case item
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    switch try container.decode(String.self, forKey: .tag) {
+    case "Place": self = .place(try container.decode(RoomPlacement.self, forKey: .placement))
+    case "Unplace": self = .unplace(try container.decode(RoomItemId.self, forKey: .item))
+    case let tag:
+      throw DecodingError.dataCorruptedError(
+        forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
+    }
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.container(keyedBy: CodingKeys.self)
+    switch self {
+    case .place(let placement):
+      try container.encode("Place", forKey: .tag)
+      try container.encode(placement, forKey: .placement)
+    case .unplace(let item):
+      try container.encode("Unplace", forKey: .tag)
+      try container.encode(item, forKey: .item)
+    }
+  }
+}
+
+public struct LayoutRequest: Codable, Hashable, Sendable {
+  public let id: IdempotencyKey
+  public let change: LayoutChange
+
+  public init(id: IdempotencyKey, change: LayoutChange) {
+    self.id = id
+    self.change = change
+  }
+}
+
+/// The room's answer: `applied`, or `duplicate` for an id it already applied; `shop` is the pair after it.
+public struct LayoutResponse: Codable, Hashable, Sendable {
+  public let result: String
+  public let shop: ShopResponse
+}
+
 /// `GET /v1/shop`. `inks` starts with the free ink, `items` with the starter pieces. `giftDay`
 /// is the pair's local day it last opened the daily gift (`nil` before the first).
 public struct ShopResponse: Codable, Hashable, Sendable {
@@ -93,6 +162,8 @@ public struct ShopResponse: Codable, Hashable, Sendable {
   public let wishlist: [RoomItemId]
   public let giftDay: String?
   public let bonuses: [String]
+  /// Where the pair stood its pieces; absent from a server before placements.
+  public let layout: [RoomPlacement]?
 
   public init(
     balance: Int,
@@ -100,7 +171,8 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     items: [RoomItemId],
     wishlist: [RoomItemId],
     giftDay: String? = nil,
-    bonuses: [String] = []
+    bonuses: [String] = [],
+    layout: [RoomPlacement]? = nil
   ) {
     self.balance = balance
     self.inks = inks
@@ -108,10 +180,11 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     self.wishlist = wishlist
     self.giftDay = giftDay
     self.bonuses = bonuses
+    self.layout = layout
   }
 
   private enum CodingKeys: String, CodingKey {
-    case balance, inks, items, wishlist, giftDay, bonuses
+    case balance, inks, items, wishlist, giftDay, bonuses, layout
   }
 
   public init(from decoder: any Decoder) throws {
@@ -123,6 +196,7 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     giftDay = try container.decodeOptionalKey(String.self, forKey: .giftDay)
     // A server from before collection bonuses sends none.
     bonuses = try container.decodeIfPresent([String].self, forKey: .bonuses) ?? []
+    layout = try container.decodeIfPresent([RoomPlacement].self, forKey: .layout)
   }
 }
 

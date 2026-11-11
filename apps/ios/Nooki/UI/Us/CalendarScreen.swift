@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct CalendarScreen: View {
     let state: HomeState
@@ -18,7 +21,7 @@ struct CalendarScreen: View {
     var body: some View {
         BilletSheet("Calendar", scrolls: false) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Space.m) {
                     if showsMonth {
                         let rows = inMonth
                         MonthGrid(month: $month, marked: Set(rows.map { Calendar.current.startOfDay(for: $0.date) }))
@@ -34,7 +37,7 @@ struct CalendarScreen: View {
                 }
                 .padding(.horizontal, Space.gutter)
                 .padding(.top, Space.s)
-                .padding(.bottom, 40)
+                .padding(.bottom, Space.xl + Space.s)
             }
             .scrollIndicators(.hidden)
             .scrollHeader {
@@ -60,7 +63,7 @@ struct CalendarScreen: View {
         Button {
             if case .event(let id) = item.source, let event = us.events.first(where: { $0.id == id }) { editing = event }
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: item.icon, size: 44)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(item.title)
@@ -86,7 +89,7 @@ struct CalendarScreen: View {
             .padding(CardMetrics.padding)
             .cardSurface()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 }
 
@@ -97,23 +100,33 @@ private struct MonthGrid: View {
     let marked: Set<Date>
 
     private let cal = Calendar.current
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.xs), count: 7)
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: Space.m) {
             HStack {
-                Button { shift(-1) } label: { Image(systemName: "chevron.left") }
+                Button { shift(-1) } label: {
+                    Image(systemName: "chevron.left")
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Previous month")
                 Spacer()
                 Text(month.formatted(.dateTime.month(.wide).year()))
                     .font(.ourioHeadline)
                 Spacer()
-                Button { shift(1) } label: { Image(systemName: "chevron.right") }
+                Button { shift(1) } label: {
+                    Image(systemName: "chevron.right")
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Next month")
             }
             .font(.ourioHeadline)
             .foregroundStyle(Ink.text)
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
 
-            LazyVGrid(columns: columns, spacing: 6) {
+            LazyVGrid(columns: columns, spacing: Space.s) {
                 ForEach(weekdaySymbols, id: \.self) { d in
                     Text(d).font(.ourioMicro).foregroundStyle(Ink.textSecondary)
                 }
@@ -171,9 +184,9 @@ struct EventEditor: View {
 
     var body: some View {
         BilletSheet(isNew ? "New event" : "Edit event", onConfirm: save, canConfirm: canSave) {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: Space.l) {
 
-            HStack(spacing: 10) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: event.icon, size: 50)
                 UsField(placeholder: "Birthday, trip, concert…", text: $event.title)
             }
@@ -192,7 +205,7 @@ struct EventEditor: View {
                 .foregroundStyle(Ink.text)
                 .fieldSurface()
 
-            HStack(spacing: 8) {
+            HStack(spacing: Space.s) {
                 FilterChip("Ours", isSelected: event.owner == nil) { event.owner = nil }
                 ForEach([state.partners.0, state.partners.1], id: \.self) { p in
                     FilterChip(p, isSelected: event.owner == p) { event.owner = p }

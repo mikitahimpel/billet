@@ -52,9 +52,18 @@ final class CatDirector {
     private(set) var touring = false
     /// Nil for the real clock.
     private(set) var forcedHour: Double?
+    /// The Labs observatory's speed: how many brain seconds pass in each real one.
+    private(set) var speed = 1.0
+    /// The last stretches of her life, newest last; set only when one begins.
+    private(set) var timeline: [CatObservation] = []
+    /// Whether the Labs card is on screen; the scores it shows are worked out only then.
+    @ObservationIgnored var observing = false
 
     /// A launch argument (`-labs.catBrainTour YES`) that starts the tour at once, for recordings.
     static let tourKey = "labs.catBrainTour"
+
+    /// Seconds between the brain's looks, in real time: the cat's moves last seconds, so four a second is plenty.
+    static let thinkEvery = 0.25
 
     /// Hours away after which opening the app is a homecoming she greets.
     static let greetAfter: TimeInterval = 3 * 3600
@@ -66,7 +75,7 @@ final class CatDirector {
     }
 
     @ObservationIgnored private let walker: CatWalker
-    @ObservationIgnored private let spots: [NookiSpot: CatWalker.Destination]
+    @ObservationIgnored private var spots: [NookiSpot: CatWalker.Destination]
     @ObservationIgnored private let source: CatEventSource
     @ObservationIgnored private let analytics: CatAnalytics
     @ObservationIgnored private let defaults: UserDefaults
@@ -80,6 +89,8 @@ final class CatDirector {
     /// Until then her head turns toward the room's back, where the partner would come in.
     @ObservationIgnored private var glanceUntil = 0.0
     @ObservationIgnored private var nextThink = 0.0
+    @ObservationIgnored private var clock = CatClock(now: Date.now.timeIntervalSince1970)
+    @ObservationIgnored private var observatory = CatObservatory()
     @ObservationIgnored private var nextSeen = 0.0
     @ObservationIgnored var paused = false
     @ObservationIgnored private var tour: (start: Double, petted: Set<Double>)?
@@ -109,6 +120,19 @@ final class CatDirector {
             }
             return true
         }
+    }
+
+    /// The room's places changed, as the player stood a piece in it or took one away: the script and the brain's
+    /// room follow, and she keeps what she is doing.
+    func update(spots new: [NookiSpot: CatWalker.Destination]) {
+        guard Set(new.keys) != Set(spots.keys) else {
+            spots = new
+            return
+        }
+        spots = new
+        let available = Set(new.keys).union([.home])
+        script = NookiCatScript(spots: available)
+        runner.setRoom(NookiSpot.affordances(available), weather: runner.brain.weather)
     }
 
     // MARK: - The couple
@@ -160,9 +184,38 @@ final class CatDirector {
 
     // MARK: - Labs
 
+    /// Runs the brain `speed` times faster than the wall clock, from now.
+    func set(speed: Double) {
+        clock.set(speed: speed, at: Date.now.timeIntervalSince1970)
+        self.speed = speed
+        lastEvent = "speed x\(Int(speed))"
+        nextThink = 0
+    }
+
+    /// Plays a script of `group` now, instead of what utility chose.
+    func force(group: CatActivityGroup) {
+        runner.force(group)
+        lastEvent = "forced \(group.rawValue)"
+        nextThink = 0
+    }
+
+    /// Sends the couple's `kind` of event as if one of them had.
+    func send(_ kind: LifeEvent.Kind) {
+        source.record(kind)
+        analytics.coupleEvent(kind.rawValue)
+    }
+
+    /// What she has been doing, as text to paste.
+    func log() -> String {
+        let now = clock.sim(at: Date.now.timeIntervalSince1970)
+        return observatory.log(
+            now: now, speed: speed, utcOffset: source.context.utcOffset, seed: source.seed,
+            top: runner.brain.scores)
+    }
+
     /// Plays ``CatMindTour/standard`` through the script and walker, then hands her back to the brain.
     func startTour() {
-        tour = (Date.now.timeIntervalSince1970, [])
+        tour = (clock.sim(at: Date.now.timeIntervalSince1970), [])
         touring = true
         lastEvent = "tour"
         nextThink = 0
@@ -178,7 +231,7 @@ final class CatDirector {
     /// Starts the brain again as a cat left alone for `hours`: hungry, lonely, bored and tired.
     func neglect(hours: Double = 16) {
         var context = source.context
-        context.born = Date.now.addingTimeInterval(-hours * 3600)
+        context.born = Date(timeIntervalSince1970: clock.sim(at: Date.now.timeIntervalSince1970) - hours * 3600)
         restart(events: [], context: context, lastEvent: "alone \(Int(hours)) h")
     }
 
@@ -199,13 +252,15 @@ final class CatDirector {
     }
 
     private func restart(events: [LifeEvent], context: LifeContext? = nil, lastEvent: String) {
-        let now = Date.now.timeIntervalSince1970
+        let now = clock.sim(at: Date.now.timeIntervalSince1970)
         var context = context ?? source.context
         if let forcedHour {
             let local = now.truncatingRemainder(dividingBy: 86400)
             context.utcOffset = Int(forcedHour * 3600 - local)
         }
         runner = CatBrainRunner(events: events, now: now, context: context, seed: source.seed, room: runner.brain.room)
+        observatory = CatObservatory()
+        timeline = []
         self.lastEvent = lastEvent
         nextThink = 0
     }
@@ -214,17 +269,16 @@ final class CatDirector {
 
     func update(_ dt: Float) {
         guard !paused else { return }
-        let now = Date.now.timeIntervalSince1970
-        if now >= nextSeen {
-            defaults.set(Date(timeIntervalSince1970: now), forKey: Self.lastSeenKey)
-            nextSeen = now + 60
+        let real = Date.now.timeIntervalSince1970
+        if real >= nextSeen {
+            defaults.set(Date(timeIntervalSince1970: real), forKey: Self.lastSeenKey)
+            nextSeen = real + 60
         }
-        if runner.live != nil, now >= liveUntil { runner.live = nil }
-        if now >= nextThink {
-            nextThink = now + 0.25
-            guard drive(enabled()) else { return }
-            think(now)
-        }
+        if runner.live != nil, real >= liveUntil { runner.live = nil }
+        guard real >= nextThink else { return }
+        nextThink = real + Self.thinkEvery
+        guard drive(enabled()) else { return }
+        think(clock.sim(at: real))
         if walker.directed { walker.behavior.focus = focus() }
     }
 
@@ -262,6 +316,12 @@ final class CatDirector {
                 lastEvent = "tour over"
             }
         }
+        observatory.observe(
+            frame.stack, at: now,
+            cause: runner.brain.transitions.last?.cause.rawValue ?? (frame.stack.interaction == nil ? "start" : "touch"))
+        if observatory.episodes.last?.start != timeline.last?.start || observatory.episodes.count != timeline.count {
+            timeline = observatory.episodes
+        }
         if mind != self.mind {
             let cause = runner.brain.transitions.last?.cause.rawValue ?? (frame.stack.interaction == nil ? "start" : "touch")
             analytics.catChanged(from: self.mind, to: mind, cause: cause)
@@ -294,6 +354,14 @@ final class CatDirector {
             case .curl: walker.behavior.perform(.curl)
             case .groom: walker.behavior.perform(.groom)
             case .pats: walker.pats()
+            case .shake: walker.behavior.perform(.shake)
+            case .tilt: walker.behavior.perform(.tilt)
+            case .chatter: walker.behavior.perform(.chatter)
+            case .track: walker.behavior.perform(.track)
+            case .lookUp: walker.behavior.perform(.lookUp)
+            case .crouch: walker.crouch()
+            case .pounce: walker.hop()
+            case .spin: walker.spin()
             }
         case .look(let look):
             self.look = look
@@ -326,10 +394,12 @@ final class CatDirector {
     private func publish(_ frame: CatBrainFrame, now: Double) {
         let path = frame.stack.path
         if path != self.path { self.path = path }
-        let needs = runner.brain.utilityInput(at: now).needs
+        let needs = runner.brain.needs
         if needs != self.needs { self.needs = needs }
-        let top = Array(runner.brain.scores.sorted { $0.score > $1.score }.prefix(3))
-        if top != self.top { self.top = top }
+        if observing {
+            let top = Array(runner.brain.scores.sorted { $0.score > $1.score }.prefix(3))
+            if top != self.top { self.top = top }
+        }
         if walker.rest != rest { rest = walker.rest }
         if here != spot { spot = here }
     }

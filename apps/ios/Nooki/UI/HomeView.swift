@@ -1,11 +1,17 @@
+import DecorInterface
+import FeatureDecor
 import FeatureGames
 import FeatureInbox
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design
 import TipKit
 import Transport
+import UsInterface
 import WidgetBridge
 import Wire
 
@@ -15,6 +21,8 @@ struct HomeView: View {
     @State var room = RoomController()
     /// The splash stays over everything until the room has loaded (see `lift()`).
     @State private var launching = true
+    /// The tab bar's top edge, global, which a purchase's card keeps clear of.
+    @State private var tabBarTop: CGFloat?
     /// The splash is still drawn while it fades out after `launching` ends, though it takes no touches by then.
     @State private var splashDrawn = true
     /// The screen as the World last showed it, held up on the way back until the room draws again.
@@ -35,6 +43,9 @@ struct HomeView: View {
     /// The header and the tab bar as a perf run wants them drawn; glass, as shipped, otherwise.
     @State private var hud = HUDArm.launch
     @State private var sheetGround = SheetGroundStyle.opaque
+    /// Labs → Performance: suspects switched off while the app runs, and its frame meter.
+    @State private var perfLab = PerfLab(defaults: .standard)
+    @State private var tabClock = TabSwitchClock()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
@@ -76,7 +87,13 @@ struct HomeView: View {
             OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 }, selectRoom: select)
             await lift()
         }
+        .onChange(of: state.shop.owned, initial: true) { _, owned in state.decor.send(.owned(owned)) }
+        .onChange(of: state.shop.serverLayout, initial: true) { _, layout in
+            state.decorSync.client = { [weak session] in session?.shopSync }
+            state.decorSync.heard(layout)
+        }
         .task {
+            if let item = UserDefaults.standard.string(forKey: "decorate") { state.decor.send(.opened(item: item == "closet" ? nil : item)) }
             room.load()
             for await event in room.events { handle(event) }
         }
@@ -136,6 +153,7 @@ struct HomeView: View {
             }
         }
         .onChange(of: state.tab) { _, tab in
+            tabClock.began(tab.title)
             OurioPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
             // A fade cut short by a quick return never comes back over a later switch.
@@ -204,6 +222,7 @@ struct HomeView: View {
             withAnimation(.spring(duration: 0.4)) { state.open(link) }
         }
         .environment(\.sheetGround, sheetGround)
+        .environment(perfLab)
     }
 
     private var layout: some View {
@@ -245,13 +264,14 @@ struct HomeView: View {
                     Color.clear
                 }
             }
-            // Tab to tab, the page alone fades; the header and the tab bar are outside it and stay put.
-            .transition(.opacity)
-            .animation(Motion.fade(), value: state.tab)
+            .perfLab(perfLab)
+            // Tab to tab, the new page is all there in its first frame, as with the system's tab bar: a fade in
+            // would show it half drawn for its first tenth of a second. The header and the tab bar stay put.
+            .transition(.identity)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
-            .bars(fades: !showsRoom) {
+            .bars(fades: !showsRoom, softEdges: perfLab.isOn(.scrollEdges)) {
                 if hud != .hidden {
                     AppHeader(state: state, erase: {
                         room.stop()
@@ -261,17 +281,24 @@ struct HomeView: View {
                     }) {
                         if state.tab == .world {
                             RoomSwitch(state: state, select: select).transition(.opacity)
+                        } else if state.tab == .moments {
+                            MomentsSwitch(state: state).transition(.opacity)
+                        } else if state.tab == .shop {
+                            ShopChips(state: state).transition(.opacity)
                         }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
-                    .environment(\.glassRendering, hud.glass)
+                    .padding(.horizontal, Space.l)
+                    .padding(.top, Space.xs)
+                    .environment(\.glassRendering, barGlass)
                 }
             } bottom: {
                 if hud != .hidden {
                     TabBar(state: state)
-                        .padding(.horizontal, 16)
-                        .environment(\.glassRendering, hud.glass)
+                        .opacity(arranging ? 0 : 1)
+                        .allowsHitTesting(!arranging)
+                        .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
+                        .padding(.horizontal, Space.l)
+                        .environment(\.glassRendering, barGlass)
                 }
             }
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
@@ -281,22 +308,40 @@ struct HomeView: View {
             RoomGameLayer(controller: room)
 
             // The composer and the canvas play it over themselves while they're up.
-            if state.composingNote == nil, !state.drawing { PurchaseMoment(state: state) }
+            if state.composingNote == nil, !state.drawing {
+                PurchaseMoment(state: state, floor: hud == .hidden ? nil : tabBarTop)
+            }
         }
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
             ZStack {
-                if state.tab == .world, room.game == nil { petControls }
+                if state.tab == .world, room.game == nil, !arranging { petControls }
             }
             .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
+        .overlay(alignment: .bottom) {
+            if arranging, room.game == nil {
+                DecorPanel(state: state) { state.decor.send(.closed) }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy(duration: 0.3), value: arranging)
         .background { TouchWatcher { [quiet] in quiet.send(.touched) } }
+        #if DEBUG || LABS_YES
+        .overlay(alignment: .topTrailing) {
+            if perfLab.state.meter {
+                PerfLabMeter(lab: perfLab, room: roomInput.visibility, tabs: tabClock.times)
+                    .padding(.trailing, Space.l)
+                    .padding(.top, Space.xl * 2)
+            }
+        }
+        #endif
         .overlay(alignment: .topLeading) {
             if brainCard && state.tab == .world {
                 RoomBrainCard(controller: room)
-                .padding(.leading, 16)
+                .padding(.leading, Space.l)
                 .padding(.top, 120)
             }
         }
@@ -322,10 +367,7 @@ struct HomeView: View {
     }
 
     private var petControls: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Above the portrait, with the arrow down at it, so the hint never covers her.
-            TipView(PetHint(), arrowEdge: .bottom)
-            TipView(TreatHint(), arrowEdge: .bottom)
+        VStack(alignment: .leading, spacing: Space.m) {
             if let homecoming {
                 HomecomingLabel(line: homecoming)
                     .transition(.opacity)
@@ -334,10 +376,18 @@ struct HomeView: View {
                 PetButton(state: state, needs: { room }) { room.play($0) }
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
+                if state.room == .home {
+                    let waiting = state.decor.state.closetCount
+                    GlassIconButton(
+                        symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
+                    ) { state.decor.send(.opened(item: nil)) }
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .accessibilityIdentifier("decorate")
+                }
             }
-            .padding(.horizontal, 4)
+            .padding(.horizontal, Space.xs)
         }
-        .padding(.horizontal, 12)
+        .padding(.horizontal, Space.m)
         .padding(.bottom, 94)
         .transition(.opacity)
         .task(id: homecoming) {
@@ -417,6 +467,7 @@ struct HomeView: View {
         if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
         #endif
         reportOpened(state.room)
+        await ShopView.prewarm(state.shop.offers)
     }
 
     /// Visits another room with one crossfade: the screen as it is stands in over the swap, and fades out once the
@@ -459,16 +510,31 @@ struct HomeView: View {
             .flatMap(\.windows).first(where: \.isKeyWindow)
     }
 
+    /// The header's and the tab bar's glass: a perf run's arm, flat while Labs → Performance has it off.
+    private var barGlass: GlassRendering { perfLab.isOn(.barGlass) ? hud.glass : .flat }
+
     private var roomInput: RoomInput {
         let visibility: RoomVisibility =
             roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true)
+            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes),
+            sway: perfLab.isOn(.sway), decor: roomDecor,
+            rendering: RoomRendering(antialiasing: perfLab.isOn(.msaa), hdr: perfLab.isOn(.hdr)))
+    }
+
+    private var arranging: Bool { state.decor.state.isArranging }
+
+    private var roomDecor: RoomDecor {
+        let arranging = state.decor.state
+        let mode: RoomDecor.Mode =
+            arranging.isArranging ? .arranging(selected: arranging.selection, fits: arranging.isValid) : .showing
+        return RoomDecor(layout: arranging.layout, mode: mode)
     }
 
     private func handle(_ event: RoomEvent) {
         switch event {
+        case .decor(let gesture): handleDecor(gesture)
         case .catPetted: withAnimation(.spring(duration: 0.4)) { state.care.pet() }
         case .pinOpened(let id): state.openedPin = PinRoute(id: id)
         case .drawAsked: state.composingNote = .draw
@@ -477,6 +543,17 @@ struct HomeView: View {
             withAnimation(.snappy(duration: 0.3)) {
                 homecoming = HomecomingLine(care, partner: state.otherPartner, cat: CatProfile.name())
             }
+        }
+    }
+
+    private func handleDecor(_ gesture: DecorGesture) {
+        switch gesture {
+        case .tapped(let id): state.decor.send(.roomTapped(id))
+        case .tappedEmpty: state.decor.send(.emptyTapped)
+        case .dragBegan(let id): state.decor.send(.dragBegan(id))
+        case .dragged(let placement): state.decor.send(.dragged(placement))
+        case .dropped: state.decor.send(.dropped)
+        case .cancelled: state.decor.send(.dragCancelled)
         }
     }
 
@@ -499,7 +576,7 @@ private struct ShowcaseLabel: View {
         .padding(.vertical, Space.s)
         .frame(minHeight: 40)
         .glass(.capsule, role: .bar)
-        .frame(minHeight: 44)
+        .frame(minHeight: Size.control)
         .accessibilityLabel("Playing \(label)")
     }
 }

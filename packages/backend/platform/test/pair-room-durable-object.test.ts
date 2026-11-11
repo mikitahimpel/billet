@@ -151,6 +151,8 @@ describe("PairRoom storage", () => {
       inks: [],
       items: [],
       wishlist: [],
+      layout: [],
+      layoutLog: [],
       bonuses: [],
       moods: [],
       welcomed: true,
@@ -192,6 +194,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_guess"),
       expect.stringContaining("_riddles"),
       expect.stringContaining("_streak"),
+      expect.stringContaining("_layout"),
     ]);
   });
 
@@ -273,6 +276,7 @@ describe("PairRoom storage", () => {
       items: ["lamp", "rug", tower],
       wishlist: [yarn],
       bonuses: [],
+      layout: [],
     });
   });
 

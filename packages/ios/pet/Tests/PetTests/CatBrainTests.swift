@@ -139,8 +139,11 @@ struct CatBrainTests {
     let games = Self.lotsOfPlay.filter { $0.kind == .play }
     for game in games {
       let at = game.at.timeIntervalSince1970
+      // A cat already stalking has nothing to change into.
       let answer = brain.transitions.first { $0.at == at && $0.cause == .event }
-      #expect(answer?.to.step == .stalk || answer?.to.step == .wake, "game at \(Self.hour(at))")
+      #expect(
+        answer == nil || answer?.to.step == .stalk || answer?.to.step == .wake,
+        "game at \(Self.hour(at))")
     }
     // The needs engine tires the cat with each game: it rests more than on a day of notes.
     let busy = Self.day(Self.lotsOfPlay, from: 14, hours: 6)

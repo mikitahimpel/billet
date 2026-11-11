@@ -1,9 +1,13 @@
 import FeatureShop
 import Foundation
+import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import ShopInterface
 import Transport
+import UsInterface
 import Wire
 
 /// The Shop's store around `ShopMachine` (FeatureShop), with the wallet file, the cat and the day's prices.
@@ -25,6 +29,8 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     @ObservationIgnored var undoWindow: Duration = .seconds(Purchase.undoWindow)
     @ObservationIgnored var retryDelay: Duration = .seconds(2)
     @ObservationIgnored private var store: ShopStore!
+    /// Where the pair stood its pieces, as the room last said; nil until it has said, or from a server without it.
+    private(set) var serverLayout: [RoomPlacement]?
     /// Rooms the wallet file has let go of, so leaving one can wait for it.
     private var left = 0
 
@@ -41,6 +47,7 @@ final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
                 // Outputs finish in any order: an answer that lands after the pair ended stays out of the wallet.
                 mirror: { [weak self] in
                     guard self?.isSynced == true else { return }
+                    self?.serverLayout = $0.layout
                     wallet.mirror(coins: $0.balance, owned: $0.owned, wishlist: $0.wishlist)
                 },
                 mirrorBalance: { [weak self] in

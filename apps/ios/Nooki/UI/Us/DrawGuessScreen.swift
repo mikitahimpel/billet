@@ -1,8 +1,11 @@
 import Ink
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import Transport
+import UsInterface
 import Wire
 
 struct DrawGuessScreen: View {
@@ -201,7 +204,7 @@ struct DrawGuessScreen: View {
                             .font(.ourioCallout)
                             .foregroundStyle(Ink.accentText)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                 }
                 VStack(alignment: .leading, spacing: Space.s) {
                     Text("Your own word")
@@ -333,16 +336,16 @@ private struct RiddleReplay: View {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.heroInk)
-                        .frame(width: 44, height: 44)
+                        .frame(width: Size.control, height: Size.control)
                         .background(Circle().fill(.white.opacity(0.7)))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .padding(Space.s)
                 .accessibilityLabel("Replay the drawing")
             }
         }
         .aspectRatio(1, contentMode: .fit)
-        .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+        .corners(.card)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("The drawing")
         .task(id: riddle.id) {
@@ -359,11 +362,13 @@ private struct RiddleBlanks: View {
     let shape: [Int]
     let slots: [DrawGuessModel.Slot]
     var takeBack: (Int) -> Void
+    @ScaledMetric(relativeTo: .headline) private var blankWidth: CGFloat = 26
+    @ScaledMetric(relativeTo: .headline) private var blankHeight: CGFloat = 34
 
     var body: some View {
-        WrapLayout(spacing: Space.l) {
+        FlowRow(spacing: Space.l) {
             ForEach(Array(words.enumerated()), id: \.offset) { _, word in
-                HStack(spacing: 6) {
+                HStack(spacing: Space.s) {
                     ForEach(word, id: \.index) { slot in blank(slot) }
                 }
             }
@@ -385,7 +390,7 @@ private struct RiddleBlanks: View {
     private func blank(_ slot: DrawGuessModel.Slot) -> some View {
         let letter = Text((slot.letter ?? " ").uppercased())
             .font(.ourioHeadline)
-            .frame(width: 26, height: 34)
+            .frame(width: blankWidth, height: blankHeight)
         switch slot.kind {
         case .empty:
             letter
@@ -402,7 +407,7 @@ private struct RiddleBlanks: View {
                     .foregroundStyle(Ink.text)
                     .overlay(alignment: .bottom) { Capsule().fill(Ink.text).frame(height: 3) }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Letter \(slot.index + 1), \(slot.letter ?? "")")
             .accessibilityHint("Takes the letter back")
         }
@@ -465,7 +470,7 @@ private struct WordOption: View {
     var body: some View {
         HStack(spacing: Space.m) {
             Text(tier)
-                .font(.ourioMicro)
+                .font(.ourioCaption.weight(.semibold))
                 .foregroundStyle(Ink.accentText)
                 .padding(.horizontal, Space.s)
                 .padding(.vertical, Space.xs)

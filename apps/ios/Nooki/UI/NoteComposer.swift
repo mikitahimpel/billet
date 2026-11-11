@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 /// Sending pins the note and earns 5 coins.
 struct NoteComposer: View {
@@ -80,6 +83,11 @@ struct NoteComposer: View {
             PenHolder(style: style, state: state, selection: $model.ink) { dismiss() }
         }
         .padding(.vertical, Space.s)
+        .overlay(alignment: .topTrailing) {
+            LimitCounter(count: model.text.count, limit: NoteStore.maxLength, warnFrom: NoteStore.maxLength - 30)
+                .padding(.horizontal, Space.gutter)
+                .offset(y: -Space.l)
+        }
         .animation(.snappy(duration: 0.2), value: model.hasInk)
     }
 
@@ -91,7 +99,7 @@ struct NoteComposer: View {
                 .frame(width: Size.control, height: Size.control)
                 .background(model.drawing ? Color.honey : Ink.surface, in: .circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(model.drawing ? "Pen on" : "Pen off")
         .accessibilityHint("Switches between drawing and typing")
         .accessibilityIdentifier("composerPen")
@@ -126,7 +134,7 @@ struct NoteComposer: View {
                 .frame(width: Size.control, height: Size.control)
                 .background(Ink.surface, in: .circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Paper: \(model.kind.rawValue)")
         .accessibilityIdentifier("composerPaperKind")
     }

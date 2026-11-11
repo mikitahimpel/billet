@@ -1,19 +1,30 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 
 enum PolaroidPaper {
     /// A softer cream in dark, so it doesn't glare on the brown screen.
     static let frame = Color(light: Color(hex: 0xFFFBF3), dark: Color(hex: 0xF5E8D3))
     static let ink = Color(hex: 0x4A2E1F)
-    static let byline = Color(hex: 0x9A7A62)
+    /// Dark enough for small type on the cream frame, about 5:1.
+    static let byline = Color(hex: 0x7A5B45)
     static let blank = Color(hex: 0xE9D6BC)
     static let milk = Color(hex: 0xEFE8DC)
     static let tapeTones: [Color] = [.blushPink, .honey, Color(hex: 0x9CC3A4), Color(hex: 0x9DBBF5)]
 }
 
 extension UUID {
+    /// One of the stamps, the same for this id every time.
+    var stampArt: StampArt {
+        let b = withUnsafeBytes(of: uuid) { Array($0) }
+        return StampArt.allCases[Int(b[7]) % StampArt.allCases.count]
+    }
+
     /// A small tilt, 2–4° either way, the same for this id every time.
     var polaroidTilt: Angle {
         let b = withUnsafeBytes(of: uuid) { Array($0) }
@@ -37,6 +48,10 @@ struct Polaroid<Photo: View>: View {
     var undeveloped = false
     /// Its own drop shadow; off where the print is drawn into a lit 3D scene.
     var lifted = true
+    /// Lines the caption may wrap to before it shrinks. A board face keeps one, so its strip never grows.
+    var captionLines = 1
+    /// Width kept clear at the strip's trailing end for a mark laid over it, such as a stamp.
+    var markSpace: CGFloat = 0
     var captionEditor: Binding<String>?
     var captionFocus: FocusState<Bool>.Binding?
     @ViewBuilder var photo: Photo
@@ -64,18 +79,20 @@ struct Polaroid<Photo: View>: View {
                             .submitLabel(.done)
                     } else {
                         Text(caption.isEmpty ? " " : caption)
-                            .lineLimit(1)
+                            .lineLimit(captionLines)
                             .minimumScaleFactor(0.7)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .font(.custom("Noteworthy-Bold", size: width * 0.078))
                 .foregroundStyle(PolaroidPaper.ink)
                 Text(byline)
-                    .font(.system(size: max(9, width * 0.05), weight: .medium, design: .rounded))
+                    .font(.system(size: max(11, width * 0.05), weight: .medium, design: .rounded))
                     .foregroundStyle(PolaroidPaper.byline)
                     .lineLimit(1)
             }
-            .padding(.horizontal, width * 0.012)
+            .padding(.leading, width * 0.012)
+            .padding(.trailing, width * 0.012 + markSpace)
             .frame(maxWidth: .infinity, minHeight: width * 0.2, alignment: .leading)
         }
         .padding([.top, .horizontal], border)
@@ -138,8 +155,8 @@ struct PaperSheet: View {
         ZStack {
             if let lift {
                 shape.fill(color)
-                    .shadow(color: .black.opacity(0.16), radius: 1, y: 1)
-                    .shadow(color: .black.opacity(lift.opacity), radius: lift.radius, y: lift.y)
+                    .perfShadow(color: .black.opacity(0.16), radius: 1, y: 1)
+                    .perfShadow(color: .black.opacity(lift.opacity), radius: lift.radius, y: lift.y)
             }
             Image(uiImage: PaperGrain.tile(on: color))
                 .resizable(resizingMode: .tile)

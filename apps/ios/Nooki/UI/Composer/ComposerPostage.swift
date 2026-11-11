@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 extension NoteStamp {
@@ -30,7 +33,8 @@ extension NoteSeal {
 extension View {
     /// The note's stamp and seal, if the sender chose any, on a face `width` points wide.
     func postage(of note: Note, width: CGFloat) -> some View {
-        postage(stamp: note.stamp?.art, seal: note.seal?.art, width: width)
+        postage(stamp: note.stamp?.art, seal: note.seal?.art, width: width,
+                postmark: note.unsent == true ? nil : note.date)
     }
 }
 
@@ -57,7 +61,7 @@ struct PostagePicker: View {
             .frame(width: Size.control, height: Size.control)
             .background(Ink.surface, in: .circle)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Stamp and seal")
         .accessibilityValue(summary)
         .accessibilityIdentifier("composerPostage")
@@ -114,7 +118,7 @@ struct PostagePicker: View {
                 .background(selected ? Color.honey.opacity(0.22) : .clear, in: .circle)
                 .overlay { Circle().strokeBorder(selected ? Color.honey : .clear, lineWidth: 2) }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(name)
         .accessibilityAddTraits(selected ? .isSelected : [])
     }

@@ -1,7 +1,12 @@
 import Foundation
+import MomentsInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
+import Persistence
+import ProfileInterface
 import Testing
+import UsInterface
 import Wire
 @testable import Billet
 

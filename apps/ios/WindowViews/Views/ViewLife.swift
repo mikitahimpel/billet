@@ -3,7 +3,8 @@ import Foundation
 import Pet
 import SwiftUI
 
-/// The room's own headlight sweep follows the same cars.
+/// The room's own headlight sweep follows the same cars. The suburban views set `chance` to 0: the City room drives
+/// its own 3D cars along this street, and a second set of flat ones would cross them.
 struct ViewRoad: Sendable {
   /// The line the cars' wheels run on, in stage units.
   var line: CGFloat

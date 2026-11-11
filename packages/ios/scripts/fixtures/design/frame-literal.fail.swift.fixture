@@ -1,0 +1,6 @@
+struct Bad: View {
+  var body: some View {
+    Button("Go") {}.frame(maxWidth: .infinity, minHeight: 44)
+    Rectangle().frame(height: 3)
+  }
+}

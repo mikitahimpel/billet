@@ -28,11 +28,15 @@ pnpm alchemy dev                   # local backend (docs/alchemy.md)
 pnpm db:generate                   # Drizzle migrations
 pnpm ios:test                      # Swift packages (Mac)
 pnpm ios:build                     # Swift packages (Mac)
+scripts/verify-ios.sh              # what the PR's iOS run checks, on this Mac (--packages, --app)
 pnpm turbo run ios:format:check    # swift-format, packages only
 pnpm turbo run ios:generate        # apps/ios/Billet.xcodeproj
 xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
   -destination 'platform=iOS Simulator,name=<iPhone>' CODE_SIGNING_ALLOWED=NO
 ```
+
+Debug builds in every worktree share one compilation cache, `~/Library/Caches/billet-compilation-cache`
+(project.yml); a build that fails for no reason in the code is retried after deleting it.
 
 `<iPhone>`: any from `xcrun simctl list devices available`. Swift scripts are named `ios:*`, never
 `test` or `build`, so the TypeScript commands skip them on Linux.
@@ -75,9 +79,8 @@ macOS runners are few and shared by every agent.
   table is tested, rejected events included.
 - Stores take every dependency in `init`; views get other features as protocols. No
   `UserDefaults.standard`, `NotificationCenter`, `SharedFile` or `CatProfile` in a feature.
-- `apps/ios/Shared` is the `OurioShared` static library, built once for the app and its extensions; what
-  the app uses from it is `public`. Add nothing new there: it is moving into the `*Interface` targets
-  ([docs/ios-architecture.md](docs/ios-architecture.md) §1.1.1).
+- Code the app and its extensions share is in the `*Interface` targets; `apps/ios/Shared` holds only
+  the images and the map they bundle ([docs/ios-architecture.md](docs/ios-architecture.md) §1.1.1).
 - The Room (`apps/ios/Nooki/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
   through `RoomControlling`, events out through `RoomEvent`. No scene type is named outside it,
   and no scene tick reaches state outside it.

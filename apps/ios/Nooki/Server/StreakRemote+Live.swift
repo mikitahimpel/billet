@@ -1,6 +1,9 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Transport
+import UsInterface
 import Wire
 
 extension StreakRemote {
@@ -46,7 +49,7 @@ extension StreakRemote {
         case .decoding, .encoding, .api(.streakNotRestorable), .api(.notFound), .api(.invalidRequest),
              .api(.invalidInvite), .api(.alreadyPaired), .api(.appleIdInUse), .api(.invalidPurchase), .api(.inkNotOwned),
              .api(.notEnoughCoins), .api(.alreadyOwned), .api(.collectionIncomplete), .api(.giftTaken),
-             .api(.bonusTaken), .api(.catNotAdopted), .api(.priceChanged):
+             .api(.bonusTaken), .api(.catNotAdopted), .api(.priceChanged), .api(.layoutRefused):
             .refused
         }
     }

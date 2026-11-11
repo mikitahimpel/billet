@@ -1,0 +1,8 @@
+struct Bad: View {
+  var body: some View {
+    VStack {
+      Text("No style")
+      Text("Coloured only").foregroundStyle(Ink.textSecondary)
+    }
+  }
+}

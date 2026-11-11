@@ -1,0 +1,19 @@
+{
+ "id": "clock",
+ "name": "Wall clock",
+ "kind": "FLAT",
+ "width_m": 0.159,
+ "depth_m": 0.028,
+ "height_m": 0.159,
+ "footprint_cells": [
+  4,
+  1
+ ],
+ "mount": "wall",
+ "fit": "width",
+ "size_m": 0.159,
+ "anchors": [],
+ "tris": 1000,
+ "affordance": null,
+ "usdz_kb": 173
+}

@@ -1,10 +1,14 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Pet
+import ProfileInterface
 import RoomInterface
 import Synchronization
 import Testing
 import Transport
+import UsInterface
 import Wire
 @testable import Billet
 
@@ -346,7 +350,7 @@ private let profile = Wire.CatProfile(
             switch event {
             case .catPetted: return told
             case .partnerCared(let care): told.append(care.map(\.kind))
-            case .pinOpened, .drawAsked, .careAsked: continue
+            case .pinOpened, .drawAsked, .careAsked, .decor: continue
             }
         }
         return told

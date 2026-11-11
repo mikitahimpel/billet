@@ -66,7 +66,7 @@ final class GameCamera {
     /// Points the frame must hold, in the room's pivot space.
     var focus: [SIMD3<Float>] = []
     /// How much of the screen's narrower side they fill.
-    var fill: Float = 0.62
+    var fill: Float = 0.9
     var viewport = CGSize(width: 390, height: 844)
     private var amount: Float = 0
     private var goal: Float = 1

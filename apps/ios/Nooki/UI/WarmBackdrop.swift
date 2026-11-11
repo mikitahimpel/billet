@@ -10,10 +10,11 @@ struct WarmBackdrop: View {
     /// Whether the bokeh moves; when it doesn't, it stays where it was.
     var drifts = true
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     /// `-uitestStill YES` holds the bokeh still: redrawn under glass every frame, it keeps the app from ever idling
     /// on CI's GPU-less virtual Macs, and UI queries time out.
     private static let still = UserDefaults.standard.bool(forKey: "uitestStill")
-    private var paused: Bool { scenePhase != .active || !drifts || Self.still }
+    private var paused: Bool { scenePhase != .active || !drifts || reduceMotion || Self.still }
 
     var body: some View {
         ZStack {
@@ -56,13 +57,15 @@ extension View {
     /// The header and the tab bar as the screen's top and bottom bars. On iOS 26 they are safe area bars with the
     /// soft scroll edge under them; before, safe area insets over a material fade when `fades`.
     @ViewBuilder
-    func bars(fades: Bool, @ViewBuilder top: () -> some View, @ViewBuilder bottom: () -> some View) -> some View {
+    func bars(fades: Bool, softEdges: Bool = true, @ViewBuilder top: () -> some View,
+              @ViewBuilder bottom: () -> some View) -> some View {
         if #available(iOS 26, *) {
             scrollEdgeEffectStyle(.soft, for: .vertical)
-                .safeAreaBar(edge: .top, spacing: 12, content: top)
+                .scrollEdgeEffectHidden(!softEdges, for: .vertical)
+                .safeAreaBar(edge: .top, spacing: Space.m, content: top)
                 .safeAreaBar(edge: .bottom, content: bottom)
         } else {
-            safeAreaInset(edge: .top, spacing: 12) {
+            safeAreaInset(edge: .top, spacing: Space.m) {
                 top().background { if fades { EdgeFade(edge: .top) } }
             }
             .safeAreaInset(edge: .bottom) {

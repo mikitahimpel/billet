@@ -41,7 +41,7 @@ struct Pen: View {
                     Text("\(ink.price)").font(.ourioMicro.monospacedDigit())
                 }
                 .foregroundStyle(Ink.text)
-                .padding(.horizontal, 4)
+                .padding(.horizontal, Space.xs)
                 .background(.thinMaterial, in: .capsule)
             }
         }
@@ -62,9 +62,9 @@ private struct PenButton: View {
         let owned = ink.isOwned(state.shop.owned)
         Button { tap(ink) } label: {
             Pen(ink: ink, owned: owned, selected: selected, length: owned ? length : length - 14)
-                .frame(minWidth: 30, minHeight: 44, alignment: .bottom)
+                .frame(minWidth: 30, minHeight: Size.control, alignment: .bottom)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(owned ? "\(ink.name) ink" : "Buy \(ink.name) ink, \(ink.price) coins")
         .accessibilityHint(owned ? "" : "Buys it, or opens the Store when the coins are short")
         .accessibilityAddTraits(selected ? .isSelected : [])
@@ -89,7 +89,7 @@ struct PenHolder: View {
     }
 
     private func pens(length: CGFloat = 54) -> some View {
-        HStack(alignment: .bottom, spacing: 8) {
+        HStack(alignment: .bottom, spacing: Space.s) {
             ForEach(state.shop.inks) { ink in
                 PenButton(ink: ink, state: state, selected: selection == ink, length: length) { picked in
                     choose(picked, state: state, select: { selection = $0; cupOpen = false }, closeForStore: closeForStore)
@@ -107,7 +107,7 @@ struct PenHolder: View {
     private var pencilCase: some View {
         ZStack(alignment: .bottom) {
             ScrollView(.horizontal) {
-                pens().frame(height: 76, alignment: .bottom).padding(.bottom, 14)
+                pens().frame(height: 76, alignment: .bottom).padding(.bottom, Space.l)
             }
             .scrollIndicators(.hidden)
             RoundedRectangle(cornerRadius: 14)
@@ -133,7 +133,7 @@ struct PenHolder: View {
                 .frame(width: 54, height: 66, alignment: .bottom)
                 .clipped()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .accessibilityLabel("Pen cup")
             .accessibilityHint(cupOpen ? "Closes the pens" : "Opens the pens")
             .accessibilityIdentifier("penCup")

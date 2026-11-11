@@ -1,0 +1,6 @@
+struct Good: View {
+  @State private var width: CGFloat = 0
+  var body: some View {
+    Image("a").onGeometryChange(for: CGFloat.self, of: \.size.width) { width = $0 }
+  }
+}

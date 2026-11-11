@@ -2,10 +2,13 @@
 import BilletKit
 import Design
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Payments
 import SwiftUI
 import Transport
+import UsInterface
 import Wire
 
 /// Labs → Coins: gives the pair coins for testing through the dev server's mock store (`POST /v1/purchases/mock`),
@@ -76,7 +79,7 @@ nonisolated enum LabsCoinsMachine: Machine {
         case .api(.unauthorized), .api(.invalidPurchase), .api(.invalidRequest), .api(.invalidInvite),
              .api(.alreadyPaired), .api(.appleIdInUse), .api(.inkNotOwned), .api(.notEnoughCoins),
              .api(.alreadyOwned), .api(.collectionIncomplete), .api(.giftTaken), .api(.bonusTaken),
-             .api(.catNotAdopted), .api(.streakNotRestorable), .api(.priceChanged), .encoding, .decoding:
+             .api(.catNotAdopted), .api(.streakNotRestorable), .api(.priceChanged), .api(.layoutRefused), .encoding, .decoding:
             .refused
         }
     }

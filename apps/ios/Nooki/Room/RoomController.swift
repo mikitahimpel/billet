@@ -1,7 +1,9 @@
+import DecorInterface
 import FeatureGames
 import GamesInterface
 import Observation
 import Pet
+import RealityKit
 import RoomInterface
 import SwiftUI
 import WindowViews
@@ -36,8 +38,19 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored let probe = RoomProbe()
 
     @ObservationIgnored private let usesStandIn: Bool
+    @ObservationIgnored private let ownLoop: Bool
+    /// The renderer and frame loop the room draws with when Labs asks for them, kept for the app's life: the room's
+    /// entities live in it, and a renderer freed and made again would draw them blank.
+    @ObservationIgnored private(set) lazy var loop: RoomRenderLoop? = ownLoop ? RoomRenderLoop() : nil
     @ObservationIgnored private lazy var standIn = CatRoom()
+    /// An empty room the room's view holds while no room can be seen (see `RoomStage`).
+    @ObservationIgnored private(set) lazy var offStage = CatRoom()
     @ObservationIgnored private var polaroids: [UIImage] = []
+    @ObservationIgnored private var motes = false
+    @ObservationIgnored let decorStage = DecorStage()
+    @ObservationIgnored var decor = RoomDecor()
+    @ObservationIgnored var decorRetries = 0
+    @ObservationIgnored private var sway = true
     @ObservationIgnored private var pins: [BoardPin] = []
     /// The scenery last picked for each game, for the next time it is played.
     @ObservationIgnored private var picked: [MiniGame: GameScenery] = [:]
@@ -54,6 +67,11 @@ final class RoomController: RoomControlling, CatStatusProviding {
     init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife,
          defaults: UserDefaults = .standard) {
         self.usesStandIn = usesStandIn
+        #if DEBUG || LABS_YES
+        ownLoop = PerfLabMachine.State.saved(in: defaults).isOn(.ownLoop)
+        #else
+        ownLoop = false
+        #endif
         self.catLife = catLife
         self.defaults = defaults
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
@@ -66,7 +84,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
         guard home == nil, !usesStandIn else { return }
         let room = DioramaScene()
         home = room
+        room.pivot.addChild(decorStage.root)
         wire(room)
+        showDecor(decor)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }
     }
 
@@ -79,7 +99,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     var hasHome: Bool { home != nil }
     var hasBoard: Bool { board != nil }
     var isReady: Bool { home?.isReady == true }
-    var cityWindowView: FlatWindowView? { city?.windowView }
+    var cityWindowView: CityWindowView? { city?.windowView }
 
     var current: CatRoom? {
         guard home != nil else { return nil }
@@ -97,6 +117,31 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     private func wire(_ room: CatRoom) {
         room.onShowcase = { [weak self] label in withAnimation(.snappy(duration: 0.25)) { self?.showcase = label } }
+        if !motes { Self.show(motes: false, in: room) }
+        room.swaying = sway
+    }
+
+    /// Lets every room sway and pulse, or holds it still.
+    func setSway(_ on: Bool) {
+        guard on != sway else { return }
+        sway = on
+        for room in [home, city, board].compactMap({ $0 }) { room.swaying = on }
+    }
+
+    /// Shows or hides the dust motes in every room, those built now and those built later.
+    func showMotes(_ on: Bool) {
+        guard on != motes else { return }
+        motes = on
+        for room in [home, city, board].compactMap({ $0 }) { Self.show(motes: on, in: room) }
+    }
+
+    /// A disabled emitter is not simulated, where one left on is stepped every frame the room is drawn.
+    private static func show(motes on: Bool, in room: CatRoom) {
+        func visit(_ entity: Entity) {
+            if entity.components.has(ParticleEmitterComponent.self) { entity.isEnabled = on }
+            entity.children.forEach(visit)
+        }
+        visit(room.root)
     }
 
     // MARK: Showing a room
@@ -165,6 +210,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func petted() { emit.yield(.catPetted) }
+
+    func decorTouched(_ gesture: DecorGesture) { emit.yield(.decor(gesture)) }
 
     func careAsked() { emit.yield(.careAsked) }
 

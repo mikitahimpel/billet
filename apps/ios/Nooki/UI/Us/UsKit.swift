@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct SheetSubtitle: View {
     let text: String
@@ -52,6 +55,41 @@ struct UsField: View {
     }
 }
 
+/// A list's own "add" line: what is typed goes in as it is with Add or Return, and the field stays up for the next one.
+struct AddItemField: View {
+    let placeholder: String
+    @Binding var text: String
+    var focused: FocusState<Bool>.Binding
+    var onAdd: () -> Void
+
+    private var canAdd: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    var body: some View {
+        HStack(spacing: Space.s) {
+            Field(placeholder, text: $text)
+                .focused(focused)
+                .submitLabel(.done)
+                .onSubmit(onAdd)
+            PillButton("Add", symbol: "plus", action: onAdd)
+                .disabled(!canAdd)
+                .accessibilityLabel(canAdd ? "Add \(text)" : "Add")
+        }
+    }
+}
+
+/// The first row of a list that adds through a sheet: says what tapping it adds.
+struct AddRow: View {
+    let title: String
+    var action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Row(title, symbol: "plus") { EmptyView() }
+        }
+        .buttonStyle(RowButtonStyle())
+    }
+}
+
 struct UsIcon: View {
     let glyph: UsGlyph
     var size: CGFloat = 44
@@ -64,10 +102,10 @@ struct UsIcon: View {
 struct UsGlyphPicker: View {
     @Binding var selection: UsGlyph
 
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: 8)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 8)
 
     var body: some View {
-        LazyVGrid(columns: columns, spacing: 10) {
+        LazyVGrid(columns: columns, spacing: Space.m) {
             ForEach(UsGlyph.palette, id: \.self) { glyph in
                 Button { selection = glyph } label: {
                     UsIcon(glyph: glyph, size: 34)
@@ -79,7 +117,7 @@ struct UsGlyphPicker: View {
                                 .padding(-3)
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .animation(.snappy(duration: 0.2), value: selection)
             }
         }
@@ -91,6 +129,12 @@ struct UsGlyphPicker: View {
 extension EmptyState where Actions == EmptyView {
     init(icon: UsGlyph, title: String, text: String) {
         self.init(symbol: icon.symbol, title: title, text: text, tint: icon.tint.color)
+    }
+}
+
+extension EmptyState {
+    init(icon: UsGlyph, title: String, text: String, @ViewBuilder actions: () -> Actions) {
+        self.init(symbol: icon.symbol, title: title, text: text, tint: icon.tint.color, actions: actions)
     }
 }
 

@@ -74,6 +74,7 @@ export class ReactionService extends Context.Service<
               case "NotOffered":
               case "GiftTaken":
               case "CollectionIncomplete":
+              case "LayoutRefused":
               case "BonusTaken":
               case "ListNotFound":
               case "ListItemNotFound":

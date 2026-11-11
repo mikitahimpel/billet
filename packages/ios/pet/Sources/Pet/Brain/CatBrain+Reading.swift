@@ -33,6 +33,9 @@ extension CatBrain {
       purring: purrs(interaction))
   }
 
+  /// The needs as of the last time the brain looked at its life.
+  public var needs: PetNeeds { life.needs }
+
   public var feeling: CatFeeling {
     CatFeeling.of(
       needs: life.needs, mood: life.mood, asleep: vitality == .asleep,

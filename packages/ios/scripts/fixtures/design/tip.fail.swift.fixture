@@ -1,0 +1,6 @@
+struct Bad: View {
+  var body: some View {
+    Image(systemName: "bag").popoverTip(ShopHint(), arrowEdge: .bottom)
+    TipView(PetHint())
+  }
+}

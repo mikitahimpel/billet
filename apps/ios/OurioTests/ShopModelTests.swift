@@ -1,11 +1,16 @@
 import FeatureShop
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import Persistence
+import ProfileInterface
 import ShopInterface
 import Synchronization
 import Testing
 import Transport
 import UIKit
+import UsInterface
 import Wire
 @testable import Billet
 

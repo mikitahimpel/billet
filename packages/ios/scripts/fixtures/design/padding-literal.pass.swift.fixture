@@ -1,0 +1,7 @@
+struct Good: View {
+  var body: some View {
+    Text("a").font(.ourioBody).padding(Space.l)
+    Text("b").font(.ourioBody).padding(.horizontal, Space.gutter)
+    Text("c").font(.ourioBody).padding(CardMetrics.padding)
+  }
+}

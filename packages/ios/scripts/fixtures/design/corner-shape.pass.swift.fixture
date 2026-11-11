@@ -1,0 +1,7 @@
+struct Good: View {
+  var body: some View {
+    Image("a").corners(.inner)
+    Card { Text("b").font(.ourioBody) }
+    Image("c").clipShape(.circle)
+  }
+}

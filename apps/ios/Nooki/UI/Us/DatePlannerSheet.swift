@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PhotosUI
 import SwiftUI
 import Design
+import UsInterface
 
 /// Closes a date: hearts, and a photo from it that goes into Moments (and to the partner, as any new moment does).
 struct DateDoneSheet: View {
@@ -22,9 +25,9 @@ struct DateDoneSheet: View {
 
     var body: some View {
         BilletSheet("How was it?", size: .fit) {
-                VStack(spacing: 14) {
+                VStack(spacing: Space.l) {
                     if let title = DateIdea.idea(plan.ideaID)?.title { SheetSubtitle(text: title) }
-                    HStack(spacing: 18) {
+                    HStack(spacing: Space.l) {
                         ForEach(1...3, id: \.self) { value in
                             Button {
                                 withAnimation(.snappy(duration: 0.2)) { hearts = value }
@@ -34,25 +37,25 @@ struct DateDoneSheet: View {
                                     .foregroundStyle(Color.blushPink)
                                     .symbolEffect(.bounce, value: hearts == value)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressScaleStyle())
                             .accessibilityLabel(value == 1 ? "1 heart" : "\(value) hearts")
                             .accessibilityAddTraits(value == hearts ? .isSelected : [])
                         }
                     }
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
+                    .padding(.vertical, Space.s)
 
                     PhotosPicker(selection: $pick, matching: .images) {
                         photoSlot
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
 
                     if photo != nil {
                         UsField(placeholder: "Caption", text: $caption)
                     }
 
                     PrimaryButton(photo == nil ? "Done" : "Done, add to Moments") { save() }
-                        .padding(.top, 4)
+                        .padding(.top, Space.xs)
                 }
         }
         .onChange(of: pick) { _, item in
@@ -73,19 +76,19 @@ struct DateDoneSheet: View {
                 .scaledToFill()
                 .frame(maxWidth: .infinity)
                 .frame(height: 260)
-                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+                .corners(.card)
                 .overlay(alignment: .bottomTrailing) {
                     Label("Change", systemImage: "photo")
                         .font(.ourioCaption.weight(.semibold))
                         .foregroundStyle(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .padding(.horizontal, Space.m)
+                        .padding(.vertical, Space.s)
                         .background(.black.opacity(0.45), in: .capsule)
-                        .padding(10)
+                        .padding(Space.m)
                 }
                 .accessibilityLabel("Change photo")
         } else {
-            VStack(spacing: 8) {
+            VStack(spacing: Space.s) {
                 Image(systemName: "photo.badge.plus")
                     .font(.system(.title, weight: .semibold))
                     .foregroundStyle(Color.honey)
@@ -146,7 +149,7 @@ struct DatePlannerSheet: View {
 
     var body: some View {
         BilletSheet(DateIdea.idea(ideaID)?.title ?? "Plan a date", size: .mediumLarge, onConfirm: { save() }) {
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: Space.m) {
                     SheetSubtitle(text: "Pick a day and what you'll do")
                     DatePicker("When", selection: $date, displayedComponents: [.date, .hourAndMinute])
                         .datePickerStyle(.compact)
@@ -157,11 +160,11 @@ struct DatePlannerSheet: View {
 
                     UsField(placeholder: "Place, e.g. our kitchen", text: $place)
 
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Space.s) {
                         Text("Who plans it")
                             .font(.ourioCaption.weight(.semibold))
                             .foregroundStyle(Ink.textSecondary)
-                        HStack(spacing: 8) {
+                        HStack(spacing: Space.s) {
                             ForEach([state.partners.0, state.partners.1], id: \.self) { initial in
                                 FilterChip(initial, isSelected: organizer == initial) {
                                     organizer = initial

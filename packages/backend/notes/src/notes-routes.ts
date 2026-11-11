@@ -27,7 +27,9 @@ import {
   OrderResponse,
   ShopResponse,
   WishRequest,
+  LayoutResponse,
 } from "@billet/contracts-http-api/shop";
+import { LayoutRequest } from "@billet/contracts-domain/decor";
 import { routes } from "@billet/contracts-http-api/routes";
 import {
   ListNotesResponse,
@@ -40,6 +42,7 @@ import type {
   BonusTaken,
   CatNotAdopted,
   CollectionIncomplete,
+  LayoutRefused,
   GiftTaken,
   InkNotOwned,
   InvalidNote,
@@ -90,6 +93,7 @@ const respondInks = HttpServerResponse.schemaJson(InksResponse);
 const respondCoins = HttpServerResponse.schemaJson(CoinsResponse);
 const respondBuy = HttpServerResponse.schemaJson(BuyResponse);
 const respondShop = HttpServerResponse.schemaJson(ShopResponse);
+const respondLayout = HttpServerResponse.schemaJson(LayoutResponse);
 const respondOrder = HttpServerResponse.schemaJson(OrderResponse);
 const respondGift = HttpServerResponse.schemaJson(OpenGiftResponse);
 const respondBonus = HttpServerResponse.schemaJson(ClaimBonusResponse);
@@ -112,6 +116,7 @@ const respondNotesFailures = <R>(
     | PriceChanged
     | AlreadyOwned
     | CollectionIncomplete
+    | LayoutRefused
     | GiftTaken
     | BonusTaken
     | CatNotAdopted
@@ -133,6 +138,8 @@ const respondNotesFailures = <R>(
         respondError(ApiError.cases.AlreadyOwned.make({ itemId }), { status: 409 }),
       CollectionIncomplete: ({ collection }) =>
         respondError(ApiError.cases.CollectionIncomplete.make({ collection }), { status: 409 }),
+      LayoutRefused: ({ reason }) =>
+        respondError(ApiError.cases.LayoutRefused.make({ reason }), { status: 409 }),
       GiftTaken: ({ day }) => respondError(ApiError.cases.GiftTaken.make({ day }), { status: 409 }),
       BonusTaken: ({ collection }) =>
         respondError(ApiError.cases.BonusTaken.make({ collection }), { status: 409 }),
@@ -262,6 +269,20 @@ export const NotesRoutes = HttpRouter.use((router) =>
           Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
         );
         return yield* respondOrder(yield* notes.order(userId, request), { headers: shopHeaders });
+      }).pipe(respondNotesFailures),
+    );
+
+    yield* router.add(
+      routes.changeLayout.method,
+      routes.changeLayout.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(LayoutRequest).pipe(
+          Effect.provideService(HttpIncomingMessage.MaxBodySize, buySizeLimit),
+        );
+        return yield* respondLayout(yield* notes.changeLayout(userId, request), {
+          headers: shopHeaders,
+        });
       }).pipe(respondNotesFailures),
     );
 

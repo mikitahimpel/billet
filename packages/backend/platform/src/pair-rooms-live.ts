@@ -83,6 +83,8 @@ export const PairRoomsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.La
           callRoom(() => rooms.getByName(pairId).earn(by, event, utcOffsetSeconds), decodeDecision),
         creditPurchase: (pairId, credit) =>
           callRoom(() => rooms.getByName(pairId).creditPurchase(credit), decodeDecision),
+        changeLayout: (pairId, by, id, change) =>
+          callRoom(() => rooms.getByName(pairId).changeLayout(by, id, change), decodeDecision),
         setWish: (pairId, by, item, wished, offered) =>
           callRoom(
             () => rooms.getByName(pairId).setWish(by, item, wished, offered),

@@ -1,11 +1,16 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct GrocerySuggestions: View {
     let draft: String
     let list: UsList
     let history: GroceryHistory
+    /// The quick picks: while the field is focused, and on an empty list so the first item is one tap.
+    var showsOften = true
     var onAdd: (String) -> Void
 
     private let catalog = GroceryCatalog.bundled
@@ -26,10 +31,11 @@ struct GrocerySuggestions: View {
                 .cardSurface()
             }
 
-            let often = often(excluding: onList)
+            let often = showsOften && draft.isEmpty ? often(excluding: onList) : []
             if !often.isEmpty {
-                GrocerySectionLabel(title: "You often buy", top: suggestions.isEmpty ? 4 : 18)
-                WrapLayout(spacing: 8) {
+                GrocerySectionLabel(title: history.often(limit: 1).isEmpty ? "Quick add" : "You often buy",
+                                    top: suggestions.isEmpty ? 4 : 18)
+                FlowRow(spacing: Space.s) {
                     ForEach(often, id: \.self) { text in
                         FilterChip(text, isSelected: false) { onAdd(text) }
                             .accessibilityLabel("Add \(text)")
@@ -43,7 +49,7 @@ struct GrocerySuggestions: View {
         Button {
             onAdd(suggestion.text)
         } label: {
-            HStack(spacing: 12) {
+            HStack(spacing: Space.m) {
                 UsIcon(glyph: suggestion.aisle.icon, size: 32)
                 VStack(alignment: .leading, spacing: 1) {
                     Text(suggestion.text)
@@ -64,11 +70,11 @@ struct GrocerySuggestions: View {
                         .background(Circle().fill(.honeyGradient))
                 }
             }
-            .padding(.horizontal, 14)
+            .padding(.horizontal, Space.l)
             .frame(minHeight: 56)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .disabled(onList)
         .opacity(onList ? 0.55 : 1)
         .accessibilityLabel(onList ? "\(suggestion.text), already on the list" : "Add \(suggestion.text)")

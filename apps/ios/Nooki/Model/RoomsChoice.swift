@@ -70,8 +70,8 @@ extension RoomsVariant {
     var title: String {
         switch self {
         case .both: "Both rooms"
-        case .roomOnly: "Room only"
-        case .cityOnly: "City only"
+        case .roomOnly: "Living room only"
+        case .cityOnly: "Bedroom only"
         }
     }
 }

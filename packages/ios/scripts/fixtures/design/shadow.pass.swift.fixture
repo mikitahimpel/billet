@@ -1,0 +1,5 @@
+struct Good: View {
+  var body: some View {
+    Card { EmptyView() }
+  }
+}

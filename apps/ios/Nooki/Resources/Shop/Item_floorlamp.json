@@ -1,0 +1,19 @@
+{
+ "id": "floorlamp",
+ "name": "Standing lamp",
+ "kind": "SOLID",
+ "width_m": 0.318,
+ "depth_m": 0.326,
+ "height_m": 0.749,
+ "footprint_cells": [
+  7,
+  7
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.749,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": null,
+ "usdz_kb": 180
+}

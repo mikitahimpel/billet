@@ -17,13 +17,32 @@ struct RoomSwitch: View {
             GlassSegmented(
                 state.rooms.variant.kinds.map { ($0, $0.title) },
                 selection: Binding(get: { state.room }, set: select),
-                identifier: "roomSwitch"
+                identifier: "roomSwitch",
+                identifiers: Dictionary(uniqueKeysWithValues: state.rooms.variant.kinds.map { ($0, $0.identifier) })
             )
             .frame(maxWidth: .infinity)
             .accessibilityLabel("Room")
             .accessibilityValue(state.room.title)
-            .accessibilityHint("Tap to visit the other room")
-            .popoverTip(RoomsHint(), arrowEdge: .top)
+            .accessibilityHint("Tap to go to the other room")
+            .hint(RoomsHint(), arrowEdge: .top, target: Capsule())
         }
+    }
+}
+
+/// Photos | Board, the Moments tab's switch: the same control, size and place as the World's `RoomSwitch`, in the
+/// header's glass container.
+struct MomentsSwitch: View {
+    @Bindable var state: HomeState
+
+    var body: some View {
+        GlassSegmented(
+            [(MomentsMode.photos, "Photos"), (MomentsMode.board, "Board")],
+            selection: $state.momentsMode,
+            identifier: "momentsMode"
+        )
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel("Moments")
+        .accessibilityValue(state.momentsMode == .board ? "Board" : "Photos")
+        .accessibilityHint("Switches between Photos and Board")
     }
 }

@@ -25,6 +25,8 @@ public enum GlassMetrics {
   public static let blend: CGFloat = Space.s
   public static let gap: CGFloat = Space.s + 2
   public static let rim: CGFloat = 1
+  /// How far a badge reaches past its control's corner.
+  public static let badgeOverhang: CGFloat = Space.xs
 }
 
 extension View {
@@ -120,6 +122,52 @@ private struct GlassModifier<S: Shape>: ViewModifier {
   }
 }
 
+extension View {
+  /// A count, a dot or a small mark on a glass control's corner. A `GlassEffectContainer` draws its
+  /// glass over everything inside it that is not glass, so in a `GlassGroup` the group draws the
+  /// badge above itself, at this view's corner. Never hit-testable or read aloud: the control says it.
+  public func glassControlBadge<Badge: View>(
+    alignment: Alignment = .topTrailing, @ViewBuilder _ badge: () -> Badge
+  ) -> some View {
+    modifier(BadgeOverGlass(alignment: alignment, badge: AnyView(badge())))
+  }
+}
+
+extension EnvironmentValues {
+  @Entry fileprivate var liftsGlassBadges = false
+}
+
+private struct LiftedBadge {
+  let bounds: Anchor<CGRect>
+  let alignment: Alignment
+  let view: AnyView
+}
+
+private struct LiftedBadges: PreferenceKey {
+  static var defaultValue: [LiftedBadge] { [] }
+  static func reduce(value: inout [LiftedBadge], nextValue: () -> [LiftedBadge]) {
+    value += nextValue()
+  }
+}
+
+private struct BadgeOverGlass: ViewModifier {
+  let alignment: Alignment
+  let badge: AnyView
+  @Environment(\.liftsGlassBadges) private var lifts
+
+  func body(content: Content) -> some View {
+    if lifts {
+      content.anchorPreference(key: LiftedBadges.self, value: .bounds) {
+        [LiftedBadge(bounds: $0, alignment: alignment, view: badge)]
+      }
+    } else {
+      content.overlay(alignment: alignment) {
+        badge.allowsHitTesting(false).accessibilityHidden(true)
+      }
+    }
+  }
+}
+
 /// One per bar: the glass in it is sampled together and morphs as one.
 public struct GlassGroup<Content: View>: View {
   let spacing: CGFloat
@@ -135,7 +183,24 @@ public struct GlassGroup<Content: View>: View {
     if rendering != .liquid {
       content
     } else if #available(iOS 26, macOS 26, *) {
-      GlassEffectContainer(spacing: spacing) { content }
+      GlassEffectContainer(spacing: spacing) { content.environment(\.liftsGlassBadges, true) }
+        .overlayPreferenceValue(LiftedBadges.self) { badges in
+          // Only while there is a badge: on iOS 27 a view laid over the container, even an empty
+          // one, makes VoiceOver and UI tests read its controls as one merged frame.
+          if !badges.isEmpty {
+            GeometryReader { proxy in
+              ForEach(badges.indices, id: \.self) { index in
+                let frame = proxy[badges[index].bounds]
+                Color.clear
+                  .frame(width: frame.width, height: frame.height)
+                  .overlay(alignment: badges[index].alignment) { badges[index].view }
+                  .position(x: frame.midX, y: frame.midY)
+              }
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+          }
+        }
     } else {
       content
     }

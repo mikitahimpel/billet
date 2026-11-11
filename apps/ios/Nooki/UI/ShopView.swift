@@ -8,63 +8,48 @@ import Design
 struct ShopView: View {
     let state: HomeState
 
-    @State private var selected: ShopCategory = .today
     @State private var sheetItem: ShopItem?
     @State private var sheetSet: SetChoice?
     /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
     @State private var highlightedInk: String?
-    /// Where the page is scrolled to; a perf run moves it (`OurioPerf.scrolls`).
-    @State private var position = ScrollPosition(edge: .top)
     @State private var scrolling = ShopScrolling()
-
-    private let columns = [
-        GridItem(.flexible(), spacing: Space.m, alignment: .top),
-        GridItem(.flexible(), spacing: Space.m, alignment: .top),
-    ]
 
     var body: some View {
         ScrollViewReader { reader in
             ScrollView {
-                VStack(alignment: .leading, spacing: Space.section) {
-                    chips
-                    if selected == .today {
+                LazyVStack(alignment: .leading, spacing: Space.section) {
+                    switch state.shopCategory {
+                    case .today:
                         today
-                    } else {
-                        grid(Catalog.items(in: selected))
+                    case .inks:
+                        InkShelf(state: state, highlighted: highlightedInk)
+                    case .furniture, .decor, .mochi, .room:
+                        grid(Catalog.items(in: state.shopCategory))
                             .padding(.horizontal, Space.l)
                     }
                 }
-                .padding(.top, Space.s)
-                .padding(.bottom, Space.l)
-                .animation(.spring(duration: 0.35), value: selected)
+                .tabContentInsets()
+                .animation(.spring(duration: 0.35), value: state.shopCategory)
             }
             .scrollIndicators(.hidden)
-            .scrollPosition($position)
             .onScrollPhaseChange { _, phase in
                 if scrolling.isScrolling != phase.isScrolling { scrolling.isScrolling = phase.isScrolling }
             }
             .environment(scrolling)
             .softScrollEdges()
-            .onAppear {
-                guard ScenePerf.isOn else { return }
-                OurioPerf.scrolls[.shop] = { position.scrollTo(y: $0) }
-            }
-            .onDisappear { OurioPerf.scrolls[.shop] = nil }
             .onChange(of: state.shopFocus, initial: true) { _, focus in
                 guard let focus else { return }
-                selected = .today
                 switch focus {
                 case .ink(let id):
-                    // After Today has laid out, so the Inks block is there to scroll to.
+                    state.shopCategory = .inks
                     Task {
-                        try? await Task.sleep(for: .milliseconds(100))
-                        withAnimation(.spring(duration: 0.45)) { reader.scrollTo("inks", anchor: .top) }
                         highlightedInk = id
                         state.shopFocus = nil
                         try? await Task.sleep(for: .seconds(3))
                         withAnimation(.easeOut(duration: 0.4)) { if highlightedInk == id { highlightedInk = nil } }
                     }
                 case .item(let id):
+                    state.shopCategory = .today
                     sheetItem = Catalog.item(id)
                     state.shopFocus = nil
                 }
@@ -95,31 +80,12 @@ struct ShopView: View {
             await Thumbnails.prefetch(names, maxPixels: 512)
             await Thumbnails.prefetch(names, maxPixels: 256)
         }
-        .haptic(.selection, trigger: selected)
         .sheet(item: $sheetItem) { item in
             ItemSheet(item: item, state: state)
         }
         .sheet(item: $sheetSet) { choice in
             SetSheet(state: state, pieces: choice.pieces)
         }
-    }
-
-    // MARK: Categories
-
-    /// The categories in one row that scrolls sideways; the page under it only scrolls up and down.
-    private var chips: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: Space.s) {
-                ForEach(ShopCategory.allCases) { category in
-                    let isSelected = selected == category
-                    FilterChip(category.title, isSelected: isSelected) { selected = category }
-                }
-            }
-            .padding(.horizontal, Space.l)
-            .padding(.vertical, 2)
-        }
-        .scrollIndicators(.hidden)
-        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
     }
 
     // MARK: Today
@@ -141,9 +107,8 @@ struct ShopView: View {
                 }
                 .accessibilityLabel("New deals at midnight")
             }
-            grid(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
+            dealsRow(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
-        .padding(.horizontal, Space.l)
         .id("deals")
 
         DailyGiftCard(state: state)
@@ -163,15 +128,6 @@ struct ShopView: View {
         .id("bundles")
 
         VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeader("Inks", symbol: "paintpalette.fill", tint: .honey) {
-                Text("For notes and drawings")
-            }
-            .padding(.horizontal, Space.l)
-            InkShelf(state: state, highlighted: highlightedInk)
-        }
-        .id("inks")
-
-        VStack(alignment: .leading, spacing: Space.m) {
             SectionHeader("Collections", symbol: "square.grid.2x2.fill", tint: ShopInk.teal) {
                 Text("A bonus for each full set")
             }
@@ -189,12 +145,69 @@ struct ShopView: View {
             .padding(.horizontal, Space.l)
     }
 
+    /// The day's deals side by side in one row that scrolls sideways, each tile as wide as a grid tile on an iPhone.
+    private func dealsRow(_ items: [ShopItem]) -> some View {
+        ScrollView(.horizontal) {
+            LazyHStack(alignment: .top, spacing: Space.m) {
+                ForEach(items) { item in
+                    ShopItemCard(item: item, state: state) { sheetItem = item }
+                        .modifier(DealWidth())
+                }
+            }
+            .padding(.horizontal, Space.l)
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+    }
+
     private func grid(_ items: [ShopItem]) -> some View {
-        LazyVGrid(columns: columns, spacing: Space.m) {
+        ItemGrid {
             ForEach(items) { item in
                 ShopItemCard(item: item, state: state) { sheetItem = item }
                     .shopAppear()
             }
         }
+    }
+
+    /// Decodes the art Today shows first, the featured set and the deals, off the main thread, so the first visit to
+    /// the Shop doesn't decode it in front of the tap.
+    static func prewarm(_ offers: ShopOffers, now: Date = .now) async {
+        let featured = offers.featured(on: now).itemIDs.compactMap(Catalog.item).map(\.thumbnail)
+        let deals = offers.deals(on: now).compactMap { Catalog.item($0.itemID)?.thumbnail }
+        await Thumbnails.prefetchTrimmed(featured)
+        await Thumbnails.prefetch(deals, maxPixels: 512)
+    }
+
+}
+
+/// The Shop's shelves in one row that scrolls sideways, in the header's slot under its controls: pinned with the
+/// header, over the page's own soft edge, so no band is drawn behind them.
+struct ShopChips: View {
+    @Bindable var state: HomeState
+
+    var body: some View {
+        ScrollViewReader { reader in
+            ScrollView(.horizontal) {
+                HStack(spacing: Space.s) {
+                    ForEach(ShopCategory.allCases) { category in
+                        FilterChip(category.title, symbol: category.symbol, isSelected: state.shopCategory == category) {
+                            state.shopCategory = category
+                        }
+                        .id(category)
+                    }
+                }
+                .padding(.horizontal, Space.l)
+                .padding(.vertical, 2)
+            }
+            // The chosen chip comes whole into view, also when a link from elsewhere chose it.
+            .onChange(of: state.shopCategory, initial: true) { _, category in
+                withAnimation(.snappy(duration: 0.3)) { reader.scrollTo(category, anchor: .center) }
+            }
+        }
+        .scrollIndicators(.hidden)
+        .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
+        // Edge to edge: the header pads its row by `Space.l`, the chips scroll out from under the screen's edges.
+        .padding(.horizontal, -Space.l)
+        .haptic(.selection, trigger: state.shopCategory)
     }
 }

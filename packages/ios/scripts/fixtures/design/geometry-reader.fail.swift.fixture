@@ -1,0 +1,5 @@
+struct Bad: View {
+  var body: some View {
+    GeometryReader { proxy in Image("a").frame(width: proxy.size.width / 2) }
+  }
+}

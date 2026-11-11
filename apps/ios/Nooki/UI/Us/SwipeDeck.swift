@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PhotosUI
 import SwiftUI
 import Design
+import UsInterface
 
 /// Owns the drag so gesture frames redraw only the cards, not the screen that builds the deck.
 struct SwipeDeck: View {
@@ -18,7 +21,7 @@ struct SwipeDeck: View {
     private var progress: CGFloat { min(1, abs(drag.width) / Self.flingDistance) }
 
     var body: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Space.l) {
             deckStack
             HStack(spacing: 28) {
                 passButton
@@ -47,11 +50,11 @@ struct SwipeDeck: View {
         return DateIdeaCard(idea: idea)
             .overlay(alignment: .topLeading) {
                 stamp("LOVE", tint: Color(hex: 0xE287A9), strength: top ? drag.width / Self.flingDistance : 0)
-                    .padding(24)
+                    .padding(Space.section)
             }
             .overlay(alignment: .topTrailing) {
                 stamp("NOPE", tint: Color(hex: 0x5B3A28), strength: top ? -drag.width / Self.flingDistance : 0)
-                    .padding(24)
+                    .padding(Space.section)
             }
             .scaleEffect(reduceMotion ? 1 : 1 - depth * 0.05, anchor: .bottom)
             .offset(y: reduceMotion ? 0 : depth * 12)
@@ -67,7 +70,7 @@ struct SwipeDeck: View {
         Text(text)
             .font(.system(.title, design: .rounded, weight: .heavy))
             .foregroundStyle(tint)
-            .padding(.horizontal, 10)
+            .padding(.horizontal, Space.m)
             .padding(.vertical, 3)
             .overlay(
                 RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
@@ -86,7 +89,7 @@ struct SwipeDeck: View {
                 .background(Ink.surfaceRaised, in: .circle)
                 .overlay(Circle().stroke(Ink.separator, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Pass")
     }
 
@@ -99,7 +102,7 @@ struct SwipeDeck: View {
                 .background(Circle().fill(.honeyGradient))
                 .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Love")
     }
 
@@ -158,7 +161,7 @@ struct DateIdeaCard: View {
         let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
         DateScenePicture(art: idea.art)
             .overlay(alignment: .bottomLeading) {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: Space.s) {
                     Text(idea.title)
                         .font(.system(.title, design: .rounded, weight: .bold))
                         .foregroundStyle(.white)
@@ -168,14 +171,14 @@ struct DateIdeaCard: View {
                         .foregroundStyle(.white.opacity(0.82))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
-                    HStack(spacing: 6) {
+                    HStack(spacing: Space.s) {
                         tag(idea.place.title, symbol: idea.place.icon.symbol)
                         tag(idea.cost.title, symbol: idea.cost.symbol)
                         tag(idea.time.title, symbol: idea.time.symbol)
                     }
-                    .padding(.top, 4)
+                    .padding(.top, Space.xs)
                 }
-                .padding(20)
+                .padding(Space.gutter)
             }
             .frame(maxWidth: .infinity)
             .frame(height: Self.height)
@@ -189,8 +192,8 @@ struct DateIdeaCard: View {
         Label(text, systemImage: symbol)
             .font(.ourioMicro)
             .foregroundStyle(.white)
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .padding(.horizontal, Space.m)
+            .padding(.vertical, Space.s)
             .background(.white.opacity(0.18), in: .capsule)
     }
 }

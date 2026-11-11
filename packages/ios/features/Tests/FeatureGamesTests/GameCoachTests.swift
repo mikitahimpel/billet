@@ -65,25 +65,26 @@ import Testing
 }
 
 @Suite struct GameSceneryTests {
-  @Test(arguments: MiniGame.allCases)
-  func everyGameOffersThreeDistinctPlaces(_ game: MiniGame) {
-    let options = GameScenery.options(for: game)
-    #expect(options.count == 3)
-    #expect(Set(options).count == 3)
-  }
-
-  @Test func onlyTheLaserIsPlayedInTheRoom() {
-    #expect(GameScenery.options(for: .laser).first == .room)
-    for game in [MiniGame.feed, .water, .brush] {
-      let corners = GameScenery.options(for: game).filter(\.isCorner)
-      #expect(corners.count == 3)
+  @Test func feedAndWaterAreOnlyPlayedInTheKitchen() {
+    for game in [MiniGame.feed, .water] {
+      #expect(GameScenery.options(for: game) == [.kitchen])
     }
   }
 
+  @Test func theBrushOffersThreeCornersAndTheLaserStartsInTheKitchen() {
+    let brush = GameScenery.options(for: .brush)
+    #expect(brush.count == 3)
+    #expect(Set(brush).count == 3)
+    #expect(brush.allSatisfy { $0.isCorner })
+    #expect(GameScenery.options(for: .laser) == [.kitchen, .room])
+  }
+
   @Test func aGameStartsWhereItWasLastPlayedIfItCanBe() {
-    #expect(GameScenery.start(.feed, last: nil) == .rug)
-    #expect(GameScenery.start(.feed, last: .garden) == .garden)
-    #expect(GameScenery.start(.laser, last: .kitchen) == .room)
+    #expect(GameScenery.start(.feed, last: nil) == .kitchen)
+    #expect(GameScenery.start(.feed, last: .garden) == .kitchen)
+    #expect(GameScenery.start(.laser, last: .room) == .room)
+    #expect(GameScenery.start(.laser, last: .rug) == .kitchen)
+    #expect(GameScenery.start(.brush, last: .garden) == .garden)
     #expect(GameScenery.start(.brush, last: .room) == .rug)
   }
 }

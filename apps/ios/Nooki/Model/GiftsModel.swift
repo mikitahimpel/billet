@@ -1,6 +1,9 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Transport
+import UsInterface
 import Wire
 
 /// Keeps the Us tab's gifts in step with the pair's room while the phone is paired: each change made here is sent

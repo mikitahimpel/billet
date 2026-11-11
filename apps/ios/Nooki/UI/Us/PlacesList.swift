@@ -1,10 +1,14 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct PlacesListBody: View {
     let state: HomeState
     let list: UsList
+    var add: () -> Void
     /// Opens the "been there" sheet: from a tick still to go, or a row already been to.
     var mark: (ListItem) -> Void
 
@@ -20,21 +24,24 @@ struct PlacesListBody: View {
             }
             .padding(.top, 2)
             let shown = tab == .want ? rows.want : rows.been
-            if shown.isEmpty {
-                Text(tab == .want ? "Add a country or a place with +." : "Tick a country once you've been together.")
-                    .font(.ourioCallout)
-                    .foregroundStyle(Ink.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, Space.xl)
-            } else {
+            if tab == .want || !shown.isEmpty {
                 VStack(spacing: 0) {
+                    if tab == .want { AddRow(title: "Add a country or place", action: add) }
                     ForEach(Array(shown.enumerated()), id: \.element.item.id) { index, row in
-                        if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 60) }
+                        if index > 0 || tab == .want { Divider().overlay(Ink.separator).padding(.leading, 60) }
                         rowView(row)
                     }
                 }
                 .cardSurface()
+            }
+            if shown.isEmpty {
+                Text(tab == .want ? "Countries you add light up on the map. Tick one once you've been together."
+                                  : "Tick a country once you've been together.")
+                    .font(.ourioCallout)
+                    .foregroundStyle(Ink.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, Space.l)
             }
         }
     }
@@ -46,7 +53,7 @@ struct PlacesListBody: View {
     private var hero: some View {
         let summary = list.travelSummary
         return VStack(alignment: .leading, spacing: Space.m) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text("\(summary.been)")
                     .font(.system(.largeTitle, design: .rounded, weight: .bold))
                     .foregroundStyle(Ink.text)
@@ -68,7 +75,7 @@ struct PlacesListBody: View {
     }
 
     private func legend(_ title: String, @ViewBuilder mark: () -> some View) -> some View {
-        HStack(spacing: 6) {
+        HStack(spacing: Space.s) {
             mark().frame(width: 10, height: 10)
             Text(title)
                 .font(.ourioCaption)
@@ -111,10 +118,10 @@ struct PlacesListBody: View {
             } label: {
                 UsCheck(done: been)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
             .accessibilityLabel(been ? "Mark as not been" : "Mark as been")
         }
-        .padding(.horizontal, 14)
+        .padding(.horizontal, Space.l)
         .frame(minHeight: 60)
         .contentShape(.rect)
         .onTapGesture { if been { mark(item) } }

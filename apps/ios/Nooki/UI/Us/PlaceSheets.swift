@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 /// Adds a country, searched in the phone's language and in English, or a city or place, then its country.
 struct AddPlaceSheet: View {
@@ -43,7 +46,7 @@ struct AddPlaceSheet: View {
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, Space.m)
-            .padding(.bottom, 40)
+            .padding(.bottom, Space.xl + Space.s)
         }
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -68,7 +71,7 @@ struct AddPlaceSheet: View {
                 }
                 .fieldSurface()
                 .padding(.horizontal, Space.gutter)
-                .padding(.top, 14)
+                .padding(.top, Space.l)
             }
         }
         .toolbar {
@@ -118,7 +121,7 @@ struct AddPlaceSheet: View {
             .frame(minHeight: 60)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .disabled(added)
         .accessibilityLabel(Country.name(code))
         .accessibilityHint(added ? "Already on the list" : "Adds it to the list")
@@ -154,7 +157,7 @@ struct AddPlaceSheet: View {
                 .contentShape(.rect)
                 .cardSurface()
             }
-            .buttonStyle(.plain)
+            .buttonStyle(PressScaleStyle())
         }
     }
 
@@ -163,23 +166,23 @@ struct AddPlaceSheet: View {
             Text("Popular with couples")
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.textSecondary)
-            WrapLayout(spacing: Space.s) {
+            FlowRow(spacing: Space.s) {
                 ForEach(PopularPlace.all, id: \.self) { popular in
                     let added = popular.place == nil && onList(popular.country)
                     Button { add(popular) } label: {
-                        HStack(spacing: 6) {
+                        HStack(spacing: Space.s) {
                             CountryFlag(code: popular.country, size: 20)
                             Text(popular.place ?? Country.name(popular.country))
                                 .font(.ourioCallout)
                                 .foregroundStyle(Ink.text)
                         }
                         .padding(.leading, 6)
-                        .padding(.trailing, 12)
+                        .padding(.trailing, Space.m)
                         .frame(minHeight: 34)
                         .background(Ink.surfaceRaised, in: .capsule)
                         .opacity(added ? 0.45 : 1)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(PressScaleStyle())
                     .disabled(added)
                 }
             }
@@ -248,7 +251,7 @@ struct BeenSheet: View {
                     if been {
                         Button("Not been yet", role: .destructive) { unmark() }
                             .font(.ourioCallout.weight(.semibold))
-                            .frame(minHeight: 44)
+                            .frame(minHeight: Size.control)
                     }
                 }
         }
@@ -263,7 +266,7 @@ struct BeenSheet: View {
         let countries = state.us.list(listID)?.beenCountries ?? []
         let ordinal = NumberFormatter.localizedString(
             from: NSNumber(value: countries.union([item.country ?? ""]).count), number: .ordinal)
-        HStack(spacing: 4) {
+        HStack(spacing: Space.xs) {
             if item.isCountry, !been, let code = item.country, !countries.contains(code) {
                 Text("Your \(ordinal) country together ·")
                 Text("+5 coins").foregroundStyle(Color.honey)
@@ -308,7 +311,7 @@ struct BeenSheet: View {
             .cardSurface()
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 
     private func save() {
@@ -348,8 +351,10 @@ private struct MonthField: View {
                 Button { self.month = nil } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(Ink.textTertiary)
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
                 .accessibilityLabel("Leave out when")
             } else {
                 Button { month = TravelMonth(.now) } label: {
@@ -361,7 +366,7 @@ private struct MonthField: View {
                     }
                     .contentShape(.rect)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(PressScaleStyle())
             }
         }
         .pickerStyle(.menu)
@@ -376,7 +381,7 @@ private struct MomentsPicker: View {
     @Binding var selection: [UUID]
 
     @Environment(\.dismiss) private var dismiss
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 3)
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.xs), count: 3)
     private static let limit = 10
 
     var body: some View {
@@ -388,21 +393,21 @@ private struct MomentsPicker: View {
                            text: "Photos you share in Moments can go with a trip.")
             } else {
                 ScrollView {
-                    LazyVGrid(columns: columns, spacing: 4) {
+                    LazyVGrid(columns: columns, spacing: Space.xs) {
                         ForEach(moments.moments) { moment in
                             let picked = selection.contains(moment.id)
                             Button { toggle(moment.id) } label: {
                                 Color.clear
                                     .aspectRatio(1, contentMode: .fit)
                                     .overlay { MomentThumb(moments: moments, id: moment.id, size: nil) }
-                                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                                    .corners(.inner)
                                     .overlay(alignment: .topTrailing) {
                                         UsCheck(done: picked)
                                             .background(Circle().fill(.black.opacity(picked ? 0 : 0.25)))
-                                            .padding(6)
+                                            .padding(Space.s)
                                     }
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(PressScaleStyle())
                             .disabled(!picked && selection.count >= Self.limit)
                             .accessibilityLabel(moment.caption.isEmpty ? "Photo" : moment.caption)
                             .accessibilityAddTraits(picked ? .isSelected : [])
@@ -410,7 +415,7 @@ private struct MomentsPicker: View {
                     }
                     .padding(.horizontal, Space.gutter)
                     .padding(.top, Space.l)
-                    .padding(.bottom, 40)
+                    .padding(.bottom, Space.xl + Space.s)
                 }
                 .softScrollEdges()
             }

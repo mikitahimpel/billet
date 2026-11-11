@@ -1,11 +1,18 @@
+import DecorInterface
+import FeatureDecor
 import FeatureGames
 import FeatureMood
+import MomentsInterface
+import MoodInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
+import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design
+import UsInterface
 import WidgetKit
 
 enum HomeTab: CaseIterable {
@@ -22,7 +29,11 @@ enum ShopFocus: Hashable {
 enum RoomKind: CaseIterable {
     case home, city
 
-    var title: String { self == .home ? "Room" : "City" }
+    /// The two rooms of the home: the one with the cat tree and the rug, and the one with the bed and the big window.
+    var title: String { self == .home ? "Living room" : "Bedroom" }
+
+    /// Stable suffix of the switch's accessibility identifier, whatever the room is called.
+    var identifier: String { self == .home ? "Room" : "City" }
 
     var scene: RoomScene { self == .home ? .home : .city }
 }
@@ -58,6 +69,8 @@ struct HomeStores {
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
+    let decor: DecorStore
+    let decorSync: DecorSync
 
     static func live() -> HomeStores {
         let profile = CoupleStore()
@@ -69,11 +82,24 @@ struct HomeStores {
         let shop = ShopModel(wallet: wallet, couple: profile, care: care)
         let us = UsStore { shop.earn($0) }
         let members: GiftsModel.Members = { profile.couple.pair.map { (profile.couple.viewer, $0.users) } }
+        let decorSync = DecorSync()
+        let decor = DecorStore.decor(
+            DecorServices(
+                storage: .appGroup(.directory(AppGroup.container)),
+                feedback: { feedback in
+                    switch feedback {
+                    case .placed: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    case .blocked, .rejected: UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    }
+                },
+                share: { [weak decorSync] in decorSync?.push($0) }))
+        decorSync.store = decor
         return HomeStores(
             profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
-            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) })
+            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
+            decor: decor, decorSync: decorSync)
     }
 }
 
@@ -85,10 +111,20 @@ final class HomeState {
     var tab: HomeTab = .world
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
+    /// The Shop's shelf; its chips sit in the header, the page under them shows it.
+    var shopCategory: ShopCategory = .today
 
     func openShop(_ focus: ShopFocus) {
         shopFocus = focus
         tab = .shop
+    }
+
+    /// Opens the World with its pieces arranged, `item` chosen when given: the Shop's Place and the purchase's
+    /// Place now.
+    func decorate(_ item: String? = nil) {
+        tab = .world
+        room = .home
+        decor.send(.opened(item: item))
     }
 
     var room: RoomKind = .home
@@ -131,6 +167,8 @@ final class HomeState {
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
+    let decor: DecorStore
+    let decorSync: DecorSync
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
@@ -149,6 +187,8 @@ final class HomeState {
         gifts = stores.gifts
         lists = stores.lists
         journal = stores.journal
+        decor = stores.decor
+        decorSync = stores.decorSync
         wallet = stores.wallet
         #if DEBUG
         // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.

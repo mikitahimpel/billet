@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import Transport
+import UsInterface
 import Wire
 
 /// Adds a film or show: TMDB is searched as the partner types, and what it can't find goes in as plain text.
@@ -55,7 +58,7 @@ struct AddTitleSheet: View {
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, Space.m)
-            .padding(.bottom, 40)
+            .padding(.bottom, Space.xl + Space.s)
         }
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
@@ -74,7 +77,7 @@ struct AddTitleSheet: View {
                 }
                 .fieldSurface()
                 .padding(.horizontal, Space.gutter)
-                .padding(.top, 14)
+                .padding(.top, Space.l)
             }
         }
         }
@@ -112,8 +115,8 @@ struct AddTitleSheet: View {
         return Button { add(title) } label: {
             HStack(spacing: Space.m) {
                 PosterImage(path: title.posterPath, title: title.title, size: .small, showsTitle: false)
-                    .frame(width: 44, height: 64)
-                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                    .frame(width: Size.control, height: 64)
+                    .corners(.inner)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title.title)
                         .font(.ourioHeadline)
@@ -134,7 +137,7 @@ struct AddTitleSheet: View {
             .frame(minHeight: 84)
             .contentShape(.rect)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(RowButtonStyle())
         .disabled(isAdded)
         .accessibilityLabel("\(title.title), \(TitleCaption.of(title))")
         .accessibilityHint(isAdded ? "Already on the list" : "Adds it to the list")
@@ -160,7 +163,7 @@ struct AddTitleSheet: View {
             .contentShape(.rect)
             .cardSurface()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 
     private func note(_ text: String) -> some View {

@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import RealityKit
 import SwiftUI
 import UIKit
+import UsInterface
 import WindowViews
 
 private enum Tone {
@@ -11,15 +14,15 @@ private enum Tone {
     static let woodLight: UInt32 = 0xCF8E58
     static let bedFrame: UInt32 = 0xE8D2B2
     static let mattress: UInt32 = 0xFBF0DE
-    static let blanket: UInt32 = 0xF0663A
+    static let blanket: UInt32 = 0xE98A5B
     static let pillow: UInt32 = 0xF4E2C8
     static let crate: UInt32 = 0xD8653F
     static let shade: UInt32 = 0xF7ECD8
-    static let rug: UInt32 = 0xDCCAB4
-    static let rugEdge: UInt32 = 0xC6B099
+    static let rug: UInt32 = 0xDDB98A
+    static let rugEdge: UInt32 = 0xC39A69
     static let leaf: UInt32 = 0x93A86A
     static let leafDark: UInt32 = 0x6F8A4E
-    static let pot: UInt32 = 0xE9D9B8
+    static let pot: UInt32 = 0xC7744A
     static let bulb: UInt32 = 0xFFD27A
     static let paper: UInt32 = 0xF6EFE2
     static let heart: UInt32 = 0xE0554A
@@ -39,12 +42,12 @@ final class CityRoomScene: CatRoom {
     private let opening: (left: Float, right: Float, bottom: Float, top: Float) = (-0.4, 0.4, 0.28, 0.72)
     private var windowCenter: SIMD3<Float> { [0, (opening.bottom + opening.top) / 2, -0.525] }
     private var sillTop: Float { opening.bottom + 0.0125 }
-    private let catBed: (at: SIMD3<Float>, scale: Float) = ([0.28, 0.014, 0.27], 0.6)
+    private let catBed: (at: SIMD3<Float>, scale: Float) = ([CityLayout.catBed.at.x, 0.014, CityLayout.catBed.at.y], 0.6)
     /// cat-standing.ply is 0.26 m tall on all fours; here Mochi sits about as tall as the nightstand.
     private let catScale: Float = 0.5 * (0.162 / 0.152)
 
     /// Shown under the room at the same size.
-    let windowView = FlatWindowView()
+    let windowView = CityWindowView()
     /// The town in the hole until `windowView` shows.
     private var fallback: ModelEntity?
     private var fallbackTexture: TextureResource?
@@ -73,7 +76,6 @@ final class CityRoomScene: CatRoom {
     private var lampShade: ModelEntity?
     private var bulbs: [ModelEntity] = []
     private var setClock: (Float) -> Void = { _ in }
-    private var street: CityStreet?
     private var reduceMotion = UIAccessibility.isReduceMotionEnabled
     private let ibl = Entity()
 
@@ -85,23 +87,26 @@ final class CityRoomScene: CatRoom {
         buildWindow()
         buildFairyLights()
         buildRug()
+        addContactShadow(named: "city_contact", x0: -0.58, z0: -0.58, x1: 0.56, z1: 0.56, y: 0.017)
         buildBed()
         buildNightstand()
         buildSillProps()
         buildDecor()
-        street = CityStreet(in: pivot)
         let bedSeat = catBed.at + [0, 0.072 * catBed.scale, 0]
         buildCat(at: [0.25, sillTop, -0.44], rests: [.pi + 0.75, .pi + 0.55], route: [
             .init(at: bedSeat),
             .init(at: [0.13, 0.014, 0.13], move: .jump),
-            .init(at: [0.16, 0.014, -0.07], move: .walk),
-            .init(at: [0.15, 0.204, -0.27], move: .jump),
+            .init(at: [0.16, 0.014, 0.07], move: .walk),
+            .init(at: [0.15, 0.204, -0.17], move: .jump),
             .init(at: [0.25, sillTop, -0.44], move: .jump),
         ], scale: catScale, wandering: true)
         buildMotes()
         buildLighting()
         applyLight()
     }
+
+    /// `-cityHour 14` on launch holds the Bedroom at that hour, for looking at it by day.
+    private static let fixedHour: Float? = UserDefaults.standard.object(forKey: "cityHour") == nil ? nil : UserDefaults.standard.float(forKey: "cityHour")
 
     override var roomShowcase: [ShowcaseStep] {
         [.init(label: "Day and night", seconds: 14, start: { [unowned self] in clock = .cycle(seconds: 14) },
@@ -113,12 +118,11 @@ final class CityRoomScene: CatRoom {
     override func tick(_ dt: Float) {
         super.tick(dt)
         switch clock {
-        case .live: hour = Daylight.localHour()
+        case .live: hour = Self.fixedHour ?? Daylight.localHour()
         case .cycle(let seconds): hour = (hour + dt * 24 / seconds).truncatingRemainder(dividingBy: 24)
         }
         light = Daylight.sample(hour)
         paintTown(dt)
-        street?.tick(dt, reduceMotion: reduceMotion)
         setClock(hour)
         // The room's lights change slowly; they are redone once the hour has moved on a little.
         let moved = abs(hour - appliedHour)
@@ -128,18 +132,20 @@ final class CityRoomScene: CatRoom {
     private func applyLight() {
         appliedHour = hour
         let darkness = light.darkness
-        var sunLight = DirectionalLightComponent(color: Daylight.color(light.sun), intensity: 320 * light.lightIntensity)
+        // By day the light is as warm as the Living room's; at night it stays the moon's.
+        let warm = Daylight.rgb(0xFFE2BC), day = 1 - darkness
+        let sunColor = simd_mix(light.sun, warm, SIMD3(repeating: 0.5 * day))
+        var sunLight = DirectionalLightComponent(color: Daylight.color(sunColor), intensity: 320 * light.lightIntensity)
         sunLight.isRealWorldProxy = false
         sun.components.set(sunLight)
         sun.look(at: .zero, from: light.lightDirection * 3, relativeTo: pivot)
 
-        let fillColor = simd_mix(light.horizon, light.top, SIMD3(repeating: 0.4))
+        let fillColor = simd_mix(simd_mix(light.horizon, light.top, SIMD3(repeating: 0.4)), warm, SIMD3(repeating: 0.55 * day))
         fill.components.set(DirectionalLightComponent(color: Daylight.color(fillColor), intensity: 300 * (0.25 + 0.5 * (1 - darkness))))
         setPoint(skyLight, color: light.horizon, lumens: 2500 * (1 - darkness * 0.85), radius: 1.2)
 
         let lamps = smoothstep(darkness, 0.2, 0.7)
         lampsOn = lamps > 0.5
-        street?.light(lampsOn: lampsOn)
         setPoint(lampLight, color: Daylight.rgb(0xFFC27A), lumens: 2200 * lamps, radius: 1.1)
         setPoint(fairyLight, color: Daylight.rgb(0xFFC27A), lumens: 900 * lamps, radius: 1)
         setPoint(candleLight, color: Daylight.rgb(0xFFAA55), lumens: 500 * (0.3 + 0.7 * lamps), radius: 0.5)
@@ -186,10 +192,9 @@ final class CityRoomScene: CatRoom {
             choice = WindowChoice.current
             weather = WindowChoice.weather
             reduceMotion = UIAccessibility.isReduceMotionEnabled
-            let look = choice.look(hour: hour, weather: weather)
-            windowView.show(look.view, hour: look.hour, weather: look.weather, lampOn: lampsOn)
+            windowView.show(choice, hour: hour, weather: weather, lampOn: lampsOn, reduceMotion: reduceMotion)
         }
-        windowView.tick(Double(dt))
+        windowView.tick(Double(dt), hour: hour)
         let showsView = windowView.isReady && windowView.window != nil
         fallback?.isEnabled = !showsView
         guard !showsView else { return }
@@ -223,37 +228,31 @@ final class CityRoomScene: CatRoom {
 
     // MARK: - The window on screen
 
-    override func start(updatesFrom content: RealityViewCameraContent, viewer: Entity,
+    override func start(on surface: any RoomSurface, viewer: Entity,
                         beforeProjecting: @escaping (Float) -> Void, onFrame: @escaping (CGPoint?) -> Void) {
-        super.start(updatesFrom: content, viewer: viewer, beforeProjecting: beforeProjecting) { [weak self] head in
+        super.start(on: surface, viewer: viewer, beforeProjecting: beforeProjecting) { [weak self] head in
             onFrame(head)
-            self?.placeWindow(content)
+            self?.placeWindow(surface)
         }
     }
 
     /// Tells the flat view where the window is on screen this frame, after the camera has moved: the glass as it is
     /// and as it would be with the room unturned, which the planes' parallax runs between, and the hole in the wall's
     /// front face, which the view is clipped to. The wall around the hole, drawn over the view, hides its edges.
-    private func placeWindow(_ content: RealityViewCameraContent) {
+    private func placeWindow(_ surface: any RoomSurface) {
         let o = opening
         let corners: [SIMD2<Float>] = [[o.left, o.top], [o.right, o.top], [o.right, o.bottom], [o.left, o.bottom]]
         let glass = corners.map { SIMD3<Float>($0.x, $0.y, -0.54) }
         let face = corners.map { SIMD3<Float>($0.x, $0.y, -0.5) }
-        let project = { (point: SIMD3<Float>) in content.project(point: point, to: .local) }
+        let project = { (point: SIMD3<Float>) in surface.project(point) }
         let window = glass.compactMap { project(pivot.convert(position: $0, to: nil)) }
         let home = glass.compactMap { project(root.convert(position: $0, to: nil)) }
         let hole = face.compactMap { project(pivot.convert(position: $0, to: nil)) }
         guard window.count == 4, hole.count == 4 else {
-            street?.gate(front: wallFront, back: wallBack, window: []) { _ in nil }
             return windowView.place(window: [], home: [], hole: [])
         }
-        street?.gate(front: wallFront, back: wallBack, window: hole) { project(pivot.convert(position: $0, to: nil)) }
         windowView.place(window: window, home: home.count == 4 ? home : window, hole: hole)
     }
-
-    /// The back wall's faces, outer corners; the street behind it shows only where both cover it on screen.
-    private let wallFront: [SIMD3<Float>] = [[-0.555, 0, -0.5], [0.495, 0, -0.5], [0.495, 0.8, -0.5], [-0.555, 0.8, -0.5]]
-    private let wallBack: [SIMD3<Float>] = [[-0.555, 0, -0.55], [0.495, 0, -0.55], [0.495, 0.8, -0.55], [-0.555, 0.8, -0.55]]
 
     /// One material per tone and roughness, shared by every part built from it.
     private var mattes: [SIMD2<UInt32>: PhysicallyBasedMaterial] = [:]
@@ -305,6 +304,15 @@ final class CityRoomScene: CatRoom {
         }
         pivot.box(0.085, 0.065, 1.13, r: 0.015, wood, at: [-0.535, h + 0.02, -0.01])
         pivot.box(1.13, 0.065, 0.085, r: 0.015, wood, at: [-0.01, h + 0.02, -0.535])
+
+        // Snow resting on the beams, as on the Living room's.
+        let snow = matte(0xFFFBF5, roughness: 0.6)
+        pivot.box(0.12, 0.05, 0.42, r: 0.024, snow, at: [-0.535, h + 0.07, 0.22])
+        pivot.box(0.11, 0.04, 0.3, r: 0.019, snow, at: [-0.535, h + 0.065, -0.28])
+        pivot.sphere(0.04, snow, at: [-0.535, h + 0.075, 0.0], scale: [1.2, 0.8, 1.4])
+        pivot.box(0.44, 0.05, 0.12, r: 0.024, snow, at: [0.24, h + 0.07, -0.535])
+        pivot.box(0.26, 0.04, 0.11, r: 0.019, snow, at: [-0.3, h + 0.065, -0.535])
+        pivot.sphere(0.045, snow, at: [-0.535, h + 0.08, -0.535], scale: [1.3, 0.9, 1.3])
     }
 
     private func buildWindow() {
@@ -367,13 +375,17 @@ final class CityRoomScene: CatRoom {
     // MARK: - Furniture
 
     private func buildRug() {
-        pivot.cylinder(0.006, 0.22, matte(Tone.rugEdge, roughness: 1), at: [0.04, 0.016, 0.2])
-        pivot.cylinder(0.008, 0.2, matte(Tone.rug, roughness: 1), at: [0.04, 0.019, 0.2])
+        let rug = CityLayout.rug.at
+        pivot.cylinder(0.006, 0.22, matte(Tone.rugEdge, roughness: 1), at: [rug.x, 0.016, rug.y])
+        pivot.cylinder(0.008, 0.2, matte(Tone.rug, roughness: 1), at: [rug.x, 0.019, rug.y])
+        // Rings like the Living room's rug.
+        pivot.cylinder(0.009, 0.15, matte(0xEFC99C, roughness: 1), at: [rug.x, 0.0195, rug.y])
+        pivot.cylinder(0.010, 0.11, matte(Tone.rug, roughness: 1), at: [rug.x, 0.02, rug.y])
     }
 
     /// Along the back wall under the window, pillow on the left, blanket over the right.
     private func buildBed() {
-        let bed = pivot.group(at: [-0.04, 0.014, -0.315])
+        let bed = pivot.group(at: [CityLayout.bed.at.x, 0.014, CityLayout.bed.at.y])
         bed.box(0.76, 0.1, 0.36, r: 0.02, matte(Tone.bedFrame), at: [0, 0.05, 0])
         bed.box(0.72, 0.07, 0.33, r: 0.03, matte(Tone.mattress, roughness: 1), at: [0, 0.13, 0])
         bed.box(0.44, 0.04, 0.35, r: 0.018, matte(Tone.blanket, roughness: 1), at: [0.15, 0.17, 0.005])
@@ -383,7 +395,7 @@ final class CityRoomScene: CatRoom {
     }
 
     private func buildNightstand() {
-        let n = pivot.group(at: [-0.37, 0.014, -0.02])
+        let n = pivot.group(at: [CityLayout.nightstand.at.x, 0.014, CityLayout.nightstand.at.y])
         let slat = matte(0xB84F30)
         n.box(0.13, 0.15, 0.13, r: 0.008, matte(Tone.crate), at: [0, 0.075, 0])
         for y: Float in [0.04, 0.09, 0.135] { n.box(0.134, 0.012, 0.134, r: 0.004, slat, at: [0, y, 0]) }
@@ -431,11 +443,11 @@ final class CityRoomScene: CatRoom {
         Props.bookStack(pivot, at: [-0.43, 0.184, 0.28], tones: [0xE98A5B, 0xF2D3A0], rotation: .y(0.3))
 
         Props.catBed(pivot, at: catBed.at, scale: catBed.scale)
-        Props.slippers(pivot, at: [-0.2, 0.014, -0.08], rotation: .y(-0.4))
-        Props.catBowls(pivot, at: [0.38, 0.014, -0.05], rotation: .y(.pi / 2 - 0.3))
+        Props.slippers(pivot, at: [-0.2, 0.014, 0.08], rotation: .y(-0.4))
+        Props.catBowls(pivot, at: [0.4, 0.014, 0.09], rotation: .y(.pi / 2 - 0.3))
         Props.toyMouse(pivot, at: [0.0, 0.023, 0.27], rotation: .y(0.8))
         Props.bookStack(pivot, at: [-0.22, 0.014, 0.42], tones: [0x6F8FB0, 0xC0563A, 0xE3B45C], rotation: .y(-0.4))
-        Props.plush(pivot, at: [-0.16, 0.18, -0.42], rotation: .y(-0.8))
+        Props.plush(pivot, at: [-0.16, 0.18, -0.28], rotation: .y(-0.8))
     }
 
     private func buildLighting() {

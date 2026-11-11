@@ -4,11 +4,14 @@ import Foundation
 import FeatureMoments
 import FeatureOnboarding
 import FeaturePairing
+import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Payments
 import Persistence
 import Transport
+import UsInterface
 import Wire
 
 /// The phone's place on the billet server: the anonymous sign-in, pairing with the partner, and whether this

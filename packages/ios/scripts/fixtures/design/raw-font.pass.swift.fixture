@@ -1,0 +1,7 @@
+struct Good: View {
+  var body: some View {
+    Text("a").font(.ourioHeadline)
+    Text("b").font(.ourioCaption.weight(.semibold))
+    Image(systemName: "house").ourioScaledFont(size: 18)
+  }
+}

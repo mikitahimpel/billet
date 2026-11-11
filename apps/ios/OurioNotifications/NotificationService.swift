@@ -1,5 +1,10 @@
+import DrawInterface
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
+import UsInterface
 import UserNotifications
 import WidgetKit
 import Wire
@@ -12,7 +17,7 @@ final class NotificationService: UNNotificationServiceExtension {
                              withContentHandler contentHandler: @escaping (UNNotificationContent) -> Void) {
         PushReceipt.stamp()
         if let drawing = LatestDrawing(push: request.content.userInfo), drawing.saveIfNewer() {
-            WidgetCenter.shared.reloadTimelines(ofKind: LatestDrawing.widgetKind)
+            LatestDrawing.widgetKinds.forEach { WidgetCenter.shared.reloadTimelines(ofKind: $0) }
         }
         contentHandler(Self.named(request.content))
     }

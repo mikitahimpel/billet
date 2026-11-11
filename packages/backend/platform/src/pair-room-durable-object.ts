@@ -7,6 +7,7 @@ import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
 import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { LayoutChange } from "@billet/contracts-domain/decor";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
 import type { ActivityCursor } from "@billet/contracts-domain/activity";
 import type { CatEntry, NatureSeed } from "@billet/contracts-domain/cat";
@@ -152,6 +153,7 @@ const shopOutputs: ReadonlySet<string> = new Set([
   "InksGranted",
   "ItemsGranted",
   "WishlistChanged",
+  "LayoutChanged",
   "GiftOpened",
   "BonusPaid",
 ]);
@@ -1017,6 +1019,15 @@ export class PairRoom extends DurableObject {
     const decision = await this.run(
       (room) => room.setWish(by, item, wished, offered),
       "PairRoom.setWish",
+    );
+    await this.pushShop(decision);
+    return decision;
+  }
+
+  async changeLayout(by: UserId, id: IdempotencyKey, change: LayoutChange): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.changeLayout(by, id, change),
+      "PairRoom.changeLayout",
     );
     await this.pushShop(decision);
     return decision;

@@ -7,16 +7,20 @@ public struct GlassSegmented<Value: Hashable>: View {
   let segments: [(value: Value, title: String)]
   @Binding var selection: Value
   let identifier: String
+  let identifiers: [Value: String]
 
   @Namespace private var thumb
 
   /// - Parameter identifier: Prefix of each segment's accessibility identifier, `"<identifier>.<title>"`.
+  /// - Parameter identifiers: A segment's own identifier suffix where it must not follow a title that is reworded.
   public init(
-    _ segments: [(value: Value, title: String)], selection: Binding<Value>, identifier: String
+    _ segments: [(value: Value, title: String)], selection: Binding<Value>, identifier: String,
+    identifiers: [Value: String] = [:]
   ) {
     self.segments = segments
     _selection = selection
     self.identifier = identifier
+    self.identifiers = identifiers
   }
 
   public var body: some View {
@@ -41,7 +45,7 @@ public struct GlassSegmented<Value: Hashable>: View {
         }
         .buttonStyle(.plain)
         .accessibilityAddTraits(isSelected ? .isSelected : [])
-        .accessibilityIdentifier("\(identifier).\(segment.title)")
+        .accessibilityIdentifier("\(identifier).\(identifiers[segment.value] ?? segment.title)")
       }
     }
     .padding(Self.inset)
@@ -55,7 +59,8 @@ public struct GlassSegmented<Value: Hashable>: View {
   @Previewable @State var room = "Room"
   BothSchemes {
     GlassSegmented(
-      [("Room", "Room"), ("City", "City")], selection: $room, identifier: "roomSwitch"
+      [("Room", "Living room"), ("City", "Bedroom")], selection: $room, identifier: "roomSwitch",
+      identifiers: ["Room": "Room", "City": "City"]
     )
     .padding(Space.gutter)
     .background(RoomBackdrop())

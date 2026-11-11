@@ -1,0 +1,19 @@
+{
+ "id": "globe",
+ "name": "Desk globe",
+ "kind": "SOLID",
+ "width_m": 0.108,
+ "depth_m": 0.124,
+ "height_m": 0.18,
+ "footprint_cells": [
+  3,
+  3
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.18,
+ "anchors": [],
+ "tris": 2000,
+ "affordance": "smallItem",
+ "usdz_kb": 247
+}

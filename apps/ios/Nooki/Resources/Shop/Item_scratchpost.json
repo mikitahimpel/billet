@@ -1,0 +1,19 @@
+{
+ "id": "scratchpost",
+ "name": "Scratching post",
+ "kind": "SOLID",
+ "width_m": 0.251,
+ "depth_m": 0.258,
+ "height_m": 0.299,
+ "footprint_cells": [
+  6,
+  6
+ ],
+ "mount": "floor",
+ "fit": "height",
+ "size_m": 0.299,
+ "anchors": [],
+ "tris": 1500,
+ "affordance": null,
+ "usdz_kb": 191
+}

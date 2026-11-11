@@ -1,67 +1,65 @@
+import DecorInterface
 import SwiftUI
 import Design
 
-/// Every card has the same three lines under its art, so a row of cards is level.
+/// An `ItemCard`: the art and one-line name open the item's sheet; the price under them is the tile's only button.
+/// Every tile has the same parts, so a row is level whatever each one costs or whether it is owned.
 struct ShopItemCard: View {
     let item: ShopItem
     let state: HomeState
     var onTap: () -> Void
 
+    @State private var shortTaps = 0
+
     private var owned: Bool { state.shop.owned.contains(item.id) }
+    private var standing: ShopPriceFace.Standing {
+        guard DecorItem.item(shopID: item.id) != nil else { return .notPlaceable }
+        return state.decor.state.layout.isPlaced(item.id) ? .room : .closet
+    }
     private var price: Int { state.shop.price(of: item) }
     private var isDeal: Bool { price < item.price }
+    private var face: ShopPriceFace {
+        ShopPriceFace(
+            price: price, was: item.price, coins: state.shop.coins, owned: owned, standing: standing)
+    }
 
     var body: some View {
-        // The art and the name open the item's sheet; the buy under them buys it in one tap.
-        VStack(alignment: .leading, spacing: Space.s) {
-            Button(action: onTap) {
-                VStack(alignment: .leading, spacing: Space.s) {
-                    art
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(item.name)
-                            .font(.ourioHeadline)
-                            .foregroundStyle(Ink.text)
-                            .lineLimit(1)
-                        Text(item.blurb)
-                            .font(.ourioCaption)
-                            .foregroundStyle(Ink.textSecondary)
-                            .lineLimit(1)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(.rect)
+        ItemCard(item.name, open: onTap) {
+            art
+        } leadingBadge: {
+            if isDeal, !owned {
+                Chip("−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%", style: .honey)
+            } else if item.isNew, !owned {
+                Chip("New", style: .honey)
             }
-            .buttonStyle(PressScaleStyle())
-            .accessibilityElement(children: .combine)
-            .accessibilityHint("Opens \(item.name)")
-            BuyButton(state: state, quote: owned ? nil : (price: price, sum: item.price), name: item.name,
-                      buy: { state.shop.buy(item) }, fills: true)
+        } trailingBadge: {
+            EmptyView()
+        } footer: {
+            TileButton(face.tileFace, name: item.name) {
+                switch face.tap {
+                case .buy: _ = state.shop.buy(item)
+                case .askForCoins:
+                    shortTaps += 1
+                    _ = state.shop.buy(item)
+                case .place: state.decorate(item.id)
+                case .none: break
+                }
+            }
+            .haptic(.warning, trigger: shortTaps)
         }
-        .padding(CardMetrics.padding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .cardSurface()
+        .perfFlattened()
     }
 
     private var art: some View {
         RarityFrame(rarity: item.rarity) {
             if let image = Thumbnails.image(item.thumbnail, maxPixels: 512) {
                 // The thumbnail carries its own soft shadow; nothing is drawn under it.
+                // An owned piece's art steps back; its name stays in full ink.
                 Image(uiImage: image).resizable().scaledToFit()
                     .padding(Space.s)
+                    .opacity(owned ? 0.6 : 1)
             } else {
                 Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
-            }
-        }
-        .aspectRatio(1.05, contentMode: .fit)
-        .overlay(alignment: .topLeading) {
-            item.rarity.chip.padding(Space.s)
-        }
-        .overlay(alignment: .topTrailing) {
-            if isDeal, !owned {
-                Chip("−\(Int(((1 - Double(price) / Double(item.price)) * 100).rounded()))%", style: .honey)
-                    .padding(Space.s)
-            } else if item.isNew, !owned {
-                Chip("New", style: .honey).padding(Space.s)
             }
         }
     }

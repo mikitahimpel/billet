@@ -1,6 +1,10 @@
 import Design
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
+import UsInterface
 
 /// Keeps the evening streak nudge in step with the streak and the Settings switch.
 struct StreakNudging: ViewModifier {

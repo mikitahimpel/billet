@@ -1,10 +1,13 @@
 import Design
 import GamesInterface
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PetScene
 import RealityKit
 import Synchronization
 import UIKit
+import UsInterface
 
 /// Header and tab bar: shipped glass, opaque with a shadow, flat, or none. `-perf.hud opaque|flat|hidden` picks one
 /// for a whole run; a `cost` run switches from it to the others.
@@ -47,7 +50,7 @@ enum OurioPerf {
             default: state.tab = .world
             }
         }
-        host.scroll = { y in scrolls[state.tab]?(y) }
+        host.scroll = { y in PageScroll.to(y, tab: state.tab) }
         if state.rooms.variant.hasRoomChoice {
             let kinds = state.rooms.variant.kinds
             host.rooms = { (kinds.filter { $0 == state.room } + kinds.filter { $0 != state.room }).map(\.perfName) }
@@ -78,9 +81,6 @@ enum OurioPerf {
     }
 
     private static var gameOpened = false
-
-    /// A run scrolls the shown tab's page to measure its frames.
-    static var scrolls: [HomeTab: (Double) -> Void] = [:]
 
     private static var setHUD: (HUDArm) -> Void = { _ in }
     /// For the covers and switches that pause it.
@@ -166,6 +166,44 @@ enum OurioPerf {
         case .us: ScenePerf.mark("us on screen")
         case .world: break
         }
+    }
+}
+
+/// Scrolls the shown tab's page as a finger does: its UIScrollView's offset, with no SwiftUI state written per
+/// frame, since a `ScrollPosition` set every frame builds the page's body again and costs more than the scroll.
+@MainActor
+private enum PageScroll {
+    private static weak var page: UIScrollView?
+    private static var pageTab: HomeTab?
+
+    static func to(_ y: Double, tab: HomeTab) {
+        // Looked up once per tab, again only if that page leaves the window.
+        if pageTab != tab || (page != nil && page?.window == nil) {
+            page = find()
+            pageTab = tab
+            // A run that found no page measures a page held still; the trace says so.
+            if page == nil { ScenePerf.trace("scroll: no page scroll view on \(tab)") }
+        }
+        guard let page else { return }
+        let top = -page.adjustedContentInset.top
+        let bottom = max(top, page.contentSize.height + page.adjustedContentInset.bottom - page.bounds.height)
+        page.contentOffset.y = min(bottom, top + y)
+    }
+
+    /// The tallest scroll view on screen that scrolls up and down: the page, not a shelf inside it.
+    private static func find() -> UIScrollView? {
+        let window = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+            .flatMap(\.windows).first(where: \.isKeyWindow)
+        var best: UIScrollView?
+        func visit(_ view: UIView) {
+            if let scroll = view as? UIScrollView, scroll.contentSize.height > scroll.bounds.height,
+               scroll.bounds.height > (best?.bounds.height ?? 0) {
+                best = scroll
+            }
+            view.subviews.forEach(visit)
+        }
+        window.map(visit)
+        return best
     }
 }
 

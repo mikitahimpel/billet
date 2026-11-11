@@ -1,10 +1,14 @@
 import FeatureOnboarding
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Pet
+import ProfileInterface
 import RoomInterface
 import StoreKit
 import SwiftUI
 import Design
+import UsInterface
 import WidgetBridge
 
 /// The account is anonymous and needs no sign-in (see `AccountRow`). Labs and Testing show only in a debug or
@@ -27,6 +31,7 @@ struct SettingsView: View {
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
     @AppStorage(ComposerStyle.key) private var composerStyle = ComposerStyle.standard
+    @Environment(PerfLab.self) private var perfLab: PerfLab?
     @State private var confirmingErase = false
     @State private var demoBusy = false
     @State private var demoFailed = false
@@ -39,10 +44,14 @@ struct SettingsView: View {
     var body: some View {
         Page {
             GroupedSection(header: "General",
+                         footer: "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
+                ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
+            }
+
+            GroupedSection(header: "Hints",
                          footer: hintsReset
                              ? "The hints start over the next time you open Ourio."
-                             : "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
-                ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
+                             : "Shows the tips again, one at a time, from the next launch.") {
                 Button { hintsReset = true } label: {
                     Row("Show hints again", symbol: "lightbulb.fill", tint: UsTint.sun.color) {
                         if hintsReset {
@@ -54,6 +63,14 @@ struct SettingsView: View {
                 }
                 .buttonStyle(PressScaleStyle())
                 .disabled(hintsReset)
+            }
+
+            GroupedSection(header: "Widgets",
+                           footer: "Mochi, your days together, your partner and more, for the Home Screen and the Lock Screen.") {
+                NavigationLink { WidgetsGalleryView() } label: {
+                    Row("Widget gallery", symbol: "rectangle.on.rectangle", tint: UsTint.honey.color) { RowChevron() }
+                }
+                .buttonStyle(PressScaleStyle())
             }
 
             GroupedSection(header: "Reminders",
@@ -72,7 +89,7 @@ struct SettingsView: View {
             }
 
             GroupedSection(header: "Window",
-                         footer: "What the City room's window looks out on. Suburbia follows the time of day.") {
+                         footer: "What the bedroom's window looks out on. Suburbia follows the time of day.") {
                 PickerRow("View", symbol: "window.horizontal", tint: UsTint.sky.color, selection: $windowView) {
                     ForEach(WindowChoice.allCases) { Text($0.title).tag($0) }
                 }
@@ -98,7 +115,7 @@ struct SettingsView: View {
                                + "with an anonymous key kept in your iCloud Keychain, without your name or email.") {
                 Row("Stays on this iPhone", symbol: "lock.fill", tint: UsTint.sage.color)
                 Button(role: .destructive) { confirmingErase = true } label: {
-                    Row("Erase All Data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
+                    Row("Erase all data", symbol: "trash.fill", tint: UsTint.coral.color, destructive: true)
                 }
                 .buttonStyle(PressScaleStyle())
             }
@@ -122,7 +139,7 @@ struct SettingsView: View {
             GroupedSection(header: "Labs",
                          footer: "With the brain off, \(CatProfile.name()) lives on her own original timers. The "
                              + "card shows what the brain has her doing and why: her state, needs and the last thing she "
-                             + "heard. All hints show at once from the next launch, for testing. Rooms shows one room or "
+                             + "heard. All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
                              + "them baked, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
                              + "the controls over the room after a few seconds without a touch. Coins come from the dev "
@@ -138,6 +155,12 @@ struct SettingsView: View {
                     Row("Style", symbol: "paintpalette.fill", tint: UsTint.sun.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
+                if let perfLab {
+                    NavigationLink { PerfLabPage(lab: perfLab) } label: {
+                        Row("Performance", symbol: "speedometer", tint: UsTint.sage.color) { RowChevron() }
+                    }
+                    .buttonStyle(PressScaleStyle())
+                }
                 PickerRow("Composer style", symbol: "square.and.pencil", tint: UsTint.sun.color,
                           selection: $composerStyle) {
                     ForEach(ComposerStyle.allCases) { Text($0.title).tag($0) }
@@ -186,10 +209,11 @@ struct SettingsView: View {
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Erase all data?", isPresented: $confirmingErase, titleVisibility: .visible) {
-            Button("Erase All Data", role: .destructive) {
+            Button("Erase all data", role: .destructive) {
                 dismiss()
                 erase()
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("Your profile, photos, moments, lists, wishes and dates will be deleted from this phone. "
                  + "This can't be undone.")

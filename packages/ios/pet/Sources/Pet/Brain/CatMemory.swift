@@ -5,6 +5,9 @@ import Foundation
 /// launched remembers the same as one run all week; anything older than two days is gone.
 public struct CatMemory: Hashable, Sendable {
   public private(set) var spots: [RoomAffordance.Kind: Double] = [:]
+  /// Seconds spent in each group, by local hour of the day, today and as of yesterday.
+  public private(set) var hours: [Int: [CatActivityGroup: Double]] = [:]
+  public private(set) var yesterday: [Int: [CatActivityGroup: Double]] = [:]
 
   public init() {}
 
@@ -18,6 +21,20 @@ public struct CatMemory: Hashable, Sendable {
 
   public mutating func petted(at kind: RoomAffordance.Kind) {
     spots[kind, default: 0] += Self.petWorth
+  }
+
+  public mutating func spent(_ group: CatActivityGroup, hour: Int, seconds: Double) {
+    guard seconds > 0, group != .rest, group != .react else { return }
+    hours[hour, default: [:]][group, default: 0] += seconds
+  }
+
+  /// How much yesterday's `hour` leaned to `group`: 1 for no habit, up to 1.8 when that was all
+  /// the cat did in that hour.
+  public func habit(_ group: CatActivityGroup, hour: Int) -> Double {
+    guard let day = yesterday[hour] else { return 1 }
+    let total = day.values.reduce(0, +)
+    guard total > 0 else { return 1 }
+    return 1 + 0.8 * (day[group] ?? 0) / total
   }
 
   /// How much of the cat's rest and petting happened at `kind`, from 0 to 1.
@@ -37,6 +54,7 @@ public struct CatMemory: Hashable, Sendable {
   public func carried() -> CatMemory {
     var next = CatMemory()
     for (kind, seconds) in spots { next.spots[kind] = seconds / 2 }
+    next.yesterday = hours
     return next
   }
 }

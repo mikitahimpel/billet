@@ -1,6 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
 struct GroceryList: View {
     let list: UsList
@@ -31,7 +35,7 @@ struct GroceryList: View {
                     Button("Clear", action: onClear)
                         .font(.ourioCallout.weight(.semibold))
                         .foregroundStyle(Ink.accentText)
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleStyle())
                 }
                 card(bought, done: true)
             }
@@ -60,7 +64,7 @@ struct GrocerySectionLabel<Trailing: View>: View {
     @ViewBuilder var trailing: Trailing
 
     var body: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             if let icon { UsIcon(glyph: icon, size: 26) }
             Text(title)
                 .font(.ourioHeadline)
@@ -70,7 +74,7 @@ struct GrocerySectionLabel<Trailing: View>: View {
         }
         .padding(.horizontal, 2)
         .padding(.top, top)
-        .padding(.bottom, 8)
+        .padding(.bottom, Space.s)
     }
 }
 
@@ -86,7 +90,7 @@ struct GroceryRow: View {
     var done = false
 
     var body: some View {
-        HStack(spacing: 12) {
+        HStack(spacing: Space.m) {
             UsCheck(done: done)
             Text(item.text)
                 .font(.ourioHeadline)
@@ -106,8 +110,8 @@ struct GroceryRow: View {
                 Monogram(partner: item.author, profile: profile, size: 20)
             }
         }
-        .padding(.horizontal, 14)
-        .frame(minHeight: 52)
+        .padding(.horizontal, Space.l)
+        .frame(minHeight: Size.button)
         .opacity(done ? 0.55 : 1)
         .contentShape(.rect)
         .accessibilityElement(children: .ignore)

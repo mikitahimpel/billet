@@ -1,7 +1,11 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PhotosUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
 struct DatesScreen: View {
     let state: HomeState
@@ -34,7 +38,7 @@ struct DatesScreen: View {
     var body: some View {
         BilletSheet("Date night", scrolls: false) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 16) {
+                VStack(alignment: .leading, spacing: Space.l) {
                     switch mode {
                     case .swipe: swipeContent
                     case .dates: datesContent
@@ -43,7 +47,7 @@ struct DatesScreen: View {
                 }
                 .padding(.horizontal, Space.gutter)
                 .padding(.top, Space.s)
-                .padding(.bottom, 40)
+                .padding(.bottom, Space.xl + Space.s)
             }
             .scrollIndicators(.hidden)
             .scrollHeader {
@@ -81,8 +85,8 @@ struct DatesScreen: View {
     private var swipeContent: some View {
         let deck = us.deck(for: state.viewer, filter: filter)
         let partner = state.profile.name(of: state.otherPartner)
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
+        return VStack(alignment: .leading, spacing: Space.l) {
+            HStack(spacing: Space.s) {
                 Monogram(partner: state.viewer, profile: state.profile, size: 22)
                 Text(likedAlone != nil
                      ? "Saved. If \(partner) loves it too, it's a match"
@@ -119,7 +123,7 @@ struct DatesScreen: View {
         } else {
             "Loosen a filter for more."
         }
-        return VStack(spacing: 12) {
+        return VStack(spacing: Space.m) {
             EmptyState(icon: .init(symbol: "rectangle.stack.fill", tint: .lilac), title: "That's the whole deck",
                        text: text)
             if toPlan > 0 {
@@ -139,10 +143,10 @@ struct DatesScreen: View {
     }
 
     private func matchesRow(_ matches: [DateIdea]) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: Space.s) {
             sectionTitle("To plan", caption: "You both loved these")
             ScrollView(.horizontal) {
-                HStack(spacing: 10) {
+                HStack(spacing: Space.m) {
                     ForEach(matches) { idea in
                         Button {
                             planner = PlannerTarget(ideaID: idea.id)
@@ -153,12 +157,12 @@ struct DatesScreen: View {
                                         .font(.ourioMicro)
                                         .foregroundStyle(.white)
                                         .lineLimit(2)
-                                        .padding(8)
+                                        .padding(Space.s)
                                 }
                                 .frame(width: 104, height: 124)
-                                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+                                .corners(.card)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(PressScaleStyle())
                     }
                 }
             }
@@ -194,7 +198,7 @@ struct DatesScreen: View {
     // MARK: Surprise
 
     private var surpriseContent: some View {
-        VStack(spacing: 14) {
+        VStack(spacing: Space.l) {
             if let idea = surpriseIdea {
                 DateIdeaCard(idea: idea)
                 PrimaryButton("Plan it") {
@@ -202,20 +206,20 @@ struct DatesScreen: View {
                 }
                 anotherButton
             } else {
-                VStack(spacing: 16) {
+                VStack(spacing: Space.l) {
                     UsIcon(glyph: .init(symbol: "wand.and.stars", tint: .lilac), size: 72)
                         .rotationEffect(.degrees(hatAngle), anchor: .bottom)
                     Text(surpriseCaption)
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
                         .multilineTextAlignment(.center)
-                        .padding(.horizontal, 24)
+                        .padding(.horizontal, Space.section)
                 }
-                .padding(.bottom, 32)
+                .padding(.bottom, Space.xl)
                 .frame(maxWidth: .infinity)
                 .frame(height: DateIdeaCard.height, alignment: .bottom)
                 .background { DateScenePicture() }
-                .clipShape(.rect(cornerRadius: Radius.card, style: .continuous))
+                .corners(.card)
 
                 PrimaryButton("Surprise us", symbol: "dice") { roll() }
                     .opacity(rolling ? 0.6 : 1)
@@ -240,11 +244,11 @@ struct DatesScreen: View {
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
                 .frame(maxWidth: .infinity)
-                .frame(height: 52)
+                .frame(height: Size.button)
                 .background(Ink.surfaceRaised, in: .capsule)
                 .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
     }
 
     private func roll() {
@@ -280,7 +284,7 @@ struct DatesScreen: View {
     private var datesContent: some View {
         let toPlan = us.matches, comingUp = us.comingUp, done = us.done
         if toPlan.isEmpty, comingUp.isEmpty, done.isEmpty {
-            VStack(spacing: 12) {
+            VStack(spacing: Space.m) {
                 EmptyState(icon: .init(symbol: "heart.text.square.fill", tint: .blush), title: "No dates yet",
                            text: "Swipe together. When you both love an idea, it lands here.")
                 PrimaryButton("Start swiping") {
@@ -288,16 +292,16 @@ struct DatesScreen: View {
                 }
             }
         } else {
-            VStack(alignment: .leading, spacing: 24) {
+            VStack(alignment: .leading, spacing: Space.section) {
                 if !toPlan.isEmpty { matchesRow(toPlan) }
                 if !comingUp.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Space.s) {
                         sectionTitle("Coming up")
                         ForEach(comingUp) { planCard($0) }
                     }
                 }
                 if !done.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
+                    VStack(alignment: .leading, spacing: Space.s) {
                         sectionTitle("Done", caption: done.count == 1 ? "1 date" : "\(done.count) dates")
                         ForEach(done) { planCard($0) }
                     }
@@ -337,7 +341,7 @@ struct DatesScreen: View {
     // MARK: Shared controls
 
     private var modeRow: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Space.s) {
             ForEach(Mode.allCases, id: \.self) { item in
                 let waiting = item == .dates ? us.matches.count : 0
                 FilterChip(waiting > 0 ? "\(item.rawValue) · \(waiting)" : item.rawValue, isSelected: mode == item) {
@@ -346,13 +350,13 @@ struct DatesScreen: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(.horizontal, 20)
-        .padding(.top, 14)
+        .padding(.horizontal, Space.gutter)
+        .padding(.top, Space.l)
     }
 
     private var filterBar: some View {
         ScrollView(.horizontal) {
-            HStack(spacing: 8) {
+            HStack(spacing: Space.s) {
                 filtersButton
                 if filter.isEmpty {
                     ForEach(DatePreset.all) { preset in
@@ -366,15 +370,15 @@ struct DatesScreen: View {
                     }
                 }
             }
-            .padding(.horizontal, 20)
+            .padding(.horizontal, Space.gutter)
         }
         .scrollIndicators(.hidden)
-        .padding(.top, 10)
+        .padding(.top, Space.m)
     }
 
     private var filtersButton: some View {
         Button { filtersOpen = true } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: Space.s) {
                 Image(systemName: "line.3.horizontal.decrease")
                     .font(.ourioCaption.weight(.semibold))
                 Text("Filters")
@@ -394,7 +398,7 @@ struct DatesScreen: View {
             .background(Ink.surfaceRaised, in: .capsule)
             .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel(filter.isEmpty ? "Filters" : "Filters, \(filter.tags.count) on")
     }
 
@@ -402,7 +406,7 @@ struct DatesScreen: View {
         Button {
             withAnimation(.snappy(duration: 0.2)) { filter.toggle(tag) }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: Space.s) {
                 Image(systemName: tag.symbol)
                     .font(.ourioMicro)
                 Text(tag.title)
@@ -412,11 +416,11 @@ struct DatesScreen: View {
             }
             .font(.ourioCallout.weight(.semibold))
             .foregroundStyle(Ink.text)
-            .padding(.horizontal, 12)
+            .padding(.horizontal, Space.m)
             .frame(height: 34)
             .background(Color.honey.opacity(0.32), in: .capsule)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(PressScaleStyle())
         .accessibilityLabel("Remove \(tag.title)")
     }
 }

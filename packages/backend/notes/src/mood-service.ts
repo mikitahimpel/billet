@@ -92,6 +92,7 @@ export class MoodService extends Context.Service<
               case "NoReaction":
               case "GiftTaken":
               case "CollectionIncomplete":
+              case "LayoutRefused":
               case "BonusTaken":
               case "ListNotFound":
               case "ListItemNotFound":
