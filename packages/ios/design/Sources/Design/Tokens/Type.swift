@@ -36,8 +36,9 @@ extension Look {
   }
 }
 
-/// Bricolage Grotesque, the landing's display face, from the package's bundle. Registered in the
-/// process the first time a name is asked for, which is the first `.ourio*` font.
+/// Bricolage Grotesque, the landing's display face. The app ships it (`Resources/Fonts`), not this
+/// package, so the widgets and the other extensions carry no font; a process without it draws the
+/// system face. Registered the first time a name is asked for, which is the first `.ourio*` font.
 enum DisplayFace {
   static func name(_ weight: Font.Weight) -> String {
     _ = registered
@@ -53,8 +54,10 @@ enum DisplayFace {
       "BricolageGrotesque-SemiBold", "BricolageGrotesque-Bold", "BricolageGrotesque-ExtraBold",
     ]
     for name in names {
+      // Xcode flattens the folder into the bundle; a package or a bundle that keeps it does not.
       guard
-        let url = Bundle.module.url(forResource: name, withExtension: "ttf", subdirectory: "Fonts")
+        let url = Bundle.main.url(forResource: name, withExtension: "ttf")
+          ?? Bundle.main.url(forResource: name, withExtension: "ttf", subdirectory: "Fonts")
       else { return false }
       // Already registered (another process entry point, a preview host) is not a failure.
       CTFontManagerRegisterFontsForURL(url as CFURL, .process, nil)
