@@ -1,8 +1,11 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PhotosUI
 import SwiftUI
 import Design
 import TipKit
+import UsInterface
 
 struct TabBar: View {
     let state: HomeState
@@ -62,7 +65,8 @@ struct TabBar: View {
                     .accessibilityHidden(true)
             }
         }
-        .sensoryFeedback(.selection, trigger: hovered ?? state.tab)
+        // A light tap rather than the selection tick, which is too faint to feel through a switch of the whole page.
+        .haptic(.tap, trigger: hovered ?? state.tab)
     }
 
     /// The tab whose slot holds `x`, measured from the capsule's leading edge; past the ends it is the first or last.
@@ -80,6 +84,7 @@ struct TabBar: View {
             let selected = hovered ?? state.tab
             Capsule()
                 .fill(Ink.glassSelection)
+                .overlay { Capsule().strokeBorder(Ink.selectionRim, lineWidth: 1) }
                 .frame(width: slot)
                 .modifier(SlidingPill(tab: selected, slides: !reduceMotion))
                 .offset(x: slot * CGFloat(selected.order))
@@ -88,9 +93,12 @@ struct TabBar: View {
 
     private func item(_ tab: HomeTab) -> some View {
         let shown = (hovered ?? state.tab) == tab
+        let dusk = Look.current == .dusk
         return VStack(spacing: 3) {
-            Image(systemName: tab.symbol).ourioScaledFont(size: 18, weight: .semibold)
-            Text(tab.title).ourioScaledFont(size: 11, weight: .medium, relativeTo: .caption2)
+            Image(systemName: dusk ? tab.symbol(filled: shown) : tab.symbol)
+                .ourioScaledFont(size: 18, weight: .semibold, design: dusk ? .rounded : .default)
+            Text(tab.title)
+                .ourioScaledFont(size: 11, weight: dusk && shown ? .semibold : .medium, relativeTo: .caption2)
         }
         // The bar keeps its height: past this size its labels show in the large content viewer instead.
         .dynamicTypeSize(...DynamicTypeSize.xLarge)

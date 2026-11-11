@@ -21,6 +21,16 @@ public struct RoomAffordance: Codable, Hashable, Sendable, Identifiable {
     case desk
     case door
     case toy
+    /// A placed sofa, armchair or bean bag: a soft seat to curl up on.
+    case sofa
+    /// A placed window seat, a seat at a window.
+    case windowSeat
+    /// A placed scratching post.
+    case scratchingPost
+    /// A placed cat bed.
+    case catBed
+    /// A placed box or tunnel to sit in.
+    case crate
   }
 
   /// Stable across phones: a piece's kind and place, or a shop placement's ID.
@@ -66,9 +76,32 @@ public struct RoomAffordances: Codable, Hashable, Sendable {
   /// The reachable pieces of furniture the cat could inspect, newest placement last.
   public var furniture: [RoomAffordance] {
     all.filter {
-      $0.reachable && [.bed, .box, .shelf, .soft, .desk, .rug].contains($0.kind)
+      $0.reachable
+        && [.bed, .box, .shelf, .soft, .desk, .rug, .sofa, .windowSeat, .catBed, .crate]
+          .contains($0.kind)
     }
   }
 
   public typealias Kind = RoomAffordance.Kind
+}
+
+extension RoomAffordance.Kind {
+  /// The place in a few words, as in "Favourite spot: the windowsill"; nil for a thing she uses
+  /// but does not stay at.
+  public var spotName: String? {
+    switch self {
+    case .window: "The windowsill"
+    case .sunbeam: "The patch of sun"
+    case .rug: "The rug"
+    case .bed, .catBed: "Her bed"
+    case .box, .crate: "Her box"
+    case .shelf: "The top shelf"
+    case .soft: "Your cardigan"
+    case .desk: "The desk"
+    case .sofa: "The sofa"
+    case .windowSeat: "The window seat"
+    case .scratchingPost: "The scratching post"
+    case .bowl, .smallItem, .door, .toy: nil
+    }
+  }
 }

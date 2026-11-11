@@ -4,6 +4,10 @@ import Wire
 
 @testable import Transport
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 @Suite struct HTTPServiceTests {
   static func service(status: Int, body: String) -> HTTPService {
     HTTPService { _ in HTTPResponse(status: status, body: Data(body.utf8)) }

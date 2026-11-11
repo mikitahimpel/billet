@@ -106,22 +106,12 @@ public struct StatusRow: View {
     .animation(Motion.fade(), value: emphasis)
   }
 
-  @ViewBuilder private var icon: some View {
-    switch emphasis {
-    case .quiet:
-      RowIcon(symbol: symbol, tint: tint, size: Self.mark)
-    case .raised:
-      Image(systemName: symbol)
-        .font(.system(size: Self.mark * 0.44, weight: .semibold))
-        .foregroundStyle(Ink.heroInk)
-        .frame(width: Self.mark, height: Self.mark)
-        .background(tint, in: .circle)
-        .accessibilityHidden(true)
-    }
+  private var icon: some View {
+    RowIcon(symbol: symbol, tint: tint, size: Self.mark, style: emphasis == .raised ? .clay : .well)
   }
 
   private var words: some View {
-    VStack(alignment: .leading, spacing: 2) {
+    VStack(alignment: .leading, spacing: Space.xxs) {
       Text(title)
         .font(.ourioCaption)
         .foregroundStyle(Ink.textSecondary)

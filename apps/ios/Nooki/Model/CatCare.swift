@@ -1,5 +1,8 @@
+import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
+import UsInterface
 
 /// Mochi's care on this phone: pets, treats and the bar that fills her level. The level lives in the shared wallet
 /// file, so the widgets show the same one.
@@ -23,10 +26,21 @@ final class CatCare {
     var level: Int { wallet.wallet.level }
     var progress: Double { wallet.wallet.progress }
 
+    /// How much of her bar one pet fills.
+    nonisolated static let petFill = 0.03
+
+    /// The way to her next level in words: the pets it still takes, or that it is one pet off.
+    nonisolated static func towardNext(level: Int, progress: Double) -> String {
+        let left = 1 - (progress.isFinite ? min(max(progress, 0), 1) : 0)
+        // Less a hair, so 0.6 of the bar is 20 pets and not 21 by rounding.
+        let pets = max(1, Int((left / petFill - 1e-9).rounded(.up)))
+        return pets == 1 ? "One more pet to Lv. \(level + 1)" : "\(pets) pets to Lv. \(level + 1)"
+    }
+
     func pet() {
         petsGiven += 1
         petPulse += 1
-        fill(0.03)
+        fill(Self.petFill)
         streak.record()
     }
 

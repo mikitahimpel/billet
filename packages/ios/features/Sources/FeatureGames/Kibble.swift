@@ -1,4 +1,5 @@
 import Foundation
+import GamesInterface
 
 /// A kitchen scale with the cat's bowl: TARE zeroes whatever is on the platform, and the display
 /// shows whole grams of the load less the tare, negative once a tared bowl comes off.
@@ -43,12 +44,12 @@ public struct FeedTask: Equatable, Sendable {
     case tooLittle(grams: Int)
   }
 
-  public static let grams = 25...60
+  public static let grams = FeedPenalty.portions
 
   public let target: Int
 
   public init(target: Int) {
-    self.target = min(max(target, Self.grams.lowerBound), Self.grams.upperBound)
+    self.target = FeedPenalty.portion(target)
   }
 
   /// The portion for a cat this `full` (0...1): the emptier she is, the more she needs.
@@ -59,7 +60,10 @@ public struct FeedTask: Equatable, Sendable {
   }
 
   /// Grams either side of the target that still count: 2, or 5 % of a big portion.
-  public var tolerance: Int { target > 40 ? max(2, Int((Double(target) * 0.05).rounded())) : 2 }
+  public var tolerance: Int { FeedPenalty.tolerance(target: target) }
+
+  /// The most the bag pours: past the zone, into the overfeed.
+  public var hardCap: Int { FeedPenalty.hardCap(target: target) }
 
   public func check(food: Double) -> Check {
     let grams = Int(food.rounded())

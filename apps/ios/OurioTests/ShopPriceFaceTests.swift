@@ -21,6 +21,14 @@ import Testing
         #expect(ShopPriceFace(price: 90, coins: 0, owned: false) == .short(missing: 90))
     }
 
+    @Test func anOwnedPieceTheRoomCanHoldOpensTheRoom() {
+        #expect(ShopPriceFace(price: 90, coins: 0, owned: true, standing: .closet) == .place)
+        #expect(ShopPriceFace(price: 90, coins: 0, owned: true, standing: .room) == .inRoom)
+        #expect(ShopPriceFace(price: 90, coins: 0, owned: true, standing: .closet).tap == .place)
+        #expect(ShopPriceFace(price: 90, coins: 0, owned: true, standing: .room).tap == .place)
+        #expect(ShopPriceFace(price: 90, coins: 0, owned: false, standing: .closet) == .short(missing: 90))
+    }
+
     @Test func ownedIgnoresTheBalanceAndRejectsTheTap() {
         #expect(ShopPriceFace(price: 90, coins: 0, owned: true) == .owned)
         #expect(ShopPriceFace(price: 90, coins: 1000, owned: true).tap == .none)

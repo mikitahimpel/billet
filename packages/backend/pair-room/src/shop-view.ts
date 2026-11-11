@@ -14,6 +14,7 @@ export const shopOf = (state: RoomState): ShopResponse => {
         wishlist: [],
         bonuses: [],
         layout: [],
+        stowed: [],
       };
     case "Active":
       return {
@@ -24,6 +25,7 @@ export const shopOf = (state: RoomState): ShopResponse => {
         ...(state.giftDay === undefined ? {} : { giftDay: state.giftDay }),
         bonuses: state.bonuses,
         layout: state.layout,
+        stowed: state.stowed,
       };
   }
 };

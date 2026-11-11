@@ -1,7 +1,10 @@
 import FeatureInbox
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Testing
 import UIKit
+import UsInterface
 import Wire
 @testable import Billet
 

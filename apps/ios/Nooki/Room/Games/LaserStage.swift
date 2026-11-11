@@ -20,35 +20,57 @@ final class LaserStage: GameStage {
     private var chases = 0
     private var pouncing = false
     private var time: Float = 0
+    /// Where the dot has been, newest first, drawn as a fading trail so the path reads.
+    private var trail: [SIMD3<Float>] = []
+    private let trailDots: [ModelEntity]
+    /// A trail dot's own size: the meshes are unit cylinders, so a scale that drops it leaves a metre-wide disc.
+    private static let trailSize = SIMD3<Float>(0.006, 0.001, 0.006)
+    private var sinceTrail: Float = 0
+    private let lesson: (start: SIMD2<Double>, end: SIMD2<Double>)
+    /// Seconds since a finger was last down; the dot waits at the lesson's start once it has been a while.
+    private var untouched: Float = 99
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
         self.deck = deck
         spots = GameSpots(room: room)
-        root = room.pivot.group()
+        let root = room.pivot.group()
+        self.root = root
         laser = LaserPlay(length: Double(spots.length), floor: spots.area)
+        lesson = LaserPlay.lesson(on: spots.area)
         dot = root.group()
-        dot.cylinder(0.0015, 0.0055, Clay.glow(0xFF3B30, intensity: 8), at: .zero)
-        var glow = UnlitMaterial(color: UIColor(red: 1, green: 0.25, blue: 0.2, alpha: 0.35))
-        glow.blending = .transparent(opacity: .init(floatLiteral: 0.35))
-        halo = dot.cylinder(0.001, 0.012, glow, at: [0, 0.0005, 0])
+        dot.cylinder(0.002, 0.0085, Clay.glow(0xFF3B30, intensity: 8), at: .zero)
+        var glow = UnlitMaterial(color: UIColor(red: 1, green: 0.25, blue: 0.2, alpha: 0.4))
+        glow.blending = .transparent(opacity: .init(floatLiteral: 0.4))
+        halo = dot.cylinder(0.001, 0.02, glow, at: [0, 0.0005, 0])
         dot.isEnabled = false
-        deck.say("Drag the red dot across the floor", for: 4)
-        deck.bar = (0, "Play")
+        trailDots = (0..<14).map { _ in
+            root.cylinder(0.001, 0.006, Clay.glow(0xFF6A55, intensity: 3), at: .zero)
+        }
+        trailDots.forEach { $0.isEnabled = false }
+        deck.say(LaserPlay.goal)
+        deck.show(0, "Played")
         let seat = spots.at(0, -0.05)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + spots.toward), id: "laser-start")
     }
 
     var focus: [SIMD3<Float>] {
-        [spots.at(-0.2, -0.14), spots.at(0.2, -0.14), spots.at(-0.2, 0.2), spots.at(0.2, 0.2), spots.at(0, 0, up: 0.12)]
+        var points = [spots.at(-0.2, -0.14), spots.at(0.2, -0.14), spots.at(-0.2, 0.2), spots.at(0.2, 0.2), spots.at(0, 0, up: 0.12)]
+        points += [lessonPoint(lesson.start), lessonPoint(lesson.end)]
+        if room is TabletopRoom { points.append(spots.at(0, -0.6, up: 0.4)) }
+        return points
     }
 
     var cue: GameCue? {
         guard deck.result == nil, chases == 0 || !(room.walker?.moving ?? false) else { return nil }
-        return GameCue(step: 0, gesture: .drag(to: spots.at(0.14, 0.1)), at: spots.at(-0.12, 0.12))
+        return GameCue(step: 0, gesture: .drag(to: lessonPoint(lesson.end)), at: lessonPoint(lesson.start))
     }
 
-    func began(_ touch: GameTouch) { moved(touch) }
+    private func lessonPoint(_ p: SIMD2<Double>) -> SIMD3<Float> { [Float(p.x), spots.floor, Float(p.y)] }
+
+    func began(_ touch: GameTouch) {
+        moved(touch)
+    }
 
     func moved(_ touch: GameTouch) {
         if let point = touch.onPlane(y: spots.floor) { aim = point }
@@ -59,13 +81,29 @@ final class LaserStage: GameStage {
     func update(_ dt: Float) {
         time += dt
         laser.aim(aim.map { SIMD2(Double($0.x), Double($0.z)) }, dt: Double(dt))
-        if let at = laser.dot {
+        untouched = aim == nil ? untouched + dt : 0
+        // With no finger down the dot waits where the hand takes it, so there is always something to drag.
+        let shown = laser.dot ?? (untouched > 1.2 && deck.result == nil ? lesson.start : nil)
+        if let at = shown {
             dot.isEnabled = true
             dot.position = [Float(at.x), spots.floor + 0.0015, Float(at.y)]
             let pulse = sin(time * 30)
-            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.012, 0.001, 0.012]
+            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.02, 0.001, 0.02]
+            sinceTrail += dt
+            if laser.dot != nil, sinceTrail > 0.035 {
+                sinceTrail = 0
+                trail.insert(dot.position, at: 0)
+                if trail.count > trailDots.count { trail.removeLast() }
+            }
         } else {
             dot.isEnabled = false
+            if !trail.isEmpty { trail.removeLast() }
+        }
+        for (index, entity) in trailDots.enumerated() {
+            entity.isEnabled = index < trail.count
+            guard index < trail.count else { continue }
+            entity.position = trail[index]
+            entity.scale = SIMD3(repeating: 1 - Float(index) / Float(trailDots.count + 2)) * Self.trailSize
         }
         guard let walker = room.walker else { return }
         let at = walker.at
@@ -92,7 +130,7 @@ final class LaserStage: GameStage {
                 }
             }
         }
-        deck.show(laser.play, "Play")
+        deck.show(laser.play, "Played")
     }
 
     /// Runs her to the dot, stopping short of it so her fore paws land on it; a pounce ends in paw pats.

@@ -1,5 +1,8 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Testing
+import UsInterface
 @testable import Billet
 
 /// What a print shows while its photo is decoded at the size it asked for.

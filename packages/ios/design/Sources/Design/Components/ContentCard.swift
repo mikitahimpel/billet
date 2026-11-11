@@ -28,7 +28,7 @@ public struct ContentCard<Content: View, Actions: View>: View {
     Card(warm: warm) {
       VStack(alignment: .leading, spacing: Space.m) {
         HStack(alignment: .firstTextBaseline, spacing: Space.s) {
-          VStack(alignment: .leading, spacing: 2) {
+          VStack(alignment: .leading, spacing: Space.xxs) {
             Text(title)
               .font(.ourioHeadline)
               .foregroundStyle(Ink.text)

@@ -1,5 +1,6 @@
 import { Schema } from "effect";
 import { IdempotencyKey } from "./ids.ts";
+import { baseHomes, footprints } from "./decor-catalog.ts";
 import { Placement, RoomItemId } from "./shop.ts";
 
 /** `Place` stands a piece in the room or moves it; `Unplace` takes it back to the closet. */
@@ -16,24 +17,33 @@ export type LayoutRequest = typeof LayoutRequest.Type;
 export const LayoutResult = Schema.Literals(["applied", "duplicate"]);
 export type LayoutResult = typeof LayoutResult.Type;
 
-/** The footprint, in metres across and into the room with no turn, of each piece the app places. A
- * wall piece has its width only. The app has the same table. */
-const footprints: Readonly<
-  Record<string, { width: number; depth: number; mount: "floor" | "wall" }>
-> = {
-  armchair: { width: 0.36, depth: 0.3, mount: "floor" },
-  bookcase: { width: 0.3, depth: 0.12, mount: "floor" },
-  donutbed: { width: 0.34, depth: 0.34, mount: "floor" },
-  lamp: { width: 0.14, depth: 0.14, mount: "floor" },
-  lantern: { width: 0.1, depth: 0.1, mount: "floor" },
-  monstera: { width: 0.22, depth: 0.22, mount: "floor" },
-  print: { width: 0.2, depth: 0, mount: "wall" },
-  rug: { width: 0.6, depth: 0.6, mount: "floor" },
-  teatable: { width: 0.26, depth: 0.26, mount: "floor" },
-  tower: { width: 0.2, depth: 0.2, mount: "floor" },
-  yarn: { width: 0.12, depth: 0.12, mount: "floor" },
-  mouse: { width: 0.08, depth: 0.05, mount: "floor" },
-};
+const decodeItem = Schema.decodeSync(RoomItemId);
+
+/** A piece of the room's own furniture: every pair has it and none is sold. */
+export const isBasePiece = (item: string): boolean => item in baseHomes;
+
+/** The room as the pair arranged it: what they placed or moved, and the room's own furniture that was
+ * neither moved nor put away, each at home. A room that never arranged anything is the default room. */
+export const effectiveLayout = (
+  layout: ReadonlyArray<Placement>,
+  stowed: ReadonlyArray<string>,
+): ReadonlyArray<Placement> => [
+  ...Object.entries(baseHomes)
+    .filter(([item]) => !stowed.includes(item) && !layout.some((placed) => placed.item === item))
+    .map(([item, home]): Placement => ({
+      item: decodeItem(item),
+      surface: "floor",
+      u: home.u,
+      v: home.v,
+      quarterTurns: 0,
+    })),
+  ...layout,
+];
+
+/** Whether `item` can be put away: a room keeps a bed or a sofa for the cat. */
+export const canPutAway = (layout: ReadonlyArray<Placement>, item: string): boolean =>
+  footprints[item]?.rest !== true ||
+  layout.some((placed) => placed.item !== item && footprints[placed.item]?.rest === true);
 
 const step = 0.05;
 const reach = 0.49;
@@ -83,7 +93,7 @@ export const placementProblem = (
     if (other.item === placement.item || other.surface !== placement.surface) continue;
     const otherSpan = spanOf(other);
     if (otherSpan === undefined) continue;
-    if (placement.surface === "floor" && (placement.item === "rug" || other.item === "rug"))
+    if (placement.surface === "floor" && (size.flat || footprints[other.item]?.flat === true))
       continue;
     if (overlaps(span, otherSpan)) return "occupied";
   }

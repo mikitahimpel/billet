@@ -1,7 +1,10 @@
 import FeaturePairing
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 extension OnboardingView {
@@ -27,7 +30,7 @@ extension OnboardingView {
             .padding(.top, Space.l)
             .padding(.bottom, Space.section)
         }
-        .softScrollEdges()
+        .ourioScrollEdges()
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize)
         .scrollDismissesKeyboard(.interactively)
@@ -110,7 +113,7 @@ extension OnboardingView {
                 tapTick += 1
                 flow.join()
             }
-            .buttonStyle(QuietButtonStyle())
+            .buttonStyle(SecondaryButtonStyle())
         case .invite:
             if case .waiting(let code, _, _)? = pairing?.state, flow.invited {
                 ShareLink(item: inviteMessage(code)) { Text("Share again").frame(maxWidth: .infinity) }

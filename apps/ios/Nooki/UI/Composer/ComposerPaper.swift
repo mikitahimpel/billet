@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PencilKit
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 struct ComposerPaper: View {

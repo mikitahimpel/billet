@@ -28,7 +28,7 @@ struct FeaturedCard: View {
             Button { openSet(offer) } label: {
                 art
                     .frame(maxWidth: .infinity)
-                    .frame(height: 196)
+                    .frame(height: ShopLayout.featuredArt)
                     .contentShape(.rect)
             }
             .buttonStyle(PressScaleStyle())
@@ -62,10 +62,9 @@ struct FeaturedCard: View {
         }
         .padding(CardMetrics.padding)
         .background {
-            // The glow is the card's shape's own, so the countdown ticking inside never redraws it.
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
                 .fill(ShopInk.lamplight)
-                .perfShadow(color: ShopInk.coral.opacity(0.4), radius: 18, y: 8)
+                .cardShadow()
         }
         .overlay {
             RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
@@ -87,6 +86,8 @@ struct FeaturedCard: View {
         .padding(.vertical, 6)
         .glass(.capsule, tint: Ink.heroInk.opacity(0.25))
         .fixedSize()
+        // A glass badge, capped as the app's chrome is: past this its one line would push the card off the screen.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     @ViewBuilder private var valueBadge: some View {
@@ -131,7 +132,7 @@ private struct DiscountRibbon: View {
     var body: some View {
         VStack(spacing: 0) {
             Text("−\(percent)%")
-                .font(.ourioTitle.monospacedDigit())
+                .font(.ourioTitleDigits)
             Text("save \(saves)")
                 .font(.ourioMicro.monospacedDigit())
         }

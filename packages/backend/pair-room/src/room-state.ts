@@ -71,6 +71,8 @@ export const RoomState = Schema.TaggedUnion({
     bonuses: Schema.Array(CollectionId).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
     /** Where the pair stood its pieces, one placement per piece. */
     layout: Schema.Array(Placement).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
+    /** The room's own furniture the pair put away; the rest of it stands where the room has it. */
+    stowed: Schema.Array(RoomItemId).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
     /** The newest layout changes applied, so a repeated id is answered and not applied twice. */
     layoutLog: Schema.Array(IdempotencyKey).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
     /** The pair's local day it last opened the daily gift on. */

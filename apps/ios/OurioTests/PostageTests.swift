@@ -1,11 +1,15 @@
 import CoreGraphics
 import Design
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Persistence
+import ProfileInterface
 import Synchronization
 import Testing
 import Transport
+import UsInterface
 import Wire
 @testable import Billet
 

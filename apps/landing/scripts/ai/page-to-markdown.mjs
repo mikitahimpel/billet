@@ -138,8 +138,11 @@ function md(node, url) {
       return ` ${inner()} `;
     case "code":
       return `\`${inline()}\``;
-    case "summary":
-      return blocks(`### ${inline()}`);
+    case "summary": {
+      // A question already set as a heading (<summary><h3>) keeps its own level.
+      const raw = inner();
+      return /^#+ /m.test(raw) ? blocks(tidy(raw)) : blocks(`### ${inline()}`);
+    }
     case "dt":
       return blocks(`**${inline()}**`);
     case "blockquote":

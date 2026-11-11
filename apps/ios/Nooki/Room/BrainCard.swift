@@ -1,8 +1,11 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Pet
 import SwiftUI
 import UIKit
 import Design
+import UsInterface
 
 extension AppSettings {
     /// Labs: shows the cat's brain over the room.
@@ -111,6 +114,7 @@ struct BrainCard: View {
             }
             line("Body", "\(director.rest.rawValue) at \(director.spot.rawValue)")
             line("Last", director.lastEvent)
+            if let reset = director.resets.last { line("Reset ×\(director.resets.count)", reset) }
             ForEach(director.top, id: \.group) { score in
                 line(score.group.rawValue, String(format: "%.2f", score.score))
             }

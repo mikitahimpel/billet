@@ -1,7 +1,10 @@
+import MomentsInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct MoodPicker: View {
     let state: HomeState

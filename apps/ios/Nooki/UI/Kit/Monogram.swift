@@ -1,6 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
 struct Monogram: View {
     let partner: String

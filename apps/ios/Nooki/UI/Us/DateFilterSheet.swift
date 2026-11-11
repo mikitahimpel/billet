@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PhotosUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct DatePreset: Identifiable {
     let title: String
@@ -51,7 +54,7 @@ struct DateFilterSheet: View {
                 .padding(.top, Space.l)
                 .padding(.bottom, Space.section)
             }
-            .softScrollEdges()
+            .ourioScrollEdges()
             .scrollIndicators(.hidden)
 
             PrimaryButton(fits == 0 ? "Nothing fits" : "Show \(fits) ideas") { dismiss() }

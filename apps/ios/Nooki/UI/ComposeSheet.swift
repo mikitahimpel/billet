@@ -1,9 +1,12 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PetScene
 import PhotosUI
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 import Wire
 
 // MARK: - Compose
@@ -16,30 +19,30 @@ struct ComposeSheet: View {
     @State private var caption = ""
     @State private var film: UIImage?
     @FocusState private var focused: Bool
+    @State private var sheetWidth: CGFloat = 0
+
+    /// Most of the sheet's width on a phone, held back on a wide one so the print stays a print. Before the first
+    /// measure it is about what an SE gives, so the fitted sheet doesn't open around a sliver.
+    private var printWidth: CGFloat { sheetWidth > 0 ? min(sheetWidth * 0.78, 320) : 260 }
+
+    static let captionLimit = 40
 
     var body: some View {
         BilletSheet("New moment", size: .fit) {
             VStack(spacing: Space.gutter) {
-                VStack(alignment: .leading, spacing: Space.m) {
-                    Image(uiImage: film ?? image)
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 220, height: 220)
-                        .clipped()
-                    TextField("", text: $caption, prompt: Text("Write a little note…").foregroundStyle(PolaroidPaper.byline))
-                        .font(.custom("Noteworthy-Bold", size: 17))
-                        .foregroundStyle(PolaroidPaper.ink)
-                        .focused($focused)
-                        .submitLabel(.done)
-                        .frame(width: 220)
-                        .onChange(of: caption) { _, text in
-                            if text.count > 40 { caption = String(text.prefix(40)) }
-                        }
+                // The print as it will hang in the feed, the caption written straight onto its strip.
+                Polaroid(width: printWidth, caption: caption, byline: Date.now.formatted(.dateTime.month(.abbreviated).day()),
+                         captionEditor: $caption, captionFocus: $focused) {
+                    Image(uiImage: film ?? image).resizable().scaledToFill()
                 }
-                .padding(Space.m)
-                .padding(.bottom, Space.l)
-                .background { PaperSheet(lift: PaperSheet.Lift(radius: 12, y: 8, opacity: 0.3)) }
-                .rotationEffect(.degrees(-2))
+                .rotationEffect(.degrees(focused ? 0 : -2))
+                .animation(.snappy(duration: 0.25), value: focused)
+                .onChange(of: caption) { _, text in
+                    if text.count > Self.captionLimit { caption = String(text.prefix(Self.captionLimit)) }
+                }
+
+                LimitCounter(count: caption.count, limit: Self.captionLimit)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
 
                 PrimaryButton("Add to Moments · +10") {
                     onSave(caption.trimmingCharacters(in: .whitespacesAndNewlines))
@@ -47,6 +50,7 @@ struct ComposeSheet: View {
                 }
             }
             .frame(maxWidth: .infinity)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { sheetWidth = $0 }
         }
         .task {
             let image = image

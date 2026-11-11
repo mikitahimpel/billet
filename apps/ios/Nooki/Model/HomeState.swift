@@ -1,12 +1,18 @@
+import DecorInterface
+import FeatureDecor
 import FeatureGames
 import FeatureMood
+import MomentsInterface
 import MoodInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
+import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design
+import UsInterface
 import WidgetKit
 
 enum HomeTab: CaseIterable {
@@ -63,6 +69,8 @@ struct HomeStores {
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
+    let decor: DecorStore
+    let decorSync: DecorSync
 
     static func live() -> HomeStores {
         let profile = CoupleStore()
@@ -74,11 +82,24 @@ struct HomeStores {
         let shop = ShopModel(wallet: wallet, couple: profile, care: care)
         let us = UsStore { shop.earn($0) }
         let members: GiftsModel.Members = { profile.couple.pair.map { (profile.couple.viewer, $0.users) } }
+        let decorSync = DecorSync()
+        let decor = DecorStore.decor(
+            DecorServices(
+                storage: .appGroup(.directory(AppGroup.container)),
+                feedback: { feedback in
+                    switch feedback {
+                    case .placed, .slid, .swapped, .reset: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    case .blocked, .rejected, .noRoomToTurn, .lastRest: UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    }
+                },
+                share: { [weak decorSync] in decorSync?.push($0) }))
+        decorSync.store = decor
         return HomeStores(
             profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
-            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) })
+            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
+            decor: decor, decorSync: decorSync)
     }
 }
 
@@ -90,10 +111,20 @@ final class HomeState {
     var tab: HomeTab = .world
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
+    /// The Shop's shelf; its chips sit in the header, the page under them shows it.
+    var shopCategory: ShopCategory = .today
 
     func openShop(_ focus: ShopFocus) {
         shopFocus = focus
         tab = .shop
+    }
+
+    /// Opens the World with its pieces arranged, `item` chosen when given: the Shop's Place and the purchase's
+    /// Place now.
+    func decorate(_ item: String? = nil) {
+        tab = .world
+        room = .home
+        decor.send(.opened(item: item))
     }
 
     var room: RoomKind = .home
@@ -136,6 +167,8 @@ final class HomeState {
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
+    let decor: DecorStore
+    let decorSync: DecorSync
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
@@ -154,6 +187,8 @@ final class HomeState {
         gifts = stores.gifts
         lists = stores.lists
         journal = stores.journal
+        decor = stores.decor
+        decorSync = stores.decorSync
         wallet = stores.wallet
         #if DEBUG
         // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.
@@ -223,6 +258,14 @@ final class HomeState {
         guard pets > 0 else { return }
         activity.save()
         for _ in 0..<min(pets, 5) { care.pet() }
+    }
+
+    /// The meals given from a widget since the last look, for her room to serve.
+    func takeWidgetFeeds() -> Int {
+        var activity = WidgetActivity.load()
+        let feeds = activity.takePendingFeeds()
+        if feeds > 0 { activity.save() }
+        return min(feeds, 2)
     }
 
     /// Deletes every store's files from the app group (or Documents) and this phone's preferences; the caller starts

@@ -1,7 +1,11 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Persistence
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
 /// The wish a shared page becomes: its title and picture fetched from the page, then the holder's price and details.
 /// Saved to the Us store in the app group; the app picks it up when it comes back, and sends it to the pair's room.
@@ -84,7 +88,7 @@ struct ShareWishView: View {
             .padding(.top, 18)
             .padding(.bottom, 40)
         }
-        .softScrollEdges()
+        .ourioScrollEdges()
         .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
     }

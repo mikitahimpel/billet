@@ -7,6 +7,7 @@ struct CoatPicker: View {
     /// The cat's height; nil to fill the height the rest leaves, between 170 and 440.
     var stageHeight: CGFloat?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(spacing: Space.l) {
@@ -42,7 +43,11 @@ struct CoatPicker: View {
 
     private var chips: some View {
         // A plain Grid, not a lazy one: the step measures the chips to see whether everything fits.
-        let rows = stride(from: 0, to: CatCoat.allCases.count, by: 3).map { Array(CatCoat.allCases[$0..<min($0 + 3, CatCoat.allCases.count)]) }
+        // Two to a row at accessibility sizes, so a coat's name breaks between words, never inside one.
+        let perRow = typeSize.isAccessibilitySize ? 2 : 3
+        let rows = stride(from: 0, to: CatCoat.allCases.count, by: perRow).map {
+            Array(CatCoat.allCases[$0..<min($0 + perRow, CatCoat.allCases.count)])
+        }
         return Grid(horizontalSpacing: Space.m, verticalSpacing: Space.m) {
             ForEach(rows, id: \.self) { row in
                 GridRow {
@@ -72,7 +77,7 @@ struct CoatPicker: View {
     }
 }
 
-/// Her splat sitting as the room has her (`Tools/bake_hero.py --cards`): same pose, light and framing for every coat.
+/// billet-gpu's render of the seated splat Mochi: same pose, light and framing for every coat.
 struct CatStage: View {
     let coat: CatCoat
     let height: CGFloat
@@ -144,8 +149,9 @@ struct CoatChip: View {
 
     var body: some View {
         VStack(spacing: Space.s) {
+            // A row must fit the narrowest phone at any text size; the name under it carries the size.
             CoatSwatchShape(swatch: coat.swatch)
-                .frame(width: size, height: size)
+                .frame(width: min(size, 80), height: min(size, 80))
                 .padding(Space.xs)
                 .overlay(Circle().stroke(picked ? Color.honey : .clear, lineWidth: 2.5))
                 .scaleEffect(picked ? 1.06 : 1)

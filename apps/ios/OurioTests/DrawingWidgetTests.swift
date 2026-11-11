@@ -1,7 +1,11 @@
+import Design
 import DrawInterface
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Testing
+import UsInterface
 import Wire
 @testable import Billet
 

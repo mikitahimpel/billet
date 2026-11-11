@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct ProfileHub: View {
     let state: HomeState
@@ -16,11 +19,12 @@ struct ProfileHub: View {
     }
 
     var body: some View {
-        BilletSheet("Profile", size: .mediumLarge, scrolls: false) {
-            Page {
+        // As tall as its two or three rows; a page pushed from it rises to full height.
+        BilletSheet("Profile", size: .fit) {
+            VStack(alignment: .leading, spacing: Space.section) {
                 couple
                 GroupedSection {
-                    NavigationLink { ProfileEditor(profile: state.profile) } label: {
+                    NavigationLink { ProfileEditor(profile: state.profile).expandsSheet() } label: {
                         Row("Edit profile", symbol: "person.2.fill", tint: UsTint.sky.color) { RowChevron() }
                     }
                     if canInvite {
@@ -37,6 +41,7 @@ struct ProfileHub: View {
                             dismiss()
                             erase()
                         }
+                        .expandsSheet()
                     } label: {
                         Row("Settings", symbol: "gearshape.fill", tint: UsTint.lilac.color) { RowChevron() }
                     }

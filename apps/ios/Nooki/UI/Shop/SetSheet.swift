@@ -62,7 +62,7 @@ struct SetSheet: View {
         .padding(.horizontal, Space.m)
         .frame(maxWidth: .infinity)
         .frame(height: 180)
-        .cornerFill(.card, ShopInk.lamplight)
+        .cardSurface(warm: true)
         .accessibilityHidden(true)
     }
 
@@ -127,13 +127,6 @@ struct SetSheet: View {
                         .fixedSize(horizontal: false, vertical: true)
                 }
             } else {
-                Button {
-                    state.tab = .world
-                    dismiss()
-                } label: {
-                    Label("Place in your room", systemImage: "house.fill").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PrimaryButtonStyle())
                 Label("The whole set is in your closet", systemImage: "checkmark.circle.fill")
                     .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)

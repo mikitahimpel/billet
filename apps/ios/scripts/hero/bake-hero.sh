@@ -1,5 +1,5 @@
 #!/bin/zsh
-# Bakes the hero Mochi of the splash and the welcome: Tools/bake_hero.py renders her splat sitting in every coat into
+# Bakes the hero Mochi of the splash and the welcome: Tools/bake_hero.py renders the seated splat in every coat into
 # Nooki/Resources/Hero and prints the patch rectangles, which go into HeroImages (Nooki/UI/Kit/CatHeroStage.swift).
 # Needs Python 3 with numpy and Pillow; about two minutes a coat.
 set -e

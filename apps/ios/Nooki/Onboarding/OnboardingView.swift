@@ -1,7 +1,11 @@
 import FeaturePairing
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 /// Server questions are drawn by their kind, so a new question needs no app update.
@@ -36,6 +40,7 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             HeroBackdrop()
+            if flow.page == .welcome { WarmBackdrop().transition(.opacity) }
             VStack(spacing: 0) {
                 header
                 page
@@ -145,6 +150,8 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, Space.s)
         .frame(height: Size.control + Space.s)
+        // Chrome in a row of a fixed height: capped as the app's header is.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private var showsHeader: Bool { flow.page != .welcome && flow.page != .stopped }
@@ -210,7 +217,7 @@ struct OnboardingView: View {
         // the page scrolls with a smaller cat.
         ViewThatFits(in: .vertical) {
             coatPage(stage: nil)
-            ScrollView { coatPage(stage: 200) }.softScrollEdges()
+            ScrollView { coatPage(stage: 200) }.ourioScrollEdges()
                 .scrollBounceBehavior(.basedOnSize)
         }
     }
@@ -497,7 +504,7 @@ struct MochiSays: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
-                .cornerFill(.card, Ink.surface)
+                .cardSurface()
         }
     }
 }

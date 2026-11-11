@@ -19,7 +19,7 @@ struct WarmBackdrop: View {
     var body: some View {
         ZStack {
             RadialGradient(
-                colors: [Color(hex: 0xF4BF7E), Color(hex: 0xB36E3A), Color(hex: 0x4A2C1B), Color(hex: 0x24150D)],
+                colors: Ink.roomGlow,
                 center: UnitPoint(x: 0.5, y: 0.48),
                 startRadius: 10,
                 endRadius: 520
@@ -55,13 +55,14 @@ struct WarmBackdrop: View {
 
 extension View {
     /// The header and the tab bar as the screen's top and bottom bars. On iOS 26 they are safe area bars with the
-    /// soft scroll edge under them; before, safe area insets over a material fade when `fades`.
+    /// system's soft scroll edge under them; before, safe area insets over a material fade when `fades` (a tab root,
+    /// not the room).
     @ViewBuilder
     func bars(fades: Bool, softEdges: Bool = true, @ViewBuilder top: () -> some View,
               @ViewBuilder bottom: () -> some View) -> some View {
         if #available(iOS 26, *) {
-            scrollEdgeEffectStyle(.soft, for: .vertical)
-                .scrollEdgeEffectHidden(!softEdges, for: .vertical)
+            ourioScrollEdges()
+                .environment(\.softScrollEdges, softEdges)
                 .safeAreaBar(edge: .top, spacing: Space.m, content: top)
                 .safeAreaBar(edge: .bottom, content: bottom)
         } else {

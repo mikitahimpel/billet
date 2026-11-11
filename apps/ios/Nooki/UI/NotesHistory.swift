@@ -1,9 +1,12 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import PetScene
 import PhotosUI
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 import Wire
 
 // MARK: - Notes history

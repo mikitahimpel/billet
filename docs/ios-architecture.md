@@ -63,30 +63,23 @@ Enforced by `Package.swift` (SwiftPM already builds with
 `packages/ios/scripts/check-imports.mjs` (section 7). The widgets and extensions link the
 `*Interface` targets they need (value types and file formats) and never a `Feature*`.
 
-### 1.1.1 `OurioShared`, for now
+### 1.1.1 What the extensions share
 
-The code the app and its extensions both need (models, App Group files, the widget snapshot, a few
-views the widgets draw) was `apps/ios/Shared`, compiled into five targets. It is now one static
-library, `OurioShared` (`project.yml`), built once and linked into the app and its three extensions;
-the test bundles get it from the app. Its images and the world map stay in each target's resources,
-and `apps/ios/PerTarget` holds what each target compiles itself: the App Intents and the Live Activity,
-whose metadata a target extracts from its own sources, and the names where `Wire` has a type of the
-same name.
+The app and its three extensions link the same `*Interface` products, built once. `AppGroup` and
+`SharedFile` are in core's `Persistence`. `MoodStore` (`MoodInterface`) and `CoupleStore`
+(`ProfileInterface`) take their files as `load` and `save`; `WidgetInterface` points them at the App
+Group with `init()`. `LatestDrawing`, `PushTokens`, `PushReceipt`, `PushPayload(push:)` and the
+reaction emoji are in `DrawInterface`. `Couple`, `PairMembers` and `CatProfile` are in
+`ProfileInterface`. The Us model, `UsStore`, `DateCatalog` and `Country` are in `UsInterface`.
+`Moment`, `Note`, their stores and `InstantFilm` are in `MomentsInterface`, iOS only because the
+photos are UIKit images. `WidgetInterface` holds what the widgets draw: `OurioSnapshot`,
+`WidgetTimeline`, `WidgetActivity`, `DeepLink`, `MoodArt`, `DrawingCard` and `InkLayer`. The
+wallpapers' palette, `LockWallpaper`, is art in the design package.
 
-It is a step, not the end: nothing new goes into it. Each feature PR moves its part out, and the
-library goes when it is empty. `AppGroup` and `SharedFile` are in core's `Persistence`; `MoodStore` is
-in `MoodInterface` and takes its file as `load` and `save`, which `OurioShared` points at the App Group;
-`LatestDrawing`, `PushTokens`, `PushReceipt`, `PushPayload(push:)` and the reaction emoji are in `DrawInterface`.
-What is left:
-
-| To | From `OurioShared` |
-| --- | --- |
-| `ProfileInterface` | `Couple`, `PairMembers`, `CoupleStore`, `CatProfile` |
-| `UsInterface` | the Us model, `UsStore`, `PendingListChange`, `WishMedia` |
-| `MomentsInterface` | `Moment`, `Note` and their stores |
-| `WidgetBridge` | `OurioSnapshot`, `WidgetTimeline`, `WidgetActivity`, `DeepLink` |
-| `WidgetUI` (new; SwiftUI, with the mood faces) | `MoodArt`, `DrawingCard`, `InkLayer`, `LockWallpaper` |
-| the feature that uses it, or the app | Places, `BlurHash`, `InstantFilm`, `DateCatalog`, `GroceryWords`, `Streak`, `Wallet` |
+`apps/ios/Shared` holds only resources: the mood faces, the cat portraits, the flags and the world
+map, bundled by each target that draws them. `apps/ios/PerTarget` holds what each target compiles
+itself: the App Intents and the Live Activity, whose metadata a target extracts from its own
+sources, and the names where `Wire` has a type of the same name.
 
 ### 1.2 What a feature owns
 
@@ -684,6 +677,7 @@ public struct CatStatus: Equatable, Sendable {
   public var mind: CatMind                       // awake, resting, social
   public var needs: Needs                        // each rounded to 1/20
   public var level: Int
+  public var about: CatAbout?                    // her day, type, traits and favourite spot
 }
 @MainActor public protocol CatStatusProviding: AnyObject { var status: CatStatus { get } }
 ```

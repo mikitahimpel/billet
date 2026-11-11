@@ -1,6 +1,9 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Transport
+import UsInterface
 import WidgetBridge
 import Wire
 

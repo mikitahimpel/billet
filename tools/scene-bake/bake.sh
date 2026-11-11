@@ -1,6 +1,6 @@
 #!/bin/zsh
 #   tools/scene-bake/bake.sh [--samples N] [--width N]
-# Renders the City window diorama on the pc (Blender, Cycles on the GPU, under ~/billet-gpu/.klein.lock), pulls the PNGs
+# Renders the City window diorama on the pc (Blender, Cycles on the GPU, all three times under one hold of ~/billet-gpu/.klein.lock), pulls the PNGs
 # and writes WebP layers plus diorama.json into apps/ios/Nooki/Resources/CityDiorama. Needs `ssh pc` and `cwebp`.
 set -euo pipefail
 here=${0:A:h}
@@ -19,8 +19,8 @@ done
 mkdir -p $work $dest
 ssh pc 'mkdir -p ~/billet-gpu/scene-bake/out'
 scp -q $here/city_diorama.py pc:billet-gpu/scene-bake/
+ssh pc "cd ~/billet-gpu/scene-bake && rm -rf out/day out/dusk out/night && flock ~/billet-gpu/.klein.lock bash -c 'for t in day dusk night; do ~/billet-gpu/blender-app/blender-billet -b --python-exit-code 1 -P city_diorama.py -- out/\$t \$t --samples $samples --width $width > out/\$t.log 2>&1 < /dev/null || exit 1; done'"
 for t in day dusk night; do
-  ssh pc "cd ~/billet-gpu/scene-bake && rm -rf out/$t && flock ~/billet-gpu/.klein.lock ~/billet-gpu/blender-app/blender-billet -b --python-exit-code 1 -P city_diorama.py -- out/$t $t --samples $samples --width $width > out/$t.log 2>&1 < /dev/null"
   mkdir -p $work/$t
   scp -q "pc:billet-gpu/scene-bake/out/$t/*" $work/$t/
   for png in $work/$t/*.png; do

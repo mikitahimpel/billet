@@ -15,6 +15,9 @@ nonisolated struct HintContext: Hashable {
     var petted = false
     var added = false
     var usedMoments = false
+    /// The Moments tab has nothing to point at yet: its empty state has the action, and the hint's popover over the
+    /// tab bar would cover it on a small phone.
+    var momentsEmpty = false
     var purchased = false
     var switchedRooms = false
     var gaveTreat = false
@@ -24,8 +27,8 @@ nonisolated struct HintContext: Hashable {
 /// wins. A seen hint never comes back, one visit shows at most one hint and one session at most `perSession`.
 nonisolated enum HintPlan {
     static let order = [
-        PetHint.hintId, AddHint.hintId, MomentsHint.hintId, ShopHint.hintId, RoomsHint.hintId,
-        TreatHint.hintId,
+        PetHint.hintId, NeedsHint.hintId, AddHint.hintId, MomentsHint.hintId, ShopHint.hintId,
+        RoomsHint.hintId, TreatHint.hintId,
     ]
     static let perSession = 2
     static let settle: Duration = .seconds(1)
@@ -58,8 +61,9 @@ nonisolated enum HintPlan {
         let metCat = seen.contains(PetHint.hintId)
         switch id {
         case PetHint.hintId: return world
+        case NeedsHint.hintId: return world && metCat
         case AddHint.hintId: return world && metCat
-        case MomentsHint.hintId: return context.screen == .moments
+        case MomentsHint.hintId: return context.screen == .moments && !context.momentsEmpty
         case ShopHint.hintId: return context.screen == .shop
         case RoomsHint.hintId: return world && metCat && context.hasRoomChoice
         case TreatHint.hintId: return world && metCat && context.canAffordTreat

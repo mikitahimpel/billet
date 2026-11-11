@@ -42,6 +42,8 @@ public struct BilletSheet<Content: View>: View {
   @Environment(\.sheetGround) private var ground
   @State private var fitHeight: CGFloat = 0
   @State private var askingToDiscard = false
+  /// A page pushed with `expandsSheet()` took the sheet to full height; it stays there.
+  @State private var expanded = false
 
   /// - Parameters:
   ///   - scrolls: Pass false for content that is a `List` or a scroll view itself.
@@ -81,11 +83,26 @@ public struct BilletSheet<Content: View>: View {
           Button("Keep editing", role: .cancel) {}
         }
     }
+    // On the stack, not its root, so the pages pushed onto it get it too.
+    .environment(\.expandSheet, SheetExpansion { expand() })
     .interactiveDismissDisabled(hasChanges ?? false)
     .tint(.honey)
     .presentationDetents(detents)
-    .presentationDragIndicator(.visible)
+    .presentationDragIndicator(Look.current == .dusk ? .hidden : .visible)
+    .overlay(alignment: .top) { grabber }
     .presentationBackground { groundView }
+  }
+
+  /// Dusk draws its own grabber, warm like the rest of the chrome; Classic keeps the system's grey one.
+  @ViewBuilder private var grabber: some View {
+    if Look.current == .dusk {
+      Capsule()
+        .fill(Ink.selectionRim)
+        .frame(width: 36, height: 5)
+        .padding(.top, 6)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
   }
 
   @ViewBuilder private var groundView: some View {
@@ -111,14 +128,20 @@ public struct BilletSheet<Content: View>: View {
       .scrollBounceBehavior(.basedOnSize)
       .scrollIndicators(.hidden)
       .scrollDismissesKeyboard(.interactively)
-      .softScrollEdges()
+      .ourioScrollEdges()
     } else {
       content
     }
   }
 
+  private func expand() {
+    withAnimation(.snappy(duration: 0.3)) { expanded = true }
+  }
+
+  /// Once a page has asked for full height, large is the only detent, so the sheet goes there.
   private var detents: Set<PresentationDetent> {
-    switch size {
+    if expanded { return [.large] }
+    return switch size {
     case .fit where scrolls && fitHeight > 0: [.height(fitHeight + Self.chrome), .large]
     case .fit, .large: [.large]
     case .medium: [.medium]
@@ -212,18 +235,43 @@ public struct Page<Content: View>: View {
     .scrollDismissesKeyboard(.interactively)
     .background(Ink.screen.ignoresSafeArea())
     .tint(.honey)
-    .softScrollEdges()
+    .ourioScrollEdges()
   }
 }
 
 extension EnvironmentValues {
-  /// False hides the scroll edge effects of `softScrollEdges()`, for Labs → Performance.
+  @Entry var expandSheet = SheetExpansion {}
+}
+
+/// Takes the `BilletSheet` around it to its large detent.
+struct SheetExpansion: Sendable {
+  let action: @MainActor @Sendable () -> Void
+
+  init(_ action: @escaping @MainActor @Sendable () -> Void) { self.action = action }
+}
+
+/// Opens the sheet a page is pushed onto to full height, for a page longer than the sheet it was pushed from.
+private struct ExpandsSheet: ViewModifier {
+  @Environment(\.expandSheet) private var expandSheet
+
+  func body(content: Content) -> some View {
+    content.onAppear { expandSheet.action() }
+  }
+}
+
+extension View {
+  /// On a page pushed inside a `BilletSheet`: the sheet rises to its large detent when the page appears.
+  public func expandsSheet() -> some View { modifier(ExpandsSheet()) }
+}
+
+extension EnvironmentValues {
+  /// False hides the scroll edge effects of `ourioScrollEdges()`, for Labs → Performance.
   @Entry public var softScrollEdges = true
 }
 
 extension View {
   /// iOS 26 soft scroll edges; every scroll view uses this, `Page` and `BilletSheet` already do.
-  public func softScrollEdges() -> some View { modifier(SoftScrollEdges()) }
+  public func ourioScrollEdges() -> some View { modifier(SoftScrollEdges()) }
 }
 
 private struct SoftScrollEdges: ViewModifier {
@@ -242,8 +290,8 @@ private struct SoftScrollEdges: ViewModifier {
 
 extension View {
   /// Pins `header` (a sheet's chips, search field or subtitle) over the top of this scroll view. The
-  /// content scrolls under it and fades out there as it does under the bars, on the sheet's own
-  /// ground, instead of being cut at the header's lower edge. Applies `softScrollEdges()`.
+  /// content starts below it and, scrolled up, fades out under it on the sheet's own ground instead
+  /// of meeting its text. Applies `ourioScrollEdges()`.
   public func scrollHeader<Header: View>(@ViewBuilder _ header: () -> Header) -> some View {
     modifier(ScrollHeader(header: header()))
   }
@@ -255,17 +303,49 @@ private struct ScrollHeader<Header: View>: ViewModifier {
 
   func body(content: Content) -> some View {
     if #available(iOS 26, macOS 26, *) {
+      // The system's edge effect is not drawn under a bar inside a sheet's navigation stack, so the
+      // header carries the sheet's ground itself, up through the title bar and fading out below.
       content
-        .safeAreaBar(edge: .top, spacing: 0) { header }
-        .softScrollEdges()
+        .ourioScrollEdges()
+        .safeAreaBar(edge: .top, spacing: 0) { header.background { HeaderGround(ground: ground) } }
     } else {
-      content.safeAreaInset(edge: .top, spacing: 0) { header.background { groundView } }
+      content.safeAreaInset(edge: .top, spacing: 0) {
+        header.background { HeaderGround(ground: ground) }
+      }
     }
   }
+}
 
-  @ViewBuilder private var groundView: some View {
+/// The sheet's ground behind a pinned header and the title bar above it, fading out over
+/// `Space.xl` below the header, so rows scrolled up sink away instead of meeting a line.
+private struct HeaderGround: View {
+  let ground: SheetGroundStyle
+
+  var body: some View {
+    fill
+      .mask {
+        VStack(spacing: 0) {
+          Color.black
+          // Mostly gone by halfway, so a row's edge never shows as a sliver under the header.
+          LinearGradient(
+            stops: [
+              .init(color: .black, location: 0), .init(color: .black.opacity(0.7), location: 0.4),
+              .init(color: .clear, location: 1),
+            ],
+            startPoint: .top, endPoint: .bottom
+          )
+          .frame(height: Space.xl)
+        }
+      }
+      .padding(.bottom, -Space.xl)
+      .ignoresSafeArea(edges: .top)
+      .allowsHitTesting(false)
+      .accessibilityHidden(true)
+  }
+
+  @ViewBuilder private var fill: some View {
     switch ground {
-    case .opaque: Ink.screen
+    case .opaque: Rectangle().fill(Ink.screen)
     case .glass: Rectangle().fill(.ultraThinMaterial)
     }
   }

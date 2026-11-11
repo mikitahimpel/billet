@@ -1,7 +1,5 @@
 {
   "apps/ios/Nooki/Onboarding/OnboardingView.swift": 1,
-  "apps/ios/Nooki/Room/BrainCard.swift": 7,
-  "apps/ios/Nooki/Room/Games/FeedStage.swift": 7,
   "apps/ios/Nooki/Room/Games/LaserStage.swift": 1,
   "apps/ios/Nooki/Room/Games/WaterStage.swift": 1,
   "apps/ios/Nooki/Room/HeartBubble.swift": 2,
@@ -14,11 +12,8 @@
   "apps/ios/Nooki/UI/MomentsView.swift": 2,
   "apps/ios/Nooki/UI/Shop/DailyGiftCard.swift": 1,
   "apps/ios/Nooki/UI/Us/PickTonightScreen.swift": 2,
-  "apps/ios/OurioWidgets/Accessory.swift": 2,
-  "apps/ios/OurioWidgets/DrawingLiveActivity.swift": 2,
   "apps/ios/OurioWidgets/DrawingWidget.swift": 1,
   "apps/ios/OurioWidgets/Modules.swift": 5,
   "apps/ios/OurioWidgets/NoteWidget.swift": 1,
-  "apps/ios/Shared/Places/WorldMap.swift": 1,
   "apps/ios/WindowViews/FlatWindowView.swift": 1
 }

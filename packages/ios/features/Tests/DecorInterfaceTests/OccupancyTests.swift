@@ -7,19 +7,21 @@ import Testing
 
   @Test func theRoomAsItComesLeavesHerAWayToEverywhereShesGoes() {
     let occupancy = DecorLayout().occupancy(in: room)
-    #expect(occupancy.connects(from: room.spawn, to: room.stops))
-    #expect(occupancy.freeShare > 0.4)
-    #expect(!occupancy.isBlocked(at: room.spawn))
-    for anchor in room.stops { #expect(!occupancy.isBlocked(at: anchor)) }
+    let layout = DecorLayout()
+    #expect(layout.reachesAnchors())
+    #expect(occupancy.connects(from: layout.spawn(), to: layout.anchors()))
+    #expect(occupancy.bareShare > 0.5)
+    #expect(!occupancy.isBlocked(at: layout.spawn()))
+    for anchor in layout.anchors() { #expect(!occupancy.isBlocked(at: anchor)) }
   }
 
   @Test func aSolidPieceBlocksItsCellsAndAFlatOneDoesNot() {
     let chair = DecorLayout(
-      placements: [Placement(item: "armchair", surface: .floor, u: -6, v: 6)], stored: [])
-    #expect(chair.occupancy(in: room).isBlocked(u: -6, v: 6))
+      placements: [Placement(item: "armchair", surface: .floor, u: -2, v: 6)], stored: [])
+    #expect(chair.occupancy(in: room).isBlocked(u: -2, v: 6))
     let rug = DecorLayout(
-      placements: [Placement(item: "rug", surface: .floor, u: -6, v: 6)], stored: [])
-    #expect(!rug.occupancy(in: room).isBlocked(u: -6, v: 6))
+      placements: [Placement(item: "rug", surface: .floor, u: -2, v: 6)], stored: [])
+    #expect(!rug.occupancy(in: room).isBlocked(u: -2, v: 6))
   }
 
   @Test func blockingHerOnlyWayIsRefused() {
@@ -31,8 +33,8 @@ import Testing
 
   @Test func theNearestFreeCellIsTheCellItselfWhenFree() {
     let occupancy = DecorLayout().occupancy(in: room)
-    let free = occupancy.nearestFree(to: (-0.3, 0.3))
-    #expect(free.map { DecorGrid.cell($0.x) } == -6)
+    let free = occupancy.nearestFree(to: (-0.2, 0.3))
+    #expect(free.map { DecorGrid.cell($0.x) } == -4)
     let onTheBed = occupancy.nearestFree(to: (0.06, -0.04))
     #expect(onTheBed.map { occupancy.isBlocked(at: $0) } == false)
   }
@@ -62,7 +64,7 @@ import Testing
 
   @Test func theNearestFitMovesAPieceOffTheBed() {
     let layout = DecorLayout(stored: [])
-    let onTheBed = Placement(item: "monstera", surface: .floor, u: 1, v: -1)
+    let onTheBed = Placement(item: "lamp", surface: .floor, u: 1, v: -1)
     #expect(layout.verdict(onTheBed) == .occupied)
     let fit = layout.nearestFit(to: onTheBed)
     #expect(fit != nil)
@@ -74,6 +76,6 @@ import Testing
     #expect(
       layout.verdict(Placement(item: "armchair", surface: .floor, u: 9, v: 9)) == .outsideRoom)
     #expect(layout.verdict(Placement(item: "print", surface: .floor, u: 0, v: 0)) == .wrongSurface)
-    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: -6, v: 6)) == .fits)
+    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: -4, v: 6)) == .fits)
   }
 }

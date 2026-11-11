@@ -94,11 +94,9 @@ final class CityDioramaView: UIView {
         backgroundColor = .clear
         opening.mask = clip
         layer.addSublayer(opening)
-        for entry in CityDiorama.layers {
-            let stack = Stack(name: entry.name)
-            stacks.append(stack)
-            opening.addSublayer(stack.holder)
-        }
+        stacks = CityDiorama.layers.map { Stack(name: $0.name) }
+        // The cars go above the street and below a layer in front of them.
+        for stack in stacks where stack.name != "near" { opening.addSublayer(stack.holder) }
         for _ in 0..<CityDiorama.plan.capacity {
             let sprite = Sprite()
             sprite.holder.addSublayer(sprite.stack.holder)
@@ -106,6 +104,7 @@ final class CityDioramaView: UIView {
             sprites.append(sprite)
             opening.addSublayer(sprite.holder)
         }
+        for stack in stacks where stack.name == "near" { opening.addSublayer(stack.holder) }
         accessibilityElementsHidden = true
     }
 
@@ -240,7 +239,8 @@ final class CityDioramaView: UIView {
         clip.path = Self.path(outline, grownBy: 1.03)
         for (stack, entry) in zip(stacks, CityDiorama.layers) {
             let stage = home.blended(with: live, follow: entry.follow)
-            let frame = stage.rect(CityDiorama.imageRect)
+            var frame = stage.rect(CityDiorama.imageRect)
+            if entry.follow == 0 { frame = Self.covering(frame, opening: Self.bounds(outline)) }
             stack.holder.frame = frame
             for layer in stack.times { layer.frame = stack.holder.bounds }
         }
@@ -253,7 +253,7 @@ final class CityDioramaView: UIView {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
         defer { CATransaction.commit() }
-        let street = home.blended(with: live, follow: CityDiorama.layers.last?.follow ?? 0)
+        let street = home.blended(with: live, follow: CityDiorama.layers.first { $0.name == "street" }?.follow ?? 0.62)
         let picture = street.rect(CityDiorama.imageRect)
         let window = Self.bounds(outline)
         for index in sprites.indices {
@@ -263,7 +263,7 @@ final class CityDioramaView: UIView {
                 continue
             }
             let lane = CityDiorama.plan.lanes[car.lane]
-            let scale = lane.direction < 0 ? CityDiorama.cars.farScale : CityDiorama.cars.nearScale
+            let scale = CityDiorama.cars.scales[car.lane]
             let width = picture.width * scale / CGFloat(CityDiorama.cars.cells)
             let height = picture.height * scale * 213 / CityDiorama.size.height
             let centre = CGPoint(
@@ -282,6 +282,19 @@ final class CityDioramaView: UIView {
                                             width: 1 / CGFloat(CityDiorama.cars.cells), height: 1)
             }
         }
+    }
+
+    /// The sky doesn't move with the room, so the opening can turn past its edge; it grows, keeping its shape, and
+    /// slides until the whole opening is inside it.
+    private static func covering(_ frame: CGRect, opening: CGRect) -> CGRect {
+        let need = opening.insetBy(dx: -opening.width * 0.04, dy: -opening.height * 0.04)
+        let scale = max(1, need.width / frame.width, need.height / frame.height)
+        var out = frame.insetBy(dx: -frame.width * (scale - 1) / 2, dy: -frame.height * (scale - 1) / 2)
+        out.origin.x = min(out.minX, need.minX)
+        out.origin.x = max(out.minX, need.maxX - out.width)
+        out.origin.y = min(out.minY, need.minY)
+        out.origin.y = max(out.minY, need.maxY - out.height)
+        return out
     }
 
     private static func bounds(_ points: [CGPoint]) -> CGRect {

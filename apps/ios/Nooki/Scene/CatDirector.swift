@@ -45,6 +45,8 @@ final class CatDirector {
     private(set) var path = ""
     private(set) var needs: PetNeeds?
     private(set) var lastEvent = "–"
+    /// What put her back in view, for the observatory; she should never need it.
+    private(set) var resets: [String] = []
     private(set) var top: [CatUtilityScore] = []
     private(set) var rest = NookiRestPose.sit
     private(set) var spot = NookiSpot.home
@@ -58,6 +60,13 @@ final class CatDirector {
     private(set) var timeline: [CatObservation] = []
     /// Whether the Labs card is on screen; the scores it shows are worked out only then.
     @ObservationIgnored var observing = false
+
+    /// What her sheet tells beyond her needs: her day, her nature and her favourite spot. Worked out when asked; nil
+    /// until the brain drives her.
+    var about: CatAbout? {
+        guard needs != nil else { return nil }
+        return runner.brain.about(events: source.events)
+    }
 
     /// A launch argument (`-labs.catBrainTour YES`) that starts the tour at once, for recordings.
     static let tourKey = "labs.catBrainTour"
@@ -75,7 +84,7 @@ final class CatDirector {
     }
 
     @ObservationIgnored private let walker: CatWalker
-    @ObservationIgnored private let spots: [NookiSpot: CatWalker.Destination]
+    @ObservationIgnored private var spots: [NookiSpot: CatWalker.Destination]
     @ObservationIgnored private let source: CatEventSource
     @ObservationIgnored private let analytics: CatAnalytics
     @ObservationIgnored private let defaults: UserDefaults
@@ -120,6 +129,19 @@ final class CatDirector {
             }
             return true
         }
+    }
+
+    /// The room's places changed, as the player stood a piece in it or took one away: the script and the brain's
+    /// room follow, and she keeps what she is doing.
+    func update(spots new: [NookiSpot: CatWalker.Destination]) {
+        guard Set(new.keys) != Set(spots.keys) else {
+            spots = new
+            return
+        }
+        spots = new
+        let available = Set(new.keys).union([.home])
+        script = NookiCatScript(spots: available)
+        runner.setRoom(NookiSpot.affordances(available), weather: runner.brain.weather)
     }
 
     // MARK: - The couple
@@ -193,6 +215,12 @@ final class CatDirector {
     }
 
     /// What she has been doing, as text to paste.
+    func noteReset(_ reason: String) {
+        print("cat reset: \(reason)")
+        resets.append(reason)
+        if resets.count > 5 { resets.removeFirst() }
+    }
+
     func log() -> String {
         let now = clock.sim(at: Date.now.timeIntervalSince1970)
         return observatory.log(

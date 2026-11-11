@@ -9,42 +9,41 @@ interface Props {
 const { apps, caption } = Astro.props;
 ---
 
-<div class="lit-panel min-w-0 overflow-x-auto p-2 md:p-4">
-  <table class="w-full min-w-[40rem] border-collapse text-left text-small">
-    <caption class="px-3 pt-2 pb-4 text-left text-muted">
-      {caption} ✓ means the app's App Store page or website lists it; a dash means we didn't find it listed. Checked{" "}
-      <time datetime={checked.iso}>{checked.label}</time>.
+<div class="tbl tbl-wide">
+  <table>
+    <caption>
+      {caption} ✓ means the app's App Store page or website lists it; a dash means we didn't find it listed. Checked <time
+        datetime={checked.iso}>{checked.label}</time
+      >.
     </caption>
     <thead>
-      <tr class="border-b border-paper/15">
-        <th scope="col" class="px-3 py-3 font-extrabold"></th>
-        {apps.map((app) => <th scope="col" class="px-3 py-3 font-extrabold">{app.name}</th>)}
+      <tr>
+        <td></td>
+        {apps.map((app) => <th scope="col">{app.name}</th>)}
       </tr>
     </thead>
-    <tbody class="text-soft">
-      <tr class="border-b border-paper/10">
-        <th scope="row" class="px-3 py-3 font-bold text-paper">Price</th>
-        {apps.map((app) => <td class="px-3 py-3 align-top">{app.price}</td>)}
+    <tbody>
+      <tr>
+        <th scope="row">Price</th>
+        {apps.map((app) => <td>{app.price}</td>)}
       </tr>
-      <tr class="border-b border-paper/10">
-        <th scope="row" class="px-3 py-3 font-bold text-paper">Android</th>
-        {apps.map((app) => <td class="px-3 py-3">{app.android ? "Yes" : "No, iPhone only"}</td>)}
+      <tr>
+        <th scope="row">Android</th>
+        {apps.map((app) => <td>{app.android ? "Yes" : "No, iPhone only"}</td>)}
       </tr>
       {
         capabilities.map((capability) => (
-          <tr class="border-b border-paper/10">
-            <th scope="row" class="px-3 py-3 font-bold text-paper">{capability.label}</th>
-            {apps.map((app) => (
-              <td class:list={["px-3 py-3", app.has.includes(capability.key) && "text-honey"]}>
-                {app.has.includes(capability.key) ? "✓" : "–"}
-              </td>
-            ))}
+          <tr>
+            <th scope="row">{capability.label}</th>
+            {apps.map((app) =>
+              app.has.includes(capability.key) ? <td class="yes">✓</td> : <td>–</td>,
+            )}
           </tr>
         ))
       }
       <tr>
-        <th scope="row" class="px-3 py-3 font-bold text-paper">App Store rating</th>
-        {apps.map((app) => <td class="px-3 py-3">{app.rating}</td>)}
+        <th scope="row">App Store rating</th>
+        {apps.map((app) => <td>{app.rating}</td>)}
       </tr>
     </tbody>
   </table>

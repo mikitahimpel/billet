@@ -162,6 +162,12 @@ export const placement = sqliteTable("placement", {
   position: integer("position").notNull(),
 });
 
+// The room's own furniture the pair put away. A piece of it with no placement and no row here stands at home.
+export const stowedPiece = sqliteTable("stowed_piece", {
+  itemId: text("item_id").primaryKey(),
+  position: integer("position").notNull(),
+});
+
 // The newest layout changes applied, oldest first, so a repeated change is answered and not applied twice.
 export const layoutLog = sqliteTable("layout_log", {
   changeId: text("change_id").primaryKey(),

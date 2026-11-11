@@ -1,0 +1,19 @@
+{
+ "id": "yarnbasket",
+ "name": "Basket of yarn",
+ "kind": "SOLID",
+ "width_m": 0.202,
+ "depth_m": 0.198,
+ "height_m": 0.154,
+ "footprint_cells": [
+  5,
+  4
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.202,
+ "anchors": [],
+ "tris": 2000,
+ "affordance": "smallItem",
+ "usdz_kb": 270
+}

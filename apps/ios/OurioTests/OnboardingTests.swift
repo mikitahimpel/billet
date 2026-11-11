@@ -1,9 +1,13 @@
 import FeaturePairing
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import Synchronization
 import Testing
 import Transport
+import UsInterface
 import Wire
 @testable import Billet
 

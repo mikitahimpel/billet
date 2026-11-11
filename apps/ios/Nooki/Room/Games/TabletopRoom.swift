@@ -12,6 +12,8 @@ final class TabletopRoom: CatRoom {
     static let catScale: Float = 0.68
     /// The wall behind her, along z.
     private static let wallAt: Float = -0.42
+    /// The row of props along the wall; the cat and what she plays with sit in front of it.
+    private static let backRow: Float = wallAt + 0.06
 
     let camera = PerspectiveCamera()
     private(set) var scenery: GameScenery
@@ -21,7 +23,7 @@ final class TabletopRoom: CatRoom {
     private var dressing: Entity?
 
     override var framing: Framing {
-        Framing(target: [0, 0.07, 0.02], direction: simd_normalize([0.2, 0.5, 1]), far: 3.2, near: 3.2)
+        Framing(target: [0, 0.07, 0.02], direction: simd_normalize([0.1, 0.3, 1]), far: 3.2, near: 3.2)
     }
     override var yawLimit: Float { 0 }
 
@@ -37,7 +39,7 @@ final class TabletopRoom: CatRoom {
         camera.look(at: framing.target, from: framing.target + framing.direction * framing.far, relativeTo: nil)
 
         dressing = Self.dress(pivot, as: scenery)
-        buildCat(at: [0, Self.floorTop + 0.003, -0.1], rests: [0], scale: Self.catScale, wandering: false)
+        buildCat(at: [0, Self.floorTop + 0.003, -0.1], rests: [.pi], scale: Self.catScale, wandering: false)
         buildLighting()
         buildMotes()
     }
@@ -83,7 +85,6 @@ final class TabletopRoom: CatRoom {
         switch scenery {
         case .room, .rug: (0xFFE2B8, 320, 0xFFE7C4, 0xB97A45)
         case .kitchen: (0xFFF0D8, 340, 0xFFF4E4, 0xC9A27A)
-        case .garden: (0xFFF4DC, 380, 0xE8F2D8, 0x8F9A5E)
         }
     }
 
@@ -91,56 +92,87 @@ final class TabletopRoom: CatRoom {
     private static func dress(_ pivot: Entity, as scenery: GameScenery) -> Entity {
         let g = pivot.group()
         let top = floorTop
-        // Wall props face +X; turned, they face the camera.
-        let onWall = simd_quatf.y(-.pi / 2)
         switch scenery {
-        case .room, .rug:
+        case .rug:
+            rugCorner(g)
+        case .room:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
             g.cylinder(0.002, 0.42, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, 0.02])
             g.cylinder(0.0024, 0.36, Clay.matte(0xE9C9A0, roughness: 1), at: [0, top + 0.0012, 0.02])
             wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
             window(g, at: [0.2, 0.25, wallAt + 0.012])
-            Props.picture(g, at: [-0.2, 0.22, wallAt + 0.012], width: 0.12, height: 0.09)
-            Array(g.children).last?.orientation = onWall
-            Props.snakePlant(g, at: [-0.36, top, -0.3])
-            Props.plush(g, at: [0.34, top, -0.28], rotation: .y(-0.6))
+            Props.bookStack(g, at: [0.14, top, backRow], tones: [0x6F8FB0, 0xE98A5B, 0x93A86A], rotation: .identity)
+            Props.snakePlant(g, at: [-0.36, top, backRow])
+            Props.plush(g, at: [0.36, top, backRow], rotation: .identity)
         case .kitchen:
-            g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xE9DCC8, roughness: 0.6), at: [0, 0, 0])
-            g.box(0.44, 0.004, 0.3, r: 0.002, Clay.matte(0x9DB08A, roughness: 1), at: [0, top + 0.002, 0.03])
-            wall(g, tone: 0xDDE6DA, skirting: 0xC8D3C4)
-            // A run of cupboards under a wooden counter, with a shelf of jars above.
-            g.box(1.0, 0.15, 0.1, r: 0.006, Clay.matte(0xF3E6D2, roughness: 0.6), at: [0, top + 0.075, wallAt + 0.06])
-            g.box(1.02, 0.014, 0.12, r: 0.004, Clay.matte(0xB46C3C, roughness: 0.6), at: [0, top + 0.157, wallAt + 0.06])
-            for x: Float in [-0.36, -0.12, 0.12, 0.36] {
-                g.sphere(0.006, Clay.matte(0xB46C3C), at: [x, top + 0.12, wallAt + 0.112])
-            }
-            g.box(0.5, 0.01, 0.06, r: 0.003, Clay.matte(0xB46C3C, roughness: 0.6), at: [-0.1, 0.32, wallAt + 0.03])
-            for (i, tone) in [UInt32(0xF0663A), 0xF2A65E, 0x6F8FB0].enumerated() {
-                g.cylinder(0.05, 0.018, Clay.matte(tone, roughness: 0.4), at: [-0.26 + Float(i) * 0.08, 0.35, wallAt + 0.03])
-            }
-            Props.catBowls(g, at: [0.36, top, -0.24], rotation: .y(-0.4))
-        case .garden:
-            g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xB98A5E, roughness: 0.8), at: [0, 0, 0])
-            for z in stride(from: Float(-0.36), through: 0.4, by: 0.08) {
-                g.box(1.2, 0.002, 0.004, r: 0.001, Clay.matte(0x9C7048, roughness: 1), at: [0, top + 0.001, z])
-            }
-            // A hedge for a wall, in soft lumps.
-            g.box(1.6, 0.3, 0.1, r: 0.04, Clay.matte(0x6F8A4E, roughness: 1), at: [0, top + 0.15, wallAt])
-            for i in 0..<9 {
-                let x = -0.64 + Float(i) * 0.16
-                g.sphere(0.09, Clay.matte(i % 2 == 0 ? 0x93A86A : 0x7F9A5A, roughness: 1),
-                         at: [x, top + 0.3, wallAt + 0.01], scale: [1, 0.8, 0.7])
-            }
-            Props.snakePlant(g, at: [-0.34, top, -0.26], pot: 0xD8653F)
-            Props.cactus(g, at: [0.36, top, -0.27])
-            Props.toyMouse(g, at: [0.3, top, 0.02], rotation: .y(0.7))
+            g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xD9AE78, roughness: 0.8), at: [0, 0, 0])
+            kitchen(g)
         }
         return g
     }
 
+    /// The brush's corner: a warm rug under her, two walls, and a cushion, a basket, a plant and a lamp set round the
+    /// edge of what the close camera shows. A few clay primitives and baked blobs, nothing that casts a shadow.
+    private static func rugCorner(_ g: Entity) {
+        let top = floorTop
+        let side: Float = -0.27
+        g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
+        g.cylinder(0.002, 0.3, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0024, 0.25, Clay.matte(0xE9B8A0, roughness: 1), at: [0, top + 0.0012, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0028, 0.17, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0014, -0.02], scale: [1.25, 1, 1])
+        wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
+        let left = g.group(at: [side, 0, 0], rotation: .y(.pi / 2))
+        left.box(1.2, 1.2, 0.02, r: 0.004, Clay.matte(0xEBD3B4, roughness: 0.9), at: [0, top + 0.6, 0])
+        left.box(1.2, 0.03, 0.012, r: 0.003, Clay.matte(0xE6CDAE, roughness: 0.8), at: [0, top + 0.015, 0.014])
+        window(g, at: [0.12, 0.27, wallAt + 0.012])
+        g.contactBlob(at: [-0.2, top, wallAt + 0.04], width: 0.12, depth: 0.1)
+        Props.lamp(g, at: [-0.2, top, wallAt + 0.05])
+        g.contactBlob(at: [0.19, top, wallAt + 0.05], width: 0.1, depth: 0.09)
+        Props.snakePlant(g, at: [0.19, top, wallAt + 0.05], pot: 0xD8653F)
+        g.contactBlob(at: [-0.19, top, -0.2], width: 0.14, depth: 0.12)
+        Props.basket(g, at: [-0.19, top, -0.2])
+        g.contactBlob(at: [0.2, top, -0.2], width: 0.14, depth: 0.12)
+        Props.cushion(g, at: [0.2, top, -0.2], tone: 0xE98A5B)
+        Props.bookStack(g, at: [0.0, top, wallAt + 0.06], tones: [0x6F8FB0, 0xE98A5B, 0x93A86A], rotation: .identity)
+    }
+
+    /// The kitchen's baked wall and floor: two unlit pictures, the wall standing behind the rug the cat sits on.
+    static let kitchenWall: Float = -0.7
+    private static let kitchenFloor: (width: Float, depth: Float) = (1.68, 1.26)
+    private static let kitchenWallSize: (width: Float, height: Float) = (0.8, 0.88)
+
+    private static func kitchen(_ g: Entity) {
+        let back = kitchenWall
+        g.picture("kitchen_floor", width: kitchenFloor.width, height: kitchenFloor.depth, lying: true,
+                  at: [0, floorTop + 0.001, back + kitchenFloor.depth / 2],
+                  margin: (left: 1.5, right: 1.5, top: 0, bottom: 1.5))
+        // The counter's cabinets stand forward of the wall and its splashback, on a layer of their own, so a lean of the
+        // camera moves the three against each other.
+        let size = kitchenWallSize
+        let split = counterTop
+        let wallRows = (split - overlap)...1
+        let wallHeight = size.height * (1 - wallRows.lowerBound)
+        g.picture("kitchen_wall", width: size.width, height: wallHeight, lying: false,
+                  at: [0, floorTop + size.height * wallRows.lowerBound + wallHeight / 2, back],
+                  margin: (left: 1.2, right: 1.2, top: 1.0, bottom: 0), rows: wallRows)
+        let counterHeight = size.height * split
+        g.picture("kitchen_wall", width: size.width, height: counterHeight, lying: false,
+                  at: [0, floorTop + counterHeight / 2, back + counterForward],
+                  margin: (left: 1.2, right: 1.2, top: 0, bottom: 0.3), rows: 0...split)
+        g.contactBlob(at: [0, floorTop, back + counterForward + 0.06], width: 1.6, depth: 0.14)
+    }
+
+    /// Where the counter's top edge sits in the wall image, from its bottom, and how far the wall piece reaches down
+    /// behind it, as shares of the image's height.
+    private static let counterTop: Float = 0.228
+    private static let overlap: Float = 0.04
+    private static let counterForward: Float = 0.07
+
     private static func wall(_ g: Entity, tone: UInt32, skirting: UInt32) {
-        g.box(1.6, 0.6, 0.02, r: 0.004, Clay.matte(tone, roughness: 0.9), at: [0, floorTop + 0.3, wallAt])
+        g.box(1.6, 1.2, 0.02, r: 0.004, Clay.matte(tone, roughness: 0.9), at: [0, floorTop + 0.6, wallAt])
         g.box(1.6, 0.03, 0.012, r: 0.003, Clay.matte(skirting, roughness: 0.8), at: [0, floorTop + 0.015, wallAt + 0.014])
+        g.box(1.6, 0.17, 0.008, r: 0.003, Clay.matte(skirting, roughness: 0.85), at: [0, floorTop + 0.115, wallAt + 0.012])
+        g.box(1.6, 0.008, 0.014, r: 0.002, Clay.matte(0xFFF3E2, roughness: 0.7), at: [0, floorTop + 0.2, wallAt + 0.014])
     }
 
     /// A small bright window, the soft light the corner seems lit from.
@@ -167,11 +199,63 @@ struct TabletopView: View {
             RealityView { content in
                 content.camera = .virtual
                 content.add(room.root)
-                room.start(updatesFrom: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
+                room.start(on: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
             }
+            // A soft shade at the corners: the corner reads as a space, the middle stays as bright as it was.
+            RadialGradient(colors: [.clear, Color.honeyDeep.opacity(0.22)], center: .center, startRadius: 220, endRadius: 560)
         }
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+}
+
+extension Entity {
+    /// Whether the top of an image is v = 1 or v = 0 on RealityKit's own planes, read from one so the quads below match.
+    private static let planeTopV: Float = {
+        let mesh = MeshResource.generatePlane(width: 1, height: 1)
+        guard let part = mesh.contents.models.first?.parts.first, let coordinates = part.textureCoordinates else { return 1 }
+        let positions = Array(part.positions.elements)
+        let uvs = Array(coordinates.elements)
+        guard positions.count == uvs.count,
+              let top = positions.indices.max(by: { positions[$0].y < positions[$1].y }) else { return 1 }
+        return uvs[top].y > 0.5 ? 1 : 0
+    }()
+
+    /// A bundled image on unlit quads: standing and facing +z, or lying on the floor with its top toward -z, centered
+    /// on `position`. `rows` is the share of the image's height shown, from its bottom edge (0) to its top (1). `margin` carries the image's edge pixels on past its border, stretched, so the picture bleeds
+    /// off the screen however wide or tall the phone's frame is.
+    @discardableResult
+    func picture(_ name: String, width: Float, height: Float, lying: Bool, at position: SIMD3<Float>,
+                 margin: (left: Float, right: Float, top: Float, bottom: Float), rows: ClosedRange<Float> = 0...1) -> Entity? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "webp"),
+              let image = UIImage(contentsOfFile: url.path)?.cgImage,
+              let texture = try? TextureResource(image: image, options: .init(semantic: .color)) else { return nil }
+        var material = UnlitMaterial(applyPostProcessToneMap: false)
+        material.color = .init(tint: .white, texture: .init(texture))
+        let group = self.group(at: position)
+        let across: [Float] = [-width / 2 - margin.left, -width / 2, width / 2, width / 2 + margin.right]
+        let up: [Float] = [-height / 2 - margin.bottom, -height / 2, height / 2, height / 2 + margin.top]
+        let topIsOne = Self.planeTopV > 0.5
+        func vertex(_ a: Float, _ b: Float) -> (SIMD3<Float>, SIMD2<Float>) {
+            let u = min(max((a + width / 2) / width, 0.002), 0.998)
+            let t = min(max((b + height / 2) / height, 0.002), 0.998)
+            let row = rows.lowerBound + t * (rows.upperBound - rows.lowerBound)
+            return (lying ? [a, 0, -b] : [a, b, 0], [u, topIsOne ? row : 1 - row])
+        }
+        for column in 0..<3 {
+            for row in 0..<3 where across[column + 1] - across[column] > 0.0001 && up[row + 1] - up[row] > 0.0001 {
+                let corners = [vertex(across[column], up[row]), vertex(across[column + 1], up[row]),
+                               vertex(across[column + 1], up[row + 1]), vertex(across[column], up[row + 1])]
+                var piece = MeshDescriptor(name: "picture")
+                piece.positions = MeshBuffers.Positions(corners.map(\.0))
+                piece.normals = MeshBuffers.Normals(Array(repeating: lying ? [0, 1, 0] : [0, 0, 1], count: 4))
+                piece.textureCoordinates = MeshBuffers.TextureCoordinates(corners.map(\.1))
+                piece.primitives = .triangles([0, 1, 2, 0, 2, 3])
+                guard let mesh = try? MeshResource.generate(from: [piece]) else { continue }
+                group.addChild(ModelEntity(mesh: mesh, materials: [material]))
+            }
+        }
+        return group
     }
 }

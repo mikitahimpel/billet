@@ -354,8 +354,7 @@ struct DrawGuessTests {
 
     /// The bundled words are the server's catalog: a drift would offer words the server list doesn't know.
     @Test func bundlesTheServersWords() throws {
-        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .appending(path: "../../../packages/contracts/domain/src/riddle-words.ts").standardizedFileURL
+        let url = Repo.root.appending(path: "packages/contracts/domain/src/riddle-words.ts")
         let source = try String(contentsOf: url, encoding: .utf8)
         func tier(_ name: String) throws -> [String] {
             let section = try #require(source.firstMatch(of: try Regex("\(name): words\\(\\[([\\s\\S]*?)\\]\\),")))

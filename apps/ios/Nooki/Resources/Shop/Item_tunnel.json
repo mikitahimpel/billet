@@ -1,0 +1,19 @@
+{
+ "id": "tunnel",
+ "name": "Cat tunnel",
+ "kind": "SOLID",
+ "width_m": 0.258,
+ "depth_m": 0.299,
+ "height_m": 0.234,
+ "footprint_cells": [
+  6,
+  6
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.299,
+ "anchors": [],
+ "tris": 1800,
+ "affordance": "hide",
+ "usdz_kb": 227
+}

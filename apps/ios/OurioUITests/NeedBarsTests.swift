@@ -1,6 +1,6 @@
 import XCTest
 
-/// The cat sheet shows her four needs, met, in the middle and low, with a screenshot of each. Each state needs its
+/// The cat sheet shows her four needs as gauges, met, in the middle and low, with a screenshot of each. Each state needs its
 /// own launch, as `-uitestNeeds` is read at launch.
 final class NeedBarsTests: XCTestCase {
     override func setUpWithError() throws {
@@ -26,21 +26,21 @@ final class NeedBarsTests: XCTestCase {
         XCTAssertTrue(splash.waitForNonExistence(timeout: 30), "the launch splash should lift")
         pet.tap()
 
-        // The sheet is up once its last line shows; then each need's row.
+        // The sheet is up once the line on its hero shows; then each need's tile.
         let sheet = app.staticTexts.matching(NSPredicate(format: "label BEGINSWITH 'With you two'")).firstMatch
         XCTAssertTrue(sheet.waitForExistence(timeout: 30), "the cat's sheet should open")
         for need in ["Full", "Rested", "Playful", "Loved"] {
             XCTAssertTrue(app.descendants(matching: .any)[need].firstMatch.waitForExistence(timeout: 15),
-                          "the \(need) row should show")
+                          "the \(need) tile should show")
         }
-        // Every care shows, on a row or under them, and the last line ends on screen: the sheet fits without a scroll.
+        // Every care is there, on a tile or under them, and the hero's line is on screen.
         for action in ["Feed", "Water", "Play", "Brush", "Pet"] {
             XCTAssertTrue(app.buttons[action].exists, "the \(action) care should show")
         }
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Treat'")).firstMatch.exists)
         Thread.sleep(forTimeInterval: 1.5)
-        XCTAssertLessThanOrEqual(sheet.frame.maxY, app.frame.maxY, "the journal line should end on screen")
-        XCTAssertTrue(sheet.isHittable, "the journal line should not sit under the home indicator")
+        XCTAssertLessThanOrEqual(sheet.frame.maxY, app.frame.maxY, "the hero should be on screen")
+        XCTAssertTrue(sheet.isHittable, "the hero should be reachable")
         let shot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         shot.name = "needs-\(name)"
         shot.lifetime = .keepAlways

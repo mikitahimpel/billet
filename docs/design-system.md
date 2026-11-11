@@ -4,6 +4,9 @@ One look for the whole app: native iOS 26 with a warm honey accent. Everything b
 package `packages/ios/design` (module `Design`); `Settings → Labs → Style` draws it on a device. Read this
 before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 
+The model behind the rules, clay for content and glass for chrome, is [design/one-system.md](design/one-system.md);
+where the app stands against it is [design/audit-2026-11-11.md](design/audit-2026-11-11.md).
+
 `docs/design.md` is the old Little House design and does not describe the app.
 
 ## Rules
@@ -19,9 +22,13 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
    chevron. Never "Done" or "Cancel" text, never a hand-drawn circle. With `hasChanges:` confirm stays disabled
    until something changed, closing asks "Discard changes?" and a swipe down is blocked meanwhile. A count under
    the title is `subtitle:`, in the same slot.
-4. **One card, one inset.** Cards and grouped sections use `Radius.card` on `Ink.surface`, padded by
+4. **One card, one inset.** Cards and grouped sections are `cardSurface()` at `Radius.card`
+   ([cards-v2.md](design/cards-v2.md): an opaque fill lit from above, a 1 pt highlight edge, one pre-rendered
+   shadow), padded by
    `CardMetrics.padding` (`check-design.mjs` fails on a `.cardSurface()` padded by anything else on every side); screens and sheets keep `Space.gutter` (20) at the sides, 16 over the room. A card that opens
-   something starts with `CardHeader`. No gradients, rims or shadows on a card; the hero is only `warm`.
+   something starts with `CardHeader`. The surface's gradient, edge and shadow are the package's; feature code adds
+   none of its own, and a card with its own fill takes `.cardShadow()`. One `warm` card per screen. No blur or
+   material on a card.
 5. **One shape language** (see [Shape](#shape)): corners come from `Radius`, fields from `Field`, and nothing in
    feature code writes a radius as a number. CI fails on a new one (`check-design.mjs`, `radius-baseline.json`).
 6. **One primary action per screen:** `PrimaryButton`, honey, full width. Next to it `SecondaryButton`. A
@@ -38,18 +45,22 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 11. **One glass, three roles** (below): every floating surface is `glass(_:role:)` or `accentGlass()`, tinted
     `Ink.glassFill` with `Ink.glassGlyph`, never white on clear glass: both adapt to the theme and pass 4.5:1 over
     the dark room, a bright room and the city. The coin has a dark ring so it never melts into honey.
-12. **Icon tiles have one rule:** a full-tint glyph on the same tint at 16%, for every row. No tint is the
-    accent (`Ink.accentText` glyph); destructive is `Ink.destructive` only.
+12. **Icon tiles are `RowIcon`, in two styles.** `.clay` is the mark of a card, a tile or an empty state: a
+    rounded tile filled with its tint, the glyph in the tint's deep shade. `.well` is a row's quiet mark: the
+    glyph on the tint at 20%. No tint is the accent; destructive is `Ink.destructive` only. A list of rows stays
+    quiet, so a screen never shows more than a few clay tiles.
 13. **Switches, not tabs.** Toggles are `.toggleStyle(.switch)` with the honey tint. No segmented control in
     content; `GlassSegmented` is only the Living room | Bedroom switch. The Shop's category row is navigation, not a
     switch: pinned `FilterChip`s with an icon each.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
-    `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
-    `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
-    glass is tinted enough that nothing ghosts through it. Chips, a search field or a subtitle pinned over a
-    sheet's list go in `.scrollHeader { }`, which pins them over the scroll view so the rows fade under them on
-    the sheet's ground instead of being cut at their edge. `check-design.mjs` fails on a scroll view without
-    either in a file on the design package, and on any `.hard` edge.
+    `.ourioScrollEdges()`: the system's iOS 26 scroll edge effect, the same at the top and the bottom, as in the
+    system's own sheets. `Page`, `BilletSheet`, `TabPage` and Home's bars already apply it. Content at rest starts
+    below the bar, so only what has scrolled under it softens. Before iOS 26 Home's bars draw the fade themselves.
+    Never a hard edge, and never a gradient or ground of your own laid under a bar: it shows as a band. Chips, a
+    search field or a subtitle pinned over a sheet's list go in `.scrollHeader { }`: the system draws no edge
+    effect under such a bar in a sheet, so it lays the sheet's ground behind the header and the title bar and
+    fades it out over `Space.xl` below, and the rows sink away under it. `check-design.mjs` fails on a scroll view without either in a file on the design package,
+    and on `.scrollEdgeEffectStyle` or `.scrollEdgeEffectHidden` outside the design package.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
@@ -60,17 +71,26 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | Need | Use |
 | --- | --- |
 | A sheet | `BilletSheet("Title", size:, onConfirm:) { content }` |
+| A tab's root (World, Moments, Shop, Us) | `TabPage { ... }`, or `.tabContentInsets()` on its own scroll view; no title of its own, the tab bar names it. A tab's switch (Living room \| Bedroom, Photos \| Board) is a `GlassSegmented` in the header's `below` slot, the same size and place on every tab |
 | A pushed or full screen of sections | `Page { ... }` |
 | A full screen with a main action | `Screen { content } primary: { } secondary: { }`; over art or a camera `.bottomActions(primary:secondary:)`; under a fixed header `ActionSlot` |
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
 | A row | `Row(title, detail:, symbol:, tint:) { trailing }`, `ToggleRow`, `PickerRow`, `RowChevron` |
-| Any other content on a card | `Card { ... }` or `.cardSurface()` |
-| A state read at a glance that a tap acts on (the cat's needs) | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. The state is a word, never a bar or a percentage (VoiceOver gets the number through `value:`); only a state that wants something now is `.raised` |
+| Any other content on a card | `Card { ... }` or `.cardSurface()`; `state: .selected / .disabled` for a card that is chosen or can't be |
+| A state read at a glance that a tap acts on, in a list | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. Only a state that wants something now is `.raised` |
+| A level read at a glance that a tap acts on (the cat's needs) | `GaugeTile(title, state:, hint:, value:, symbol:, tint:, emphasis:, action:) { }` in an `ItemGrid`: a ring that fills to the level round its glyph, the percentage, the state in a word, what comes next ("Hungry in about 2 h") and the care as a pill; `note:` when nothing can be done. One tint per level; only the one that wants something now is `.raised`, and only it takes the accent |
+| Several levels at once round an avatar | `SegmentedRing([.init(value:tint:)])`: an arc each, clockwise from the upper leading quarter, in the order their tiles have on the sheet the avatar opens |
+| A progress along a line (a level, a trait) | `MeterBar(value:tint:)` |
+| A day or a history as a few marks in order | `MomentStrip([StripMoment(id:symbol:tint:title:time:)])`: a card that scrolls sideways under faded edges and opens at the latest; a list at accessibility sizes |
 | What an avatar or a round control wants, while it matters | `SymbolBadge(symbol:tint:)` at its top trailing corner; nothing when nothing is wanted |
 | A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
 | Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
-| A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, open:) { art } leadingBadge: trailingBadge: footer: }` |
-| A picture or tile clipped to the scale | `.corners(.card / .inner / .control)`, a tile's fill `.cornerFill(.inner, style)` |
+| A shelf of things to open or buy | `ItemGrid { ItemCard(name, subtitle:, tag:, open:) { art } leadingBadge: trailingBadge: footer: }`; `tag: ItemTag(title, color:)` is its kind (a rarity) as a dot and a word |
+| A picture clipped to the scale | `.corners(.card / .inner / .control)` |
+| A recess in a card: an art slot, a thumbnail's backdrop, an inset note | `.wellSurface()`; never a fill of your own, and never a card in a card |
+| A line between two rows you lay out yourself on one card | `Hairline(inset:)`; `GroupedSection` draws its own |
+| Progress toward one goal, as a bar in a card | `ProgressBar(value:total:tint:)`, with an `.accessibilityLabel` |
+| A round control on content (add to a list, the next picture) | `RoundButton(symbol:label:style:)`, `.honey` for the screen's one accent; over the room or a canvas it is `GlassIconButton` |
 | The top of a card | `CardHeader(title, detail:, symbol:, tint:)`, or with `leading:` / `detail:` / `trailing:` views; art goes in `CardArt` |
 | A text field | `Field(placeholder, text:, axis:, lines:, font:, failed:)` |
 | A labelled field with its error or footnote | `FormField(label, placeholder:, text:, footer:, error:)` |
@@ -94,22 +114,32 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
 | A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
-| A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:)` on the note's face |
+| A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
+| A screen's few big actions side by side | `ActionTiles([ActionTile(title, status:, symbol:, tint:) {}])`: equal squares while every label fits on one line, a `GroupedSection` of rows otherwise |
+| A progress toward one goal, in a hero | `ProgressRing(value:tint:) { centre }` |
+| Something to open on a shelf that scrolls sideways, with art | `PosterCard(title, status:, emphasis:, action:) { PosterScene(tone:framing:hero:prop:) }`, the title on a paper ribbon over the art, three fifths of the width each (`containerRelativeFrame(count: 5, span: 3)`), stacked at accessibility sizes |
+| A stamp on its own | `PostageStamp(_:size:rare:postmark:pinned:)`: `.small` in a control, `.regular` in a row, `.large` alone; `pinned` in a row, `postmark` once sent |
 
 ### Do and don't
 
 - Do give a sheet exactly one size: `.fit` for a few controls, `.medium` or `.large` for lists.
 - Do put an empty state in `.fit`, not in a large sheet.
+- Do mark a page pushed from a `.fit` sheet with `.expandsSheet()`, so the sheet rises to full height for it.
 - Do keep the toolbar to close or confirm.
 - Don't draw an `xmark` yourself, or add a `Button("Done")`.
 - Don't put `ContentUnavailableView` in a large sheet; it fills the space.
 - Don't force `.colorScheme(.light)` on a card to make it pop; use `Ink.surface`.
 - Don't write a radius as a number, or pick one by eye; see [Shape](#shape).
+- Don't fill a shape behind content yourself (`.cornerFill`, `.background(Ink.surface…)`, `Ink.surfaceRaised`,
+  `.listRowBackground`): a slab is `cardSurface()`, a recess in it `.wellSurface()`. `check-design.mjs` counts
+  them (`flat-surface`), and a stroke of your own (`raw-stroke`).
 - Don't draw a field with `TextField` + `.background(...)`; use `Field` or `.fieldSurface()`.
 - Don't make a "Try again" `Button` of your own; `check-design.mjs` fails on one (`retry-baseline.json`).
 - Don't stack chips or a field above a sheet's `ScrollView` in a `VStack`; the rows cut hard under them. Use
   `.scrollHeader`.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
+- Don't label a button with a bare symbol outside a toolbar: its tap area is the glyph. Frame the label
+  `Size.control` square with `.contentShape(.rect)`, or use `GlassIconButton` (check-design fails otherwise).
 - Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
   `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
 
@@ -174,7 +204,7 @@ on `.calloutBubble(pointer:)`.
 
 - `packages/ios/scripts/check-design.mjs` (CI, `ios:format:check`) runs the rules in `design-rules.mjs` over
   feature code: raw colours, non-`.ourio` fonts, numeric paddings and heights, hand-made corners, shadows,
-  blurs and materials, `GeometryReader`, system or plain button styles, TipKit without the Hint style, and Text
+  flat fills, strokes, blurs and materials, `GeometryReader`, system or plain button styles, TipKit without the Hint style, and Text
   without a text style. Each file may keep at most its count in `packages/ios/design/lint/baseline.json`, which
   only shrinks (`node packages/ios/scripts/check-design.mjs --update` lowers it after a cleanup, never raises it).
   `lint/allow.json` exempts a path from one rule and grows only together with a change to the design package.
@@ -190,6 +220,8 @@ on `.calloutBubble(pointer:)`.
 - `Color(...)`, `.white`, `.black` or a system colour for UI; `.font(.system...)`, `.headline` and friends.
 - `RoundedRectangle`, `.cornerRadius`, `.clipShape(.rect(cornerRadius:))`: use `Card`, `.cardSurface()`,
   `.corners(_:)`.
+- `.cornerFill`, `Ink.surface` or `Ink.surfaceRaised` as a fill, `.listRowBackground`, `.stroke`, `.strokeBorder`:
+  content sits on `cardSurface()` or in `.wellSurface()`.
 - `.shadow`, `.blur`, a `Material`, `.glassEffect` of your own (`Toast` and `glass(_:role:)` have theirs);
   `GeometryReader` for layout.
 - `.buttonStyle(.plain / .bordered / .borderedProminent)` on a visible button; a hand-made toast, hint or
@@ -201,14 +233,17 @@ on `.calloutBubble(pointer:)`.
 | Token | Use |
 | --- | --- |
 | `Ink.screen`, `Ink.surface`, `Ink.surfaceRaised`, `Ink.separator` | backgrounds and hairlines, adaptive |
+| `Ink.cardFill`, `.honeyFace` | the card's own gradient and a honey button's lit face; feature code reaches them through `cardSurface()` and the buttons |
 | `Ink.text`, `.textSecondary`, `.textTertiary`, `.accentText` | text, adaptive |
 | `Ink.glassFill`, `.glassGlyph`, `.glassGlyphSecondary`, `.glassRim`, `.glassSelection` | the glass roles, adaptive |
 | `Ink.disabledFill`, `.disabledText`, `.destructive` | disabled buttons, destructive text and tiles |
 | `Ink.primary`, `.secondary`, `.glassTint` | white on the dark full-screen canvas's warm glass only |
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
-| `.ourioLargeTitle` `.ourioTitle` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles |
+| `Color.lilac`, `.sage` | with honey and blush, the clay tints of the cat's four needs (Rested, Playful, Full, Loved); never a button or text |
+| `.ourioLargeTitle` `.ourioTitle` `.ourioValue` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles; `ourioMicro` is 12 pt, the smallest text in the app |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 | `Motion.*` | every animation, see Motion |
+| `Look.current` | which set of colours and display face the tokens above serve: `classic` (cream, honey, SF Rounded) or `dusk` (the landing's warm night, amber, Bricolage Grotesque). Chosen in Settings → Labs → Look, read once at launch; `Palette` holds a `Tones` per look and `ContrastTests` checks each |
 
 Over the room use the glass roles; elsewhere solid surfaces. Nothing in the app is red for the cat or the couple.
 
@@ -245,7 +280,7 @@ relations, so a redesign changes a token, not the screens.
 | Token | Value | Use |
 | --- | --- | --- |
 | `Radius.sheet` | `card + Space.gutter` | the system sheet's corner, which iOS draws; content at the gutter is a `card` |
-| `Radius.card` | 24 | every card, grouped section, tile, panel and large picture on a screen or sheet |
+| `Radius.card` | 28 | every card, grouped section, tile, panel and large picture on a screen or sheet |
 | `Radius.inner` | `card − CardMetrics.padding` | what sits inside a card's padding: thumbnails, posters, peeks, small grid tiles |
 | `Radius.control` | `Size.button / 2` | every text field and choice row: a one-line field is the buttons' capsule |
 
@@ -254,8 +289,8 @@ relations, so a redesign changes a token, not the screens.
 - A card is the container shape for what is inside it, so an iOS 26 `ConcentricRectangle` there follows its
   corners. Prefer `Radius.inner` where the inset is the card padding, which is why a card's content always
   sits at `CardMetrics.padding`: art in a tile padded tighter has corners squarer than the card's.
-- One card family: `Card`, `CardMetrics.padding`, `CardHeader` with a `Size.cardMark` icon (`RowIcon`) or
-  `CardArt`, the title in `.ourioHeadline` over a `.ourioCaption` line, a `RowChevron` when it opens something.
+- One card family: `Card`, `CardMetrics.padding`, `CardHeader` with a `Size.cardMark` clay icon (`RowIcon`) or
+  `CardArt`, the title in `.ourioHeadline` over a `.ourioCaption` line `Space.xxs` under it, a `RowChevron` when it opens something.
   The screen's hero differs only by `warm`.
 - Art (paper, pens, gift boxes, window views, widgets) may keep its own drawn corners; those files are in
   `packages/ios/scripts/radius-baseline.json` and may only shrink.

@@ -1,0 +1,19 @@
+{
+ "id": "catbed",
+ "name": "Plush cat bed",
+ "kind": "SOLID",
+ "width_m": 0.249,
+ "depth_m": 0.25,
+ "height_m": 0.075,
+ "footprint_cells": [
+  5,
+  5
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.25,
+ "anchors": [],
+ "tris": 2500,
+ "affordance": "bed",
+ "usdz_kb": 288
+}

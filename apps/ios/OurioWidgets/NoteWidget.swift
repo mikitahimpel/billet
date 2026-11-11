@@ -1,6 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 import WidgetKit
 
 /// Lock Screen: the note your partner left last, or a pencil if the board is empty. Tap to write one back.
@@ -56,7 +60,7 @@ private struct NoteAccessoryView: View {
         switch family {
         case .accessoryCircular:
             Image(systemName: "pencil.and.scribble")
-                .font(.system(size: 22, weight: .semibold))
+                .font(.ourioTitle)
                 .widgetAccentable()
                 .containerBackground(for: .widget) { AccessoryWidgetBackground() }
                 .widgetURL(DeepLink.newNote.url)

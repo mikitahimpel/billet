@@ -1,4 +1,5 @@
 import CoreGraphics
+import simd
 import Testing
 @testable import Billet
 
@@ -31,5 +32,20 @@ struct CityDioramaTests {
         #expect(visible.contains(CGRect(x: 0, y: 0, width: 100, height: CityDiorama.stageHeight)))
         // Left to right it sits in the middle of the window.
         #expect(abs((visible.midX) - 50) < 0.001)
+    }
+
+    @Test func theBackingSkyIsBlueByDayAndDarkAtNight() {
+        let noon = CityDiorama.sky(hour: 12), midnight = CityDiorama.sky(hour: 0)
+        #expect(noon.top.z > noon.top.x && noon.horizon.z > noon.horizon.x)
+        // Deeper at the top, lighter at the horizon.
+        #expect(noon.top.x < noon.horizon.x)
+        #expect(midnight.top.x + midnight.top.y + midnight.top.z < 0.5)
+        #expect(midnight.top.x > midnight.top.y)
+    }
+
+    @Test(arguments: stride(from: Float(0), to: 24, by: 0.5).map { $0 })
+    func theBackingSkyChangesGentlyThroughTheDay(hour: Float) {
+        let a = CityDiorama.sky(hour: hour), b = CityDiorama.sky(hour: hour + 0.5)
+        #expect(simd_length(a.top - b.top) < 0.45 && simd_length(a.horizon - b.horizon) < 0.45)
     }
 }

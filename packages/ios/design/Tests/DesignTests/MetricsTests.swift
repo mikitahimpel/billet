@@ -5,7 +5,9 @@ import Testing
 
 @Suite struct MetricsTests {
   @Test func spacingGrowsWithEachStep() {
-    let steps = [Space.xs, Space.s, Space.m, Space.l, Space.gutter, Space.section, Space.xl]
+    let steps = [
+      Space.xxs, Space.xs, Space.s, Space.m, Space.l, Space.gutter, Space.section, Space.xl,
+    ]
     #expect(steps == steps.sorted())
     #expect(Set(steps).count == steps.count)
   }

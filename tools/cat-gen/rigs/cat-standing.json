@@ -21,33 +21,9 @@
     { "name": "lidLeft", "parent": "head", "head": [0.027, 0.193, -0.146], "tail": [0.027, 0.2055, -0.158], "part": "lidLeft" },
     { "name": "lidLeftLow", "parent": "head", "head": [0.027, 0.193, -0.146], "tail": [0.027, 0.1795, -0.158], "part": "lidLeftLow" },
     { "name": "lidRight", "parent": "head", "head": [-0.0275, 0.193, -0.145], "tail": [-0.0275, 0.2055, -0.157], "part": "lidRight" },
-    { "name": "lidRightLow", "parent": "head", "head": [-0.0275, 0.193, -0.145], "tail": [-0.0275, 0.1795, -0.157], "part": "lidRightLow" },
-    { "name": "leftForePaw", "parent": "leftForeLower", "head": [0.033, 0.022, -0.118], "tail": [0.033, 0.008, -0.142], "part": "leftForePaw" },
-    { "name": "rightForePaw", "parent": "rightForeLower", "head": [-0.033, 0.022, -0.118], "tail": [-0.033, 0.008, -0.142], "part": "rightForePaw" },
-    { "name": "leftHindPaw", "parent": "leftHindLower", "head": [0.038, 0.022, 0.062], "tail": [0.038, 0.008, 0.04], "part": "leftHindPaw" },
-    { "name": "rightHindPaw", "parent": "rightHindLower", "head": [-0.038, 0.022, 0.061], "tail": [-0.038, 0.008, 0.04], "part": "rightHindPaw" }
+    { "name": "lidRightLow", "parent": "head", "head": [-0.0275, 0.193, -0.145], "tail": [-0.0275, 0.1795, -0.157], "part": "lidRightLow" }
   ],
   "parts": {
-    "leftForePaw": [
-      { "normal": [0, -1, 0], "point": [0, 0.024, 0], "soft": 0.008 },
-      { "normal": [1, 0, 0], "point": [0.01, 0, 0], "soft": 0.008 },
-      { "normal": [0, 0, -1], "point": [0, 0, -0.0425], "soft": 0.015 }
-    ],
-    "rightForePaw": [
-      { "normal": [0, -1, 0], "point": [0, 0.024, 0], "soft": 0.008 },
-      { "normal": [-1, 0, 0], "point": [-0.01, 0, 0], "soft": 0.008 },
-      { "normal": [0, 0, -1], "point": [0, 0, -0.0425], "soft": 0.015 }
-    ],
-    "leftHindPaw": [
-      { "normal": [0, -1, 0], "point": [0, 0.024, 0], "soft": 0.008 },
-      { "normal": [1, 0, 0], "point": [0.014, 0, 0], "soft": 0.008 },
-      { "normal": [0, 0, 1], "point": [0, 0, 0.0275], "soft": 0.015 }
-    ],
-    "rightHindPaw": [
-      { "normal": [0, -1, 0], "point": [0, 0.024, 0], "soft": 0.008 },
-      { "normal": [-1, 0, 0], "point": [-0.014, 0, 0], "soft": 0.008 },
-      { "normal": [0, 0, 1], "point": [0, 0, 0.0275], "soft": 0.015 }
-    ],
     "lidLeft": [
       { "normal": [0, 1, 0], "point": [0.01, 0.1995, -0.058], "soft": 0.002 },
       { "center": [0.027, 0.1995, -0.158], "radii": [0.0155, 0.018, 0.03], "soft": 0.8 },

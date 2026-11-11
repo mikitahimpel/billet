@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 import Wire
 
 struct NoteSheet: View {
