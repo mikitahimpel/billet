@@ -87,6 +87,8 @@ struct FeaturedCard: View {
         .padding(.vertical, 6)
         .glass(.capsule, tint: Ink.heroInk.opacity(0.25))
         .fixedSize()
+        // A glass badge, capped as the app's chrome is: past this its one line would push the card off the screen.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     @ViewBuilder private var valueBadge: some View {

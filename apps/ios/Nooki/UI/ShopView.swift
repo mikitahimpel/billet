@@ -186,16 +186,23 @@ struct ShopChips: View {
     @Bindable var state: HomeState
 
     var body: some View {
-        ScrollView(.horizontal) {
-            HStack(spacing: Space.s) {
-                ForEach(ShopCategory.allCases) { category in
-                    FilterChip(category.title, symbol: category.symbol, isSelected: state.shopCategory == category) {
-                        state.shopCategory = category
+        ScrollViewReader { reader in
+            ScrollView(.horizontal) {
+                HStack(spacing: Space.s) {
+                    ForEach(ShopCategory.allCases) { category in
+                        FilterChip(category.title, symbol: category.symbol, isSelected: state.shopCategory == category) {
+                            state.shopCategory = category
+                        }
+                        .id(category)
                     }
                 }
+                .padding(.horizontal, Space.l)
+                .padding(.vertical, 2)
             }
-            .padding(.horizontal, Space.l)
-            .padding(.vertical, 2)
+            // The chosen chip comes whole into view, also when a link from elsewhere chose it.
+            .onChange(of: state.shopCategory, initial: true) { _, category in
+                withAnimation(.snappy(duration: 0.3)) { reader.scrollTo(category, anchor: .center) }
+            }
         }
         .scrollIndicators(.hidden)
         .scrollBounceBehavior(.basedOnSize, axes: .horizontal)

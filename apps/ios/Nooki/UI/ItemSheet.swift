@@ -125,10 +125,13 @@ struct ItemSheet: View {
     private var actions: some View {
         VStack(spacing: Space.s) {
             HStack(spacing: Space.s) {
-                // Icon-only, so the primary button keeps its label on one line on a small phone.
+                // A short word beside the cube, so the primary button keeps its label on one line on a small phone.
                 Button(action: reveal) {
-                    Label("Preview in 3D", systemImage: "cube").labelStyle(.iconOnly)
+                    Label("3D", systemImage: "cube")
+                        .lineLimit(1)
+                        .fixedSize()
                 }
+                .accessibilityLabel("Preview in 3D")
                 .buttonStyle(SecondaryButtonStyle(fullWidth: false))
                 .disabled(!showsPlaceholder || !turntable.isDrawn)
                 .accessibilityHint("Drag the item to turn it")
