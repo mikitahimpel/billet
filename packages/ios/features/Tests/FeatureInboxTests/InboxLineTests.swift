@@ -77,7 +77,7 @@ private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner) -> 
   @Test func shortStatesFitTheirContent() {
     let empty = InboxMachine.Page(items: [])
     let short: [InboxMachine.Sheet] = [
-      .idle, .loading, .unpaired, .failed, .loaded(empty), .stale(empty),
+      .unpaired, .failed, .loaded(empty), .stale(empty),
     ]
     for sheet in short {
       let layout = InboxLayout(sheet)
@@ -95,6 +95,13 @@ private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner) -> 
       #expect(layout == .list)
       #expect(layout.size == .large)
       #expect(!layout.scrolls)
+    }
+  }
+
+  /// The first page lands in the sheet the placeholder opened: same height, same list, nothing moves.
+  @Test func loadingOpensAsTheList() {
+    for sheet: InboxMachine.Sheet in [.idle, .loading] {
+      #expect(InboxLayout(sheet) == InboxLayout(.loaded(Self.page)))
     }
   }
 }
