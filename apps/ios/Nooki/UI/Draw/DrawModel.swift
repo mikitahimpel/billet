@@ -1,9 +1,11 @@
+import Design
 import FeatureCanvas
 import Foundation
 import Ink
 import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import QuartzCore
 import SwiftUI
 import Transport

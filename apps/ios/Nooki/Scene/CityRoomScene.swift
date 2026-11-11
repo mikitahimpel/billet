@@ -1,5 +1,6 @@
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import RealityKit
 import SwiftUI
 import UIKit

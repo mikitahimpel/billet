@@ -2,7 +2,8 @@ import FeatureShop
 import Foundation
 import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import ShopInterface
 import Transport

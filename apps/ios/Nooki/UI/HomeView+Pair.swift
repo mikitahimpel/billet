@@ -1,7 +1,8 @@
 import FeatureGames
 import FeatureMood
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import TipKit

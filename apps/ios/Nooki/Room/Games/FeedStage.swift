@@ -2,7 +2,8 @@ import CoreMotion
 import FeatureGames
 import GamesInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import RealityKit
 import SwiftUI

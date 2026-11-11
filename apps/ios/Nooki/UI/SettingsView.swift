@@ -1,6 +1,7 @@
 import FeatureOnboarding
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Pet
 import ProfileInterface
 import RoomInterface

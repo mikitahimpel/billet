@@ -1,7 +1,8 @@
 import Design
 import GamesInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import PetScene
 import RealityKit
 import Synchronization
