@@ -1,6 +1,7 @@
 import DrawInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Testing
 import UsInterface

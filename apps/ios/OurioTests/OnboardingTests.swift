@@ -1,7 +1,8 @@
 import FeaturePairing
 import Foundation
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import Synchronization
 import Testing

@@ -2,7 +2,8 @@ import CoreGraphics
 import Design
 import Foundation
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
 import ProfileInterface
 import Synchronization

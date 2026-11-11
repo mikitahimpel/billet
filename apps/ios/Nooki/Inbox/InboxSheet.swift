@@ -2,7 +2,8 @@ import Design
 import DrawInterface
 import FeatureInbox
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import UIKit
 import UsInterface

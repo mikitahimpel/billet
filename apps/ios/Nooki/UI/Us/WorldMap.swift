@@ -68,7 +68,7 @@ public struct WorldMapView: View {
         self.map = map
     }
 
-    public static let wantedColor = Color(light: Color.honeyDeep, dark: Color(hex: 0xFFE07A))
+    public static let wantedColor = Color(light: .honeyDeep, dark: .honeyBright)
 
     public var body: some View {
         Canvas { context, size in
@@ -115,7 +115,9 @@ public struct CountryFlag: View {
                     .interpolation(.high)
             } else {
                 Text(Country.emoji(code))
-                    .font(.system(size: size * 0.62))
+                    .ourioScaledFont(size: size * 0.62)
+                    // The circle doesn't grow with Dynamic Type, so neither does the flag in it.
+                    .dynamicTypeSize(.large)
                     .frame(width: size, height: size)
                     .background(Ink.surfaceRaised, in: .circle)
             }
