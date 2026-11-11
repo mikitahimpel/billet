@@ -35,7 +35,7 @@ struct DioramaView: View {
     }
 
     /// The camera's own effects: the room has no use for blur, depth of field or grain, and each costs a pass.
-    private func apply(_ rendering: RoomRendering, to content: RealityViewCameraContent) {
+    private func apply(_ rendering: RoomRendering, to content: inout RealityViewCameraContent) {
         content.renderingEffects.motionBlur = .disabled
         content.renderingEffects.depthOfField = .disabled
         content.renderingEffects.cameraGrain = .disabled
@@ -46,11 +46,11 @@ struct DioramaView: View {
     var body: some View {
         RealityView { content in
             content.camera = .virtual
-            apply(rendering, to: content)
+            apply(rendering, to: &content)
             content.add(rig.camera)
             attach(scene, to: content)
         } update: { content in
-            apply(rendering, to: content)
+            apply(rendering, to: &content)
             // A new room swaps its root into this same view, so there is never a second renderer running.
             if !content.entities.contains(where: { $0 === scene.root }) { attach(scene, to: content) }
         }
