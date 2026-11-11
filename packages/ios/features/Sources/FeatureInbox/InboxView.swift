@@ -92,8 +92,6 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     #endif
     .scrollContentBackground(.hidden)
     .refreshable { await model.open() }
-    // Under the notice, which the header draws over it.
-    .sheetBarBacking()
     .scrollHeader {
       VStack(spacing: 0) {
         if case .stale = model.sheet { staleNotice }

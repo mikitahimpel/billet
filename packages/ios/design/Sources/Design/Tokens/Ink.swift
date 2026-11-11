@@ -118,9 +118,7 @@ public enum Ink {
   public static let paperEdge = Color(hex: 0xEADFCB)
   /// Light enough that the room still shows through, warm enough that the glass never turns grey.
   public static let glassTint = Color(hex: 0xF2A65E, opacity: 0.16)
-  /// The warm dark behind the tab roots, under the shared header so scrolled content never meets its glass.
-  public static let headerScrim = Palette.roomBackdrop.color
-  /// Behind the room: its glow, centre out, ending on the warm dark of `headerScrim`.
+  /// Behind the room: its glow, centre out, ending on the backdrop's warm dark.
   public static let roomGlow = Palette.current.backdrop.map(\.color)
   /// A honey control's fill: flat honey, or in Dusk the face lit from above, as clay catches a lamp.
   public static let accentFace: AnyShapeStyle =
