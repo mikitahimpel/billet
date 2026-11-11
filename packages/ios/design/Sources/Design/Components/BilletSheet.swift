@@ -42,6 +42,8 @@ public struct BilletSheet<Content: View>: View {
   @Environment(\.sheetGround) private var ground
   @State private var fitHeight: CGFloat = 0
   @State private var askingToDiscard = false
+  /// A page pushed with `expandsSheet()` took the sheet to full height; it stays there.
+  @State private var expanded = false
 
   /// - Parameters:
   ///   - scrolls: Pass false for content that is a `List` or a scroll view itself.
@@ -83,6 +85,7 @@ public struct BilletSheet<Content: View>: View {
     }
     // On the stack, not its root, so the pages pushed onto it get it too.
     .environment(\.backsSheetBar, ground == .opaque)
+    .environment(\.expandSheet, SheetExpansion { expand() })
     .interactiveDismissDisabled(hasChanges ?? false)
     .tint(.honey)
     .presentationDetents(detents)
@@ -120,8 +123,14 @@ public struct BilletSheet<Content: View>: View {
     }
   }
 
+  private func expand() {
+    withAnimation(.snappy(duration: 0.3)) { expanded = true }
+  }
+
+  /// Once a page has asked for full height, large is the only detent, so the sheet goes there.
   private var detents: Set<PresentationDetent> {
-    switch size {
+    if expanded { return [.large] }
+    return switch size {
     case .fit where scrolls && fitHeight > 0: [.height(fitHeight + Self.chrome), .large]
     case .fit, .large: [.large]
     case .medium: [.medium]
@@ -223,6 +232,28 @@ public struct Page<Content: View>: View {
 extension EnvironmentValues {
   /// True inside an opaque `BilletSheet`'s stack, whose pages draw a ground under its bar.
   @Entry var backsSheetBar = false
+  @Entry var expandSheet = SheetExpansion {}
+}
+
+/// Takes the `BilletSheet` around it to its large detent.
+struct SheetExpansion: Sendable {
+  let action: @MainActor @Sendable () -> Void
+
+  init(_ action: @escaping @MainActor @Sendable () -> Void) { self.action = action }
+}
+
+/// Opens the sheet a page is pushed onto to full height, for a page longer than the sheet it was pushed from.
+private struct ExpandsSheet: ViewModifier {
+  @Environment(\.expandSheet) private var expandSheet
+
+  func body(content: Content) -> some View {
+    content.onAppear { expandSheet.action() }
+  }
+}
+
+extension View {
+  /// On a page pushed inside a `BilletSheet`: the sheet rises to its large detent when the page appears.
+  public func expandsSheet() -> some View { modifier(ExpandsSheet()) }
 }
 
 extension View {
