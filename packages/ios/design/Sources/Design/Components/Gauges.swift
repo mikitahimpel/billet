@@ -240,7 +240,10 @@ public struct GaugeTile: View {
     ZStack {
       Circle().stroke(tint.opacity(Gauge.trackOpacity), lineWidth: line)
       RingArc(start: .degrees(-90), sweep: .degrees(360), fill: Gauge.clamp(value))
-        .stroke(Gauge.face(tint), style: StrokeStyle(lineWidth: line, lineCap: .round))
+        // The raised level's arc is the tint at full strength, so the lowest ring is not the palest.
+        .stroke(
+          emphasis == .raised ? AnyShapeStyle(tint) : AnyShapeStyle(Gauge.face(tint)),
+          style: StrokeStyle(lineWidth: line, lineCap: .round))
       Image(systemName: symbol)
         .font(.system(size: side * 0.36, weight: .semibold))
         .foregroundStyle(Gauge.glyph(tint, in: colorScheme))

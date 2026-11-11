@@ -4,7 +4,7 @@ import RoomInterface
 import SwiftUI
 
 /// Mochi's sheet, top to bottom: how she is right now, her four needs with the care each takes, her day so far and
-/// what kind of cat she is. It draws what it is given, so the gallery shows it with a fixed cat.
+/// what kind of cat she is. It draws what it is given, so the gallery shows its parts with a fixed cat.
 struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
     let name: String
     let status: CatStatus
@@ -12,41 +12,48 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
     /// The way to the next level, 0...1.
     let progress: Double
     let days: Int
-    /// The zone her day's times are told in.
-    var zone: TimeZone = .current
     var care: (NeedCare) -> Void
     @ViewBuilder var portrait: Portrait
     /// The care no need's tile offers, under the tiles.
     @ViewBuilder var extraCare: ExtraCare
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.section) {
-            hero
+            MochiHero(mood: status.needs?.moodLine(name: name) ?? "Settling in", level: level, progress: progress,
+                      days: days) { portrait }
             VStack(alignment: .leading, spacing: Space.m) {
                 NeedGrid(name: name, needs: status.needs, asleep: status.about?.asleep ?? false, care: care)
                 extraCare
             }
             if let about = status.about {
-                day(about)
-                character(about)
+                MochiDay(name: name, doing: status.doing, moments: about.day)
+                MochiNature(about: about)
             }
         }
     }
+}
 
-    // MARK: Hero
+/// The sheet's one warm card: her portrait, her mood in a line, how long she has been with the couple, and her level
+/// as a bar with the pets still to go.
+struct MochiHero<Portrait: View>: View {
+    let mood: String
+    let level: Int
+    let progress: Double
+    let days: Int
+    @ViewBuilder var portrait: Portrait
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    private var hero: some View {
+    var body: some View {
         Card(warm: true) {
             VStack(alignment: .leading, spacing: Space.l) {
                 // At accessibility sizes her words take the card's whole width under her portrait.
                 if dynamicTypeSize.isAccessibilitySize {
                     portrait
-                    mood
+                    words
                 } else {
                     HStack(spacing: Space.l) {
                         portrait
-                        mood
+                        words
                     }
                 }
                 levelBar
@@ -57,9 +64,9 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
 
-    private var mood: some View {
+    private var words: some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            Text(status.needs?.moodLine(name: name) ?? "Settling in")
+            Text(mood)
                 .font(.ourioValue)
                 .foregroundStyle(Ink.text)
                 .contentTransition(.opacity)
@@ -88,13 +95,21 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
         .accessibilityLabel("Level \(level)")
         .accessibilityValue("\(PetNeed.percent(progress)) percent to level \(level + 1)")
     }
+}
 
-    // MARK: Her day
+/// Her day so far as a strip of moments, with what she is doing now beside the title.
+struct MochiDay: View {
+    let name: String
+    let doing: String
+    let moments: [CatDayMoment]
+    /// The zone and locale her day's times are told in.
+    var zone: TimeZone = .current
+    var locale: Locale = .current
 
-    private func day(_ about: CatAbout) -> some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeader("\(name)'s day", symbol: "sun.max.fill") { Text("Now: \(status.doing.lowercased())") }
-            if about.day.isEmpty {
+            SectionHeader("\(name)'s day", symbol: "sun.max.fill") { Text("Now: \(doing.lowercased())") }
+            if moments.isEmpty {
                 Card {
                     Text("Her day is only starting. What she gets up to shows here.")
                         .font(.ourioCallout)
@@ -102,17 +117,20 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             } else {
-                MomentStrip(about.day.map { moment in
+                MomentStrip(moments.map { moment in
                     StripMoment(id: moment.id, symbol: moment.kind.symbol, tint: moment.kind.tint,
-                                title: moment.kind.title, time: moment.time(in: zone))
+                                title: moment.kind.title, time: moment.time(in: zone, locale: locale))
                 })
             }
         }
     }
+}
 
-    // MARK: About her
+/// What kind of cat she is: her type and its line, her six traits as bars, and her favourite spot.
+struct MochiNature: View {
+    let about: CatAbout
 
-    private func character(_ about: CatAbout) -> some View {
+    var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
             SectionHeader("About her", symbol: "pawprint.fill")
             Card {
@@ -125,7 +143,8 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
                                 Text(trait.title)
                                     .font(.ourioCaption)
                                     .foregroundStyle(Ink.textSecondary)
-                                MeterBar(value: about.personality[trait], tint: trait.tint)
+                                // One quiet tone: a tint here would read as one of her needs.
+                                MeterBar(value: about.personality[trait], tint: Ink.textSecondary)
                             }
                             .accessibilityElement(children: .ignore)
                             .accessibilityLabel(trait.title)

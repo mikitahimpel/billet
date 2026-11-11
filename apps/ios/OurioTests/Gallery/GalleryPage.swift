@@ -13,6 +13,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case status
     case gauges
     case mochi
+    case mochiAbout = "mochi-about"
     case postage
     case tiles
     case fields
@@ -30,6 +31,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .status: Self.statusPage
             case .gauges: Self.gaugesPage
             case .mochi: Self.mochiPage
+            case .mochiAbout: Self.mochiAboutPage
             case .postage: Self.postagePage
             case .tiles: Self.tilesPage
             case .fields: Self.fieldsPage
@@ -132,7 +134,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
         }
     }
 
-    /// The ring round an avatar, the bars, the four tiles with one raised and one with a note, and a day's strip.
+    /// The ring round an avatar, the bars, a raised tile beside one with a note, and a day's strip.
     @MainActor @ViewBuilder private static var gaugesPage: some View {
         HStack(spacing: Space.l) {
             Circle().fill(Ink.surfaceRaised)
@@ -154,30 +156,26 @@ enum GalleryPage: String, CaseIterable, Sendable {
                       emphasis: .raised, action: "Feed") {}
             GaugeTile("Rested", state: "Wide awake", hint: "Fine for today", value: 0.9, symbol: "moon.zzz.fill",
                       tint: .lilac, note: "Naps on her own")
-            GaugeTile("Playful", state: "Curious", hint: "Bored in about 4 h", value: 0.55,
-                      symbol: "tennisball.fill", tint: .sage, action: "Play") {}
-            GaugeTile("Loved", state: "Adored", hint: "Lonely in about 9 h", value: 0.75, symbol: "heart.fill",
-                      tint: .blushPink, action: "Pet") {}
         }
         MomentStrip([
-            StripMoment(id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7 AM"),
-            StripMoment(id: "2", symbol: "fork.knife", tint: .honey, title: "Ate", time: "8:12 AM"),
-            StripMoment(id: "3", symbol: "binoculars.fill", tint: .sage, title: "Watched", time: "10 AM"),
-            StripMoment(id: "4", symbol: "heart.fill", tint: .blushPink, title: "Cuddles", time: "12:40 PM"),
+            StripMoment(id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7:00"),
+            StripMoment(id: "2", symbol: "fork.knife", tint: .honey, title: "Ate", time: "8:12"),
+            StripMoment(id: "3", symbol: "heart.fill", tint: .blushPink, title: "Cuddles", time: "12:40"),
         ])
     }
 
-    /// Mochi's whole sheet with a fixed cat: one need raised, a day of six moments, an Explorer.
+    /// The top of Mochi's sheet with a fixed cat: her hero and her day. Her needs are the `gauges` page's tiles; the
+    /// whole sheet at the largest text size is taller than a drawing can be.
     @MainActor @ViewBuilder private static var mochiPage: some View {
-        MochiSheetContent(name: "Mochi", status: fixedCat, level: 2, progress: 0.4, days: 2, zone: .gmt, care: { _ in }) {
+        MochiHero(mood: fixedCat.needs?.moodLine(name: "Mochi") ?? "", level: 2, progress: 0.4, days: 2) {
             PetPortrait(size: 88)
-        } extraCare: {
-            FlowRow {
-                PillButton("Water", symbol: "drop.fill") {}
-                PillButton("Brush", symbol: "paintbrush.fill") {}
-                PillButton("Treat", symbol: "gift.fill") {}
-            }
         }
+        MochiDay(name: "Mochi", doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
+                 locale: Locale(identifier: "en_GB"))
+    }
+
+    @MainActor @ViewBuilder private static var mochiAboutPage: some View {
+        if let about = fixedCat.about { MochiNature(about: about) }
     }
 
     private static let fixedCat: CatStatus = {
@@ -185,14 +183,12 @@ enum GalleryPage: String, CaseIterable, Sendable {
         let dawn = 1_794_283_200.0
         func hour(_ hour: Double) -> Double { dawn + (hour - 4) * 3600 }
         return CatStatus(
-            needs: PetNeeds(full: 0.3, rested: 0.9, loved: 0.75, playful: 0.55), mind: .napping,
+            needs: PetNeeds(full: 0.3, rested: 0.9, loved: 0.75, playful: 0.55), mind: .exploring,
             about: CatAbout(
                 temperament: .explorer, personality: CatTemperament.explorer.archetype, favourite: .window,
                 day: [
                     CatDayMoment(kind: .slept, at: hour(4), until: hour(7), exact: false),
                     CatDayMoment(kind: .ate, at: hour(8.2), exact: true),
-                    CatDayMoment(kind: .watched, at: hour(10), until: hour(11), exact: false),
-                    CatDayMoment(kind: .petted, at: hour(12.7), exact: true),
                     CatDayMoment(kind: .napped, at: hour(14), until: hour(16), exact: false),
                     CatDayMoment(kind: .playedTogether, at: hour(18.1), exact: true),
                 ]))

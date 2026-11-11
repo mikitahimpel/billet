@@ -138,27 +138,15 @@ nonisolated extension CatDayMoment.Kind {
 }
 
 nonisolated extension CatDayMoment {
-    /// When it was, as the strip says it: the minute of something the couple did, the hour of something she did
-    /// on her own, and for a night's sleep the hour she woke.
-    func time(in zone: TimeZone = .current) -> String {
-        var style = Date.FormatStyle(timeZone: zone)
-        style = exact ? style.hour().minute() : style.hour()
+    /// When it was, as the strip says it: the minute of something the couple did, the start of the hour of
+    /// something she did on her own, and for a night's sleep the hour she woke.
+    func time(in zone: TimeZone = .current, locale: Locale = .current) -> String {
+        let style = Date.FormatStyle(locale: locale, timeZone: zone).hour().minute()
         switch kind {
         case .slept: return "till " + Date(timeIntervalSince1970: until).formatted(style)
         case .napped, .ate, .played, .watched, .explored, .groomed, .mischief, .soughtYou, .playedTogether, .petted,
             .gotNote:
             return Date(timeIntervalSince1970: at).formatted(style)
-        }
-    }
-}
-
-nonisolated extension CatPersonality.Trait {
-    var tint: Color {
-        switch self {
-        case .curious, .playful: .sage
-        case .lazy: .lilac
-        case .cuddly: .blushPink
-        case .bold, .vocal: .honey
         }
     }
 }

@@ -48,7 +48,8 @@ public struct MomentStrip: View {
         .padding(.horizontal, CardMetrics.padding)
       }
       .scrollIndicators(.hidden)
-      .defaultScrollAnchor(.trailing)
+      // Opened at the latest moment; a day too short to scroll still starts at the leading edge.
+      .defaultScrollAnchor(.trailing, for: .initialOffset)
       .mask { edges }
       .padding(.vertical, CardMetrics.padding)
       .cardSurface()

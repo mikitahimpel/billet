@@ -64,13 +64,14 @@ import Testing
 
     @Test func aMomentTellsItsTimeInTheZoneAsked() throws {
         let zone = try #require(TimeZone(secondsFromGMT: 3600))
+        let british = Locale(identifier: "en_GB")
         let noon = 1_793_620_800.0
         let fed = CatDayMoment(kind: .ate, at: noon + 720, exact: true)
         let nap = CatDayMoment(kind: .napped, at: noon, until: noon + 7200, exact: false)
         let night = CatDayMoment(kind: .slept, at: noon - 8 * 3600, until: noon - 5 * 3600, exact: false)
-        #expect(fed.time(in: zone).contains("12") && fed.time(in: zone).hasPrefix("1"))
-        #expect(nap.time(in: zone).hasPrefix("1"))
-        #expect(night.time(in: zone).hasPrefix("till ") && night.time(in: zone).contains("8"))
+        #expect(fed.time(in: zone, locale: british) == "13:12")
+        #expect(nap.time(in: zone, locale: british) == "13:00")
+        #expect(night.time(in: zone, locale: british) == "till 08:00")
     }
 
     @Test func voiceOverHearsTheWordAndTheNumber() {
