@@ -239,16 +239,7 @@ struct DatesScreen: View {
     }
 
     private func secondaryButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.ourioHeadline)
-                .foregroundStyle(Ink.text)
-                .frame(maxWidth: .infinity)
-                .frame(height: Size.button)
-                .background(Ink.surfaceRaised, in: .capsule)
-                .overlay(Capsule().stroke(Ink.separator, lineWidth: 0.5))
-        }
-        .buttonStyle(PressScaleStyle())
+        SecondaryButton(title, action: action)
     }
 
     private func roll() {
