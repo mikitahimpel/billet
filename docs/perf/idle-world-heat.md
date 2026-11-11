@@ -302,6 +302,63 @@ not verified.
 - `project.yml` still says `deploymentTarget: iOS 18.0` while the brief says iOS 26+. Every API in 3.1 and 3.2
   is iOS 18+, so it does not matter here.
 
+## 8. Round 2: splat cost, throttling and adaptive quality
+
+Added after section 7. Everything here is a Labs switch or follows the phone's heat; nothing was measured on a
+phone, and the Simulator cannot draw splats, so the Simulator can only show that nothing else regressed.
+
+### 8.1 What shipped
+
+| Change | Where | Default | Why it should help |
+| --- | --- | --- | --- |
+| **Splat pruning at load**: the least important splats (opacity times covered area, `SplatPruning`) are dropped, the rest enlarged by half the volume-conserving amount. Levels: `balanced` keeps 55% (~72k), `light` keeps 40% (~52k). The skin rows follow the kept splats. The pinned PLY and skin files are untouched; coats are cut from the whole file and pruned the same way | `SplatReduction.swift`, `RoomInterface/SplatDetail.swift` | Full (131k), unless the phone is warm or in Low Power Mode at launch, or Labs asks | Fragment cost and sort cost fall roughly with count |
+| **Skinning/sort rate limit**: `SplatSkinner` runs at most N times a second, so RealityKit sees a changed buffer, and re-sorts, at that rate | `CatRig.swift` (checksum in `apps/ios/nooki-cat.sha256` updated) | Every frame; 30 Hz at `fair`, 20 Hz at `serious`, 15 Hz at `critical` | Halves the compute pass and, if RealityKit sorts only on a changed buffer, the sort. The pass already skipped when no bone moved |
+| **Quality tiers**: `RoomQualityPolicy` maps `thermalState` and Low Power Mode to `full`, `fair`, `serious`, `critical`; degrades at once, recovers one step after 90 s of calmer readings | `RoomInterface/RoomQuality.swift`, `QualityMonitor` in `Perf/PerfLab.swift` | On, every build | `fair`: motes, antialiasing and the backdrop drift off, splats 30 Hz, pruned on the next launch or reload. `serious`: also no sway and bulb pulse, 20 Hz. `critical`: the room is held on its last frame (the covered state) |
+| **Labs tier picker**: the current tier and a control that forces one | Labs → Performance | Auto | Lets the owner see each tier's cost without a hot phone |
+| **Backdrop drift switch** (`drift`): the bokeh behind the room, 10 Hz, redrawn under the room layer and the glass | Labs, `HomeView` | On | The one SwiftUI animation that runs behind the room; off isolates the compositor cost |
+| New switches `splatLean` (55%, next launch) and `splatRate` (30 Hz) | Labs | Off | A/B on the phone |
+
+Not changed, with the reason:
+
+- **Splat sort mode** stays as it is; which of `.depth` and `.distance` is cheaper is undocumented.
+- **Screen-size LOD** (fewer splats when the cat is small in frame) is not built: the `GaussianSplatResource` buffers
+  are fixed at load, so a live change means swapping resources, which the Simulator cannot exercise. Pruning at load
+  by tier covers the same ground without a swap. Revisit only if the phone shows the splat is the bill and 55% is not
+  enough.
+- **Compositing**: the room layer is non-opaque on purpose. The walls do not fill the view (the City's window hole,
+  the margins around the shell) and the warm backdrop shows through, so `isOpaque` would change the picture. The
+  bars are the system's Liquid Glass over it, which cannot be made cheaper from our side except by the existing
+  switch. The only per-frame work behind the room is the 10 Hz bokeh, now switchable. Nothing over the room uses
+  `compositingGroup` or `drawingGroup`; the Flatten switch applies to pages only.
+- **Static batching, baked light pools and one static shadow** are not done in this round. They touch
+  `DioramaScene` placement code that the furniture-placement work is changing, and a merged mesh breaks
+  per-piece selection while arranging. The plan: batch only the shell and fixed furniture after the layout settles,
+  keep placed pieces as entities, bake the string-light and flame pools with `tools/scene-bake/contact_shadow.py`
+  and `RoomBake` and delete the point lights. Do it after the phone A/B below says draw calls and lights, not the
+  splat, are the bill (section 2, causes 2 and 4).
+
+### 8.2 Phone test plan (TestFlight Labs build)
+
+Fixed conditions: unplugged, same brightness, Wi-Fi, app freshly launched, Home open and left alone. Read each line
+after 60 s still (the Energy line), and let the battery number run 10 minutes per step. After each step use Labs →
+Performance → Copy settings and paste it back; the line carries the switches, the tier, fps, CPU, heat and the battery
+slope. Turn the Metal HUD on once (next launch) to see fps and GPU ms.
+
+| Step | Flip | Compare | Reading |
+| --- | --- | --- | --- |
+| 0 | Nothing, tier Auto | Baseline | CPU, HUD GPU ms, battery/10 min |
+| 1 | "Cat as splats" off (relaunch) | Is the splat the bill? | GPU ms and battery against step 0 |
+| 2 | Back on; "Cat splats cut to 55%" on (relaunch) | Pruning's gain; look at the fur at full zoom for holes | GPU ms, by eye |
+| 3 | "Cat splats updated at 30 Hz" on | Skin and sort throttle; look for judder when she walks | GPU ms, by eye |
+| 4 | Tier forced `fair`, then `serious`, then `critical` | Cost of each tier; `critical` is the floor with the room frozen | Battery and GPU ms per tier |
+| 5 | Auto again; "Backdrop bokeh drift" off, then "Glass header and tab bar" off | Compositor share | Battery |
+| 6 | "Antialiasing" and "HDR" toggled | Per-pixel cost | GPU ms |
+| 7 | "Room sway" off | Whether a still room lets RealityKit reuse work | GPU ms |
+
+How to read it: the step with the largest battery/GPU drop is the next thing to build. If step 1 saves little, the
+splat is not the bill and the batching and light work (8.1, last bullet) is next. If steps 1 to 3 save most of it,
+ship pruning at 55% as the default and re-run.
+
 ## Sources
 
 - [RealityRenderer](https://developer.apple.com/documentation/realitykit/realityrenderer),

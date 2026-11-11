@@ -15,6 +15,19 @@ struct PetMochiControl: ControlWidget {
     }
 }
 
+/// Control Center and Lock Screen button: dinner for Mochi.
+struct FeedMochiControl: ControlWidget {
+    var body: some ControlWidgetConfiguration {
+        StaticControlConfiguration(kind: "com.ourio.app.feed") {
+            ControlWidgetButton(action: FeedMochiIntent()) {
+                Label("Feed \(CatProfile.name())", systemImage: "fork.knife")
+            }
+        }
+        .displayName("Feed Your Cat")
+        .description("Dinner for your cat, no need to open Ourio.")
+    }
+}
+
 /// Control Center and Lock Screen button: a hug for the partner.
 struct SendHugControl: ControlWidget {
     var body: some ControlWidgetConfiguration {

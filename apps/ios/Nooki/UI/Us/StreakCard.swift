@@ -73,17 +73,24 @@ struct StreakCard: View {
     }
 
     private func ring(days: Int, flame: Flame.State, next: Int?) -> some View {
-        ProgressRing(value: next.map { Double(days) / Double($0) } ?? 1) {
-            VStack(spacing: 0) {
-                Flame(days: days, state: flame)
-                Text(days, format: .number)
-                    .font(.ourioTitleDigits)
-                    .foregroundStyle(Ink.text)
-                    .contentTransition(.numericText())
-                Text("streak")
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
+        VStack(spacing: Space.xs) {
+            ProgressRing(
+                value: next.map { Double(days) / Double($0) } ?? 1,
+                tint: Color(light: .honeyDeep, dark: .honeyBright)
+            ) {
+                VStack(spacing: 0) {
+                    Flame(days: days, state: flame)
+                    Text(days, format: .number)
+                        .font(.ourioTitleDigits)
+                        .foregroundStyle(Ink.text)
+                        .contentTransition(.numericText())
+                }
             }
+            Text("day streak")
+                .font(.ourioCaption)
+                .foregroundStyle(Ink.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
     }
 
@@ -125,8 +132,8 @@ struct StreakCard: View {
 
 // MARK: - Pieces
 
-/// Flame that warms with the streak: orange, pink from 30 days, purple from 100. Fades while today doesn't count yet,
-/// less once one partner did their part.
+/// Flame that warms with the streak: orange, pink from 30 days, purple from 100. At 0 it is an outline, a flame
+/// waiting to be lit; while today doesn't count yet it is quieter, less so once one partner did their part.
 private struct Flame: View {
     enum State { case lit, half, unlit }
 
@@ -136,23 +143,29 @@ private struct Flame: View {
     private var opacity: Double {
         switch state {
         case .lit: 1
-        case .half: 0.7
-        case .unlit: days == 0 ? 1 : 0.45
+        case .half: 0.85
+        case .unlit: 0.65
         }
     }
 
     private var colors: [Color] {
-        if days == 0 { return [Color(hex: 0xBFB3AA), Color(hex: 0x8C7D72)] }
         if days >= 100 { return [Color(hex: 0xD9B8FF), Color(hex: 0x8A5CFF)] }
         if days >= 30 { return [Color(hex: 0xFFB3C4), Color(hex: 0xFF5C8A)] }
         return [Color(hex: 0xFFD27A), Color(hex: 0xFF6A3D)]
     }
 
     var body: some View {
-        Image(systemName: "flame.fill")
-            .font(.ourioHeadline)
-            .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
-            .opacity(opacity)
-            .accessibilityHidden(true)
+        Group {
+            if days == 0 {
+                Image(systemName: "flame")
+                    .foregroundStyle(Ink.textSecondary)
+            } else {
+                Image(systemName: "flame.fill")
+                    .foregroundStyle(LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom))
+                    .opacity(opacity)
+            }
+        }
+        .font(.ourioLargeTitleDigits)
+        .accessibilityHidden(true)
     }
 }

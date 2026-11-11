@@ -21,7 +21,7 @@ struct CalendarScreen: View {
     var body: some View {
         BilletSheet("Calendar", scrolls: false) {
             ScrollView {
-                VStack(alignment: .leading, spacing: Space.m) {
+                LazyVStack(alignment: .leading, spacing: Space.m) {
                     if showsMonth {
                         let rows = inMonth
                         MonthGrid(month: $month, marked: Set(rows.map { Calendar.current.startOfDay(for: $0.date) }))
@@ -44,8 +44,8 @@ struct CalendarScreen: View {
                 VStack(spacing: 0) {
                     SheetSubtitle(text: "Day \(state.daysTogether) together")
                     HStack(spacing: Space.s) {
-                        FilterChip("Soon", isSelected: !showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = false } }
-                        FilterChip("Month", isSelected: showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = true } }
+                        FilterChip("Soon", isSelected: !showsMonth) { withAnimation(Motion.spring(Motion.quick)) { showsMonth = false } }
+                        FilterChip("Month", isSelected: showsMonth) { withAnimation(Motion.spring(Motion.quick)) { showsMonth = true } }
                         Spacer(minLength: 0)
                     }
                 }
@@ -169,7 +169,7 @@ private struct MonthGrid: View {
     }
 
     private func shift(_ months: Int) {
-        withAnimation(.snappy(duration: 0.25)) { month = cal.date(byAdding: .month, value: months, to: month) ?? month }
+        withAnimation(Motion.spring(Motion.quick)) { month = cal.date(byAdding: .month, value: months, to: month) ?? month }
     }
 }
 

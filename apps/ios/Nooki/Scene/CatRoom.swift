@@ -4,6 +4,7 @@ import WidgetInterface
 import WidgetUI
 import Pet
 import RealityKit
+import RoomInterface
 import SwiftUI
 import UsInterface
 
@@ -303,6 +304,7 @@ class CatRoom {
             do {
                 let file = try await Task.detached {
                     try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
+                        .reduced(to: SplatDetail.chosen())
                 }.value
                 guard !Task.isCancelled else { return }
                 let rig = try CatRig(file)
@@ -343,8 +345,9 @@ class CatRoom {
             let files = try await Task.detached {
                 // Grey reads the original files from the app; another coat reads its recoloured copy (CatCoat.bundle).
                 let coat = try drawn ? CatCoat.current().bundle(poses: ["MochiStanding", "Mochi"]) : .main
-                return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat),
-                        try CatRig.Files(named: "Mochi", drawn: drawn, in: coat))
+                let detail = SplatDetail.chosen()
+                return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat).reduced(to: detail),
+                        try CatRig.Files(named: "Mochi", drawn: drawn, in: coat).reduced(to: detail))
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
             if !drawn {
@@ -365,6 +368,7 @@ class CatRoom {
                     do {
                         let file = try await Task.detached {
                             try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
+                                .reduced(to: SplatDetail.chosen())
                         }.value
                         let rig = try CatRig(file)
                         if let entity = rig.entity {

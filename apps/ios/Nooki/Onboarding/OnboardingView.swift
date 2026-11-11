@@ -40,6 +40,7 @@ struct OnboardingView: View {
     var body: some View {
         ZStack {
             HeroBackdrop()
+            if flow.page == .welcome { WarmBackdrop().transition(.opacity) }
             VStack(spacing: 0) {
                 header
                 page
@@ -503,7 +504,7 @@ struct MochiSays: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.horizontal, Space.m)
                 .padding(.vertical, Space.s)
-                .cornerFill(.card, Ink.surface)
+                .cardSurface()
         }
     }
 }

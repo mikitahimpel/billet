@@ -1,4 +1,6 @@
 {
   "tip": ["apps/ios/Nooki/UI/Hints/"],
-  "text-role": ["apps/ios/Nooki/UI/Hints/HintTips.swift"]
+  "text-role": ["apps/ios/Nooki/UI/Hints/HintTips.swift"],
+  "flat-surface": ["apps/ios/Nooki/Scene/", "apps/ios/Nooki/Room/Games/", "apps/ios/Nooki/Perf/"],
+  "raw-stroke": ["apps/ios/Nooki/Scene/", "apps/ios/Nooki/Room/", "apps/ios/Nooki/Perf/"]
 }

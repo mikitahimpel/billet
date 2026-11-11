@@ -24,9 +24,13 @@ public struct RoomRendering: Equatable, Sendable {
   /// The wide colour range the glow and bloom are drawn in.
   public var hdr: Bool
 
-  public init(antialiasing: Bool = false, hdr: Bool = true) {
+  /// The splat cat is rewritten and re-sorted at most this many times a second; 0 is every frame.
+  public var splatRate: Int
+
+  public init(antialiasing: Bool = false, hdr: Bool = true, splatRate: Int = 0) {
     self.antialiasing = antialiasing
     self.hdr = hdr
+    self.splatRate = splatRate
   }
 }
 

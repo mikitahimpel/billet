@@ -268,14 +268,14 @@ struct WishlistScreen: View {
                 Text("\(otherName) hasn't filled this in yet.")
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
-                    .padding(Space.l)
+                    .padding(CardMetrics.padding)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .cornerFill(.card, Ink.surface)
+                    .cardSurface()
             } else {
                 VStack(spacing: 0) {
                     ForEach(Array(rows.enumerated()), id: \.element.label) { index, row in
                         if index > 0 {
-                            Rectangle().fill(Ink.separator).frame(height: 1)
+                            Hairline()
                         }
                         let value = loves[keyPath: row.keyPath]
                         HStack(alignment: .firstTextBaseline, spacing: Space.m) {
@@ -294,8 +294,8 @@ struct WishlistScreen: View {
                     }
                 }
                 .padding(.horizontal, Space.l)
-                .padding(.vertical, 2)
-                .cornerFill(.card, Ink.surface)
+                .padding(.vertical, Space.xxs)
+                .cardSurface()
                 .contentShape(.rect)
                 .onTapGesture { if mine { editingLoves = true } }
             }
@@ -348,20 +348,20 @@ private struct WishCard<Actions: View>: View {
             }
             actions
         }
-        .padding(Space.l)
+        .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cornerFill(.card, Ink.surface)
-        .contentShape(RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+        .cardSurface()
+        .contentShape(.rect)
         .task(id: wish) { await loadImage() }
     }
 
     /// The phone's own picture, or, for a wish made on the partner's phone, the one its link shows, kept once fetched.
     private func loadImage() async {
-        image = WishImage.load(wish.id)
+        image = await WishImage.thumbnail(wish.id, maxPixels: WishThumbnail.pixels)
         guard image == nil, let url = URL(string: wish.link), url.scheme?.hasPrefix("http") == true,
               let data = await LinkPreview.fetch(url)?.image, !Task.isCancelled else { return }
         WishImage.save(data, for: wish.id)
-        image = UIImage(data: data)
+        image = await WishImage.thumbnail(wish.id, maxPixels: WishThumbnail.pixels)
     }
 
     @ViewBuilder

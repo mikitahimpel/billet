@@ -62,7 +62,7 @@ struct SetSheet: View {
         .padding(.horizontal, Space.m)
         .frame(maxWidth: .infinity)
         .frame(height: 180)
-        .cornerFill(.card, ShopInk.lamplight)
+        .cardSurface(warm: true)
         .accessibilityHidden(true)
     }
 
