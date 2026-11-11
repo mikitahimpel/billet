@@ -46,6 +46,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored let decorStage = DecorStage()
     @ObservationIgnored var decor = RoomDecor()
     @ObservationIgnored var decorRetries = 0
+    @ObservationIgnored private var sway = true
     @ObservationIgnored private var pins: [BoardPin] = []
     /// The scenery last picked for each game, for the next time it is played.
     @ObservationIgnored private var picked: [MiniGame: GameScenery] = [:]
@@ -108,6 +109,14 @@ final class RoomController: RoomControlling, CatStatusProviding {
     private func wire(_ room: CatRoom) {
         room.onShowcase = { [weak self] label in withAnimation(.snappy(duration: 0.25)) { self?.showcase = label } }
         if !motes { Self.show(motes: false, in: room) }
+        room.swaying = sway
+    }
+
+    /// Lets every room sway and pulse, or holds it still.
+    func setSway(_ on: Bool) {
+        guard on != sway else { return }
+        sway = on
+        for room in [home, city, board].compactMap({ $0 }) { room.swaying = on }
     }
 
     /// Shows or hides the dust motes in every room, those built now and those built later.
