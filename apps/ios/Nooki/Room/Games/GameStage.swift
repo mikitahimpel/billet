@@ -56,6 +56,8 @@ protocol GameStage: AnyObject {
     var action: String? { get }
     /// What to show the player now, or nil when the game needs no gesture.
     var cue: GameCue? { get }
+    /// Where she glances from her head, in points on screen, instead of at the player; nil for the usual gaze.
+    var glance: CGSize? { get }
     func act()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
@@ -64,6 +66,7 @@ protocol GameStage: AnyObject {
 extension GameStage {
     var action: String? { nil }
     var cue: GameCue? { nil }
+    var glance: CGSize? { nil }
     func act() {}
 }
 
@@ -164,6 +167,9 @@ struct GameSpots {
     func at(_ x: Float, _ z: Float, up y: Float = 0) -> SIMD3<Float> {
         center + right * x + toward * z + [0, y, 0]
     }
+
+    /// The yaw that has her face the player, a little turned so she is not flat on.
+    var facingPlayer: Float { Self.yaw(from: .zero, to: toward) - 0.3 }
 
     /// The yaw that faces her from `from` toward `to` (0 faces -z).
     static func yaw(from: SIMD3<Float>, to: SIMD3<Float>) -> Float {

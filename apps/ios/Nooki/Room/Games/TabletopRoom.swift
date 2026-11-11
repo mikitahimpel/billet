@@ -39,7 +39,7 @@ final class TabletopRoom: CatRoom {
         camera.look(at: framing.target, from: framing.target + framing.direction * framing.far, relativeTo: nil)
 
         dressing = Self.dress(pivot, as: scenery)
-        buildCat(at: [0, Self.floorTop + 0.003, -0.1], rests: [0], scale: Self.catScale, wandering: false)
+        buildCat(at: [0, Self.floorTop + 0.003, -0.1], rests: [.pi], scale: Self.catScale, wandering: false)
         buildLighting()
         buildMotes()
     }

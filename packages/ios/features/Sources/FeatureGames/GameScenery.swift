@@ -25,7 +25,8 @@ public enum GameScenery: String, CaseIterable, Hashable, Sendable {
   /// The first is where the game starts.
   public static func options(for game: MiniGame) -> [GameScenery] {
     switch game {
-    case .feed, .water, .brush: [.rug, .kitchen, .garden]
+    case .feed, .water: [.kitchen]
+    case .brush: [.rug, .kitchen, .garden]
     case .laser: [.room, .rug, .garden]
     }
   }
