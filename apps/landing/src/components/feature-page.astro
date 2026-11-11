@@ -1,28 +1,29 @@
 ---
-import { Image } from "astro:assets";
+import { getImage } from "astro:assets";
+import mochi from "../assets/mochi-portrait.webp";
 import { dateIdeas } from "../dates";
 import type { Feature, FeatureSection } from "../features";
 import Page from "../layouts/page.astro";
 import { features, pages } from "../site";
-import AppStoreBadge from "./app-store-badge.astro";
-import GetApp from "./get-app.astro";
-import PictureView from "./picture.astro";
+import Art from "./art.astro";
+import EndCard from "./end-card.astro";
 import SectionText from "./section-text.astro";
+import StoreButton from "./store-button.astro";
 
 interface Props {
   feature: Feature;
 }
 
 const { feature } = Astro.props;
-// Sections with a picture get a row of their own; runs of text-only sections sit side by side as cards.
-type Block = { kind: "row"; section: FeatureSection; flip: boolean } | { kind: "cards"; sections: FeatureSection[] };
+// Sections with a picture get a row of their own, alternating sides; runs of text-only sections sit side by side as columns.
+type Block = { kind: "row"; section: FeatureSection; flip: boolean } | { kind: "cols"; sections: FeatureSection[] };
 const blocks: Block[] = [];
 let rows = 0;
 for (const section of feature.sections) {
   const last = blocks.at(-1);
   if (section.picture) blocks.push({ kind: "row", section, flip: rows++ % 2 === 1 });
-  else if (last?.kind === "cards") last.sections.push(section);
-  else blocks.push({ kind: "cards", sections: [section] });
+  else if (last?.kind === "cols") last.sections.push(section);
+  else blocks.push({ kind: "cols", sections: [section] });
 }
 // A related slug is a feature page or a use-case page at the site root.
 const others = feature.related
@@ -46,135 +47,156 @@ if (feature.steps)
     name: feature.h1,
     step: feature.steps.map((step, i) => ({ "@type": "HowToStep", position: i + 1, name: step.title, text: step.text })),
   });
+
+const [mochiSmall, mochiLarge] = await Promise.all(
+  [192, 320].map((width) => getImage({ src: mochi, width, format: "webp" })),
+);
+const ideas =
+  feature.gallery === "dates"
+    ? await Promise.all(
+        dateIdeas.map(async (idea) => ({
+          idea,
+          small: (await getImage({ src: idea.art, width: 400, format: "webp" })).src,
+        })),
+      )
+    : [];
 ---
 
-<Page title={feature.title} description={feature.description} schema={schema}>
-  <section class="container-page grid items-center gap-12 pt-10 pb-16 md:pt-14 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] lg:gap-20 lg:pb-24">
-    <div>
+<Page title={feature.title} description={feature.description} schema={schema} bodyClass="site-feature">
+  <section class="wrap pg-hero">
+    <div class="pg-hero-copy">
       <p class="eyebrow">{feature.eyebrow}</p>
-      <h1 class="mt-5 max-w-[16ch] text-h2">{feature.h1}</h1>
-      <p class="mt-6 max-w-[38rem] text-lead text-soft">{feature.lead}</p>
-      <AppStoreBadge qr class="mt-9" />
+      <h1>{feature.h1}</h1>
+      <p class="lead">{feature.lead}</p>
+      <div class="pg-cta"><StoreButton /></div>
     </div>
-    <PictureView picture={feature.hero} eager class:list={feature.hero.kind === "scene" && "aspect-[4/5] max-h-[34rem] w-full"} />
+    <Art picture={feature.hero} class="pg-hero-art" eager fitHeight="34rem" />
   </section>
-
   {
     feature.steps && (
-      <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="how">
-        <div class="container-page">
-          <h2 id="how" class="text-h3">How it works</h2>
-          <ol class:list={["mt-8 grid gap-4 md:gap-5", feature.steps.length === 4 ? "md:grid-cols-2 lg:grid-cols-4" : "md:grid-cols-3"]}>
-            {feature.steps.map((step, i) => (
-              <li class="lit-panel min-w-0 p-6 md:p-7">
-                <span aria-hidden="true" class="grid size-9 place-items-center rounded-full bg-gold text-small font-black text-ink">
-                  {i + 1}
-                </span>
-                <h3 class="mt-4 text-[1.125rem] font-extrabold">{step.title}</h3>
-                <p class="mt-2 text-body text-soft">{step.text}</p>
-              </li>
-            ))}
-          </ol>
-        </div>
+      <section class="pg wrap" aria-labelledby="how">
+        <h2 id="how" class="pg-h2">
+          How it works
+        </h2>
+        <ol class={`pg-steps n${feature.steps.length} reveal`}>
+          {feature.steps.map((step, i) => (
+            <li>
+              <span class="step-n" aria-hidden="true">
+                {String(i + 1).padStart(2, "0")}
+              </span>
+              <h3>{step.title}</h3>
+              <p>{step.text}</p>
+            </li>
+          ))}
+        </ol>
       </section>
     )
   }
-
   {
     blocks.map((block) =>
       block.kind === "row" ? (
-        <section id={block.section.id} class="border-t border-paper/10 py-16 md:py-24">
-          <div class="container-page grid gap-10 md:grid-cols-2 md:items-center md:gap-16">
-            <div class:list={["min-w-0", block.flip && "md:order-2"]}>
-              <SectionText section={block.section} />
-            </div>
-            <PictureView
-              picture={block.section.picture!}
-              class:list={[
-                block.flip && "md:order-1",
-                block.section.picture!.kind === "scene" && "aspect-square w-full max-w-[30rem] justify-self-center",
-              ]}
-            />
-          </div>
+        <section id={block.section.id} class:list={["pg wrap pg-row", block.flip && "flip"]}>
+          <SectionText section={block.section} />
+          <Art picture={block.section.picture!} class="reveal" fitHeight="30rem" />
         </section>
       ) : (
-        <div class="border-t border-paper/10 py-16 md:py-24">
-          <div class:list={["container-page grid gap-4 md:gap-5", block.sections.length > 1 && "md:grid-cols-2"]}>
-            {block.sections.map((section) => (
-              <section id={section.id} class:list={["lit-panel min-w-0 p-6 md:p-9", block.sections.length % 2 === 1 && block.sections.length > 1 && section === block.sections.at(-1) && "md:col-span-2"]}>
-                <SectionText section={section} />
-              </section>
-            ))}
-          </div>
+        <div class:list={["pg wrap pg-cols", block.sections.length === 1 && "one"]}>
+          {block.sections.map((section, i) => (
+            <section
+              id={section.id}
+              class:list={[
+                "pg-col",
+                block.sections.length > 1 && block.sections.length % 2 === 1 && i === block.sections.length - 1 && "span",
+              ]}
+            >
+              <SectionText section={section} />
+            </section>
+          ))}
         </div>
       ),
     )
   }
-
   {
-    feature.gallery === "dates" && (
-      <section class="border-t border-paper/10 py-16 md:py-24" aria-labelledby="ideas-gallery">
-        <div class="container-page">
-          <h2 id="ideas-gallery" class="text-h3">A few of the 150 ideas</h2>
-          <ul class="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
-            {dateIdeas.map((idea) => (
-              <li class="lit-panel min-w-0 overflow-hidden">
-                <Image src={idea.art} alt="" widths={[300, 600]} sizes="(min-width: 1024px) 18rem, (min-width: 768px) 30vw, 45vw" class="aspect-[4/5] w-full object-cover" loading="lazy" />
-                <div class="p-4 md:p-5">
-                  <h3 class="font-extrabold">{idea.title}</h3>
-                  <p class="mt-1 text-small text-soft">{idea.pitch}</p>
-                  <p class="mt-2 text-small text-muted">{idea.place} · {idea.cost}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
+    ideas.length > 0 && (
+      <section class="pg wrap" aria-labelledby="ideas-gallery">
+        <h2 id="ideas-gallery" class="pg-h2">
+          A few of the 150 ideas
+        </h2>
+        <ul class="ideas">
+          {ideas.map(({ idea, small }) => (
+            <li class="reveal">
+              <figure class="idea-art">
+                <img
+                  src={idea.art.src}
+                  srcset={`${small} 400w, ${idea.art.src} ${idea.art.width}w`}
+                  sizes="(max-width: 640px) 44vw, 280px"
+                  alt=""
+                  width={idea.art.width}
+                  height={idea.art.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </figure>
+              <h3>{idea.title}</h3>
+              <p>{idea.pitch}</p>
+              <p class="idea-meta">
+                {idea.place} · {idea.cost}
+              </p>
+            </li>
+          ))}
+        </ul>
       </section>
     )
   }
-
-  <section class="border-t border-paper/10 py-16 md:py-24" aria-labelledby="questions">
-    <div class="container-page grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
-      <h2 id="questions" class="text-h3">Questions</h2>
-      <div class="border-b border-paper/15">
+  <section class="pg wrap pg-split" aria-labelledby="questions">
+    <div class="qs-side">
+      <h2 id="questions" class="pg-h2">Questions</h2>
+      <p class="pg-note">More answers in the <a href="/faq/">FAQ</a> and the <a href="/help/">help pages</a>.</p>
+      <img
+        class="qs-mochi"
+        src={mochiLarge!.src}
+        srcset={`${mochiSmall!.src} 192w, ${mochiLarge!.src} 320w`}
+        sizes="150px"
+        alt=""
+        width="320"
+        height="320"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+    <div>
+      <div class="qs">
         {
           feature.questions.map((item) => (
-            <details class="faq group border-t border-paper/15" open>
-              <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-5 text-[1.125rem] font-extrabold md:text-[1.25rem]">
+            <details open>
+              <summary>
                 <h3>{item.question}</h3>
-                <span aria-hidden="true" class="grid size-8 shrink-0 place-items-center rounded-full bg-raised text-honey transition-transform group-open:rotate-45">
-                  +
-                </span>
+                <span class="plus" aria-hidden="true" />
               </summary>
-              <p class="max-w-[38rem] pb-6 text-body text-soft">{item.answer}</p>
+              <p>{item.answer}</p>
             </details>
           ))
         }
-        <p class="border-t border-paper/15 py-5 text-small text-muted">
-          More answers in the <a href="/faq/" class="text-honey underline underline-offset-4">FAQ</a> and the{" "}
-          <a href="/help/" class="text-honey underline underline-offset-4">help pages</a>.
-        </p>
       </div>
     </div>
   </section>
-
-  <section class="border-t border-paper/10 py-16 md:py-24" aria-labelledby="more">
-    <div class="container-page">
-      <h2 id="more" class="text-h3">More of Ourio</h2>
-      <ul class="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {
-          others.map((page) => (
-            <li>
-              <a href={page.path} class="lit-panel block h-full p-5 transition-transform hover:-translate-y-0.5">
-                <span class="block font-extrabold">{page.label}</span>
-                <span class="mt-1.5 block text-small text-muted">{page.summary}</span>
-              </a>
-            </li>
-          ))
-        }
-      </ul>
-    </div>
+  <section class="pg wrap" aria-labelledby="more">
+    <h2 id="more" class="pg-h2">More of Ourio</h2>
+    <ul class="more">
+      {
+        others.map((page) => (
+          <li>
+            <a href={page.path}>
+              <span class="more-name">{page.label}</span>
+              <span class="more-sum">{page.summary}</span>
+              <span class="more-go" aria-hidden="true">
+                →
+              </span>
+            </a>
+          </li>
+        ))
+      }
+    </ul>
   </section>
-
-  <GetApp />
+  <EndCard />
 </Page>
