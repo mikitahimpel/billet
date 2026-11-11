@@ -3,7 +3,24 @@ public enum CatUse: String, CaseIterable, Sendable {
   case sofa, windowSeat, post, catBed, crate
 }
 
-/// A shop piece the player can stand in the room: the model the scene draws and the room it takes.
+/// What makes a piece the room's own furniture: every pair has it, it is not for sale, and a room nobody has
+/// arranged has it standing in `u`, `v` (grid cells).
+public struct BaseSpot: Equatable, Sendable {
+  public let title: String
+  public let u: Int
+  public let v: Int
+  /// The cat lies on it, so a room keeps at least one such piece.
+  public let isRest: Bool
+
+  public init(title: String, u: Int, v: Int, isRest: Bool = false) {
+    self.title = title
+    self.u = u
+    self.v = v
+    self.isRest = isRest
+  }
+}
+
+/// A piece the player can stand in the room: the model the scene draws and the room it takes.
 /// Sizes are metres, as the shop's catalog fixes them.
 public struct DecorItem: Equatable, Sendable, Identifiable {
   public enum Fit: Equatable, Sendable {
@@ -43,10 +60,17 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   public let height: Double
   /// What the cat does with it, if anything.
   public let cat: CatUse?
+  /// Set on the room's own furniture; nil on a shop piece.
+  public let base: BaseSpot?
+
+  public var isBase: Bool { base != nil }
+  /// The cat lies on it: a bed or a sofa.
+  public var isRest: Bool { base?.isRest == true || cat == .catBed || cat == .sofa }
 
   public init(
     id: String, model: String, assetName: String, fit: Fit, size: Double, mount: Mount,
-    width: Double, depth: Double, isFlat: Bool = false, height: Double = 0.2, cat: CatUse? = nil
+    width: Double, depth: Double, isFlat: Bool = false, height: Double = 0.2, cat: CatUse? = nil,
+    base: BaseSpot? = nil
   ) {
     self.id = id
     self.model = model
@@ -59,6 +83,7 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
     self.isFlat = isFlat
     self.height = height
     self.cat = cat
+    self.base = base
   }
 
   /// The pieces the player can place, from `DecorCatalog.generated.swift`. A treat, a style or a piece
@@ -69,9 +94,12 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
 
   public static var all: [DecorItem] { catalog }
 
-  /// What the player can place out of everything owned, in the shop's order.
+  /// The room's own furniture, which every pair has.
+  public static var baseItems: [DecorItem] { all.filter(\.isBase) }
+
+  /// What the player can place out of everything owned, in the shop's order: the room's own furniture first.
   public static func placeable(among owned: Set<String>) -> [DecorItem] {
-    all.filter { owned.contains($0.id) }
+    all.filter { $0.isBase || owned.contains($0.id) }
   }
 
   /// The pieces the pair starts with. The room is built with a lamp and a rug of its own, so these
