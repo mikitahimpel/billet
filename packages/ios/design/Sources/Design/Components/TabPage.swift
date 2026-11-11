@@ -71,7 +71,9 @@ extension View {
       }
     }
     .safeAreaInset(edge: .top) {
-      Chip("Furniture").frame(maxWidth: .infinity, alignment: .leading).padding(.horizontal, Space.l)
+      Chip("Furniture")
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, Space.l)
         .background { HeaderScrim() }
     }
   }
