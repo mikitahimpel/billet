@@ -39,7 +39,7 @@ extension RoomController {
             func waypoint(_ point: Occupancy.Point) -> CatWalker.Waypoint {
                 .init(at: [Float(point.x), floor, Float(point.z)])
             }
-            var path = (occupancy.route(from: DecorRoom.home.spawn, to: plan.approach) ?? []).map(waypoint)
+            var path = (occupancy.route(from: layout.spawn(), to: plan.approach) ?? []).map(waypoint)
             path.append(waypoint(plan.approach))
             var yaw = Float.pi * 0.75
             if let top = plan.top {

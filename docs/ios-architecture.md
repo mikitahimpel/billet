@@ -677,6 +677,7 @@ public struct CatStatus: Equatable, Sendable {
   public var mind: CatMind                       // awake, resting, social
   public var needs: Needs                        // each rounded to 1/20
   public var level: Int
+  public var about: CatAbout?                    // her day, type, traits and favourite spot
 }
 @MainActor public protocol CatStatusProviding: AnyObject { var status: CatStatus { get } }
 ```

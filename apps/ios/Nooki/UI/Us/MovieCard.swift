@@ -69,7 +69,7 @@ struct MovieCard: View {
                 .padding(.bottom, Space.xl + Space.s)
             }
         }
-        .softScrollEdges()
+        .ourioScrollEdges()
         .scrollIndicators(.hidden)
         .ignoresSafeArea(edges: .top)
     }
@@ -229,18 +229,10 @@ struct MovieCard: View {
                 dismiss()
             }
         }
-        Button {
+        SecondaryButton("Plan a movie night", symbol: "dice.fill") {
             dismiss()
             // The list's sheet gives way to Date night once this card has closed.
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { state.usRoute = .dates }
-        } label: {
-            Label("Plan a movie night", systemImage: "dice.fill")
-                .font(.ourioHeadline)
-                .foregroundStyle(Ink.text)
-                .frame(maxWidth: .infinity)
-                .frame(minHeight: 50)
-                .background(Ink.surfaceRaised, in: .capsule)
         }
-        .buttonStyle(PressScaleStyle())
     }
 }

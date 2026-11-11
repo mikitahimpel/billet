@@ -32,7 +32,7 @@ struct WelcomeView: View {
         ViewThatFits(in: .vertical) {
             playing(stage: nil)
             ScrollView { playing(stage: Self.stageHeights.lowerBound) }
-                .softScrollEdges()
+                .ourioScrollEdges()
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
         }

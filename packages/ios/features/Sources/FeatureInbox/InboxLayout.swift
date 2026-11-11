@@ -1,7 +1,7 @@
 import Design
 
 /// How tall the Inbox opens: a short state hugs its content like every other short sheet, the list
-/// takes the whole sheet and scrolls itself.
+/// (and its placeholder while loading) takes the whole sheet and scrolls itself.
 public enum InboxLayout: Equatable {
   case short
   case list
@@ -10,7 +10,9 @@ public enum InboxLayout: Equatable {
     switch sheet {
     case .loaded(let page), .refreshing(let page), .stale(let page):
       self = page.items.isEmpty ? .short : .list
-    case .idle, .loading, .unpaired, .failed: self = .short
+    // Loading opens as the list does, so the first page lands without the sheet changing height.
+    case .idle, .loading: self = .list
+    case .unpaired, .failed: self = .short
     }
   }
 

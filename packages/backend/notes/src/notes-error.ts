@@ -30,7 +30,13 @@ export class CollectionIncomplete extends Data.TaggedError("CollectionIncomplete
 
 /** A placement the room refused: the piece is not the pair's, or does not fit there. */
 export class LayoutRefused extends Data.TaggedError("LayoutRefused")<{
-  readonly reason: "not-owned" | "unknown-piece" | "wrong-surface" | "outside-room" | "occupied";
+  readonly reason:
+    | "not-owned"
+    | "unknown-piece"
+    | "wrong-surface"
+    | "outside-room"
+    | "occupied"
+    | "last-rest";
 }> {}
 
 /** The day's gift is already open, and its entry is no longer there to repeat. */

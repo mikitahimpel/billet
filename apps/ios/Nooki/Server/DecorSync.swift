@@ -16,17 +16,20 @@ final class DecorSync {
 
     /// The server's layout as last heard.
     private var known: [Placement] = []
+    private var knownStowed: Set<String>?
     private var sending = false
     private var dirty = false
 
     /// The room's layout arrived, from a read or a push. A room that has none yet takes this phone's.
-    func heard(_ wire: [RoomPlacement]?) {
+    func heard(_ wire: [RoomPlacement]?, stowed: [RoomItemId]?) {
         guard let wire, let store else { return }
         known = DecorSyncPlan.placements(wire)
-        if known.isEmpty, !store.state.book.layout.placements.isEmpty {
-            push(store.state.book.layout)
+        knownStowed = DecorSyncPlan.stowed(stowed)
+        let local = store.state.book.layout
+        if known.isEmpty, knownStowed?.isEmpty != false, !local.placements.isEmpty || !local.stowed.isEmpty {
+            push(local)
         } else {
-            store.send(.remote(known))
+            store.send(.remote(known, stowed: knownStowed))
         }
     }
 
@@ -43,11 +46,13 @@ final class DecorSync {
         defer { sending = false }
         while dirty, let store, let client = client() {
             dirty = false
-            let changes = DecorSyncPlan.changes(from: known, to: store.state.book.layout.placements)
+            let server = DecorLayout().replacing(placements: known, stowed: knownStowed ?? [])
+            let changes = DecorSyncPlan.changes(from: server.allPlacements, to: store.state.book.layout.allPlacements)
             for change in changes {
                 do {
                     let answer = try await client.changeLayout(LayoutRequest(id: .make(), change: change))
                     known = DecorSyncPlan.placements(answer.shop.layout ?? [])
+                    knownStowed = DecorSyncPlan.stowed(answer.shop.stowed)
                 } catch {
                     if case .api(.layoutRefused) = error { await reread(client) }
                     // Offline: the change stays on this phone; the room's next word replaces it.
@@ -61,6 +66,7 @@ final class DecorSync {
     private func reread(_ client: ShopClient) async {
         guard let shop = try? await client.fetch() else { return }
         known = DecorSyncPlan.placements(shop.layout ?? [])
-        store?.send(.remote(known))
+        knownStowed = DecorSyncPlan.stowed(shop.stowed)
+        store?.send(.remote(known, stowed: knownStowed))
     }
 }

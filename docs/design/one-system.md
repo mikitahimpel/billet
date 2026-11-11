@@ -38,7 +38,7 @@ A screen has four levels and no more. Each is drawn by exactly one thing.
 Above them all, **chrome**: glass, at the screen's edges, in at most two groups (the header and the tab bar).
 
 The well is what replaces every "flat dark rounded rectangle inside a card". A slab is raised and lit from
-above; a well is pressed in: one flat tone a step down from the slab's lit top (the kit's, opaque), a hairline of
+above; a well is pressed in: one flat tone of the kit's own, opaque, darker than the slab's foot in dark, a hairline of
 shade on its upper edge where a slab has light, and no shadow. A picture in a well keeps the well's corners (`Radius.inner`), so no thumbnail has a hard
 edge.
 

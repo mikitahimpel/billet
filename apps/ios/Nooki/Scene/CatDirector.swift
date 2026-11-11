@@ -45,6 +45,8 @@ final class CatDirector {
     private(set) var path = ""
     private(set) var needs: PetNeeds?
     private(set) var lastEvent = "–"
+    /// What put her back in view, for the observatory; she should never need it.
+    private(set) var resets: [String] = []
     private(set) var top: [CatUtilityScore] = []
     private(set) var rest = NookiRestPose.sit
     private(set) var spot = NookiSpot.home
@@ -58,6 +60,13 @@ final class CatDirector {
     private(set) var timeline: [CatObservation] = []
     /// Whether the Labs card is on screen; the scores it shows are worked out only then.
     @ObservationIgnored var observing = false
+
+    /// What her sheet tells beyond her needs: her day, her nature and her favourite spot. Worked out when asked; nil
+    /// until the brain drives her.
+    var about: CatAbout? {
+        guard needs != nil else { return nil }
+        return runner.brain.about(events: source.events)
+    }
 
     /// A launch argument (`-labs.catBrainTour YES`) that starts the tour at once, for recordings.
     static let tourKey = "labs.catBrainTour"
@@ -206,6 +215,12 @@ final class CatDirector {
     }
 
     /// What she has been doing, as text to paste.
+    func noteReset(_ reason: String) {
+        print("cat reset: \(reason)")
+        resets.append(reason)
+        if resets.count > 5 { resets.removeFirst() }
+    }
+
     func log() -> String {
         let now = clock.sim(at: Date.now.timeIntervalSince1970)
         return observatory.log(

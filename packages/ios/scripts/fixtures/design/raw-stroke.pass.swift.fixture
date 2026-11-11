@@ -2,4 +2,8 @@ struct Good: View {
   var body: some View {
     Card(state: .selected) { Hairline() }
   }
+
+  func events(_ stroke: Stroke) -> [Event] {
+    return [.send(.stroke(stroke))]
+  }
 }
