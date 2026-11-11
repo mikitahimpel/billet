@@ -1,3 +1,5 @@
+import DecorInterface
+
 /// Which of Mochi's rooms the host shows.
 public enum RoomScene: Equatable, Sendable {
   case home
@@ -14,6 +16,31 @@ public enum RoomVisibility: Equatable, Sendable {
   case hidden
 }
 
+/// Which pieces stand where, and whether the player is arranging them.
+public struct RoomDecor: Equatable, Sendable {
+  public enum Mode: Equatable, Sendable {
+    case showing
+    /// The pieces are individually addressable. `fits` is false while a dragged piece is somewhere it
+    /// does not fit.
+    case arranging(selected: String?, fits: Bool)
+  }
+
+  public var layout: DecorLayout
+  public var mode: Mode
+
+  public init(layout: DecorLayout = DecorLayout(), mode: Mode = .showing) {
+    self.layout = layout
+    self.mode = mode
+  }
+
+  public var isArranging: Bool {
+    switch mode {
+    case .showing: false
+    case .arranging: true
+    }
+  }
+}
+
 /// Everything the room is told to show. The host takes one of these and nothing else, and
 /// re-evaluates only when it changes.
 public struct RoomInput: Equatable, Sendable {
@@ -27,10 +54,12 @@ public struct RoomInput: Equatable, Sendable {
   /// The dust drifting through the room. Its particles are stepped every frame the room is drawn,
   /// so Labs can take them away.
   public var motes: Bool
+  public var decor: RoomDecor
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
-    partnerHere: Bool = false, motes: Bool = true
+    partnerHere: Bool = false, motes: Bool = true,
+    decor: RoomDecor = RoomDecor()
   ) {
     self.scene = scene
     self.coat = coat
@@ -38,5 +67,6 @@ public struct RoomInput: Equatable, Sendable {
     self.catName = catName
     self.partnerHere = partnerHere
     self.motes = motes
+    self.decor = decor
   }
 }

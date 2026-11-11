@@ -1,7 +1,8 @@
 import DrawInterface
 import Foundation
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import UIKit
 import UsInterface
 import UserNotifications

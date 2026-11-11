@@ -1,7 +1,8 @@
 import Design
 import MomentsInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import SwiftUI
 import UsInterface

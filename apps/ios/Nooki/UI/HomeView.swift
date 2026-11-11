@@ -1,7 +1,10 @@
+import DecorInterface
+import FeatureDecor
 import FeatureGames
 import FeatureInbox
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import RoomInterface
 import SwiftUI
@@ -84,7 +87,9 @@ struct HomeView: View {
             OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 }, selectRoom: select)
             await lift()
         }
+        .onChange(of: state.shop.owned, initial: true) { _, owned in state.decor.send(.owned(owned)) }
         .task {
+            if let item = UserDefaults.standard.string(forKey: "decorate") { state.decor.send(.opened(item: item == "closet" ? nil : item)) }
             room.load()
             for await event in room.events { handle(event) }
         }
@@ -274,6 +279,8 @@ struct HomeView: View {
                             RoomSwitch(state: state, select: select).transition(.opacity)
                         } else if state.tab == .moments {
                             MomentsSwitch(state: state).transition(.opacity)
+                        } else if state.tab == .shop {
+                            ShopChips(state: state).transition(.opacity)
                         }
                     }
                     .padding(.horizontal, Space.l)
@@ -490,11 +497,20 @@ struct HomeView: View {
             roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes))
+            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes),
+            decor: roomDecor)
+    }
+
+    private var roomDecor: RoomDecor {
+        let arranging = state.decor.state
+        let mode: RoomDecor.Mode =
+            arranging.isArranging ? .arranging(selected: arranging.selection, fits: arranging.isValid) : .showing
+        return RoomDecor(layout: arranging.layout, mode: mode)
     }
 
     private func handle(_ event: RoomEvent) {
         switch event {
+        case .decor(let gesture): handleDecor(gesture)
         case .catPetted: withAnimation(.spring(duration: 0.4)) { state.care.pet() }
         case .pinOpened(let id): state.openedPin = PinRoute(id: id)
         case .drawAsked: state.composingNote = .draw
@@ -503,6 +519,17 @@ struct HomeView: View {
             withAnimation(.snappy(duration: 0.3)) {
                 homecoming = HomecomingLine(care, partner: state.otherPartner, cat: CatProfile.name())
             }
+        }
+    }
+
+    private func handleDecor(_ gesture: DecorGesture) {
+        switch gesture {
+        case .tapped(let id): state.decor.send(.roomTapped(id))
+        case .tappedEmpty: state.decor.send(.emptyTapped)
+        case .dragBegan(let id): state.decor.send(.dragBegan(id))
+        case .dragged(let placement): state.decor.send(.dragged(placement))
+        case .dropped: state.decor.send(.dropped)
+        case .cancelled: state.decor.send(.dragCancelled)
         }
     }
 

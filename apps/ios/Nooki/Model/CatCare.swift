@@ -1,6 +1,7 @@
 import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import UsInterface
 
 /// Mochi's care on this phone: pets, treats and the bar that fills her level. The level lives in the shared wallet

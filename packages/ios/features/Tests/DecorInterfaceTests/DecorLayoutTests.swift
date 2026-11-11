@@ -10,6 +10,19 @@ import Testing
     #expect(DecorItem.item(shopID: "treat-fish") == nil)
   }
 
+  @Test func aFullRoomLeavesTheNextPieceInTheCloset() {
+    let ids = DecorItem.all.map(\.id)
+    var layout = DecorLayout(stored: [])
+    for (index, id) in ids.prefix(DecorLayout.maxPlaced).enumerated() {
+      layout = layout.putting(Placement(item: id, surface: .floor, u: index, v: 0))
+    }
+    let next = ids[DecorLayout.maxPlaced]
+    let settled = layout.settled(owned: Set(ids))
+    #expect(settled.placements.count == DecorLayout.maxPlaced)
+    #expect(!settled.isPlaced(next))
+    #expect(settled.stored.contains(next))
+  }
+
   @Test func aNewPieceGoesIntoTheRoomByItself() {
     let layout = DecorLayout(stored: []).settled(owned: ["yarn", "print"])
     #expect(layout.isPlaced("yarn"))
@@ -37,7 +50,7 @@ import Testing
     let first = Placement(item: "mouse", surface: .floor, u: 0, v: 6)
     let layout = DecorLayout(placements: [first], stored: [])
     #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: 0, v: 6)) == .occupied)
-    #expect(layout.accepts(Placement(item: "yarn", surface: .floor, u: -6, v: 6)))
+    #expect(layout.accepts(Placement(item: "yarn", surface: .floor, u: -4, v: 6)))
   }
 
   @Test func aRugIsStoodOn() {
@@ -65,7 +78,7 @@ import Testing
   }
 
   @Test func aTurnSwapsAFloorPiecesSides() {
-    let bookcase = Placement(item: "bookcase", surface: .floor, u: 0, v: 8)
+    let bookcase = Placement(item: "bookcase", surface: .floor, u: -1, v: 7)
     #expect(DecorLayout().accepts(bookcase))
     #expect(
       !DecorLayout().accepts(bookcase.turned), "turned it is 0.3 deep and runs through the wall")

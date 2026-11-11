@@ -30,7 +30,7 @@ public struct TabPage<Content: View>: View {
 }
 
 extension View {
-  /// The vertical insets of a tab root's content, for one that lays out its own scroll view (the Shop's pinned chips).
+  /// The vertical insets of a tab root's content, for one that lays out its own scroll view (the Shop's).
   public func tabContentInsets() -> some View {
     padding(.top, TabMetrics.top).padding(.bottom, TabMetrics.bottom)
   }
