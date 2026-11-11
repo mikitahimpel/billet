@@ -149,6 +149,8 @@ struct OnboardingView: View {
         }
         .padding(.horizontal, Space.s)
         .frame(height: Size.control + Space.s)
+        // Chrome in a row of a fixed height: capped as the app's header is.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     private var showsHeader: Bool { flow.page != .welcome && flow.page != .stopped }
