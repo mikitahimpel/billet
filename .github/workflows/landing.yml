@@ -1,0 +1,138 @@
+name: Landing
+
+# Builds apps/landing and deploys it to Cloudflare Pages (docs/landing.md):
+#
+#   - a push to main     → staging, the production deployment of the Pages project "ourio-landing"
+#                          (https://ourio-landing.pages.dev);
+#   - Run workflow, Preview    → the chosen branch as a preview of "ourio-landing"
+#                          (https://<branch>.ourio-landing.pages.dev), linked on the branch's pull request;
+#   - Run workflow, Production → the chosen ref to the Pages project "ourio-landing-prod", after a required
+#                          reviewer approves the "landing-production" environment.
+#
+# Needs the repository secrets CLOUDFLARE_API_TOKEN (Account › Cloudflare Pages › Edit) and
+# CLOUDFLARE_ACCOUNT_ID, and both Pages projects created once with `wrangler pages project create`.
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/landing/**
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .github/workflows/landing.yml
+  workflow_dispatch:
+    inputs:
+      deploy:
+        description: Preview deploys the branch above to <branch>.ourio-landing.pages.dev; Production deploys it to ourio-landing-prod
+        type: choice
+        options: [Preview, Production]
+        default: Preview
+
+concurrency:
+  group: landing-${{ github.event_name == 'push' && 'staging' || inputs.deploy }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: ${{ github.event_name == 'push' && 'Staging' || inputs.deploy }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      # Only the preview comments, on the branch's pull request.
+      pull-requests: write
+    # Production waits here for the environment's required reviewer; the others only record the deployment.
+    environment:
+      name: ${{ github.event_name == 'push' && 'landing-staging' || (inputs.deploy == 'Production' && 'landing-production' || 'landing-preview') }}
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      TARGET: ${{ github.event_name == 'push' && 'staging' || (inputs.deploy == 'Production' && 'production' || 'preview') }}
+    steps:
+      # A preview of main would land on staging's production deployment: main deploys itself on push.
+      - name: Choose the Pages project and branch
+        id: target
+        run: |
+          set -euo pipefail
+          case "$TARGET" in
+            staging) project=ourio-landing; branch=main ;;
+            production) project=ourio-landing-prod; branch=main ;;
+            preview)
+              if [ "$GITHUB_REF_NAME" = main ] || [ "$GITHUB_REF_TYPE" != branch ]; then
+                echo "::error::Preview deploys a branch other than main; main reaches staging on every push."
+                exit 1
+              fi
+              project=ourio-landing; branch="$GITHUB_REF_NAME" ;;
+          esac
+          echo "project=$project" >> "$GITHUB_OUTPUT"
+          echo "branch=$branch" >> "$GITHUB_OUTPUT"
+
+      - name: Cloudflare secrets are set
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::error::Set the repository secrets CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID (docs/landing.md)."
+            exit 1
+          fi
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint, typecheck, test and format check
+        run: pnpm turbo run lint typecheck test format:check --filter=@billet/landing
+
+      - name: Build
+        run: pnpm --filter @billet/landing build
+
+      # On a project whose production branch is main, --branch main is its production deployment
+      # and any other branch is a preview under <branch>.<project>.pages.dev.
+      - name: Deploy
+        id: deploy
+        working-directory: apps/landing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PROJECT: ${{ steps.target.outputs.project }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+        run: |
+          set -euo pipefail
+          pnpm exec wrangler pages deploy dist --project-name "$PROJECT" --branch "$BRANCH" \
+            --commit-hash "$GITHUB_SHA" --commit-dirty=true | tee "$RUNNER_TEMP/deploy.log"
+          if [ "$BRANCH" = main ]; then
+            url="https://$PROJECT.pages.dev"
+          else
+            # Pages shortens and slugs the branch for its alias; wrangler prints the result.
+            url=$(grep -i 'alias' "$RUNNER_TEMP/deploy.log" | grep -oE "https://[a-z0-9-]+\.$PROJECT\.pages\.dev" | head -n 1 || true)
+            if [ -z "$url" ]; then
+              url=$(grep -oE "https://[a-z0-9-]+\.$PROJECT\.pages\.dev" "$RUNNER_TEMP/deploy.log" | tail -n 1)
+            fi
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed $GITHUB_SHA to $url" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Link the preview on the pull request
+        if: env.TARGET == 'preview'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          URL: ${{ steps.deploy.outputs.url }}
+        run: |
+          set -euo pipefail
+          number=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" --state open --json number --jq '.[0].number // empty')
+          if [ -z "$number" ]; then
+            echo "No open pull request for $GITHUB_REF_NAME."
+            exit 0
+          fi
+          gh pr comment "$number" --repo "$GITHUB_REPOSITORY" \
+            --body "Landing preview of ${GITHUB_SHA::7}: $URL"

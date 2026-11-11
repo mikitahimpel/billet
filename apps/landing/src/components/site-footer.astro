@@ -32,35 +32,33 @@ const groups = [
 ];
 ---
 
-<footer class="border-t border-paper/10">
-  <div class="container-page grid gap-10 pt-14 pb-28 lg:grid-cols-[minmax(0,3fr)_minmax(0,9fr)] lg:pb-14">
+<footer class="foot">
+  <div class="wrap foot-grid">
     <div>
-      <a href="/" class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</a>
-      <p class="mt-2 max-w-[24rem] text-small text-muted">
+      <a href="/" class="foot-mark">Ourio</a>
+      <p class="foot-blurb">
         A free iPhone app for couples: one shared room, one cat, and everything you do for her on your partner's Lock
         Screen.
       </p>
       {
         appStoreLive ? (
-          <a href={appStoreUrl} class="mt-5 inline-block rounded-full bg-gold px-5 py-2.5 text-small font-extrabold text-ink" data-cta>
+          <a href={appStoreUrl} class="foot-soon">
             Get Ourio for iPhone
           </a>
         ) : (
-          <p class="mt-5 inline-block rounded-full bg-gold px-5 py-2.5 text-small font-extrabold text-ink">Coming soon to iPhone</p>
+          <p class="foot-soon">Coming soon to iPhone</p>
         )
       }
     </div>
-    <nav class="grid grid-cols-2 gap-x-6 gap-y-8 md:grid-cols-4" aria-label="Footer">
+    <nav class="foot-nav" aria-label="Footer">
       {
         groups.map((group) => (
           <div>
             <p class="eyebrow">{group.title}</p>
-            <ul class="mt-3 space-y-1.5 text-small text-muted">
+            <ul>
               {group.links.map((link) => (
                 <li>
-                  <a href={link.path} class="underline-offset-4 hover:text-paper hover:underline">
-                    {link.label}
-                  </a>
+                  <a href={link.path}>{link.label}</a>
                 </li>
               ))}
             </ul>
@@ -69,5 +67,5 @@ const groups = [
       }
     </nav>
   </div>
-  <div class="container-page border-t border-paper/10 py-6 text-label text-muted">© 2026 Ourio. iPhone only, US English.</div>
+  <div class="wrap foot-base">© 2026 Ourio. iPhone only, US English.</div>
 </footer>

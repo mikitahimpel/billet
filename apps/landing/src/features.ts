@@ -32,8 +32,13 @@ import mochi from "./assets/mochi-portrait.webp";
 // behind a release flag or not built (coin packs, a subscription, the drawing Live Activity, a streak freeze, the
 // City room) stay out. Titles and H1s carry the words people search with.
 
-// "scene": a full picture in a frame; "cutout": Mochi on a transparent ground; "shot": an app screenshot in a phone.
-export type Picture = { src: ImageMetadata; alt: string; kind: "scene" | "cutout" | "shot" };
+// "scene": a full picture in a frame; "cutout": Mochi on a transparent ground; "shot": an app screenshot in a phone;
+// "portrait": the small cutout of Mochi's head.
+export type Picture = {
+  src: ImageMetadata;
+  alt: string;
+  kind: "scene" | "cutout" | "shot" | "portrait";
+};
 
 export type FeatureSection = {
   id: string;
@@ -110,7 +115,7 @@ export const featureList: Feature[] = [
         picture: {
           src: mochi,
           alt: "Mochi, a grey tabby kitten with a red collar and a gold bell",
-          kind: "cutout",
+          kind: "portrait",
         },
       },
       {

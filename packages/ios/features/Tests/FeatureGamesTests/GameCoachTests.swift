@@ -71,10 +71,10 @@ import Testing
     }
   }
 
-  @Test func theBrushOffersThreeCornersAndTheLaserIsOnlyPlayedInTheRoom() {
+  @Test func theBrushOffersTwoCornersAndTheLaserIsOnlyPlayedInTheRoom() {
     let brush = GameScenery.options(for: .brush)
-    #expect(brush.count == 3)
-    #expect(Set(brush).count == 3)
+    #expect(brush.count == 2)
+    #expect(Set(brush).count == 2)
     #expect(brush.allSatisfy { $0.isCorner })
     #expect(GameScenery.options(for: .laser) == [.room])
     #expect(!GameScenery.options(for: .laser).contains(.kitchen))
@@ -82,12 +82,12 @@ import Testing
 
   @Test func aGameStartsWhereItWasLastPlayedIfItCanBe() {
     #expect(GameScenery.start(.feed, last: nil) == .kitchen)
-    #expect(GameScenery.start(.feed, last: .garden) == .kitchen)
+    #expect(GameScenery.start(.feed, last: .rug) == .kitchen)
     #expect(GameScenery.start(.laser, last: .room) == .room)
     #expect(GameScenery.start(.laser, last: .rug) == .room)
     #expect(GameScenery.start(.laser, last: .kitchen) == .room)
     #expect(GameScenery.start(.laser, last: nil) == .room)
-    #expect(GameScenery.start(.brush, last: .garden) == .garden)
+    #expect(GameScenery.start(.brush, last: .kitchen) == .kitchen)
     #expect(GameScenery.start(.brush, last: .room) == .rug)
   }
 }

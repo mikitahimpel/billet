@@ -45,6 +45,8 @@ final class CatDirector {
     private(set) var path = ""
     private(set) var needs: PetNeeds?
     private(set) var lastEvent = "–"
+    /// What put her back in view, for the observatory; she should never need it.
+    private(set) var resets: [String] = []
     private(set) var top: [CatUtilityScore] = []
     private(set) var rest = NookiRestPose.sit
     private(set) var spot = NookiSpot.home
@@ -213,6 +215,12 @@ final class CatDirector {
     }
 
     /// What she has been doing, as text to paste.
+    func noteReset(_ reason: String) {
+        print("cat reset: \(reason)")
+        resets.append(reason)
+        if resets.count > 5 { resets.removeFirst() }
+    }
+
     func log() -> String {
         let now = clock.sim(at: Date.now.timeIntervalSince1970)
         return observatory.log(

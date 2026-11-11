@@ -8,44 +8,42 @@ interface Props {
 const { section } = Astro.props;
 ---
 
-<h2 class="max-w-[22ch] text-h3">{section.heading}</h2>
-{section.body.map((paragraph) => <p class="mt-4 max-w-[38rem] text-body text-soft">{paragraph}</p>)}
-{
-  section.bullets && (
-    <ul class="mt-5 max-w-[38rem] space-y-2.5 text-body text-soft">
-      {section.bullets.map((bullet) => (
-        <li class="flex gap-3">
-          <span class="mt-[0.6em] size-1.5 shrink-0 rounded-full bg-gold" aria-hidden="true" />
-          <span>{bullet}</span>
-        </li>
-      ))}
-    </ul>
-  )
-}
-{
-  section.table && (
-    <div class="mt-7 max-w-[40rem] overflow-x-auto rounded-[20px] bg-plate/60 p-2">
-      <table class="w-full text-left text-small">
-        <caption class="sr-only">{section.table.caption}</caption>
-        <thead>
-          <tr>
-            {section.table.head.map((cell) => (
-              <th scope="col" class="px-4 py-3 text-label font-extrabold tracking-[0.08em] text-honey uppercase">
-                {cell}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-paper/10">
-          {section.table.rows.map((row) => (
+<div class="txt">
+  <h2 class="pg-h2">{section.heading}</h2>
+  {section.body.map((paragraph) => <p>{paragraph}</p>)}
+  {
+    section.bullets && (
+      <ul class="dots">
+        {section.bullets.map((bullet) => (
+          <li>{bullet}</li>
+        ))}
+      </ul>
+    )
+  }
+  {
+    section.table && (
+      <div class="tbl">
+        <table>
+          <caption class="sr-only">{section.table.caption}</caption>
+          <thead>
             <tr>
-              {row.map((cell, c) => (
-                <td class:list={["px-4 py-3 align-top", c === 0 ? "font-semibold text-paper" : "text-soft"]}>{cell}</td>
+              {section.table.head.map((cell) => (
+                <th scope="col">{cell}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
-}
+          </thead>
+          <tbody>
+            {section.table.rows.map(([first, ...rest]) => (
+              <tr>
+                <th scope="row">{first}</th>
+                {rest.map((cell) => (
+                  <td>{cell}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    )
+  }
+</div>

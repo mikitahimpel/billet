@@ -37,6 +37,7 @@ class CatRoom {
     private var catBody = Entity()
     private var catModel = Entity()
     private(set) var walker: CatWalker?
+    private var watch = CatWatch()
     private(set) var director: CatDirector?
     /// The pair's journal once paired; `RoomController` connects it.
     static let catLife = CatLife()
@@ -216,6 +217,7 @@ class CatRoom {
         director?.paused = isShowcasing || isPlayingGame
         director?.update(dt)
         walker?.update(dt)
+        keepCatInView(dt)
 
         // A quick squash-and-stretch after a tap while her mesh is still loading; posed, she leans into the pet
         // instead, and breathes on her own skeleton.
@@ -379,6 +381,32 @@ class CatRoom {
         }
         mochi = task
         return try await task.value
+    }
+
+    /// Whether any of her splats is drawn by this room.
+    private var catIsDrawn: Bool {
+        guard let walker, root.scene != nil else { return true }
+        return ([walker.standing, walker.seated] + walker.bodies.values).contains {
+            guard let entity = $0.entity else { return false }
+            return entity.isActive && entity.parent === catModel
+        }
+    }
+
+    /// Rigs are lent between rooms, so a room that was left without handing her back, a pose that left every splat
+    /// disabled or a position that is no number would leave an empty room; she is put back where the room shows her.
+    private func keepCatInView(_ dt: Float) {
+        guard let walker, Self.shown == nil || Self.shown === self else { return }
+        switch watch.update(Double(dt), at: walker.at, isDrawn: catIsDrawn) {
+        case .fine: break
+        case .showAgain:
+            adoptCat()
+            director?.noteReset("shown again")
+        case .snapHome:
+            let from = walker.at
+            walker.snapHome()
+            adoptCat()
+            director?.noteReset("sent home from \(from)")
+        }
     }
 
     /// Lit by this room's ambient light and posed as this room's walker last left her.

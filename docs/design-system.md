@@ -4,6 +4,9 @@ One look for the whole app: native iOS 26 with a warm honey accent. Everything b
 package `packages/ios/design` (module `Design`); `Settings → Labs → Style` draws it on a device. Read this
 before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 
+The model behind the rules, clay for content and glass for chrome, is [design/one-system.md](design/one-system.md);
+where the app stands against it is [design/audit-2026-11-11.md](design/audit-2026-11-11.md).
+
 `docs/design.md` is the old Little House design and does not describe the app.
 
 ## Rules

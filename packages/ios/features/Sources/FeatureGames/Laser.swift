@@ -59,6 +59,19 @@ public struct LaserPlay: Equatable, Sendable {
     play = min(1, play + 0.2)
   }
 
+  public static let goal = "Drag the red dot, Mochi will chase it"
+
+  /// The dot's lesson: it rests at `start` and the hand drags it to `end`, both on the floor, far enough
+  /// apart that she has to run.
+  public static func lesson(on floor: FloorArea) -> (start: SIMD2<Double>, end: SIMD2<Double>) {
+    func at(_ u: Double, _ v: Double) -> SIMD2<Double> {
+      SIMD2(
+        floor.x.lowerBound + (floor.x.upperBound - floor.x.lowerBound) * u,
+        floor.z.lowerBound + (floor.z.upperBound - floor.z.lowerBound) * v)
+    }
+    return (at(0.2, 0.7), at(0.8, 0.45))
+  }
+
   public static let cheers = ["Got it!", "Pounce!", "Again!"]
   public var cheer: String { Self.cheers[pounces % Self.cheers.count] }
 }

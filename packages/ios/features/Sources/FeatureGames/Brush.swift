@@ -64,5 +64,16 @@ public struct BrushStrokes: Equatable, Sendable {
     if !isPurring { content = max(0, content - dt * 0.12) }
   }
 
+  public static let goal = "Stroke her back, head to tail"
+
+  /// Whether the fur-direction guide shows on her back: until the first real strokes, and again once
+  /// the finger has been away for a while.
+  public func showsGuide(sinceTouch: Double) -> Bool {
+    groom < 0.1 || sinceTouch > 4
+  }
+
+  /// Whether a stroke at `fit` goes with the grain.
+  public static func goesWithFur(fit: Double) -> Bool { fit > 0.35 }
+
   public static let wrongWay = "Other way: with the fur, head to tail"
 }

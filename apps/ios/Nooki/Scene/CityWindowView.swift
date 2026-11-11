@@ -83,7 +83,7 @@ final class CityWindowView: UIView {
     }
 
     private static func color(_ rgb: SIMD3<Float>) -> CGColor {
-        UIColor(red: CGFloat(rgb.x), green: CGFloat(rgb.y), blue: CGFloat(rgb.z), alpha: 1).cgColor
+        CGColor(srgbRed: CGFloat(rgb.x), green: CGFloat(rgb.y), blue: CGFloat(rgb.z), alpha: 1)
     }
 
     /// Grown about its middle so its edges hide behind the wall.
