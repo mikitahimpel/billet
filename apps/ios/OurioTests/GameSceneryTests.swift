@@ -32,13 +32,13 @@ struct GameSceneryTests {
     @Test func aGameComesBackToTheScenePickedLastTime() {
         let controller = RoomController(usesStandIn: true)
         controller.play(.laser)
-        #expect(controller.scenery == .room)
-        controller.showScenery(.garden)
+        #expect(controller.scenery == .kitchen)
+        controller.showScenery(.room)
         controller.endGame()
         controller.play(.brush)
         #expect(controller.scenery == .rug, "each game remembers its own")
         controller.endGame()
         controller.play(.laser)
-        #expect(controller.scenery == .garden)
+        #expect(controller.scenery == .room)
     }
 }

@@ -20,6 +20,10 @@ final class LaserStage: GameStage {
     private var chases = 0
     private var pouncing = false
     private var time: Float = 0
+    /// Where the dot has been, newest first, drawn as a fading trail so the path reads.
+    private var trail: [SIMD3<Float>] = []
+    private let trailDots: [ModelEntity]
+    private var sinceTrail: Float = 0
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -33,6 +37,10 @@ final class LaserStage: GameStage {
         glow.blending = .transparent(opacity: .init(floatLiteral: 0.35))
         halo = dot.cylinder(0.001, 0.012, glow, at: [0, 0.0005, 0])
         dot.isEnabled = false
+        trailDots = (0..<14).map { _ in
+            root.cylinder(0.001, 0.0045, Clay.glow(0xFF6A55, intensity: 3), at: .zero)
+        }
+        trailDots.forEach { $0.isEnabled = false }
         deck.say("Drag the red dot across the floor")
         deck.show(0, "Played")
         let seat = spots.at(0, -0.05)
@@ -40,7 +48,9 @@ final class LaserStage: GameStage {
     }
 
     var focus: [SIMD3<Float>] {
-        [spots.at(-0.2, -0.14), spots.at(0.2, -0.14), spots.at(-0.2, 0.2), spots.at(0.2, 0.2), spots.at(0, 0, up: 0.12)]
+        var points = [spots.at(-0.2, -0.14), spots.at(0.2, -0.14), spots.at(-0.2, 0.2), spots.at(0.2, 0.2), spots.at(0, 0, up: 0.12)]
+        if room is TabletopRoom { points.append(spots.at(0, -0.6, up: 0.4)) }
+        return points
     }
 
     var cue: GameCue? {
@@ -64,8 +74,21 @@ final class LaserStage: GameStage {
             dot.position = [Float(at.x), spots.floor + 0.0015, Float(at.y)]
             let pulse = sin(time * 30)
             halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.012, 0.001, 0.012]
+            sinceTrail += dt
+            if sinceTrail > 0.035 {
+                sinceTrail = 0
+                trail.insert(dot.position, at: 0)
+                if trail.count > trailDots.count { trail.removeLast() }
+            }
         } else {
             dot.isEnabled = false
+            if !trail.isEmpty { trail.removeLast() }
+        }
+        for (index, entity) in trailDots.enumerated() {
+            entity.isEnabled = index < trail.count
+            guard index < trail.count else { continue }
+            entity.position = trail[index]
+            entity.scale = SIMD3(repeating: 1 - Float(index) / Float(trailDots.count + 2)) * [1, 1, 1]
         }
         guard let walker = room.walker else { return }
         let at = walker.at
