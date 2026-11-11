@@ -76,17 +76,18 @@ same name.
 It is a step, not the end: nothing new goes into it. Each feature PR moves its part out, and the
 library goes when it is empty. `AppGroup` and `SharedFile` are in core's `Persistence`; `MoodStore` is
 in `MoodInterface` and takes its file as `load` and `save`, which `OurioShared` points at the App Group;
-`LatestDrawing`, `PushTokens`, `PushReceipt`, `PushPayload(push:)` and the reaction emoji are in `DrawInterface`.
+`LatestDrawing`, `PushTokens`, `PushReceipt`, `PushPayload(push:)` and the reaction emoji are in `DrawInterface`;
+`Couple`, `PairMembers`, `CoupleStore` (with `load`, `save` and `photoURL`) and `CatProfile` are in `ProfileInterface`;
+the Us model, `UsStore`, `PendingListChange`, `DateCatalog`, `GroceryHistory`, `GroceryWords`, `Country` and `WishMedia` (iOS only) in
+`UsInterface`; `Moment`, `Note`, their stores and `InstantFilm` in `MomentsInterface` (iOS only: the photos
+are UIKit images). `BlurHash`, `Streak` and `Wallet` moved into the app, the only user.
 What is left:
 
 | To | From `OurioShared` |
 | --- | --- |
-| `ProfileInterface` | `Couple`, `PairMembers`, `CoupleStore`, `CatProfile` |
-| `UsInterface` | the Us model, `UsStore`, `PendingListChange`, `WishMedia` |
-| `MomentsInterface` | `Moment`, `Note` and their stores |
 | `WidgetBridge` | `OurioSnapshot`, `WidgetTimeline`, `WidgetActivity`, `DeepLink` |
 | `WidgetUI` (new; SwiftUI, with the mood faces) | `MoodArt`, `DrawingCard`, `InkLayer`, `LockWallpaper` |
-| the feature that uses it, or the app | Places, `BlurHash`, `InstantFilm`, `DateCatalog`, `GroceryWords`, `Streak`, `Wallet` |
+| the app, once its colour and font pass the design rules | `WorldMap` |
 
 ### 1.2 What a feature owns
 

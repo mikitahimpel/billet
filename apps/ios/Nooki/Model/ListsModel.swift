@@ -1,6 +1,8 @@
 import Foundation
+import MomentsInterface
 import OurioShared
 import Transport
+import UsInterface
 import Wire
 
 /// Keeps the Us tab's lists in step with the pair's room while the phone is paired. Each change made here shows at

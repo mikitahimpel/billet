@@ -1,6 +1,8 @@
+import MomentsInterface
 import OurioShared
 import SwiftUI
 import Design
+import UsInterface
 
 /// Sending pins the note and earns 5 coins.
 struct NoteComposer: View {

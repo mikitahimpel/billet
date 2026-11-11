@@ -1,5 +1,7 @@
 import Foundation
 import MoodInterface
+import ProfileInterface
+import UsInterface
 
 public enum WidgetModule: String, Codable, CaseIterable, Sendable {
     case mochi, us, mood, list, date, moment

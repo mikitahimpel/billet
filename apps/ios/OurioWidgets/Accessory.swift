@@ -1,6 +1,8 @@
+import MomentsInterface
 import OurioShared
 import SwiftUI
 import Design
+import UsInterface
 import WidgetKit
 
 /// Lock Screen: the day counter above the clock, a round countdown and a line from the smart slot.
