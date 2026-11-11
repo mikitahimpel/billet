@@ -23,8 +23,8 @@ extension Color {
     #endif
   }
 
-  public static let honey = Color(hex: 0xF2A65E)
-  public static let honeyDeep = Color(hex: 0xD9784A)
+  public static let honey = Palette.honey.color
+  public static let honeyDeep = Palette.honeyDeep.color
   /// Honey that reads on dark, for marks drawn over a dark map or picture.
   public static let honeyBright = Color(hex: 0xFFE07A)
   public static let blushPink = Color(hex: 0xFF8FA3)
@@ -59,12 +59,13 @@ extension Ink {
 extension ShapeStyle where Self == LinearGradient {
   /// A honey button's face, lit from above.
   public static var honeyFace: LinearGradient {
-    LinearGradient(colors: [Color(hex: 0xFFC27D), .honey], startPoint: .top, endPoint: .bottom)
+    LinearGradient(colors: [Palette.honeyLight.color, .honey], startPoint: .top, endPoint: .bottom)
   }
 
   public static var honeyGradient: LinearGradient {
     LinearGradient(
-      colors: [Color(hex: 0xFFC27D), .honeyDeep], startPoint: .topLeading, endPoint: .bottomTrailing
+      colors: [Palette.honeyLight.color, .honeyDeep], startPoint: .topLeading,
+      endPoint: .bottomTrailing
     )
   }
 }
@@ -115,4 +116,6 @@ public enum Ink {
   public static let glassTint = Color(hex: 0xF2A65E, opacity: 0.16)
   /// The warm dark behind the tab roots, under the shared header so scrolled content never meets its glass.
   public static let headerScrim = Palette.roomBackdrop.color
+  /// Behind the room: its glow, centre out, ending on the warm dark of `headerScrim`.
+  public static let roomGlow = Palette.current.backdrop.map(\.color)
 }

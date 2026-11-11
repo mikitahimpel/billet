@@ -226,6 +226,7 @@ on `.calloutBubble(pointer:)`.
 | `.ourioLargeTitle` `.ourioTitle` `.ourioValue` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles; `ourioMicro` is 12 pt, the smallest text in the app |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 | `Motion.*` | every animation, see Motion |
+| `Look.current` | which set of colours and display face the tokens above serve: `classic` (cream, honey, SF Rounded) or `dusk` (the landing's warm night, amber, Bricolage Grotesque). Chosen in Settings → Labs → Look, read once at launch; `Palette` holds a `Tones` per look and `ContrastTests` checks each |
 
 Over the room use the glass roles; elsewhere solid surfaces. Nothing in the app is red for the cat or the couple.
 

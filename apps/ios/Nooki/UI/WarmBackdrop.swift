@@ -19,7 +19,7 @@ struct WarmBackdrop: View {
     var body: some View {
         ZStack {
             RadialGradient(
-                colors: [Color(hex: 0xF4BF7E), Color(hex: 0xB36E3A), Color(hex: 0x4A2C1B), Color(hex: 0x24150D)],
+                colors: Ink.roomGlow,
                 center: UnitPoint(x: 0.5, y: 0.48),
                 startRadius: 10,
                 endRadius: 520
