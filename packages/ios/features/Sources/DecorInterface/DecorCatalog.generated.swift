@@ -4,146 +4,151 @@ extension DecorItem {
   static let catalog: [DecorItem] = [
     DecorItem(
       id: "armchair", model: "Item_armchair", assetName: "Decor_armchair", fit: .width, size: 0.4,
-      mount: .floor, width: 0.36, depth: 0.3, isFlat: false),
+      mount: .floor, width: 0.36, depth: 0.3, isFlat: false, height: 0.22, cat: .sofa),
     DecorItem(
       id: "bookcase", model: "Item_bookcase", assetName: "Decor_bookcase", fit: .height, size: 0.6,
-      mount: .floor, width: 0.3, depth: 0.12, isFlat: false),
+      mount: .floor, width: 0.3, depth: 0.12, isFlat: false, height: 0.6, cat: nil),
     DecorItem(
       id: "donutbed", model: "Item_donutbed", assetName: "Decor_donutbed", fit: .width, size: 0.4,
-      mount: .floor, width: 0.34, depth: 0.34, isFlat: false),
+      mount: .floor, width: 0.34, depth: 0.34, isFlat: false, height: 0.1, cat: .catBed),
     DecorItem(
       id: "lamp", model: "Item_lamp", assetName: "Decor_lamp", fit: .height, size: 0.46,
-      mount: .floor, width: 0.14, depth: 0.14, isFlat: false),
+      mount: .floor, width: 0.14, depth: 0.14, isFlat: false, height: 0.46, cat: nil),
     DecorItem(
       id: "lantern", model: "Item_lantern", assetName: "Decor_lantern", fit: .height, size: 0.15,
-      mount: .floor, width: 0.1, depth: 0.1, isFlat: false),
+      mount: .floor, width: 0.1, depth: 0.1, isFlat: false, height: 0.15, cat: nil),
     DecorItem(
       id: "monstera", model: "Item_monstera", assetName: "Decor_monstera", fit: .height, size: 0.55,
-      mount: .floor, width: 0.22, depth: 0.22, isFlat: false),
+      mount: .floor, width: 0.22, depth: 0.22, isFlat: false, height: 0.55, cat: nil),
     DecorItem(
       id: "print", model: "Item_print", assetName: "Decor_print", fit: .height, size: 0.26,
-      mount: .wall, width: 0.2, depth: 0.0, isFlat: false),
+      mount: .wall, width: 0.2, depth: 0.0, isFlat: false, height: 0.26, cat: nil),
     DecorItem(
       id: "rug", model: "Item_rug", assetName: "Decor_rug", fit: .width, size: 0.6, mount: .floor,
-      width: 0.6, depth: 0.6, isFlat: true),
+      width: 0.6, depth: 0.6, isFlat: true, height: 0.01, cat: nil),
     DecorItem(
       id: "teatable", model: "Item_teatable", assetName: "Decor_teatable", fit: .height, size: 0.2,
-      mount: .floor, width: 0.26, depth: 0.26, isFlat: false),
+      mount: .floor, width: 0.26, depth: 0.26, isFlat: false, height: 0.2, cat: nil),
     DecorItem(
       id: "tower", model: "Item_tower", assetName: "Decor_tower", fit: .height, size: 0.6,
-      mount: .floor, width: 0.2, depth: 0.2, isFlat: false),
+      mount: .floor, width: 0.2, depth: 0.2, isFlat: false, height: 0.6, cat: nil),
     DecorItem(
       id: "yarn", model: "Item_yarn", assetName: "Decor_yarn", fit: .width, size: 0.12,
-      mount: .floor, width: 0.12, depth: 0.12, isFlat: false),
+      mount: .floor, width: 0.12, depth: 0.12, isFlat: false, height: 0.1, cat: nil),
     DecorItem(
       id: "mouse", model: "Item_mouse", assetName: "Decor_mouse", fit: .height, size: 0.07,
-      mount: .floor, width: 0.08, depth: 0.05, isFlat: false),
+      mount: .floor, width: 0.08, depth: 0.05, isFlat: false, height: 0.05, cat: nil),
     DecorItem(
       id: "armchair-round", model: "Item_armchair-round", assetName: "Item_armchair-round",
-      fit: .width, size: 0.4, mount: .floor, width: 0.45, depth: 0.4, isFlat: false),
+      fit: .width, size: 0.4, mount: .floor, width: 0.45, depth: 0.4, isFlat: false, height: 0.369,
+      cat: .sofa),
     DecorItem(
       id: "beanbag-sage", model: "Item_beanbag-sage", assetName: "Item_beanbag-sage", fit: .width,
-      size: 0.4, mount: .floor, width: 0.4, depth: 0.4, isFlat: false),
+      size: 0.4, mount: .floor, width: 0.4, depth: 0.4, isFlat: false, height: 0.255, cat: .sofa),
     DecorItem(
       id: "beanbag-terracotta", model: "Item_beanbag-terracotta",
       assetName: "Item_beanbag-terracotta", fit: .width, size: 0.4, mount: .floor, width: 0.4,
-      depth: 0.4, isFlat: false),
+      depth: 0.4, isFlat: false, height: 0.276, cat: .sofa),
     DecorItem(
       id: "beanbag", model: "Item_beanbag", assetName: "Item_beanbag", fit: .width, size: 0.4,
-      mount: .floor, width: 0.4, depth: 0.4, isFlat: false),
+      mount: .floor, width: 0.4, depth: 0.4, isFlat: false, height: 0.271, cat: .sofa),
     DecorItem(
       id: "books", model: "Item_books", assetName: "Item_books", fit: .width, size: 0.14,
-      mount: .floor, width: 0.15, depth: 0.15, isFlat: false),
+      mount: .floor, width: 0.15, depth: 0.15, isFlat: false, height: 0.063, cat: nil),
     DecorItem(
       id: "box", model: "Item_box", assetName: "Item_box", fit: .width, size: 0.299, mount: .floor,
-      width: 0.3, depth: 0.3, isFlat: false),
+      width: 0.3, depth: 0.3, isFlat: false, height: 0.162, cat: .crate),
     DecorItem(
       id: "cactus", model: "Item_cactus", assetName: "Item_cactus", fit: .height, size: 0.09,
-      mount: .floor, width: 0.1, depth: 0.1, isFlat: false),
+      mount: .floor, width: 0.1, depth: 0.1, isFlat: false, height: 0.09, cat: nil),
     DecorItem(
       id: "catbed", model: "Item_catbed", assetName: "Item_catbed", fit: .width, size: 0.25,
-      mount: .floor, width: 0.25, depth: 0.25, isFlat: false),
+      mount: .floor, width: 0.25, depth: 0.25, isFlat: false, height: 0.075, cat: .catBed),
     DecorItem(
       id: "cattree", model: "Item_cattree", assetName: "Item_cattree", fit: .height, size: 0.549,
-      mount: .floor, width: 0.5, depth: 0.5, isFlat: false),
+      mount: .floor, width: 0.5, depth: 0.5, isFlat: false, height: 0.549, cat: nil),
     DecorItem(
       id: "clock", model: "Item_clock", assetName: "Item_clock", fit: .width, size: 0.159,
-      mount: .wall, width: 0.2, depth: 0.0, isFlat: false),
+      mount: .wall, width: 0.2, depth: 0.0, isFlat: false, height: 0.159, cat: nil),
     DecorItem(
       id: "desk", model: "Item_desk", assetName: "Item_desk", fit: .width, size: 0.5, mount: .floor,
-      width: 0.4, depth: 0.55, isFlat: false),
+      width: 0.4, depth: 0.55, isFlat: false, height: 0.481, cat: nil),
     DecorItem(
       id: "fiddlefig", model: "Item_fiddlefig", assetName: "Item_fiddlefig", fit: .height,
-      size: 0.75, mount: .floor, width: 0.4, depth: 0.4, isFlat: false),
+      size: 0.75, mount: .floor, width: 0.4, depth: 0.4, isFlat: false, height: 0.75, cat: nil),
     DecorItem(
       id: "fishplush", model: "Item_fishplush", assetName: "Item_fishplush", fit: .width,
-      size: 0.15, mount: .floor, width: 0.15, depth: 0.2, isFlat: false),
+      size: 0.15, mount: .floor, width: 0.15, depth: 0.2, isFlat: false, height: 0.086, cat: nil),
     DecorItem(
       id: "fishtank", model: "Item_fishtank", assetName: "Item_fishtank", fit: .height, size: 0.35,
-      mount: .floor, width: 0.35, depth: 0.35, isFlat: false),
+      mount: .floor, width: 0.35, depth: 0.35, isFlat: false, height: 0.35, cat: nil),
     DecorItem(
       id: "floorcushion-sage", model: "Item_floorcushion-sage", assetName: "Item_floorcushion-sage",
-      fit: .width, size: 0.3, mount: .floor, width: 0.3, depth: 0.3, isFlat: true),
+      fit: .width, size: 0.3, mount: .floor, width: 0.3, depth: 0.3, isFlat: true, height: 0.054,
+      cat: nil),
     DecorItem(
       id: "floorcushion-terracotta", model: "Item_floorcushion-terracotta",
       assetName: "Item_floorcushion-terracotta", fit: .width, size: 0.3, mount: .floor, width: 0.3,
-      depth: 0.35, isFlat: true),
+      depth: 0.35, isFlat: true, height: 0.089, cat: nil),
     DecorItem(
       id: "floorlamp", model: "Item_floorlamp", assetName: "Item_floorlamp", fit: .height,
-      size: 0.749, mount: .floor, width: 0.35, depth: 0.35, isFlat: false),
+      size: 0.749, mount: .floor, width: 0.35, depth: 0.35, isFlat: false, height: 0.749, cat: nil),
     DecorItem(
       id: "frame-landscape", model: "Item_frame-landscape", assetName: "Item_frame-landscape",
-      fit: .width, size: 0.223, mount: .wall, width: 0.25, depth: 0.0, isFlat: false),
+      fit: .width, size: 0.223, mount: .wall, width: 0.25, depth: 0.0, isFlat: false, height: 0.273,
+      cat: nil),
     DecorItem(
       id: "globe", model: "Item_globe", assetName: "Item_globe", fit: .height, size: 0.18,
-      mount: .floor, width: 0.15, depth: 0.15, isFlat: false),
+      mount: .floor, width: 0.15, depth: 0.15, isFlat: false, height: 0.18, cat: nil),
     DecorItem(
       id: "guitar", model: "Item_guitar", assetName: "Item_guitar", fit: .height, size: 0.499,
-      mount: .floor, width: 0.25, depth: 0.15, isFlat: false),
+      mount: .floor, width: 0.25, depth: 0.15, isFlat: false, height: 0.499, cat: nil),
     DecorItem(
       id: "lavalamp", model: "Item_lavalamp", assetName: "Item_lavalamp", fit: .height, size: 0.2,
-      mount: .floor, width: 0.1, depth: 0.1, isFlat: false),
+      mount: .floor, width: 0.1, depth: 0.1, isFlat: false, height: 0.2, cat: nil),
     DecorItem(
       id: "mirror", model: "Item_mirror", assetName: "Item_mirror", fit: .height, size: 0.801,
-      mount: .floor, width: 0.4, depth: 0.2, isFlat: false),
+      mount: .floor, width: 0.4, depth: 0.2, isFlat: false, height: 0.801, cat: nil),
     DecorItem(
       id: "mugs", model: "Item_mugs", assetName: "Item_mugs", fit: .width, size: 0.11,
-      mount: .floor, width: 0.05, depth: 0.15, isFlat: false),
+      mount: .floor, width: 0.05, depth: 0.15, isFlat: false, height: 0.042, cat: nil),
     DecorItem(
       id: "poster-moon", model: "Item_poster-moon", assetName: "Item_poster-moon", fit: .height,
-      size: 0.3, mount: .wall, width: 0.2, depth: 0.0, isFlat: false),
+      size: 0.3, mount: .wall, width: 0.2, depth: 0.0, isFlat: false, height: 0.3, cat: nil),
     DecorItem(
       id: "poster-plants", model: "Item_poster-plants", assetName: "Item_poster-plants",
-      fit: .height, size: 0.299, mount: .wall, width: 0.25, depth: 0.0, isFlat: false),
+      fit: .height, size: 0.299, mount: .wall, width: 0.25, depth: 0.0, isFlat: false,
+      height: 0.299, cat: nil),
     DecorItem(
       id: "pothos", model: "Item_pothos", assetName: "Item_pothos", fit: .height, size: 0.175,
-      mount: .floor, width: 0.2, depth: 0.2, isFlat: false),
+      mount: .floor, width: 0.2, depth: 0.2, isFlat: false, height: 0.175, cat: nil),
     DecorItem(
       id: "radio", model: "Item_radio", assetName: "Item_radio", fit: .width, size: 0.16,
-      mount: .floor, width: 0.2, depth: 0.1, isFlat: false),
+      mount: .floor, width: 0.2, depth: 0.1, isFlat: false, height: 0.151, cat: nil),
     DecorItem(
       id: "recordplayer", model: "Item_recordplayer", assetName: "Item_recordplayer", fit: .width,
-      size: 0.209, mount: .floor, width: 0.25, depth: 0.25, isFlat: false),
+      size: 0.209, mount: .floor, width: 0.25, depth: 0.25, isFlat: false, height: 0.106, cat: nil),
     DecorItem(
       id: "scratchpost", model: "Item_scratchpost", assetName: "Item_scratchpost", fit: .height,
-      size: 0.299, mount: .floor, width: 0.3, depth: 0.3, isFlat: false),
+      size: 0.299, mount: .floor, width: 0.3, depth: 0.3, isFlat: false, height: 0.299, cat: .post),
     DecorItem(
       id: "succulents", model: "Item_succulents", assetName: "Item_succulents", fit: .width,
-      size: 0.15, mount: .floor, width: 0.15, depth: 0.15, isFlat: false),
+      size: 0.15, mount: .floor, width: 0.15, depth: 0.15, isFlat: false, height: 0.112, cat: nil),
     DecorItem(
       id: "teaset", model: "Item_teaset", assetName: "Item_teaset", fit: .width, size: 0.18,
-      mount: .floor, width: 0.2, depth: 0.2, isFlat: false),
+      mount: .floor, width: 0.2, depth: 0.2, isFlat: false, height: 0.118, cat: nil),
     DecorItem(
       id: "throwblanket", model: "Item_throwblanket", assetName: "Item_throwblanket", fit: .width,
-      size: 0.251, mount: .floor, width: 0.3, depth: 0.25, isFlat: true),
+      size: 0.251, mount: .floor, width: 0.3, depth: 0.25, isFlat: true, height: 0.131, cat: nil),
     DecorItem(
       id: "tunnel", model: "Item_tunnel", assetName: "Item_tunnel", fit: .width, size: 0.299,
-      mount: .floor, width: 0.3, depth: 0.3, isFlat: false),
+      mount: .floor, width: 0.3, depth: 0.3, isFlat: false, height: 0.234, cat: .crate),
     DecorItem(
       id: "windowseat", model: "Item_windowseat", assetName: "Item_windowseat", fit: .width,
-      size: 0.397, mount: .floor, width: 0.4, depth: 0.4, isFlat: false),
+      size: 0.397, mount: .floor, width: 0.4, depth: 0.4, isFlat: false, height: 0.357,
+      cat: .windowSeat),
     DecorItem(
       id: "yarnbasket", model: "Item_yarnbasket", assetName: "Item_yarnbasket", fit: .width,
-      size: 0.202, mount: .floor, width: 0.25, depth: 0.2, isFlat: false),
+      size: 0.202, mount: .floor, width: 0.25, depth: 0.2, isFlat: false, height: 0.154, cat: nil),
   ]
 }

@@ -24,6 +24,42 @@ extension RoomController {
         for (name, spot) in [("ball", NookiSpot.ball), ("basket", .basket), ("sill", .sill)]
         where !next.layout.canVisit(name) { cut.insert(spot) }
         if cut != home.cutOff { home.cutOff = cut }
+        let places = Self.cat(places: next.layout, occupancy: occupancy)
+        if Set(places.keys) != Set(home.placedSpots.keys) || places.values.map(\.id) != home.placedSpots.values.map(\.id) {
+            home.placedSpots = places
+        }
+    }
+
+    /// Where the cat goes to use each kind of piece the player stood: round whatever is in the way to the floor
+    /// beside it, then up onto a seat.
+    private static func cat(places layout: DecorLayout, occupancy: Occupancy) -> [NookiSpot: CatWalker.Destination] {
+        let floor: Float = 0.023
+        var spots: [NookiSpot: CatWalker.Destination] = [:]
+        for plan in layout.catSpots() {
+            func waypoint(_ point: Occupancy.Point) -> CatWalker.Waypoint {
+                .init(at: [Float(point.x), floor, Float(point.z)])
+            }
+            var path = (occupancy.route(from: DecorRoom.home.spawn, to: plan.approach) ?? []).map(waypoint)
+            path.append(waypoint(plan.approach))
+            var yaw = Float.pi * 0.75
+            if let top = plan.top {
+                path.append(.init(at: [Float(top.point.x), 0.014 + Float(top.height), Float(top.point.z)], move: .jump))
+            } else if let item = DecorItem.item(shopID: plan.item), let placement = layout.placement(of: item.id) {
+                let dx = DecorGrid.metres(placement.u) - plan.approach.x
+                let dz = DecorGrid.metres(placement.v) - plan.approach.z
+                yaw = Float(atan2(-dx, -dz))
+            }
+            let spot: NookiSpot =
+                switch plan.use {
+                case .sofa: .sofa
+                case .windowSeat: .windowSeat
+                case .post: .post
+                case .catBed: .catBed
+                case .crate: .crate
+                }
+            spots[spot] = CatWalker.Destination(id: "placed.\(plan.use.rawValue)", path: path, rest: yaw)
+        }
+        return spots
     }
 
     // MARK: Touch
