@@ -131,7 +131,7 @@ struct AddTitleSheet: View {
                     .font(.body.weight(.bold))
                     .foregroundStyle(isAdded ? Ink.accentText : Ink.heroInk)
                     .frame(width: 34, height: 34)
-                    .background(Circle().fill(isAdded ? AnyShapeStyle(Ink.surfaceRaised) : AnyShapeStyle(.honeyGradient)))
+                    .background(Circle().fill(isAdded ? AnyShapeStyle(Ink.well) : AnyShapeStyle(.honeyGradient)))
             }
             .padding(.horizontal, Space.m)
             .frame(minHeight: 84)
