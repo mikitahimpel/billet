@@ -61,17 +61,17 @@ import Testing
   }
 
   @Test func twoPiecesDoNotStandInOnePlace() {
-    let first = Placement(item: "mouse", surface: .floor, u: 0, v: 6)
+    let first = Placement(item: "mouse", surface: .floor, u: -5, v: -5)
     let layout = DecorLayout(placements: [first], stored: [])
-    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: 0, v: 6)) == .occupied)
+    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: -5, v: -5)) == .occupied)
     #expect(layout.accepts(Placement(item: "yarn", surface: .floor, u: -4, v: 6)))
   }
 
   @Test func aRugIsStoodOn() {
-    let mouse = Placement(item: "mouse", surface: .floor, u: 0, v: 6)
+    let mouse = Placement(item: "mouse", surface: .floor, u: -5, v: -5)
     let layout = DecorLayout(placements: [mouse], stored: [])
     #expect(layout.accepts(Placement(item: "rug", surface: .floor, u: 0, v: 0)))
-    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: 0, v: 6)) == .occupied)
+    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: -5, v: -5)) == .occupied)
   }
 
   @Test func theRoomsOwnFurnitureBlocksTheFloor() {
@@ -123,5 +123,42 @@ import Testing
     let layout = DecorLayout(stored: []).settled(owned: ["tower"])
     #expect(layout.isPlaced("tower") || layout.stored.contains("tower"))
     #expect(DecorLayout(stored: []).defaultPlacement(for: "unknown") == nil)
+  }
+
+  /// The room is about 0.4 of real size, its walls 0.8 m high and its floor 1 m across: a piece that is not a
+  /// plausible size there swallows the room (a lamp as wide as the armchair did).
+  @Test func everyPieceIsASensibleSizeForTheRoom() {
+    for item in DecorItem.all {
+      let biggest = max(item.width, item.depth, item.mount == .wall ? 0 : item.height)
+      #expect(biggest >= 0.04, "\(item.id) is too small to see")
+      if item.mount == .wall {
+        #expect(item.width <= 0.3, "\(item.id) is too wide for a wall")
+        #expect(item.height <= 0.35, "\(item.id) is too tall for a wall")
+      } else if item.isFlat {
+        #expect(max(item.width, item.depth) <= 0.6, "\(item.id) is too big for the floor")
+        #expect(item.height <= 0.15, "\(item.id) is not flat")
+      } else {
+        #expect(max(item.width, item.depth) <= 0.55, "\(item.id) is too big for the floor")
+        #expect(item.height <= 0.65, "\(item.id) is too tall for the walls")
+      }
+    }
+  }
+
+  /// Pieces whose real size we know, as a share of the room: their longest side, in metres, at 0.4 of real.
+  @Test func theFamiliarPiecesAreTheSizeOfWhatTheyAre() {
+    let ranges: [String: ClosedRange<Double>] = [
+      "lamp": 0.15...0.3, "armchair": 0.3...0.45, "donutbed": 0.35...0.45, "rug": 0.5...0.6,
+      "tower": 0.45...0.6, "yarn": 0.05...0.1, "mouse": 0.05...0.15, "teatable": 0.15...0.25,
+      "monstera": 0.3...0.5, "bookcase": 0.4...0.6, "floorlamp": 0.4...0.65, "desk": 0.4...0.55,
+      "windowseat": 0.25...0.4, "scratchpost": 0.2...0.45, "cactus": 0.05...0.15,
+    ]
+    for (id, range) in ranges {
+      guard let item = DecorItem.item(shopID: id) else {
+        Issue.record("\(id) is not in the catalog")
+        continue
+      }
+      let longest = max(item.width, item.depth, item.height)
+      #expect(range.contains(longest), "\(id) is \(longest) m")
+    }
   }
 }

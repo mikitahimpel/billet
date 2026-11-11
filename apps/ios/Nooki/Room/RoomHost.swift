@@ -69,7 +69,7 @@ private struct RoomStage: View {
                 let loop = controller.loop
                 DioramaView(scene: visible || loop != nil ? scene : controller.offStage,
                             paused: !visible || controller.corner != nil, petPulse: controller.petPulse,
-                            rendering: input.rendering, loop: loop) {
+                            showsBubble: !input.decor.isArranging, rendering: input.rendering, loop: loop) {
                     controller.petted()
                 }
                 .frame(width: visible || loop != nil ? nil : 1, height: visible || loop != nil ? nil : 1)

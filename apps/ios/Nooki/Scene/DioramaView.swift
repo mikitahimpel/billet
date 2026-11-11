@@ -7,6 +7,8 @@ struct DioramaView: View {
     /// Off-screen, the room stops animating and drawing.
     let paused: Bool
     let petPulse: Int
+    /// False while the pieces are arranged: the heart bubble would hide what is being moved.
+    var showsBubble = true
     let rendering: RoomRendering
     /// Draws the room with its own renderer and frame loop in place of a `RealityView`, when there is one.
     var loop: RoomRenderLoop?
@@ -93,7 +95,7 @@ struct DioramaView: View {
 
     var body: some View {
         canvas
-        .overlay { BubbleOverlay(spot: bubble, pulse: petPulse).opacity(photoFocused ? 0 : 1) }
+        .overlay { BubbleOverlay(spot: bubble, pulse: petPulse).opacity(photoFocused || !showsBubble ? 0 : 1) }
         .overlay(alignment: .bottom) {
             if photoFocused {
                 Button { scene.unfocusPhoto() } label: {
