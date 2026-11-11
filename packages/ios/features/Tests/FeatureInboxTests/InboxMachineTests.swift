@@ -282,4 +282,16 @@ private func item(
     #expect(days.map(\.title) == ["Today", "Yesterday"])
     #expect(days.map(\.items.count) == [2, 1])
   }
+
+  @Test func aLongListKeepsEveryItemInOrderWithinItsDay() {
+    let now = Date(timeIntervalSince1970: 1_800_000_000)
+    var utc = Calendar(identifier: .gregorian)
+    utc.timeZone = TimeZone(identifier: "UTC")!
+    let hour = 3_600_000
+    let items = (0..<500).map { item(id: "i\($0)", at: Int(now.timeIntervalSince1970) * 1000 - $0 * hour) }
+    let days = InboxDay.group(items, now: now, calendar: utc)
+    #expect(days.flatMap(\.items).map(\.id) == items.map(\.id))
+    #expect(days.map(\.day) == days.map(\.day).sorted(by: >))
+    #expect(Set(days.map(\.day)).count == days.count)
+  }
 }
