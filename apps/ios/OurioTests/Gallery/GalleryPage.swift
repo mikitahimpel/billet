@@ -1,5 +1,6 @@
 import Design
 import SwiftUI
+@testable import Billet
 
 /// One page per family of design components, each in its usual states. A new public component gets a place on one.
 enum GalleryPage: String, CaseIterable, Sendable {
