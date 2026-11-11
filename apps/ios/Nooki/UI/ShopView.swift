@@ -28,8 +28,7 @@ struct ShopView: View {
                             .padding(.horizontal, Space.l)
                     }
                 }
-                .padding(.top, Space.s)
-                .padding(.bottom, Space.l)
+                .tabContentInsets()
                 .animation(.spring(duration: 0.35), value: state.shopCategory)
             }
             .scrollIndicators(.hidden)
