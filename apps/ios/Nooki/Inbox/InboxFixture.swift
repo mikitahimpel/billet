@@ -30,14 +30,25 @@ enum InboxFixture {
         ]
     }
 
+    enum Scenario {
+        case items, empty, failed, loading
+    }
+
     /// A model that answers from the fixture: the newest three are unread until marked.
-    static func model() -> InboxModel {
-        let items = items()
+    static func model(_ scenario: Scenario = .items) -> InboxModel {
+        let items = scenario == .items ? items() : []
         return InboxModel(
             list: { (before) async throws(TransportError) in
-                ActivityResponse(items: before == nil ? items : [], unread: 3)
+                switch scenario {
+                case .failed: throw TransportError.network("offline")
+                case .loading:
+                    try? await Task.sleep(for: .seconds(3600))
+                    throw TransportError.network("cancelled")
+                case .items, .empty: return ActivityResponse(items: before == nil ? items : [], unread: items.isEmpty ? 0 : 3)
+                }
             },
-            markRead: { (_) async throws(TransportError) in ActivityUnreadResponse(unread: 0) })
+            markRead: { (_) async throws(TransportError) in ActivityUnreadResponse(unread: 0) },
+            timeout: scenario == .loading ? .seconds(3600) : .seconds(15))
     }
 }
 
