@@ -1,5 +1,6 @@
 import FeatureGames
 import GamesInterface
+import Pet
 import RoomInterface
 import SwiftUI
 

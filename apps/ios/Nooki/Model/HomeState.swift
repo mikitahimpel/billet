@@ -8,6 +8,7 @@ import Observation
 import WidgetInterface
 import WidgetUI
 import Persistence
+import Pet
 import ProfileInterface
 import RoomInterface
 import SwiftUI
