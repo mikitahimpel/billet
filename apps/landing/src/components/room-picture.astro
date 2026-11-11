@@ -1,8 +1,9 @@
 ---
 // The clay room render (2560×1440), pre-sized in public/room as AVIF and WebP at 1000, 1600 and 2560 px.
 interface Props {
-  // "nocat" is the same room with Mochi's bed empty, for her animated loop to sit in.
-  room?: "clean" | "nocat";
+  // The other renders have Mochi's bed empty, for her animated loop to sit in: "nocat" fully lit,
+  // "lamp" with only the lamp and candle on, "none" with every light off.
+  room?: "clean" | "nocat" | "lamp" | "none";
   sizes: string;
   class?: string;
   eager?: boolean;

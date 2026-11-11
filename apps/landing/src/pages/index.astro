@@ -42,9 +42,9 @@ const mochi = await variants(mochiSrc, [96, 192, 320]);
 // The window and bed close-ups of the room render (2560×1440), pre-sized in public/room.
 const room = (name: "window" | "mochi") => `/room/${name}-1000.webp 1000w, /room/${name}-1600.webp 1600w`;
 const reducedMotionPixel = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
-// The preload and the clean room's AVIF source share this srcset and sizes, so the browser fetches one file.
+// The preload and the unlit room's AVIF source share this srcset and sizes, so the browser fetches one file.
 const heroSizes = "(max-width: 900px) 100vw, 60vw";
-const heroAvif = [1000, 1600, 2560].map((width) => `/room/room-clean-${width}.avif ${width}w`).join(", ");
+const heroAvif = [1000, 1600, 2560].map((width) => `/room/room-none-${width}.avif ${width}w`).join(", ");
 
 // Names, prices and blurbs are the shop's own (apps/ios/Nooki/Model/Shop.swift). The box is the piece's
 // measured outline in its 1024 px image (x, y, width, height), which its glow and floor light centre on.
@@ -236,9 +236,12 @@ const schema = [
         <div class="turn">
           <div class="room lit-entrance" id="story-room">
             <div class="room-img">
-              <!-- Mochi, animated: the cat-less room and her loop, shown (has-loop) once both decode. Under reduced motion both sources are an empty pixel. -->
-              <RoomPicture room="nocat" class="room-pic empty" sizes={heroSizes} eager motionOnly />
-              <RoomPicture sizes={heroSizes} eager fetchpriority="high" />
+              <!-- The room's light, as real renders: none (all off), lamp, full; then the lit room with Mochi for no script,
+                   reduced motion or no loop; then Mochi's loop (global.css, the lights coming on). -->
+              <RoomPicture room="none" class="room-pic none" sizes={heroSizes} eager fetchpriority="high" />
+              <RoomPicture room="lamp" class="room-pic lamp" sizes={heroSizes} eager motionOnly />
+              <RoomPicture room="nocat" class="room-pic full" sizes={heroSizes} eager motionOnly />
+              <RoomPicture sizes={heroSizes} eager fetchpriority="low" />
               <picture>
                 <source media="(prefers-reduced-motion: reduce)" srcset={reducedMotionPixel} />
                 <source media="(max-width: 600px)" srcset="/room/mochi-wide-80.webp" />

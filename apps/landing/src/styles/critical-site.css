@@ -170,6 +170,17 @@ h1 {
   text-shadow: 0 0 40px #ffaa6433;
   line-height: 0.92;
 }
+.bulb {
+  aspect-ratio: 1;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  width: 3.2%;
+  animation: twinkle var(--d, 5s) ease-in-out var(--delay, 3s) infinite alternate;
+  background: radial-gradient(closest-side, #fff0cdbf, #ffc88242 45%, #0000);
+  border-radius: 50%;
+  position: absolute;
+  translate: -50% -50%;
+}
 @media (prefers-reduced-motion: reduce) {
   *,
   :before,
@@ -390,6 +401,17 @@ main > section:not(:first-child) {
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes twinkle {
+  0% {
+    opacity: 0.28;
+  }
+  60% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0.55;
   }
 }
 ol {
