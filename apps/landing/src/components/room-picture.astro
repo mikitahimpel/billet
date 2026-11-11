@@ -1,0 +1,33 @@
+---
+// The clay room render (2560×1440), pre-sized in public/room as AVIF and WebP at 1000, 1600 and 2560 px.
+interface Props {
+  // "nocat" is the same room with Mochi's bed empty, for her animated loop to sit in.
+  room?: "clean" | "nocat";
+  sizes: string;
+  class?: string;
+  eager?: boolean;
+  fetchpriority?: "high" | "low";
+  // Reduced motion gets an empty pixel instead, so the room costs nothing there.
+  motionOnly?: boolean;
+}
+
+const { room = "clean", sizes, class: className = "room-pic clean", eager = false, fetchpriority, motionOnly = false } =
+  Astro.props;
+const set = (format: "avif" | "webp") =>
+  [1000, 1600, 2560].map((width) => `/room/room-${room}-${width}.${format} ${width}w`).join(", ");
+---
+
+<picture class={className}>
+  {motionOnly && <source media="(prefers-reduced-motion: reduce)" srcset="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" />}
+  <source type="image/avif" srcset={set("avif")} sizes={sizes} />
+  <source type="image/webp" srcset={set("webp")} sizes={sizes} />
+  <img
+    src={`/room/room-${room}-1600.webp`}
+    alt=""
+    width="2560"
+    height="1440"
+    loading={eager ? undefined : "lazy"}
+    fetchpriority={fetchpriority}
+    decoding="async"
+  />
+</picture>

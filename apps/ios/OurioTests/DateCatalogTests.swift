@@ -1,5 +1,8 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Testing
+import UsInterface
 @testable import Billet
 
 @Suite struct DateCatalogTests {

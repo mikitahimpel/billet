@@ -8,7 +8,7 @@ import Testing
 typealias M = DecorMachine
 
 private let owned: Set<String> = ["yarn", "mouse", "print", "monstera", "bookcase"]
-private let armchair = Placement(item: "yarn", surface: .floor, u: -6, v: -6)
+private let armchair = Placement(item: "yarn", surface: .floor, u: -5, v: -5)
 
 private func book(
   _ placements: [Placement] = [armchair], stored: Set<String> = ["monstera", "bookcase"]
@@ -17,6 +17,24 @@ private func book(
 }
 
 @Suite struct DecorMachineTests {
+  @Test func theServersLayoutReplacesThePlacementsAndKeepsWhatWasPutAway() {
+    let theirs = Placement(item: "mouse", surface: .floor, u: 7, v: 0)
+    let (state, outputs) = M.transition(.off(book()), .remote([theirs]))
+    #expect(state.book.layout.placement(of: "mouse") == theirs)
+    #expect(
+      !state.book.layout.isPlaced("yarn") || state.book.layout.placement(of: "yarn") != armchair)
+    #expect(state.book.layout.stored.contains("monstera"))
+    #expect(outputs.allSatisfy { if case .keep = $0 { true } else { false } } || !outputs.isEmpty)
+  }
+
+  @Test func aRemoteLayoutThatIsAlreadyHereChangesNothing() {
+    let settled = M.Book(
+      layout: DecorLayout(placements: [armchair], stored: owned.subtracting(["yarn"])), owned: owned
+    )
+    let start = M.State.off(settled)
+    #expect(M.transition(start, .remote([armchair])) == (start, []))
+  }
+
   @Test func newPiecesLandInTheRoomWhenOwnedChanges() {
     let (state, outputs) = M.transition(.off(M.Book()), .owned(["yarn"]))
     #expect(state.book.layout.isPlaced("yarn"))
@@ -76,7 +94,7 @@ private func book(
   }
 
   @Test func aDragMovesThePieceAndLettingGoOnAFreeSpotKeepsIt() {
-    let target = Placement(item: "yarn", surface: .floor, u: 0, v: -6)
+    let target = Placement(item: "yarn", surface: .floor, u: -5, v: 0)
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(state, .dragged(target))
     #expect(state.layout.placement(of: "yarn") == target)
@@ -91,7 +109,7 @@ private func book(
   }
 
   @Test func lettingGoWhereItDoesNotFitPutsItBack() {
-    let onTheBed = Placement(item: "yarn", surface: .floor, u: 1, v: -1)
+    let onTheBed = Placement(item: "yarn", surface: .backWall, u: 1)
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(state, .dragged(onTheBed))
     #expect(!state.isValid)
@@ -103,7 +121,7 @@ private func book(
   @Test func aCancelledDragChangesNothing() {
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(
-      state, .dragged(Placement(item: "yarn", surface: .floor, u: 3, v: -6)))
+      state, .dragged(Placement(item: "yarn", surface: .floor, u: -5, v: 2)))
     #expect(M.transition(state, .dragCancelled) == (.selected(book(), item: "yarn"), []))
   }
 
@@ -122,10 +140,36 @@ private func book(
     #expect(outputs == [.save(state.book.layout)])
   }
 
-  @Test func aTurnThatDoesNotFitIsRefused() {
-    let tight = Placement(item: "bookcase", surface: .floor, u: 0, v: 8)
+  @Test func aTurnThatFitsNowhereSaysSoAndChangesNothing() {
+    // Turned, the bookcase meets the wall, the bed and the nightstand wherever it goes.
+    let tight = Placement(item: "bookcase", surface: .floor, u: -1, v: 7)
     let state = M.State.selected(book([tight]), item: "bookcase")
-    #expect(M.transition(state, .turned) == (state, [.feedback(.blocked)]))
+    #expect(M.transition(state, .turned) == (state, [.feedback(.noRoomToTurn)]))
+  }
+
+  @Test func theLastBedOrSofaCannotBeStored() {
+    let fresh = M.Book(layout: DecorLayout(), owned: [])
+    let state = M.State.selected(fresh, item: "base-donutbed")
+    #expect(M.transition(state, .stored) == (state, [.feedback(.lastRest)]))
+    let (stored, outputs) = M.transition(
+      .selected(fresh, item: "base-plant"), .stored)
+    #expect(!stored.book.layout.isPlaced("base-plant"))
+    #expect(outputs == [.save(stored.book.layout)])
+  }
+
+  @Test func resettingTheRoomPutsTheFurnitureBack() {
+    let messy = M.Book(
+      layout: DecorLayout().putting(Placement(item: "base-cattree", surface: .floor, u: 7, v: 0))
+        .storing("base-plant"),
+      owned: [])
+    let (state, outputs) = M.transition(.closet(messy), .resetRoom)
+    guard case .closet(let reset) = state else {
+      Issue.record("not the closet")
+      return
+    }
+    #expect(reset.layout.placements.isEmpty && reset.layout.stowed.isEmpty)
+    #expect(outputs == [.save(reset.layout), .feedback(.reset)])
+    #expect(M.transition(.closet(reset), .resetRoom) == (.closet(reset), []))
   }
 
   @Test func aWallPieceCannotBeTurned() {

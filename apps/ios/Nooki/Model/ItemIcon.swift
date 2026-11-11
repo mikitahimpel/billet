@@ -1,5 +1,8 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import UsInterface
 
 /// The icon a list item gets from its words: places to eat, books and bucket-list dreams first, then the grocery
 /// catalog's aisle, then the list's own icon.

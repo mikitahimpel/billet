@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Payments
 import SwiftUI
 import Design
+import UsInterface
 
 /// Billet Plus, the pair's monthly subscription. What it gives isn't built yet, so a mock build turns it on for this
 /// phone only and a StoreKit build says it is coming.
@@ -81,11 +84,8 @@ struct PlusHero: View {
             PrimaryButton(on ? "Turn off (test)" : "Try Ourio Plus · \(PlusPass.price) / month") { on.toggle() }
                 .accessibilityIdentifier("plusMock")
         } else {
-            Text("\(PlusPass.price) / month · coming soon")
-                .font(.ourioHeadline)
-                .foregroundStyle(Ink.textSecondary)
-                .frame(maxWidth: .infinity, minHeight: Size.button)
-                .background(Ink.surfaceRaised, in: .capsule)
+            PrimaryButton("\(PlusPass.price) / month · coming soon") {}
+                .disabled(true)
         }
     }
 }
@@ -193,7 +193,7 @@ private struct PackCard: View {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
                         Text(pack.stamps.formatted())
-                            .font(.ourioTitle.monospacedDigit())
+                            .font(.ourioTitleDigits)
                             .foregroundStyle(Ink.text)
                         Text("coins")
                             .font(.ourioCallout)

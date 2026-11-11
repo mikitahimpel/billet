@@ -30,7 +30,8 @@ const checks = [
   },
   {
     pattern:
-      /\b(?:cornerRadius|(?:top|bottom)(?:Leading|Trailing)Radius)\s*:\s*[\d.]|cardSurface\(\s*radius:\s*[\d.]/g,
+      // A RealityKit mesh's `cornerRadius` is a bevel in metres, not a corner on screen.
+      /(?<!MeshResource\.generate\w*\([^)]*)\b(?:cornerRadius|(?:top|bottom)(?:Leading|Trailing)Radius)\s*:\s*[\d.]|cardSurface\(\s*radius:\s*[\d.]/g,
     baseline: join(here, "radius-baseline.json"),
     what: "corner radii written as numbers",
     fix: "Corners come from Radius (card, inner, control) or Field / Card (docs/design-system.md#shape).",
@@ -145,15 +146,16 @@ if (paddingViolations.length > 0) {
 }
 
 // Every vertical scroll view in a file on the design package fades out under the bars and under a
-// pinned header: `.softScrollEdges()`, or `.scrollHeader { }`, which applies it. Nothing sets a hard edge.
+// pinned header: `.ourioScrollEdges()`, or `.scrollHeader { }`, which applies it. Only the design
+// package sets the edge effect itself, so no screen draws a hard or hand-made edge of its own.
 const edgeViolations = [];
 for (const [file, text] of sources) {
-  if (/scrollEdgeEffectStyle\(\s*\.hard/.test(text)) {
-    edgeViolations.push(`${file}: a hard scroll edge`);
+  if (/\.scrollEdgeEffect(Style|Hidden)\(/.test(text)) {
+    edgeViolations.push(`${file}: a scroll edge set by hand`);
   }
   if (!/^import Design$/m.test(text)) continue;
   const scrolls = text.match(/ScrollView\s*(\{|\(\s*\.vertical)/g)?.length ?? 0;
-  const soft = text.match(/\.softScrollEdges\(\)|\.scrollHeader\s*\{/g)?.length ?? 0;
+  const soft = text.match(/\.ourioScrollEdges\(\)|\.scrollHeader\s*\{/g)?.length ?? 0;
   if (soft < scrolls) {
     edgeViolations.push(`${file}: ${scrolls} vertical scroll views, ${soft} soft edges`);
   }
@@ -161,7 +163,22 @@ for (const [file, text] of sources) {
 if (edgeViolations.length > 0) {
   console.error(edgeViolations.join("\n"));
   console.error(
-    "Every scroll view fades under the bars with .softScrollEdges(), and under a sheet's chips or search with .scrollHeader { } (docs/design-system.md).",
+    "Every scroll view fades under the bars with .ourioScrollEdges(), and under a sheet's chips or search with .scrollHeader { }; never .scrollEdgeEffectStyle or a gradient of your own (docs/design-system.md).",
+  );
+  failed = true;
+}
+
+// The tab bar names the tab, so a tab root never draws a title of its own; the shared header sits above it.
+const tabRoots = /\/Nooki\/UI\/(MomentsView|ShopView|Us\/UsView|HomeView)\.swift$/;
+const tabTitles = [];
+for (const [file, text] of sources) {
+  if (tabRoots.test(file) && /\.ourioLargeTitle\b/.test(text))
+    tabTitles.push(`${file}: a tab root draws a large title`);
+}
+if (tabTitles.length > 0) {
+  console.error(tabTitles.join("\n"));
+  console.error(
+    "A tab root starts under the shared header with TabPage (or .tabContentInsets()); its tab bar item is its title (docs/design-system.md).",
   );
   failed = true;
 }
@@ -180,6 +197,37 @@ if (restyled.length > 0) {
   console.error(restyled.join("\n"));
   console.error(
     "Use PrimaryButton, SecondaryButton or QuietButtonStyle as they are; add a variant to the design package if one is missing (docs/design-system.md).",
+  );
+  failed = true;
+}
+
+// A button whose label is a bare symbol is as small as the glyph, well under the 44 pt a finger
+// needs. Its label takes a frame (Size.control) or it is a design control such as GlassIconButton.
+// A toolbar gives its items the system's hit area, so those are left alone.
+const smallTargets = [];
+function inToolbar(text, at) {
+  const start = text.lastIndexOf(".toolbar", at);
+  if (start < 0) return false;
+  let depth = 0;
+  for (const char of text.slice(start, at)) {
+    if (char === "{") depth++;
+    else if (char === "}" && --depth === 0) return false;
+  }
+  return depth > 0;
+}
+for (const [file, text] of sources) {
+  for (const match of text.matchAll(
+    /label:\s*\{\s*Image\(systemName:[^)]*\)(?:\s*\.(?:font|foregroundStyle|symbolRenderingMode|imageScale|symbolVariant|fontWeight)\([^()]*(?:\([^()]*\))?[^()]*\))*\s*\}/g,
+  )) {
+    if (inToolbar(text, match.index)) continue;
+    const line = text.slice(0, match.index).split("\n").length;
+    smallTargets.push(`${file}:${line}: a button labelled by a bare symbol`);
+  }
+}
+if (smallTargets.length > 0) {
+  console.error(smallTargets.join("\n"));
+  console.error(
+    "Give a symbol button's label .frame(width: Size.control, height: Size.control) and .contentShape(.rect), or use GlassIconButton (docs/design-system.md).",
   );
   failed = true;
 }

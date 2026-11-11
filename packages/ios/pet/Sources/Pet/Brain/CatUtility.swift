@@ -52,6 +52,8 @@ public struct CatUtilityInput: Sendable {
   /// hungry.
   public var upbringing: CatUpbringing
   public var mealtime: Bool
+  /// Overfed lately: the bowl holds no interest.
+  public var stuffed = false
   /// How hungry it acts, from 0 up, after its temperament's drama: a hungry cat keeps going
   /// back to the bowl.
   public var hunger: Double = 0
@@ -80,6 +82,7 @@ public enum CatUtility {
     let kind = input.temperament?.bias(group) ?? 1
     let raised =
       input.upbringing.bias(group, hour: input.hour) * (group == .eat && input.mealtime ? 3 : 1)
+      * (group == .eat && input.stuffed ? CatUtility.stuffedEat : 1)
     let habit = input.habits[group] ?? 1
     let time = timeTerm(group, hour: input.hour)
     let room = roomTerm(group, input)
@@ -96,6 +99,9 @@ public enum CatUtility {
       novelty: novelty, mood: mood,
       vitality: vitality)
   }
+
+  /// What the Eat group's score is scaled by while she is stuffed.
+  static let stuffedEat = 0.05
 
   static func base(_ group: CatActivityGroup) -> Double {
     switch group {

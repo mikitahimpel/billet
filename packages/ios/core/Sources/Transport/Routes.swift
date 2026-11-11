@@ -1,5 +1,9 @@
 import Foundation
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 public struct Route: Equatable, Sendable {
   public let method: HTTPMethod
   public let path: String
@@ -46,7 +50,6 @@ public enum Routes {
   public static let getShop = Route(.get, "/v1/shop")
   public static let placeOrder = Route(.post, "/v1/shop/orders")
   public static let setWish = Route(.put, "/v1/shop/wishlist")
-  /// Stands a piece in the room, moves it or puts it back in the closet; each id applies once.
   public static let changeLayout = Route(.post, "/v1/shop/layout")
   public static let openGift = Route(.post, "/v1/shop/gift")
   public static let claimBonus = Route(.post, "/v1/shop/bonus")

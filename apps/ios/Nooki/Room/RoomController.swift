@@ -1,3 +1,4 @@
+import DecorInterface
 import FeatureGames
 import GamesInterface
 import Observation
@@ -5,6 +6,8 @@ import Pet
 import RealityKit
 import RoomInterface
 import SwiftUI
+import WidgetInterface
+import WidgetKit
 import WindowViews
 import Wire
 
@@ -35,13 +38,22 @@ final class RoomController: RoomControlling, CatStatusProviding {
     /// The cat's life the brain runs on; `connectCat` makes it the pair's.
     @ObservationIgnored let catLife: CatLife
     @ObservationIgnored let probe = RoomProbe()
+    @ObservationIgnored private var publishedNeeds: CatNeedsGlance?
 
     @ObservationIgnored private let usesStandIn: Bool
+    @ObservationIgnored private let ownLoop: Bool
+    /// The renderer and frame loop the room draws with when Labs asks for them, kept for the app's life: the room's
+    /// entities live in it, and a renderer freed and made again would draw them blank.
+    @ObservationIgnored private(set) lazy var loop: RoomRenderLoop? = ownLoop ? RoomRenderLoop() : nil
     @ObservationIgnored private lazy var standIn = CatRoom()
     /// An empty room the room's view holds while no room can be seen (see `RoomStage`).
     @ObservationIgnored private(set) lazy var offStage = CatRoom()
     @ObservationIgnored private var polaroids: [UIImage] = []
-    @ObservationIgnored private var motes = true
+    @ObservationIgnored private var motes = false
+    @ObservationIgnored let decorStage = DecorStage()
+    @ObservationIgnored var decor = RoomDecor()
+    @ObservationIgnored var decorRetries = 0
+    @ObservationIgnored private var sway = true
     @ObservationIgnored private var pins: [BoardPin] = []
     /// The scenery last picked for each game, for the next time it is played.
     @ObservationIgnored private var picked: [MiniGame: GameScenery] = [:]
@@ -58,6 +70,11 @@ final class RoomController: RoomControlling, CatStatusProviding {
     init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife,
          defaults: UserDefaults = .standard) {
         self.usesStandIn = usesStandIn
+        #if DEBUG || LABS_YES
+        ownLoop = PerfLabMachine.State.saved(in: defaults).isOn(.ownLoop)
+        #else
+        ownLoop = false
+        #endif
         self.catLife = catLife
         self.defaults = defaults
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
@@ -70,7 +87,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
         guard home == nil, !usesStandIn else { return }
         let room = DioramaScene()
         home = room
+        room.pivot.addChild(decorStage.root)
         wire(room)
+        showDecor(decor)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }
     }
 
@@ -102,6 +121,14 @@ final class RoomController: RoomControlling, CatStatusProviding {
     private func wire(_ room: CatRoom) {
         room.onShowcase = { [weak self] label in withAnimation(.snappy(duration: 0.25)) { self?.showcase = label } }
         if !motes { Self.show(motes: false, in: room) }
+        room.swaying = sway
+    }
+
+    /// Lets every room sway and pulse, or holds it still.
+    func setSway(_ on: Bool) {
+        guard on != sway else { return }
+        sway = on
+        for room in [home, city, board].compactMap({ $0 }) { room.swaying = on }
     }
 
     /// Shows or hides the dust motes in every room, those built now and those built later.
@@ -186,6 +213,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func petted() { emit.yield(.catPetted) }
+
+    func decorTouched(_ gesture: DecorGesture) { emit.yield(.decor(gesture)) }
 
     func careAsked() { emit.yield(.careAsked) }
 
@@ -311,7 +340,19 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     func refreshStatus() {
         let director = current?.director
-        let next = CatStatus(rounding: director?.needs, mind: director?.mind)
+        let next = CatStatus(rounding: director?.needs, mind: director?.mind, about: director?.about)
         if next != status { status = next }
+        publishNeeds(director?.needs)
+    }
+
+    /// Hands her needs to the widgets, which reload only when what she asks for changes.
+    private func publishNeeds(_ needs: PetNeeds?) {
+        guard let needs else { return }
+        let glance = CatNeedsGlance(full: needs.full, rested: needs.rested, loved: needs.loved,
+                                    playful: needs.playful, lowBelow: LifeConfig.standard.lowBelow, savedAt: .now)
+        guard glance.differsForWidgets(from: publishedNeeds) else { return }
+        publishedNeeds = glance
+        glance.save()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

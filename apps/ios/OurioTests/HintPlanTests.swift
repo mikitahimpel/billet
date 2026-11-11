@@ -1,6 +1,9 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Testing
+import UsInterface
 import Wire
 @testable import Billet
 
@@ -19,19 +22,27 @@ import Wire
         #expect(next(HintContext(screen: .shop, busy: true)) == nil)
     }
 
-    @Test func theAddButtonComesRightAfterTheCat() {
+    @Test func herNeedsComeRightAfterTheCatAndThenTheAddButton() {
         let world = HintContext(screen: .world, hasRoomChoice: true, canAffordTreat: true)
-        #expect(next(world, seen: ["pet"]) == "add")
+        #expect(next(world, seen: ["pet"]) == "needs")
+        #expect(next(world, seen: ["pet", "needs"]) == "add")
         // The pair is made in the onboarding: no hint asks for a partner, whatever an older build saw.
         #expect(!HintPlan.order.contains("invite"))
-        #expect(next(world, seen: ["pet", "invite"]) == "add")
+        #expect(next(world, seen: ["pet", "needs", "invite"]) == "add")
+    }
+
+    @Test func aPhoneThatSawEveryOlderHintStillLearnsWhereHerNeedsAre() {
+        let world = HintContext(screen: .world, hasRoomChoice: true, canAffordTreat: true)
+        #expect(next(world, seen: ["pet", "add", "moments", "shop", "rooms", "treat"]) == "needs")
+        // Not before she has been met.
+        #expect(next(world, seen: ["add"]) == "pet")
     }
 
     @Test func worldHintsFollowAFixedOrder() {
         let world = HintContext(screen: .world, hasRoomChoice: true, canAffordTreat: true)
-        #expect(next(world, seen: ["pet", "add"]) == "rooms")
-        #expect(next(world, seen: ["pet", "add", "rooms"]) == "treat")
-        #expect(next(world, seen: ["pet", "add", "rooms", "treat"]) == nil)
+        #expect(next(world, seen: ["pet", "needs", "add"]) == "rooms")
+        #expect(next(world, seen: ["pet", "needs", "add", "rooms"]) == "treat")
+        #expect(next(world, seen: ["pet", "needs", "add", "rooms", "treat"]) == nil)
     }
 
     @Test func eachTabHintWaitsForItsFirstVisit() {
@@ -39,14 +50,18 @@ import Wire
         #expect(next(HintContext(screen: .shop)) == "shop")
         #expect(next(HintContext(screen: .shop), seen: ["shop"]) == nil)
         #expect(next(HintContext(screen: .other)) == nil)
-        #expect(next(HintContext(screen: .world), seen: ["pet", "add"]) == nil)
+        #expect(next(HintContext(screen: .world), seen: ["pet", "needs", "add"]) == nil)
+    }
+
+    @Test func theMomentsHintWaitsForSomethingOnTheTab() {
+        #expect(next(HintContext(screen: .moments, momentsEmpty: true)) == nil)
     }
 
     @Test func aFeatureHintWaitsForItsFeature() {
         let world = HintContext(screen: .world)
-        #expect(next(world, seen: ["pet", "add"]) == nil)
-        #expect(next(HintContext(screen: .world, hasRoomChoice: true), seen: ["pet", "add"]) == "rooms")
-        #expect(next(HintContext(screen: .world, canAffordTreat: true), seen: ["pet", "add"]) == "treat")
+        #expect(next(world, seen: ["pet", "needs", "add"]) == nil)
+        #expect(next(HintContext(screen: .world, hasRoomChoice: true), seen: ["pet", "needs", "add"]) == "rooms")
+        #expect(next(HintContext(screen: .world, canAffordTreat: true), seen: ["pet", "needs", "add"]) == "treat")
         // Without the cat first, a feature hint doesn't jump the queue.
         #expect(next(HintContext(screen: .world, hasRoomChoice: true)) == "pet")
     }
@@ -96,16 +111,17 @@ import Wire
         let first = hints()
         #expect(first.plan(HintContext(screen: .world)) == "pet")
         first.appeared(PetHint())
-        #expect(first.plan(HintContext(screen: .world)) == "add")
+        #expect(first.plan(HintContext(screen: .world)) == "needs")
         // A new launch remembers it.
-        #expect(hints().plan(HintContext(screen: .world)) == "add")
+        #expect(hints().plan(HintContext(screen: .world)) == "needs")
     }
 
     @Test func doneOrClosedCountsAsSeen() {
         let hints = hints()
         hints.done(PetHint())
+        hints.done(NeedsHint())
         hints.close(AddHint())
-        #expect(hints.seen == ["pet", "add"])
+        #expect(hints.seen == ["pet", "needs", "add"])
         #expect(hints.plan(HintContext(screen: .world)) == nil)
     }
 
@@ -147,13 +163,13 @@ import Wire
         #expect(hints.plan(HintContext(screen: .world)) == nil)
         hints.onboardingFinished(true)
         hints.appeared(PetHint())
-        #expect(hints.plan(HintContext(screen: .world)) == "add")
+        #expect(hints.plan(HintContext(screen: .world)) == "needs")
     }
 
     @Test func aHintDoneBeforeItShowsIsSeenAndNeverShown() {
         let hints = hints()
         let petted = HintContext(screen: .world, petted: true)
-        #expect(hints.show(petted) == "add")
+        #expect(hints.show(petted) == "needs")
         #expect(hints.seen.contains("pet"))
         #expect(self.hints().plan(HintContext(screen: .world, added: true)) == nil)
         HintStage.current = ""

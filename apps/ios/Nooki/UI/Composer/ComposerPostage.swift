@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 import Wire
 
 extension NoteStamp {
@@ -30,7 +33,8 @@ extension NoteSeal {
 extension View {
     /// The note's stamp and seal, if the sender chose any, on a face `width` points wide.
     func postage(of note: Note, width: CGFloat) -> some View {
-        postage(stamp: note.stamp?.art, seal: note.seal?.art, width: width)
+        postage(stamp: note.stamp?.art, seal: note.seal?.art, width: width,
+                postmark: note.unsent == true ? nil : note.date)
     }
 }
 

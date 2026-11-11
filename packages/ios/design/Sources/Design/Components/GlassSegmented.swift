@@ -38,6 +38,7 @@ public struct GlassSegmented<Value: Hashable>: View {
             .background {
               if isSelected {
                 Capsule().fill(Ink.glassSelection)
+                  .overlay { Capsule().strokeBorder(Ink.selectionRim, lineWidth: 1) }
                   .matchedGeometryEffect(id: "thumb", in: thumb)
               }
             }

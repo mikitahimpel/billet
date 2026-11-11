@@ -1,3 +1,4 @@
+import ProfileInterface
 import XCTest
 
 /// Taps on the tab bar, anywhere on it, must never fall through to the room underneath.

@@ -25,17 +25,24 @@ public struct GameResult: Equatable, Sendable {
   public let score: Int
   /// The meal's weight, for `feed`.
   public let grams: Int?
+  /// The bowl went past the portion (feed) or the brim (water): the reward is cut.
+  public let tooMuch: Bool
 
-  public init(game: MiniGame, score: Int, grams: Int? = nil) {
+  public init(game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false) {
     self.game = game
     self.score = min(max(score, 0), 100)
     self.grams = grams
+    self.tooMuch = tooMuch
   }
 
-  /// A feed that hit `target` with `food` in the bowl: 100 on the gram, less for each gram off.
+  /// A feed that hit `target` with `food` in the bowl: 100 on the gram, less for each gram off,
+  /// and past the portion's zone the table in ``FeedPenalty`` decides.
   public static func feed(target: Int, food: Double) -> GameResult {
-    let grams = Int(food.rounded())
-    return GameResult(game: .feed, score: 100 - 10 * abs(grams - target), grams: grams)
+    let target = FeedPenalty.portion(target)
+    let grams = Int(max(food.isFinite ? food : 0, 0).rounded())
+    let penalty = FeedPenalty.over(target: target, food: food)
+    let score = penalty?.score ?? max(0, 100 - 10 * abs(grams - target))
+    return GameResult(game: .feed, score: score, grams: grams, tooMuch: penalty != nil)
   }
 
   /// The care itself where a need calls for it, and the game, which pays the coins (the server
@@ -53,10 +60,14 @@ public struct GameResult: Equatable, Sendable {
   /// The toast's line.
   public var line: String {
     switch game {
-    case .feed: score == 100 ? "Exactly right. Dinner's served" : "Close enough. Dinner's served"
-    case .water: score >= 80 ? "Right on the line. Fresh water" : "Fresh water"
-    case .laser: "Played out"
-    case .brush: "Soft and shiny"
+    case .feed:
+      if tooMuch { return "Too much! She's stuffed" }
+      return score == 100 ? "Exactly right. Dinner's served" : "Close enough. Dinner's served"
+    case .water:
+      if tooMuch { return "Too much! A puddle, but fresh water" }
+      return score >= 80 ? "Right on the line. Fresh water" : "Fresh water"
+    case .laser: return "Played out"
+    case .brush: return "Soft and shiny"
     }
   }
 }

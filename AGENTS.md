@@ -56,6 +56,24 @@ macOS runners are few and shared by every agent.
   (`gh run list --workflow ios.yml --branch main`). A test that fails there with the same error
   isn't yours: report it, don't rerun.
 
+## Run on the pc
+
+The backend suites and the Swift packages that build on Linux run on the owner's PC, not the Mac, and
+need no build lock:
+
+```sh
+scripts/pc-test.sh [<worktree>|<git-ref>] [--backend|--swift|--all]
+```
+
+It rsyncs the worktree to `ssh pc`, streams the output and exits non-zero on a failure. `--backend`
+is install, lint, typecheck, test and `format:check` (about 2 minutes; the platform suite does not
+time out there). `--swift` is the design rules, swift-format and `swift test` of `contracts`, `core`,
+`pet`, `payments` and `features` without the files that import SwiftUI, CoreGraphics or another
+Apple framework (the pet's 404 tests in under a minute). Anything in the app, `design`, a View or
+RealityKit still needs the Mac or CI. Write new brain, model and store code so it imports only
+Foundation, and keep it out of files that import SwiftUI
+([docs/testflight-ci.md](docs/testflight-ci.md#tests-on-the-pc)).
+
 ## Boundaries
 
 - kebab-case for folders and TS/config files; Swift files are PascalCase after their main type.
@@ -79,9 +97,8 @@ macOS runners are few and shared by every agent.
   table is tested, rejected events included.
 - Stores take every dependency in `init`; views get other features as protocols. No
   `UserDefaults.standard`, `NotificationCenter`, `SharedFile` or `CatProfile` in a feature.
-- `apps/ios/Shared` is the `OurioShared` static library, built once for the app and its extensions; what
-  the app uses from it is `public`. Add nothing new there: it is moving into the `*Interface` targets
-  ([docs/ios-architecture.md](docs/ios-architecture.md) §1.1.1).
+- Code the app and its extensions share is in the `*Interface` targets; `apps/ios/Shared` holds only
+  the images and the map they bundle ([docs/ios-architecture.md](docs/ios-architecture.md) §1.1.1).
 - The Room (`apps/ios/Nooki/Room`) is sealed: `RoomHost(input:)` with `.equatable()`, commands
   through `RoomControlling`, events out through `RoomEvent`. No scene type is named outside it,
   and no scene tick reaches state outside it.

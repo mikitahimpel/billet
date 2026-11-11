@@ -108,3 +108,13 @@ test("buttons that jump within the page keep their words apart", () => {
     /\n\nLet’s talk See products\n$/,
   );
 });
+
+test("a question set as a heading inside <summary> keeps one heading", () => {
+  const md = pageToMarkdown(
+    page(
+      '<details><summary><h3>Is it free?</h3><span aria-hidden="true"></span></summary><p>Yes.</p></details>',
+    ),
+    "https://floorto3d.com/",
+  );
+  assert.match(md, /\n### Is it free\?\n\nYes\.\n$/);
+});

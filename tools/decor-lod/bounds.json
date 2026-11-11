@@ -1,0 +1,337 @@
+{
+  "Decor_armchair": {
+    "depth": 0.75,
+    "height": 0.84,
+    "width": 0.94
+  },
+  "Decor_bookcase": {
+    "depth": 0.2793,
+    "height": 1.0447,
+    "width": 0.6993
+  },
+  "Decor_donutbed": {
+    "depth": 0.8793,
+    "height": 0.2452,
+    "width": 0.8745
+  },
+  "Decor_lamp": {
+    "depth": 0.48,
+    "height": 0.6034,
+    "width": 0.48
+  },
+  "Decor_lantern": {
+    "depth": 0.4518,
+    "height": 0.9749,
+    "width": 0.452
+  },
+  "Decor_monstera": {
+    "depth": 0.7758,
+    "height": 1.0365,
+    "width": 0.784
+  },
+  "Decor_mouse": {
+    "depth": 0.5695,
+    "height": 0.2216,
+    "width": 0.2227
+  },
+  "Decor_print": {
+    "depth": 0.3578,
+    "height": 0.7077,
+    "width": 0.56
+  },
+  "Decor_rug": {
+    "depth": 1.3001,
+    "height": 0.0398,
+    "width": 1.2996
+  },
+  "Decor_teatable": {
+    "depth": 0.72,
+    "height": 0.61,
+    "width": 0.72
+  },
+  "Decor_tower": {
+    "depth": 0.54,
+    "height": 1.1342,
+    "width": 0.7096
+  },
+  "Decor_yarn": {
+    "depth": 0.443,
+    "height": 0.4709,
+    "width": 0.6807
+  },
+  "Item_armchair": {
+    "depth": 0.75,
+    "height": 0.84,
+    "width": 0.94
+  },
+  "Item_armchair-blossom": {
+    "depth": 0.74,
+    "height": 0.9,
+    "width": 0.86
+  },
+  "Item_armchair-cocoa": {
+    "depth": 0.74,
+    "height": 0.83,
+    "width": 0.86
+  },
+  "Item_armchair-ember": {
+    "depth": 0.74,
+    "height": 0.83,
+    "width": 0.86
+  },
+  "Item_armchair-frost": {
+    "depth": 0.74,
+    "height": 0.9,
+    "width": 0.86
+  },
+  "Item_armchair-meadow": {
+    "depth": 0.74,
+    "height": 0.86,
+    "width": 0.86
+  },
+  "Item_armchair-round": {
+    "depth": 0.3894,
+    "height": 0.3688,
+    "width": 0.4004
+  },
+  "Item_armchair-sunbeam": {
+    "depth": 0.74,
+    "height": 0.86,
+    "width": 0.86
+  },
+  "Item_beanbag": {
+    "depth": 0.4,
+    "height": 0.271,
+    "width": 0.3999
+  },
+  "Item_beanbag-sage": {
+    "depth": 0.4,
+    "height": 0.2549,
+    "width": 0.3999
+  },
+  "Item_beanbag-terracotta": {
+    "depth": 0.3999,
+    "height": 0.2762,
+    "width": 0.3999
+  },
+  "Item_bookcase": {
+    "depth": 0.28,
+    "height": 1.045,
+    "width": 0.7
+  },
+  "Item_books": {
+    "depth": 0.1336,
+    "height": 0.063,
+    "width": 0.1402
+  },
+  "Item_box": {
+    "depth": 0.299,
+    "height": 0.1619,
+    "width": 0.2864
+  },
+  "Item_cactus": {
+    "depth": 0.0631,
+    "height": 0.0901,
+    "width": 0.0708
+  },
+  "Item_catbed": {
+    "depth": 0.25,
+    "height": 0.0754,
+    "width": 0.2488
+  },
+  "Item_cattree": {
+    "depth": 0.463,
+    "height": 0.5495,
+    "width": 0.4644
+  },
+  "Item_chest": {
+    "depth": 0.465,
+    "height": 0.72,
+    "width": 0.64
+  },
+  "Item_clock": {
+    "depth": 0.0281,
+    "height": 0.1591,
+    "width": 0.1591
+  },
+  "Item_desk": {
+    "depth": 0.5002,
+    "height": 0.4814,
+    "width": 0.3719
+  },
+  "Item_donutbed": {
+    "depth": 0.8806,
+    "height": 0.245,
+    "width": 0.8738
+  },
+  "Item_fiddlefig": {
+    "depth": 0.3598,
+    "height": 0.7502,
+    "width": 0.3675
+  },
+  "Item_fishplush": {
+    "depth": 0.1501,
+    "height": 0.0864,
+    "width": 0.1291
+  },
+  "Item_fishtank": {
+    "depth": 0.3476,
+    "height": 0.3499,
+    "width": 0.3417
+  },
+  "Item_floorcushion-sage": {
+    "depth": 0.2992,
+    "height": 0.0541,
+    "width": 0.2999
+  },
+  "Item_floorcushion-terracotta": {
+    "depth": 0.3,
+    "height": 0.089,
+    "width": 0.3
+  },
+  "Item_floorlamp": {
+    "depth": 0.3257,
+    "height": 0.7491,
+    "width": 0.3181
+  },
+  "Item_frame-landscape": {
+    "depth": 0.0158,
+    "height": 0.2728,
+    "width": 0.2232
+  },
+  "Item_globe": {
+    "depth": 0.1245,
+    "height": 0.1798,
+    "width": 0.1083
+  },
+  "Item_guitar": {
+    "depth": 0.1208,
+    "height": 0.4993,
+    "width": 0.2265
+  },
+  "Item_lamp": {
+    "depth": 0.48,
+    "height": 0.6085,
+    "width": 0.48
+  },
+  "Item_lantern": {
+    "depth": 0.452,
+    "height": 0.975,
+    "width": 0.452
+  },
+  "Item_lavalamp": {
+    "depth": 0.0978,
+    "height": 0.1998,
+    "width": 0.0986
+  },
+  "Item_mirror": {
+    "depth": 0.1848,
+    "height": 0.8006,
+    "width": 0.3768
+  },
+  "Item_monstera": {
+    "depth": 0.8393,
+    "height": 1.0506,
+    "width": 0.8338
+  },
+  "Item_monstera-potted": {
+    "depth": 1.0122,
+    "height": 0.9583,
+    "width": 1.0545
+  },
+  "Item_mouse": {
+    "depth": 0.5695,
+    "height": 0.2214,
+    "width": 0.2231
+  },
+  "Item_mugs": {
+    "depth": 0.1099,
+    "height": 0.0416,
+    "width": 0.0401
+  },
+  "Item_poster-moon": {
+    "depth": 0.0544,
+    "height": 0.3001,
+    "width": 0.1966
+  },
+  "Item_poster-plants": {
+    "depth": 0.0252,
+    "height": 0.2991,
+    "width": 0.2054
+  },
+  "Item_pothos": {
+    "depth": 0.17,
+    "height": 0.1748,
+    "width": 0.1849
+  },
+  "Item_print": {
+    "depth": 0.3621,
+    "height": 0.7126,
+    "width": 0.56
+  },
+  "Item_radio": {
+    "depth": 0.098,
+    "height": 0.1512,
+    "width": 0.16
+  },
+  "Item_recordplayer": {
+    "depth": 0.2059,
+    "height": 0.1058,
+    "width": 0.2094
+  },
+  "Item_rug": {
+    "depth": 1.3,
+    "height": 0.0399,
+    "width": 1.3
+  },
+  "Item_scratchpost": {
+    "depth": 0.2577,
+    "height": 0.2993,
+    "width": 0.2513
+  },
+  "Item_succulents": {
+    "depth": 0.1447,
+    "height": 0.1119,
+    "width": 0.1496
+  },
+  "Item_teaset": {
+    "depth": 0.1799,
+    "height": 0.1178,
+    "width": 0.1801
+  },
+  "Item_teatable": {
+    "depth": 0.72,
+    "height": 0.61,
+    "width": 0.72
+  },
+  "Item_throwblanket": {
+    "depth": 0.2214,
+    "height": 0.1305,
+    "width": 0.2508
+  },
+  "Item_tower": {
+    "depth": 0.54,
+    "height": 1.135,
+    "width": 0.71
+  },
+  "Item_tunnel": {
+    "depth": 0.2989,
+    "height": 0.2335,
+    "width": 0.2582
+  },
+  "Item_windowseat": {
+    "depth": 0.3617,
+    "height": 0.3574,
+    "width": 0.3969
+  },
+  "Item_yarn": {
+    "depth": 0.5006,
+    "height": 0.531,
+    "width": 0.7428
+  },
+  "Item_yarnbasket": {
+    "depth": 0.1982,
+    "height": 0.154,
+    "width": 0.2016
+  }
+}

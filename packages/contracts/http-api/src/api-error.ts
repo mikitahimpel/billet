@@ -32,6 +32,7 @@ export const ApiError = Schema.TaggedUnion({
       "wrong-surface",
       "outside-room",
       "occupied",
+      "last-rest",
     ]),
   },
   CollectionIncomplete: { collection: CollectionId },

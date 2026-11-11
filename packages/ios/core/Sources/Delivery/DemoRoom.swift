@@ -1,5 +1,10 @@
 import Foundation
 import Ink
+import Persistence
+
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
 
 /// The pairing code and this device's ID, shared with the extensions through the App Group.
 /// The code is the room's only credential.
@@ -20,7 +25,7 @@ public struct DemoRoom: Hashable, Sendable {
   }
 
   public static var sharedDefaults: UserDefaults {
-    UserDefaults(suiteName: NoteImage.appGroup) ?? .standard
+    UserDefaults(suiteName: AppGroupStorage.billetIdentifier) ?? .standard
   }
 
   public static func generateCode() -> String {
@@ -129,21 +134,23 @@ public struct DemoRoom: Hashable, Sendable {
     return components.url
   }
 
-  /// Saves the note a push points at as the latest note image, and reports whether it did.
-  public func saveNote(
-    noteURL: String, session: URLSession = .shared, to file: URL? = NoteImage.latestFile
-  ) async -> Bool {
-    struct StoredNote: Decodable {
-      let ink: String
+  #if canImport(CoreGraphics)
+    /// Saves the note a push points at as the latest note image, and reports whether it did.
+    public func saveNote(
+      noteURL: String, session: URLSession = .shared, to file: URL? = NoteImage.latestFile
+    ) async -> Bool {
+      struct StoredNote: Decodable {
+        let ink: String
+      }
+      guard let url = noteRequestURL(noteURL: noteURL),
+        let (data, response) = try? await session.data(from: url),
+        (response as? HTTPURLResponse)?.statusCode == 200,
+        let note = try? JSONDecoder().decode(StoredNote.self, from: data),
+        let strokes = try? NoteInk.decode(note.ink)
+      else { return false }
+      return NoteImage.saveLatest(strokes, to: file)
     }
-    guard let url = noteRequestURL(noteURL: noteURL),
-      let (data, response) = try? await session.data(from: url),
-      (response as? HTTPURLResponse)?.statusCode == 200,
-      let note = try? JSONDecoder().decode(StoredNote.self, from: data),
-      let strokes = try? NoteInk.decode(note.ink)
-    else { return false }
-    return NoteImage.saveLatest(strokes, to: file)
-  }
+  #endif
 }
 
 /// One play frame as the room reads it: a pet, the day's treat or a meal.

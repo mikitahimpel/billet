@@ -1,7 +1,11 @@
 import AppIntents
+import MomentsInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
+import ProfileInterface
+import UsInterface
 import WidgetKit
 
 // One-tap actions on the widgets and controls. They live in both the app and the extension: the system runs the app's
@@ -57,6 +61,20 @@ nonisolated struct PetMochiIntent: AppIntent {
     }
 }
 
+/// A meal for Mochi: the widget stops asking for dinner right away, and her room serves it on the app's next launch.
+nonisolated struct FeedMochiIntent: AppIntent {
+    static let title: LocalizedStringResource = "Feed Your Cat"
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        var activity = WidgetActivity.load()
+        activity.feed()
+        activity.save()
+        savedReloadingWidgets()
+        return .result()
+    }
+}
+
 /// Leaves a check-in for the partner holding the phone.
 struct SetMoodIntent: AppIntent {
     static let title: LocalizedStringResource = "Set Mood"
@@ -73,6 +91,20 @@ struct SetMoodIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         MoodStore().set(mood.mood, for: CoupleStore().couple.viewer)
+        savedReloadingWidgets()
+        return .result()
+    }
+}
+
+/// Tells the partner "I'm thinking of you": a Missing-you check-in, the one mood that says it. It reaches them when the
+/// app next runs, like any check-in made on a widget.
+struct SendHugIntent: AppIntent {
+    static let title: LocalizedStringResource = "Send a Hug"
+    static let description = IntentDescription("Lets your partner know you are thinking of them.")
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        MoodStore().set(.missing, for: CoupleStore().couple.viewer)
         savedReloadingWidgets()
         return .result()
     }

@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 struct CalendarScreen: View {
     let state: HomeState
@@ -41,8 +44,8 @@ struct CalendarScreen: View {
                 VStack(spacing: 0) {
                     SheetSubtitle(text: "Day \(state.daysTogether) together")
                     HStack(spacing: Space.s) {
-                        FilterChip("Soon", isSelected: !showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = false } }
-                        FilterChip("Month", isSelected: showsMonth) { withAnimation(.snappy(duration: 0.25)) { showsMonth = true } }
+                        FilterChip("Soon", isSelected: !showsMonth) { withAnimation(Motion.spring(Motion.quick)) { showsMonth = false } }
+                        FilterChip("Month", isSelected: showsMonth) { withAnimation(Motion.spring(Motion.quick)) { showsMonth = true } }
                         Spacer(minLength: 0)
                     }
                 }
@@ -102,12 +105,22 @@ private struct MonthGrid: View {
     var body: some View {
         VStack(spacing: Space.m) {
             HStack {
-                Button { shift(-1) } label: { Image(systemName: "chevron.left") }
+                Button { shift(-1) } label: {
+                    Image(systemName: "chevron.left")
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Previous month")
                 Spacer()
                 Text(month.formatted(.dateTime.month(.wide).year()))
                     .font(.ourioHeadline)
                 Spacer()
-                Button { shift(1) } label: { Image(systemName: "chevron.right") }
+                Button { shift(1) } label: {
+                    Image(systemName: "chevron.right")
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
+                }
+                .accessibilityLabel("Next month")
             }
             .font(.ourioHeadline)
             .foregroundStyle(Ink.text)
@@ -156,7 +169,7 @@ private struct MonthGrid: View {
     }
 
     private func shift(_ months: Int) {
-        withAnimation(.snappy(duration: 0.25)) { month = cal.date(byAdding: .month, value: months, to: month) ?? month }
+        withAnimation(Motion.spring(Motion.quick)) { month = cal.date(byAdding: .month, value: months, to: month) ?? month }
     }
 }
 

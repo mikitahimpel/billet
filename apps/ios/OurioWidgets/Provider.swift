@@ -1,6 +1,10 @@
+import MomentsInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import UIKit
+import UsInterface
 import WidgetKit
 
 struct OurioEntry<Configuration: OurioConfiguration>: TimelineEntry {
@@ -32,19 +36,22 @@ struct OurioProvider<Configuration: OurioConfiguration>: AppIntentTimelineProvid
 }
 
 /// The shared stores, read once for a whole timeline.
-private struct Stores {
+struct Stores {
     let couple = CoupleStore().couple
     let moods = MoodStore().latest
     let activity = WidgetActivity.load()
+    let needs = CatNeedsGlance.load()
     let us = UsStore()
-    let moment: (preview: OurioSnapshot.MomentPreview, image: Data?)?
+    let moment: (preview: OurioSnapshot.MomentPreview, image: Data?, date: Date)?
 
-    init() {
+    /// The photo is decoded only for the widgets that show it: the extension's memory limit is tight.
+    init(loadsPhoto: Bool = true) {
         let store = MomentStore()
         moment = (store.pinned.first ?? store.moments.first).map { moment in
             let url = MomentStore.imageURL(for: moment)
             return (OurioSnapshot.MomentPreview(id: moment.id, caption: moment.caption, imageURL: url),
-                    Downsample.image(at: url, maxPixels: 600)?.jpegData(compressionQuality: 0.85))
+                    loadsPhoto ? Downsample.image(at: url, maxPixels: 600)?.jpegData(compressionQuality: 0.85) : nil,
+                    moment.date)
         }
     }
 
@@ -57,24 +64,32 @@ private struct Stores {
     }
 }
 
-extension OurioSnapshot {
-    /// Gallery and placeholder data: a plausible evening, nothing from the couple's real stores.
-    static func sample(now: Date = .now) -> OurioSnapshot {
-        let cal = Calendar.current
-        return OurioSnapshot(
-            date: now, viewer: "L", partner: "M", daysTogether: 127,
-            next: NextEvent(title: "4 months together", icon: .init(symbol: "sparkles", tint: .sun),
-                            date: cal.date(byAdding: .day, value: 18, to: now) ?? now, daysLeft: 18),
-            partnerMood: MoodCheckIn(mood: .missing, date: now.addingTimeInterval(-1200)),
-            myMood: nil,
-            list: ListPreview(id: UUID(), title: "Groceries", icon: ListKind.groceries.icon,
-                              items: [.init(id: UUID(), text: "Oat milk", author: "M", done: false),
-                                      .init(id: UUID(), text: "Cat treats", author: "L", done: false),
-                                      .init(id: UUID(), text: "Lemons", author: "M", done: true)],
-                              openCount: 2, partnerAddedToday: false),
-            planned: nil,
-            idea: IdeaPreview(id: 1, title: "Blanket fort cinema", pitch: "Build a fort, pick a movie, no phones allowed inside",
-                              matched: true),
-            moment: nil, isPurring: false, isNight: isNight(now))
+/// The family widgets: no configuration, one timeline of a few entries a day (FamilyTimeline).
+struct FamilyProvider: TimelineProvider {
+    var loadsPhoto = false
+
+    func placeholder(in context: Context) -> FamilyEntry {
+        FamilyEntry(date: .now, snapshot: .sample(), facts: .sample(), momentImage: nil, momentDate: nil, want: .food)
+    }
+
+    func getSnapshot(in context: Context, completion: @escaping (FamilyEntry) -> Void) {
+        completion(context.isPreview ? placeholder(in: context) : entry(at: .now, stores: Stores(loadsPhoto: loadsPhoto),
+                                                                        facts: .load()))
+    }
+
+    func getTimeline(in context: Context, completion: @escaping (Timeline<FamilyEntry>) -> Void) {
+        let stores = Stores(loadsPhoto: loadsPhoto)
+        let facts = WidgetFacts.load()
+        let dates = FamilyTimeline.entryDates(from: .now, activity: stores.activity, moods: stores.moods,
+                                              drawing: facts.drawing)
+        completion(Timeline(entries: dates.map { entry(at: $0, stores: stores, facts: facts) }, policy: .atEnd))
+    }
+
+    private func entry(at date: Date, stores: Stores, facts: WidgetFacts) -> FamilyEntry {
+        let configured: OurioEntry<ModuleConfiguration> = stores.entry(at: date, configuration: ModuleConfiguration())
+        let want = stores.needs?.want(at: date, asleep: configured.snapshot.isNight, fedAt: stores.activity.lastFed,
+                                      pettedAt: stores.activity.lastPet)
+        return FamilyEntry(date: date, snapshot: configured.snapshot, facts: facts, momentImage: configured.momentImage,
+                           momentDate: stores.moment?.date, want: want)
     }
 }

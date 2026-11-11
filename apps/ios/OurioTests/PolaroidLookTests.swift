@@ -1,14 +1,17 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import Testing
+import UsInterface
 @testable import Billet
 
 /// Renders the polaroid look at iPhone SE width, light and dark, into `BILLET_SAMPLES` when it is set (CI sets it and
 /// keeps the PNGs as the `samples` artifact), so the look can be reviewed without a Simulator session.
 struct PolaroidLookTests {
     @Test func rendersTheFeedLookInLightAndDark() throws {
-        let photos = try ["ginger", "calico", "tuxedo", "cream"].map { "CatStandingColor-\($0)" }.map {
+        let photos = try ["CatColor-ginger", "CatStandingColor-calico", "CatColor-tuxedo", "CatStandingColor-cream"].map {
             let url = try #require(Bundle.main.url(forResource: $0, withExtension: "jpg"))
             return try #require(Downsample.image(at: url, maxPixels: 512))
         }

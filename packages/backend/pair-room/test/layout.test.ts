@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { LayoutChange } from "@billet/contracts-domain/decor";
 import { type Placement, RoomItemId } from "@billet/contracts-domain/shop";
 import { decide } from "../src/decide.ts";
+import { shopOf } from "../src/shop-view.ts";
 import { RoomCommand } from "../src/room-command.ts";
 import type { RoomDecision } from "../src/room-decision.ts";
 import type { ActiveRoom } from "../src/room-state.ts";
@@ -53,8 +54,8 @@ describe("arranging the room", () => {
 
   it("moves a piece by placing it again, and takes it back with Unplace", () => {
     const first = accepted(owning, place(1, spot("armchair", -2, 6))).state;
-    const moved = accepted(first, place(2, spot("armchair", 0, 6))).state;
-    expect(moved.layout).toEqual([spot("armchair", 0, 6)]);
+    const moved = accepted(first, place(2, spot("armchair", -1, 6))).state;
+    expect(moved.layout).toEqual([spot("armchair", -1, 6)]);
     const gone = accepted(moved, change(3, { _tag: "Unplace", item: piece("armchair") })).state;
     expect(gone.layout).toEqual([]);
   });
@@ -69,7 +70,7 @@ describe("arranging the room", () => {
   it("keeps the newest ids only", () => {
     let room = owning;
     for (let n = 1; n <= 70; n++) {
-      room = accepted(room, place(n, spot("yarn", n % 2 === 0 ? -4 : -5, 6))).state;
+      room = accepted(room, place(n, spot("yarn", n % 2 === 0 ? -2 : -1, 5))).state;
     }
     expect(room.layoutLog).toHaveLength(64);
     expect(room.layoutLog.at(-1)).toBe(uuid(70));
@@ -86,16 +87,72 @@ describe("arranging the room", () => {
   it("refuses two pieces in one place, so two partners cannot overlap", () => {
     const first = accepted(owning, place(1, spot("armchair", -2, 6))).state;
     expect(reason(first, place(2, spot("yarn", -2, 6)))).toBe("occupied");
-    expect(accepted(first, place(3, spot("yarn", 5, -6))).state.layout).toHaveLength(2);
+    expect(accepted(first, place(3, spot("yarn", 6, -3))).state.layout).toHaveLength(2);
   });
 
   it("lets a piece stand on a rug", () => {
     const withRug: ActiveRoom = { ...owning, items: [...owning.items, piece("monstera")] };
     const first = accepted(withRug, place(1, spot("rug", 0, 0))).state;
-    expect(accepted(first, place(2, spot("monstera", 0, 0))).state.layout).toHaveLength(2);
+    expect(accepted(first, place(2, spot("monstera", 0, 5))).state.layout).toHaveLength(2);
+  });
+
+  it("knows the props of the catalog, a flat cushion is stood on, a wall clock hangs", () => {
+    const props: ActiveRoom = {
+      ...owning,
+      items: [piece("windowseat"), piece("floorcushion-sage"), piece("books"), piece("clock")],
+    };
+    const first = accepted(props, place(1, spot("floorcushion-sage", 0, 5))).state;
+    expect(accepted(first, place(2, spot("books", 0, 5))).state.layout).toHaveLength(2);
+    expect(accepted(first, place(3, spot("clock", 4, 0, "backWall"))).state.layout).toHaveLength(2);
+    expect(reason(props, place(4, spot("windowseat", 0, 0, "backWall")))).toBe("wrong-surface");
+    expect(reason(props, place(5, spot("hammock", 0, 0)))).toBe("not-owned");
   });
 
   it("refuses a room not open", () => {
     expect(decide({ _tag: "Vacant" }, place(1, spot("armchair", 0, 0)))._tag).toBe("Rejected");
+  });
+});
+
+describe("the room's own furniture", () => {
+  it("stands where the room has it until the pair moves it, with no change stored", () => {
+    expect(owning.layout).toEqual([]);
+    expect(reason(owning, place(1, spot("armchair", 1, -1)))).toBe("occupied");
+    expect(reason(owning, place(2, spot("armchair", -5, 0)))).toBe("occupied");
+  });
+
+  it("moves a piece of it like any other, and frees where it stood", () => {
+    const moved = accepted(owning, place(1, spot("base-cattree", 7, 0))).state;
+    expect(moved.layout).toEqual([spot("base-cattree", 7, 0)]);
+    expect(reason(moved, place(2, spot("yarn", 7, 0)))).toBe("occupied");
+    expect(reason(owning, place(3, spot("yarn", 7, -7)))).toBe("occupied");
+    expect(accepted(moved, place(4, spot("yarn", 7, -7))).state.layout).toHaveLength(2);
+    expect(reason(owning, place(5, spot("base-cattree", 1, -1)))).toBe("occupied");
+  });
+
+  it("owns it without buying: no sale, no ownership check", () => {
+    expect(shopOf(owning)).toMatchObject({ layout: [], stowed: [] });
+    expect(accepted(owning, place(1, spot("base-plant", -4, 4))).state.layout).toHaveLength(1);
+    expect(reason(owning, place(2, spot("base-plant", 0, 0, "backWall")))).toBe("wrong-surface");
+  });
+
+  it("puts a piece away, remembers it, and stands it again on a place", () => {
+    const away = accepted(owning, change(1, { _tag: "Unplace", item: piece("base-plant") })).state;
+    expect(away.stowed).toEqual(["base-plant"]);
+    expect(away.layout).toEqual([]);
+    expect(shopOf(away)).toMatchObject({ layout: [], stowed: ["base-plant"] });
+    expect(accepted(away, place(2, spot("yarn", -8, -8))).state.layout).toHaveLength(1);
+    const back = accepted(away, place(3, spot("base-plant", 7, 3))).state;
+    expect(back.stowed).toEqual([]);
+    expect(back.layout).toContainEqual(spot("base-plant", 7, 3));
+  });
+
+  it("keeps a bed or a sofa for the cat: the last one cannot be put away", () => {
+    const away = (n: number, item: string) => change(n, { _tag: "Unplace", item: piece(item) });
+    expect(reason(owning, away(1, "base-donutbed"))).toBe("last-rest");
+    const sofa = accepted(owning, place(2, spot("armchair", -2, 6))).state;
+    const bedGone = accepted(sofa, away(3, "base-donutbed")).state;
+    expect(bedGone.stowed).toEqual(["base-donutbed"]);
+    expect(reason(bedGone, away(4, "armchair"))).toBe("last-rest");
+    expect(accepted(bedGone, away(5, "base-plant")).state.stowed).toHaveLength(2);
   });
 });

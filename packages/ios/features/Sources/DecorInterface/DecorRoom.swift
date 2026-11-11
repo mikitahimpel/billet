@@ -1,14 +1,36 @@
-/// What a room already has in it that a piece cannot stand on, in metres.
+/// A floor point that follows a piece of the room's own furniture: where the cat goes in relation to it. While
+/// the piece is stored there is no such point.
+public struct DecorFollow: Equatable, Sendable {
+  public let piece: String
+  /// Metres from the piece's middle with no turn; a piece turned a quarter swings it round.
+  public let dx: Double
+  public let dz: Double
+
+  public init(piece: String, dx: Double, dz: Double) {
+    self.piece = piece
+    self.dx = dx
+    self.dz = dz
+  }
+}
+
+/// What a room has in it that no piece can be put away from, in metres, and where the cat goes. The room's
+/// furniture is not here: it is a piece like any other, in `DecorItem.baseItems`.
 public struct DecorRoom: Equatable, Sendable {
   let blocked: [Span]
   let backWallBlocked: [Span]
   let leftWallBlocked: [Span]
   /// Where a new floor piece goes first, in grid cells.
   public let floorSpots: [(u: Int, v: Int)]
-  /// Where she starts, and the floor spots she walks to: her bed's front, the tree, the window seat,
-  /// the ball and the yarn basket. A piece may not cut her off from any of them.
+  /// Where she steps down from her bed when it is stored, or the room has none.
   public let spawn: Occupancy.Point
-  public let anchors: [Occupancy.Point]
+  /// Where she steps down from her bed while it stands.
+  public let spawnFollow: DecorFollow
+  /// The pieces she must always be able to walk up to, from her bed: the cat tree. A piece may not cut her
+  /// off from them. A stored piece asks nothing.
+  public let anchorPieces: [String]
+  /// Where she stands to visit the ball, the yarn basket and the window seat. A piece that cuts one off
+  /// only takes that visit away; it does not stop her being placed.
+  public let visitFollows: [String: DecorFollow]
   /// The least share of the floor she must keep.
   public let minimumFree = 0.35
 
@@ -20,34 +42,34 @@ public struct DecorRoom: Equatable, Sendable {
     }
   }
 
-  /// The cat's floor with the room's own furniture and `solid` pieces blocked.
+  /// The cat's floor with the room's own fixtures and `solid` pieces blocked.
   func occupancy(solid: [Span]) -> Occupancy { Occupancy(spans: blocked + solid) }
-
-  /// Her stops, each moved to the nearest cell the room itself leaves free: she sits beside a piece,
-  /// and a cell beside it may fall inside its margin.
-  var stops: [Occupancy.Point] {
-    let bare = Occupancy(spans: blocked)
-    return anchors.map { bare.nearestFree(to: $0) ?? $0 }
-  }
 
   public static func == (a: DecorRoom, b: DecorRoom) -> Bool {
     a.blocked == b.blocked && a.backWallBlocked == b.backWallBlocked
-      && a.leftWallBlocked == b.leftWallBlocked
+      && a.leftWallBlocked == b.leftWallBlocked && a.anchorPieces == b.anchorPieces
+      && a.visitFollows == b.visitFollows && a.spawnFollow == b.spawnFollow
   }
 
-  /// Mochi's room as the scene builds it: her bed, the cat tree, the yarn basket, the window seat,
-  /// the stool with its lamp, and the wall space the polaroid garland and the window take.
+  /// Mochi's room as `Tools/make_room.py` builds it. Its floor furniture is in the catalog; what stays here
+  /// is the walls' own: the shelf, the polaroid garland, the round window and the paw picture.
   public static let home = DecorRoom(
-    blocked: [
-      Span(x: 0.06, z: -0.04, halfX: 0.19, halfZ: 0.19),
-      Span(x: 0.36, z: -0.36, halfX: 0.11, halfZ: 0.11),
-      Span(x: 0.37, z: 0.36, halfX: 0.1, halfZ: 0.1),
-      Span(x: -0.41, z: 0, halfX: 0.11, halfZ: 0.23),
-      Span(x: -0.15, z: -0.34, halfX: 0.08, halfZ: 0.08),
+    blocked: [],
+    backWallBlocked: [
+      Span(x: 0.04, z: 0, halfX: 0.1, halfZ: 0.01),
+      Span(x: -0.28, z: 0, halfX: 0.2, halfZ: 0.01),
     ],
-    backWallBlocked: [Span(x: -0.28, z: 0, halfX: 0.2, halfZ: 0.01)],
-    leftWallBlocked: [Span(x: 0, z: 0, halfX: 0.25, halfZ: 0.01)],
-    floorSpots: [(-4, 6), (-6, 4), (-2, 8), (7, 0), (2, 7)],
+    leftWallBlocked: [
+      Span(x: 0.02, z: 0, halfX: 0.2, halfZ: 0.01),
+      Span(x: 0.36, z: 0, halfX: 0.08, halfZ: 0.01),
+    ],
+    floorSpots: [(0, 7), (-3, 7), (4, 5), (-5, -2), (7, 0)],
     spawn: (0.0, 0.19),
-    anchors: [(0.3, -0.12), (0.2, 0.2), (-0.1, 0.26), (0.27, 0.26), (-0.24, 0.04), (-0.12, 0.1)])
+    spawnFollow: DecorFollow(piece: "base-donutbed", dx: -0.05, dz: 0.24),
+    anchorPieces: ["base-cattree"],
+    visitFollows: [
+      "ball": DecorFollow(piece: "base-rug", dx: -0.1, dz: 0.21),
+      "basket": DecorFollow(piece: "base-basket", dx: -0.08, dz: -0.09),
+      "sill": DecorFollow(piece: "base-windowseat", dx: 0.16, dz: 0.04),
+    ])
 }

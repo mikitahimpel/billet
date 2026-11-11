@@ -1,0 +1,19 @@
+{
+ "id": "windowseat",
+ "name": "Window seat",
+ "kind": "SOLID",
+ "width_m": 0.397,
+ "depth_m": 0.362,
+ "height_m": 0.357,
+ "footprint_cells": [
+  8,
+  8
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.397,
+ "anchors": [],
+ "tris": 2500,
+ "affordance": "sit",
+ "usdz_kb": 322
+}

@@ -284,3 +284,63 @@ struct CatMindTourTests {
     #expect(rests == [.sit, .loaf, .sleep], "the pet leaves her asleep")
   }
 }
+
+@Suite("Placed furniture")
+struct PlacedFurnitureTests {
+  @Test("each placed kind has its own spot, and the spot's affordance gives the kind back")
+  func kindsAndSpots() {
+    let pairs: [(RoomAffordance.Kind, NookiSpot)] = [
+      (.sofa, .sofa), (.windowSeat, .windowSeat), (.scratchingPost, .post), (.catBed, .catBed),
+      (.crate, .crate),
+    ]
+    for (kind, spot) in pairs {
+      #expect(NookiSpot(kind) == spot)
+      let room = NookiSpot.affordances([spot])
+      #expect(room.first(kind)?.kind == kind)
+    }
+  }
+
+  @Test("she rests on a placed sofa, window seat, cat bed or crate, and sends nothing to a post")
+  func resting() {
+    let rest: [NookiSpot] = [.sofa, .windowSeat, .catBed, .crate]
+    for spot in rest { #expect(NookiCatScript.beds.contains(spot)) }
+    #expect(!NookiCatScript.beds.contains(.post))
+  }
+
+  @Test("a spot the room does not have is not wanted; one it has is")
+  func wanted() {
+    let with = NookiCatScript(spots: [.home, .sofa])
+    let without = NookiCatScript(spots: [.home])
+    #expect(with.spot(for: .affordance(.sofa), here: .home) == .sofa)
+    #expect(without.spot(for: .affordance(.sofa), here: .home) == .home)
+  }
+
+  @Test("napping goes to a placed sofa, and not to a post")
+  func napping() {
+    let script = NookiCatScript(spots: [.home, .sofa, .post])
+    #expect(script.spot(for: .affordance(.sofa), mind: .napping, here: .home) == .sofa)
+    #expect(script.spot(for: .affordance(.scratchingPost), mind: .napping, here: .home) == .home)
+  }
+
+  @Test("scratching goes to a post when there is one, else to soft things")
+  func scratching() {
+    let post = RoomAffordances([RoomAffordance(id: "post", kind: .scratchingPost)])
+    let soft = RoomAffordances([RoomAffordance(id: "x", kind: .soft)])
+    #expect(
+      CatStatechart.target(.scratch, room: post, napSpot: nil, inspecting: nil, roll: 0)
+        == .affordance(.scratchingPost))
+    #expect(
+      CatStatechart.target(.scratch, room: soft, napSpot: nil, inspecting: nil, roll: 0)
+        == .affordance(.soft))
+    #expect(
+      CatStatechart.target(.scratch, room: .empty, napSpot: nil, inspecting: nil, roll: 0)
+        == .stay)
+  }
+
+  @Test("a placed piece is something new to look at")
+  func novelty() {
+    let room = RoomAffordances([RoomAffordance(id: "sofa", kind: .sofa, since: 100)])
+    #expect(room.furniture.map(\.id) == ["sofa"])
+    #expect(RoomAffordances([RoomAffordance(id: "post", kind: .scratchingPost)]).furniture.isEmpty)
+  }
+}

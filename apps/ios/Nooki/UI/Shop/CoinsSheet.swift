@@ -1,7 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Payments
 import SwiftUI
 import Design
+import UsInterface
 import WidgetBridge
 import Wire
 
@@ -47,7 +50,7 @@ struct CoinsSheet: View {
                 CoinIcon(size: 56)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(state.shop.coins)")
-                        .font(.ourioLargeTitle.monospacedDigit())
+                        .font(.ourioLargeTitleDigits)
                         .foregroundStyle(Ink.text)
                         .contentTransition(.numericText())
                         .animation(.snappy, value: state.shop.coins)

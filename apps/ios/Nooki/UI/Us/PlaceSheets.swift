@@ -1,6 +1,9 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
+import UsInterface
 
 /// Adds a country, searched in the phone's language and in English, or a city or place, then its country.
 struct AddPlaceSheet: View {
@@ -348,6 +351,8 @@ private struct MonthField: View {
                 Button { self.month = nil } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(Ink.textTertiary)
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
                 }
                 .buttonStyle(PressScaleStyle())
                 .accessibilityLabel("Leave out when")
@@ -412,7 +417,7 @@ private struct MomentsPicker: View {
                     .padding(.top, Space.l)
                     .padding(.bottom, Space.xl + Space.s)
                 }
-                .softScrollEdges()
+                .ourioScrollEdges()
             }
         }
         }

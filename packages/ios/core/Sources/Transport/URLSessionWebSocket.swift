@@ -2,6 +2,10 @@ import Foundation
 import Synchronization
 import Wire
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 extension WebSocketConnection {
   /// Returns once the server has answered a ping. A frame that does not decode is skipped.
   public static func urlSession(

@@ -18,6 +18,10 @@ final class GameSession {
     /// Where the hand shows the gesture to make, while it shows.
     private(set) var pointer: GamePointer?
 
+    /// The goal line while it is the one she was shown at the start; after the first touch only a new line shows.
+    var shownHint: String? { deck.hint == goalSeen ? nil : deck.hint }
+    private var goalSeen: String?
+
     @ObservationIgnored private let room: CatRoom
     @ObservationIgnored private let catLife: CatLife
     @ObservationIgnored private var stage: GameStage?
@@ -75,6 +79,7 @@ final class GameSession {
         finished = nil
         deck.result = nil
         deck.bar = nil
+        goalSeen = nil
         coach = .idle
         pointer = nil
         let stage = Self.stage(for: game, room: room, deck: deck)
@@ -101,6 +106,7 @@ final class GameSession {
         sinceTwitch += dt
         deck.tick(dt)
         stage.update(min(dt, 0.1))
+        camera?.push = stage.push
         for big in deck.takeCheers() { cheer(big: big) }
         look(dt)
         coach = GameCoach.transition(coach, .tick(Double(dt))).0
@@ -123,7 +129,7 @@ final class GameSession {
         case .finger:
             guard let finger, let head, let at = deck.project(head) else { return }
             room.follow(CGSize(width: finger.x - at.x, height: finger.y - at.y))
-        case .player: room.follow(.zero)
+        case .player: room.follow(stage?.glance ?? .zero)
         case .free: room.follow(nil)
         }
     }
@@ -161,6 +167,7 @@ final class GameSession {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         // On this phone at once, for her bars; in the pair's journal for both partners, and for the coins.
         catLife.record(result.events)
+        if result.game == .feed, result.tooMuch { catLife.record(.overfeed) }
     }
 
     func playAgain() {
@@ -203,6 +210,7 @@ final class GameSession {
         let touch = ray(at: point)
         switch phase {
         case .began:
+            if goalSeen == nil { goalSeen = deck.hint ?? "" }
             coach = GameCoach.transition(coach, .touched).0
             react()
             if let touch { stage.began(touch) }

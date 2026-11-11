@@ -1,3 +1,4 @@
+import DecorInterface
 import Foundation
 import GamesInterface
 import Pet
@@ -14,6 +15,19 @@ public enum RoomEvent: Equatable, Sendable {
   /// Back after hours away, and the partner cared for the cat meanwhile: what they did, oldest first. Sent once per
   /// homecoming, when the pair's journal has caught up.
   case partnerCared([LifeEvent])
+  /// A touch while the pieces are being arranged.
+  case decor(DecorGesture)
+}
+
+/// What the player did to the pieces in the room. A drag reports the snapped spot each time it
+/// changes, so the shell holds the arrangement and the room only draws it.
+public enum DecorGesture: Equatable, Sendable {
+  case tapped(String)
+  case tappedEmpty
+  case dragBegan(String)
+  case dragged(Placement)
+  case dropped
+  case cancelled
 }
 
 /// The room's commands. Every way in, apart from the host's input value.
@@ -37,20 +51,23 @@ public struct CatStatus: Equatable, Sendable {
   /// Nil until her brain is running.
   public var needs: PetNeeds?
   public var mind: CatMind?
+  /// What her sheet tells about her beyond her needs; nil until her brain is running.
+  public var about: CatAbout?
 
-  public init(needs: PetNeeds? = nil, mind: CatMind? = nil) {
+  public init(needs: PetNeeds? = nil, mind: CatMind? = nil, about: CatAbout? = nil) {
     self.needs = needs
     self.mind = mind
+    self.about = about
   }
 
   /// `needs` rounded to twentieths, so a small drift changes nothing outside the room.
-  public init(rounding needs: PetNeeds?, mind: CatMind?) {
+  public init(rounding needs: PetNeeds?, mind: CatMind?, about: CatAbout? = nil) {
     let rounded = needs.map { needs in
       var out = needs
       for need in PetNeed.allCases { out[need] = (needs[need] * 20).rounded() / 20 }
       return out
     }
-    self.init(needs: rounded, mind: mind)
+    self.init(needs: rounded, mind: mind, about: about)
   }
 }
 

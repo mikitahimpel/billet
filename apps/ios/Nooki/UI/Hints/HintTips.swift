@@ -1,6 +1,10 @@
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import SwiftUI
 import TipKit
+import UsInterface
 
 /// `HintPlan` puts the planned hint's id in `HintStage.current` and each tip's rule matches only that id, so
 /// TipKit draws exactly the planned one. Copy is short and warm, at most two lines.
@@ -24,9 +28,19 @@ nonisolated struct PetHint: HintTip {
     static let hintId = "pet"
 
     var title: Text { Text("Say hi to \(CatProfile.name())") }
-    var message: Text? { Text("Tap her in the room to pet her. Her portrait shows what she would like.") }
+    var message: Text? { Text("Tap her in the room to pet her.") }
     var image: Image? { Image(systemName: "hand.wave.fill") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "pet" }] }
+}
+
+/// On her portrait: the ring round it is her needs, and a tap opens them.
+nonisolated struct NeedsHint: HintTip {
+    static let hintId = "needs"
+
+    var title: Text { Text("\(CatProfile.name())'s needs live here") }
+    var message: Text? { Text("The ring shows how full, rested, playful and loved she is. Tap her portrait to care for her.") }
+    var image: Image? { Image(systemName: "chart.pie.fill") }
+    var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "needs" }] }
 }
 
 nonisolated struct AddHint: HintTip {

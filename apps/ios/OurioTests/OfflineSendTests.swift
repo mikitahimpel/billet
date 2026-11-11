@@ -1,9 +1,12 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Persistence
 import Synchronization
 import Testing
 import Transport
+import UsInterface
 import Wire
 @testable import Billet
 

@@ -1,5 +1,7 @@
 import Foundation
-import simd
+#if canImport(simd)
+  import simd
+#endif
 
 public enum PetZone: String, CaseIterable, Hashable, Sendable {
   case head

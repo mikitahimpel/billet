@@ -70,11 +70,18 @@ struct Span: Equatable {
   }
 }
 
-/// What the player placed, and what they put back on purpose. A piece in neither is new: owned and
-/// not yet put anywhere, so it goes into the room by itself.
+/// What the player placed, and what they put back on purpose. A shop piece in neither is new: owned and
+/// not yet put anywhere, so it goes into the room by itself. A piece of the room's own furniture in neither
+/// stands where the room has it, so a layout that never heard of them is the room as it always was.
 public struct DecorLayout: Codable, Equatable, Sendable {
+  /// Most pieces the player bought that one room holds, so its draw cost stays bounded however many the
+  /// shop sells. The room's own furniture is not counted.
+  public static let maxPlaced = 8
+
+  /// What was placed or moved on purpose. The room's furniture still where it stands is not here: see
+  /// `standing`.
   public private(set) var placements: [Placement]
-  /// Owned pieces the player or a full room left in the closet.
+  /// Owned pieces, and the room's own furniture, the player or a full room left in the closet.
   public private(set) var stored: Set<String>
 
   public init(placements: [Placement] = [], stored: Set<String> = DecorItem.starters) {
@@ -82,8 +89,21 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     self.stored = stored
   }
 
+  /// The room's own furniture that has not been moved or stored, each at its home.
+  public var standing: [Placement] {
+    DecorItem.baseItems.compactMap { item in
+      guard let base = item.base, !stored.contains(item.id),
+        !placements.contains(where: { $0.item == item.id })
+      else { return nil }
+      return Placement(item: item.id, surface: .floor, u: base.u, v: base.v)
+    }
+  }
+
+  /// Every piece in the room.
+  public var allPlacements: [Placement] { standing + placements }
+
   public func placement(of item: String) -> Placement? {
-    placements.first { $0.item == item }
+    allPlacements.first { $0.item == item }
   }
 
   public func isPlaced(_ item: String) -> Bool { placement(of: item) != nil }
@@ -124,8 +144,8 @@ public struct DecorLayout: Codable, Equatable, Sendable {
         return .occupied
       }
     }
-    for other in placements where other.item != placement.item && other.surface == placement.surface
-    {
+    for other in allPlacements
+    where other.item != placement.item && other.surface == placement.surface {
       guard let otherItem = DecorItem.item(shopID: other.item),
         let otherSpan = Self.span(of: other, item: otherItem)
       else { continue }
@@ -133,9 +153,10 @@ public struct DecorLayout: Codable, Equatable, Sendable {
       if span.overlaps(otherSpan) { return .occupied }
     }
     if placement.surface == .floor, !item.isFlat {
-      let occupancy = putting(placement).occupancy(in: room)
-      if occupancy.freeShare < room.minimumFree
-        || !occupancy.connects(from: room.spawn, to: room.stops)
+      let next = putting(placement)
+      let occupancy = next.occupancy(in: room)
+      if occupancy.bareShare < room.minimumFree
+        || !next.reachesAnchors(in: room)
       {
         return .blocksWay
       }
@@ -145,13 +166,73 @@ public struct DecorLayout: Codable, Equatable, Sendable {
 
   /// The floor she cannot walk through with this layout.
   public func occupancy(in room: DecorRoom = .home) -> Occupancy {
-    let solid = placements.compactMap { placement -> Span? in
+    let solid = allPlacements.compactMap { placement -> Span? in
       guard placement.surface == .floor, let item = DecorItem.item(shopID: placement.item),
         !item.isFlat
       else { return nil }
       return Self.span(of: placement, item: item)
     }
     return room.occupancy(solid: solid)
+  }
+
+  /// Where `follow` is now, or nil while its piece is stored.
+  public func point(of follow: DecorFollow) -> Occupancy.Point? {
+    guard let placement = placement(of: follow.piece) else { return nil }
+    let (dx, dz) = Self.turn(follow.dx, follow.dz, quarterTurns: placement.quarterTurns)
+    return (DecorGrid.metres(placement.u) + dx, DecorGrid.metres(placement.v) + dz)
+  }
+
+  /// Quarter turns about the up axis, as the scene turns a piece.
+  static func turn(_ x: Double, _ z: Double, quarterTurns: Int) -> (Double, Double) {
+    switch quarterTurns % 4 {
+    case 1: (z, -x)
+    case 2: (-x, -z)
+    case 3: (-z, x)
+    default: (x, z)
+    }
+  }
+
+  /// Where she steps down from her bed: beside it while it stands, else where the room says.
+  public func spawn(in room: DecorRoom = .home) -> Occupancy.Point {
+    point(of: room.spawnFollow) ?? room.spawn
+  }
+
+  /// Where she walks up to each piece she must always be able to reach, while it stands: the cat tree. Nil
+  /// for a piece nothing leaves her a way to.
+  public func anchorSpots(in room: DecorRoom = .home) -> [String: Occupancy.Point] {
+    let occupancy = occupancy(in: room)
+    let spawn = spawn(in: room)
+    var spots: [String: Occupancy.Point] = [:]
+    for id in room.anchorPieces {
+      guard let placement = placement(of: id), let item = DecorItem.item(shopID: id),
+        let span = Self.span(of: placement, item: item),
+        let spot = Self.approach(to: span, in: occupancy, from: spawn)
+      else { continue }
+      spots[id] = spot
+    }
+    return spots
+  }
+
+  /// The anchor spots she can reach.
+  public func anchors(in room: DecorRoom = .home) -> [Occupancy.Point] {
+    room.anchorPieces.compactMap { anchorSpots(in: room)[$0] }
+  }
+
+  /// Whether she can still walk up to every anchor piece that stands.
+  public func reachesAnchors(in room: DecorRoom = .home) -> Bool {
+    let spots = anchorSpots(in: room)
+    return room.anchorPieces.allSatisfy { placement(of: $0) == nil || spots[$0] != nil }
+  }
+
+  /// Whether she can still walk from her bed to where she stands for the visit `name`; false while its
+  /// piece is stored.
+  public func canVisit(_ name: String, in room: DecorRoom = .home) -> Bool {
+    guard let follow = room.visitFollows[name], let stop = point(of: follow) else { return false }
+    let here = occupancy(in: room)
+    // She walks round what is in the way, so the visit is open while a way to the stop is.
+    let furniture = DecorLayout(placements: placements.filter(\.isBase), stored: stored)
+    let spot = furniture.occupancy(in: room).nearestFree(to: stop) ?? stop
+    return here.connects(from: spawn(in: room), to: [spot])
   }
 
   /// The closest spot to `placement`, on the same surface, where it fits; nil when none does.
@@ -193,6 +274,10 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   /// Where a new piece goes by itself: the first open spot of a short list, then a sweep of the floor.
   public func defaultPlacement(for itemID: String, in room: DecorRoom = .home) -> Placement? {
     guard let item = DecorItem.item(shopID: itemID) else { return nil }
+    if let base = item.base {
+      let home = Placement(item: itemID, surface: .floor, u: base.u, v: base.v)
+      return accepts(home, in: room) ? home : nearestFit(to: home, in: room)
+    }
     let candidates: [Placement]
     switch item.mount {
     case .floor:
@@ -215,12 +300,27 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   public func settled(owned: Set<String>, in room: DecorRoom = .home) -> DecorLayout {
     var next = self
     for item in DecorItem.placeable(among: owned)
-    where !next.isPlaced(item.id) && !next.stored.contains(item.id) {
-      if let spot = next.defaultPlacement(for: item.id, in: room) {
+    where !item.isBase && !next.isPlaced(item.id) && !next.stored.contains(item.id) {
+      if next.placements.filter({ !(DecorItem.item(shopID: $0.item)?.isBase ?? false) }).count
+        < Self.maxPlaced,
+        let spot = next.defaultPlacement(for: item.id, in: room)
+      {
         next.placements.append(spot)
       } else {
         next.stored.insert(item.id)
       }
+    }
+    return next
+  }
+
+  /// The same closet with these placements, as the server holds them.
+  public func replacing(placements spots: [Placement], stowed: Set<String>? = nil) -> DecorLayout {
+    var next = self
+    next.placements = spots
+    next.stored.subtract(spots.map(\.item))
+    if let stowed {
+      let own = Set(DecorItem.baseItems.map(\.id))
+      next.stored = next.stored.subtracting(own).union(stowed.intersection(own))
     }
     return next
   }
@@ -235,6 +335,19 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     }
     next.stored.remove(placement.item)
     return next
+  }
+
+  /// The pieces of the room's own furniture put away, as the server keeps them.
+  public var stowed: Set<String> {
+    stored.filter { DecorItem.item(shopID: $0)?.isBase == true }
+  }
+
+  /// Whether `item` can be put away: a room keeps at least one bed or sofa for her.
+  public func canStore(_ item: String) -> Bool {
+    guard DecorItem.item(shopID: item)?.isRest == true else { return true }
+    return allPlacements.contains {
+      $0.item != item && DecorItem.item(shopID: $0.item)?.isRest == true
+    }
   }
 
   public func storing(_ item: String) -> DecorLayout {
@@ -260,7 +373,13 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   /// Without a placement of something no longer owned, such as a gift taken back.
   public func keeping(owned: Set<String>) -> DecorLayout {
     var next = self
-    next.placements.removeAll { !owned.contains($0.item) }
+    next.placements.removeAll {
+      !owned.contains($0.item) && DecorItem.item(shopID: $0.item)?.isBase != true
+    }
     return next
   }
+}
+
+extension Placement {
+  fileprivate var isBase: Bool { DecorItem.item(shopID: item)?.isBase == true }
 }

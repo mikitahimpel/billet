@@ -1,0 +1,19 @@
+{
+ "id": "beanbag-terracotta",
+ "name": "Terracotta bean bag",
+ "kind": "SOLID",
+ "width_m": 0.4,
+ "depth_m": 0.4,
+ "height_m": 0.276,
+ "footprint_cells": [
+  8,
+  8
+ ],
+ "mount": "floor",
+ "fit": "width",
+ "size_m": 0.4,
+ "anchors": [],
+ "tris": 2500,
+ "affordance": "soft",
+ "usdz_kb": 279
+}

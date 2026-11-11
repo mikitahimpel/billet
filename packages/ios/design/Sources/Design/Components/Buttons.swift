@@ -13,7 +13,7 @@ public struct PrimaryButtonStyle: ButtonStyle {
       .foregroundStyle(isEnabled ? Ink.heroInk : Ink.disabledText)
       .padding(.horizontal, Space.xl)
       .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Size.button)
-      .background(isEnabled ? Color.honey : Ink.disabledFill, in: .capsule)
+      .background(isEnabled ? Ink.accentFace : AnyShapeStyle(Ink.disabledFill), in: .capsule)
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
       .animation(.spring(duration: 0.2), value: configuration.isPressed)
   }
@@ -172,7 +172,10 @@ public struct GlassSymbol: View {
 
   public var body: some View {
     Image(systemName: name)
-      .font(.body.weight(.semibold))
+      .font(
+        Look.current == .dusk
+          ? .system(.body, design: .rounded, weight: .semibold) : .body.weight(.semibold)
+      )
       .imageScale(.large)
       .foregroundStyle(Ink.glassGlyph)
   }
@@ -216,7 +219,7 @@ public struct PriceButton: View {
       .foregroundStyle(Ink.heroInk)
       .padding(.horizontal, Space.m)
       .frame(minHeight: Size.pill)
-      .background(Color.honey, in: .capsule)
+      .background(Ink.accentFace, in: .capsule)
       .frame(minHeight: Size.control)
       .contentShape(.rect)
     }

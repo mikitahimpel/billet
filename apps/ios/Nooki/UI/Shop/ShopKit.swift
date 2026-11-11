@@ -44,11 +44,8 @@ struct RarityFrame<Content: View>: View {
         content
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
-                // The glow comes from the frame's shape alone, so the art and the shine moving over it never have
-                // to be drawn again just to cast it.
                 shape.fill(RadialGradient(colors: [rarity.fill.light, rarity.fill.edge],
                                           center: UnitPoint(x: 0.5, y: 0.3), startRadius: 4, endRadius: 140))
-                    .perfShadow(color: rarity.shines ? rarity.tint.opacity(0.5) : .clear, radius: 9)
             }
             .overlay {
                 if rarity.shines, shine { ShineSweep(period: rarity == .legendary ? 2.6 : 3.6).clipShape(shape) }
@@ -190,4 +187,20 @@ private struct ShopAppear: ViewModifier {
 
 enum ShopLayout {
     static let dealWidth: CGFloat = 176
+    /// Low enough that on a Pro Max the deals under the featured set end above the tab bar before any scroll.
+    static let featuredArt: CGFloat = 140
+}
+
+/// A deal card's width: a fixed one that shows the next card peeking in, and at accessibility sizes most of the row,
+/// so the name and the price have room.
+struct DealWidth: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    func body(content: Content) -> some View {
+        if typeSize.isAccessibilitySize {
+            content.containerRelativeFrame(.horizontal, count: 5, span: 4, spacing: Space.m)
+        } else {
+            content.frame(width: ShopLayout.dealWidth)
+        }
+    }
 }

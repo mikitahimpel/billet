@@ -1,11 +1,17 @@
+import DecorInterface
+import FeatureDecor
 import FeatureGames
 import FeatureInbox
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
+import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design
 import TipKit
 import Transport
+import UsInterface
 import WidgetBridge
 import Wire
 
@@ -81,7 +87,16 @@ struct HomeView: View {
             OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 }, selectRoom: select)
             await lift()
         }
+        .onChange(of: state.shop.owned, initial: true) { _, owned in state.decor.send(.owned(owned)) }
+        .onChange(of: state.shop.serverLayout, initial: true) { _, layout in
+            state.decorSync.client = { [weak session] in session?.shopSync }
+            state.decorSync.heard(layout, stowed: state.shop.serverStowed)
+        }
+        .onChange(of: state.shop.serverStowed) { _, stowed in
+            state.decorSync.heard(state.shop.serverLayout, stowed: stowed)
+        }
         .task {
+            if let item = UserDefaults.standard.string(forKey: "decorate") { state.decor.send(.opened(item: item == "closet" ? nil : item)) }
             room.load()
             for await event in room.events { handle(event) }
         }
@@ -217,7 +232,7 @@ struct HomeView: View {
         ZStack {
             // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
             // and the glass over them never redraw a moving backdrop every frame.
-            WarmBackdrop(drifts: roomOnScreen)
+            WarmBackdrop(drifts: roomOnScreen && perfLab.isOn(.drift) && perfLab.tier.plan.sway)
 
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
             RoomHost(input: roomInput, controller: room).equatable()
@@ -269,6 +284,10 @@ struct HomeView: View {
                     }) {
                         if state.tab == .world {
                             RoomSwitch(state: state, select: select).transition(.opacity)
+                        } else if state.tab == .moments {
+                            MomentsSwitch(state: state).transition(.opacity)
+                        } else if state.tab == .shop {
+                            ShopChips(state: state).transition(.opacity)
                         }
                     }
                     .padding(.horizontal, Space.l)
@@ -278,6 +297,8 @@ struct HomeView: View {
             } bottom: {
                 if hud != .hidden {
                     TabBar(state: state)
+                        .opacity(arranging ? 0 : 1)
+                        .allowsHitTesting(!arranging)
                         .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
                         .padding(.horizontal, Space.l)
                         .environment(\.glassRendering, barGlass)
@@ -298,11 +319,18 @@ struct HomeView: View {
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
             ZStack {
-                if state.tab == .world, room.game == nil { petControls }
+                if state.tab == .world, room.game == nil, !arranging { petControls }
             }
             .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
+        .overlay(alignment: .bottom) {
+            if arranging, room.game == nil {
+                DecorPanel(state: state) { state.decor.send(.closed) }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy(duration: 0.3), value: arranging)
         .background { TouchWatcher { [quiet] in quiet.send(.touched) } }
         #if DEBUG || LABS_YES
         .overlay(alignment: .topTrailing) {
@@ -351,6 +379,14 @@ struct HomeView: View {
                 PetButton(state: state, needs: { room }) { room.play($0) }
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
+                if state.room == .home {
+                    let waiting = state.decor.state.closetCount
+                    GlassIconButton(
+                        symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
+                    ) { state.decor.send(.opened(item: nil)) }
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .accessibilityIdentifier("decorate")
+                }
             }
             .padding(.horizontal, Space.xs)
         }
@@ -370,6 +406,7 @@ struct HomeView: View {
         case .active:
             // The first call is launch, where every store has just been read.
             state.refresh(reloading: old != phase)
+            for _ in 0..<state.takeWidgetFeeds() { room.feed() }
             room.appOpened()
             visitHints()
             Task {
@@ -481,15 +518,32 @@ struct HomeView: View {
     private var barGlass: GlassRendering { perfLab.isOn(.barGlass) ? hud.glass : .flat }
 
     private var roomInput: RoomInput {
+        let plan = perfLab.tier.plan
         let visibility: RoomVisibility =
-            roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
+            roomOnScreen && !plan.still ? .visible : (showsRoom ? .covered : .hidden)
+        let rate = perfLab.isOn(.splatRate) ? 30 : 0
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes))
+            catName: state.petName, partnerHere: session?.partnerHere == true,
+            motes: perfLab.isOn(.motes) && plan.motes,
+            sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,
+            rendering: RoomRendering(
+                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr),
+                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0))
+    }
+
+    private var arranging: Bool { state.decor.state.isArranging }
+
+    private var roomDecor: RoomDecor {
+        let arranging = state.decor.state
+        let mode: RoomDecor.Mode =
+            arranging.isArranging ? .arranging(selected: arranging.selection, fits: arranging.isValid) : .showing
+        return RoomDecor(layout: arranging.layout, mode: mode)
     }
 
     private func handle(_ event: RoomEvent) {
         switch event {
+        case .decor(let gesture): handleDecor(gesture)
         case .catPetted: withAnimation(.spring(duration: 0.4)) { state.care.pet() }
         case .pinOpened(let id): state.openedPin = PinRoute(id: id)
         case .drawAsked: state.composingNote = .draw
@@ -498,6 +552,17 @@ struct HomeView: View {
             withAnimation(.snappy(duration: 0.3)) {
                 homecoming = HomecomingLine(care, partner: state.otherPartner, cat: CatProfile.name())
             }
+        }
+    }
+
+    private func handleDecor(_ gesture: DecorGesture) {
+        switch gesture {
+        case .tapped(let id): state.decor.send(.roomTapped(id))
+        case .tappedEmpty: state.decor.send(.emptyTapped)
+        case .dragBegan(let id): state.decor.send(.dragBegan(id))
+        case .dragged(let placement): state.decor.send(.dragged(placement))
+        case .dropped: state.decor.send(.dropped)
+        case .cancelled: state.decor.send(.dragCancelled)
         }
     }
 

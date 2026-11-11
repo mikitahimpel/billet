@@ -1,5 +1,8 @@
 import Design
+import Pet
+import RoomInterface
 import SwiftUI
+@testable import Billet
 
 /// One page per family of design components, each in its usual states. A new public component gets a place on one.
 enum GalleryPage: String, CaseIterable, Sendable {
@@ -8,6 +11,11 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case cards
     case rows
     case status
+    case gauges
+    case mochi
+    case mochiAbout = "mochi-about"
+    case postage
+    case tiles
     case fields
     case grid
     case callout
@@ -21,6 +29,11 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .cards: Self.cardsPage
             case .rows: Self.rowsPage
             case .status: Self.statusPage
+            case .gauges: Self.gaugesPage
+            case .mochi: Self.mochiPage
+            case .mochiAbout: Self.mochiAboutPage
+            case .postage: Self.postagePage
+            case .tiles: Self.tilesPage
             case .fields: Self.fieldsPage
             case .grid: Self.gridPage
             case .callout: Self.calloutPage
@@ -80,6 +93,12 @@ enum GalleryPage: String, CaseIterable, Sendable {
         Card {
             CardHeader("A weekend away somewhere warm", detail: "3 ideas saved", symbol: "airplane", tint: .teal)
         }
+        Card(state: .selected) {
+            CardHeader("Friday evening", detail: "Selected", symbol: "checkmark", opens: false)
+        }
+        Card(state: .disabled) {
+            Text("Booked by someone else").font(.ourioHeadline).foregroundStyle(Ink.disabledText)
+        }
         ContentCard("Weekend in Lisbon", subtitle: "Saved by both of you", chip: Chip("Plan", style: .honey)) {
             SecondaryButton("Edit", fullWidth: false) {}
             PrimaryButton("Book it", fullWidth: false) {}
@@ -115,6 +134,66 @@ enum GalleryPage: String, CaseIterable, Sendable {
         }
     }
 
+    /// The ring round an avatar, the bars, a raised tile beside one with a note, and a day's strip.
+    @MainActor @ViewBuilder private static var gaugesPage: some View {
+        HStack(spacing: Space.l) {
+            Circle().fill(Ink.surfaceRaised)
+                .frame(width: Size.button + Space.m, height: Size.button + Space.m)
+                .overlay {
+                    SegmentedRing([
+                        .init(value: 0.3, tint: .honey), .init(value: 0.9, tint: .lilac),
+                        .init(value: 0.75, tint: .blushPink), .init(value: 0.55, tint: .sage),
+                    ])
+                }
+            VStack(spacing: Space.s) {
+                MeterBar(value: 0.4)
+                MeterBar(value: 0.02, tint: .lilac)
+                MeterBar(value: 1, tint: .sage)
+            }
+        }
+        ItemGrid {
+            GaugeTile("Full", state: "Hungry", hint: "Would love a meal", value: 0.3, symbol: "fork.knife",
+                      emphasis: .raised, action: "Feed") {}
+            GaugeTile("Rested", state: "Wide awake", hint: "Fine for today", value: 0.9, symbol: "moon.zzz.fill",
+                      tint: .lilac, note: "Naps on her own")
+        }
+        MomentStrip([
+            StripMoment(id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7:00"),
+            StripMoment(id: "2", symbol: "fork.knife", tint: .honey, title: "Ate", time: "8:12"),
+            StripMoment(id: "3", symbol: "heart.fill", tint: .blushPink, title: "Cuddles", time: "12:40"),
+        ])
+    }
+
+    /// The top of Mochi's sheet with a fixed cat: her hero and her day. Her needs are the `gauges` page's tiles; the
+    /// whole sheet at the largest text size is taller than a drawing can be.
+    @MainActor @ViewBuilder private static var mochiPage: some View {
+        MochiHero(mood: fixedCat.needs?.moodLine(name: "Mochi") ?? "", level: 2, progress: 0.4, days: 2) {
+            PetPortrait(size: 88)
+        }
+        MochiDay(name: "Mochi", doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
+                 locale: Locale(identifier: "en_GB"))
+    }
+
+    @MainActor @ViewBuilder private static var mochiAboutPage: some View {
+        if let about = fixedCat.about { MochiNature(about: about) }
+    }
+
+    private static let fixedCat: CatStatus = {
+        // 04:00 UTC on 10 November 2026, the start of her day.
+        let dawn = 1_794_283_200.0
+        func hour(_ hour: Double) -> Double { dawn + (hour - 4) * 3600 }
+        return CatStatus(
+            needs: PetNeeds(full: 0.3, rested: 0.9, loved: 0.75, playful: 0.55), mind: .exploring,
+            about: CatAbout(
+                temperament: .explorer, personality: CatTemperament.explorer.archetype, favourite: .window,
+                day: [
+                    CatDayMoment(kind: .slept, at: hour(4), until: hour(7), exact: false),
+                    CatDayMoment(kind: .ate, at: hour(8.2), exact: true),
+                    CatDayMoment(kind: .napped, at: hour(14), until: hour(16), exact: false),
+                    CatDayMoment(kind: .playedTogether, at: hour(18.1), exact: true),
+                ]))
+    }()
+
     /// A raised row and a quiet one, a row with a note, and the badge on a round control.
     @MainActor @ViewBuilder private static var statusPage: some View {
         GroupedSection(inset: StatusRow.inset) {
@@ -134,19 +213,74 @@ enum GalleryPage: String, CaseIterable, Sendable {
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
+    /// Every stamp pinned in a row, the sizes, rare foil and a postmark, beside the seals of the same family.
+    @MainActor @ViewBuilder private static var postagePage: some View {
+        HStack(spacing: Space.m) {
+            ForEach(StampArt.allCases, id: \.self) { PostageStamp($0, pinned: true) }
+        }
+        HStack(alignment: .bottom, spacing: Space.l) {
+            PostageStamp(.paw, size: .small)
+            PostageStamp(.moon, rare: true, pinned: true)
+            PostageStamp(.heart, size: .large, postmark: Date(timeIntervalSince1970: 1_762_776_000), pinned: true)
+            PostageStamp(.bloom, size: .large, rare: true, pinned: true)
+        }
+        HStack(spacing: Space.m) {
+            ForEach(SealArt.allCases, id: \.self) { WaxSeal($0, size: 36) }
+        }
+    }
+
+    /// A screen's few big actions, a ring toward a goal, and two posters of a shelf side by side.
+    @MainActor @ViewBuilder private static var tilesPage: some View {
+        ActionTiles([
+            ActionTile("Dates", status: "3 matches", symbol: "heart.fill", tint: .blushPink) {},
+            ActionTile("Wishes", status: "5 wishes", symbol: "gift.fill", tint: .honey) {},
+            ActionTile("Calendar", status: "In 12 days", symbol: "calendar", tint: .teal) {},
+        ])
+        // Side by side while they fit, stacked at accessibility sizes as the Us screen does.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Space.l) { rings }
+            VStack(alignment: .leading, spacing: Space.l) { rings }
+        }
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .top, spacing: Space.m) { posters }
+            VStack(spacing: Space.m) { posters }
+        }
+    }
+
+    @MainActor @ViewBuilder private static var rings: some View {
+        ProgressRing(value: 0) { Text("0").font(.ourioTitle) }
+        ProgressRing(value: 5.0 / 7) { Text("5").font(.ourioTitle) }
+    }
+
+    @MainActor @ViewBuilder private static var posters: some View {
+        PosterCard("Who knows who", status: "Your turn", emphasis: true, action: {}) {
+            GamePoster(game: .whoKnows, coat: .grey)
+        }
+        .frame(minWidth: 150)
+        PosterCard("Draw & guess", status: "Played yesterday", action: {}) {
+            GamePoster(game: .drawGuess, coat: .grey)
+        }
+        .frame(minWidth: 150)
+    }
+
     @MainActor @ViewBuilder private static var fieldsPage: some View {
         Field("A few words (optional)", text: .constant(""), axis: .vertical, lines: 1...3)
         FormField("Name", placeholder: "Your name", text: .constant("Mikita"), footer: "Your partner sees it.")
+        HStack {
+            LimitCounter(count: 12, limit: 40)
+            LimitCounter(count: 34, limit: 40)
+            LimitCounter(count: 40, limit: 40)
+        }
         FormField("Invite code", placeholder: "Code", text: .constant("K7QM"), error: "That code isn't working.")
     }
 
     @MainActor @ViewBuilder private static var gridPage: some View {
         ItemGrid {
             ForEach(["Cat tower", "Window seat with a long name", "Lamp"], id: \.self) { name in
-                ItemCard(name, subtitle: "Cosy in any corner", open: {}) {
+                ItemCard(name, tag: ItemTag("Legendary", color: Ink.rarityLegendary.tint), open: {}) {
                     Ink.surfaceRaised.corners(.inner)
                 } leadingBadge: {
-                    Chip("Legendary", style: .tinted(.orange))
+                    EmptyView()
                 } trailingBadge: {
                     Chip("−20%", style: .honey)
                 } footer: {

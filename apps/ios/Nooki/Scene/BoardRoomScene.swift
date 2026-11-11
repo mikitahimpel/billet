@@ -159,9 +159,12 @@ final class BoardRoomScene: CatRoom {
         }
     }
 
+    private var bulbClock = Throttle(interval: 0.1)
+
     override func tick(_ dt: Float) {
         super.tick(dt)
         let t = time
+        guard swaying, bulbClock.fires(dt) else { return }
         for (i, bulb) in bulbs.enumerated() {
             let s = 1 + 0.22 * sin(t * 2.1 + Float(i) * 1.3)
             bulb.scale = .init(repeating: Self.bulbRadius * s)

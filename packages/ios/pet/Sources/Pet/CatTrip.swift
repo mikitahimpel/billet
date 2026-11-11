@@ -1,5 +1,7 @@
 import Foundation
-import simd
+#if canImport(simd)
+  import simd
+#endif
 
 /// A short trip from the cat's place and back, as a pure function of time. Positions are on the
 /// floor plane as (x, z) in the room's metres; a heading is a yaw in radians, 0 facing -z, the

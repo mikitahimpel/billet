@@ -1,7 +1,10 @@
 import Foundation
-import OurioShared
+import MomentsInterface
+import WidgetInterface
+import WidgetUI
 import Persistence
 import Transport
+import UsInterface
 
 /// The billet server this build talks to: the API client, the saved session and the anonymous account key in the
 /// iCloud Keychain. The host comes from the build (`BILLET_API_HOST`, Info.plist `BilletAPIHost`), never the
