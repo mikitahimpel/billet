@@ -274,7 +274,7 @@ struct MomentPrint: View {
 
     var body: some View {
         Polaroid(width: width, caption: moment.caption, byline: profile.byline(of: moment), undeveloped: undeveloped,
-                 captionLines: 2, markSpace: moment.noteID == nil ? 0 : Self.stampWidth(width),
+                 captionLines: 2, markSpace: moment.noteID == nil ? 0 : Self.stampWidth(width) + width * 0.05,
                  captionEditor: captionEditor, captionFocus: captionFocus) {
             MomentPhoto(store: store, moment: moment, maxPixels: maxPixels, film: true)
         }

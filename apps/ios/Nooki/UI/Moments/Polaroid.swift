@@ -11,7 +11,8 @@ enum PolaroidPaper {
     /// A softer cream in dark, so it doesn't glare on the brown screen.
     static let frame = Color(light: Color(hex: 0xFFFBF3), dark: Color(hex: 0xF5E8D3))
     static let ink = Color(hex: 0x4A2E1F)
-    static let byline = Color(hex: 0x9A7A62)
+    /// Dark enough for small type on the cream frame, about 5:1.
+    static let byline = Color(hex: 0x7A5B45)
     static let blank = Color(hex: 0xE9D6BC)
     static let milk = Color(hex: 0xEFE8DC)
     static let tapeTones: [Color] = [.blushPink, .honey, Color(hex: 0x9CC3A4), Color(hex: 0x9DBBF5)]
