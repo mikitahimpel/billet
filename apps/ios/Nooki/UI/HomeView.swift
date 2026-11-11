@@ -290,6 +290,8 @@ struct HomeView: View {
             } bottom: {
                 if hud != .hidden {
                     TabBar(state: state)
+                        .opacity(arranging ? 0 : 1)
+                        .allowsHitTesting(!arranging)
                         .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
                         .padding(.horizontal, Space.l)
                         .environment(\.glassRendering, barGlass)
@@ -310,11 +312,18 @@ struct HomeView: View {
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
             ZStack {
-                if state.tab == .world, room.game == nil { petControls }
+                if state.tab == .world, room.game == nil, !arranging { petControls }
             }
             .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
+        .overlay(alignment: .bottom) {
+            if arranging, room.game == nil {
+                DecorPanel(state: state) { state.decor.send(.closed) }
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.snappy(duration: 0.3), value: arranging)
         .background { TouchWatcher { [quiet] in quiet.send(.touched) } }
         #if DEBUG || LABS_YES
         .overlay(alignment: .topTrailing) {
@@ -363,6 +372,13 @@ struct HomeView: View {
                 PetButton(state: state, needs: { room }) { room.play($0) }
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
+                if state.room == .home {
+                    let waiting = state.decor.state.closetCount
+                    GlassIconButton(
+                        symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
+                    ) { state.decor.send(.opened(item: nil)) }
+                    .accessibilityIdentifier("decorate")
+                }
             }
             .padding(.horizontal, Space.xs)
         }
@@ -501,6 +517,8 @@ struct HomeView: View {
             sway: perfLab.isOn(.sway), decor: roomDecor,
             rendering: RoomRendering(antialiasing: perfLab.isOn(.msaa), hdr: perfLab.isOn(.hdr)))
     }
+
+    private var arranging: Bool { state.decor.state.isArranging }
 
     private var roomDecor: RoomDecor {
         let arranging = state.decor.state
