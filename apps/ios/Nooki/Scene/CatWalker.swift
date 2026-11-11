@@ -303,6 +303,21 @@ final class CatWalker {
         fade(seatAmount)
     }
 
+    /// Back on her bed at once, sitting, with whatever she was doing dropped.
+    func snapHome() {
+        steps = []
+        away = nil
+        lying = false
+        rest = .sit
+        posture = .sit
+        stepping = false
+        group.position = home
+        yaw = homeYaw
+        planYaw = homeYaw
+        last = (home, homeYaw)
+        fade(1)
+    }
+
     /// Model-space point she sees whoever watches her from.
     func watch(_ point: SIMD3<Float>) {
         viewer = point
