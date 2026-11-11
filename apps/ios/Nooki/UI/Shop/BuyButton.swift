@@ -1,7 +1,7 @@
 import SwiftUI
 import Design
 
-/// The buy, or "In your closet" once it is owned: one pill at the price tag's height, so a row of cards ends level
+/// The buy, or "Place" once it is owned: one pill at the price tag's height, so a row of cards ends level
 /// whatever each one's state.
 struct BuyButton: View {
     let state: HomeState
@@ -38,10 +38,10 @@ struct BuyButton: View {
             .haptic(.warning, trigger: shakes)
             .frame(maxWidth: fills ? .infinity : nil, alignment: .leading)
         } else {
-            // Placing from here waits for the room's Decorate mode; until then it only says where the set is.
-            Chip("In your closet", symbol: "checkmark", style: .quiet)
-                .frame(minHeight: Size.control)
-                .accessibilityLabel("\(name) is in your closet")
+            PillButton("Place", symbol: "mappin") { state.decorate() }
+                .fixedSize()
+                .accessibilityLabel("Place \(name)")
+                .accessibilityHint("Opens the room")
                 .frame(maxWidth: fills ? .infinity : nil, alignment: .leading)
         }
     }
