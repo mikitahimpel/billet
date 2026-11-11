@@ -70,6 +70,7 @@ export const resetDirectory = async () => {
   await env.DB.batch(
     [
       "pair_events",
+      "event_details",
       "pair_flags",
       "flag_configs",
       "flag_changes",

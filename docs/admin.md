@@ -216,7 +216,7 @@ To add one, on **Shop → New item**:
 1. **Id:** the bundled asset id, such as `armchair-frost`. It can never change, so decide first.
 2. **Kind and shelf:** `furniture` and `furniture`.
 3. **Name, blurb, rarity, price, sort order:** your choice. The blurb may use `{cat}`.
-4. **Picture:** "Bundled in the app", with the same asset id. The app draws `Item_<id>.png` on
+4. **Picture:** "Bundled in the app", with the same asset id. The app draws `Item_<id>.webp` on
    the card and `Item_<id>.usdz` on the item's stage.
 5. **Minimum build:** the first build that bundles the files, so older phones skip the item.
 6. Leave **Active** off until you want it on the shelves. A season's colourways can go on together

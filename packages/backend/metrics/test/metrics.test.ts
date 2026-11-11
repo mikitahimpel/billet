@@ -66,11 +66,13 @@ describe("Metrics", () => {
   it("never fails the caller, whether storage fails or dies", async () => {
     const failing = Layer.succeed(MetricsRepository, {
       record: () => Effect.fail(new MetricsUnavailable({ reason: "directory-unavailable" })),
+      recordMany: () => Effect.fail(new MetricsUnavailable({ reason: "directory-unavailable" })),
       all: Effect.succeed([]),
       details: Effect.succeed([]),
     });
     const dying = Layer.succeed(MetricsRepository, {
       record: () => Effect.die("storage is on fire: user-a pair-1"),
+      recordMany: () => Effect.die("storage is on fire: user-a pair-1"),
       all: Effect.succeed([]),
       details: Effect.succeed([]),
     });
@@ -78,7 +80,9 @@ describe("Metrics", () => {
       await expect(
         Effect.runPromise(
           Effect.gen(function* () {
-            yield* (yield* Metrics).record({ userId: ana, pairId: pair, name: "NoteSent" });
+            const metrics = yield* Metrics;
+            yield* metrics.record({ userId: ana, pairId: pair, name: "NoteSent" });
+            yield* metrics.recordMany([{ userId: ana, pairId: pair, name: "NoteSent" }]);
             return "carried on";
           }).pipe(Effect.provide(Metrics.layer.pipe(Layer.provide(repository)))),
         ),
