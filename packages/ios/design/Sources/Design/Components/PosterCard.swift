@@ -27,6 +27,8 @@ public struct PosterCard: View {
         Color.clear
           // Wider at accessibility sizes, where posters stack full width and the words need the room.
           .aspectRatio(typeSize.isAccessibilitySize ? 3 / 2 : 1, contentMode: .fit)
+          // Height from the width alone, so long words under it never squeeze the art narrower than the card.
+          .fixedSize(horizontal: false, vertical: true)
           .overlay(alignment: .top) { art.resizable().scaledToFill() }
           .clipped()
           .accessibilityHidden(true)
@@ -34,6 +36,7 @@ public struct PosterCard: View {
           Text(title)
             .font(.ourioHeadline)
             .foregroundStyle(Ink.text)
+            .fixedSize(horizontal: false, vertical: true)
           Text(status)
             .font(.ourioCallout.weight(emphasis ? .semibold : .regular))
             .foregroundStyle(emphasis ? Ink.accentText : Ink.textSecondary)
