@@ -18,6 +18,7 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
     @ViewBuilder var portrait: Portrait
     /// The care no need's tile offers, under the tiles.
     @ViewBuilder var extraCare: ExtraCare
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.section) {
@@ -38,16 +39,14 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
     private var hero: some View {
         Card(warm: true) {
             VStack(alignment: .leading, spacing: Space.l) {
-                HStack(spacing: Space.l) {
+                // At accessibility sizes her words take the card's whole width under her portrait.
+                if dynamicTypeSize.isAccessibilitySize {
                     portrait
-                    VStack(alignment: .leading, spacing: Space.s) {
-                        Text(status.needs?.moodLine(name: name) ?? "Settling in")
-                            .font(.ourioValue)
-                            .foregroundStyle(Ink.text)
-                            .contentTransition(.opacity)
-                            .fixedSize(horizontal: false, vertical: true)
-                        Chip("With you two for \(days == 1 ? "1 day" : "\(days) days")", symbol: "heart.fill",
-                             style: .tinted(.blushPink))
+                    mood
+                } else {
+                    HStack(spacing: Space.l) {
+                        portrait
+                        mood
                     }
                 }
                 levelBar
@@ -56,6 +55,18 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
         }
         // Past this the mood line alone fills an SE's screen and pushes her needs below the fold.
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+    }
+
+    private var mood: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text(status.needs?.moodLine(name: name) ?? "Settling in")
+                .font(.ourioValue)
+                .foregroundStyle(Ink.text)
+                .contentTransition(.opacity)
+                .fixedSize(horizontal: false, vertical: true)
+            Chip("With you two for \(days == 1 ? "1 day" : "\(days) days")", symbol: "heart.fill",
+                 style: .tinted(.blushPink))
+        }
     }
 
     private var levelBar: some View {
