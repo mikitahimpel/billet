@@ -259,7 +259,7 @@ public enum CatStatechart {
     case .walkToBowl, .eat, .lickLips, .waitByBowl, .pawBowl: return spot(.bowl)
     case .beg, .dropToy: return .camera
     case .knockOff: return spot(.smallItem)
-    case .scratch: return spot(.soft)
+    case .scratch: return room.reachable(.scratchingPost) ? spot(.scratchingPost) : spot(.soft)
     case .watchWindow, .watchPartnerWindow: return spot(.window)
     case .seekYou, .rub, .slowBlink: return .camera
     case .bringToy: return spot(.toy)
