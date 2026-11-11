@@ -52,7 +52,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   @ViewBuilder private var content: some View {
     switch model.sheet {
     case .idle, .loading:
-      LoadingState("Loading the Inbox")
+      placeholderList
     case .unpaired:
       EmptyState(
         symbol: "tray", title: "Nothing here yet",
@@ -74,7 +74,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   }
 
   private func list(_ page: InboxMachine.Page) -> some View {
-    List {
+    frame {
       ForEach(InboxDay.group(page.items, now: now()), id: \.day) { day in
         Section(day.title) {
           ForEach(day.items, id: \.id) { item in
@@ -87,17 +87,35 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
         .listRowBackground(Ink.surface)
       }
     }
-    #if os(iOS)
-      .listStyle(.insetGrouped)
-    #endif
-    .scrollContentBackground(.hidden)
     .refreshable { await model.open() }
-    .scrollHeader {
-      VStack(spacing: 0) {
-        if case .stale = model.sheet { staleNotice }
-        notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
+  }
+
+  /// While the first page loads: the loaded list's frame, notice and section header, with still rows
+  /// the size of real ones, so the page swaps rows in place instead of moving under the finger.
+  private var placeholderList: some View {
+    frame {
+      Section("Today") {
+        ForEach(0..<InboxPlaceholderRow.count, id: \.self) { _ in InboxPlaceholderRow() }
       }
+      .listRowBackground(Ink.surface)
+      .redacted(reason: .placeholder)
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("Loading the Inbox")
     }
+  }
+
+  private func frame(@ViewBuilder rows: () -> some View) -> some View {
+    List { rows() }
+      #if os(iOS)
+        .listStyle(.insetGrouped)
+      #endif
+      .scrollContentBackground(.hidden)
+      .scrollHeader {
+        VStack(spacing: 0) {
+          if case .stale = model.sheet { staleNotice }
+          notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
+        }
+      }
   }
 
   private var staleNotice: some View {
@@ -153,6 +171,32 @@ public struct InboxSignedOut: View {
   }
 }
 
+/// An Inbox row's frame: the avatar's side, the gap between its two lines and around them.
+private enum InboxRowMetrics {
+  static let avatar: CGFloat = 40
+  static let lineGap: CGFloat = 2
+  static let padding: CGFloat = Space.xs
+}
+
+/// A row while the Inbox loads: an avatar and the same two lines as a real row, redacted, never shimmering.
+private struct InboxPlaceholderRow: View {
+  static let count = 6
+
+  var body: some View {
+    HStack(spacing: Space.m) {
+      Circle()
+        .fill(Ink.surfaceRaised)
+        .frame(width: InboxRowMetrics.avatar, height: InboxRowMetrics.avatar)
+      VStack(alignment: .leading, spacing: InboxRowMetrics.lineGap) {
+        Text("Someone did something lovely").font(.ourioCallout.weight(.medium))
+        Text("A minute ago").font(.ourioCaption)
+      }
+      Spacer(minLength: 0)
+    }
+    .padding(.vertical, InboxRowMetrics.padding)
+  }
+}
+
 private struct InboxRow<Avatar: View, Face: View>: View {
   let item: ActivityItem
   let line: InboxLine
@@ -164,7 +208,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
   var body: some View {
     HStack(spacing: Space.m) {
       avatar
-        .frame(width: 40, height: 40)
+        .frame(width: InboxRowMetrics.avatar, height: InboxRowMetrics.avatar)
         .overlay(alignment: .bottomTrailing) {
           if let mood = line.mood {
             face(mood)
@@ -180,7 +224,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
               .offset(x: 4, y: 4)
           }
         }
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: InboxRowMetrics.lineGap) {
         Text(line.text)
           .font(.ourioCallout.weight(isNew ? .semibold : .medium))
           .foregroundStyle(Ink.text)
@@ -199,7 +243,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
           .accessibilityLabel("New")
       }
     }
-    .padding(.vertical, Space.xs)
+    .padding(.vertical, InboxRowMetrics.padding)
     .accessibilityElement(children: .combine)
   }
 
