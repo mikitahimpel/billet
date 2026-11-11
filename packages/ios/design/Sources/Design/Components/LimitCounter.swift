@@ -19,7 +19,9 @@ public struct LimitCounter: View {
       .monospacedDigit()
       .foregroundStyle(count >= limit ? Ink.destructive : Ink.textSecondary)
       .opacity(count >= warnFrom ? 1 : 0)
-      .accessibilityLabel(count >= limit ? "Limit reached, \(limit) characters" : "\(count) of \(limit) characters")
+      .accessibilityLabel(
+        count >= limit ? "Limit reached, \(limit) characters" : "\(count) of \(limit) characters"
+      )
       .accessibilityHidden(count < warnFrom)
   }
 }
