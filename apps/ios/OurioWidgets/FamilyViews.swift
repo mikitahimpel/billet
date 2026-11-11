@@ -1,0 +1,587 @@
+import Design
+import DrawInterface
+import MoodInterface
+import WidgetInterface
+import WidgetUI
+import SwiftUI
+import UIKit
+import WidgetKit
+
+// The Home Screen family: one idea per widget, each a clay object on warm paper. Honey is spent once per widget.
+// Shared by the extension and the app, which draws the same views live in Settings, so nothing here may need WidgetKit
+// to run.
+
+// MARK: - Ground
+
+extension View {
+    /// Warm paper under the widget; tinted and clear Home Screens draw the system's own ground instead.
+    func familyGround() -> some View {
+        modifier(FamilyGround()).widgetTypeCap()
+    }
+}
+
+/// The ground a widget is laid on: the app's own screen colour, flat, so the cards on it read as the app's cards do.
+struct FamilyGroundFill: View {
+    var body: some View { Ink.screen }
+}
+
+private struct FamilyGround: ViewModifier {
+    @Environment(\.widgetRenderingMode) private var mode
+
+    func body(content: Content) -> some View {
+        content.containerBackground(for: .widget) {
+            if mode == .fullColor { FamilyGroundFill() } else { Color.clear }
+        }
+    }
+}
+
+// MARK: - Pieces
+
+private struct LevelChip: View {
+    let level: Int
+
+    var body: some View {
+        Text("Lv \(level)")
+            .font(.ourioMicro)
+            .monospacedDigit()
+            .foregroundStyle(Ink.heroInk)
+            .padding(.horizontal, Space.s)
+            .padding(.vertical, Space.xs)
+            .background(Color.honey, in: .capsule)
+            .widgetAccentable()
+            .accessibilityLabel("Level \(level)")
+    }
+}
+
+/// The one honey control of a widget that has one.
+private struct PetPill: View {
+    let catName: String
+
+    var body: some View {
+        Button(intent: PetMochiIntent()) {
+            Label("Pet", systemImage: "pawprint.fill")
+                .font(.ourioCaption.weight(.bold))
+                .lineLimit(1)
+                .fixedSize()
+                .foregroundStyle(Ink.heroInk)
+                .padding(.horizontal, Space.m)
+                .frame(height: Size.pill)
+                .background(Color.honey, in: .capsule)
+        }
+        .buttonStyle(PressScaleStyle())
+        .widgetAccentable()
+        .accessibilityLabel("Pet \(catName)")
+    }
+}
+
+/// A quiet second button beside Pet: a hug for the partner, filled once it is sent today.
+private struct HugButton: View {
+    let sent: Bool
+    let partner: String
+
+    var body: some View {
+        Button(intent: SendHugIntent()) {
+            Image(systemName: sent ? "heart.fill" : "heart")
+                .font(.ourioHeadline)
+                .foregroundStyle(sent ? Color.blushPink : Ink.text)
+                .frame(width: Size.pill, height: Size.pill)
+                .background(Ink.surface, in: .circle)
+        }
+        .buttonStyle(PressScaleStyle())
+        .widgetAccentable(sent)
+        .accessibilityLabel(sent ? "Hug sent to \(partner)" : "Send \(partner) a hug")
+    }
+}
+
+/// The whole widget is the tap target, so this says so in plain words rather than drawing a button.
+private struct ReplyLine: View {
+    var body: some View {
+        Text("Tap to reply")
+            .font(.ourioMicro)
+            .foregroundStyle(Ink.textSecondary)
+            .lineLimit(1)
+    }
+}
+
+/// Mochi on her disc, the room's colour at night; her state shows as a mark on the disc, not as a different cat.
+private struct CatDisc: View {
+    let snapshot: OurioSnapshot
+    let pose: MochiPose
+    let size: CGFloat
+    var partnerMood: PartnerMood?
+    @Environment(\.widgetRenderingMode) private var mode
+
+    var body: some View {
+        ZStack {
+            if mode == .fullColor {
+                Circle().fill(pose == .asleep ? WidgetScene.room(night: true)[0] : Ink.surfaceRaised)
+            }
+            portrait
+                .frame(width: size * 0.8, height: size * 0.8)
+                .scaleEffect(pose == .purring ? 1.04 : 1)
+                .frame(width: size, height: size, alignment: .bottom)
+                .clipShape(Circle())
+            mark.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing).padding(size * 0.02)
+        }
+        .frame(width: size, height: size)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(snapshot.catName), \(pose.word.lowercased())")
+    }
+
+    @ViewBuilder
+    private var portrait: some View {
+        if let image = UIImage(named: snapshot.catAvatar) ?? UIImage(named: "CatDisc") {
+            Image(uiImage: image)
+                .resizable()
+                .widgetAccentedRenderingMode(.accented)
+                .scaledToFit()
+        } else {
+            Image(systemName: "cat.fill").resizable().scaledToFit().foregroundStyle(Ink.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private var mark: some View {
+        switch pose {
+        case .purring:
+            Image(systemName: "heart.fill")
+                .font(.ourioHeadline)
+                .foregroundStyle(Color.blushPink)
+                .widgetAccentable()
+        case .asleep:
+            Image(systemName: "moon.zzz.fill")
+                .font(.ourioHeadline)
+                .foregroundStyle(Color.honey)
+                .widgetAccentable()
+        case .waiting:
+            if let partnerMood {
+                MoodArt(mood: partnerMood, size: size * 0.24)
+            } else {
+                Image(systemName: "envelope.fill")
+                    .font(.ourioHeadline)
+                    .foregroundStyle(Color.honey)
+                    .widgetAccentable()
+            }
+        case .chirpy:
+            Image(systemName: "music.note")
+                .font(.ourioHeadline)
+                .foregroundStyle(Color.honey)
+                .widgetAccentable()
+        case .napping, .quiet, .idle:
+            EmptyView()
+        }
+    }
+}
+
+// MARK: - Mochi
+
+struct MochiFamilyView: View {
+    let entry: FamilyEntry
+    let family: WidgetFamily
+    /// Inside the Our day widget, where Pet is the one honey mark.
+    var calm = false
+
+    private var s: OurioSnapshot { entry.snapshot }
+    private var pose: MochiPose { MochiPose.pose(s, drawing: entry.facts.drawing) }
+    private var line: String { pose.line(s, drawing: entry.facts.drawing) }
+    private var mood: PartnerMood? { PartnerNews.latest(s, drawing: entry.facts.drawing).flatMap(\.mood) }
+
+    var body: some View {
+        GeometryReader { geo in
+            switch family {
+            case .systemMedium: medium(geo.size)
+            case .systemLarge: large(geo.size)
+            default: small(geo.size)
+            }
+        }
+        .widgetURL(DeepLink.room.url)
+    }
+
+    /// The portrait scales with the widget: a small iPhone's widgets are a sixth smaller than a Pro Max's.
+    private func small(_ size: CGSize) -> some View {
+        ZStack(alignment: .bottomTrailing) {
+            CatDisc(snapshot: s, pose: pose, size: min(size.width, size.height) * 0.68, partnerMood: mood)
+                .offset(x: Space.s, y: Space.s)
+            VStack(alignment: .leading, spacing: Space.xs) {
+                Text(pose.word).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.8)
+                Text(line).font(.ourioMicro).foregroundStyle(Ink.textSecondary).lineLimit(1).minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                LevelChip(level: entry.facts.wallet.level)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(Space.m)
+        }
+    }
+
+    private func medium(_ size: CGSize) -> some View {
+        HStack(spacing: Space.m) {
+            VStack(alignment: .leading, spacing: Space.xs) {
+                HStack(spacing: Space.s) {
+                    Text(pose.word).font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
+                    if !calm { LevelChip(level: entry.facts.wallet.level) }
+                }
+                Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(2)
+                Spacer(minLength: 0)
+                HStack(spacing: Space.s) {
+                    PetPill(catName: s.catName)
+                    if !calm { HugButton(sent: HugState.sent(s), partner: s.partner) }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            CatDisc(snapshot: s, pose: pose, size: size.height * 0.82, partnerMood: mood)
+        }
+        .padding(Space.l)
+    }
+
+    private func large(_ size: CGSize) -> some View {
+        VStack(spacing: Space.m) {
+            HStack(alignment: .firstTextBaseline) {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text(pose.word).font(.ourioLargeTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
+                    Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                LevelChip(level: entry.facts.wallet.level)
+            }
+            Spacer(minLength: 0)
+            CatDisc(snapshot: s, pose: pose, size: min(size.width * 0.66, size.height * 0.52), partnerMood: mood)
+            Spacer(minLength: 0)
+            HStack(spacing: Space.s) {
+                PetPill(catName: s.catName)
+                HugButton(sent: HugState.sent(s), partner: s.partner)
+            }
+        }
+        .padding(Space.l)
+    }
+}
+
+private extension PartnerNews {
+    var mood: PartnerMood? {
+        if case .mood(let check) = self { check.mood } else { nil }
+    }
+}
+
+// MARK: - Us
+
+struct UsFamilyView: View {
+    let entry: FamilyEntry
+    let family: WidgetFamily
+    var calm = false
+
+    private var s: OurioSnapshot { entry.snapshot }
+    private var streak: StreakGlance { StreakGlance(entry.facts.streak, on: s.date) }
+
+    var body: some View {
+        switch family {
+        case .systemMedium:
+            HStack(spacing: Space.m) {
+                days.frame(maxWidth: .infinity)
+                nextTile
+            }
+            .padding(Space.l)
+        case .systemLarge:
+            VStack(spacing: Space.m) {
+                days.frame(maxHeight: .infinity)
+                nextTile.frame(height: 96)
+                StreakRow(glance: streak)
+            }
+            .padding(Space.l)
+        default:
+            days.padding(Space.m)
+        }
+    }
+
+    private var days: some View {
+        VStack(spacing: 0) {
+            if !calm {
+                Image(systemName: "heart.fill").font(.ourioHeadline).foregroundStyle(Color.blushPink).widgetAccentable()
+            }
+            Text("\(s.daysTogether)")
+                .font(.ourioNumber)
+                .monospacedDigit()
+                .foregroundStyle(calm ? Ink.text : Ink.accentText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+                .widgetAccentable()
+            Text(s.daysTogether == 1 ? "day together" : "days together")
+                .font(.ourioCaption)
+                .foregroundStyle(Ink.textSecondary)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var nextTile: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            if let next = s.next {
+                Image(systemName: next.icon.symbol).font(.ourioHeadline).foregroundStyle(Ink.accentText).widgetAccentable()
+                Spacer(minLength: 0)
+                Text(next.title).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(2)
+                Text(next.daysLeft == 0 ? "Today" : "in \(next.daysLeft) \(next.daysLeft == 1 ? "day" : "days")")
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.textSecondary)
+            } else {
+                Spacer(minLength: 0)
+                Text("Add a date in Us").font(.ourioHeadline).foregroundStyle(Ink.textSecondary)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .padding(Space.m)
+        .background(Ink.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+}
+
+private struct StreakRow: View {
+    let glance: StreakGlance
+
+    var body: some View {
+        HStack(spacing: Space.m) {
+            Image(systemName: "flame.fill")
+                .font(.ourioTitle)
+                .foregroundStyle(glance.status == .cold ? Ink.textTertiary : Color.honey)
+                .widgetAccentable()
+            VStack(alignment: .leading, spacing: Space.xs) {
+                HStack {
+                    Text(glance.count > 0 ? "Day \(glance.count)" : "No streak")
+                        .font(.ourioHeadline)
+                        .monospacedDigit()
+                        .foregroundStyle(Ink.text)
+                    Spacer(minLength: 0)
+                    Text(glance.caption).font(.ourioMicro).foregroundStyle(Ink.textSecondary).lineLimit(1)
+                }
+                Bar(value: glance.progress)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct Bar: View {
+    let value: Double
+
+    var body: some View {
+        Capsule()
+            .fill(Ink.separator)
+            .frame(height: Space.s + Space.xs)
+            .overlay(alignment: .leading) {
+                GeometryReader { geo in
+                    Capsule().fill(Color.honey).frame(width: max(Space.s + Space.xs, geo.size.width * value))
+                }
+            }
+            .widgetAccentable()
+    }
+}
+
+// MARK: - Partner
+
+struct PartnerFamilyView: View {
+    let entry: FamilyEntry
+    let family: WidgetFamily
+
+    private var s: OurioSnapshot { entry.snapshot }
+    private var news: PartnerNews? { PartnerNews.latest(s, drawing: entry.facts.drawing) }
+
+    var body: some View {
+        if family == .systemMedium {
+            HStack(spacing: Space.l) {
+                card.frame(width: 130)
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text(headline).font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(2).minimumScaleFactor(0.7)
+                    if let news {
+                        Text(news.sentLabel(relativeTo: s.date)).font(.ourioCaption).foregroundStyle(Ink.textSecondary)
+                    }
+                    Spacer(minLength: 0)
+                    ReplyLine()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .privacySensitive()
+            }
+            .padding(Space.l)
+        } else {
+            VStack(spacing: Space.s) {
+                card.frame(maxHeight: .infinity)
+                Text("From \(s.partner)").font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(1)
+                if news != nil { ReplyLine() }
+            }
+            .padding(Space.m)
+        }
+    }
+
+    private var headline: String {
+        switch news {
+        case .drawing: "\(s.partner) drew you something"
+        case .mood(let check): "\(s.partner) is \(check.mood.title.lowercased())"
+        case nil: "Nothing from \(s.partner) yet"
+        }
+    }
+
+    /// A small print of what they sent, on paper, with a stamp on its corner.
+    private var card: some View {
+        ZStack(alignment: .topTrailing) {
+            RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
+                .fill(Ink.paper)
+                .overlay { RoundedRectangle(cornerRadius: Radius.inner, style: .continuous).stroke(Ink.paperEdge, lineWidth: 1) }
+            content.padding(Space.s).frame(maxWidth: .infinity, maxHeight: .infinity)
+            PostageStamp(.heart, size: .regular)
+                .rotationEffect(.degrees(6))
+                .padding(Space.xs)
+        }
+        .rotationEffect(.degrees(-2))
+        .accessibilityHidden(news == nil)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        switch news {
+        case .drawing(let drawing):
+            DrawingCard(strokes: drawing.strokes, wallpaper: LockWallpaper(paper: drawing.paper), margin: 0.08)
+                .clipShape(RoundedRectangle(cornerRadius: Radius.inner - Space.s, style: .continuous))
+                .privacySensitive()
+        case .mood(let check):
+            MoodArt(mood: check.mood, size: 64).privacySensitive()
+        case nil:
+            Image(systemName: "envelope").font(.ourioTitle).foregroundStyle(Ink.textTertiary)
+        }
+    }
+}
+
+// MARK: - Coins
+
+struct CoinsFamilyView: View {
+    let entry: FamilyEntry
+    let family: WidgetFamily
+
+    private var glance: CoinsGlance { CoinsGlance(entry.facts.wallet) }
+
+    var body: some View {
+        if family == .systemMedium {
+            HStack(spacing: Space.m) {
+                balance.frame(maxWidth: .infinity, alignment: .leading)
+                levelTile
+            }
+            .padding(Space.l)
+        } else {
+            balance.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading).padding(Space.m)
+        }
+    }
+
+    private var balance: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            CoinIcon(size: 36).widgetAccentable()
+            Spacer(minLength: 0)
+            Text(glance.coins.formatted())
+                .font(.ourioNumber)
+                .monospacedDigit()
+                .foregroundStyle(Ink.text)
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
+            Text(glance.caption).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(2).minimumScaleFactor(0.85)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(glance.coins) coins")
+    }
+
+    private var levelTile: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            Text("Care level").font(.ourioMicro).foregroundStyle(Ink.textSecondary)
+            Text("Lv \(glance.level)").font(.ourioTitle).monospacedDigit().foregroundStyle(Ink.accentText).widgetAccentable()
+            Bar(value: glance.progress)
+            Text("\(Int((glance.progress * 100).rounded()))% to Lv \(glance.level + 1)")
+                .font(.ourioMicro)
+                .foregroundStyle(Ink.textSecondary)
+        }
+        .frame(width: 124, alignment: .leading)
+        .padding(Space.m)
+        .frame(maxHeight: .infinity)
+        .background(Ink.surface, in: RoundedRectangle(cornerRadius: Radius.card, style: .continuous))
+    }
+}
+
+// MARK: - Memory
+
+struct MemoryFamilyView: View {
+    let entry: FamilyEntry
+    let family: WidgetFamily
+
+    private var photo: UIImage? { entry.momentImage.flatMap(UIImage.init(data:)) }
+    private var caption: String { entry.snapshot.moment?.caption ?? "" }
+
+    var body: some View {
+        switch family {
+        case .systemMedium:
+            HStack(spacing: Space.l) {
+                print.frame(width: 140)
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    Text(caption.isEmpty ? "A moment together" : caption)
+                        .font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(3).minimumScaleFactor(0.8)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .privacySensitive()
+            }
+            .padding(Space.l)
+        case .systemLarge:
+            print.padding(Space.l)
+        default:
+            print.padding(Space.m)
+        }
+    }
+
+    /// A polaroid: the photo square on white paper, the date in the wide border, a stamp over the corner.
+    private var print: some View {
+        VStack(spacing: Space.s) {
+            Color.clear
+                .aspectRatio(1, contentMode: .fit)
+                .overlay {
+                    if let photo {
+                        Image(uiImage: photo)
+                            .resizable()
+                            .widgetAccentedRenderingMode(.desaturated)
+                            .scaledToFill()
+                            .privacySensitive()
+                    } else {
+                        Ink.surfaceRaised.overlay {
+                            Image(systemName: "photo.on.rectangle.angled").font(.ourioTitle).foregroundStyle(Ink.textTertiary)
+                        }
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: Space.xs, style: .continuous))
+            Text(label)
+                .font(.ourioMicro)
+                .foregroundStyle(Ink.heroInk)
+                .lineLimit(1)
+        }
+        .padding([.horizontal, .top], Space.s)
+        .padding(.bottom, Space.s)
+        .background(Ink.paper, in: RoundedRectangle(cornerRadius: Space.s, style: .continuous))
+        .overlay(alignment: .topTrailing) {
+            PostageStamp(.paw, size: .regular).rotationEffect(.degrees(8)).padding(Space.s)
+        }
+        .rotationEffect(.degrees(-2))
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var label: String {
+        if photo == nil { return "Pin a moment in Ourio" }
+        guard let date = entry.momentDate else { return caption }
+        return date.formatted(.dateTime.day().month(.abbreviated).year())
+    }
+}
+
+// MARK: - Our day
+
+struct DayFamilyView: View {
+    let entry: FamilyEntry
+    var family: WidgetFamily = .systemLarge
+
+    var body: some View {
+        VStack(spacing: 0) {
+            MochiFamilyView(entry: entry, family: .systemMedium, calm: true)
+                .frame(height: 170)
+            HStack(spacing: 0) {
+                Link(destination: DeepLink.calendar.url) { UsFamilyView(entry: entry, family: .systemSmall, calm: true) }
+                Link(destination: DeepLink.inbox.url) { PartnerFamilyView(entry: entry, family: .systemSmall) }
+            }
+            .frame(maxHeight: .infinity)
+        }
+    }
+}

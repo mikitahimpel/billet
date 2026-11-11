@@ -50,6 +50,11 @@ targets:
       # Activity, whose metadata each target extracts from its own sources.
       - path: Shared
       - path: PerTarget
+      # The widgets' views, drawn live by the widget gallery in Settings.
+      - path: OurioWidgets/WidgetFacts.swift
+      - path: OurioWidgets/FamilyViews.swift
+      - path: OurioWidgets/LockViews.swift
+      - path: OurioWidgets/Theme.swift
       # The date ideas the build ships with: the server's own catalog file (packages/ios/features/Sources/UsInterface/DateCatalog.swift).
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources

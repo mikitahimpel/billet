@@ -1,8 +1,15 @@
+import Design
 import DrawInterface
 import Foundation
 import MoodInterface
 import WidgetInterface
 import Persistence
+import SwiftUI
+import ProfileInterface
+import UIKit
+import UsInterface
+import WidgetKit
+import Wire
 
 /// What the family widgets draw besides the snapshot: the streak, the wallet and the partner's latest drawing, read
 /// from the App Group once per timeline.
@@ -17,11 +24,11 @@ struct WidgetFacts: Equatable {
                     drawing: LatestDrawing.load())
     }
 
-    static func sample(now: Date = .now) -> WidgetFacts {
+    static func sample(now: Date = .now, drawing: Bool = false) -> WidgetFacts {
         let day = Calendar.current.startOfDay(for: now)
         return WidgetFacts(streak: LoveStreak(count: 9, lastDay: day, best: 12),
                            wallet: Wallet(coins: 240, level: 4, progress: 0.6, wishlist: ["rug-moss", "lamp-star"]),
-                           drawing: nil)
+                           drawing: drawing ? .sample(now: now) : nil)
     }
 }
 
@@ -79,6 +86,15 @@ enum PartnerNews: Equatable {
         case .drawing(let drawing): drawing.sentAt
         case .mood(let check): check.date
         }
+    }
+
+    /// When it was sent, in words that stay true until the widget next reloads: a clock time today, never "5 min ago".
+    func sentLabel(relativeTo now: Date, calendar: Calendar = .current) -> String {
+        if calendar.isDate(date, inSameDayAs: now) { return date.formatted(.dateTime.hour().minute()) }
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now), calendar.isDate(date, inSameDayAs: yesterday) {
+            return "Yesterday"
+        }
+        return date.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated))
     }
 
     /// How long a drawing stays news on the Home Screen.
@@ -185,5 +201,73 @@ enum HugState {
     static func sent(_ s: OurioSnapshot) -> Bool {
         guard let mine = s.myMood else { return false }
         return mine.mood == .missing && Calendar.current.isDate(mine.date, inSameDayAs: s.date)
+    }
+}
+
+struct FamilyEntry: TimelineEntry {
+    let date: Date
+    let snapshot: OurioSnapshot
+    let facts: WidgetFacts
+    let momentImage: Data?
+    let momentDate: Date?
+}
+
+
+extension OurioSnapshot {
+    /// Gallery and placeholder data: a plausible evening, nothing from the couple's real stores.
+    static func sample(now: Date = .now) -> OurioSnapshot {
+        let cal = Calendar.current
+        return OurioSnapshot(
+            date: now, viewer: "L", partner: "M", daysTogether: 127,
+            next: NextEvent(title: "4 months together", icon: .init(symbol: "sparkles", tint: .sun),
+                            date: cal.date(byAdding: .day, value: 18, to: now) ?? now, daysLeft: 18),
+            partnerMood: MoodCheckIn(mood: .missing, date: now.addingTimeInterval(-1200)),
+            myMood: nil,
+            list: ListPreview(id: UUID(), title: "Groceries", icon: ListKind.groceries.icon,
+                              items: [.init(id: UUID(), text: "Oat milk", author: "M", done: false),
+                                      .init(id: UUID(), text: "Cat treats", author: "L", done: false),
+                                      .init(id: UUID(), text: "Lemons", author: "M", done: true)],
+                              openCount: 2, partnerAddedToday: false),
+            planned: nil,
+            idea: IdeaPreview(id: 1, title: "Blanket fort cinema", pitch: "Build a fort, pick a movie, no phones allowed inside",
+                              matched: true),
+            moment: nil, isPurring: false, isNight: isNight(now))
+    }
+}
+
+extension LatestDrawing {
+    /// Two loose strokes, for the gallery and the previews.
+    static func sample(now: Date = .now) -> LatestDrawing {
+        LatestDrawing(
+            noteID: "sample", seq: 1, sentAt: now.addingTimeInterval(-600),
+            compact: CompactStrokes(strokes: [
+                CompactStroke(color: "#7B4FE0", width: 32, points: [120, 300, 300, 160, 520, 320, 700, 180, 880, 340]),
+                CompactStroke(color: "#FF8FA3", width: 32, points: [300, 520, 500, 640, 700, 520]),
+            ]),
+            paper: .sky)
+    }
+}
+
+extension FamilyEntry {
+    /// What the in-app gallery and the placeholder draw: a plausible afternoon, nothing from the couple's stores.
+    static func sample(now: Date = .now, mood: PartnerMood? = .missing, drawing: Bool = false, photo: Bool = false,
+                       purring: Bool = false) -> FamilyEntry {
+        var snapshot = OurioSnapshot.sample(now: now)
+        snapshot.partnerMood = mood.map { MoodCheckIn(mood: $0, date: now.addingTimeInterval(-1200)) }
+        snapshot.isPurring = purring
+        return FamilyEntry(date: now, snapshot: snapshot, facts: .sample(now: now, drawing: drawing),
+                           momentImage: photo ? SamplePhoto.jpeg() : nil,
+                           momentDate: photo ? now.addingTimeInterval(-40 * 86_400) : nil)
+    }
+}
+
+/// A warm gradient standing in for a photo.
+enum SamplePhoto {
+    static func jpeg() -> Data? {
+        UIGraphicsImageRenderer(size: CGSize(width: 300, height: 300)).jpegData(withCompressionQuality: 0.8) { context in
+            let colors = [UIColor(Color(hex: 0xFAB380)).cgColor, UIColor(Color(hex: 0x7399CC)).cgColor]
+            guard let gradient = CGGradient(colorsSpace: nil, colors: colors as CFArray, locations: [0, 1]) else { return }
+            context.cgContext.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 300, y: 300), options: [])
+        }
     }
 }

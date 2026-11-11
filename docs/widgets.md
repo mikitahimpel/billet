@@ -35,7 +35,8 @@ reload through `WidgetCenter`: the app on backgrounding, and `LatestDrawing.widg
 ## Looking at them
 
 `WidgetGalleryTests` renders every widget for a Pro Max and an SE, light, dark and accented, into
-`$BILLET_SAMPLES/widgets` (CI keeps them as the `samples` artifact). With `BILLET_WIDGET_PREVIEWS=<dir>` it also
-writes the ten pictures the in-app gallery (Settings, Widget gallery) shows, as `<Asset>-light.png` and
-`-dark.png`; copy them into `apps/ios/Nooki/Assets.xcassets/WidgetPreviews/<Asset>.imageset` when a widget changes.
-The test renders without WidgetKit, so the system tint and gauges are not drawn.
+`$BILLET_SAMPLES/widgets` (CI keeps them as the `samples` artifact); it renders without WidgetKit, so the system
+tint is not drawn. Settings, Widget gallery draws the widgets live: `FamilyViews.swift`, `LockViews.swift` and
+`WidgetFacts.swift` are compiled into the app as well as the extension, and `WidgetStage` / `LockScreenStage` in the
+design package put each view at its true size on a wallpaper. A view that needs WidgetKit to draw (the system gauge)
+checks `drawsGaugesItself`, which the gallery sets, and draws the ring or bar by hand.
