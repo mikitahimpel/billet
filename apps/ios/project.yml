@@ -187,6 +187,8 @@ targets:
         products: [Ink, Persistence]
       - package: BilletDesign
         products: [Design]
+      - package: BilletPet
+        products: [Pet]
       - package: BilletFeatures
         products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface, WidgetInterface, WidgetUI]
     settings:

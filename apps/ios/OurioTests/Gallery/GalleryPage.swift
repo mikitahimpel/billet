@@ -170,12 +170,12 @@ enum GalleryPage: String, CaseIterable, Sendable {
         MochiHero(mood: fixedCat.needs?.moodLine(name: "Mochi") ?? "", level: 2, progress: 0.4, days: 2) {
             PetPortrait(size: 88)
         }
-        MochiDay(name: "Mochi", doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
+        MochiDay(name: "Mochi", pronouns: .she, doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
                  locale: Locale(identifier: "en_GB"))
     }
 
     @MainActor @ViewBuilder private static var mochiAboutPage: some View {
-        if let about = fixedCat.about { MochiNature(about: about) }
+        if let about = fixedCat.about { MochiNature(about: about, pronouns: .she) }
     }
 
     private static let fixedCat: CatStatus = {

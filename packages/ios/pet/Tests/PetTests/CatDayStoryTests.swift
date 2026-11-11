@@ -171,9 +171,9 @@ struct CatAboutWordsTests {
 
   @Test func aPlaceSheOnlyPassesIsNoFavouriteSpot() {
     for kind in [RoomAffordance.Kind.bowl, .smallItem, .door, .toy] {
-      #expect(kind.spotName == nil)
+      #expect(kind.spotName(for: .they) == nil)
     }
-    let named = RoomAffordance.Kind.allCases.compactMap(\.spotName)
+    let named = RoomAffordance.Kind.allCases.compactMap { $0.spotName(for: .they) }
     #expect(named.count == RoomAffordance.Kind.allCases.count - 4)
     #expect(named.allSatisfy { $0.count <= 20 })
   }

@@ -1,5 +1,6 @@
 import FeatureGames
 import GamesInterface
+import Pet
 import ProfileInterface
 import RealityKit
 import SwiftUI
@@ -39,6 +40,7 @@ final class FeedStage: GameStage {
     private let root: Entity
     private let task: FeedTask
     private let name: String
+    private let pronouns: CatPronouns
 
     private let bowlAt: SIMD3<Float>
     private let bagRest: SIMD3<Float>
@@ -86,6 +88,7 @@ final class FeedStage: GameStage {
         root = room.pivot.group()
         task = FeedTask(full: room.director?.needs?.full ?? 0.5)
         name = CatProfile.name()
+        pronouns = CatProfile.pronouns()
         bowlAt = spots.at(0, 0.04, up: Self.scaleSize.y)
         bagRest = spots.at(0.2, -0.05, up: 0.13)
         bagPour = bowlAt + spots.right * 0.045 + [0, 0.115, 0]
@@ -192,11 +195,11 @@ final class FeedStage: GameStage {
     }
 
     private var hint: String {
-        if capped { return "The bowl is full: she'll be stuffed" }
+        if capped { return pronouns.say(.bowlCapped) }
         switch task.check(food: food) {
         case .ready: return "Right there. Let go, tap Feed"
         case .tooLittle(let grams): return food < 1 ? "Hold to pour \(name)'s \(task.target) g, stop in the green" : "\(grams) g to go"
-        case .tooMuch: return "Too much! She'll be stuffed"
+        case .tooMuch: return pronouns.say(.tooMuchWarning)
         }
     }
 

@@ -37,6 +37,8 @@ final class CatLife: CatEventSource {
         /// The last journal entry held, so a sync or a socket resumes after it.
         var lastSeq = 0
         var outbox: [RecordCatEventRequest] = []
+        /// This phone chose the cat's pronouns after the room last heard them.
+        var pronounsPending: Bool?
     }
 
     static let key = "cat.life"
@@ -59,6 +61,8 @@ final class CatLife: CatEventSource {
     private let defaults: UserDefaults
     private let catName: () -> String
     private let catCoat: () -> String
+    private let chosenPronouns: () -> CatPronouns?
+    private let adoptPronouns: (CatPronouns) -> Void
     private var saved: Saved
     private var client: CatEventsClient?
     private var observers: [(CatLifeChange) -> Bool] = []
@@ -88,10 +92,14 @@ final class CatLife: CatEventSource {
 
     init(defaults: UserDefaults = .standard, now: Date = .now, formerOutbox: URL = CatLife.formerOutbox,
          catName: @escaping () -> String = { CatProfile.name() },
-         catCoat: @escaping () -> String = { CatCoat.current().rawValue }) {
+         catCoat: @escaping () -> String = { CatCoat.current().rawValue },
+         chosenPronouns: @escaping () -> CatPronouns? = { CatProfile.chosenPronouns() },
+         adoptPronouns: @escaping (CatPronouns) -> Void = { CatProfile.setPronouns($0) }) {
         self.defaults = defaults
         self.catName = catName
         self.catCoat = catCoat
+        self.chosenPronouns = chosenPronouns
+        self.adoptPronouns = adoptPronouns
         if let data = defaults.data(forKey: Self.key), let stored = try? JSONDecoder().decode(Saved.self, from: data) {
             saved = stored
         } else {
@@ -181,10 +189,14 @@ final class CatLife: CatEventSource {
             var cat = try await client.load()
             if cat.cat == nil {
                 cat = try await client.adopt(SaveCatRequest(
-                    name: catName(), look: CatLook(model: "mochi", coat: catCoat()),
+                    name: catName(), pronouns: chosenPronouns()?.rawValue,
+                    look: CatLook(model: "mochi", coat: catCoat()),
                     utcOffsetSeconds: TimeZone.current.secondsFromGMT()))
             }
-            if let profile = cat.cat { take(profile) }
+            if let profile = cat.cat {
+                take(profile)
+                try await settlePronouns(with: profile, through: client)
+            }
             _ = await flush()
             var after = max(saved.lastSeq, cat.lastSeq - Self.journalWindow)
             while true {
@@ -200,6 +212,32 @@ final class CatLife: CatEventSource {
     func received(_ entry: CatEntry) {
         guard isPaired else { return }
         merge([entry])
+    }
+
+    /// This phone's choice made after the room last heard it, or one the room never had, goes up; otherwise the
+    /// room's choice is this phone's, so both partners word the cat alike. A save leaves the name, look and clock as
+    /// the room has them.
+    private func settlePronouns(with profile: Wire.CatProfile, through client: CatEventsClient) async throws(TransportError) {
+        let mine = chosenPronouns()
+        let theirs = profile.pronouns.flatMap(CatPronouns.init(rawValue:))
+        if let mine, saved.pronounsPending == true || theirs == nil {
+            if theirs != mine {
+                _ = try await client.adopt(SaveCatRequest(
+                    name: profile.name, pronouns: mine.rawValue, look: profile.look,
+                    utcOffsetSeconds: profile.utcOffsetSeconds))
+            }
+            saved.pronounsPending = nil
+            save()
+        } else if let theirs, theirs != mine {
+            adoptPronouns(theirs)
+        }
+    }
+
+    /// The pair chose different pronouns for the cat on this phone: the room hears it at the next sync, now if reachable.
+    func pronounsChosen() {
+        saved.pronounsPending = true
+        save()
+        Task { await sync() }
     }
 
     private func take(_ profile: Wire.CatProfile) {

@@ -66,8 +66,29 @@ describe("decide: the cat", () => {
       name: "Pirozhok",
     });
     expect(renamed.outputs).toEqual([
-      { _tag: "CatSaved", cat: renamed.state.cat?.profile, by: bob, adopted: false },
+      { _tag: "CatSaved", cat: renamed.state.cat?.profile, by: bob, adopted: false, renamed: true },
     ]);
+  });
+
+  it("keeps the pronouns the last save chose, and a save without them leaves them", () => {
+    const adopted = decide(active, saveCat(alice, start + hour));
+    if (adopted._tag !== "Accepted") throw new Error("not adopted");
+    expect(adopted.state.cat?.profile.pronouns).toBeUndefined();
+
+    const chosen = decide(adopted.state, { ...saveCat(bob, start + day), pronouns: "he" });
+    if (chosen._tag !== "Accepted") throw new Error("not saved");
+    expect(chosen.state.cat?.profile.pronouns).toBe("he");
+    expect(chosen.outputs).toEqual([
+      { _tag: "CatSaved", cat: chosen.state.cat?.profile, by: bob, adopted: false, renamed: false },
+    ]);
+
+    const again = decide(chosen.state, saveCat(alice, start + 2 * day));
+    if (again._tag !== "Accepted") throw new Error("not saved");
+    expect(again.state.cat?.profile.pronouns).toBe("he");
+
+    const changed = decide(again.state, { ...saveCat(alice, start + 3 * day), pronouns: "they" });
+    if (changed._tag !== "Accepted") throw new Error("not saved");
+    expect(changed.state.cat?.profile.pronouns).toBe("they");
   });
 
   it("refuses a stranger, and care before there is a cat", () => {

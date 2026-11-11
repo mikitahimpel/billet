@@ -31,11 +31,14 @@ public struct CatResponse: Codable, Hashable, Sendable {
 /// The first save adopts the cat; later ones change its name, look and the pair's clock.
 public struct SaveCatRequest: Codable, Hashable, Sendable {
   public let name: String
+  /// Left out, the room keeps what it has.
+  public let pronouns: String?
   public let look: CatLook
   public let utcOffsetSeconds: Int
 
-  public init(name: String, look: CatLook, utcOffsetSeconds: Int) {
+  public init(name: String, pronouns: String? = nil, look: CatLook, utcOffsetSeconds: Int) {
     self.name = name
+    self.pronouns = pronouns
     self.look = look
     self.utcOffsetSeconds = utcOffsetSeconds
   }

@@ -120,7 +120,7 @@ private struct Catalog: View {
           ) {}
           GaugeTile(
             "Rested", state: "Wide awake", hint: "Fine for today", value: 0.9,
-            symbol: "moon.zzz.fill", tint: .lilac, note: "Naps on her own")
+            symbol: "moon.zzz.fill", tint: .lilac, note: "Only sleep fills it")
         }
         MeterBar(value: 0.4)
         MomentStrip([

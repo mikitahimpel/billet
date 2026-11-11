@@ -1470,7 +1470,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     default: catEntry(3, "game-played"),
     "note-shared": catEntry(4, "note-shared", bob),
   }),
-  fixture("CatProfile", CatProfile, { default: catProfile }),
+  fixture("CatProfile", CatProfile, {
+    default: catProfile,
+    "with-pronouns": Schema.decodeUnknownSync(CatProfile)({ ...catProfile, pronouns: "he" }),
+  }),
   fixture("CatTemper", CatTemper, { default: catTemper }),
   fixture("CatNeeds", CatNeeds, { default: catNeeds, missing: lonelyCatNeeds }),
   fixture("CatResponse", CatResponse, {
@@ -1486,6 +1489,12 @@ export const catalog: ReadonlyArray<Fixture> = [
       name: "Мочи 🐾",
       look: { model: "detailed", coat: "greyWhite" },
       utcOffsetSeconds: -18_000,
+    }),
+    "with-pronouns": Schema.decodeUnknownSync(SaveCatRequest)({
+      name: "Tofu",
+      pronouns: "they",
+      look: { model: "detailed", coat: "greyWhite" },
+      utcOffsetSeconds: 3600,
     }),
   }),
   fixture("RecordCatEventRequest", RecordCatEventRequest, {

@@ -536,22 +536,27 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       return accepted(after.room, [appended, ...after.outputs]);
     }
     case "SaveCat": {
-      const { user, name, look, utcOffsetSeconds, natureSeed, at } = command;
+      const { user, name, pronouns, look, utcOffsetSeconds, natureSeed, at } = command;
+      const chosen = pronouns === undefined ? {} : { pronouns };
       if (!isMember(room, user)) return rejected(RoomRejection.cases.NotAMember.make({ user }));
       // Birth and nature are the cat's for life: a later save changes only what can change.
       const cat: RoomCat =
         room.cat === undefined
           ? {
-              profile: { name, look, utcOffsetSeconds, natureSeed, bornAt: at },
+              profile: { name, ...chosen, look, utcOffsetSeconds, natureSeed, bornAt: at },
               temper: newTemper,
               lastSeq: 0,
             }
-          : { ...room.cat, profile: { ...room.cat.profile, name, look, utcOffsetSeconds } };
+          : {
+              ...room.cat,
+              profile: { ...room.cat.profile, name, ...chosen, look, utcOffsetSeconds },
+            };
       return accepted({ ...room, cat }, [
         RoomOutput.cases.CatSaved.make({
           cat: cat.profile,
           by: user,
           adopted: room.cat === undefined,
+          renamed: room.cat !== undefined && room.cat.profile.name !== name,
         }),
       ]);
     }
