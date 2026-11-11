@@ -30,5 +30,6 @@ for path in files:
     # Blender is Z up and USD's front is -Y: width is x, depth y, height z.
     name = os.path.basename(path)[: -len(".usdz")]
     result[name] = {"width": round(hi[0] - lo[0], 4), "depth": round(hi[1] - lo[1], 4), "height": round(hi[2] - lo[2], 4)}
-json.dump(result, open(out, "w"), indent=1, sort_keys=True)
+with open(out, "w") as f:
+    f.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
 print("BOUNDS", len(result))
