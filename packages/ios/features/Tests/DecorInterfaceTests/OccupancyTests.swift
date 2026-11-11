@@ -62,7 +62,7 @@ import Testing
 
   @Test func theNearestFitMovesAPieceOffTheBed() {
     let layout = DecorLayout(stored: [])
-    let onTheBed = Placement(item: "monstera", surface: .floor, u: 1, v: -1)
+    let onTheBed = Placement(item: "lamp", surface: .floor, u: 1, v: -1)
     #expect(layout.verdict(onTheBed) == .occupied)
     let fit = layout.nearestFit(to: onTheBed)
     #expect(fit != nil)

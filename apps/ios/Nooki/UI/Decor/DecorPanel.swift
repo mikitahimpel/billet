@@ -85,23 +85,30 @@ struct DecorPanel: View {
                 .foregroundStyle(Ink.textSecondary)
         } else {
             ScrollView(.horizontal) {
-                HStack(spacing: Space.m) {
+                HStack(spacing: Space.s) {
                     ForEach(items) { item in
-                        ItemCard(
-                            Catalog.item(item.id)?.name ?? item.id, opens: "Places \(item.id)",
-                            open: { state.decor.send(.closetTapped(item.id)) }
-                        ) {
-                            art(item.id)
-                        } footer: {
-                            Chip("Place", symbol: "plus", style: .honey)
+                        let name = Catalog.item(item.id)?.name ?? item.id
+                        Button { state.decor.send(.closetTapped(item.id)) } label: {
+                            VStack(spacing: Space.xs) {
+                                art(item.id)
+                                    .frame(width: Size.cardMark + Space.l, height: Size.cardMark + Space.l)
+                                    .clipShape(.rect(cornerRadius: Radius.inner, style: .continuous))
+                                Text(name)
+                                    .font(.ourioCaption)
+                                    .foregroundStyle(Ink.text)
+                                    .lineLimit(2)
+                                    .minimumScaleFactor(0.85)
+                                    .multilineTextAlignment(.center)
+                            }
+                            .frame(width: 84)
+                            .contentShape(.rect)
                         }
-                        // Two and a half across, so the half card says the strip scrolls.
-                        .containerRelativeFrame(.horizontal, count: 5, span: 2, spacing: Space.m)
+                        .buttonStyle(PressScaleStyle())
+                        .accessibilityLabel("Place \(name)")
+                        .accessibilityHint("Stands it in the room")
                     }
                 }
-                .scrollTargetLayout()
             }
-            .scrollTargetBehavior(.viewAligned)
             .scrollIndicators(.hidden)
             .fixedSize(horizontal: false, vertical: true)
         }
@@ -110,7 +117,7 @@ struct DecorPanel: View {
     private func art(_ id: String) -> some View {
         Ink.surfaceRaised.overlay {
             if let image = Thumbnails.image("Item_\(id)", maxPixels: 256) {
-                Image(uiImage: image).resizable().scaledToFit().padding(Space.s)
+                Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
             }
         }
     }
