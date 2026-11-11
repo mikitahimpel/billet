@@ -1,5 +1,7 @@
 import AppIntents
+import MomentsInterface
 import OurioShared
+import UsInterface
 import WidgetKit
 
 /// A block picked in "Edit Widget": a fixed module, or the smart slot that picks one by itself.

@@ -1,5 +1,6 @@
 import Foundation
 import Persistence
+import ProfileInterface
 
 /// What happened on the widgets and controls while the app was closed: pets waiting to reach Mochi and the date idea
 /// the widget last drew.

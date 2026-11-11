@@ -1,7 +1,9 @@
+import MomentsInterface
 import OurioShared
 import PhotosUI
 import SwiftUI
 import Design
+import UsInterface
 
 /// Owns the drag so gesture frames redraw only the cards, not the screen that builds the deck.
 struct SwipeDeck: View {

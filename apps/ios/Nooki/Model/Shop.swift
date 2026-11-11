@@ -1,5 +1,8 @@
+import MomentsInterface
 import OurioShared
+import ProfileInterface
 import SwiftUI
+import UsInterface
 
 enum ShopCategory: String, CaseIterable, Identifiable {
     case today, furniture, decor, mochi, room, inks

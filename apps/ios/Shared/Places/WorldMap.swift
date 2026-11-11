@@ -1,6 +1,7 @@
 import SwiftUI
 import Design
 import UIKit
+import UsInterface
 
 /// Every country's outline from Natural Earth (public domain), simplified to half a degree, on an equirectangular
 /// map from 180°W, 84°N to 180°E, 56°S. `WorldMap.txt` is made by `scripts/places/world-map.py`.

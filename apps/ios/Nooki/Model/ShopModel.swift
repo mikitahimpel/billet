@@ -1,9 +1,12 @@
 import FeatureShop
 import Foundation
+import MomentsInterface
 import Observation
 import OurioShared
+import ProfileInterface
 import ShopInterface
 import Transport
+import UsInterface
 import Wire
 
 /// The Shop's store around `ShopMachine` (FeatureShop), with the wallet file, the cat and the day's prices.

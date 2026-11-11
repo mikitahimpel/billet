@@ -1,7 +1,10 @@
+import MomentsInterface
 import OurioShared
 import PhotosUI
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
 /// The back button leaves without saving.
 struct ProfileEditor: View {

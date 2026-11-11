@@ -1,6 +1,9 @@
+import MomentsInterface
 import OurioShared
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 import WidgetKit
 
 /// Lock Screen: the note your partner left last, or a pencil if the board is empty. Tap to write one back.

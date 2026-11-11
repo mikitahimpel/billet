@@ -1,6 +1,9 @@
+import MomentsInterface
 import MoodInterface
 import OurioShared
+import ProfileInterface
 import UIKit
+import UsInterface
 import WidgetKit
 
 struct OurioEntry<Configuration: OurioConfiguration>: TimelineEntry {

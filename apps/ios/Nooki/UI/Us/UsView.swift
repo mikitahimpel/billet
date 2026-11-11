@@ -1,6 +1,9 @@
+import MomentsInterface
 import OurioShared
+import ProfileInterface
 import SwiftUI
 import Design
+import UsInterface
 
 /// Every card is a `Card` that starts with a `CardHeader`; only the hero is warm.
 struct UsView: View {
@@ -27,26 +30,17 @@ struct UsView: View {
         }
     }
 
-    private let hMargin: CGFloat = Space.l
     private var us: UsStore { state.us }
 
     var body: some View {
         let upcoming = us.upcoming(togetherSince: state.togetherSince)
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.m) {
-                header
-                CountdownHero(next: upcoming.first, days: state.daysTogether) { state.usRoute = .calendar }
-                StreakCard(store: state.streak)
-                tiles(upcoming: upcoming.count)
-                games
-                lists
-            }
-            .padding(.horizontal, hMargin)
-            .padding(.top, Space.xs)
-            .padding(.bottom, Space.l)
+        TabPage {
+            CountdownHero(next: upcoming.first, days: state.daysTogether) { state.usRoute = .calendar }
+            StreakCard(store: state.streak)
+            tiles(upcoming: upcoming.count)
+            games
+            lists
         }
-        .scrollIndicators(.hidden)
-        .softScrollEdges()
         .task(id: session?.isPaired) {
             await whoKnows.load()
             await drawGuess.load()
@@ -66,17 +60,6 @@ struct UsView: View {
 
     private var whoKnows: WhoKnowsModel { session?.whoKnows ?? unpaired }
     private var drawGuess: DrawGuessModel { session?.drawGuess ?? unpairedRiddles }
-
-    private var header: some View {
-        HStack(alignment: .center, spacing: Space.m) {
-            Text("Us")
-                .font(.ourioLargeTitle)
-                .foregroundStyle(Ink.primary)
-                .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
-        }
-        .frame(height: Size.control)
-    }
 
     private func tiles(upcoming: Int) -> some View {
         VStack(spacing: Space.m) {

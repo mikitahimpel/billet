@@ -106,9 +106,12 @@ targets:
             FeatureShop,
             DrawInterface,
             GamesInterface,
+            MomentsInterface,
             MoodInterface,
+            ProfileInterface,
             RoomInterface,
             ShopInterface,
+            UsInterface,
             WidgetBridge,
           ]
       - package: BilletPayments
@@ -163,7 +166,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
     settings:
       base:
         APPLICATION_EXTENSION_API_ONLY: YES
@@ -172,6 +175,9 @@ targets:
     platform: iOS
     sources:
       - path: OurioWidgets
+      # The files the app keeps the streak and the wallet in, which the widgets read.
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       # Shared's code is the OurioShared library; its images and map stay here. PerTarget holds the intents and the
       # Live Activity, whose metadata each target extracts from its own sources.
       - path: Shared
@@ -200,7 +206,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
@@ -240,7 +246,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
@@ -284,7 +290,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MoodInterface]
+        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.share
@@ -298,6 +304,8 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       - path: PerTarget
     # Wire, Ink and OurioShared come from the app it is loaded into, as for OurioTests: linking them here as well
     # makes Xcode build them as frameworks, and OurioTests then finds none of their symbols.
