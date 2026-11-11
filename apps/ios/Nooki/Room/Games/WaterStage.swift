@@ -73,8 +73,10 @@ final class WaterStage: GameStage {
         say(hint)
     }
 
+    var seat: SIMD3<Float>? { spots.at(0, -0.13) }
+
     var focus: [SIMD3<Float>] {
-        [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], bowlAt + spots.toward * 0.08, spots.at(0, -0.13, up: 0.12), spots.at(0, -0.6, up: 0.4)]
+        [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], bowlAt + spots.toward * 0.08, spots.at(0, -0.13, up: 0.12), spots.at(0, -0.13, up: 0.2)]
     }
 
     var action: String? { bowl.canServe && !holding && !served ? "Serve" : nil }
