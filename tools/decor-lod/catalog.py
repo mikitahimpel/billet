@@ -62,9 +62,9 @@ BASE = [
     ("base-cattree", "Cat tree", False, 0.2, 0.2, 0.4, False, (7, -7)),
     ("base-bowls", "Bowls", False, 0.2, 0.09, 0.04, False, (2, -7)),
     ("base-donutbed", "Cat bed", True, 0.38, 0.38, 0.14, False, (1, -1)),
-    ("base-basket", "Yarn basket", False, 0.174, 0.174, 0.093, False, (7, 7)),
-    ("base-books", "Books", False, 0.144, 0.128, 0.043, False, (4, 8)),
-    ("base-rug", "Rug", False, 0.666, 0.666, 0.012, True, (0, 1)),
+    ("base-basket", "Yarn basket", False, 0.16, 0.16, 0.09, False, (7, 7)),
+    ("base-books", "Books", False, 0.12, 0.1, 0.05, False, (4, 8)),
+    ("base-rug", "Rug", False, 0.64, 0.64, 0.02, True, (0, 1)),
 ]
 
 items = []

@@ -31,16 +31,16 @@ extension DecorItem {
       mount: .floor, width: 0.38, depth: 0.38, isFlat: false, height: 0.14, cat: nil,
       base: BaseSpot(title: "Cat bed", u: 1, v: -1, isRest: true)),
     DecorItem(
-      id: "base-basket", model: "", assetName: "Base_basket", fit: .width, size: 0.174,
-      mount: .floor, width: 0.174, depth: 0.174, isFlat: false, height: 0.093, cat: nil,
+      id: "base-basket", model: "", assetName: "Base_basket", fit: .width, size: 0.16,
+      mount: .floor, width: 0.16, depth: 0.16, isFlat: false, height: 0.09, cat: nil,
       base: BaseSpot(title: "Yarn basket", u: 7, v: 7, isRest: false)),
     DecorItem(
-      id: "base-books", model: "", assetName: "Base_books", fit: .width, size: 0.144, mount: .floor,
-      width: 0.144, depth: 0.128, isFlat: false, height: 0.043, cat: nil,
+      id: "base-books", model: "", assetName: "Base_books", fit: .width, size: 0.12, mount: .floor,
+      width: 0.12, depth: 0.1, isFlat: false, height: 0.05, cat: nil,
       base: BaseSpot(title: "Books", u: 4, v: 8, isRest: false)),
     DecorItem(
-      id: "base-rug", model: "", assetName: "Base_rug", fit: .width, size: 0.666, mount: .floor,
-      width: 0.666, depth: 0.666, isFlat: true, height: 0.012, cat: nil,
+      id: "base-rug", model: "", assetName: "Base_rug", fit: .width, size: 0.64, mount: .floor,
+      width: 0.64, depth: 0.64, isFlat: true, height: 0.02, cat: nil,
       base: BaseSpot(title: "Rug", u: 0, v: 1, isRest: false)),
     DecorItem(
       id: "armchair", model: "Item_armchair", assetName: "Decor_armchair", fit: .width, size: 0.36,

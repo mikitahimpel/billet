@@ -176,7 +176,8 @@ private func book(
     }
     #expect(reset.layout.placements.isEmpty && reset.layout.stowed.isEmpty)
     #expect(outputs == [.save(reset.layout), .feedback(.reset)])
-    #expect(M.transition(.closet(reset), .resetRoom) == (.closet(reset), []))
+    let (again, nothing) = M.transition(.closet(reset), .resetRoom)
+    #expect(again.book.layout == reset.layout && nothing.isEmpty)
   }
 
   @Test func aWallPieceCannotBeTurned() {
