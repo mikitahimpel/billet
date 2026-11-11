@@ -61,6 +61,13 @@ final class CatDirector {
     /// Whether the Labs card is on screen; the scores it shows are worked out only then.
     @ObservationIgnored var observing = false
 
+    /// What her sheet tells beyond her needs: her day, her nature and her favourite spot. Worked out when asked; nil
+    /// until the brain drives her.
+    var about: CatAbout? {
+        guard needs != nil else { return nil }
+        return runner.brain.about(events: source.events)
+    }
+
     /// A launch argument (`-labs.catBrainTour YES`) that starts the tour at once, for recordings.
     static let tourKey = "labs.catBrainTour"
 

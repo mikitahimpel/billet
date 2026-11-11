@@ -53,14 +53,14 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
     content; `GlassSegmented` is only the Living room | Bedroom switch. The Shop's category row is navigation, not a
     switch: pinned `FilterChip`s with an icon each.
 14. **Scroll edges are soft.** Every scroll view fades out under bars, the header and the tab bar with
-    `.softScrollEdges()` (iOS 26 scroll edge effect, the same at the top and the bottom); `Page` and
-    `BilletSheet` already apply it. Before iOS 26 Home's bars draw the fade themselves. Never a hard edge: the
-    glass is tinted enough that nothing ghosts through it. Chips, a search field or a subtitle pinned over a
-    sheet's list go in `.scrollHeader { }`, which pins them over the scroll view so the rows fade under them on
-    the sheet's ground instead of being cut at their edge. `check-design.mjs` fails on a scroll view without
-    either in a file on the design package, and on any `.hard` edge. In an opaque sheet the fade alone lets text
-    show behind the title, so `Page` and `BilletSheet` also lay the sheet's ground under its bar and fade it out
-    just below; a `List` in a sheet adds `.sheetBarBacking()` under its `.scrollHeader`.
+    `.ourioScrollEdges()`: the system's iOS 26 scroll edge effect, the same at the top and the bottom, as in the
+    system's own sheets. `Page`, `BilletSheet`, `TabPage` and Home's bars already apply it. Content at rest starts
+    below the bar, so only what has scrolled under it softens. Before iOS 26 Home's bars draw the fade themselves.
+    Never a hard edge, and never a gradient or ground of your own laid under a bar: it shows as a band. Chips, a
+    search field or a subtitle pinned over a sheet's list go in `.scrollHeader { }`: the system draws no edge
+    effect under such a bar in a sheet, so it lays the sheet's ground behind the header and the title bar and
+    fades it out over `Space.xl` below, and the rows sink away under it. `check-design.mjs` fails on a scroll view without either in a file on the design package,
+    and on `.scrollEdgeEffectStyle` or `.scrollEdgeEffectHidden` outside the design package.
 15. **A horizontal drag on the scene never switches rooms.** The room is changed only by the explicit control;
     drags belong to the cat, the camera and the laser.
 16. **Contrast is tested.** `ContrastTests` computes the Ink pairs from `Palette` for light and dark; a new
@@ -77,7 +77,11 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
 | A row | `Row(title, detail:, symbol:, tint:) { trailing }`, `ToggleRow`, `PickerRow`, `RowChevron` |
 | Any other content on a card | `Card { ... }` or `.cardSurface()`; `state: .selected / .disabled` for a card that is chosen or can't be |
-| A state read at a glance that a tap acts on (the cat's needs) | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. The state is a word, never a bar or a percentage (VoiceOver gets the number through `value:`); only a state that wants something now is `.raised` |
+| A state read at a glance that a tap acts on, in a list | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. Only a state that wants something now is `.raised` |
+| A level read at a glance that a tap acts on (the cat's needs) | `GaugeTile(title, state:, hint:, value:, symbol:, tint:, emphasis:, action:) { }` in an `ItemGrid`: a ring that fills to the level round its glyph, the percentage, the state in a word, what comes next ("Hungry in about 2 h") and the care as a pill; `note:` when nothing can be done. One tint per level; only the one that wants something now is `.raised`, and only it takes the accent |
+| Several levels at once round an avatar | `SegmentedRing([.init(value:tint:)])`: an arc each, clockwise from the upper leading quarter, in the order their tiles have on the sheet the avatar opens |
+| A progress along a line (a level, a trait) | `MeterBar(value:tint:)` |
+| A day or a history as a few marks in order | `MomentStrip([StripMoment(id:symbol:tint:title:time:)])`: a card that scrolls sideways under faded edges and opens at the latest; a list at accessibility sizes |
 | What an avatar or a round control wants, while it matters | `SymbolBadge(symbol:tint:)` at its top trailing corner; nothing when nothing is wanted |
 | A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
 | Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
@@ -226,6 +230,7 @@ on `.calloutBubble(pointer:)`.
 | `Ink.disabledFill`, `.disabledText`, `.destructive` | disabled buttons, destructive text and tiles |
 | `Ink.primary`, `.secondary`, `.glassTint` | white on the dark full-screen canvas's warm glass only |
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
+| `Color.lilac`, `.sage` | with honey and blush, the clay tints of the cat's four needs (Rested, Playful, Full, Loved); never a button or text |
 | `.ourioLargeTitle` `.ourioTitle` `.ourioValue` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles; `ourioMicro` is 12 pt, the smallest text in the app |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 | `Motion.*` | every animation, see Motion |

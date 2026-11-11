@@ -76,6 +76,11 @@ export const StoredLayoutLog = Schema.Struct({
   position: Schema.Int,
 });
 
+export const StoredStowedPiece = Schema.Struct({
+  itemId: Schema.String,
+  position: Schema.Int,
+});
+
 export const StoredClaimedBonus = Schema.Struct({
   collectionId: Schema.String,
   position: Schema.Int,

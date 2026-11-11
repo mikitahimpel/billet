@@ -25,4 +25,4 @@ Before writing or editing any SwiftUI in `apps/ios` or `packages/ios`:
    component changes.
 
 5. Sheets use the native toolbar through `BilletSheet` (close leading + confirm trailing, or close trailing
-   alone); controls over the room use `Ink.glassFill`/`Ink.glassGlyph`; scroll views get `.softScrollEdges()`.
+   alone); controls over the room use `Ink.glassFill`/`Ink.glassGlyph`; scroll views get `.ourioScrollEdges()`.
