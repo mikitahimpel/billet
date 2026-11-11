@@ -54,9 +54,10 @@ final class BrushStage: GameStage {
         head.box(0.04, 0.007, 0.009, r: 0.003, Clay.matte(0xB46C3C), at: [0.042, 0.016, 0])
         head.scale = SIMD3(repeating: Self.brushScale)
         brush.isEnabled = false
-        guide = root.group()
-        guideDots = (0..<5).map { _ in guide.sphere(0.006, Clay.glow(0xFFC25A, intensity: 2.5), at: .zero) }
-        arrow = [Float(0.7), -0.7].map { guide.box(0.03, 0.005, 0.005, r: 0.002, Clay.glow(0xFFC25A, intensity: 2.5), at: .zero, rotation: .z($0)) }
+        let guideNode = root.group()
+        guide = guideNode
+        guideDots = (0..<5).map { _ in guideNode.sphere(0.006, Clay.glow(0xFFC25A, intensity: 2.5), at: .zero) }
+        arrow = [Float(0.7), -0.7].map { guideNode.box(0.03, 0.005, 0.005, r: 0.002, Clay.glow(0xFFC25A, intensity: 2.5), at: .zero, rotation: .z($0)) }
         // Three-quarters on: her face to the player, turned far enough to the left that her back shows, so a stroke
         // from her neck out to the right goes with the fur. Her neck turns the rest of the way to look at us.
         seat = spots.at(0, -0.02)
