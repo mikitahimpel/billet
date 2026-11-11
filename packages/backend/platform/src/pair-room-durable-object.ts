@@ -865,9 +865,11 @@ export class PairRoom extends DurableObject {
       await this.ctx.storage.delete(demoBotKey);
       return;
     }
-    await this.demoBotDoes(bot.bot, action).catch((error: unknown) =>
-      this.run(() => Effect.logWarning("demo bot action failed", error)),
-    );
+    const done = await this.demoBotDoes(bot.bot, action).catch(async (error: unknown) => {
+      await this.run(() => Effect.logWarning("demo bot action failed", error));
+      return false;
+    });
+    if (!done) return;
     // A real partner's phone marks their streak day after each of these; without it the owner's day never lit. The
     // bot has no clock of its own, so its day is the cat's.
     const utcOffsetSeconds = room._tag === "Active" ? (room.cat?.profile.utcOffsetSeconds ?? 0) : 0;
@@ -876,30 +878,28 @@ export class PairRoom extends DurableObject {
     );
   }
 
-  private async demoBotDoes(bot: UserId, action: DemoBotAction): Promise<void> {
+  /** Whether the room took it, so the bot's streak day counts only for something it did. */
+  private async demoBotDoes(bot: UserId, action: DemoBotAction): Promise<boolean> {
     switch (action._tag) {
       case "SendNote":
-        await this.sendNote(bot, action.request);
-        return;
+        return (await this.sendNote(bot, action.request))._tag === "Accepted";
       case "React":
-        await this.react(bot, action.request);
-        return;
+        return (await this.react(bot, action.request))._tag === "Accepted";
       case "RecordCatEvent":
-        await this.recordCatEvent(bot, action.request);
-        return;
+        return (await this.recordCatEvent(bot, action.request))._tag === "Accepted";
       case "OpenGift":
         await this.openGift(bot, undefined);
-        return;
+        return false;
       case "PlayGuess": {
         const view = await this.guess(bot, { _tag: "View" });
-        if (view._tag !== "Done") return;
+        if (view._tag !== "Done") return false;
         const { round, answers } = view.view;
         const open = round.questions.filter((q) => !answers.some((a) => a.question === q));
         for (const [i, question] of open.entries()) {
           const option = action.options[i % action.options.length] ?? 0;
           await this.guess(bot, { _tag: "Answer", round: round.id, question, option });
         }
-        return;
+        return open.length > 0;
       }
     }
   }

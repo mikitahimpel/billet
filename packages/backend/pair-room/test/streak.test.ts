@@ -78,8 +78,8 @@ describe("the pair's love streak", () => {
       ],
     });
     // Alice's older mark can no longer meet one, so it goes once a later day is marked.
-    expect(streakOf([report(alice, dayAt(0)), report(bob, dayAt(2))]).marks).toEqual([
-      { user: bob, day: day("2026-11-06") },
+    expect(streakOf([report(alice, dayAt(0)), report(bob, dayAt(3))]).marks).toEqual([
+      { user: bob, day: day("2026-11-07") },
     ]);
   });
 

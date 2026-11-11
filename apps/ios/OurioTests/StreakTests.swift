@@ -92,6 +92,19 @@ private func day(_ offset: Int) -> Date { cal.date(byAdding: .day, value: offset
         #expect(s.count == 3 && s.best == 5 && s.mine.isEmpty && s.partner.isEmpty)
     }
 
+    @Test func aPushOlderThanTheSavedStreakIsDropped() {
+        let file = "Tests/\(UUID().uuidString)-streak.json"
+        var lit = LoveStreak()
+        lit.record(on: day(0))
+        lit.record(on: day(1))
+        StreakStore.save(pushed: lit, file: file)
+        var turn = LoveStreak()
+        turn.record(on: day(0))
+        turn.partnerMark(on: day(1))
+        StreakStore.save(pushed: turn, file: file)
+        #expect(StreakStore(file: file).streak == lit)
+    }
+
     @Test func aPushedStreakKeepsThisPhonesUnsentDaysOnTop() {
         var room = LoveStreak()
         room.record(on: day(0))

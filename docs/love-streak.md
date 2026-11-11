@@ -16,8 +16,9 @@ local `YYYY-MM-DD`. The rules are pure functions there, run by the room's `decid
 
 - `markStreakDay(streak, members, user, day)`: `user` did their part on `day`, their own local day. The day lights
   once both members have marked it: it runs through `recordStreakDay`, and its marks go. Until then the mark waits in
-  `marks`. A mark at or before `lastDay` changes nothing. Marks more than a day older than the newest are dropped, as
-  partners' local days differ by at most one.
+  `marks`. A mark at or before `lastDay` changes nothing. Marks more than two days older than the newest are dropped:
+  a report may come a day late, and partners' local days differ by up to a day.
+  A late report for a day before one that already lit can't light it any more (`lastDay` has moved past it).
 - `recordStreakDay(streak, day)`: the day after `lastDay` continues the run, a later one starts over at 1; a day at
   or before `lastDay` changes nothing. `best` never falls.
 - `restoreStreak(streak, today)`: only when `today` is two days after `lastDay`, `days >= 3`, and the last restore was

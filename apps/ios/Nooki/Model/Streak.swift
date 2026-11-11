@@ -281,9 +281,16 @@ public final class StreakStore {
 
     /// The room's streak a push brought, for the widgets while the app may not be running; the app reads it when it
     /// next comes to the front.
+    /// A push that comes after a later day lit (APNs keeps no order) is older than the file, and is dropped. Flushed,
+    /// as the widgets read the file next and the extension may end at once.
     public nonisolated static func save(pushed shared: LoveStreak, file: String = "Us/streak.json") {
+        if let saved = SharedFile.read(LoveStreak.self, from: file)?.lastDay,
+           shared.lastDay.map({ $0 < saved }) ?? true {
+            return
+        }
         let unsent = SharedFile.read([Date].self, from: unsentFile(of: file)) ?? []
         SharedFile.write(merged(shared, unsent: unsent), to: file)
+        SharedFile.flush()
     }
 
     nonisolated static func unsentFile(of file: String) -> String {

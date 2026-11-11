@@ -72,9 +72,9 @@ export const recordStreakDay = (streak: LoveStreak, day: LocalDay): LoveStreak =
   return { ...streak, days, lastDay: day, best: Math.max(streak.best, days) };
 };
 
-/** A mark further back than this from the newest can no longer meet the partner's. Partners' local
- * days differ by at most one across time zones. */
-const markReach = 1;
+/** A mark further back than this from the newest can no longer meet the partner's: a report may come
+ * a day late, and partners' local days differ by up to a day across time zones. */
+const markReach = 2;
 
 /** No `marks` key when there are none, so an unmarked streak reads as it did before marks. */
 const withMarks = (streak: LoveStreak, marks: ReadonlyArray<StreakMark>): LoveStreak => {
