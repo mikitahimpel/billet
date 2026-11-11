@@ -41,7 +41,7 @@ extension HomecomingLine {
         case .pet: "\(partner) petted \(cat)"
         case .sleep: "\(partner) put \(cat) to bed"
         case .note: "\(partner) left \(cat) a note"
-        case .shoo: nil
+        case .shoo, .overfeed: nil
         }
     }
 }

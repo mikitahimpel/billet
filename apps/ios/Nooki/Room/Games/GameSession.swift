@@ -106,6 +106,7 @@ final class GameSession {
         sinceTwitch += dt
         deck.tick(dt)
         stage.update(min(dt, 0.1))
+        camera?.push = stage.push
         for big in deck.takeCheers() { cheer(big: big) }
         look(dt)
         coach = GameCoach.transition(coach, .tick(Double(dt))).0
@@ -166,6 +167,7 @@ final class GameSession {
         UINotificationFeedbackGenerator().notificationOccurred(.success)
         // On this phone at once, for her bars; in the pair's journal for both partners, and for the coins.
         catLife.record(result.events)
+        if result.game == .feed, result.tooMuch { catLife.record(.overfeed) }
     }
 
     func playAgain() {

@@ -23,6 +23,8 @@ final class LaserStage: GameStage {
     /// Where the dot has been, newest first, drawn as a fading trail so the path reads.
     private var trail: [SIMD3<Float>] = []
     private let trailDots: [ModelEntity]
+    /// A trail dot's own size: the meshes are unit cylinders, so a scale that drops it leaves a metre-wide disc.
+    private static let trailSize = SIMD3<Float>(0.0045, 0.001, 0.0045)
     private var sinceTrail: Float = 0
 
     init(room: CatRoom, deck: GameDeck) {
@@ -89,7 +91,7 @@ final class LaserStage: GameStage {
             entity.isEnabled = index < trail.count
             guard index < trail.count else { continue }
             entity.position = trail[index]
-            entity.scale = SIMD3(repeating: 1 - Float(index) / Float(trailDots.count + 2)) * [1, 1, 1]
+            entity.scale = SIMD3(repeating: 1 - Float(index) / Float(trailDots.count + 2)) * Self.trailSize
         }
         guard let walker = room.walker else { return }
         let at = walker.at
