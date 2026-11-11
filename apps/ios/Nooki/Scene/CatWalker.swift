@@ -61,7 +61,7 @@ final class CatWalker {
 
     /// Body postures as rig values; feet are offsets (up, back) from the rest paws in model units, `tail` lifts each
     /// tail joint (negative lowers it).
-    private struct Posture {
+    struct Posture {
         var lift: Float = 0, back: Float = 0, pitch: Float = 0, bend: Float = 0, headPitch: Float = 0, seat: Float = 0
         var fore = SIMD2<Float>.zero, hind = SIMD2<Float>.zero
         var tail: [Float] = [0, 0, 0]
@@ -69,13 +69,21 @@ final class CatWalker {
         var sway: [Float] = [0, 0, 0]
 
         static let stand = Posture()
+
+        /// The angle each tail joint turns its bone by: a smooth curve keeps them close, a kink is one far larger.
+        var tailBends: [Float] {
+            zip(tail, sway).map { lift, sway in
+                let (cs, cl) = (cos(sway), cos(lift))
+                return acos(min(max((cs + cl + cs * cl - 1) / 2, -1), 1))
+            }
+        }
         // Rump down on folded hind legs, chest up on straight fore legs, tail lying behind her: the seated splat's
         // silhouette, with the head exactly where the seated splat has it, for the swap between the two.
         static let sit = Posture(lift: -0.005, back: -0.005, pitch: 0.5, bend: -0.7, headPitch: 0, seat: 1, hind: [0, -0.035],
-                                 tail: [-1.1, -0.4, -0.2])
+                                 tail: [-0.8, -0.5, -0.4])
         // Lying with her paws tucked under her and the tail along her side.
         static let loaf = Posture(lift: -0.065, bend: 0.05, headPitch: 0.05, fore: [0, 0.035], hind: [0, -0.03],
-                                  tail: [-1.5, -0.3, -0.1], sway: [1.3, 0.7, 0.5])
+                                  tail: [-0.8, -0.6, -0.5], sway: [0.7, 0.6, 0.6])
 
         static func blend(_ a: Posture, _ b: Posture, _ t: Float) -> Posture {
             Posture(lift: lerp(a.lift, b.lift, t), back: lerp(a.back, b.back, t), pitch: lerp(a.pitch, b.pitch, t),
