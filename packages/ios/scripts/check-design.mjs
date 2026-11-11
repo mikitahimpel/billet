@@ -166,6 +166,20 @@ if (edgeViolations.length > 0) {
   failed = true;
 }
 
+// The tab bar names the tab, so a tab root never draws a title of its own; the shared header sits above it.
+const tabRoots = /\/Nooki\/UI\/(MomentsView|ShopView|Us\/UsView|HomeView)\.swift$/;
+const tabTitles = [];
+for (const [file, text] of sources) {
+  if (tabRoots.test(file) && /\.ourioLargeTitle\b/.test(text)) tabTitles.push(`${file}: a tab root draws a large title`);
+}
+if (tabTitles.length > 0) {
+  console.error(tabTitles.join("\n"));
+  console.error(
+    "A tab root starts under the shared header with TabPage (or .tabContentInsets()); its tab bar item is its title (docs/design-system.md).",
+  );
+  failed = true;
+}
+
 // A design button keeps the package's type and colour: a `.font`, `.tint` or `.foregroundStyle` after
 // its style makes a one-off that no longer matches the other buttons.
 const restyled = [];

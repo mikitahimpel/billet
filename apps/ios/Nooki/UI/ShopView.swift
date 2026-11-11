@@ -31,12 +31,11 @@ struct ShopView: View {
                         }
                     } header: {
                         chips
-                            .padding(.vertical, Space.xs)
+                            .padding(.bottom, Space.xs)
                             .background(Ink.screen)
                     }
                 }
-                .padding(.top, Space.s)
-                .padding(.bottom, Space.l)
+                .tabContentInsets()
                 .animation(.spring(duration: 0.35), value: selected)
             }
             .scrollIndicators(.hidden)
