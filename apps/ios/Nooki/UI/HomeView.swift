@@ -274,6 +274,8 @@ struct HomeView: View {
                             RoomSwitch(state: state, select: select).transition(.opacity)
                         } else if state.tab == .moments {
                             MomentsSwitch(state: state).transition(.opacity)
+                        } else if state.tab == .shop {
+                            ShopChips(state: state).transition(.opacity)
                         }
                     }
                     .padding(.horizontal, Space.l)

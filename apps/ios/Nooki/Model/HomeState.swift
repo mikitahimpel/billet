@@ -93,6 +93,8 @@ final class HomeState {
     var tab: HomeTab = .world
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
+    /// The Shop's shelf; its chips sit in the header, the page under them shows it.
+    var shopCategory: ShopCategory = .today
 
     func openShop(_ focus: ShopFocus) {
         shopFocus = focus
