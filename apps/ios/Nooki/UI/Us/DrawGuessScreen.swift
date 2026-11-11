@@ -96,7 +96,7 @@ struct DrawGuessScreen: View {
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .contentTransition(.numericText())
-                    .animation(.snappy, value: riddle.tries)
+                    .animation(Motion.spring(), value: riddle.tries)
                 RiddleBlanks(shape: riddle.shape, slots: model.slots) { slot in model.takeBack(slot) }
                     .disabled(model.busy)
                 RiddleTiles(tiles: model.tiles, count: riddle.tiles.count, misses: model.misses) { tile in
@@ -160,7 +160,7 @@ struct DrawGuessScreen: View {
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
                     .contentTransition(.numericText())
-                    .animation(.snappy, value: riddle.tries)
+                    .animation(Motion.spring(), value: riddle.tries)
             }
             .padding(.horizontal, Space.gutter)
             .padding(.vertical, Space.l)
@@ -434,7 +434,7 @@ private struct RiddleTiles: View {
                 if let tile = shown[index] { button(tile) } else { Color.clear.frame(minHeight: 48) }
             }
         }
-        .animation(reduceMotion ? nil : .snappy(duration: 0.2), value: tiles)
+        .animation(reduceMotion ? nil : Motion.spring(0.2), value: tiles)
         .keyframeAnimator(initialValue: 0.0, trigger: misses) { content, offset in
             content.offset(x: shakes ? offset : 0)
         } keyframes: { _ in
@@ -469,12 +469,7 @@ private struct WordOption: View {
 
     var body: some View {
         HStack(spacing: Space.m) {
-            Text(tier)
-                .font(.ourioCaption.weight(.semibold))
-                .foregroundStyle(Ink.accentText)
-                .padding(.horizontal, Space.s)
-                .padding(.vertical, Space.xs)
-                .background(Capsule().fill(Ink.surfaceRaised))
+            Chip(tier)
             Text(word)
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
