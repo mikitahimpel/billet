@@ -8,6 +8,7 @@ public struct ShopClient: Sendable {
   public var order: @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse
   public var wish: @Sendable (WishRequest) async throws(TransportError) -> ShopResponse
   public var inks: @Sendable () async throws(TransportError) -> InksResponse
+  public var changeLayout: @Sendable (LayoutRequest) async throws(TransportError) -> LayoutResponse
   public var openGift: @Sendable (OpenGiftRequest) async throws(TransportError) -> OpenGiftResponse
   public var claimBonus:
     @Sendable (ClaimBonusRequest) async throws(TransportError) -> ClaimBonusResponse
@@ -22,6 +23,9 @@ public struct ShopClient: Sendable {
     inks: @escaping @Sendable () async throws(TransportError) -> InksResponse = {
       () async throws(TransportError) in throw .network("offline")
     },
+    changeLayout:
+      @escaping @Sendable (LayoutRequest) async throws(TransportError) ->
+      LayoutResponse = { (_) async throws(TransportError) in throw .network("offline") },
     openGift:
       @escaping @Sendable (OpenGiftRequest) async throws(TransportError) ->
       OpenGiftResponse = { (_) async throws(TransportError) in throw .network("offline") },
@@ -39,6 +43,7 @@ public struct ShopClient: Sendable {
     self.order = order
     self.wish = wish
     self.inks = inks
+    self.changeLayout = changeLayout
     self.openGift = openGift
     self.claimBonus = claimBonus
     self.earn = earn
@@ -48,6 +53,7 @@ public struct ShopClient: Sendable {
   public static func live(_ api: APIClient) -> ShopClient {
     ShopClient(
       fetch: api.shop, order: api.placeOrder, wish: api.setWish, inks: api.listInks,
+      changeLayout: api.changeLayout,
       openGift: api.openGift, claimBonus: api.claimBonus, earn: api.earnCoins, coins: api.getCoins)
   }
 }

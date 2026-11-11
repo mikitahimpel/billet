@@ -63,6 +63,9 @@ public struct APIClient: Sendable {
   /// Buys one offer at the server's price. Repeat the request's `id` on a retry.
   public var placeOrder: @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse
   public var setWish: @Sendable (WishRequest) async throws(TransportError) -> ShopResponse
+  /// Stands a piece in the room, moves it or puts it back; the same `id` again answers `duplicate`.
+  /// `.api(.layoutRefused)` when it does not fit.
+  public var changeLayout: @Sendable (LayoutRequest) async throws(TransportError) -> LayoutResponse
   /// Opens the day's gift, once a day for the pair. The partner's open answers with the first.
   public var openGift: @Sendable (OpenGiftRequest) async throws(TransportError) -> OpenGiftResponse
   /// Collects a complete collection's bonus, once. `.api(.collectionIncomplete)` while a piece is
@@ -226,6 +229,10 @@ public struct APIClient: Sendable {
       @escaping @Sendable (WishRequest) async throws(TransportError) -> ShopResponse = {
         (_) async throws(TransportError) in throw .network("offline")
       },
+    changeLayout:
+      @escaping @Sendable (LayoutRequest) async throws(TransportError) -> LayoutResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
     openGift:
       @escaping @Sendable (OpenGiftRequest) async throws(TransportError) -> OpenGiftResponse = {
         (_) async throws(TransportError) in throw .network("offline")
@@ -365,6 +372,7 @@ public struct APIClient: Sendable {
     self.shop = shop
     self.placeOrder = placeOrder
     self.setWish = setWish
+    self.changeLayout = changeLayout
     self.openGift = openGift
     self.claimBonus = claimBonus
     self.earnCoins = earnCoins

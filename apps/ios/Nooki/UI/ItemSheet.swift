@@ -184,7 +184,7 @@ struct ItemSheet: View {
         phase = next
         for output in outputs {
             switch output {
-            case .openRoom: state.tab = .world
+            case .openRoom: state.decorate(item.id)
             case .close: dismiss()
             }
         }
