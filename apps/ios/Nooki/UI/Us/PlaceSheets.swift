@@ -115,7 +115,7 @@ struct AddPlaceSheet: View {
                     .font(.body.weight(.bold))
                     .foregroundStyle(added ? Ink.accentText : Ink.heroInk)
                     .frame(width: 34, height: 34)
-                    .background(Circle().fill(added ? AnyShapeStyle(Ink.surfaceRaised) : AnyShapeStyle(.honeyGradient)))
+                    .background(Circle().fill(added ? AnyShapeStyle(Ink.well) : AnyShapeStyle(.honeyGradient)))
             }
             .padding(.horizontal, Space.m)
             .frame(minHeight: 60)
@@ -134,7 +134,7 @@ struct AddPlaceSheet: View {
                 .foregroundStyle(Ink.textSecondary)
                 .padding(.top, Space.s)
             Button {
-                withAnimation(.snappy(duration: 0.25)) {
+                withAnimation(Motion.spring(0.25)) {
                     place = trimmed
                     query = ""
                 }
@@ -169,20 +169,11 @@ struct AddPlaceSheet: View {
             FlowRow(spacing: Space.s) {
                 ForEach(PopularPlace.all, id: \.self) { popular in
                     let added = popular.place == nil && onList(popular.country)
-                    Button { add(popular) } label: {
-                        HStack(spacing: Space.s) {
-                            CountryFlag(code: popular.country, size: 20)
-                            Text(popular.place ?? Country.name(popular.country))
-                                .font(.ourioCallout)
-                                .foregroundStyle(Ink.text)
-                        }
-                        .padding(.leading, 6)
-                        .padding(.trailing, Space.m)
-                        .frame(minHeight: 34)
-                        .background(Ink.surfaceRaised, in: .capsule)
-                        .opacity(added ? 0.45 : 1)
-                    }
-                    .buttonStyle(PressScaleStyle())
+                    FilterChip(
+                        "\(Country.emoji(popular.country)) \(popular.place ?? Country.name(popular.country))",
+                        isSelected: false
+                    ) { add(popular) }
+                    .opacity(added ? 0.45 : 1)
                     .disabled(added)
                 }
             }
@@ -191,7 +182,7 @@ struct AddPlaceSheet: View {
     }
 
     private func back() {
-        withAnimation(.snappy(duration: 0.25)) {
+        withAnimation(Motion.spring(0.25)) {
             query = place ?? ""
             place = nil
         }
@@ -446,7 +437,7 @@ private struct MomentThumb: View {
             if let image {
                 Image(uiImage: image).resizable().scaledToFill()
             } else {
-                Ink.surfaceRaised
+                Ink.well
             }
         }
         .frame(width: size, height: size)

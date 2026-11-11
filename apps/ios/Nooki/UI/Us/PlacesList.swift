@@ -47,7 +47,7 @@ struct PlacesListBody: View {
     }
 
     private func select(_ value: PlacesTab) {
-        withAnimation(.snappy(duration: 0.2)) { tab = value }
+        withAnimation(Motion.spring(0.2)) { tab = value }
     }
 
     private var hero: some View {
@@ -55,7 +55,7 @@ struct PlacesListBody: View {
         return VStack(alignment: .leading, spacing: Space.m) {
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text("\(summary.been)")
-                    .font(.system(.largeTitle, design: .rounded, weight: .bold))
+                    .font(.ourioHeroDigits)
                     .foregroundStyle(Ink.text)
                 Text("of \(Country.count) countries together · \(summary.percent)%")
                     .font(.ourioCallout)
@@ -107,7 +107,7 @@ struct PlacesListBody: View {
             Monogram(partner: item.author, profile: state.profile, size: 20)
             Button {
                 if been {
-                    withAnimation(.snappy(duration: 0.25)) {
+                    withAnimation(Motion.spring(0.25)) {
                         for twin in twins(of: item) {
                             state.us.setItem(twin.id, in: list.id, done: false, by: state.viewer)
                         }
@@ -145,7 +145,7 @@ struct PlacesListBody: View {
     }
 
     private func delete(_ item: ListItem) {
-        withAnimation(.snappy(duration: 0.25)) { state.us.deleteItem(item.id, in: list.id) }
+        withAnimation(Motion.spring(0.25)) { state.us.deleteItem(item.id, in: list.id) }
     }
 }
 
