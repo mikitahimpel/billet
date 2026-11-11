@@ -132,6 +132,24 @@ jobs:
       - name: Install XcodeGen
         run: .github/scripts/install-xcodegen.sh
 
+      # The last green build on main: Xcode rebuilds only what changed since (source-times.sh). The same paths on
+      # every runner keep its outputs valid.
+      - name: Restore the app build
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        env:
+          # A download that stalls (seen at 0.2 MB/s) gives up after 2 minutes and the build starts clean.
+          SEGMENT_DOWNLOAD_TIMEOUT_MINS: 2
+        with:
+          # The same paths as the save below: the cache's version is derived from them.
+          path: |
+            ${{ runner.temp }}/app-tests
+            !${{ runner.temp }}/app-tests/Logs
+          key: app-derived-${{ hashFiles('.xcode-version') }}-${{ github.sha }}
+          restore-keys: app-derived-${{ hashFiles('.xcode-version') }}-
+
+      - name: Source times for an incremental build
+        run: .github/scripts/source-times.sh "$RUNNER_TEMP/app-tests"
+
       - name: App tests (Simulator)
         # A hung UI test must not hold a runner for an hour; each test is also capped below. On main the build
         # takes about 22 minutes without the compilation cache and the UI tests about 10 more.
@@ -177,6 +195,20 @@ jobs:
             echo "::endgroup::"
           fi
           exit "$status"
+
+      - name: Record the build's commit
+        if: success() && (github.ref == 'refs/heads/main' || github.head_ref == 'ci/app-derived-cache')
+        run: .github/scripts/source-times.sh --record "$RUNNER_TEMP/app-tests"
+
+      # Saved from main only, so pull requests share one build and the repository's cache isn't spent on branches.
+      - name: Save the app build
+        if: success() && (github.ref == 'refs/heads/main' || github.head_ref == 'ci/app-derived-cache')
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: |
+            ${{ runner.temp }}/app-tests
+            !${{ runner.temp }}/app-tests/Logs
+          key: app-derived-${{ hashFiles('.xcode-version') }}-${{ github.sha }}
 
       # Looks rendered by the app tests (OurioTests/PolaroidLookTests.swift), for review without a Simulator.
       - name: Keep the rendered samples
