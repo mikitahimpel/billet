@@ -65,6 +65,8 @@ final class CatWalker {
         var lift: Float = 0, back: Float = 0, pitch: Float = 0, bend: Float = 0, headPitch: Float = 0, seat: Float = 0
         var fore = SIMD2<Float>.zero, hind = SIMD2<Float>.zero
         var tail: [Float] = [0, 0, 0]
+        /// Swings each tail joint to her left, radians.
+        var sway: [Float] = [0, 0, 0]
 
         static let stand = Posture()
         // Rump down on folded hind legs, chest up on straight fore legs, tail lying behind her: the seated splat's
@@ -73,13 +75,14 @@ final class CatWalker {
                                  tail: [-1.1, -0.4, -0.2])
         // Lying with her paws tucked under her and the tail along her side.
         static let loaf = Posture(lift: -0.065, bend: 0.05, headPitch: 0.05, fore: [0, 0.035], hind: [0, -0.03],
-                                  tail: [-0.9, -0.3, -0.1])
+                                  tail: [-1.5, -0.3, -0.1], sway: [1.3, 0.7, 0.5])
 
         static func blend(_ a: Posture, _ b: Posture, _ t: Float) -> Posture {
             Posture(lift: lerp(a.lift, b.lift, t), back: lerp(a.back, b.back, t), pitch: lerp(a.pitch, b.pitch, t),
                     bend: lerp(a.bend, b.bend, t), headPitch: lerp(a.headPitch, b.headPitch, t), seat: lerp(a.seat, b.seat, t),
                     fore: simd_mix(a.fore, b.fore, SIMD2(repeating: t)), hind: simd_mix(a.hind, b.hind, SIMD2(repeating: t)),
-                    tail: zip(a.tail, b.tail).map { lerp($0, $1, t) })
+                    tail: zip(a.tail, b.tail).map { lerp($0, $1, t) },
+                    sway: zip(a.sway, b.sway).map { lerp($0, $1, t) })
         }
     }
 
@@ -519,7 +522,8 @@ final class CatWalker {
         for i in p.tail.indices {
             let spring = tailSpring.joints[min(i, tailSpring.joints.count - 1)]
             let fi = Float(i)
-            p.tail[i].sway = lerp((0.06 + 0.05 * fi) * sin(time * 1.6 - fi * 0.8), b.tailSway[i], r)
+            p.tail[i].sway = s.sway[min(i, s.sway.count - 1)]
+                + lerp((0.06 + 0.05 * fi) * sin(time * 1.6 - fi * 0.8), b.tailSway[i], r)
             p.tail[i].lift = s.tail[min(i, s.tail.count - 1)] + 0.1 * gait.amount + b.tailLift[i] * r + spring.lift
             p.tail[i].lean = spring.lean
         }
