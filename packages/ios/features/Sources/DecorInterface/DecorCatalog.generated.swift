@@ -19,7 +19,7 @@ extension DecorItem {
       mount: .floor, width: 0.07, depth: 0.07, isFlat: false, height: 0.15, cat: nil),
     DecorItem(
       id: "monstera", model: "Item_monstera", assetName: "Decor_monstera", fit: .height, size: 0.45,
-      mount: .floor, width: 0.34, depth: 0.337, isFlat: false, height: 0.45, cat: nil),
+      mount: .floor, width: 0.2, depth: 0.2, isFlat: false, height: 0.45, cat: nil),
     DecorItem(
       id: "print", model: "Item_print", assetName: "Decor_print", fit: .height, size: 0.22,
       mount: .wall, width: 0.174, depth: 0.0, isFlat: false, height: 0.22, cat: nil),
