@@ -19,7 +19,6 @@ struct NoteComposer: View {
     @State private var flight = 0.0
     @State private var sending = false
     @State private var paperSize = CGSize(width: 280, height: 280)
-    @State private var pats = 0
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -38,19 +37,13 @@ struct NoteComposer: View {
                 ZStack {
                     ComposerPaper(model: model, size: size, focused: $focused)
                         .sendFlight(style: style, color: Color(hex: model.paper.hex), progress: flight)
-                        .overlay {
-                            if style == .desk {
-                                MochiOnDesk(activity: model.text.count + (model.hasInk ? 1 : 0) + pats, paper: size,
-                                            swiping: .constant(sending))
-                            }
-                        }
                         .onAppear { paperSize = size }
                         .onChange(of: size) { _, new in paperSize = new }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding(.horizontal, Space.gutter)
-            .padding(.top, Space.xl)
+            .padding(.top, Space.s)
             .safeAreaInset(edge: .bottom, spacing: 0) { tools }
         }
         .overlay { PurchaseMoment(state: state) }
@@ -61,8 +54,8 @@ struct NoteComposer: View {
     }
 
     private func paper(fitting available: CGSize) -> CGSize {
-        let room = CGSize(width: max(120, available.width), height: max(120, available.height - Space.xl))
-        let width = min(room.width, room.height * model.kind.aspect, 340)
+        let room = CGSize(width: max(120, available.width), height: max(120, available.height))
+        let width = min(room.width, room.height * model.kind.aspect)
         return CGSize(width: width, height: width / model.kind.aspect)
     }
 
@@ -100,8 +93,8 @@ struct NoteComposer: View {
                 .background(model.drawing ? Color.honey : Ink.surface, in: .circle)
         }
         .buttonStyle(PressScaleStyle())
-        .accessibilityLabel(model.drawing ? "Pen on" : "Pen off")
-        .accessibilityHint("Switches between drawing and typing")
+        .accessibilityLabel(model.drawing ? "Type" : "Draw")
+        .accessibilityHint(model.drawing ? "Back to typing" : "Draw on the note with a pen")
         .accessibilityIdentifier("composerPen")
     }
 
@@ -118,6 +111,7 @@ struct NoteComposer: View {
                 .frame(width: Size.control, height: Size.control)
         }
         .accessibilityLabel("Paper colour")
+        .accessibilityValue(model.paper.rawValue.capitalized)
         .accessibilityIdentifier("composerPaperColour")
     }
 
@@ -126,7 +120,6 @@ struct NoteComposer: View {
             let kinds = style.kinds
             let next = (kinds.firstIndex(of: model.kind) ?? 0) + 1
             withAnimation(.snappy) { model.kind = kinds[next % kinds.count] }
-            pats += 1
         } label: {
             Image(systemName: model.kind.symbol)
                 .font(.ourioCallout.weight(.semibold))

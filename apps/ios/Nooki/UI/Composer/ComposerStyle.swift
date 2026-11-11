@@ -12,7 +12,7 @@ enum ComposerStyle: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .sticky: "Sticky pad"
-        case .desk: "Desk with Mochi"
+        case .desk: "Desk"
         case .papers: "Papers and pen cup"
         }
     }
