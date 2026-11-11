@@ -18,7 +18,6 @@ struct MomentsView: View {
 
     @State private var pick: PhotosPickerItem?
     @State private var draft: Draft?
-    @State private var showsHistory = false
     @State private var viewing: PinRoute?
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
@@ -65,9 +64,6 @@ struct MomentsView: View {
                     }
                 }
             }
-        }
-        .sheet(isPresented: $showsHistory) {
-            NotesHistory(state: state)
         }
         .sheet(item: openedNote) { route in
             NoteSheet(state: state, id: route.id)
@@ -130,37 +126,35 @@ struct MomentsView: View {
         }
     }
 
-    /// The board room shows underneath; only its actions and, on an empty board, a hint sit over it.
-    private var boardOverlay: some View {
-        VStack(spacing: 0) {
-            boardActions
-                .padding(.horizontal, TabMetrics.side)
-                .padding(.top, TabMetrics.top)
-            Spacer(minLength: 0)
-            if notes.isEmpty, store.pinned.isEmpty {
-                Text("Leave a note or doodle for the board")
-                    .font(.ourioCallout.weight(.semibold))
-                    .foregroundStyle(Ink.glassGlyph)
-                    .padding(.horizontal, Space.l)
-                    .frame(minHeight: Size.control)
-                    .glass(.capsule, role: .bar)
-                    .padding(.bottom, Space.l)
-            }
+    /// The board room shows underneath; its actions are in the header beside the switch (`BoardActions`), and only
+    /// a hint sits over an empty board.
+    @ViewBuilder private var boardOverlay: some View {
+        if notes.isEmpty, store.pinned.isEmpty {
+            Text("Leave a note or doodle for the board")
+                .font(.ourioCallout.weight(.semibold))
+                .foregroundStyle(Ink.glassGlyph)
+                .padding(.horizontal, Space.l)
+                .frame(minHeight: Size.control)
+                .glass(.capsule, role: .bar)
+                .padding(.bottom, Space.l)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+        } else {
+            Color.clear
         }
     }
+}
 
-    /// Photos are added from the tab bar's +; the board keeps its own for doodles, which the + doesn't offer.
-    private var boardActions: some View {
-        HStack(spacing: Space.m) {
-            if !notes.isEmpty || !store.pinned.isEmpty {
-                Text("\(min(notes.count + store.pinned.count, BoardRoomScene.slots)) on the board")
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.secondary)
-            }
+/// The board's own buttons, after the Photos | Board switch in the header: all notes, and a + for notes and doodles,
+/// which the tab bar's + doesn't offer.
+struct BoardActions: View {
+    let state: HomeState
+    @State private var showsHistory = false
 
-            Spacer(minLength: 0)
+    private var onBoard: Int { min(state.notes.notes.count + state.moments.pinned.count, BoardRoomScene.slots) }
 
-            if !notes.isEmpty {
+    var body: some View {
+        HStack(spacing: GlassMetrics.gap) {
+            if !state.notes.notes.isEmpty {
                 GlassIconButton(symbol: "clock.arrow.circlepath", label: "All notes") { showsHistory = true }
             }
 
@@ -173,18 +167,19 @@ struct MomentsView: View {
                     Label("Doodle", systemImage: "scribble")
                     Text("+5")
                 }
-            } label: { plus }
+            } label: {
+                Image(systemName: "plus")
+                    .font(.body.weight(.bold))
+                    .foregroundStyle(Ink.heroInk)
+                    .frame(width: Size.control, height: Size.control)
+                    .background(Color.honey, in: .circle)
+            }
             .accessibilityLabel("Add a note")
+            .accessibilityValue(onBoard > 0 ? "\(onBoard) on the board" : "")
         }
-        .frame(minHeight: Size.control)
-    }
-
-    private var plus: some View {
-        Image(systemName: "plus")
-            .font(.body.weight(.bold))
-            .foregroundStyle(Ink.heroInk)
-            .frame(width: Size.control, height: Size.control)
-            .background(Color.honey, in: .circle)
+        .sheet(isPresented: $showsHistory) {
+            NotesHistory(state: state)
+        }
     }
 }
 
