@@ -75,7 +75,7 @@ get a card each. A calendar's upcoming dates are rows of one list, so they are o
 | a filter or category over a list | `FilterChip`s in `.scrollHeader { }` | chips stacked over a `ScrollView` |
 | the tools of a full-screen canvas | `glass(.control)` in one `GlassGroup` | `warmGlass` on a sheet |
 | where content meets a bar | the system scroll edge effect, soft, through `.ourioScrollEdges()` (it replaces `.softScrollEdges()`); the scaffolds apply it | a hard edge, a gradient mask or a blur of your own |
-| a round control on content, not over a scene (add to a list, next photo) | `IconButton(symbol:label:style:)`: clay, opaque | glass; a `Circle().fill(…)` |
+| a round control on content, not over a scene (add to a list, next photo) | `RoundButton(symbol:label:style:)`: clay, opaque | glass; a `Circle().fill(…)` |
 
 Large titles are not used. A tab's name is its tab bar item; a sheet's title is the toolbar's inline title;
 a section's is `SectionHeader`.

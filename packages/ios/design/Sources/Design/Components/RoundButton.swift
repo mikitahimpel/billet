@@ -2,7 +2,7 @@ import SwiftUI
 
 /// A round control on content: add to a list, the next picture, a small action beside a row. Opaque;
 /// over the room or a canvas the control is `GlassIconButton` instead.
-public struct IconButton: View {
+public struct RoundButton: View {
   public enum Style: Hashable, Sendable {
     case quiet
     /// The screen's one accented control.
@@ -54,13 +54,13 @@ public struct IconButton: View {
   }
 }
 
-#Preview("Icon button") {
+#Preview("Round button") {
   BothSchemes {
     Card {
       HStack(spacing: Space.m) {
-        IconButton(symbol: "plus", label: "Add", style: .honey) {}
-        IconButton(symbol: "arrow.uturn.backward", label: "Undo") {}
-        IconButton(symbol: "checkmark", label: "Added") {}.disabled(true)
+        RoundButton(symbol: "plus", label: "Add", style: .honey) {}
+        RoundButton(symbol: "arrow.uturn.backward", label: "Undo") {}
+        RoundButton(symbol: "checkmark", label: "Added") {}.disabled(true)
       }
     }
     .padding(Space.gutter)

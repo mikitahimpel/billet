@@ -86,7 +86,7 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 | A recess in a card: an art slot, a thumbnail's backdrop, an inset note | `.wellSurface()`; never a fill of your own, and never a card in a card |
 | A line between two rows you lay out yourself on one card | `Hairline(inset:)`; `GroupedSection` draws its own |
 | Progress toward one goal, as a bar in a card | `ProgressBar(value:total:tint:)`, with an `.accessibilityLabel` |
-| A round control on content (add to a list, the next picture) | `IconButton(symbol:label:style:)`, `.honey` for the screen's one accent; over the room or a canvas it is `GlassIconButton` |
+| A round control on content (add to a list, the next picture) | `RoundButton(symbol:label:style:)`, `.honey` for the screen's one accent; over the room or a canvas it is `GlassIconButton` |
 | The top of a card | `CardHeader(title, detail:, symbol:, tint:)`, or with `leading:` / `detail:` / `trailing:` views; art goes in `CardArt` |
 | A text field | `Field(placeholder, text:, axis:, lines:, font:, failed:)` |
 | A labelled field with its error or footnote | `FormField(label, placeholder:, text:, footer:, error:)` |

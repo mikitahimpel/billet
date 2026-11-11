@@ -133,7 +133,7 @@ export const rules = [
   {
     id: "flat-surface",
     what: "flat fills on content (cornerFill, Ink.surface, Ink.surfaceRaised, listRowBackground)",
-    fix: "Content sits on .cardSurface() (Card, GroupedSection, ItemCard); a recess in a card is .wellSurface(), a round control IconButton, a bar ProgressBar (docs/design/one-system.md).",
+    fix: "Content sits on .cardSurface() (Card, GroupedSection, ItemCard); a recess in a card is .wellSurface(), a round control RoundButton, a bar ProgressBar (docs/design/one-system.md).",
     pattern:
       /\.cornerFill\(|\.listRowBackground\(|(?<!\.listRowBackground\(\s*)\bInk\.surface(?:Raised)?\b/g,
   },

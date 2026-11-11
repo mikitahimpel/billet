@@ -3,7 +3,7 @@ struct Good: View {
     VStack {
       Text("Lamplit").padding(CardMetrics.padding).cardSurface()
       Color.clear.wellSurface()
-      IconButton(symbol: "plus", label: "Add") {}
+      RoundButton(symbol: "plus", label: "Add") {}
       Text("Page").background(Ink.screen)
     }
   }
