@@ -68,7 +68,7 @@ final class FeedStage: GameStage {
     private var served: Float?
     private var servedPile = 0
     private var stuffed = false
-    private var sinceBlink: Float = 0
+    private var aftermath: FeedAftermath?
     private var loafed = false
     private var shownHint = ""
 
@@ -77,7 +77,9 @@ final class FeedStage: GameStage {
     private var zoneEnd: Double { Double(task.target + task.tolerance) }
 
     /// How far the camera leans toward the bowl while the bag pours.
-    var push: Float { tip }
+    var push: Float { tip * 0.6 }
+
+    var seat: SIMD3<Float>? { spots.at(0, -0.13) }
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -129,7 +131,7 @@ final class FeedStage: GameStage {
 
     var focus: [SIMD3<Float>] {
         [bowlAt - spots.right * 0.1, bagRest + spots.right * 0.05 + [0, 0.02, 0], bowlAt + spots.toward * 0.08,
-         spots.at(0, -0.13, up: 0.1), spots.at(0, -0.6, up: 0.4)]
+         spots.at(0, -0.13, up: 0.1), spots.at(0, -0.13, up: 0.2)]
     }
 
     var action: String? { served == nil && canServe ? "Feed" : nil }
@@ -365,6 +367,7 @@ final class FeedStage: GameStage {
             deck.cheer(big: true)
         }
         stuffed = result.tooMuch
+        aftermath = FeedAftermath(stuffed: result.tooMuch)
         deck.result = result
     }
 
@@ -373,16 +376,15 @@ final class FeedStage: GameStage {
         served = time
         let left = Int(Float(servedPile) * max(0, 1 - (time - 0.8) / (stuffed ? 6 : 4)))
         while pile.count > left { pile.removeLast().removeFromParent() }
-        guard stuffed, time > 2.5 else { return }
-        if !loafed {
-            loafed = true
-            room.walker?.settle(.loaf)
-            room.walker?.behavior.perform(.yawn)
-        }
-        sinceBlink += dt
-        if sinceBlink > 2.2 {
-            sinceBlink = 0
-            room.walker?.behavior.perform(.slowBlink)
+        guard let acts = aftermath?.advance(Double(dt)) else { return }
+        for act in acts {
+            switch act {
+            case .loaf:
+                loafed = true
+                room.walker?.settle(.loaf)
+            case .yawn: room.walker?.behavior.perform(.yawn)
+            case .slowBlink: room.walker?.behavior.perform(.slowBlink)
+            }
         }
     }
 

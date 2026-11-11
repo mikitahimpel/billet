@@ -1,7 +1,0 @@
-{
-  "wall": { "image": "kitchen_wall.webp", "width": 1.0, "height": 1.1, "pixels": [1024, 1126] },
-  "floor": { "image": "kitchen_floor.webp", "width": 1.2, "depth": 0.9, "pixels": [1024, 768] },
-  "rug": { "x": 0.5, "y": 0.5556, "width": 0.5333, "height": 0.4444 },
-  "counter": { "top": 0.2318, "depth": 0.085 },
-  "clear": { "x0": 0.25, "x1": 0.75, "y0": 0.7273, "y1": 1.0 }
-}
