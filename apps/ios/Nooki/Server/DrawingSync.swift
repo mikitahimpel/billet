@@ -2,7 +2,8 @@ import ActivityKit
 import DrawInterface
 import Foundation
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
 import PetScene
 import Transport
@@ -42,7 +43,7 @@ struct DrawingSync {
 
     private func save(_ drawing: LatestDrawing?) {
         guard let drawing, drawing.saveIfNewer() else { return }
-        WidgetCenter.shared.reloadTimelines(ofKind: LatestDrawing.widgetKind)
+        LatestDrawing.widgetKinds.forEach { WidgetCenter.shared.reloadTimelines(ofKind: $0) }
     }
 
     /// Sends the server any APNs token it does not have yet: the alert token, the widgets' token and the Live

@@ -1,7 +1,10 @@
 import DrawInterface
 import MomentsInterface
-import OurioShared
+import MoodInterface
+import WidgetInterface
+import WidgetUI
 import SwiftUI
+import UIKit
 import Testing
 import UsInterface
 import WidgetKit
@@ -15,10 +18,32 @@ struct WidgetGalleryTests {
     static let small = CGSize(width: 170, height: 170)
     static let medium = CGSize(width: 364, height: 170)
     static let large = CGSize(width: 364, height: 382)
+    static let seSmall = CGSize(width: 141, height: 141)
+    static let seMedium = CGSize(width: 292, height: 141)
+    static let seLarge = CGSize(width: 292, height: 311)
+
+    /// A warm gradient standing in for a photo.
+    static func photo() -> Data? {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 300, height: 300))
+        return renderer.jpegData(withCompressionQuality: 0.8) { context in
+            let colors = [UIColor(red: 0.98, green: 0.7, blue: 0.5, alpha: 1).cgColor,
+                          UIColor(red: 0.45, green: 0.6, blue: 0.8, alpha: 1).cgColor]
+            let gradient = CGGradient(colorsSpace: nil, colors: colors as CFArray, locations: [0, 1])!
+            context.cgContext.drawLinearGradient(gradient, start: .zero, end: CGPoint(x: 300, y: 300), options: [])
+        }
+    }
 
     /// An afternoon, so the room is lit, and the same evening, when it is night.
     static let afternoon = Calendar.current.date(bySettingHour: 15, minute: 0, second: 0, of: .now) ?? .now
     static let night = Calendar.current.date(bySettingHour: 22, minute: 0, second: 0, of: .now) ?? .now
+
+    /// The pieces the in-app widget gallery shows, by the asset each is saved as (WidgetShowcase).
+    static let previewAssets = [
+        "mochi-medium-pm": "WidgetMochi", "us-medium-pm": "WidgetUs", "partner-medium-pm": "WidgetPartner",
+        "coins-medium-pm": "WidgetCoins", "memory-medium-pm": "WidgetMemory", "day-large-pm": "WidgetDay",
+        "lock-us-rectangular-pm": "WidgetLockUs", "lock-streak-rectangular-pm": "WidgetLockStreak",
+        "lock-cat-rectangular-pm": "WidgetLockCat", "lock-partner-rectangular-pm": "WidgetLockPartner",
+    ]
 
     @Test func rendersTheGallery() throws {
         let day = OurioSnapshot.sample(now: Self.afternoon)
@@ -36,16 +61,68 @@ struct WidgetGalleryTests {
                 paper: .sky),
             partner: "M")
 
-        let pieces: [(String, CGSize, AnyView)] = [
-            ("corner-large", Self.large, AnyView(Corner(snapshot: day))),
-            ("mochi-medium", Self.medium, AnyView(MochiMedium(snapshot: day))),
-            ("mochi-night-medium", Self.medium, AnyView(MochiMedium(snapshot: evening))),
-            ("mochi-ginger-medium", Self.medium, AnyView(MochiMedium(snapshot: ginger))),
-            ("us-small", Self.small, AnyView(ModuleView(module: .us, snapshot: day))),
-            ("mood-small", Self.small, AnyView(ModuleView(module: .mood, snapshot: day, smart: true))),
-            ("list-small", Self.small, AnyView(ModuleView(module: .list, snapshot: day))),
-            ("date-small", Self.small, AnyView(ModuleView(module: .date, snapshot: day))),
-            ("moment-small", Self.small, AnyView(ModuleView(module: .moment, snapshot: day))),
+        let facts = WidgetFacts(
+            streak: LoveStreak(count: 9, lastDay: Calendar.current.startOfDay(for: .now), best: 12),
+            wallet: Wallet(coins: 240, level: 4, progress: 0.6, wishlist: ["rug-moss", "lamp-star"]),
+            drawing: nil)
+        let drawn = WidgetFacts(streak: facts.streak, wallet: facts.wallet, drawing: drawing.drawing)
+        func entry(_ snapshot: OurioSnapshot, _ facts: WidgetFacts, photo: Bool = false) -> FamilyEntry {
+            FamilyEntry(date: snapshot.date, snapshot: snapshot, facts: facts, momentImage: photo ? Self.photo() : nil,
+                        momentDate: photo ? snapshot.date.addingTimeInterval(-40 * 86_400) : nil)
+        }
+        var waiting = day
+        waiting.partnerMood = MoodCheckIn(mood: .missing, date: day.date.addingTimeInterval(-600))
+        var purring = day
+        purring.isPurring = true
+        let empty = WidgetFacts()
+
+        var pieces: [(String, CGSize, AnyView)] = []
+        for (device, small, medium, large) in [
+            ("pm", Self.small, Self.medium, Self.large), ("se", Self.seSmall, Self.seMedium, Self.seLarge),
+        ] {
+            let sizes: [(String, CGSize, WidgetFamily)] = [
+                ("small", small, .systemSmall), ("medium", medium, .systemMedium), ("large", large, .systemLarge),
+            ]
+            for (label, size, family) in sizes {
+                func add(_ name: String, _ entry: FamilyEntry, _ view: (FamilyEntry, WidgetFamily) -> AnyView) {
+                    pieces.append(("\(name)-\(label)-\(device)", size, AnyView(view(entry, family))))
+                }
+                add("mochi", entry(waiting, drawn)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                if device == "pm" {
+                    add("mochi-night", entry(evening, facts)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("mochi-purring", entry(purring, facts)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                }
+                add("us", entry(day, facts)) { AnyView(UsFamilyView(entry: $0, family: $1)) }
+                if family != .systemLarge {
+                    add("partner", entry(day, drawn)) { AnyView(PartnerFamilyView(entry: $0, family: $1)) }
+                    add("partner-mood", entry(waiting, facts)) { AnyView(PartnerFamilyView(entry: $0, family: $1)) }
+                    add("partner-empty", entry(day, empty)) { AnyView(PartnerFamilyView(entry: $0, family: $1)) }
+                    add("coins", entry(day, facts)) { AnyView(CoinsFamilyView(entry: $0, family: $1)) }
+                }
+                add("memory", entry(day, facts, photo: true)) { AnyView(MemoryFamilyView(entry: $0, family: $1)) }
+                if family == .systemLarge {
+                    add("day", entry(waiting, drawn)) { AnyView(DayFamilyView(entry: $0, family: $1)) }
+                }
+            }
+        }
+        for (device, circular, rectangular, inline) in [
+            ("pm", CGSize(width: 76, height: 76), CGSize(width: 172, height: 76), CGSize(width: 260, height: 22)),
+            ("se", CGSize(width: 72, height: 72), CGSize(width: 157, height: 72), CGSize(width: 230, height: 22)),
+        ] {
+            let sizes: [(String, CGSize, WidgetFamily)] = [
+                ("circular", circular, .accessoryCircular), ("rectangular", rectangular, .accessoryRectangular),
+                ("inline", inline, .accessoryInline),
+            ]
+            for (label, size, family) in sizes {
+                let e = entry(waiting, drawn)
+                pieces.append(("lock-us-\(label)-\(device)", size, AnyView(UsLockView(entry: e, family: family))))
+                pieces.append(("lock-streak-\(label)-\(device)", size, AnyView(StreakLockView(entry: e, family: family))))
+                pieces.append(("lock-cat-\(label)-\(device)", size, AnyView(CatLockView(entry: e, family: family))))
+                pieces.append(("lock-partner-\(label)-\(device)", size, AnyView(PartnerLockView(entry: e, family: family))))
+            }
+        }
+        pieces += [
+            ("block-small", Self.small, AnyView(ModuleView(module: .mood, snapshot: day, smart: true))),
             ("drawing-small", Self.small, AnyView(DrawingWidgetView(entry: drawing))),
         ]
 
@@ -69,6 +146,21 @@ struct WidgetGalleryTests {
                 #expect(image.size.width == size.width + 24)
                 rendered += 1
 
+                if let asset = Self.previewAssets[name], mode == .fullColor,
+                   let folder = ProcessInfo.processInfo.environment["BILLET_WIDGET_PREVIEWS"] {
+                    let clean = view
+                        .frame(width: size.width, height: size.height)
+                        .background(WidgetGallery.background)
+                        .environment(\.colorScheme, scheme)
+                        .environment(\.widgetRenderingMode, mode)
+                    let cleanRenderer = ImageRenderer(content: clean)
+                    cleanRenderer.scale = 2
+                    let preview = try #require(cleanRenderer.uiImage)
+                    let directory = URL(fileURLWithPath: folder, isDirectory: true)
+                    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                    try #require(SamplePNG.encode(preview)).write(to: directory.appending(path: "\(asset)-\(look).png"))
+                }
+
                 guard let folder = ProcessInfo.processInfo.environment["BILLET_SAMPLES"] else { continue }
                 let directory = URL(fileURLWithPath: folder, isDirectory: true).appending(path: "widgets")
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -77,36 +169,5 @@ struct WidgetGalleryTests {
             }
         }
         #expect(rendered == pieces.count * 3)
-    }
-}
-
-/// The large "Our Corner" widget: Mochi's room over two blocks.
-private struct Corner: View {
-    let snapshot: OurioSnapshot
-
-    var body: some View {
-        VStack(spacing: 0) {
-            MochiRoom(snapshot: snapshot).frame(maxHeight: .infinity)
-            Divider()
-            HStack(spacing: 0) {
-                ModuleView(module: .us, snapshot: snapshot)
-                Divider()
-                ModuleView(module: .list, snapshot: snapshot)
-            }
-            .frame(height: 158)
-        }
-    }
-}
-
-/// The medium "Ourio" widget: Mochi beside the smart slot.
-private struct MochiMedium: View {
-    let snapshot: OurioSnapshot
-
-    var body: some View {
-        HStack(spacing: 0) {
-            MochiRoom(snapshot: snapshot, showsCaption: false)
-            Divider()
-            ModuleView(module: snapshot.smartModule, snapshot: snapshot, smart: true)
-        }
     }
 }

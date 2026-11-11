@@ -1,6 +1,7 @@
 import Ink
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import Transport
@@ -361,6 +362,8 @@ private struct RiddleBlanks: View {
     let shape: [Int]
     let slots: [DrawGuessModel.Slot]
     var takeBack: (Int) -> Void
+    @ScaledMetric(relativeTo: .headline) private var blankWidth: CGFloat = 26
+    @ScaledMetric(relativeTo: .headline) private var blankHeight: CGFloat = 34
 
     var body: some View {
         FlowRow(spacing: Space.l) {
@@ -387,7 +390,7 @@ private struct RiddleBlanks: View {
     private func blank(_ slot: DrawGuessModel.Slot) -> some View {
         let letter = Text((slot.letter ?? " ").uppercased())
             .font(.ourioHeadline)
-            .frame(width: 26, height: 34)
+            .frame(width: blankWidth, height: blankHeight)
         switch slot.kind {
         case .empty:
             letter
@@ -467,7 +470,7 @@ private struct WordOption: View {
     var body: some View {
         HStack(spacing: Space.m) {
             Text(tier)
-                .font(.ourioMicro)
+                .font(.ourioCaption.weight(.semibold))
                 .foregroundStyle(Ink.accentText)
                 .padding(.horizontal, Space.s)
                 .padding(.vertical, Space.xs)

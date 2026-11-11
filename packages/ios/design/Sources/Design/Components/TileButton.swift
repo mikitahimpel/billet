@@ -7,6 +7,9 @@ public struct TileButton: View {
     case price(Int, was: Int?)
     case short(missing: Int)
     case owned
+    /// A piece waiting in the closet: a button that opens the room to place it.
+    case place
+    /// A piece standing in the room: a button that opens the room with it chosen.
     case inRoom
   }
 
@@ -48,12 +51,18 @@ public struct TileButton: View {
       Button(action: action) {
         HStack(spacing: Space.xs + 1) {
           CoinIcon(size: Size.pill / 2, relativeTo: .headline)
-          Text("Need \(missing, format: .number) more").monospacedDigit()
+          // The short form when the whole line would reach the capsule's border, as in a narrow tile.
+          ViewThatFits(in: .horizontal) {
+            Text("Need \(missing, format: .number) more")
+            Text("Need \(missing, format: .number)")
+          }
+          .monospacedDigit()
         }
         .lineLimit(1)
         .minimumScaleFactor(0.8)
         .font(.ourioHeadline)
         .foregroundStyle(Ink.text)
+        .padding(.horizontal, Space.m)
         .frame(maxWidth: .infinity, minHeight: Size.button)
         .background(Ink.surfaceRaised, in: .capsule)
         .overlay { Capsule().strokeBorder(Color.honey, lineWidth: 2) }
@@ -65,9 +74,27 @@ public struct TileButton: View {
     case .owned:
       label("Owned", symbol: "checkmark", style: Ink.textSecondary)
         .accessibilityLabel("\(name), owned")
+    case .place:
+      Button(action: action) {
+        Label("Place", systemImage: "mappin")
+          .font(.ourioHeadline)
+          .foregroundStyle(Ink.accentText)
+          .frame(maxWidth: .infinity, minHeight: Size.button)
+          .background(Ink.surfaceRaised, in: .capsule)
+          .overlay { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
+          .contentShape(.capsule)
+      }
+      .buttonStyle(PressScaleStyle())
+      .accessibilityLabel("Place \(name)")
+      .accessibilityHint("Opens the room")
     case .inRoom:
-      label("In room", symbol: "mappin", style: Ink.accentText)
-        .accessibilityLabel("\(name), in your room")
+      Button(action: action) {
+        label("In room", symbol: "mappin", style: Ink.accentText)
+          .contentShape(.capsule)
+      }
+      .buttonStyle(PressScaleStyle())
+      .accessibilityLabel("\(name), in your room")
+      .accessibilityHint("Opens the room to move it")
     }
   }
 
@@ -86,6 +113,7 @@ public struct TileButton: View {
       TileButton(.price(90, was: 120), name: "Lamp") {}
       TileButton(.short(missing: 40), name: "Lamp") {}
       TileButton(.owned, name: "Lamp") {}
+      TileButton(.place, name: "Lamp") {}
       TileButton(.inRoom, name: "Lamp") {}
     }
     .padding(Space.gutter)

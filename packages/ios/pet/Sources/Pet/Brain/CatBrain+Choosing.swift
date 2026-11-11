@@ -43,7 +43,11 @@ extension CatBrain {
           ([.stalk, .pounce], 0.4), ([.stalk, .pounce, .chase], 0.3 + p.bold),
           ([.batObject], room.reachable(.toy) ? 0.8 : 0.3),
           ([.zoomies], 0.1 + p.playful * 0.3 + bored * drama), ([.chase, .pounce], 0.4),
-          ([.scratch], room.reachable(.soft) ? 0.15 + 1.5 * bored * drama : 0),
+          (
+            [.scratch],
+            room.reachable(.scratchingPost) || room.reachable(.soft)
+              ? 0.15 + 1.5 * bored * drama : 0
+          ),
           ([.stalk, .pounce, .batObject], room.reachable(.toy) ? 0.3 + 1.5 * bored : 0),
           ([.spotMote, .windUp, .pounce, .shakeOff], 0.6 + p.curious + p.playful),
           ([.stalk, .windUp, .pounce, .shakeOff], 0.8 + p.bold),
@@ -169,6 +173,8 @@ extension CatBrain {
     let options: [(RoomAffordance.Kind, Double)] = [
       (.bed, 3), (.soft, 2 + personality.cuddly), (.sunbeam, sunny ? 3 : 0), (.rug, 1),
       (.box, 1 + personality.curious), (.shelf, personality.bold * 1.5),
+      (.sofa, 2.5 + personality.cuddly), (.catBed, 3), (.crate, 1 + personality.curious),
+      (.windowSeat, sunny ? 3 : 1.5),
     ]
     return options.filter { kind, weight in
       weight > 0 && (kind == .sunbeam ? sunny && room.reachable(.window) : room.reachable(kind))

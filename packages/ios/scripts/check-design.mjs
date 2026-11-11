@@ -30,7 +30,8 @@ const checks = [
   },
   {
     pattern:
-      /\b(?:cornerRadius|(?:top|bottom)(?:Leading|Trailing)Radius)\s*:\s*[\d.]|cardSurface\(\s*radius:\s*[\d.]/g,
+      // A RealityKit mesh's `cornerRadius` is a bevel in metres, not a corner on screen.
+      /(?<!MeshResource\.generate\w*\([^)]*)\b(?:cornerRadius|(?:top|bottom)(?:Leading|Trailing)Radius)\s*:\s*[\d.]|cardSurface\(\s*radius:\s*[\d.]/g,
     baseline: join(here, "radius-baseline.json"),
     what: "corner radii written as numbers",
     fix: "Corners come from Radius (card, inner, control) or Field / Card (docs/design-system.md#shape).",
@@ -170,7 +171,8 @@ if (edgeViolations.length > 0) {
 const tabRoots = /\/Nooki\/UI\/(MomentsView|ShopView|Us\/UsView|HomeView)\.swift$/;
 const tabTitles = [];
 for (const [file, text] of sources) {
-  if (tabRoots.test(file) && /\.ourioLargeTitle\b/.test(text)) tabTitles.push(`${file}: a tab root draws a large title`);
+  if (tabRoots.test(file) && /\.ourioLargeTitle\b/.test(text))
+    tabTitles.push(`${file}: a tab root draws a large title`);
 }
 if (tabTitles.length > 0) {
   console.error(tabTitles.join("\n"));
@@ -194,6 +196,37 @@ if (restyled.length > 0) {
   console.error(restyled.join("\n"));
   console.error(
     "Use PrimaryButton, SecondaryButton or QuietButtonStyle as they are; add a variant to the design package if one is missing (docs/design-system.md).",
+  );
+  failed = true;
+}
+
+// A button whose label is a bare symbol is as small as the glyph, well under the 44 pt a finger
+// needs. Its label takes a frame (Size.control) or it is a design control such as GlassIconButton.
+// A toolbar gives its items the system's hit area, so those are left alone.
+const smallTargets = [];
+function inToolbar(text, at) {
+  const start = text.lastIndexOf(".toolbar", at);
+  if (start < 0) return false;
+  let depth = 0;
+  for (const char of text.slice(start, at)) {
+    if (char === "{") depth++;
+    else if (char === "}" && --depth === 0) return false;
+  }
+  return depth > 0;
+}
+for (const [file, text] of sources) {
+  for (const match of text.matchAll(
+    /label:\s*\{\s*Image\(systemName:[^)]*\)(?:\s*\.(?:font|foregroundStyle|symbolRenderingMode|imageScale|symbolVariant|fontWeight)\([^()]*(?:\([^()]*\))?[^()]*\))*\s*\}/g,
+  )) {
+    if (inToolbar(text, match.index)) continue;
+    const line = text.slice(0, match.index).split("\n").length;
+    smallTargets.push(`${file}:${line}: a button labelled by a bare symbol`);
+  }
+}
+if (smallTargets.length > 0) {
+  console.error(smallTargets.join("\n"));
+  console.error(
+    "Give a symbol button's label .frame(width: Size.control, height: Size.control) and .contentShape(.rect), or use GlassIconButton (docs/design-system.md).",
   );
   failed = true;
 }

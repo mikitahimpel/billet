@@ -1,6 +1,7 @@
 import DrawInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import PetScene
 import PhotosUI
 import SwiftUI
@@ -44,6 +45,13 @@ struct MomentViewer: View {
 
                 Spacer(minLength: Space.m)
 
+                if editing {
+                    LimitCounter(count: caption.count, limit: ComposeSheet.captionLimit)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .padding(.horizontal, Space.gutter)
+                        .padding(.bottom, Space.s)
+                }
+
                 if UnsentMark.shows(moment.unsent, paired: session?.isPaired == true) {
                     UnsentLabel().padding(.bottom, Space.m)
                 }
@@ -72,7 +80,7 @@ struct MomentViewer: View {
         .animation(.snappy(duration: 0.25), value: editing)
         .onAppear { caption = moment?.caption ?? "" }
         .onChange(of: caption) { _, text in
-            if text.count > 40 { caption = String(text.prefix(40)) }
+            if text.count > ComposeSheet.captionLimit { caption = String(text.prefix(ComposeSheet.captionLimit)) }
         }
         .onChange(of: editing) { _, now in if !now { saveCaption() } }
         .onDisappear(perform: saveCaption)
@@ -93,6 +101,7 @@ struct MomentViewer: View {
                 if let moment { store.delete(moment) }
                 dismiss()
             }
+            Button("Cancel", role: .cancel) {}
         }
     }
 

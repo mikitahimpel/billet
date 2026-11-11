@@ -9,4 +9,7 @@ extension Font {
   public static let ourioCallout = Font.system(.subheadline, weight: .medium)
   public static let ourioCaption = Font.system(.footnote, weight: .medium)
   public static let ourioMicro = Font.system(.caption2, design: .rounded, weight: .semibold)
+
+  /// A hero number on a widget or a stat: fixed, because its frame is.
+  public static let ourioNumber = Font.system(size: 52, weight: .heavy, design: .rounded)
 }

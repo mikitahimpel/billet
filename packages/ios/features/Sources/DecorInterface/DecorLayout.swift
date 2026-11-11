@@ -73,6 +73,9 @@ struct Span: Equatable {
 /// What the player placed, and what they put back on purpose. A piece in neither is new: owned and
 /// not yet put anywhere, so it goes into the room by itself.
 public struct DecorLayout: Codable, Equatable, Sendable {
+  /// Most pieces one room holds, so its draw cost stays bounded however many the shop sells.
+  public static let maxPlaced = 8
+
   public private(set) var placements: [Placement]
   /// Owned pieces the player or a full room left in the closet.
   public private(set) var stored: Set<String>
@@ -134,8 +137,8 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     }
     if placement.surface == .floor, !item.isFlat {
       let occupancy = putting(placement).occupancy(in: room)
-      if occupancy.freeShare < room.minimumFree
-        || !occupancy.connects(from: room.spawn, to: room.stops)
+      if occupancy.bareShare < room.minimumFree
+        || !occupancy.connects(from: room.spawn, to: room.anchors)
       {
         return .blocksWay
       }
@@ -152,6 +155,15 @@ public struct DecorLayout: Codable, Equatable, Sendable {
       return Self.span(of: placement, item: item)
     }
     return room.occupancy(solid: solid)
+  }
+
+  /// Whether she can still walk from her bed to where she stands for the visit `name`.
+  public func canVisit(_ name: String, in room: DecorRoom = .home) -> Bool {
+    guard let stop = room.visits[name] else { return false }
+    let here = occupancy(in: room)
+    // She walks round what is in the way, so the visit is open while a way to the stop is.
+    let spot = room.occupancy(solid: []).nearestFree(to: stop) ?? stop
+    return here.connects(from: room.spawn, to: [spot])
   }
 
   /// The closest spot to `placement`, on the same surface, where it fits; nil when none does.
@@ -216,12 +228,22 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     var next = self
     for item in DecorItem.placeable(among: owned)
     where !next.isPlaced(item.id) && !next.stored.contains(item.id) {
-      if let spot = next.defaultPlacement(for: item.id, in: room) {
+      if next.placements.count < Self.maxPlaced,
+        let spot = next.defaultPlacement(for: item.id, in: room)
+      {
         next.placements.append(spot)
       } else {
         next.stored.insert(item.id)
       }
     }
+    return next
+  }
+
+  /// The same closet with these placements, as the server holds them.
+  public func replacing(placements spots: [Placement]) -> DecorLayout {
+    var next = self
+    next.placements = spots
+    next.stored.subtract(spots.map(\.item))
     return next
   }
 

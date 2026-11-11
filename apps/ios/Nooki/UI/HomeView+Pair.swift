@@ -1,7 +1,8 @@
 import FeatureGames
 import FeatureMood
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import TipKit
@@ -85,6 +86,7 @@ extension HomeView {
                 petted: state.care.petsGiven > 0,
                 added: !state.notes.notes.isEmpty || !state.moments.moments.isEmpty,
                 usedMoments: !state.moments.pinned.isEmpty,
+                momentsEmpty: state.moments.moments.isEmpty && state.notes.notes.isEmpty,
                 purchased: !state.shop.owned.isSubset(of: Wallet().owned),
                 switchedRooms: state.room == .city,
                 gaveTreat: state.care.treatsGiven > 0)

@@ -1,6 +1,8 @@
 import AudioToolbox
+import DecorInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import UsInterface
@@ -84,9 +86,29 @@ struct PurchaseMoment: View {
 
     private func detail(_ purchase: Purchase) -> String {
         switch purchase.kind {
-        case .item: "\(state.petName) is already sniffing it. It's in your room's closet."
+        case .item:
+            placedItem(purchase) == nil
+                ? "\(state.petName) is already sniffing it. It's in your closet."
+                : "\(state.petName) is already sniffing it. It's in your room."
         case .ink: "It's in your pens for notes and drawings, for both of you."
         case .treat: "\(state.petName) loved it."
+        }
+    }
+
+    /// The piece of a buy that stands in the room, once it landed there by itself.
+    private func placedItem(_ purchase: Purchase) -> String? {
+        purchase.itemIDs.first { state.decor.state.layout.isPlaced($0) }
+    }
+
+    /// Place now for a piece waiting in the closet, Move it for one that landed in the room.
+    @ViewBuilder private func decorateButton(_ purchase: Purchase) -> some View {
+        let placed = placedItem(purchase)
+        if let item = placed ?? purchase.itemIDs.first(where: { DecorItem.item(shopID: $0) != nil }) {
+            PillButton(placed == nil ? "Place now" : "Move it", symbol: "mappin") {
+                withAnimation(.spring(duration: 0.3)) { shown = nil }
+                state.decorate(item)
+            }
+            .fixedSize()
         }
     }
 
@@ -112,12 +134,15 @@ struct PurchaseMoment: View {
                         .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                if purchase.undoable {
-                    PillButton("Undo", symbol: "arrow.uturn.backward") {
-                        if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
+                VStack(alignment: .trailing, spacing: Space.xs) {
+                    if purchase.kind == .item { decorateButton(purchase) }
+                    if purchase.undoable {
+                        PillButton("Undo", symbol: "arrow.uturn.backward") {
+                            if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
+                        }
+                        .fixedSize()
+                        .accessibilityHint("Gives back \(purchase.cost) coins")
                     }
-                    .fixedSize()
-                    .accessibilityHint("Gives back \(purchase.cost) coins")
                 }
             }
         }

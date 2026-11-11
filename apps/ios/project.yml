@@ -44,15 +44,13 @@ targets:
   Billet:
     type: application
     platform: iOS
-    # Shared: stores, palette and intents the widget extension compiles too.
     sources:
       - path: Nooki
-      # Shared's code is the OurioShared library; its images and map stay here. PerTarget holds the intents and the
-      # Live Activity, whose metadata each target extracts from its own sources.
+      # Shared: the images and the map the app and its extensions bundle. PerTarget holds the intents and the Live
+      # Activity, whose metadata each target extracts from its own sources.
       - path: Shared
-        excludes: ["**/*.swift"]
       - path: PerTarget
-      # The date ideas the build ships with: the server's own catalog file (Shared/Model/DateCatalog.swift).
+      # The date ideas the build ships with: the server's own catalog file (packages/ios/features/Sources/UsInterface/DateCatalog.swift).
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
       # The Who knows who questions the build ships with (Nooki/Model/GuessCatalog.swift).
@@ -72,10 +70,13 @@ targets:
         # What the build carries, for check-archive.sh: the store (mock or storekit) and Labs (YES or NO).
         BilletPayments: $(BILLET_PAYMENTS_MODE)
         BilletLabs: $(BILLET_LABS_MODE)
+        # The Metal Performance HUD (fps, GPU ms) over the app, in builds that carry Labs: YES there, NO in the one
+        # App Review and the App Store get (check-archive.sh checks it). OurioApp also sets MTL_HUD_ENABLED in Labs.
+        MetalHudEnabled: $(BILLET_LABS_MODE)
         # The invite step scans the partner's QR code (Onboarding/InviteScanner).
         NSCameraUsageDescription: Ourio uses the camera to scan the invite code on your partner's screen.
         # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename
-        # (Shared/Widget/DeepLink.swift).
+        # (WidgetInterface/DeepLink.swift).
         CFBundleURLTypes:
           - CFBundleURLName: com.ourio.app
             CFBundleURLSchemes: [ourio, nooki]
@@ -84,7 +85,6 @@ targets:
       - target: OurioNotifications
       - target: OurioShare
       - target: WindowViews
-      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
@@ -97,6 +97,7 @@ targets:
         products:
           [
             FeatureCanvas,
+            FeatureDecor,
             FeatureGames,
             FeatureInbox,
             FeatureMood,
@@ -104,6 +105,7 @@ targets:
             FeatureOnboarding,
             FeaturePairing,
             FeatureShop,
+            DecorInterface,
             DrawInterface,
             GamesInterface,
             MomentsInterface,
@@ -113,6 +115,8 @@ targets:
             ShopInterface,
             UsInterface,
             WidgetBridge,
+            WidgetInterface,
+            WidgetUI,
           ]
       - package: BilletPayments
         products: [Payments, PaymentsLive]
@@ -150,35 +154,15 @@ targets:
     dependencies:
       - package: BilletPet
         product: Pet
-  # Shared's code, built once for the app, its extensions and the tests. Extensions keep Swift's default isolation,
-  # so this does too; the app reaches it through its public API.
-  OurioShared:
-    type: library.static
-    platform: iOS
-    sources:
-      - path: Shared
-        includes: ["**/*.swift"]
-    dependencies:
-      - package: BilletContracts
-        products: [Wire]
-      - package: BilletCore
-        products: [Ink, Persistence]
-      - package: BilletDesign
-        products: [Design]
-      - package: BilletFeatures
-        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
-    settings:
-      base:
-        APPLICATION_EXTENSION_API_ONLY: YES
   OurioWidgets:
     type: app-extension
     platform: iOS
     sources:
       - path: OurioWidgets
-      # Shared's code is the OurioShared library; its images and map stay here. PerTarget holds the intents and the
-      # Live Activity, whose metadata each target extracts from its own sources.
+      # The files the app keeps the streak and the wallet in, which the widgets read.
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       - path: Shared
-        excludes: ["**/*.swift"]
       - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
@@ -195,7 +179,6 @@ targets:
       properties:
         com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
-      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
@@ -203,7 +186,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
+        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface, WidgetInterface, WidgetUI]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
@@ -217,8 +200,8 @@ targets:
       - path: OurioNotifications
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
-        # Shared's code is the OurioShared library; Places' flags and map are for the app and its widgets.
-        excludes: ["**/*.swift", Places/Flags.xcassets, Places/WorldMap.txt]
+        # Places' flags and map are for the app and its widgets.
+        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
     info:
@@ -235,7 +218,6 @@ targets:
       properties:
         com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
-      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
@@ -243,7 +225,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
+        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface, WidgetInterface, WidgetUI]
     settings:
       base:
         # The id the first app's notification service registered, so automatic signing finds it.
@@ -256,8 +238,8 @@ targets:
     sources:
       - path: OurioShare
       - path: Shared
-        # Shared's code is the OurioShared library; Places' flags and map are for the app and its widgets.
-        excludes: ["**/*.swift", Places/Flags.xcassets, Places/WorldMap.txt]
+        # Places' flags and map are for the app and its widgets.
+        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
       - path: Nooki/UI/Us/UsKit.swift
@@ -279,7 +261,6 @@ targets:
       properties:
         com.apple.security.application-groups: [group.com.ourio.app]
     dependencies:
-      - target: OurioShared
       - package: BilletContracts
         products: [Wire]
       - package: BilletCore
@@ -287,7 +268,7 @@ targets:
       - package: BilletDesign
         products: [Design]
       - package: BilletFeatures
-        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface]
+        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface, WidgetInterface, WidgetUI]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.share
@@ -301,13 +282,13 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
+      - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/Wallet.swift
       - path: PerTarget
-    # Wire, Ink and OurioShared come from the app it is loaded into, as for OurioTests: linking them here as well
+    # Wire, Ink and the interfaces come from the app it is loaded into, as for OurioTests: linking them here as well
     # makes Xcode build them as frameworks, and OurioTests then finds none of their symbols.
     dependencies:
       - target: Billet
-      - target: OurioShared
-        link: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget-tests
@@ -318,9 +299,6 @@ targets:
     sources: [OurioTests]
     dependencies:
       - target: Billet
-      # Its code comes from the app, as Wire's does.
-      - target: OurioShared
-        link: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.tests

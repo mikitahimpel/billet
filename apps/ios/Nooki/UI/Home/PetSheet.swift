@@ -1,7 +1,8 @@
 import FeatureGames
 import GamesInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Pet
 import SwiftUI
 import Design
@@ -61,6 +62,9 @@ struct PetButton: View {
                     SpringKeyframe(1.12, duration: 0.15)
                     SpringKeyframe(1.0, duration: 0.35)
                 }
+                // Chrome over the room caps its text as the header does, so the level badge never outgrows its pill.
+                // On the label only: the sheet below keeps the full range.
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
         .buttonStyle(PressScaleStyle())
         // Above the portrait, the arrow down at it, so the hint never covers her.

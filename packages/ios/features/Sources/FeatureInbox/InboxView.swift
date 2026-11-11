@@ -16,11 +16,17 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   let avatar: (ActivityActor) -> Avatar
   let face: (CheckInMood) -> Face
   let notice: (EdgeInsets) -> Notice
+  /// False for a model that was opened already, as the gallery's.
+  let opensModel: Bool
+  /// The clock the days and the "4 minutes ago" lines are read against.
+  let now: () -> Date
 
   @Environment(\.dismiss) private var dismiss
 
   public init(
-    model: InboxModel, names: InboxLine.Names, open: @escaping (ActivityTarget) -> Void,
+    model: InboxModel, names: InboxLine.Names, opensModel: Bool = true,
+    now: @escaping () -> Date = { .now },
+    open: @escaping (ActivityTarget) -> Void,
     @ViewBuilder avatar: @escaping (ActivityActor) -> Avatar,
     @ViewBuilder face: @escaping (CheckInMood) -> Face,
     @ViewBuilder notice: @escaping (EdgeInsets) -> Notice
@@ -31,6 +37,8 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     self.avatar = avatar
     self.face = face
     self.notice = notice
+    self.opensModel = opensModel
+    self.now = now
   }
 
   public var body: some View {
@@ -38,25 +46,20 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     BilletSheet("Inbox", size: layout.size, scrolls: layout.scrolls) {
       content
     }
-    .task { await model.open() }
+    .task { if opensModel { await model.open() } }
   }
 
   @ViewBuilder private var content: some View {
     switch model.sheet {
     case .idle, .loading:
-      ProgressView()
-        .frame(maxWidth: .infinity)
-        .padding(.vertical, Space.xl)
+      LoadingState("Loading the Inbox")
     case .unpaired:
       EmptyState(
         symbol: "tray", title: "Nothing here yet",
         text: "Once your partner joins, what you both do with \(names.cat) shows up here.")
     case .failed:
-      EmptyState(
-        symbol: "wifi.exclamationmark", title: "Couldn't load the Inbox",
-        text: "Check your connection and try again."
-      ) {
-        RetryButton { Task { await model.open() } }
+      ErrorState("Couldn't load the Inbox", text: "Check your connection and try again.") {
+        Task { await model.open() }
       }
     case .loaded(let page) where page.items.isEmpty:
       VStack(spacing: 0) {
@@ -72,7 +75,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
 
   private func list(_ page: InboxMachine.Page) -> some View {
     List {
-      ForEach(InboxDay.group(page.items), id: \.day) { day in
+      ForEach(InboxDay.group(page.items, now: now()), id: \.day) { day in
         Section(day.title) {
           ForEach(day.items, id: \.id) { item in
             row(item, isNew: page.fresh.contains(item.id))
@@ -92,14 +95,30 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     // Under the notice, which the header draws over it.
     .sheetBarBacking()
     .scrollHeader {
-      notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
+      VStack(spacing: 0) {
+        if case .stale = model.sheet { staleNotice }
+        notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
+      }
     }
+  }
+
+  private var staleNotice: some View {
+    GroupedSection {
+      Row(
+        "Couldn't refresh", detail: "Showing what loaded last.", symbol: "wifi.exclamationmark",
+        tint: Ink.destructive
+      ) {
+        RetryButton(compact: true) { Task { await model.open() } }
+      }
+    }
+    .padding(.horizontal, Space.l)
+    .padding(.top, Space.s)
   }
 
   @ViewBuilder private func row(_ item: ActivityItem, isNew: Bool) -> some View {
     let rowView = InboxRow(
       item: item, line: InboxLine(item, names: names), isNew: isNew, avatar: avatar(item.actor),
-      face: face)
+      face: face, now: now)
     if let target = item.target {
       Button {
         dismiss()
@@ -107,9 +126,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
       } label: {
         HStack {
           rowView
-          Image(systemName: "chevron.right")
-            .font(.ourioCaption.weight(.semibold))
-            .foregroundStyle(Ink.textTertiary)
+          RowChevron()
         }
       }
       .buttonStyle(RowButtonStyle())
@@ -144,6 +161,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
   let isNew: Bool
   let avatar: Avatar
   let face: (CheckInMood) -> Face
+  let now: () -> Date
 
   var body: some View {
     HStack(spacing: Space.m) {
@@ -169,9 +187,11 @@ private struct InboxRow<Avatar: View, Face: View>: View {
           .font(.ourioCallout.weight(isNew ? .semibold : .medium))
           .foregroundStyle(Ink.text)
           .fixedSize(horizontal: false, vertical: true)
-        Text(date, format: .relative(presentation: .named))
-          .font(.ourioCaption)
-          .foregroundStyle(Ink.textSecondary)
+        TimelineView(.everyMinute) { _ in
+          Text(Self.ago(date, now: now()))
+            .font(.ourioCaption)
+            .foregroundStyle(Ink.textSecondary)
+        }
       }
       Spacer(minLength: 0)
       if isNew {
@@ -186,4 +206,11 @@ private struct InboxRow<Avatar: View, Face: View>: View {
   }
 
   private var date: Date { Date(timeIntervalSince1970: TimeInterval(item.at) / 1000) }
+
+  /// "4 minutes ago", "yesterday".
+  static func ago(_ date: Date, now: Date) -> String {
+    let formatter = RelativeDateTimeFormatter()
+    formatter.dateTimeStyle = .named
+    return formatter.localizedString(for: date, relativeTo: now)
+  }
 }

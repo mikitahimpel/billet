@@ -98,12 +98,16 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
+| A screen's few big actions side by side | `ActionTiles([ActionTile(title, status:, symbol:, tint:) {}])`: equal squares while every label fits on one line, a `GroupedSection` of rows otherwise |
+| A progress toward one goal, in a hero | `ProgressRing(value:tint:) { centre }` |
+| Something to open on a shelf that scrolls sideways, with art | `PosterCard(title, status:, emphasis:, art:) {}`, three fifths of the width each (`containerRelativeFrame(count: 5, span: 3)`), stacked at accessibility sizes |
 | A stamp on its own | `PostageStamp(_:size:rare:postmark:pinned:)`: `.small` in a control, `.regular` in a row, `.large` alone; `pinned` in a row, `postmark` once sent |
 
 ### Do and don't
 
 - Do give a sheet exactly one size: `.fit` for a few controls, `.medium` or `.large` for lists.
 - Do put an empty state in `.fit`, not in a large sheet.
+- Do mark a page pushed from a `.fit` sheet with `.expandsSheet()`, so the sheet rises to full height for it.
 - Do keep the toolbar to close or confirm.
 - Don't draw an `xmark` yourself, or add a `Button("Done")`.
 - Don't put `ContentUnavailableView` in a large sheet; it fills the space.
@@ -114,6 +118,8 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 - Don't stack chips or a field above a sheet's `ScrollView` in a `VStack`; the rows cut hard under them. Use
   `.scrollHeader`.
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
+- Don't label a button with a bare symbol outside a toolbar: its tap area is the glyph. Frame the label
+  `Size.control` square with `.contentShape(.rect)`, or use `GlassIconButton` (check-design fails otherwise).
 - Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
   `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
 

@@ -1,5 +1,6 @@
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Design
 import UsInterface
@@ -350,6 +351,8 @@ private struct MonthField: View {
                 Button { self.month = nil } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(Ink.textTertiary)
+                        .frame(width: Size.control, height: Size.control)
+                        .contentShape(.rect)
                 }
                 .buttonStyle(PressScaleStyle())
                 .accessibilityLabel("Leave out when")

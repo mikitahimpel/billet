@@ -1,10 +1,12 @@
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import UIKit
 import UsInterface
 
 /// Item tiles are WebP (512 px, props) or PNG (1024 px) with generous transparent margins: each place decodes them at the size it draws,
-/// and the hero fan also crops them to the artwork before aligning the pieces on the card's bottom edge.
+/// and the hero fan also fades their shadows' cut edges and crops them to the artwork before aligning the pieces on the card's
+/// bottom edge.
 @MainActor
 enum Thumbnails {
     /// NSCache is safe from any thread; `prefetch` fills it off the main one.
@@ -60,13 +62,45 @@ enum Thumbnails {
 
     @discardableResult
     private nonisolated static func trim(_ image: UIImage, _ name: String) -> UIImage {
-        let result = image.trimmingTransparentEdges() ?? image
+        let clean = image.fadingShadowEdges() ?? image
+        let result = clean.trimmingTransparentEdges() ?? clean
         cache.setObject(result, forKey: trimmedKey(name))
         return result
     }
 }
 
 private extension UIImage {
+    /// The renders carry a noisy contact shadow from a ground plane that runs off the square, so on a coloured card
+    /// its cut edges read as a box. Shadow pixels (alpha below `solid`) fade to nothing over the outer `band` of the
+    /// square and the faintest grain goes; the piece itself, opaque, is left as it is.
+    nonisolated func fadingShadowEdges() -> UIImage? {
+        guard let cgImage else { return nil }
+        let width = cgImage.width, height = cgImage.height
+        guard let space = CGColorSpace(name: CGColorSpace.sRGB),
+              let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                      space: space, bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let data = context.data else { return nil }
+        context.draw(cgImage, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let pixels = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        let solid: UInt8 = 200, grain: UInt8 = 14
+        let band = Double(min(width, height)) * 0.18
+        for y in 0..<height {
+            let edgeY = Double(min(y, height - 1 - y))
+            for x in 0..<width {
+                let i = (y * width + x) * 4
+                let alpha = pixels[i + 3]
+                guard alpha < solid else { continue }
+                let edge = min(1, min(Double(min(x, width - 1 - x)), edgeY) / band)
+                let keep = alpha < grain ? 0 : edge * edge * (3 - 2 * edge)
+                guard keep < 1 else { continue }
+                // Premultiplied, so colour and alpha scale together.
+                for c in 0..<4 { pixels[i + c] = UInt8(Double(pixels[i + c]) * keep) }
+            }
+        }
+        guard let faded = context.makeImage() else { return nil }
+        return UIImage(cgImage: faded, scale: scale, orientation: .up)
+    }
+
     nonisolated func trimmingTransparentEdges() -> UIImage? {
         guard let cgImage, cgImage.bitsPerPixel == 32,
               let data = cgImage.dataProvider?.data,

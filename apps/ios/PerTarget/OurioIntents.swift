@@ -1,7 +1,8 @@
 import AppIntents
 import MomentsInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
 import ProfileInterface
 import UsInterface
@@ -76,6 +77,20 @@ struct SetMoodIntent: AppIntent {
     @MainActor
     func perform() async throws -> some IntentResult {
         MoodStore().set(mood.mood, for: CoupleStore().couple.viewer)
+        savedReloadingWidgets()
+        return .result()
+    }
+}
+
+/// Tells the partner "I'm thinking of you": a Missing-you check-in, the one mood that says it. It reaches them when the
+/// app next runs, like any check-in made on a widget.
+struct SendHugIntent: AppIntent {
+    static let title: LocalizedStringResource = "Send a Hug"
+    static let description = IntentDescription("Lets your partner know you are thinking of them.")
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        MoodStore().set(.missing, for: CoupleStore().couple.viewer)
         savedReloadingWidgets()
         return .result()
     }

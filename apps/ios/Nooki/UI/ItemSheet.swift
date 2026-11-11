@@ -1,6 +1,7 @@
 import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import RealityKit
 import SwiftUI
 import Design
@@ -124,10 +125,13 @@ struct ItemSheet: View {
     private var actions: some View {
         VStack(spacing: Space.s) {
             HStack(spacing: Space.s) {
-                // Icon-only, so the primary button keeps its label on one line on a small phone.
+                // A short word beside the cube, so the primary button keeps its label on one line on a small phone.
                 Button(action: reveal) {
-                    Label("Preview in 3D", systemImage: "cube").labelStyle(.iconOnly)
+                    Label("3D", systemImage: "cube")
+                        .lineLimit(1)
+                        .fixedSize()
                 }
+                .accessibilityLabel("Preview in 3D")
                 .buttonStyle(SecondaryButtonStyle(fullWidth: false))
                 .disabled(!showsPlaceholder || !turntable.isDrawn)
                 .accessibilityHint("Drag the item to turn it")
@@ -183,7 +187,7 @@ struct ItemSheet: View {
         phase = next
         for output in outputs {
             switch output {
-            case .openRoom: state.tab = .world
+            case .openRoom: state.decorate(item.id)
             case .close: dismiss()
             }
         }

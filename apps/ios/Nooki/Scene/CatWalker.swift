@@ -1,3 +1,4 @@
+import DecorInterface
 import Foundation
 import Pet
 import RealityKit
@@ -353,16 +354,32 @@ final class CatWalker {
     var floorTop: Float = 0.04
     /// A round obstacle on the floor, center and radius in the floor plane, that walks between destinations go around.
     var keepOut: (center: SIMD2<Float>, radius: Float)?
+    /// What the player has stood on the floor: walks between destinations take the route around it.
+    var avoid: Occupancy?
 
     /// Back along the way she came, each leg crossed the way it was reached, until she stands on `points[index]`.
     private func retrace(_ points: [Waypoint], downTo index: Int) {
-        for i in stride(from: points.count - 1, to: index, by: -1) { leg(points[i].at, points[i - 1].at, points[i].move) }
+        for i in stride(from: points.count - 1, to: index, by: -1) {
+            walk(from: points[i].at, to: points[i - 1].at, points[i].move)
+        }
+    }
+
+    /// One leg, a walk along the floor going round what the player stood in the way (found when she sets off).
+    private func walk(from: SIMD3<Float>, to: SIMD3<Float>, _ move: Waypoint.Move) {
+        guard move == .walk, avoid != nil, from.y < floorTop, to.y < floorTop else {
+            return leg(from, to, move)
+        }
+        var at = from
+        for corner in detour(from, to) + [to] {
+            leg(at, corner, .walk)
+            at = corner
+        }
     }
 
     private func follow(_ destination: Destination, from index: Int, at start: SIMD3<Float>) {
         var from = start
         for point in destination.path[index...] {
-            leg(from, point.at, point.move)
+            walk(from: from, to: point.at, point.move)
             from = point.at
         }
         if let arrive = destination.arrive { add(0.01) { _ in arrive() } }
@@ -383,6 +400,10 @@ final class CatWalker {
     /// Corners around `keepOut` when the straight walk from `a` to `b` would cross it, always on its front (+z)
     /// side, where the floor is open; each new leg is checked again once.
     private func detour(_ a: SIMD3<Float>, _ b: SIMD3<Float>, depth: Int = 2) -> [SIMD3<Float>] {
+        if let avoid {
+            let route = avoid.route(from: (Double(a.x), Double(a.z)), to: (Double(b.x), Double(b.z)))
+            return (route ?? []).map { SIMD3(Float($0.x), a.y, Float($0.z)) }
+        }
         guard let keepOut, depth > 0 else { return [] }
         let a2 = SIMD2(a.x, a.z), d = SIMD2(b.x, b.z) - a2
         let t = simd_clamp(simd_dot(keepOut.center - a2, d) / max(simd_length_squared(d), 1e-6), 0, 1)

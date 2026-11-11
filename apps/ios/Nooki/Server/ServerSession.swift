@@ -6,7 +6,8 @@ import FeatureOnboarding
 import FeaturePairing
 import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Payments
 import Persistence
 import Transport
