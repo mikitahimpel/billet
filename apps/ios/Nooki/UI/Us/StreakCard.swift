@@ -78,6 +78,9 @@ struct StreakCard: View {
                     .font(.ourioTitle.monospacedDigit())
                     .foregroundStyle(Ink.text)
                     .contentTransition(.numericText())
+                Text("streak")
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.textSecondary)
             }
         }
     }
@@ -90,14 +93,14 @@ struct StreakCard: View {
             lead = "Day \(days) is in."
             rest = next.map { " Badge at day \($0)." } ?? " See you tomorrow."
         case .atRisk:
-            lead = "Keep the flame going."
-            rest = " Pet \(CatProfile.name()) or leave a note today."
+            lead = "Keep it going."
+            rest = " Pet \(CatProfile.name()) or leave a note."
         case .restorable:
             lead = "You missed a day."
             rest = " You can bring the flame back once a month."
         case .cold:
-            lead = "Light the flame."
-            rest = " Do something together today."
+            lead = "Light the flame"
+            rest = " together today."
         }
         return Text(lead).font(.ourioCallout.weight(.semibold)).foregroundStyle(Ink.text)
             + Text(rest).font(.ourioCallout).foregroundStyle(Ink.textSecondary)

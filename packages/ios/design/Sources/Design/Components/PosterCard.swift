@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// A poster on a shelf that scrolls sideways: the art full bleed on top, the name and one status
+/// A poster on a shelf that scrolls sideways: the art full bleed and square on top, the name and one status
 /// line under it. `emphasis` tints the status when it asks something of the viewer ("Your turn").
 public struct PosterCard: View {
   let title: String
@@ -26,7 +26,7 @@ public struct PosterCard: View {
       VStack(alignment: .leading, spacing: 0) {
         Color.clear
           // Wider at accessibility sizes, where posters stack full width and the words need the room.
-          .aspectRatio(typeSize.isAccessibilitySize ? 3 / 2 : 4 / 5, contentMode: .fit)
+          .aspectRatio(typeSize.isAccessibilitySize ? 3 / 2 : 1, contentMode: .fit)
           .overlay(alignment: .top) { art.resizable().scaledToFill() }
           .clipped()
           .accessibilityHidden(true)

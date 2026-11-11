@@ -17,8 +17,9 @@ public struct ProgressRing<Center: View>: View {
 
   public var body: some View {
     ZStack {
+      // The tint's own faint track, so an empty ring still reads as waiting to fill, not as off.
       Circle()
-        .stroke(Ink.separator, lineWidth: line)
+        .stroke(tint.opacity(0.22), lineWidth: line)
       Circle()
         .trim(from: 0, to: min(max(value, 0), 1))
         .stroke(tint, style: StrokeStyle(lineWidth: line, lineCap: .round))
