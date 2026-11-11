@@ -54,6 +54,11 @@ class CatRoom {
     private var touchedAt: Float = -10
     /// Whether the room is swaying, or still easing to rest.
     var isSwaying: Bool { sway.strength > 0 }
+    /// Whether anything moves that a higher frame rate would show: she walks, a finger is down or just was, a showcase
+    /// or game plays, or the room is still easing to rest.
+    var isActive: Bool {
+        isSwaying || walker?.moving == true || time - touchedAt < 1 || isShowcasing || isPlayingGame
+    }
     private var yaw: Float = 0
     private var targetYaw: Float = 0
     private var purrStart: Float = -10
@@ -164,18 +169,19 @@ class CatRoom {
 
     /// Hands the frame time to `beforeProjecting` first (the camera follows `settledYaw`), then reports where the
     /// spot above Mochi's head lands on screen. `viewer` is the camera.
-    func start(updatesFrom content: RealityViewCameraContent, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
+    func start(on surface: any RoomSurface, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
         Self.shown = self
         adoptCat()
-        subscription = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) { [weak self] event in
+        subscription?.cancel()
+        subscription = surface.updates { [weak self] event in
             guard let self, !paused else { return }
             let dt = Float(event.deltaTime)
             walker?.watch(catModel.convert(position: viewer.position(relativeTo: nil), from: nil))
             tick(dt)
             beforeProjecting(dt)
             let anchor = catGroup.position(relativeTo: nil) + [0, catHeadTop, 0]
-            onFrame(walker == nil ? nil : content.project(point: anchor, to: .local))
+            onFrame(walker == nil ? nil : surface.project(anchor))
         }
     }
 
