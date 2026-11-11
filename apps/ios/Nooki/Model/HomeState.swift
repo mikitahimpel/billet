@@ -114,6 +114,14 @@ final class HomeState {
         tab = .shop
     }
 
+    /// Opens the World with its pieces arranged, `item` chosen when given: the Shop's Place and the purchase's
+    /// Place now.
+    func decorate(_ item: String? = nil) {
+        tab = .world
+        room = .home
+        decor.send(.opened(item: item))
+    }
+
     var room: RoomKind = .home
     var showsProfile = false
     /// Settings › Labs asks Home to play every animation; Home takes the request and clears it.
