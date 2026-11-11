@@ -288,7 +288,9 @@ private func item(
     var utc = Calendar(identifier: .gregorian)
     utc.timeZone = TimeZone(identifier: "UTC")!
     let hour = 3_600_000
-    let items = (0..<500).map { item(id: "i\($0)", at: Int(now.timeIntervalSince1970) * 1000 - $0 * hour) }
+    let items = (0..<500).map {
+      item(id: "i\($0)", at: Int(now.timeIntervalSince1970) * 1000 - $0 * hour)
+    }
     let days = InboxDay.group(items, now: now, calendar: utc)
     #expect(days.flatMap(\.items).map(\.id) == items.map(\.id))
     #expect(days.map(\.day) == days.map(\.day).sorted(by: >))
