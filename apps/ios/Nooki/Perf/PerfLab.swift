@@ -30,6 +30,9 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     case msaa
     /// The room drawn in the wide colour range; off, the standard one.
     case hdr
+    /// The room drawn by our own renderer and frame loop, at 30 frames a second when nothing moves and none when it
+    /// is not on screen, in place of RealityView. A spike; read at launch.
+    case ownLoop
 
     var title: String {
         switch self {
@@ -44,6 +47,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .sway: "Room sway and light pulse"
         case .msaa: "Antialiasing (4 samples)"
         case .hdr: "HDR rendering"
+        case .ownLoop: "Room on its own 30 fps loop (spike; next launch)"
         }
     }
 
@@ -60,6 +64,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .sway: "waveform.path"
         case .msaa: "square.dashed"
         case .hdr: "sun.max"
+        case .ownLoop: "gauge.with.dots.needle.33percent"
         }
     }
 
@@ -68,19 +73,27 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     var shippedOn: Bool {
         switch self {
         case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .sway, .hdr: true
-        case .flatten, .motes, .msaa: false
+        case .flatten, .motes, .msaa, .ownLoop: false
         }
     }
 }
 
 /// The Performance lab: which suspects are switched against how the app ships, and whether the frame meter shows.
 nonisolated enum PerfLabMachine: Machine {
+    static let saveKey = "labs.perf"
+
     struct State: Equatable, Codable, Sendable {
         /// The suspects set the other way from how they ship.
         var changed: Set<PerfSuspect> = []
         var meter = false
 
         static let shipped = State()
+
+        /// What Labs saved on this phone; where a part of the app reads a switch before the lab itself exists.
+        static func saved(in defaults: UserDefaults) -> State {
+            defaults.data(forKey: PerfLabMachine.saveKey)
+                .flatMap { try? JSONDecoder().decode(State.self, from: $0) } ?? .shipped
+        }
 
         func isOn(_ suspect: PerfSuspect) -> Bool { changed.contains(suspect) != suspect.shippedOn }
     }
@@ -382,7 +395,7 @@ private final class TabSwitchLinkTarget: NSObject {
 @MainActor
 @Observable
 final class PerfLab {
-    static let key = "labs.perf"
+    static let key = PerfLabMachine.saveKey
 
     private let store: Store<PerfLabMachine>
 

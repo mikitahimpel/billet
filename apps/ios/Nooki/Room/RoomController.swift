@@ -38,6 +38,10 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored let probe = RoomProbe()
 
     @ObservationIgnored private let usesStandIn: Bool
+    @ObservationIgnored private let ownLoop: Bool
+    /// The renderer and frame loop the room draws with when Labs asks for them, kept for the app's life: the room's
+    /// entities live in it, and a renderer freed and made again would draw them blank.
+    @ObservationIgnored private(set) lazy var loop: RoomRenderLoop? = ownLoop ? RoomRenderLoop() : nil
     @ObservationIgnored private lazy var standIn = CatRoom()
     /// An empty room the room's view holds while no room can be seen (see `RoomStage`).
     @ObservationIgnored private(set) lazy var offStage = CatRoom()
@@ -63,6 +67,11 @@ final class RoomController: RoomControlling, CatStatusProviding {
     init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife,
          defaults: UserDefaults = .standard) {
         self.usesStandIn = usesStandIn
+        #if DEBUG || LABS_YES
+        ownLoop = PerfLabMachine.State.saved(in: defaults).isOn(.ownLoop)
+        #else
+        ownLoop = false
+        #endif
         self.catLife = catLife
         self.defaults = defaults
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
