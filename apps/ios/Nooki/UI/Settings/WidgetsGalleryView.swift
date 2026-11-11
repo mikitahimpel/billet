@@ -40,7 +40,7 @@ private struct PreviewCard: View {
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity)
-                    .clipShape(RoundedRectangle(cornerRadius: item.group == .lockScreen ? Radius.inner : Radius.card, style: .continuous))
+                    .corners(item.group == .lockScreen ? .inner : .card)
                     .accessibilityLabel("\(item.title) widget")
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text(item.title).font(.ourioHeadline).foregroundStyle(Ink.text)
