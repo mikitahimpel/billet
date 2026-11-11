@@ -133,9 +133,11 @@ final class TabletopRoom: CatRoom {
     private static func kitchen(_ g: Entity) {
         let back = kitchenWall
         g.picture("kitchen_floor", width: kitchenFloor.width, height: kitchenFloor.depth, lying: true,
-                  at: [0, floorTop + 0.001, back + kitchenFloor.depth / 2])
+                  at: [0, floorTop + 0.001, back + kitchenFloor.depth / 2],
+                  margin: (left: 1.5, right: 1.5, top: 0, bottom: 1.5))
         g.picture("kitchen_wall", width: kitchenWallSize.width, height: kitchenWallSize.height, lying: false,
-                  at: [0, floorTop + kitchenWallSize.height / 2, back])
+                  at: [0, floorTop + kitchenWallSize.height / 2, back],
+                  margin: (left: 1.2, right: 1.2, top: 1.0, bottom: 0))
     }
 
     private static func wall(_ g: Entity, tone: UInt32, skirting: UInt32) {
@@ -179,20 +181,50 @@ struct TabletopView: View {
 }
 
 extension Entity {
-    /// A bundled image on an unlit quad: standing and facing +z, or lying on the floor with its top toward -z.
+    /// Whether the top of an image is v = 1 or v = 0 on RealityKit's own planes, read from one so the quads below match.
+    private static let planeTopV: Float = {
+        let mesh = MeshResource.generatePlane(width: 1, height: 1)
+        guard let part = mesh.contents.models.first?.parts.first, let coordinates = part.textureCoordinates else { return 1 }
+        let positions = Array(part.positions.elements)
+        let uvs = Array(coordinates.elements)
+        guard positions.count == uvs.count,
+              let top = positions.indices.max(by: { positions[$0].y < positions[$1].y }) else { return 1 }
+        return uvs[top].y > 0.5 ? 1 : 0
+    }()
+
+    /// A bundled image on unlit quads: standing and facing +z, or lying on the floor with its top toward -z, centered
+    /// on `position`. `margin` carries the image's edge pixels on past its border, stretched, so the picture bleeds
+    /// off the screen however wide or tall the phone's frame is.
     @discardableResult
     func picture(_ name: String, width: Float, height: Float, lying: Bool, at position: SIMD3<Float>,
-                 transparent: Bool = false) -> ModelEntity? {
+                 margin: (left: Float, right: Float, top: Float, bottom: Float)) -> Entity? {
         guard let url = Bundle.main.url(forResource: name, withExtension: "webp"),
               let image = UIImage(contentsOfFile: url.path)?.cgImage,
               let texture = try? TextureResource(image: image, options: .init(semantic: .color)) else { return nil }
         var material = UnlitMaterial(applyPostProcessToneMap: false)
         material.color = .init(tint: .white, texture: .init(texture))
-        if transparent { material.blending = .transparent(opacity: .init(floatLiteral: 1)) }
-        let mesh = lying ? MeshResource.generatePlane(width: width, depth: height) : MeshResource.generatePlane(width: width, height: height)
-        let quad = ModelEntity(mesh: mesh, materials: [material])
-        quad.position = position
-        addChild(quad)
-        return quad
+        let group = self.group(at: position)
+        let across: [Float] = [-width / 2 - margin.left, -width / 2, width / 2, width / 2 + margin.right]
+        let up: [Float] = [-height / 2 - margin.bottom, -height / 2, height / 2, height / 2 + margin.top]
+        let topIsOne = Self.planeTopV > 0.5
+        func vertex(_ a: Float, _ b: Float) -> (SIMD3<Float>, SIMD2<Float>) {
+            let u = min(max((a + width / 2) / width, 0.002), 0.998)
+            let t = min(max((b + height / 2) / height, 0.002), 0.998)
+            return (lying ? [a, 0, -b] : [a, b, 0], [u, topIsOne ? t : 1 - t])
+        }
+        for column in 0..<3 {
+            for row in 0..<3 where across[column + 1] - across[column] > 0.0001 && up[row + 1] - up[row] > 0.0001 {
+                let corners = [vertex(across[column], up[row]), vertex(across[column + 1], up[row]),
+                               vertex(across[column + 1], up[row + 1]), vertex(across[column], up[row + 1])]
+                var piece = MeshDescriptor(name: "picture")
+                piece.positions = MeshBuffers.Positions(corners.map(\.0))
+                piece.normals = MeshBuffers.Normals(Array(repeating: lying ? [0, 1, 0] : [0, 0, 1], count: 4))
+                piece.textureCoordinates = MeshBuffers.TextureCoordinates(corners.map(\.1))
+                piece.primitives = .triangles([0, 1, 2, 0, 2, 3])
+                guard let mesh = try? MeshResource.generate(from: [piece]) else { continue }
+                group.addChild(ModelEntity(mesh: mesh, materials: [material]))
+            }
+        }
+        return group
     }
 }
