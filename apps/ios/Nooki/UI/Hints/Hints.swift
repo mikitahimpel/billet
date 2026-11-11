@@ -22,7 +22,7 @@ final class Hints {
     static let actionWindow: TimeInterval = 24 * 3600
 
     static let all: [any HintTip.Type] = [
-        PetHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self,
+        PetHint.self, NeedsHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self,
     ]
 
     @ObservationIgnored private let report: @Sendable ([ClientEvent]) async throws(TransportError) -> Void

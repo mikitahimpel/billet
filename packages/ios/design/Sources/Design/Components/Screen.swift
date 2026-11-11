@@ -42,7 +42,7 @@ extension Screen where Secondary == EmptyView {
 
 extension View {
   /// The bottom action slot of `Screen`, for a full screen whose content is not a list of sections
-  /// (art, a camera, a picker). Applies `softScrollEdges()`.
+  /// (art, a camera, a picker). Applies `ourioScrollEdges()`.
   public func bottomActions<Primary: View, Secondary: View>(
     @ViewBuilder primary: () -> Primary, @ViewBuilder secondary: () -> Secondary
   ) -> some View {
@@ -62,7 +62,7 @@ private struct BottomActions<Primary: View, Secondary: View>: ViewModifier {
     if #available(iOS 26, macOS 26, *) {
       content
         .safeAreaBar(edge: .bottom, spacing: 0) { slot }
-        .softScrollEdges()
+        .ourioScrollEdges()
     } else {
       content.safeAreaInset(edge: .bottom, spacing: 0) {
         slot.background { Ink.screen.ignoresSafeArea() }

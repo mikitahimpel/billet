@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { IdempotencyKey } from "./ids.ts";
-import { footprints } from "./decor-catalog.ts";
+import { baseHomes, footprints } from "./decor-catalog.ts";
 import { Placement, RoomItemId } from "./shop.ts";
 
 /** `Place` stands a piece in the room or moves it; `Unplace` takes it back to the closet. */
@@ -16,6 +16,34 @@ export type LayoutRequest = typeof LayoutRequest.Type;
 
 export const LayoutResult = Schema.Literals(["applied", "duplicate"]);
 export type LayoutResult = typeof LayoutResult.Type;
+
+const decodeItem = Schema.decodeSync(RoomItemId);
+
+/** A piece of the room's own furniture: every pair has it and none is sold. */
+export const isBasePiece = (item: string): boolean => item in baseHomes;
+
+/** The room as the pair arranged it: what they placed or moved, and the room's own furniture that was
+ * neither moved nor put away, each at home. A room that never arranged anything is the default room. */
+export const effectiveLayout = (
+  layout: ReadonlyArray<Placement>,
+  stowed: ReadonlyArray<string>,
+): ReadonlyArray<Placement> => [
+  ...Object.entries(baseHomes)
+    .filter(([item]) => !stowed.includes(item) && !layout.some((placed) => placed.item === item))
+    .map(([item, home]): Placement => ({
+      item: decodeItem(item),
+      surface: "floor",
+      u: home.u,
+      v: home.v,
+      quarterTurns: 0,
+    })),
+  ...layout,
+];
+
+/** Whether `item` can be put away: a room keeps a bed or a sofa for the cat. */
+export const canPutAway = (layout: ReadonlyArray<Placement>, item: string): boolean =>
+  footprints[item]?.rest !== true ||
+  layout.some((placed) => placed.item !== item && footprints[placed.item]?.rest === true);
 
 const step = 0.05;
 const reach = 0.49;

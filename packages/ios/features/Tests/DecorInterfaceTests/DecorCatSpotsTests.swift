@@ -26,7 +26,7 @@ import Testing
     #expect((plan.top?.height ?? 0) > 0.1)
     let occupancy = layout([sofa]).occupancy()
     #expect(!occupancy.isBlocked(at: plan.approach))
-    #expect(occupancy.connects(from: DecorRoom.home.spawn, to: [plan.approach]))
+    #expect(occupancy.connects(from: layout([sofa]).spawn(), to: [plan.approach]))
   }
 
   @Test func aPostIsStoodBesideAndNotClimbed() {
@@ -61,7 +61,36 @@ import Testing
     let plans = shut.catSpots()
     if let plan = plans.first {
       let occupancy = shut.occupancy()
-      #expect(occupancy.connects(from: DecorRoom.home.spawn, to: [plan.approach]))
+      #expect(occupancy.connects(from: shut.spawn(), to: [plan.approach]))
+    }
+  }
+}
+
+@Suite struct DecorCatSpotsInRoomTests {
+  /// Every seat and approach the cat is sent to stays inside the room, above the floor, and is a number.
+  @Test func everyPlacementOfEverySeatGivesSpotsInsideTheRoom() {
+    let seats = ["armchair", "windowseat", "scratchpost", "catbed", "box", "beanbag", "cattree"]
+    let reach = Double(Occupancy.reach + 1) * DecorGrid.step
+    for item in seats {
+      for u in stride(from: -Occupancy.reach, through: Occupancy.reach, by: 3) {
+        for v in stride(from: -Occupancy.reach, through: Occupancy.reach, by: 3) {
+          let layout = DecorLayout(
+            placements: [Placement(item: item, surface: .floor, u: u, v: v)], stored: [])
+          let occupancy = layout.occupancy()
+          for plan in layout.catSpots() {
+            var points = [plan.approach]
+            if let top = plan.top {
+              points.append(top.point)
+              #expect(top.height.isFinite && top.height > 0 && top.height < 0.8)
+            }
+            points += occupancy.route(from: DecorRoom.home.spawn, to: plan.approach) ?? []
+            for point in points {
+              #expect(point.x.isFinite && point.z.isFinite)
+              #expect(abs(point.x) <= reach && abs(point.z) <= reach)
+            }
+          }
+        }
+      }
     }
   }
 }

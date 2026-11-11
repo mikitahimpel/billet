@@ -27,8 +27,8 @@ nonisolated struct HintContext: Hashable {
 /// wins. A seen hint never comes back, one visit shows at most one hint and one session at most `perSession`.
 nonisolated enum HintPlan {
     static let order = [
-        PetHint.hintId, AddHint.hintId, MomentsHint.hintId, ShopHint.hintId, RoomsHint.hintId,
-        TreatHint.hintId,
+        PetHint.hintId, NeedsHint.hintId, AddHint.hintId, MomentsHint.hintId, ShopHint.hintId,
+        RoomsHint.hintId, TreatHint.hintId,
     ]
     static let perSession = 2
     static let settle: Duration = .seconds(1)
@@ -61,6 +61,7 @@ nonisolated enum HintPlan {
         let metCat = seen.contains(PetHint.hintId)
         switch id {
         case PetHint.hintId: return world
+        case NeedsHint.hintId: return world && metCat
         case AddHint.hintId: return world && metCat
         case MomentsHint.hintId: return context.screen == .moments && !context.momentsEmpty
         case ShopHint.hintId: return context.screen == .shop

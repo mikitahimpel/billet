@@ -113,6 +113,21 @@ private struct Catalog: View {
           StatusRow("Light", state: "Plenty", symbol: "sun.max.fill", note: "Moves on its own")
           StatusRow("Food", state: "Well fed", symbol: "fork.knife", action: "Feed") {}
         }
+        ItemGrid {
+          GaugeTile(
+            "Full", state: "Hungry", hint: "Would love a meal", value: 0.3, symbol: "fork.knife",
+            emphasis: .raised, action: "Feed"
+          ) {}
+          GaugeTile(
+            "Rested", state: "Wide awake", hint: "Fine for today", value: 0.9,
+            symbol: "moon.zzz.fill", tint: .lilac, note: "Naps on her own")
+        }
+        MeterBar(value: 0.4)
+        MomentStrip([
+          StripMoment(
+            id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7"),
+          StripMoment(id: "2", symbol: "fork.knife", tint: .honey, title: "Ate", time: "8:12"),
+        ])
         Card(warm: true) {
           CardHeader("A hero card", detail: "Same radius, warmer", symbol: "sparkles")
         }

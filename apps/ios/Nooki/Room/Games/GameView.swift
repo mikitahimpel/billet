@@ -417,7 +417,6 @@ extension GameScenery {
         case .room: "house.fill"
         case .rug: "square.grid.2x2.fill"
         case .kitchen: "fork.knife"
-        case .garden: "leaf.fill"
         }
     }
 }

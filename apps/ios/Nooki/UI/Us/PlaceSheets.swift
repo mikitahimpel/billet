@@ -417,7 +417,7 @@ private struct MomentsPicker: View {
                     .padding(.top, Space.l)
                     .padding(.bottom, Space.xl + Space.s)
                 }
-                .softScrollEdges()
+                .ourioScrollEdges()
             }
         }
         }

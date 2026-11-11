@@ -109,7 +109,7 @@ private func book(
   }
 
   @Test func lettingGoWhereItDoesNotFitPutsItBack() {
-    let onTheBed = Placement(item: "yarn", surface: .floor, u: 1, v: -1)
+    let onTheBed = Placement(item: "yarn", surface: .backWall, u: 1)
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(state, .dragged(onTheBed))
     #expect(!state.isValid)
@@ -140,10 +140,36 @@ private func book(
     #expect(outputs == [.save(state.book.layout)])
   }
 
-  @Test func aTurnThatDoesNotFitIsRefused() {
+  @Test func aTurnThatFitsNowhereSaysSoAndChangesNothing() {
+    // Turned, the bookcase meets the wall, the bed and the nightstand wherever it goes.
     let tight = Placement(item: "bookcase", surface: .floor, u: -1, v: 7)
     let state = M.State.selected(book([tight]), item: "bookcase")
-    #expect(M.transition(state, .turned) == (state, [.feedback(.blocked)]))
+    #expect(M.transition(state, .turned) == (state, [.feedback(.noRoomToTurn)]))
+  }
+
+  @Test func theLastBedOrSofaCannotBeStored() {
+    let fresh = M.Book(layout: DecorLayout(), owned: [])
+    let state = M.State.selected(fresh, item: "base-donutbed")
+    #expect(M.transition(state, .stored) == (state, [.feedback(.lastRest)]))
+    let (stored, outputs) = M.transition(
+      .selected(fresh, item: "base-plant"), .stored)
+    #expect(!stored.book.layout.isPlaced("base-plant"))
+    #expect(outputs == [.save(stored.book.layout)])
+  }
+
+  @Test func resettingTheRoomPutsTheFurnitureBack() {
+    let messy = M.Book(
+      layout: DecorLayout().putting(Placement(item: "base-cattree", surface: .floor, u: 7, v: 0))
+        .storing("base-plant"),
+      owned: [])
+    let (state, outputs) = M.transition(.closet(messy), .resetRoom)
+    guard case .closet(let reset) = state else {
+      Issue.record("not the closet")
+      return
+    }
+    #expect(reset.layout.placements.isEmpty && reset.layout.stowed.isEmpty)
+    #expect(outputs == [.save(reset.layout), .feedback(.reset)])
+    #expect(M.transition(.closet(reset), .resetRoom) == (.closet(reset), []))
   }
 
   @Test func aWallPieceCannotBeTurned() {

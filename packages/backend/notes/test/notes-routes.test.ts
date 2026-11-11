@@ -241,12 +241,13 @@ describe("the shop routes", () => {
       wishlist: [],
       bonuses: [],
       layout: [],
+      stowed: [],
     });
   });
 
   it("keeps one layout for both partners, applies an id once and refuses overlaps", async () => {
     const id = "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f";
-    const placed = { item: "lamp", surface: "floor", u: -5, v: -5, quarterTurns: 0 };
+    const placed = { item: "lamp", surface: "floor", u: 7, v: -2, quarterTurns: 0 };
     const place = (key: string, placement: object, who = "ana") =>
       handler(
         request("/v1/shop/layout", who, {

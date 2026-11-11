@@ -85,12 +85,13 @@ final class DecorStage {
         self.decor = decor
         if receiver != nil { self.receiver = receiver }
 
-        let placed = Set(decor.layout.placements.map(\.item))
+        let drawn = decor.layout.placements.filter { DecorItem.item(shopID: $0.item)?.isBase == false }
+        let placed = Set(drawn.map(\.item))
         for (id, node) in nodes where !placed.contains(id) {
             node.holder.removeFromParent()
             nodes[id] = nil
         }
-        for placement in decor.layout.placements {
+        for placement in drawn {
             guard let item = DecorItem.item(shopID: placement.item) else { continue }
             let node = nodes[placement.item] ?? makeNode(for: item)
             if node.placement != placement || lightChanged || node.model == nil { place(node, at: placement) }

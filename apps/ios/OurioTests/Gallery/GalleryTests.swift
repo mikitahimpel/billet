@@ -34,6 +34,7 @@ enum GalleryScreen: String, CaseIterable, Sendable {
     case inbox
     case inboxEmpty = "inbox-empty"
     case inboxFailed = "inbox-failed"
+    case inboxLoading = "inbox-loading"
     case settings
     case whoKnowsIntro = "whoknows-intro"
     case whoKnowsAnswer = "whoknows-answer"
@@ -61,6 +62,12 @@ enum GalleryScreen: String, CaseIterable, Sendable {
         case .inbox: return await inbox(.items)
         case .inboxEmpty: return await inbox(.empty)
         case .inboxFailed: return await inbox(.failed)
+        case .inboxLoading:
+            // The fixture's first page never comes; the model stays loading while the page is drawn.
+            let model = InboxFixture.model(.loading, now: Self.now)
+            Task { await model.open() }
+            while model.sheet != .loading { await Task.yield() }
+            return .inbox(model)
         case .settings: return .settings
         case .whoKnowsIntro: return .whoKnows(await GameFixture.whoKnows(.intro))
         case .whoKnowsAnswer: return .whoKnows(await GameFixture.whoKnows(.answering))
