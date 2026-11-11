@@ -200,6 +200,37 @@ if (restyled.length > 0) {
   failed = true;
 }
 
+// A button whose label is a bare symbol is as small as the glyph, well under the 44 pt a finger
+// needs. Its label takes a frame (Size.control) or it is a design control such as GlassIconButton.
+// A toolbar gives its items the system's hit area, so those are left alone.
+const smallTargets = [];
+function inToolbar(text, at) {
+  const start = text.lastIndexOf(".toolbar", at);
+  if (start < 0) return false;
+  let depth = 0;
+  for (const char of text.slice(start, at)) {
+    if (char === "{") depth++;
+    else if (char === "}" && --depth === 0) return false;
+  }
+  return depth > 0;
+}
+for (const [file, text] of sources) {
+  for (const match of text.matchAll(
+    /label:\s*\{\s*Image\(systemName:[^)]*\)(?:\s*\.(?:font|foregroundStyle|symbolRenderingMode|imageScale|symbolVariant|fontWeight)\([^()]*(?:\([^()]*\))?[^()]*\))*\s*\}/g,
+  )) {
+    if (inToolbar(text, match.index)) continue;
+    const line = text.slice(0, match.index).split("\n").length;
+    smallTargets.push(`${file}:${line}: a button labelled by a bare symbol`);
+  }
+}
+if (smallTargets.length > 0) {
+  console.error(smallTargets.join("\n"));
+  console.error(
+    "Give a symbol button's label .frame(width: Size.control, height: Size.control) and .contentShape(.rect), or use GlassIconButton (docs/design-system.md).",
+  );
+  failed = true;
+}
+
 // The closed vocabulary for feature code (design-rules.mjs). `--base <commit>` also fails when the
 // baseline grew since that commit, or the allow-list did without a change to the design package.
 const baseAt = process.argv.indexOf("--base");
