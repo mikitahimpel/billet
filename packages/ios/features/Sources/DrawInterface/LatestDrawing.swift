@@ -14,8 +14,11 @@ public struct LatestDrawing: Codable, Hashable, Sendable {
   public static let path = "Drawings/latest.json"
   /// WidgetKit kind of the drawing widgets, so a write reloads only them.
   public static let widgetKind = "com.ourio.app.drawing"
-  /// Every widget that shows a new drawing: the drawing widgets, and Mochi, the partner and the day, which wait for it.
-  public static let widgetKinds = [widgetKind, "com.ourio.app.cat", "com.ourio.app.partner", "com.ourio.app.day"]
+  /// Every widget that shows a new drawing: the drawing widgets, and the cat, partner and day widgets that
+  /// wait for one.
+  public static let widgetKinds = [
+    widgetKind, "com.ourio.app.cat", "com.ourio.app.partner", "com.ourio.app.day",
+  ]
 
   public static func load() -> LatestDrawing? { SharedFile.read(LatestDrawing.self, from: path) }
 
