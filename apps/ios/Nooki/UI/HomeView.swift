@@ -1,11 +1,14 @@
 import FeatureGames
 import FeatureInbox
+import MomentsInterface
 import OurioShared
+import ProfileInterface
 import RoomInterface
 import SwiftUI
 import Design
 import TipKit
 import Transport
+import UsInterface
 import WidgetBridge
 import Wire
 
@@ -269,6 +272,8 @@ struct HomeView: View {
                     }) {
                         if state.tab == .world {
                             RoomSwitch(state: state, select: select).transition(.opacity)
+                        } else if state.tab == .moments {
+                            MomentsSwitch(state: state).transition(.opacity)
                         }
                     }
                     .padding(.horizontal, Space.l)

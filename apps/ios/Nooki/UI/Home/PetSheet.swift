@@ -1,10 +1,12 @@
 import FeatureGames
 import GamesInterface
+import MomentsInterface
 import OurioShared
 import Pet
 import SwiftUI
 import Design
 import TipKit
+import UsInterface
 
 struct PetButton: View {
     let state: HomeState

@@ -1,8 +1,10 @@
 import FeatureGames
 import GamesInterface
+import MomentsInterface
 import OurioShared
 import SwiftUI
 import Design
+import UsInterface
 
 /// A mini-game over the room: the whole screen takes the touches for the game, with a glass hint pill and a close
 /// button on top, the game's bar and button at the bottom, and its toast once it is done. Nothing else of Home

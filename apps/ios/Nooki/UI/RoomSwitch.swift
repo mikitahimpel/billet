@@ -28,3 +28,21 @@ struct RoomSwitch: View {
         }
     }
 }
+
+/// Photos | Board, the Moments tab's switch: the same control, size and place as the World's `RoomSwitch`, in the
+/// header's glass container.
+struct MomentsSwitch: View {
+    @Bindable var state: HomeState
+
+    var body: some View {
+        GlassSegmented(
+            [(MomentsMode.photos, "Photos"), (MomentsMode.board, "Board")],
+            selection: $state.momentsMode,
+            identifier: "momentsMode"
+        )
+        .frame(maxWidth: .infinity)
+        .accessibilityLabel("Moments")
+        .accessibilityValue(state.momentsMode == .board ? "Board" : "Photos")
+        .accessibilityHint("Switches between Photos and Board")
+    }
+}

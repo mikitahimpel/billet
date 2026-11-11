@@ -1,3 +1,4 @@
+import ProfileInterface
 import XCTest
 
 /// Every header button opens what it names, with the real room under it: the room draws with RealityKit and takes its

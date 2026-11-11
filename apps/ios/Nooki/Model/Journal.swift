@@ -1,6 +1,9 @@
+import MomentsInterface
 import Observation
 import OurioShared
+import ProfileInterface
 import UIKit
+import UsInterface
 import Wire
 
 /// What the couple adds to Moments and the board. The server pays for each: a photo or text note that goes to the
