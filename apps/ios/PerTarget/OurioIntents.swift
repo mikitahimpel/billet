@@ -1,7 +1,8 @@
 import AppIntents
 import MomentsInterface
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Persistence
 import ProfileInterface
 import UsInterface

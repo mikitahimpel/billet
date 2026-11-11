@@ -1,6 +1,7 @@
 import Design
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import Transport
 import UsInterface
@@ -47,6 +48,7 @@ struct PartnerAndAccountSections: View {
         .disabled(working)
         .confirmationDialog(title, isPresented: isConfirming, titleVisibility: .visible, presenting: confirming) { action in
             Button(label(action), role: .destructive) { run(action) }
+            Button("Cancel", role: .cancel) {}
         } message: { action in
             Text(message(action))
         }
@@ -54,6 +56,7 @@ struct PartnerAndAccountSections: View {
             ForEach(ReportReason.allCases, id: \.self) { reason in
                 Button(reason.title) { report(reason) }
             }
+            Button("Cancel", role: .cancel) {}
         } message: {
             Text("What happened?")
         }
@@ -92,7 +95,7 @@ struct PartnerAndAccountSections: View {
         switch action {
         case .unpair: "Unpair"
         case .block: "Block"
-        case .deleteAccount: "Delete Account"
+        case .deleteAccount: "Delete account"
         }
     }
 

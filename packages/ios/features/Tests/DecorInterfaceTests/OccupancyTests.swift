@@ -7,19 +7,19 @@ import Testing
 
   @Test func theRoomAsItComesLeavesHerAWayToEverywhereShesGoes() {
     let occupancy = DecorLayout().occupancy(in: room)
-    #expect(occupancy.connects(from: room.spawn, to: room.stops))
-    #expect(occupancy.freeShare > 0.4)
+    #expect(occupancy.connects(from: room.spawn, to: room.anchors))
+    #expect(occupancy.bareShare > 0.5)
     #expect(!occupancy.isBlocked(at: room.spawn))
-    for anchor in room.stops { #expect(!occupancy.isBlocked(at: anchor)) }
+    for anchor in room.anchors { #expect(!occupancy.isBlocked(at: anchor)) }
   }
 
   @Test func aSolidPieceBlocksItsCellsAndAFlatOneDoesNot() {
     let chair = DecorLayout(
-      placements: [Placement(item: "armchair", surface: .floor, u: -6, v: 6)], stored: [])
-    #expect(chair.occupancy(in: room).isBlocked(u: -6, v: 6))
+      placements: [Placement(item: "armchair", surface: .floor, u: -2, v: 6)], stored: [])
+    #expect(chair.occupancy(in: room).isBlocked(u: -2, v: 6))
     let rug = DecorLayout(
-      placements: [Placement(item: "rug", surface: .floor, u: -6, v: 6)], stored: [])
-    #expect(!rug.occupancy(in: room).isBlocked(u: -6, v: 6))
+      placements: [Placement(item: "rug", surface: .floor, u: -2, v: 6)], stored: [])
+    #expect(!rug.occupancy(in: room).isBlocked(u: -2, v: 6))
   }
 
   @Test func blockingHerOnlyWayIsRefused() {
@@ -31,8 +31,8 @@ import Testing
 
   @Test func theNearestFreeCellIsTheCellItselfWhenFree() {
     let occupancy = DecorLayout().occupancy(in: room)
-    let free = occupancy.nearestFree(to: (-0.3, 0.3))
-    #expect(free.map { DecorGrid.cell($0.x) } == -6)
+    let free = occupancy.nearestFree(to: (-0.2, 0.3))
+    #expect(free.map { DecorGrid.cell($0.x) } == -4)
     let onTheBed = occupancy.nearestFree(to: (0.06, -0.04))
     #expect(onTheBed.map { occupancy.isBlocked(at: $0) } == false)
   }
@@ -74,6 +74,6 @@ import Testing
     #expect(
       layout.verdict(Placement(item: "armchair", surface: .floor, u: 9, v: 9)) == .outsideRoom)
     #expect(layout.verdict(Placement(item: "print", surface: .floor, u: 0, v: 0)) == .wrongSurface)
-    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: -6, v: 6)) == .fits)
+    #expect(layout.verdict(Placement(item: "yarn", surface: .floor, u: -4, v: 6)) == .fits)
   }
 }

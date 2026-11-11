@@ -8,7 +8,7 @@ import Testing
 typealias M = DecorMachine
 
 private let owned: Set<String> = ["yarn", "mouse", "print", "monstera", "bookcase"]
-private let armchair = Placement(item: "yarn", surface: .floor, u: -6, v: -6)
+private let armchair = Placement(item: "yarn", surface: .floor, u: -5, v: -5)
 
 private func book(
   _ placements: [Placement] = [armchair], stored: Set<String> = ["monstera", "bookcase"]
@@ -76,7 +76,7 @@ private func book(
   }
 
   @Test func aDragMovesThePieceAndLettingGoOnAFreeSpotKeepsIt() {
-    let target = Placement(item: "yarn", surface: .floor, u: 0, v: -6)
+    let target = Placement(item: "yarn", surface: .floor, u: -5, v: 0)
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(state, .dragged(target))
     #expect(state.layout.placement(of: "yarn") == target)
@@ -103,7 +103,7 @@ private func book(
   @Test func aCancelledDragChangesNothing() {
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(
-      state, .dragged(Placement(item: "yarn", surface: .floor, u: 3, v: -6)))
+      state, .dragged(Placement(item: "yarn", surface: .floor, u: -5, v: 2)))
     #expect(M.transition(state, .dragCancelled) == (.selected(book(), item: "yarn"), []))
   }
 
@@ -123,7 +123,7 @@ private func book(
   }
 
   @Test func aTurnThatDoesNotFitIsRefused() {
-    let tight = Placement(item: "bookcase", surface: .floor, u: 0, v: 8)
+    let tight = Placement(item: "bookcase", surface: .floor, u: -1, v: 7)
     let state = M.State.selected(book([tight]), item: "bookcase")
     #expect(M.transition(state, .turned) == (state, [.feedback(.blocked)]))
   }

@@ -1,7 +1,8 @@
 import FeatureGames
 import GamesInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import RealityKit
 import SwiftUI
 import UIKit
@@ -55,6 +56,8 @@ protocol GameStage: AnyObject {
     var action: String? { get }
     /// What to show the player now, or nil when the game needs no gesture.
     var cue: GameCue? { get }
+    /// Where she glances from her head, in points on screen, instead of at the player; nil for the usual gaze.
+    var glance: CGSize? { get }
     func act()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
@@ -63,6 +66,7 @@ protocol GameStage: AnyObject {
 extension GameStage {
     var action: String? { nil }
     var cue: GameCue? { nil }
+    var glance: CGSize? { nil }
     func act() {}
 }
 
@@ -164,6 +168,9 @@ struct GameSpots {
         center + right * x + toward * z + [0, y, 0]
     }
 
+    /// The yaw that has her face the player, a little turned so she is not flat on.
+    var facingPlayer: Float { Self.yaw(from: .zero, to: toward) - 0.3 }
+
     /// The yaw that faces her from `from` toward `to` (0 faces -z).
     static func yaw(from: SIMD3<Float>, to: SIMD3<Float>) -> Float {
         atan2(-(to.x - from.x), -(to.z - from.z))
@@ -175,5 +182,31 @@ extension CatRoom {
     func send(to spot: SIMD3<Float>, facing yaw: Float, id: String, play: Bool = false, arrive: (() -> Void)? = nil) {
         walker?.go(to: CatWalker.Destination(
             id: id, path: [.init(at: spot, move: .jump)], rest: yaw, play: play, arrive: arrive))
+    }
+}
+
+extension Entity {
+    private static let blobTexture: TextureResource? = {
+        let size = CGSize(width: 128, height: 128)
+        let image = UIGraphicsImageRenderer(size: size).image { context in
+            let colors = [UIColor(white: 0, alpha: 0.4).cgColor, UIColor(white: 0, alpha: 0).cgColor] as CFArray
+            guard let gradient = CGGradient(colorsSpace: CGColorSpaceCreateDeviceRGB(), colors: colors, locations: [0, 1]) else {
+                return
+            }
+            context.cgContext.drawRadialGradient(gradient, startCenter: CGPoint(x: 64, y: 64), startRadius: 0,
+                                                 endCenter: CGPoint(x: 64, y: 64), endRadius: 64, options: [])
+        }
+        return image.cgImage.flatMap { try? TextureResource(image: $0, options: .init(semantic: .color)) }
+    }()
+
+    /// A soft contact shadow on the floor under a prop: a baked blob, no light and no shadow map.
+    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float) {
+        guard let texture = Self.blobTexture else { return }
+        var material = UnlitMaterial(applyPostProcessToneMap: false)
+        material.color = .init(tint: .white, texture: .init(texture))
+        material.blending = .transparent(opacity: .init(floatLiteral: 1))
+        let blob = ModelEntity(mesh: .generatePlane(width: width, depth: depth), materials: [material])
+        blob.position = position + [0, 0.0015, 0]
+        addChild(blob)
     }
 }

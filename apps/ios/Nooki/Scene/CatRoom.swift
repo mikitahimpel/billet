@@ -1,5 +1,7 @@
+import DecorInterface
 import MomentsInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import Pet
 import RealityKit
 import SwiftUI
@@ -23,6 +25,13 @@ class CatRoom {
         didSet { root.isEnabled = !paused }
     }
     var isPlayingGame = false
+    /// Screen point to world point on a plane (a transform whose Y axis is its normal); set by the view that draws
+    /// the room, for the arranging of its pieces.
+    var unprojector: ((CGPoint, simd_float4x4) -> SIMD3<Float>?)?
+    /// The floor she cannot cross, which her walks between destinations go around.
+    var avoid: Occupancy? {
+        didSet { walker?.avoid = avoid }
+    }
 
     private(set) var catGroup = Entity()
     private var catBody = Entity()
@@ -38,6 +47,18 @@ class CatRoom {
 
     private(set) var time: Float = 0
     private(set) var frame = 0
+    /// Whether the room turns a little under the sun and its lights pulse; off, they hold where they are.
+    var swaying = true
+    private var sway = SwayEnvelope()
+    private var turned: simd_quatf?
+    private var touchedAt: Float = -10
+    /// Whether the room is swaying, or still easing to rest.
+    var isSwaying: Bool { sway.strength > 0 }
+    /// Whether anything moves that a higher frame rate would show: she walks, a finger is down or just was, a showcase
+    /// or game plays, or the room is still easing to rest.
+    var isActive: Bool {
+        isSwaying || walker?.moving == true || time - touchedAt < 1 || isShowcasing || isPlayingGame
+    }
     private var yaw: Float = 0
     private var targetYaw: Float = 0
     private var purrStart: Float = -10
@@ -70,6 +91,7 @@ class CatRoom {
 
     func setYaw(_ value: Float) {
         targetYaw = min(max(value, -yawLimit), yawLimit)
+        touchedAt = time
     }
 
     func isCat(_ entity: Entity) -> Bool {
@@ -142,22 +164,24 @@ class CatRoom {
     /// `offset` is points from her head on screen; nil stops her.
     func follow(_ offset: CGSize?) {
         walker?.follow(offset.map { SIMD2<Float>(Float($0.width), Float($0.height)) / 400 })
+        if offset != nil { touchedAt = time }
     }
 
     /// Hands the frame time to `beforeProjecting` first (the camera follows `settledYaw`), then reports where the
     /// spot above Mochi's head lands on screen. `viewer` is the camera.
-    func start(updatesFrom content: RealityViewCameraContent, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
+    func start(on surface: any RoomSurface, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
         Self.shown = self
         adoptCat()
-        subscription = content.subscribe(to: SceneEvents.Update.self, on: nil, componentType: nil) { [weak self] event in
+        subscription?.cancel()
+        subscription = surface.updates { [weak self] event in
             guard let self, !paused else { return }
             let dt = Float(event.deltaTime)
             walker?.watch(catModel.convert(position: viewer.position(relativeTo: nil), from: nil))
             tick(dt)
             beforeProjecting(dt)
             let anchor = catGroup.position(relativeTo: nil) + [0, catHeadTop, 0]
-            onFrame(walker == nil ? nil : content.project(point: anchor, to: .local))
+            onFrame(walker == nil ? nil : surface.project(anchor))
         }
     }
 
@@ -180,7 +204,14 @@ class CatRoom {
         let t = time
 
         yaw += (targetYaw - yaw) * min(1, dt * 8)
-        pivot.orientation = .y(yaw + 0.035 * sin(t * 0.35))
+        sway.update(dt: dt, active: walker?.moving == true || t - touchedAt < 1 || isShowcasing || isPlayingGame,
+                    enabled: swaying)
+        // Setting an orientation, even the same one, makes every entity under it move; a still room sets none.
+        let turn = simd_quatf.y(yaw + 0.035 * sway.strength * sin(t * 0.35))
+        if turn != turned {
+            turned = turn
+            pivot.orientation = turn
+        }
 
         director?.paused = isShowcasing || isPlayingGame
         director?.update(dt)
@@ -227,6 +258,7 @@ class CatRoom {
             walker.keepOut = catKeepOut
             walker.needsBody = { Self.needBody($0) }
             Self.rooms.add(self)
+            walker.avoid = avoid
             self.walker = walker
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })

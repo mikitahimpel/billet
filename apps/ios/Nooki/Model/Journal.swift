@@ -1,6 +1,7 @@
 import MomentsInterface
 import Observation
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import ProfileInterface
 import UIKit
 import UsInterface

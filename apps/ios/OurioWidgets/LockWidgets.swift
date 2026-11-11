@@ -1,6 +1,7 @@
 import Design
 import MoodInterface
-import OurioShared
+import WidgetInterface
+import WidgetUI
 import SwiftUI
 import WidgetKit
 
