@@ -135,11 +135,9 @@ struct DecorPanel: View {
     private var resetButton: some View {
         PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
             .accessibilityIdentifier("decorReset")
-            .confirmationDialog("Put everything back where it first stood?", isPresented: $confirmingReset, titleVisibility: .visible) {
+            .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
                 Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
                 Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("The furniture goes back to its first places. What you bought is placed again where it fits.")
             }
     }
 
