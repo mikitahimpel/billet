@@ -74,7 +74,11 @@ before writing or changing any SwiftUI under `apps/ios` or `packages/ios`.
 | Rows in a settings-like list | `GroupedSection(header:footer:) { Row ... }` |
 | A row | `Row(title, detail:, symbol:, tint:) { trailing }`, `ToggleRow`, `PickerRow`, `RowChevron` |
 | Any other content on a card | `Card { ... }` or `.cardSurface()`; `state: .selected / .disabled` for a card that is chosen or can't be |
-| A state read at a glance that a tap acts on (the cat's needs) | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. The state is a word, never a bar or a percentage (VoiceOver gets the number through `value:`); only a state that wants something now is `.raised` |
+| A state read at a glance that a tap acts on, in a list | `StatusRow(title, state:, symbol:, tint:, emphasis:, action:) { }` in `GroupedSection(inset: StatusRow.inset)`; `note:` instead of `action:` when nothing can be done. Only a state that wants something now is `.raised` |
+| A level read at a glance that a tap acts on (the cat's needs) | `GaugeTile(title, state:, hint:, value:, symbol:, tint:, emphasis:, action:) { }` in an `ItemGrid`: a ring that fills to the level round its glyph, the percentage, the state in a word, what comes next ("Hungry in about 2 h") and the care as a pill; `note:` when nothing can be done. One tint per level; only the one that wants something now is `.raised`, and only it takes the accent |
+| Several levels at once round an avatar | `SegmentedRing([.init(value:tint:)])`: an arc each, clockwise from the upper leading quarter, in the order their tiles have on the sheet the avatar opens |
+| A progress along a line (a level, a trait) | `MeterBar(value:tint:)` |
+| A day or a history as a few marks in order | `MomentStrip([StripMoment(id:symbol:tint:title:time:)])`: a card that scrolls sideways under faded edges and opens at the latest; a list at accessibility sizes |
 | What an avatar or a round control wants, while it matters | `SymbolBadge(symbol:tint:)` at its top trailing corner; nothing when nothing is wanted |
 | A card with a title, a state and actions | `ContentCard(title, subtitle:, chip:) { content } actions: { }`; its buttons sit in an `ActionRow` |
 | Text with one action beside it on a card (a bundle, a bonus) | `CardActions { text } trail: { action }` |
@@ -223,6 +227,7 @@ on `.calloutBubble(pointer:)`.
 | `Ink.disabledFill`, `.disabledText`, `.destructive` | disabled buttons, destructive text and tiles |
 | `Ink.primary`, `.secondary`, `.glassTint` | white on the dark full-screen canvas's warm glass only |
 | `Color.honey`, `.honeyDeep`, `.blushPink` | accent fills; blush is love and hearts only |
+| `Color.lilac`, `.sage` | with honey and blush, the clay tints of the cat's four needs (Rested, Playful, Full, Loved); never a button or text |
 | `.ourioLargeTitle` `.ourioTitle` `.ourioValue` `.ourioHeadline` `.ourioBody` `.ourioCallout` `.ourioCaption` `.ourioMicro` | text styles; `ourioMicro` is 12 pt, the smallest text in the app |
 | `Space.xs…xl`, `Space.gutter`, `CardMetrics.padding`, `Radius.*`, `Size.*` | spacing, corners, sizes |
 | `Motion.*` | every animation, see Motion |

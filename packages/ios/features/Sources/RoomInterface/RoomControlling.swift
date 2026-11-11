@@ -51,20 +51,23 @@ public struct CatStatus: Equatable, Sendable {
   /// Nil until her brain is running.
   public var needs: PetNeeds?
   public var mind: CatMind?
+  /// What her sheet tells about her beyond her needs; nil until her brain is running.
+  public var about: CatAbout?
 
-  public init(needs: PetNeeds? = nil, mind: CatMind? = nil) {
+  public init(needs: PetNeeds? = nil, mind: CatMind? = nil, about: CatAbout? = nil) {
     self.needs = needs
     self.mind = mind
+    self.about = about
   }
 
   /// `needs` rounded to twentieths, so a small drift changes nothing outside the room.
-  public init(rounding needs: PetNeeds?, mind: CatMind?) {
+  public init(rounding needs: PetNeeds?, mind: CatMind?, about: CatAbout? = nil) {
     let rounded = needs.map { needs in
       var out = needs
       for need in PetNeed.allCases { out[need] = (needs[need] * 20).rounded() / 20 }
       return out
     }
-    self.init(needs: rounded, mind: mind)
+    self.init(needs: rounded, mind: mind, about: about)
   }
 }
 

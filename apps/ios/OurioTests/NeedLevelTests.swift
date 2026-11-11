@@ -35,6 +35,43 @@ import Testing
         #expect(need.word(.wants) == wants)
     }
 
+    @Test(arguments: [
+        (2, 0.0, "34 pets to Lv. 3"), (2, 0.4, "20 pets to Lv. 3"), (5, 0.97, "One more pet to Lv. 6"),
+        (1, 0.999, "One more pet to Lv. 2"), (1, 1.5, "One more pet to Lv. 2"), (1, -1.0, "34 pets to Lv. 2"),
+        (1, Double.nan, "34 pets to Lv. 2"),
+    ])
+    func theWayToTheNextLevelIsCountedInPets(level: Int, progress: Double, words: String) {
+        #expect(CatCare.towardNext(level: level, progress: progress) == words)
+    }
+
+    @Test func theRingRoundHerPortraitPutsEachNeedWhereItsTileIs() {
+        // Clockwise from the upper leading quarter: the two upper tiles, then the lower trailing, then the lower leading.
+        let grid = PetNeed.displayOrder
+        #expect(PetNeed.ringOrder == [grid[0], grid[1], grid[3], grid[2]])
+    }
+
+    @Test func herPortraitSpeaksAllFourLevels() {
+        #expect(PetButton.spoken(PetNeeds(full: 0.2, rested: 0.9, loved: 0.5, playful: 0.75))
+            == "Full 20 percent, Rested 90 percent, Playful 75 percent, Loved 50 percent")
+    }
+
+    @Test(arguments: CatDayMoment.Kind.allCases)
+    func everyMomentOfHerDayHasAMarkAndAShortName(kind: CatDayMoment.Kind) {
+        #expect(!kind.symbol.isEmpty)
+        #expect(!kind.title.isEmpty && kind.title.count <= 10)
+    }
+
+    @Test func aMomentTellsItsTimeInTheZoneAsked() throws {
+        let zone = try #require(TimeZone(secondsFromGMT: 3600))
+        let noon = 1_793_620_800.0
+        let fed = CatDayMoment(kind: .ate, at: noon + 720, exact: true)
+        let nap = CatDayMoment(kind: .napped, at: noon, until: noon + 7200, exact: false)
+        let night = CatDayMoment(kind: .slept, at: noon - 8 * 3600, until: noon - 5 * 3600, exact: false)
+        #expect(fed.time(in: zone).contains("12") && fed.time(in: zone).hasPrefix("1"))
+        #expect(nap.time(in: zone).hasPrefix("1"))
+        #expect(night.time(in: zone).hasPrefix("till ") && night.time(in: zone).contains("8"))
+    }
+
     @Test func voiceOverHearsTheWordAndTheNumber() {
         #expect(PetNeed.full.spoken(0.2) == "Hungry, 20 percent")
         #expect(PetNeed.loved.spoken(0.9) == "Adored, 90 percent")

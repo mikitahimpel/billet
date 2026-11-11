@@ -4,6 +4,7 @@ import MomentsInterface
 import WidgetInterface
 import WidgetUI
 import Pet
+import RoomInterface
 import SwiftUI
 import Design
 import TipKit
@@ -16,6 +17,8 @@ struct PetButton: View {
     /// Starts one of the mini-games, once the sheet is down.
     var onPlay: (MiniGame) -> Void
     @State private var showsSheet = false
+    /// Bumped when a need starts to want something, so its ring pulses once.
+    @State private var asks = 0
     @Environment(Hints.self) private var hints
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -25,19 +28,25 @@ struct PetButton: View {
         Button {
             showsSheet = true
             hints.done(PetHint())
+            hints.done(NeedsHint())
         } label: {
             PetPortrait(size: 58)
-                .padding(3)
+                .padding(Space.xs)
                 .overlay {
-                    Circle()
-                        .trim(from: 0, to: min(max(state.care.progress, 0.02), 1))
-                        .stroke(.honeyGradient, style: StrokeStyle(lineWidth: 3.5, lineCap: .round))
-                        .rotationEffect(.degrees(-90))
-                        .animation(.spring(duration: 0.5), value: state.care.progress)
+                    // Her four needs, an arc each; the sheet a tap opens says the rest.
+                    if let current {
+                        SegmentedRing(PetNeed.ringOrder.map { .init(value: current[$0], tint: $0.tint) })
+                            .keyframeAnimator(initialValue: 1.0, trigger: asks) { view, scale in
+                                view.scaleEffect(scale)
+                            } keyframes: { _ in
+                                SpringKeyframe(1.14, duration: 0.2)
+                                SpringKeyframe(1.0, duration: 0.4)
+                            }
+                    }
                 }
                 .glass(.circle, role: .control)
                 .overlay(alignment: .topTrailing) {
-                    // What she wants, only while she wants it; the sheet says the rest.
+                    // What she wants, only while she wants it.
                     ZStack {
                         if let cue {
                             SymbolBadge(symbol: cue.symbol, tint: cue.tint)
@@ -48,12 +57,13 @@ struct PetButton: View {
                     .animation(reduceMotion ? Motion.fade() : Motion.spring(), value: cue)
                 }
                 .overlay(alignment: .bottom) {
-                    Text("Lv.\(state.care.level)")
+                    // Names the button: what she asks for, or simply that her needs are here.
+                    Text(cue?.ask ?? "Needs")
                         .font(.ourioMicro)
                         .padding(.horizontal, 7)
                         .frame(height: 17)
                         .glassBadge()
-                        .contentTransition(.numericText())
+                        .contentTransition(.opacity)
                         .offset(y: 8)
                 }
                 .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
@@ -62,17 +72,22 @@ struct PetButton: View {
                     SpringKeyframe(1.12, duration: 0.15)
                     SpringKeyframe(1.0, duration: 0.35)
                 }
-                // Chrome over the room caps its text as the header does, so the level badge never outgrows its pill.
+                // Chrome over the room caps its text as the header does, so the tag never outgrows its pill.
                 // On the label only: the sheet below keeps the full range.
                 .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         }
         .buttonStyle(PressScaleStyle())
         // Above the portrait, the arrow down at it, so the hint never covers her.
         .hint(PetHint(), arrowEdge: .bottom, target: Circle())
+        .hint(NeedsHint(), arrowEdge: .bottom, target: Circle())
         .hint(TreatHint(), arrowEdge: .bottom, target: Circle())
-        .accessibilityLabel("\(state.petName), Lv. \(state.care.level)")
-        .accessibilityValue(cue.map { $0.word(.wants) } ?? "")
+        .accessibilityLabel("\(state.petName)'s needs")
+        .accessibilityValue(current.map(Self.spoken) ?? "")
+        .accessibilityHint("Opens her needs and care")
         .accessibilityIdentifier("pet")
+        .onChange(of: cue) { _, cue in
+            if cue != nil, !reduceMotion { asks += 1 }
+        }
         .onChange(of: state.showsPetSheet) { _, asked in
             guard asked else { return }
             showsSheet = true
@@ -87,8 +102,7 @@ struct PetButton: View {
     }
 }
 
-/// Her face and mood, her four needs with the care each takes, the care no need offers, and one closing line.
-/// Scrolls only when its content is taller than the screen allows.
+/// Mochi's sheet over the room: ``MochiSheetContent`` with her live status, her care wired to the room and the shop.
 private struct PetSheet: View {
     let state: HomeState
     var needs: () -> PetNeedsSource?
@@ -97,19 +111,19 @@ private struct PetSheet: View {
     @Environment(\.dismiss) private var dismiss
 
     var body: some View {
+        let source = FixedNeeds.fromLaunch ?? needs()
         BilletSheet(state.petName, size: .fit) {
-            // The brain starts after the room has loaded and keeps changing; look again each second.
-            TimelineView(.periodic(from: .now, by: 1)) { _ in
-                let current = (FixedNeeds.fromLaunch ?? needs())?.needs
-                VStack(spacing: Space.m) {
-                    hero(mood: current?.moodLine(name: state.petName))
-                    NeedList(name: state.petName, needs: current, care: give)
-                    moreCare(needsKnown: current != nil)
-                    Text(short ? "Not enough coins for a treat" : "With you two for ^[\(state.daysTogether) day](inflect: true)")
-                        .font(.ourioCaption)
-                        .foregroundStyle(short ? Ink.accentText : Ink.textSecondary)
-                        .contentTransition(.opacity)
-                }
+            MochiSheetContent(name: state.petName, status: source?.status ?? CatStatus(), level: state.care.level,
+                              progress: state.care.progress, days: state.daysTogether, care: give) {
+                PetPortrait(size: 88)
+                    .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
+                        view.scaleEffect(scale)
+                    } keyframes: { _ in
+                        SpringKeyframe(1.08, duration: 0.15)
+                        SpringKeyframe(1.0, duration: 0.35)
+                    }
+            } extraCare: {
+                moreCare(needsKnown: source?.needs != nil)
             }
         }
         .haptic(.impact(weight: .light), trigger: state.care.petPulse)
@@ -129,75 +143,47 @@ private struct PetSheet: View {
         if !short { needs()?.feed() }
     }
 
-    /// Smaller than a need's row, so the rows stay what the eye reads first.
+    /// Smaller than a need's tile, so the tiles stay what the eye reads first.
     private func moreCare(needsKnown: Bool) -> some View {
-        FlowRow {
-            ForEach(NeedCare.extra(needsKnown: needsKnown), id: \.self) { care in
-                PillButton(care.title, symbol: care.symbol) { give(care) }
-                    .accessibilityHint(care.hint(name: state.petName))
-            }
-            Button(action: treat) {
-                HStack(spacing: Space.xs) {
-                    Image(systemName: "gift.fill")
-                    Text("Treat")
-                    CoinIcon(size: 14, relativeTo: .callout)
-                    Text(ShopModel.treatPrice, format: .number).monospacedDigit()
+        VStack(alignment: .leading, spacing: Space.s) {
+            FlowRow {
+                ForEach(NeedCare.extra(needsKnown: needsKnown), id: \.self) { care in
+                    PillButton(care.title, symbol: care.symbol) { give(care) }
+                        .accessibilityHint(care.hint(name: state.petName))
                 }
-                .font(.ourioCallout.weight(.semibold))
+                Button(action: treat) {
+                    HStack(spacing: Space.xs) {
+                        Image(systemName: "gift.fill")
+                        Text("Treat")
+                        CoinIcon(size: 14, relativeTo: .callout)
+                        Text(ShopModel.treatPrice, format: .number).monospacedDigit()
+                    }
+                    .font(.ourioCallout.weight(.semibold))
+                }
+                .buttonStyle(PillButtonStyle())
+                .accessibilityLabel("Treat, \(ShopModel.treatPrice) coins")
+                .accessibilityHint("Fills \(state.petName) up more than a pet")
             }
-            .buttonStyle(PillButtonStyle())
-            .accessibilityLabel("Treat, \(ShopModel.treatPrice) coins")
-            .accessibilityHint("Fills \(state.petName) up more than a pet")
+            if short {
+                Text("Not enough coins for a treat")
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.accentText)
+                    .transition(.opacity)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    private func hero(mood: String?) -> some View {
-        Card(warm: true) {
-            VStack(spacing: Space.s) {
-                PetPortrait(size: 96)
-                    .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
-                        view.scaleEffect(scale)
-                    } keyframes: { _ in
-                        SpringKeyframe(1.08, duration: 0.15)
-                        SpringKeyframe(1.0, duration: 0.35)
-                    }
-                Text(mood ?? "Settling in")
-                    .font(.ourioHeadline)
-                    .foregroundStyle(Ink.text)
-                    .multilineTextAlignment(.center)
-                    .contentTransition(.opacity)
-                HStack(spacing: Space.s) {
-                    Chip("Lv. \(state.care.level)", style: .honey)
-                        .contentTransition(.numericText())
-                    Text(Self.towardNext(level: state.care.level, progress: state.care.progress))
-                        .font(.ourioCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel("Level \(state.care.level)")
-                .accessibilityValue(
-                    "\(Int((state.care.progress * 100).rounded())) percent to level \(state.care.level + 1)")
-            }
-            .frame(maxWidth: .infinity)
-        }
-        // Past this the mood line alone fills an SE's screen and pushes her needs below the fold.
-        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
-    }
-
-    /// The way to her next level in words; the ring on her portrait on Home draws it.
-    static func towardNext(level: Int, progress: Double) -> String {
-        let next = "Lv. \(level + 1)"
-        switch progress {
-        case 0.75...: return "Nearly \(next)"
-        case 0.4..<0.75: return "Halfway to \(next)"
-        default: return "On the way to \(next)"
-        }
+extension PetButton {
+    /// Her four needs for VoiceOver, in the order her sheet shows them.
+    static func spoken(_ needs: PetNeeds) -> String {
+        PetNeed.displayOrder.map { "\($0.title) \(PetNeed.percent(needs[$0])) percent" }.joined(separator: ", ")
     }
 }
 
 /// Her face (Tools/make_portrait.py) on a warm disc.
-private struct PetPortrait: View {
+struct PetPortrait: View {
     let size: CGFloat
 
     var body: some View {
