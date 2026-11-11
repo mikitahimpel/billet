@@ -36,7 +36,7 @@ struct ShopView: View {
                 if scrolling.isScrolling != phase.isScrolling { scrolling.isScrolling = phase.isScrolling }
             }
             .environment(scrolling)
-            .softScrollEdges()
+            .ourioScrollEdges()
             .onChange(of: state.shopFocus, initial: true) { _, focus in
                 guard let focus else { return }
                 switch focus {

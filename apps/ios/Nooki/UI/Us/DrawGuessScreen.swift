@@ -132,7 +132,7 @@ struct DrawGuessScreen: View {
             .padding(.horizontal, Space.gutter)
             .padding(.vertical, Space.l)
         }
-        .softScrollEdges()
+        .ourioScrollEdges()
         .confirmationDialog("Give up on this riddle?", isPresented: $givingUp, titleVisibility: .visible) {
             Button("Give up and see the word", role: .destructive) { Task { await model.giveUp() } }
         } message: {
@@ -165,7 +165,7 @@ struct DrawGuessScreen: View {
             .padding(.horizontal, Space.gutter)
             .padding(.vertical, Space.l)
         }
-        .softScrollEdges()
+        .ourioScrollEdges()
     }
 
     private func progress(_ riddle: Riddle) -> String {
@@ -231,7 +231,7 @@ struct DrawGuessScreen: View {
             .padding(.horizontal, Space.gutter)
             .padding(.vertical, Space.l)
         }
-        .softScrollEdges()
+        .ourioScrollEdges()
         .scrollDismissesKeyboard(.interactively)
     }
 
@@ -283,7 +283,7 @@ struct DrawGuessScreen: View {
                 }
                 .padding(.vertical, Space.l)
             }
-            .softScrollEdges()
+            .ourioScrollEdges()
             PrimaryButton("Now you draw") { model.drawNext() }
         }
         .padding(.horizontal, Space.gutter)

@@ -13,7 +13,12 @@ import {
   type EarnEvent,
 } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
-import { placementProblem } from "@billet/contracts-domain/decor";
+import {
+  effectiveLayout,
+  isBasePiece,
+  canPutAway,
+  placementProblem,
+} from "@billet/contracts-domain/decor";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
 import type { PriceBook, PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import { earnsOnTick } from "@billet/contracts-domain/list";
@@ -462,6 +467,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           items: [],
           wishlist: [],
           layout: [],
+          stowed: [],
           layoutLog: [],
           bonuses: [],
           moods: [],
@@ -638,21 +644,30 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
       if (room.layoutLog.includes(id))
         return accepted(room, [RoomOutput.cases.LayoutRepeated.make({})]);
-      const others = room.layout.filter(
-        (placement) =>
-          placement.item !== (change._tag === "Place" ? change.placement.item : change.item),
-      );
+      const target = change._tag === "Place" ? change.placement.item : change.item;
+      const standing = effectiveLayout(room.layout, room.stowed);
+      const others = standing.filter((placement) => placement.item !== target);
       if (change._tag === "Place") {
-        if (!ownsItem(room, change.placement.item))
+        if (!isBasePiece(target) && !ownsItem(room, change.placement.item))
           return rejected(RoomRejection.cases.LayoutRefused.make({ reason: "not-owned" }));
         const problem = placementProblem(change.placement, others);
         if (problem !== undefined)
           return rejected(RoomRejection.cases.LayoutRefused.make({ reason: problem }));
+      } else if (!canPutAway(standing, target)) {
+        return rejected(RoomRejection.cases.LayoutRefused.make({ reason: "last-rest" }));
       }
-      const layout = change._tag === "Place" ? [...others, change.placement] : others;
-      return accepted({ ...room, layout, layoutLog: [...room.layoutLog, id].slice(-64) }, [
-        RoomOutput.cases.LayoutChanged.make({ layout }),
-      ]);
+      const explicit = room.layout.filter((placement) => placement.item !== target);
+      const layout = change._tag === "Place" ? [...explicit, change.placement] : explicit;
+      const stowed = room.stowed.filter((item) => item !== target);
+      return accepted(
+        {
+          ...room,
+          layout,
+          stowed: change._tag === "Unplace" && isBasePiece(target) ? [...stowed, target] : stowed,
+          layoutLog: [...room.layoutLog, id].slice(-64),
+        },
+        [RoomOutput.cases.LayoutChanged.make({ layout })],
+      );
     }
     case "Welcome": {
       if (room.welcomed) return accepted(room);
