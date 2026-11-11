@@ -54,11 +54,14 @@ public struct RoomInput: Equatable, Sendable {
   /// The dust drifting through the room. Its particles are stepped every frame the room is drawn,
   /// so Labs can take them away.
   public var motes: Bool
+  /// The room turning slowly under the sun and its lights pulsing. Off, nothing in it moves but the cat, so a
+  /// still frame can be told from a swaying one.
+  public var sway: Bool
   public var decor: RoomDecor
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
-    partnerHere: Bool = false, motes: Bool = true,
+    partnerHere: Bool = false, motes: Bool = true, sway: Bool = true,
     decor: RoomDecor = RoomDecor()
   ) {
     self.scene = scene
@@ -67,6 +70,7 @@ public struct RoomInput: Equatable, Sendable {
     self.catName = catName
     self.partnerHere = partnerHere
     self.motes = motes
+    self.sway = sway
     self.decor = decor
   }
 }

@@ -53,17 +53,29 @@ final class FrameMeter {
     }
 }
 
-/// Reads the app's CPU, the thermal state and Low Power Mode once a second while the meter is up.
+/// Reads the app's CPU, its busiest threads, the thermal state, Low Power Mode and the battery every two seconds,
+/// from launch.
 @MainActor
-@Observable
 final class EnergyMeter {
     private(set) var cpu: Double?
+    private var threads: [ThreadLoad] = []
+    private var thermal = ThermalClock()
+    private var battery = BatteryTrack()
 
-    @ObservationIgnored private var last: (busy: Double, at: Double)?
+    private var last: (busy: Double, at: Double)?
+    private var lastThreads: [ThreadLoad.Sample] = []
 
     func sample() {
-        guard let busy = Self.busySeconds() else { return }
         let now = CACurrentMediaTime()
+        let device = UIDevice.current
+        device.isBatteryMonitoringEnabled = true
+        battery.record(level: Double(device.batteryLevel),
+                       charging: device.batteryState == .charging || device.batteryState == .full, at: now)
+        thermal.record(Self.heat(ProcessInfo.processInfo.thermalState), at: now)
+        let samples = Self.threadSamples()
+        if let last { threads = ThreadLoad.busiest(from: lastThreads, to: samples, elapsed: now - last.at) }
+        lastThreads = samples
+        guard let busy = Self.busySeconds() else { return }
         if let last, let cpu = EnergyStats.cpu(busy: last.busy, busy, elapsed: now - last.at) { self.cpu = cpu }
         last = (busy, now)
     }
@@ -72,7 +84,8 @@ final class EnergyMeter {
         guard let cpu else { return nil }
         let info = ProcessInfo.processInfo
         return EnergyStats(cpu: cpu, room: EnergyStats.Room(room), heat: Self.heat(info.thermalState),
-                           lowPower: info.isLowPowerModeEnabled)
+                           lowPower: info.isLowPowerModeEnabled, threads: threads, battery: battery.drain,
+                           secondsToFair: thermal.secondsToFair)
     }
 
     private static func heat(_ state: ProcessInfo.ThermalState) -> EnergyStats.Heat {
@@ -83,6 +96,48 @@ final class EnergyMeter {
         case .critical: .critical
         @unknown default: .critical
         }
+    }
+
+    /// CPU time per thread alive now. The first thread is the main one; the others are named by what made them.
+    private static func threadSamples() -> [ThreadLoad.Sample] {
+        var list: thread_act_array_t?
+        var count = mach_msg_type_number_t(0)
+        guard task_threads(mach_task_self_, &list, &count) == KERN_SUCCESS, let list else { return [] }
+        defer {
+            vm_deallocate(mach_task_self_, vm_address_t(UInt(bitPattern: list)),
+                          vm_size_t(Int(count) * MemoryLayout<thread_act_t>.size))
+        }
+        func seconds(_ t: time_value_t) -> Double { Double(t.seconds) + Double(t.microseconds) / 1e6 }
+        var samples: [ThreadLoad.Sample] = []
+        for index in 0..<Int(count) {
+            let port = list[index]
+            defer { mach_port_deallocate(mach_task_self_, port) }
+            var basic = thread_basic_info()
+            var basicCount = mach_msg_type_number_t(MemoryLayout<thread_basic_info>.size / MemoryLayout<integer_t>.size)
+            let basicResult = withUnsafeMutablePointer(to: &basic) {
+                $0.withMemoryRebound(to: integer_t.self, capacity: Int(basicCount)) {
+                    thread_info(port, thread_flavor_t(THREAD_BASIC_INFO), $0, &basicCount)
+                }
+            }
+            var identity = thread_identifier_info()
+            var identityCount = mach_msg_type_number_t(
+                MemoryLayout<thread_identifier_info>.size / MemoryLayout<integer_t>.size)
+            let identityResult = withUnsafeMutablePointer(to: &identity) {
+                $0.withMemoryRebound(to: integer_t.self, capacity: Int(identityCount)) {
+                    thread_info(port, thread_flavor_t(THREAD_IDENTIFIER_INFO), $0, &identityCount)
+                }
+            }
+            guard basicResult == KERN_SUCCESS, identityResult == KERN_SUCCESS else { continue }
+            var name = ""
+            if let thread = pthread_from_mach_thread_np(port) {
+                var buffer = [CChar](repeating: 0, count: 64)
+                if pthread_getname_np(thread, &buffer, buffer.count) == 0 { name = String(cString: buffer) }
+            }
+            if index == 0 { name = "main" } else if name.isEmpty { name = "#\(identity.thread_id % 10_000)" }
+            samples.append(.init(id: identity.thread_id, name: name,
+                                 seconds: seconds(basic.user_time) + seconds(basic.system_time)))
+        }
+        return samples
     }
 
     /// The CPU time the app has used since launch, in seconds: its threads alive now and those that ended.
@@ -124,11 +179,10 @@ struct PerfLabMeter: View {
     let room: RoomVisibility
     let tabs: TabSwitchTimes
     @State private var meter = FrameMeter()
-    @State private var energy = EnergyMeter()
     @State private var opened = false
 
     private var line: String {
-        [meter.reading?.line ?? "measuring…", energy.reading(room: room)?.line, tabs.line].compactMap { $0 }
+        [meter.reading?.line ?? "measuring…", lab.energy.reading(room: room)?.line, tabs.line].compactMap { $0 }
             .joined(separator: "\n")
     }
 
@@ -150,19 +204,13 @@ struct PerfLabMeter: View {
             .accessibilityHint("Shows the performance switches")
 
             if opened {
-                PerfLabSwitches(lab: lab, reading: meter.reading, energy: energy.reading(room: room), tabs: tabs)
+                PerfLabSwitches(lab: lab, reading: meter.reading, energy: lab.energy.reading(room: room), tabs: tabs)
                     .frame(maxWidth: 320)
                     .transition(.opacity)
             }
         }
         .onAppear { meter.start() }
         .onDisappear { meter.stop() }
-        .task {
-            while !Task.isCancelled {
-                energy.sample()
-                try? await Task.sleep(for: .seconds(1))
-            }
-        }
     }
 }
 
@@ -197,10 +245,16 @@ struct PerfLabSwitches: View {
                 ForEach(PerfSuspect.allCases, id: \.self) { suspect in
                     ToggleRow(suspect.title, symbol: suspect.symbol, tint: UsTint.honey.color, isOn: lab.binding(suspect))
                 }
+                Text(lab.day?.line ?? "MetricKit: no day delivered yet; the system sends one about once a day.")
+                    .font(.ourioMicro)
+                    .foregroundStyle(Ink.textSecondary)
                 HStack(spacing: Space.s) {
                     SecondaryButton("Copy settings", fullWidth: true) {
                         UIPasteboard.general.string = PerfLabMachine.summary(lab.state, reading: reading,
-                                                                             energy: energy, tabs: tabs)
+                                                                             energy: energy, tabs: tabs, day: lab.day)
+                    }
+                    if let json = MetricsReceiver.savedJSON() {
+                        SecondaryButton("Copy MetricKit", fullWidth: false) { UIPasteboard.general.string = json }
                     }
                     SecondaryButton("Reset", fullWidth: false) { lab.reset() }
                 }

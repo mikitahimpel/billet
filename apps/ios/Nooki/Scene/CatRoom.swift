@@ -47,6 +47,8 @@ class CatRoom {
 
     private(set) var time: Float = 0
     private(set) var frame = 0
+    /// Whether the room turns a little under the sun and its lights pulse; off, they hold where they are.
+    var swaying = true
     private var yaw: Float = 0
     private var targetYaw: Float = 0
     private var purrStart: Float = -10
@@ -189,7 +191,7 @@ class CatRoom {
         let t = time
 
         yaw += (targetYaw - yaw) * min(1, dt * 8)
-        pivot.orientation = .y(yaw + 0.035 * sin(t * 0.35))
+        pivot.orientation = .y(yaw + (swaying ? 0.035 * sin(t * 0.35) : 0))
 
         director?.paused = isShowcasing || isPlayingGame
         director?.update(dt)

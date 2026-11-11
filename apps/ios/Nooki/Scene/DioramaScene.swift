@@ -77,17 +77,19 @@ final class DioramaScene: CatRoom {
         super.tick(dt)
         let t = time
 
-        let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
-        flame.scale = Self.flameRadius * [0.85, 1.45 * flicker, 0.85]
-        // The flame shape flickers every frame; its light every third is enough.
-        if frame.isMultiple(of: 3), var light = candleLight.components[PointLightComponent.self] {
-            light.intensity = 450 * flicker
-            candleLight.components.set(light)
-        }
+        if swaying {
+            let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
+            flame.scale = Self.flameRadius * [0.85, 1.45 * flicker, 0.85]
+            // The flame shape flickers every frame; its light every third is enough.
+            if frame.isMultiple(of: 3), var light = candleLight.components[PointLightComponent.self] {
+                light.intensity = 450 * flicker
+                candleLight.components.set(light)
+            }
 
-        for (i, bulb) in bulbs.enumerated() {
-            let s = 1 + 0.22 * sin(t * 2.1 + Float(i) * 1.3)
-            bulb.scale = .init(repeating: Self.bulbRadius * s)
+            for (i, bulb) in bulbs.enumerated() {
+                let s = 1 + 0.22 * sin(t * 2.1 + Float(i) * 1.3)
+                bulb.scale = .init(repeating: Self.bulbRadius * s)
+            }
         }
 
         // Toys hop with each of her two pats, the ball rolling a little, then settle.

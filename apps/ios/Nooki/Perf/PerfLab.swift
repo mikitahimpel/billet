@@ -22,6 +22,10 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     case flatten
     /// The dust drifting through the room.
     case motes
+    /// The cat drawn as 131,000 splats; off, as the skinned mesh the Simulator draws. Read at launch.
+    case splatCat
+    /// The room swaying under the sun and the bulbs and flame pulsing; off, a still room.
+    case sway
 
     var title: String {
         switch self {
@@ -32,6 +36,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .shine: "Shine on rare cards"
         case .flatten: "Flatten prints and cards"
         case .motes: "Dust motes in the room"
+        case .splatCat: "Cat as splats (mesh when off; next launch)"
+        case .sway: "Room sway and light pulse"
         }
     }
 
@@ -44,13 +50,15 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .shine: "sparkles"
         case .flatten: "square.stack.3d.down.right"
         case .motes: "sparkle"
+        case .splatCat: "cat"
+        case .sway: "waveform.path"
         }
     }
 
     /// `flatten` is an extra step, not something shipped: it starts off, the others start on.
     var shippedOn: Bool {
         switch self {
-        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .motes: true
+        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .motes, .splatCat, .sway: true
         case .flatten: false
         }
     }
@@ -96,11 +104,11 @@ nonisolated enum PerfLabMachine: Machine {
 
     /// One line to paste into a message: what is switched and the meter's last reading.
     static func summary(_ state: State, reading: FrameStats?, energy: EnergyStats? = nil,
-                        tabs: TabSwitchTimes? = nil) -> String {
+                        tabs: TabSwitchTimes? = nil, day: MetricsDigest? = nil) -> String {
         let changed = PerfSuspect.allCases.filter { state.changed.contains($0) }
             .map { "\($0.rawValue) \(state.isOn($0) ? "on" : "off")" }
         let switches = changed.isEmpty ? "as shipped" : changed.joined(separator: ", ")
-        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line].compactMap { $0 })
+        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line, day?.line].compactMap { $0 })
             .joined(separator: " · ")
     }
 }
@@ -146,6 +154,11 @@ nonisolated struct EnergyStats: Equatable, Sendable {
     var room: Room
     var heat: Heat
     var lowPower: Bool
+    /// The busiest threads over the last sample, busiest first.
+    var threads: [ThreadLoad] = []
+    var battery: BatteryDrain?
+    /// How long after the app started the phone first left nominal.
+    var secondsToFair: Double?
 
     /// `busy` is the app's total CPU time in seconds, read at two moments `elapsed` seconds apart.
     static func cpu(busy from: Double, _ to: Double, elapsed: Double) -> Double? {
@@ -154,7 +167,120 @@ nonisolated struct EnergyStats: Equatable, Sendable {
     }
 
     var line: String {
-        "CPU \(Int(cpu.rounded()))% · room \(room.rawValue) · \(heat.rawValue)\(lowPower ? " · low power" : "")"
+        let base = "CPU \(Int(cpu.rounded()))% · room \(room.rawValue) · \(heat.rawValue)\(lowPower ? " · low power" : "")"
+        let threadsLine = threads.isEmpty ? nil : "threads " + threads.map(\.line).joined(separator: ", ")
+        let fair = secondsToFair.map { String(format: "fair after %.0f min", $0 / 60) }
+        return ([base, fair, battery?.line, threadsLine].compactMap { $0 }).joined(separator: " · ")
+    }
+}
+
+/// One thread's share of the app's CPU over a moment: 100 is one core.
+nonisolated struct ThreadLoad: Equatable, Sendable {
+    nonisolated struct Sample: Equatable, Sendable {
+        var id: UInt64
+        var name: String
+        /// CPU time the thread has used, in seconds.
+        var seconds: Double
+    }
+
+    var name: String
+    var cpu: Double
+
+    /// The `count` busiest threads between two readings `elapsed` seconds apart; a thread in only one of them, or
+    /// under one point, is left out.
+    static func busiest(from: [Sample], to: [Sample], elapsed: Double, count: Int = 3) -> [ThreadLoad] {
+        guard elapsed > 0 else { return [] }
+        let before = Dictionary(from.map { ($0.id, $0.seconds) }, uniquingKeysWith: { first, _ in first })
+        return to.compactMap { sample -> ThreadLoad? in
+            guard let was = before[sample.id], sample.seconds >= was else { return nil }
+            let cpu = (sample.seconds - was) / elapsed * 100
+            return cpu >= 1 ? ThreadLoad(name: sample.name, cpu: cpu) : nil
+        }
+        .sorted { $0.cpu > $1.cpu }
+        .prefix(count)
+        .map { $0 }
+    }
+
+    var line: String { "\(name) \(Int(cpu.rounded()))" }
+}
+
+/// What the battery lost per ten minutes while unplugged: the one number that includes the GPU, the display and the
+/// radios. It counts from the moment the phone was last unplugged or the level last rose, and shows after five minutes.
+nonisolated struct BatteryDrain: Equatable, Sendable {
+    static let minimumSeconds = 300.0
+
+    /// Percentage points lost per ten minutes.
+    var per10Minutes: Double
+    var minutes: Double
+
+    var line: String { String(format: "battery -%.1f%%/10 min over %.0f min", per10Minutes, minutes) }
+}
+
+nonisolated struct BatteryTrack: Equatable, Sendable {
+    private struct Point: Equatable, Sendable {
+        var level: Double
+        var at: Double
+    }
+
+    private var start: Point?
+    private var latest: Point?
+
+    /// `level` is 0...1, negative when the system does not say; `at` is in seconds.
+    mutating func record(level: Double, charging: Bool, at: Double) {
+        guard level >= 0, !charging else {
+            start = nil
+            latest = nil
+            return
+        }
+        if let start, level > start.level { self.start = nil }
+        if start == nil { start = Point(level: level, at: at) }
+        latest = Point(level: level, at: at)
+    }
+
+    var drain: BatteryDrain? {
+        guard let start, let latest, latest.at - start.at >= BatteryDrain.minimumSeconds else { return nil }
+        let seconds = latest.at - start.at
+        return BatteryDrain(per10Minutes: (start.level - latest.level) * 100 / seconds * 600, minutes: seconds / 60)
+    }
+}
+
+/// Seconds from the first reading, taken at launch, to the first one above nominal. A phone already warm at launch
+/// says nothing about the app, so it never reports.
+nonisolated struct ThermalClock: Equatable, Sendable {
+    private var first: Double?
+    private var warmAtStart = false
+    private(set) var secondsToFair: Double?
+
+    mutating func record(_ heat: EnergyStats.Heat, at: Double) {
+        guard let first else {
+            first = at
+            warmAtStart = heat != .nominal
+            return
+        }
+        guard secondsToFair == nil, !warmAtStart, heat != .nominal else { return }
+        secondsToFair = at - first
+    }
+}
+
+/// MetricKit's day for this build, boiled down: how much of the foreground the GPU and CPU were busy and how often a
+/// frame was late. The system delivers it about once a day, for the day before.
+nonisolated struct MetricsDigest: Equatable, Codable, Sendable {
+    var gpuSeconds: Double
+    var cpuSeconds: Double
+    var foregroundSeconds: Double
+    /// Seconds of late frames per second of animation, where the system reports it.
+    var hitchRatio: Double?
+    var day: Date
+
+    /// Percent of the foreground the GPU was busy, or nil with no foreground time.
+    var gpuDuty: Double? { foregroundSeconds > 0 ? gpuSeconds / foregroundSeconds * 100 : nil }
+    var cpuDuty: Double? { foregroundSeconds > 0 ? cpuSeconds / foregroundSeconds * 100 : nil }
+
+    var line: String? {
+        guard let gpuDuty, let cpuDuty else { return nil }
+        let hitch = hitchRatio.map { String(format: ", hitch %.1f ms/s", $0 * 1000) } ?? ""
+        return String(format: "day GPU %.0f%% (%.0f min), CPU %.0f%% of %.0f min foreground%@", gpuDuty,
+                      gpuSeconds / 60, cpuDuty, foregroundSeconds / 60, hitch)
     }
 }
 
@@ -253,6 +379,14 @@ final class PerfLab {
 
     var state: PerfLabMachine.State { store.state }
 
+    /// MetricKit's latest day for this build, once the system has delivered one.
+    private(set) var day: MetricsDigest?
+    #if DEBUG || LABS_YES
+    @ObservationIgnored let energy = EnergyMeter()
+    @ObservationIgnored private var metrics: MetricsReceiver?
+    @ObservationIgnored private var sampling: Task<Void, Never>?
+    #endif
+
     init(defaults: UserDefaults) {
         let saved = defaults.data(forKey: Self.key)
             .flatMap { try? JSONDecoder().decode(PerfLabMachine.State.self, from: $0) } ?? .shipped
@@ -264,6 +398,20 @@ final class PerfLab {
             }
             return nil
         }
+        #if DEBUG || LABS_YES
+        SplatLoader.setMeshOnly(!saved.isOn(.splatCat))
+        day = MetricsReceiver.saved(in: defaults)
+        let receiver = MetricsReceiver(defaults: defaults) { [weak self] digest in self?.day = digest }
+        receiver.start()
+        metrics = receiver
+        // Started with the app, not with the meter: the time to a warm phone and the battery's slope run from launch.
+        sampling = Task { @MainActor [energy] in
+            while !Task.isCancelled {
+                energy.sample()
+                try? await Task.sleep(for: .seconds(2))
+            }
+        }
+        #endif
     }
 
     func isOn(_ suspect: PerfSuspect) -> Bool { state.isOn(suspect) }
