@@ -12,8 +12,6 @@ public struct DecorRoom: Equatable, Sendable {
   /// Where she stands to visit the ball, the yarn basket and the window seat. A piece that cuts one off
   /// only takes that visit away; it does not stop her being placed.
   public let visits: [String: Occupancy.Point]
-  /// The straight walks her routes are made of, which a piece may not stand across: bed to the tree.
-  public let legs: [(from: Occupancy.Point, to: Occupancy.Point)]
   /// The least share of the floor she must keep.
   public let minimumFree = 0.35
 
@@ -60,6 +58,5 @@ public struct DecorRoom: Equatable, Sendable {
     floorSpots: [(0, 7), (-3, 7), (4, 5), (-5, -2), (7, 0)],
     spawn: (0.0, 0.19),
     anchors: [(0.3, -0.12)],
-    visits: ["ball": (-0.1, 0.26), "basket": (0.27, 0.26), "sill": (-0.24, 0.04)],
-    legs: [((0.0, 0.19), (0.2, 0.2)), ((0.2, 0.2), (0.3, -0.12))])
+    visits: ["ball": (-0.1, 0.26), "basket": (0.27, 0.26), "sill": (-0.24, 0.04)])
 }
