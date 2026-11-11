@@ -99,4 +99,6 @@ public enum Ink {
   public static let paperEdge = Color(hex: 0xEADFCB)
   /// Light enough that the room still shows through, warm enough that the glass never turns grey.
   public static let glassTint = Color(hex: 0xF2A65E, opacity: 0.16)
+  /// The warm dark behind the tab roots, under the shared header so scrolled content never meets its glass.
+  public static let headerScrim = Palette.roomBackdrop.color
 }
