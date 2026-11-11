@@ -169,7 +169,7 @@ struct TabletopView: View {
             RealityView { content in
                 content.camera = .virtual
                 content.add(room.root)
-                room.start(updatesFrom: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
+                room.start(on: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
             }
         }
         .ignoresSafeArea()
