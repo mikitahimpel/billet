@@ -18,7 +18,7 @@ struct CalendarScreen: View {
     var body: some View {
         BilletSheet("Calendar", scrolls: false) {
             ScrollView {
-                VStack(alignment: .leading, spacing: Space.m) {
+                LazyVStack(alignment: .leading, spacing: Space.m) {
                     if showsMonth {
                         let rows = inMonth
                         MonthGrid(month: $month, marked: Set(rows.map { Calendar.current.startOfDay(for: $0.date) }))

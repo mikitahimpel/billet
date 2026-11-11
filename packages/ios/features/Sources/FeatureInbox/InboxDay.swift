@@ -11,15 +11,21 @@ public struct InboxDay: Sendable {
     _ items: [ActivityItem], now: Date = .now, calendar: Calendar = .current
   ) -> [InboxDay] {
     var days: [InboxDay] = []
+    var current: (day: Date, title: String, items: [ActivityItem])?
     for item in items {
       let start = calendar.startOfDay(
         for: Date(timeIntervalSince1970: TimeInterval(item.at) / 1000))
-      if let last = days.last, last.day == start {
-        days[days.count - 1] = InboxDay(day: start, title: last.title, items: last.items + [item])
+      if current?.day == start {
+        current?.items.append(item)
       } else {
-        days.append(
-          InboxDay(day: start, title: title(start, now: now, calendar: calendar), items: [item]))
+        if let done = current {
+          days.append(InboxDay(day: done.day, title: done.title, items: done.items))
+        }
+        current = (start, title(start, now: now, calendar: calendar), [item])
       }
+    }
+    if let done = current {
+      days.append(InboxDay(day: done.day, title: done.title, items: done.items))
     }
     return days
   }

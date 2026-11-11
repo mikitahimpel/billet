@@ -9,14 +9,41 @@ public enum WishImage {
 
     public static func load(_ id: UUID) -> UIImage? { UIImage(contentsOfFile: url(id).path()) }
 
+    nonisolated(unsafe) private static let thumbnails = NSCache<NSString, UIImage>()
+
+    /// Decoded off the main thread at the size a card draws it, and kept until the picture changes.
+    public static func thumbnail(_ id: UUID, maxPixels: Int) async -> UIImage? {
+        let key = "\(id.uuidString)@\(maxPixels)" as NSString
+        if let cached = thumbnails.object(forKey: key) { return cached }
+        let path = url(id)
+        let image = await Task.detached(priority: .userInitiated) {
+            Downsample.image(at: path, maxPixels: maxPixels)
+        }.value
+        if let image { thumbnails.setObject(image, forKey: key) }
+        return image
+    }
+
+    private static func forget(_ id: UUID) {
+        thumbnails.removeObject(forKey: "\(id.uuidString)@\(WishThumbnail.pixels)" as NSString)
+    }
+
     public static func save(_ data: Data, for id: UUID) {
         let target = url(id)
         let folder = target.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try? data.write(to: target, options: .atomic)
+        forget(id)
     }
 
-    public static func remove(_ id: UUID) { try? FileManager.default.removeItem(at: url(id)) }
+    public static func remove(_ id: UUID) {
+        try? FileManager.default.removeItem(at: url(id))
+        forget(id)
+    }
+}
+
+public enum WishThumbnail {
+    /// A card draws the picture at 64 pt.
+    public static let pixels = 192
 }
 
 public enum LinkPreview {

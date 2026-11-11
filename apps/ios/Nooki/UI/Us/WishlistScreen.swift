@@ -354,11 +354,11 @@ private struct WishCard<Actions: View>: View {
 
     /// The phone's own picture, or, for a wish made on the partner's phone, the one its link shows, kept once fetched.
     private func loadImage() async {
-        image = WishImage.load(wish.id)
+        image = await WishImage.thumbnail(wish.id, maxPixels: WishThumbnail.pixels)
         guard image == nil, let url = URL(string: wish.link), url.scheme?.hasPrefix("http") == true,
               let data = await LinkPreview.fetch(url)?.image, !Task.isCancelled else { return }
         WishImage.save(data, for: wish.id)
-        image = UIImage(data: data)
+        image = await WishImage.thumbnail(wish.id, maxPixels: WishThumbnail.pixels)
     }
 
     @ViewBuilder
