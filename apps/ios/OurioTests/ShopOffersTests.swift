@@ -161,8 +161,7 @@ private struct OffersFixture: Decodable {
     let cases: [Case]
 
     static func load() throws -> OffersFixture {
-        let url = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
-            .appending(path: "../../../packages/contracts/fixtures/shop-offers.json").standardizedFileURL
+        let url = Repo.root.appending(path: "packages/contracts/fixtures/shop-offers.json")
         return try JSONDecoder().decode(OffersFixture.self, from: Data(contentsOf: url))
     }
 }

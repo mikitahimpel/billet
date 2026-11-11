@@ -38,10 +38,7 @@ enum Snapshot {
     static let pixelTolerance = 0.005
     static let scale: CGFloat = 2
 
-    static let gallery = URL(fileURLWithPath: #filePath)
-        .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-        .deletingLastPathComponent().deletingLastPathComponent()
-        .appending(path: "packages/ios/design/Tests/Gallery")
+    static let gallery = Repo.root.appending(path: "packages/ios/design/Tests/Gallery")
     static let references = gallery.appending(path: "References")
     static let recorded = gallery.appending(path: "Recorded")
 
