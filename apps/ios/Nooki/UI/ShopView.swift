@@ -151,7 +151,7 @@ struct ShopView: View {
             LazyHStack(alignment: .top, spacing: Space.m) {
                 ForEach(items) { item in
                     ShopItemCard(item: item, state: state) { sheetItem = item }
-                        .frame(width: ShopLayout.dealWidth)
+                        .modifier(DealWidth())
                 }
             }
             .padding(.horizontal, Space.l)

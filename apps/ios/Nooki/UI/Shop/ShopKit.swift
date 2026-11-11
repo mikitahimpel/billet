@@ -191,3 +191,17 @@ private struct ShopAppear: ViewModifier {
 enum ShopLayout {
     static let dealWidth: CGFloat = 176
 }
+
+/// A deal card's width: a fixed one that shows the next card peeking in, and at accessibility sizes most of the row,
+/// so the name and the price have room.
+struct DealWidth: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    func body(content: Content) -> some View {
+        if typeSize.isAccessibilitySize {
+            content.containerRelativeFrame(.horizontal, count: 5, span: 4, spacing: Space.m)
+        } else {
+            content.frame(width: ShopLayout.dealWidth)
+        }
+    }
+}
