@@ -40,7 +40,6 @@ struct ShopItemCard: View {
             }
             .haptic(.warning, trigger: shortTaps)
         }
-        .opacity(owned ? 0.7 : 1)
         .perfFlattened()
     }
 
@@ -48,8 +47,10 @@ struct ShopItemCard: View {
         RarityFrame(rarity: item.rarity) {
             if let image = Thumbnails.image(item.thumbnail, maxPixels: 512) {
                 // The thumbnail carries its own soft shadow; nothing is drawn under it.
+                // An owned piece's art steps back; its name stays in full ink.
                 Image(uiImage: image).resizable().scaledToFit()
                     .padding(Space.s)
+                    .opacity(owned ? 0.6 : 1)
             } else {
                 Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
             }
