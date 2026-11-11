@@ -17,7 +17,8 @@ struct GamePoster: View {
         case .whoKnows:
             PosterScene(tone: .honey, framing: .closeUp, hero: hero, prop: .note(symbol: "questionmark"))
         case .drawGuess:
-            let painting = Thumbnails.image("Item_frame-landscape", maxPixels: 512).map { PosterScene.Prop.clay(Image(uiImage: $0)) }
+            let painting = Thumbnails.image("Item_frame-landscape", maxPixels: 512)
+                .map { PosterScene.Prop.clay(Image(uiImage: $0)) }
             PosterScene(tone: .rose, framing: .seated, hero: hero, prop: painting)
         }
     }

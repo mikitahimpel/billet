@@ -143,11 +143,11 @@ public struct PosterScene: View {
       .position(x: width * 0.5 - height * 0.09, y: height * 0.66)
     let side = height * 0.34
     switch prop {
-    case .note(let symbol):
+    case .note(let symbol)?:
       note(symbol, width: side)
         .rotationEffect(.degrees(8))
         .position(x: width * 0.91 - side / 2, y: height * 0.83 - side * 0.6)
-    case .clay(let image):
+    case .clay(let image)?:
       image.resizable().scaledToFit()
         .frame(width: side * 1.3, height: side * 1.3)
         .position(x: width * 0.94 - side * 0.65, y: height * 0.86 - side * 0.65)
@@ -158,22 +158,26 @@ public struct PosterScene: View {
 
   @ViewBuilder private func seated(width: CGFloat, height: CGFloat) -> some View {
     let floor = Ellipse()
-    floor.fill(LinearGradient(colors: [tone.floorTop, tone.floorBottom], startPoint: .top, endPoint: .center))
-      .overlay {
-        floor.strokeBorder(
-          LinearGradient(colors: [.white.opacity(0.3), .white.opacity(0)], startPoint: .top, endPoint: .center),
-          lineWidth: 2)
-      }
-      .frame(width: width * 1.6, height: height * 0.62)
-      .position(x: width / 2, y: height * 1.03)
+    floor.fill(
+      LinearGradient(
+        colors: [tone.floorTop, tone.floorBottom], startPoint: .top, endPoint: .center)
+    )
+    .overlay {
+      floor.strokeBorder(
+        LinearGradient(
+          colors: [.white.opacity(0.3), .white.opacity(0)], startPoint: .top, endPoint: .center),
+        lineWidth: 2)
+    }
+    .frame(width: width * 1.6, height: height * 0.62)
+    .position(x: width / 2, y: height * 1.03)
     let catX = width * 0.5 + height * 0.126
     let side = height * 0.56
     switch prop {
-    case .clay(let image):
+    case .clay(let image)?:
       image.resizable().scaledToFit()
         .frame(width: side, height: side)
         .position(x: side * 0.47, y: height * 0.87 - side / 2)
-    case .note(let symbol):
+    case .note(let symbol)?:
       note(symbol, width: height * 0.3)
         .rotationEffect(.degrees(-8))
         .position(x: width * 0.07 + height * 0.15, y: height * 0.3)
@@ -183,7 +187,8 @@ public struct PosterScene: View {
     Ellipse()
       .fill(
         EllipticalGradient(
-          colors: [tone.floorBottom.mix(with: Ink.heroInk, by: 0.6).opacity(0.5), .clear]))
+          colors: [tone.floorBottom.mix(with: Ink.heroInk, by: 0.6).opacity(0.5), .clear])
+      )
       .frame(width: height * 0.46, height: height * 0.09)
       .position(x: catX, y: height * 0.8)
     cat(height: height * 0.84)
@@ -270,7 +275,8 @@ extension PosterScene.Tone {
         PosterScene(tone: .honey, framing: .closeUp, hero: nil, prop: .note(symbol: "questionmark"))
       }
       PosterCard("Draw & guess", status: "Alex is drawing", action: {}) {
-        PosterScene(tone: .rose, framing: .seated, hero: nil, prop: .note(symbol: "scribble.variable"))
+        PosterScene(
+          tone: .rose, framing: .seated, hero: nil, prop: .note(symbol: "scribble.variable"))
       }
     }
     .padding(Space.gutter)

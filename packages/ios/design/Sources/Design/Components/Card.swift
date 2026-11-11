@@ -310,13 +310,12 @@ public struct RowIcon: View {
 
   private var glyph: Color {
     switch style {
-    case .clay: deep
+    case .clay:
+      return deep
     case .well:
-      if let tint {
-        colorScheme == .dark ? tint.mix(with: .white, by: 0.15) : tint.mix(with: Ink.heroInk, by: 0.45)
-      } else {
-        Ink.accentText
-      }
+      guard let tint else { return Ink.accentText }
+      return colorScheme == .dark
+        ? tint.mix(with: .white, by: 0.15) : tint.mix(with: Ink.heroInk, by: 0.45)
     }
   }
 

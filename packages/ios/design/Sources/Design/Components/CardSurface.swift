@@ -63,7 +63,10 @@ private struct CardSurface: ViewModifier {
     case .rest:
       shape.strokeBorder(
         LinearGradient(
-          stops: [.init(color: Ink.cardRimTop, location: 0), .init(color: Ink.cardRimBottom, location: 0.55)],
+          stops: [
+            .init(color: Ink.cardRimTop, location: 0),
+            .init(color: Ink.cardRimBottom, location: 0.55),
+          ],
           startPoint: .top, endPoint: .bottom),
         lineWidth: 1
       )
@@ -97,15 +100,15 @@ struct CardShadow: View {
 
   /// How far the picture reaches past the card on every side.
   static let outset: CGFloat = 24
-  /// The corner kept unstretched: the outset, the card's radius and the blur's reach inside it.
-  static let cap: CGFloat = outset + Radius.card + 4
+  /// The corner kept unstretched.
+  static let cap: CGFloat = outset + Radius.card
   private static let scale: CGFloat = 3
 
   @MainActor private static var drawn: [ColorScheme: Image] = [:]
 
   @MainActor static func image(_ scheme: ColorScheme) -> Image? {
     if let image = drawn[scheme] { return image }
-    let renderer = ImageRenderer(content: picture.environment(\.colorScheme, scheme))
+    let renderer = ImageRenderer(content: picture(scheme))
     renderer.scale = scale
     guard let rendered = renderer.cgImage else { return nil }
     let image = Image(decorative: rendered, scale: scale)
@@ -113,10 +116,10 @@ struct CardShadow: View {
     return image
   }
 
-  private static var picture: some View {
+  private static func picture(_ scheme: ColorScheme) -> some View {
     let side = 2 * (cap - outset) + 1
     let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-    let color = Palette.cardShadow.color
+    let color = Palette.cardShadow.value(scheme == .dark ? .dark : .light).color
     return ZStack {
       shape.fill(color).padding(.horizontal, 4).blur(radius: 9).offset(y: 6)
       shape.fill(color.opacity(0.5)).blur(radius: 1).offset(y: 1)
