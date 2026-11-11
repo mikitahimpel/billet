@@ -1,0 +1,79 @@
+---
+import { getImage } from "astro:assets";
+import type { ImageMetadata } from "astro";
+import type { Picture } from "../features";
+
+interface Props {
+  picture: Picture;
+  class?: string;
+  // Above the fold: load at once, at high priority.
+  eager?: boolean;
+  // A still's largest height (it is never cropped, so its width follows its aspect).
+  fitHeight?: string;
+  // An empty alt where the picture only repeats the caption beside it.
+  alt?: string;
+  sizes?: string;
+}
+
+const { picture, class: className, eager = false, fitHeight = "30rem", alt = picture.alt, sizes } = Astro.props;
+
+// WebP steps under the original, which stays the largest candidate; a step within 100 px of it adds nothing.
+async function variants(src: ImageMetadata, steps: number[]) {
+  const made = await Promise.all(
+    steps
+      .filter((width) => width < src.width - 100)
+      .map(async (width) => ({ width, url: (await getImage({ src, width, format: "webp" })).src })),
+  );
+  return [...made, { width: src.width, url: src.src }];
+}
+
+const { src } = picture;
+const steps = picture.kind === "portrait" ? [96, 192, 320] : [400, 800, 1200];
+const candidates = await variants(src, steps);
+const srcset = candidates.map((candidate) => `${candidate.url} ${candidate.width}w`).join(", ");
+// The 800 px step (320 px for the portrait) is the fallback when there is one, else the original.
+const fallback = candidates.find((candidate) => candidate.width === (picture.kind === "portrait" ? 320 : 800)) ?? candidates.at(-1)!;
+const imgSizes =
+  sizes ??
+  (picture.kind === "shot"
+    ? "(max-width: 640px) 62vw, 300px"
+    : picture.kind === "portrait"
+      ? "(max-width: 640px) 40vw, 160px"
+      : "(max-width: 900px) 92vw, 560px");
+const img = {
+  src: fallback.url,
+  srcset,
+  sizes: imgSizes,
+  alt,
+  width: src.width,
+  height: src.height,
+  loading: eager ? ("eager" as const) : ("lazy" as const),
+  decoding: "async" as const,
+  fetchpriority: eager ? ("high" as const) : undefined,
+};
+---
+
+{
+  picture.kind === "shot" ? (
+    <figure class:list={["art art-shot", className]}>
+      <div class="phone">
+        <div class="screen">
+          <img class="shot-img" {...img} />
+        </div>
+        <div class="island" />
+        <div class="home-bar" />
+      </div>
+    </figure>
+  ) : picture.kind === "scene" ? (
+    <figure
+      class:list={["art still fit", className]}
+      style={`--ar: ${(src.width / src.height).toFixed(4)}; --fit-h: ${fitHeight}`}
+    >
+      <img {...img} />
+    </figure>
+  ) : (
+    <figure class:list={["art art-cutout", className]}>
+      <img {...img} />
+    </figure>
+  )
+}

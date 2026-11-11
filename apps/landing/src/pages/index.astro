@@ -1,22 +1,18 @@
 ---
-import { getImage, Image } from "astro:assets";
-import AppStoreBadge from "../components/app-store-badge.astro";
-import { HeroStage } from "../components/hero-stage";
-import QrCode from "../components/qr-code.astro";
-import Step from "../components/setup-step.astro";
-import { TwoPhones } from "../components/two-phones";
+import { getImage } from "astro:assets";
+import type { ImageMetadata } from "astro";
+import EndCard from "../components/end-card.astro";
+import RoomPicture from "../components/room-picture.astro";
+import SiteHeader from "../components/site-header.astro";
+import StoreButton from "../components/store-button.astro";
 import { appStoreId, appStoreLive, appStoreUrl, siteDescription, siteTitle } from "../config";
 import { faq } from "../faq";
-import Page from "../layouts/page.astro";
-import PictureView from "../components/picture.astro";
 import { featureList, hubArt } from "../features";
+import Page from "../layouts/page.astro";
 
-import appIcon from "../assets/app-icon.png";
-import mochi from "../assets/mochi-portrait.webp";
-// Stills of the 3D room at scroll 0 (phone 390×844, tablet 820×1180, desktop 1440×900), shown until the scene is up.
-import roomDesktop from "../assets/hero/room-desktop.webp";
-import roomPhone from "../assets/hero/room-phone.webp";
-import roomTablet from "../assets/hero/room-tablet.webp";
+import appIconSrc from "../assets/app-icon.png";
+import sharedRoomSrc from "../assets/art/shared-room.webp";
+import mochiSrc from "../assets/mochi-portrait.webp";
 import armchair from "../assets/Item_armchair.png";
 import lamp from "../assets/Item_lamp.png";
 import donutbed from "../assets/Item_donutbed.png";
@@ -26,20 +22,51 @@ import yarn from "../assets/Item_yarn.png";
 import teatable from "../assets/Item_teatable.png";
 import lantern from "../assets/Item_lantern.png";
 
-const portrait = await getImage({ src: mochi, width: 96, format: "webp" });
-const demoMochi = await getImage({ src: mochi, width: 352, format: "webp" });
+// WebP steps under the original, which stays the largest candidate; a step within 100 px of it adds nothing.
+async function variants(src: ImageMetadata, steps: number[]) {
+  const made = await Promise.all(
+    steps
+      .filter((width) => width < src.width - 100)
+      .map(async (width) => ({ width, url: (await getImage({ src, width, format: "webp" })).src })),
+  );
+  const candidates = [...made, { width: src.width, url: src.src }];
+  return {
+    srcset: candidates.map((candidate) => `${candidate.url} ${candidate.width}w`).join(", "),
+    at: (width: number) => candidates.find((candidate) => candidate.width === width)?.url ?? src.src,
+  };
+}
 
-// Names, prices and blurbs are the shop's own (apps/ios/Nooki/Model/Shop.swift).
+const appIcon = (await getImage({ src: appIconSrc, width: 192, format: "webp" })).src;
+const sharedRoom = await variants(sharedRoomSrc, [400, 800, 1200]);
+const mochi = await variants(mochiSrc, [96, 192, 320]);
+// The window and bed close-ups of the room render (2560×1440), pre-sized in public/room.
+const room = (name: "window" | "mochi") => `/room/${name}-1000.webp 1000w, /room/${name}-1600.webp 1600w`;
+const reducedMotionPixel = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
+// The preload and the clean room's AVIF source share this srcset and sizes, so the browser fetches one file.
+const heroSizes = "(max-width: 900px) 100vw, 60vw";
+const heroAvif = [1000, 1600, 2560].map((width) => `/room/room-clean-${width}.avif ${width}w`).join(", ");
+
+// Names, prices and blurbs are the shop's own (apps/ios/Nooki/Model/Shop.swift). The box is the piece's
+// measured outline in its 1024 px image (x, y, width, height), which its glow and floor light centre on.
 const items = [
-  { src: armchair, name: "Cloud Armchair", price: 320, blurb: "Big enough for two and a cat who insists." },
-  { src: lamp, name: "Mushroom Lamp", price: 140, blurb: "Warm glow for late-night talks." },
-  { src: teatable, name: "Tea Table", price: 210, blurb: "Two cups, always." },
-  { src: donutbed, name: "Donut Bed", price: 380, blurb: "Sprinkles included, calories not." },
-  { src: bookcase, name: "Little Bookcase", price: 260, blurb: "Room for both your favourite stories." },
-  { src: monstera, name: "Monstera", price: 90, blurb: "Grows a new leaf every week you visit." },
-  { src: yarn, name: "Yarn Ball", price: 60, blurb: "Mochi's favourite thing to unravel." },
-  { src: lantern, name: "Paper Lantern", price: 150, blurb: "Hangs by the window and hums with light." },
+  { key: "armchair", src: armchair, name: "Cloud Armchair", price: 320, blurb: "Big enough for two and a cat who insists.", box: [186, 208, 754, 668] },
+  { key: "lamp", src: lamp, name: "Mushroom Lamp", price: 140, blurb: "Warm glow for late-night talks.", box: [284, 222, 598, 602] },
+  { key: "teatable", src: teatable, name: "Tea Table", price: 210, blurb: "Two cups, always.", box: [258, 296, 614, 534] },
+  { key: "donutbed", src: donutbed, name: "Donut Bed", price: 380, blurb: "Sprinkles included, calories not.", box: [222, 354, 612, 376] },
+  { key: "bookcase", src: bookcase, name: "Little Bookcase", price: 260, blurb: "Room for both your favourite stories.", box: [266, 204, 624, 692] },
+  { key: "monstera", src: monstera, name: "Monstera", price: 90, blurb: "Grows a new leaf every week you visit.", box: [286, 168, 588, 664] },
+  { key: "yarn", src: yarn, name: "Yarn Ball", price: 60, blurb: "Mochi's favourite thing to unravel.", box: [268, 220, 458, 634] },
+  { key: "lantern", src: lantern, name: "Paper Lantern", price: 150, blurb: "Hangs by the window and hums with light.", box: [354, 180, 402, 660] },
 ];
+const shop = await Promise.all(
+  items.map(async (item) => {
+    const [small, large] = await Promise.all(
+      [300, 600].map(async (width) => (await getImage({ src: item.src, width, format: "webp" })).src),
+    );
+    const [bx, by, bw, bh] = item.box;
+    return { ...item, small, large, style: `--bx: ${bx}; --by: ${by}; --bw: ${bw}; --bh: ${bh}` };
+  }),
+);
 
 const steps = [
   { title: "Get Ourio", body: "Free on iPhone. Mochi is already curled up in her bed." },
@@ -48,16 +75,16 @@ const steps = [
 ];
 
 // Dark-mode ink colours from packages/contracts/domain/src/inks.ts.
-const inks = ["#ECEAE4", "#FF8FAB", "#7CC4FF", "#9BD88F", "#C3A2F0", "#F2CF5B"];
+const inks = ["#eceae4", "#ff8fab", "#7cc4ff", "#9bd88f", "#c3a2f0", "#f2cf5b"];
 
 // The six coats of apps/ios/Nooki/Model/CatCoat.swift.
 const coats = [
-  { name: "Grey tabby", fill: "repeating-linear-gradient(120deg,#9a9a98 0 6px,#cfcdc8 6px 12px)" },
+  { name: "Grey tabby", fill: "repeating-linear-gradient(120deg, #9a9a98 0 6px, #cfcdc8 6px 12px)" },
   { name: "Ginger", fill: "#e08a3c" },
   { name: "Cream", fill: "#f1dcb4" },
-  { name: "Tuxedo", fill: "linear-gradient(90deg,#1d1a1a 55%,#f4f1ea 55%)" },
+  { name: "Tuxedo", fill: "linear-gradient(90deg, #1d1a1a 55%, #f4f1ea 55%)" },
   { name: "Black", fill: "#1d1a1a" },
-  { name: "Calico", fill: "conic-gradient(#f4f1ea 0 40%,#e08a3c 0 70%,#1d1a1a 0)" },
+  { name: "Calico", fill: "conic-gradient(#f4f1ea 0 40%, #e08a3c 0 70%, #1d1a1a 0)" },
 ];
 
 const inbox = [
@@ -76,45 +103,50 @@ const promises = [
 ];
 
 // The home page tells the room's story; these link to the rest of the app.
-const more = ["date-night", "games", "love-streak", "widgets-and-notifications"].map(
-  (slug) => featureList.find((feature) => feature.slug === slug)!,
+const posters = await Promise.all(
+  ["date-night", "games", "love-streak", "widgets-and-notifications"].map(async (slug) => {
+    const feature = featureList.find((candidate) => candidate.slug === slug)!;
+    const picture = hubArt[slug]!;
+    const art = await variants(picture.src, [400, 800, 1200]);
+    return { feature, picture, srcset: art.srcset, src: art.at(800) };
+  }),
 );
 
 const canonical = new URL("/", Astro.site).href;
 const ogImage = new URL("/og.png", Astro.site).href;
 const schema = [
-    {
-      "@type": "WebSite",
-      "@id": `${canonical}#website`,
-      url: canonical,
-      name: "Ourio",
-      description: siteDescription,
-      inLanguage: "en",
-    },
-    {
-      "@type": "MobileApplication",
-      "@id": `${canonical}#app`,
-      name: "Ourio",
-      description: siteDescription,
-      url: canonical,
-      // Only once the listing is live: until then the URL is a placeholder.
-      ...(appStoreId && { downloadUrl: appStoreUrl }),
-      image: ogImage,
-      applicationCategory: "LifestyleApplication",
-      operatingSystem: "iOS 18.0 or later",
-      offers: { "@type": "Offer", price: 0, priceCurrency: "USD" },
-      audience: { "@type": "Audience", audienceType: "Couples" },
-    },
-    {
-      "@type": "FAQPage",
-      "@id": `${canonical}#faq`,
-      mainEntity: faq.map((item) => ({
-        "@type": "Question",
-        name: item.question,
-        acceptedAnswer: { "@type": "Answer", text: item.answer },
-      })),
-    },
-  ];
+  {
+    "@type": "WebSite",
+    "@id": `${canonical}#website`,
+    url: canonical,
+    name: "Ourio",
+    description: siteDescription,
+    inLanguage: "en",
+  },
+  {
+    "@type": "MobileApplication",
+    "@id": `${canonical}#app`,
+    name: "Ourio",
+    description: siteDescription,
+    url: canonical,
+    // Only once the listing is live: until then the URL is a placeholder.
+    ...(appStoreId && { downloadUrl: appStoreUrl }),
+    image: ogImage,
+    applicationCategory: "LifestyleApplication",
+    operatingSystem: "iOS 18.0 or later",
+    offers: { "@type": "Offer", price: 0, priceCurrency: "USD" },
+    audience: { "@type": "Audience", audienceType: "Couples" },
+  },
+  {
+    "@type": "FAQPage",
+    "@id": `${canonical}#faq`,
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
 ---
 
 <Page
@@ -123,434 +155,631 @@ const schema = [
   shareTitle="Ourio: a cat you raise together"
   shareDescription="One room. Two phones. One cat. Free on iPhone."
   schema={schema}
-  overlayHeader
+  home
 >
-      <!-- The story: one pinned room, lit and approached as you scroll (see diorama.tsx). -->
-      <section id="story" class="relative h-[420svh]">
-        <div class="sticky top-0 h-svh overflow-hidden">
-          <div class="absolute inset-0">
-            <picture id="story-poster" class="pointer-events-none absolute inset-0 transition-opacity duration-700">
-              <source media="(max-width: 767px)" srcset={roomPhone.src} />
-              <source media="(max-width: 1023px)" srcset={roomTablet.src} />
+  <link
+    slot="head"
+    rel="preload"
+    as="image"
+    type="image/avif"
+    fetchpriority="high"
+    imagesrcset={heroAvif}
+    imagesizes={heroSizes}
+  />
+
+  <!-- 01 · The story: one room, held in place while the copy changes beside it. -->
+  <section id="story" class="story" data-beat="0">
+    <div class="pin">
+      <SiteHeader home />
+      <div class="beats">
+        <div class="beat beat-0" data-for="0">
+          <h1>
+            <span class="line"><span class="w" style="--i: 0">Your</span> <span class="w" style="--i: 1">love</span></span>
+            <span class="line"
+              ><span class="w" style="--i: 2">has</span> <span class="w" style="--i: 3">a</span>
+              <span class="w amber" style="--i: 4">cat</span></span
+            >
+            <span class="line"><span class="w amber" style="--i: 5">now.</span></span>
+          </h1>
+          <div class="credits">
+            <p class="lead">A cozy room you share with your partner, and Mochi, who lives there.</p>
+            <StoreButton />
+          </div>
+        </div>
+
+        <div class="beat beat-1" data-for="1">
+          <p class="eyebrow">Late. Miles apart.</p>
+          <h2 class="beat-title">Leave a light on for each other.</h2>
+        </div>
+
+        <div class="beat beat-2" data-for="2">
+          <p class="eyebrow">One room, two phones</p>
+          <h2 class="beat-title">She lives in yours and in theirs.</h2>
+          <div class="twin" aria-hidden="true">
+            <img
+              src={sharedRoom.at(sharedRoomSrc.width)}
+              srcset={sharedRoom.srcset}
+              sizes="(max-width: 900px) 92vw, 560px"
+              alt=""
+              width={sharedRoomSrc.width}
+              height={sharedRoomSrc.height}
+              loading="lazy"
+              decoding="async"
+            />
+            <span class="twin-thread"></span>
+            <img
+              src={sharedRoom.at(sharedRoomSrc.width)}
+              srcset={sharedRoom.srcset}
+              sizes="(max-width: 900px) 92vw, 560px"
+              alt=""
+              width={sharedRoomSrc.width}
+              height={sharedRoomSrc.height}
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+
+        <div class="beat beat-3" data-for="3">
+          <h2 class="beat-title">Pet her.<br />They'll feel it.</h2>
+          <p class="beat-note">Tap Mochi. Drag to turn the room.</p>
+          <StoreButton />
+        </div>
+      </div>
+
+      <div
+        class="stage"
+        id="story-stage"
+        role="img"
+        aria-label="Ourio's cozy clay room at night: string lights, a round window, a lamp on a stool and Mochi sitting in her donut bed"
+      >
+        <div class="turn">
+          <div class="room lit-entrance" id="story-room">
+            <div class="room-img">
+              <!-- Mochi, animated: the cat-less room and her loop, shown (has-loop) once both decode. Under reduced motion both sources are an empty pixel. -->
+              <RoomPicture room="nocat" class="room-pic empty" sizes={heroSizes} eager motionOnly />
+              <RoomPicture sizes={heroSizes} eager fetchpriority="high" />
+              <picture>
+                <source media="(prefers-reduced-motion: reduce)" srcset={reducedMotionPixel} />
+                <source media="(max-width: 600px)" srcset="/room/mochi-wide-80.webp" />
+                <img
+                  class="mochi-loop"
+                  src="/room/mochi-wide-140.webp"
+                  alt=""
+                  width="140"
+                  height="140"
+                  fetchpriority="low"
+                  decoding="async"
+                />
+              </picture>
+            </div>
+            <div class="night"></div>
+            <div class="bloom bloom-lamp"></div>
+            <div class="bloom bloom-flicker"></div>
+            <div class="bloom bloom-window"></div>
+            <div class="bloom bloom-moon"></div>
+            <div class="bulbs"></div>
+            <div class="hearts"></div>
+          </div>
+        </div>
+        <div class="spill"></div>
+        <canvas class="motes"></canvas>
+      </div>
+
+      <span class="scroll-hint" aria-hidden="true">Scroll</span>
+    </div>
+  </section>
+
+  <!-- 02 · You do it here. They feel it there: two phones in the dark, one thread of light. -->
+  <section class="scene here-there">
+    <div class="wrap here-there-grid">
+      <div class="copy reveal">
+        <p class="eyebrow"><span class="no">02</span>No chat. No feed.</p>
+        <h2>You do it here. They feel it there.</h2>
+        <p class="lead">
+          Pet Mochi, feed her, pin a note to her wall. It turns up on your partner's lock screen, quietly, with no thread to
+          keep up with.
+        </p>
+      </div>
+
+      <div class="duo reveal" id="duo">
+        <svg class="thread" aria-hidden="true">
+          <defs>
+            <linearGradient id="thread-lit" gradientUnits="userSpaceOnUse">
+              <stop offset="0" stop-color="#ffb46b" stop-opacity="0.2"></stop>
+              <stop offset="1" stop-color="#ffe2b8"></stop>
+            </linearGradient>
+          </defs>
+          <path class="thread-base"></path>
+          <path class="thread-lit" stroke="url(#thread-lit)"></path>
+        </svg>
+        <span class="spark" aria-hidden="true"></span>
+
+        <figure class="phone-fig phone-yours">
+          <div class="phone">
+            <div class="screen yours">
               <img
-                src={roomDesktop.src}
-                alt=""
-                width={roomDesktop.width}
-                height={roomDesktop.height}
-                fetchpriority="high"
-                class="h-full w-full object-cover object-[center_top] lg:object-[right_center]"
+                class="app-room"
+                src={sharedRoom.at(sharedRoomSrc.width)}
+                srcset={sharedRoom.srcset}
+                sizes="(max-width: 640px) 62vw, 300px"
+                alt="Mochi in her donut bed in the shared room"
+                width={sharedRoomSrc.width}
+                height={sharedRoomSrc.height}
+                loading="lazy"
+                decoding="async"
               />
-            </picture>
-            <HeroStage client:only="react" portrait={portrait.src} storyId="story" posterId="story-poster" />
-          </div>
-
-          <div class="container-page pointer-events-none relative flex h-full flex-col justify-end pt-24 pb-10 [text-shadow:0_2px_28px_rgb(26_10_20/0.55)] lg:justify-center lg:pb-0">
-            <div data-beat="0" data-on class="max-w-[22rem] sm:max-w-[34rem] lg:max-w-[40rem]">
-              <p class="eyebrow">Free on iPhone · made for two</p>
-              <h1 class="mt-5 text-display">Your love has a cat now.</h1>
-              <p class="mt-6 max-w-[26rem] text-lead text-soft">
-                A cozy room you share with your partner, and Mochi, who lives there.
-              </p>
-              <AppStoreBadge qr class="pointer-events-auto mt-9" />
+              <div class="app-hearts" aria-hidden="true"></div>
+              <div class="statusbar" aria-hidden="true">
+                <span class="sb-time">9:41</span><span class="sb-icons"
+                  ><i class="sb-signal"></i><i class="sb-wifi"></i><i class="sb-battery"></i></span
+                >
+              </div>
+              <span class="island" aria-hidden="true"></span>
+              <div class="sheet">
+                <p class="screen-label">Living room</p>
+                <div class="acts">
+                  <button type="button" data-act="0">Pet her</button>
+                  <button type="button" data-act="1">Feed her</button>
+                  <button type="button" data-act="2" class="primary">Leave a note</button>
+                </div>
+              </div>
+              <span class="home-bar" aria-hidden="true"></span>
             </div>
           </div>
+          <figcaption>Your phone</figcaption>
+        </figure>
 
-          <div class="container-page pointer-events-none absolute inset-0 flex flex-col justify-end pb-12 [text-shadow:0_2px_28px_rgb(26_10_20/0.55)] lg:justify-center lg:pb-0">
-            <div data-beat="1" class="max-w-[22rem] sm:max-w-[32rem]">
-              <p class="eyebrow">Late. Miles apart.</p>
-              <h2 class="mt-4 text-h2">Leave a light on for each other.</h2>
+        <figure class="phone-fig phone-theirs">
+          <div class="phone">
+            <div class="screen lock" id="lock">
+              <img
+                class="wall"
+                src="/room/window-1000.webp"
+                srcset={room("window")}
+                sizes="(max-width: 640px) 62vw, 300px"
+                alt=""
+                width="2560"
+                height="1440"
+                loading="lazy"
+                decoding="async"
+              />
+              <div class="statusbar" aria-hidden="true">
+                <span class="sb-time"></span><span class="sb-icons"
+                  ><i class="sb-signal"></i><i class="sb-wifi"></i><i class="sb-battery"></i></span
+                >
+              </div>
+              <span class="island" aria-hidden="true"></span>
+              <div class="lock-top">
+                <p class="lock-date">Thursday 5 November</p>
+                <p class="lock-time">9:41</p>
+                <div class="lock-widgets">
+                  <span class="lw-round"
+                    ><img
+                      src={mochi.at(96)}
+                      srcset={mochi.srcset}
+                      sizes="56px"
+                      alt=""
+                      width="56"
+                      height="56"
+                      loading="lazy"
+                      decoding="async"
+                    /></span
+                  >
+                  <span class="lw-rect"><b>Ourio</b><span class="day">Day 127</span></span>
+                </div>
+              </div>
+              <div class="notif-ios" id="notif" aria-live="polite">
+                <img class="ni-icon" src={appIcon} alt="" width="56" height="56" loading="lazy" decoding="async" />
+                <div class="ni-text">
+                  <p class="ni-head"><b>Ourio</b><span id="widget-when">earlier</span></p>
+                  <p class="ni-line" id="widget-line">Mochi is napping by the lamp.</p>
+                  <div class="widget-note" id="widget-note" hidden></div>
+                </div>
+              </div>
+              <span class="lock-btn lock-torch" aria-hidden="true"></span>
+              <span class="lock-btn lock-cam" aria-hidden="true"></span>
+              <span class="home-bar" aria-hidden="true"></span>
             </div>
           </div>
+          <figcaption>Their lock screen</figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
 
-          <div class="container-page pointer-events-none absolute inset-0 flex flex-col justify-end pb-28 md:justify-start md:pt-36 md:pb-0">
-            <div data-beat="2" class="max-w-[22rem] sm:max-w-[34rem]">
-              <p class="eyebrow">One room, two phones</p>
-              <h2 class="mt-4 text-h2">She lives in yours and in theirs.</h2>
-            </div>
-          </div>
+  <!-- 03 · Furnish it together: the set, dressed, with its props in the credits. -->
+  <section class="scene shop">
+    <div class="wrap shop-grid">
+      <div class="shop-copy reveal">
+        <p class="eyebrow"><span class="no">03</span>Her room, your taste</p>
+        <h2>Furnish it together.</h2>
+        <p class="lead">Look after Mochi and you both earn coins. Every piece you buy appears on both phones.</p>
+      </div>
 
-          <div
-            data-beat="3"
-            class="pointer-events-none absolute inset-x-0 bottom-0 h-[60%] bg-linear-to-t from-page-deep via-page-deep/70 to-transparent"
-            aria-hidden="true"
-          ></div>
-          <div class="container-page pointer-events-none absolute inset-0 flex flex-col items-center justify-end pb-10 text-center md:pb-14">
-            <div data-beat="3" class="flex flex-col items-center">
-              <h2 class="text-h2">Pet her.<br />They'll feel it.</h2>
-              <p class="mt-4 text-body text-soft">Tap Mochi. Drag to turn the room.</p>
-              <AppStoreBadge class="pointer-events-auto mt-7" />
-            </div>
-          </div>
-
-          <div class="pointer-events-none absolute inset-x-0 bottom-6 hidden justify-center md:flex" data-beat="scroll" data-on>
-            <span class="text-label font-bold tracking-[0.14em] text-muted uppercase">Scroll</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="section-y">
-        <div class="container-page grid items-center gap-16 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
-          <div>
-            <p class="eyebrow">No chat. No feed.</p>
-            <h2 class="mt-5 max-w-[30rem] text-h2">You do it here. They feel it there.</h2>
-            <p class="mt-6 max-w-[28rem] text-lead text-soft">
-              Pet Mochi, feed her, pin a note to her wall. It turns up on your partner's lock screen, quietly, with no
-              thread to keep up with.
-            </p>
-          </div>
-          <TwoPhones client:visible mochi={demoMochi.src} />
-        </div>
-      </section>
-
-      <section class="section-y overflow-hidden">
-        <div class="container-page grid gap-8 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
-          <div>
-            <p class="eyebrow">Her room, your taste</p>
-            <h2 class="mt-5 text-h2">Furnish it together.</h2>
-          </div>
-          <p class="max-w-[28rem] text-lead text-soft">
-            Look after Mochi and you both earn coins. Every piece you buy appears on both phones.
-          </p>
-        </div>
-        <div class="marquee mt-16 flex w-max gap-4" aria-label="Things you can buy for Mochi's room">
+      <div class="set reveal" id="set" aria-hidden="true">
+        <div class="set-floor"></div>
+        <span class="set-cord"></span>
+        <div class="set-props">
           {
-            [0, 1].map((copy) =>
-              items.map((item) => (
-                <figure class="lit-panel w-[16rem] shrink-0 p-6 md:w-[18rem]" aria-hidden={copy === 1 ? "true" : undefined}>
-                  <Image src={item.src} alt="" widths={[240, 480]} sizes="240px" class="mx-auto aspect-square w-44" />
-                  <figcaption class="mt-4">
-                    <div class="flex items-baseline justify-between gap-3">
-                      <span class="text-body font-extrabold">{item.name}</span>
-                      <span class="font-mono text-label text-honey tabular-nums">● {item.price}</span>
-                    </div>
-                    <p class="mt-1.5 text-small text-muted">{item.blurb}</p>
-                  </figcaption>
-                </figure>
-              )),
-            )
+            shop.map((item) => (
+              <div class={`prop prop-${item.key}`} data-prop={item.key}>
+                <div class="art" style={item.style}>
+                  <img
+                    src={item.small}
+                    srcset={`${item.small} 300w, ${item.large} 600w`}
+                    sizes="(max-width: 600px) 45vw, 300px"
+                    alt=""
+                    width="600"
+                    height="600"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+              </div>
+            ))
           }
         </div>
-      </section>
+      </div>
 
-      <section class="section-y">
-        <div class="container-page">
-          <div class="grid gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
-            <div>
-              <p class="eyebrow">Small ways to stay close</p>
-              <h2 class="mt-5 max-w-[40rem] text-h2">Little things that travel.</h2>
-            </div>
-            <p class="max-w-[26rem] text-lead text-soft">Everything you make here ends up on the other phone.</p>
-          </div>
-
-          <div class="mt-14 grid gap-4 md:mt-20 md:grid-cols-2 md:gap-5 lg:grid-cols-3">
-            <article class="lit-panel grid gap-8 overflow-hidden p-6 md:col-span-2 md:grid-cols-2 md:items-center md:p-8">
-              <div>
-                <h3 class="text-h3">Draw on their lock screen.</h3>
-                <p class="mt-3 max-w-[24rem] text-body text-soft">
-                  Doodle with a finger. It shows up on your partner's Lock Screen and home widget, stroke by stroke, while
-                  you draw.
-                </p>
-              </div>
-              <div
-                class="relative mx-auto flex h-64 w-full max-w-[17rem] flex-col items-center rounded-[34px] border-[5px] border-plate bg-linear-to-b from-sky to-foot pt-7"
-                aria-hidden="true"
-              >
-                <span class="text-small text-soft">Thursday 5 November</span>
-                <span class="text-[3.25rem] leading-none font-bold tracking-[-0.03em]">9:41</span>
-                <svg viewBox="0 0 200 120" class="doodle mt-3 w-48" fill="none" stroke="#ff8fab" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-                  <path pathLength="1" d="M100 92C70 72 56 58 62 42s30-16 38 2c8-18 32-18 38-2s-8 30-38 50"></path>
-                  <path pathLength="1" d="M40 108q15-10 30 0t30 0 30 0 30 0"></path>
-                </svg>
-              </div>
-            </article>
-
-            <article class="lit-panel flex flex-col p-6 md:p-8">
-              <div class="flex h-48 flex-col justify-center gap-5" aria-hidden="true">
-                <div class="flex justify-center gap-2.5">
-                  {inks.map((ink) => <span class="size-7 rounded-full ring-2 ring-plate/60" style={`background:${ink}`} />)}
-                </div>
-                <div class="rounded-[20px] bg-plate/80 p-3.5">
-                  <div class="flex items-center gap-3">
-                    <img src={portrait.src} alt="" width="36" height="36" class="size-9 rounded-full bg-raised" />
-                    <span class="flex-1 text-small font-semibold">New note on Mochi's board</span>
-                    <span class="font-mono text-label text-honey">now</span>
-                  </div>
-                </div>
-              </div>
-              <h3 class="mt-8 text-h3">Notes on her board.</h3>
-              <p class="mt-3 text-body text-soft">
-                Type or draw a note, pick the paper, add a stamp. It goes up on Mochi's board and on your partner's Lock
-                Screen widget.
-              </p>
-            </article>
-
-            <article class="lit-panel flex flex-col p-6 md:p-8">
-              <div class="grid h-48 place-items-center" aria-hidden="true">
-                <figure class="w-36 -rotate-3 rounded-[4px] bg-paper p-2.5 pb-3 shadow-[0_20px_40px_-16px_var(--color-plate)]">
-                  <div class="lamp-glow aspect-square bg-raised">
-                    <Image src={mochi} alt="" widths={[160, 320, 480]} sizes="160px" class="h-full w-full object-contain" />
-                  </div>
-                  <figcaption class="mt-2 text-center text-small font-semibold text-ink">sunday nap</figcaption>
-                </figure>
-              </div>
-              <h3 class="mt-8 text-h3">Moments, on film.</h3>
-              <p class="mt-3 text-body text-soft">Send a photo and it lands as a polaroid, with an instant-film look and your caption.</p>
-            </article>
-
-            <article class="lit-panel flex flex-col p-6 md:p-8">
-              <div class="flex h-48 flex-col justify-center" aria-hidden="true">
-                <p class="text-label font-bold tracking-[0.14em] text-muted uppercase">Today</p>
-                <ul class="mt-3 divide-y divide-paper/10 rounded-[20px] bg-plate/70 px-4">
-                  {
-                    inbox.map((line) => (
-                      <li class="flex items-center gap-3 py-3 text-small">
-                        <span class={line.fresh ? "size-2 rounded-full bg-gold" : "size-2"} />
-                        <span class="flex-1">{line.text}</span>
-                        <span class="font-mono text-label text-muted tabular-nums">{line.at}</span>
-                      </li>
-                    ))
-                  }
-                </ul>
-              </div>
-              <h3 class="mt-8 text-h3">Everything, by day.</h3>
-              <p class="mt-3 text-body text-soft">The Inbox keeps what you two did: who fed her, who drew what, what you bought.</p>
-            </article>
-
-            <article class="lit-panel flex flex-col p-6 md:p-8">
-              <div class="flex h-48 flex-col items-center justify-center gap-4" aria-hidden="true">
-                <div class="grid grid-cols-3 gap-3">
-                  {
-                    coats.map((coat, i) => (
-                      <span
-                        class:list={["size-12 rounded-full ring-2", i === 0 ? "ring-gold" : "ring-plate/60"]}
-                        style={`background:${coat.fill}`}
-                      />
-                    ))
-                  }
-                </div>
-                <span class="text-small font-semibold">Grey tabby <span class="text-muted">· 1 of 6</span></span>
-              </div>
-              <h3 class="mt-8 text-h3">Her own little life.</h3>
-              <p class="mt-3 text-body text-soft">
-                Mochi keeps a journal of her day, so both phones agree when she's full, sleepy or missing you. Pick her coat
-                from six.
-              </p>
-            </article>
-          </div>
-        </div>
-      </section>
-
-      <section class="section-y">
-        <div class="container-page">
-          <div class="grid gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
-            <div>
-              <p class="eyebrow">Beyond the room</p>
-              <h2 class="mt-5 max-w-[40rem] text-h2">Plans, games and a flame to keep lit.</h2>
-            </div>
-            <p class="max-w-[26rem] text-lead text-soft">
-              Date night ideas you swipe together, wishlists, shared lists, a love streak, two games and six widgets.
-              Apart for now? See{" "}
-              <a href="/long-distance-relationship-app/" class="text-honey underline underline-offset-4">Ourio for long-distance couples</a>.
-            </p>
-          </div>
-          <ul class="mt-14 grid gap-4 sm:grid-cols-2 md:mt-20 md:gap-5 lg:grid-cols-4">
-            {
-              more.map((feature) => (
-                <li>
-                  <a href={`/features/${feature.slug}/`} class="lit-panel group flex h-full flex-col overflow-hidden p-5 transition-transform hover:-translate-y-1">
-                    <PictureView
-                      picture={hubArt[feature.slug]!}
-                      class:list={[
-                        "h-48",
-                        hubArt[feature.slug]!.kind === "scene" && "w-full",
-                        hubArt[feature.slug]!.kind === "cutout" && "[&_img]:max-h-48",
-                        hubArt[feature.slug]!.kind === "shot" && "!max-w-[12rem] overflow-hidden",
-                      ]}
-                    />
-                    <span class="eyebrow mt-6">{feature.eyebrow}</span>
-                    <span class="mt-2 text-[1.25rem] leading-tight font-extrabold">{feature.h1}</span>
-                    <span class="mt-4 text-small font-bold text-honey">Read more →</span>
-                  </a>
-                </li>
-              ))
-            }
-          </ul>
-          <a href="/features/" class="mt-10 inline-block font-bold text-honey underline underline-offset-4">See every feature</a>
-        </div>
-      </section>
-
-      <section class="section-y">
-        <div class="container-page">
-          <div class="grid gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)] md:items-end">
-            <div>
-              <p class="eyebrow">Setup</p>
-              <h2 class="mt-5 max-w-[34rem] text-h2">Two minutes to move in.</h2>
-            </div>
-            <p class="max-w-[26rem] text-lead text-soft">One of you installs Ourio, the other types a code. Then it's your room.</p>
-          </div>
-          <ol class="mt-14 grid gap-4 md:mt-20 md:grid-cols-3 md:gap-5">
-            <li class="lit-panel flex flex-col p-6 md:p-8">
-              <div class="grid h-44 place-items-center" aria-hidden="true">
-                <div class="flex flex-col items-center gap-2.5">
-                  <Image src={appIcon} alt="" widths={[96, 192]} sizes="96px" class="size-24 rounded-[22px] shadow-[0_18px_40px_-14px_var(--color-plate)]" />
-                  <span class="text-small font-semibold">Ourio</span>
-                </div>
-              </div>
-              <Step n={1} {...steps[0]!} />
-            </li>
-            <li class="lit-panel flex flex-col p-6 md:p-8">
-              <div class="grid h-44 place-items-center" aria-hidden="true">
-                <div class="flex flex-col items-center gap-3">
-                  <span class="text-label font-bold tracking-[0.14em] text-muted uppercase">Your code</span>
-                  <span class="rounded-plate bg-plate px-5 py-3.5 font-mono text-[1.5rem] leading-none tracking-[0.1em] text-honey">7KQM2&thinsp;XWPRD</span>
-                  <span class="flex gap-2 text-label font-bold">
-                    <span class="rounded-full bg-raised-top px-3.5 py-2">Copy</span>
-                    <span class="rounded-full bg-gold px-3.5 py-2 text-ink">Share</span>
-                  </span>
-                </div>
-              </div>
-              <Step n={2} {...steps[1]!} />
-            </li>
-            <li class="lit-panel flex flex-col p-6 md:p-8">
-              <div class="grid h-44 place-items-center" aria-hidden="true">
-                <div class="flex w-full max-w-[17rem] items-center gap-3 rounded-[22px] bg-plate/70 p-3 shadow-[0_18px_40px_-14px_var(--color-plate)]">
-                  <img src={portrait.src} alt="" width="44" height="44" class="size-11 rounded-[11px] bg-raised" />
-                  <span class="min-w-0 flex-1 text-left">
-                    <span class="flex justify-between text-label text-muted">
-                      <span class="font-bold tracking-[0.08em] uppercase">Ourio</span><span>now</span>
-                    </span>
-                    <span class="mt-0.5 block text-small leading-snug">Your partner petted Mochi.</span>
-                  </span>
-                </div>
-              </div>
-              <Step n={3} {...steps[2]!} />
-            </li>
-          </ol>
-        </div>
-      </section>
-
-      <section class="section-y">
-        <div class="container-page">
-          <p class="eyebrow">Cozy, never needy</p>
-          <h2 class="mt-5 max-w-[58rem] text-h2">Nothing here makes you feel guilty.</h2>
-          <dl class="mt-14 border-b border-paper/15 md:mt-20">
-            {
-              promises.map((promise) => (
-                <div class="grid gap-3 border-t border-paper/15 py-8 md:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] md:gap-12 md:py-11">
-                  <dt class="text-h3 font-extrabold">{promise.title}</dt>
-                  <dd class="max-w-[34rem] text-lead text-soft">{promise.body}</dd>
-                </div>
-              ))
-            }
-          </dl>
-        </div>
-      </section>
-
-      <section class="section-y" aria-labelledby="faq-title">
-        <div class="container-page grid gap-12 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
-          <div class="lg:sticky lg:top-28 lg:self-start">
-            <p class="eyebrow">Questions</p>
-            <h2 id="faq-title" class="mt-5 max-w-[30rem] text-h2">Before you move in.</h2>
-          </div>
-          <div class="border-b border-paper/15">
-            {
-              faq.map((item) => (
-                <details class="faq group border-t border-paper/15">
-                  <summary class="flex cursor-pointer list-none items-center justify-between gap-6 py-6 text-[1.25rem] leading-snug font-extrabold tracking-[-0.015em] md:text-[1.375rem]">
-                    <h3>{item.question}</h3>
-                    <span aria-hidden="true" class="grid size-9 shrink-0 place-items-center rounded-full bg-raised text-honey transition-transform group-open:rotate-45">+</span>
-                  </summary>
-                  <p class="max-w-[38rem] pb-7 text-body text-soft">{item.answer}</p>
-                </details>
-              ))
-            }
-          </div>
-        </div>
-      </section>
-
-      <section id="get" class="relative section-y">
-        <div class="lamp-glow absolute inset-x-0 top-0 mx-auto h-[36rem] max-w-3xl" aria-hidden="true"></div>
-        <div class="container-page relative flex flex-col items-center text-center">
-          <Image
-            src={mochi}
-            alt="Mochi, a grey tabby kitten with a red collar and a gold bell"
-            widths={[256, 512, 768]}
-            sizes="256px"
-            class="w-52 [mask-image:linear-gradient(#000_70%,transparent)] md:w-64"
-          />
-          <h2 class="mt-2 max-w-[11ch] text-display">She's waiting for you two.</h2>
-          <p class="mt-6 max-w-[34rem] text-lead text-soft">Free on iPhone. Your partner joins with one code.</p>
-
-          <div class="lit-panel mt-12 flex w-full max-w-[36rem] items-center gap-4 p-4 text-left md:gap-5 md:p-5">
-            <Image src={appIcon} alt="" widths={[80, 160]} sizes="80px" class="size-16 shrink-0 rounded-[16px] md:size-20 md:rounded-[19px]" />
-            <div class="min-w-0 flex-1">
-              <p class="text-body leading-tight font-extrabold">Ourio</p>
-              <p class="mt-0.5 text-small text-muted">A cat you raise together</p>
-              <p class="mt-1.5 text-label font-bold tracking-[0.08em] text-honey uppercase">Free · iPhone</p>
-            </div>
-            {
-              appStoreLive ? (
-                <>
-                  <a
-                    href={appStoreUrl}
-                    class="shrink-0 rounded-full bg-gold px-6 py-3 font-extrabold text-ink transition-transform hover:-translate-y-0.5 active:scale-[0.97]"
-                    data-cta
-                  >
-                    Get
-                  </a>
-                  <div class="hidden shrink-0 border-l border-paper/15 pl-5 lg:block">
-                    <QrCode class="size-24" />
-                  </div>
-                </>
-              ) : (
-                <span class="shrink-0 rounded-full bg-gold px-5 py-3 font-extrabold text-ink">Coming soon</span>
-              )
-            }
-          </div>
-          {appStoreLive && <p class="mt-4 hidden text-small text-muted lg:block">On a computer? Scan the code with your iPhone camera.</p>}
-        </div>
-      </section>
-  <Fragment slot="after">
-    <!-- Phones get a download bar once the story's own buttons are out of view. -->
-    <div
-      id="sticky-cta"
-      class="fixed inset-x-3 bottom-[max(12px,env(safe-area-inset-bottom))] z-30 flex translate-y-[150%] items-center gap-3 rounded-[22px] border border-paper/10 bg-plate/85 p-2 pl-3 shadow-2xl backdrop-blur-xl transition-transform duration-500 md:hidden"
-    >
-      <img src={portrait.src} alt="" width="40" height="40" class="size-10 rounded-[10px] bg-raised" />
-      <p class="flex-1 text-small leading-tight"><b>Ourio</b><br /><span class="text-muted">Free · iPhone</span></p>
-      {
-        appStoreLive ? (
-          <a href={appStoreUrl} class="rounded-full bg-gold px-5 py-3 text-small font-bold text-ink">
-            Get
-          </a>
-        ) : (
-          <span class="rounded-full bg-gold px-5 py-3 text-small font-bold text-ink">Soon</span>
-        )
-      }
+      <div class="credits-roll reveal">
+        <ul class="roll" aria-label="Things you can buy for Mochi's room">
+          {
+            shop.map((item) => (
+              <li data-prop={item.key}>
+                <span class="c-name">{item.name}</span>
+                <span class="c-lead" aria-hidden="true" />
+                <span class="c-price">● {item.price}</span>
+                <span class="c-blurb">{item.blurb}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </div>
     </div>
+  </section>
 
-    <script>
-      const story = document.getElementById("story")!;
-      const beats = [...document.querySelectorAll<HTMLElement>("[data-beat]")];
-      const bar = document.getElementById("sticky-cta");
-      const final = document.getElementById("get")!;
-      // Which beat shows at each stretch of the story's scroll.
-      const beatAt = (p: number) => (p < 0.1 ? "0" : p < 0.42 ? "1" : p < 0.68 ? "2" : "3");
+  <!-- 04 · Little things that travel: a strip of film, one frame each. -->
+  <section class="scene travel">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <p class="eyebrow"><span class="no">04</span>Small ways to stay close</p>
+          <h2>Little things that travel.</h2>
+        </div>
+        <p class="lead">Everything you make here ends up on the other phone.</p>
+      </div>
 
-      function update() {
-        const rect = story.getBoundingClientRect();
-        const p = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height - innerHeight)));
-        const current = beatAt(p);
-        for (const beat of beats) {
-          beat.toggleAttribute("data-on", beat.dataset.beat === current || (beat.dataset.beat === "scroll" && p < 0.04));
+      <ol class="strip">
+        <li class="cell reveal">
+          <div class="film">
+            <div class="frame-art lockmini" aria-hidden="true">
+              <span class="lm-date">Thursday 5 November</span>
+              <span class="lm-time">9:41</span>
+              <svg
+                viewBox="0 0 200 120"
+                class="doodle"
+                fill="none"
+                stroke="#ff8fab"
+                stroke-width="5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              >
+                <path pathLength="1" d="M100 92C70 72 56 58 62 42s30-16 38 2c8-18 32-18 38-2s-8 30-38 50"></path>
+                <path pathLength="1" d="M40 108q15-10 30 0t30 0 30 0 30 0"></path>
+              </svg>
+            </div>
+          </div>
+          <h3>Draw on their lock screen.</h3>
+          <p>
+            Doodle with a finger. It shows up on your partner's Lock Screen and home widget, stroke by stroke, while you draw.
+          </p>
+        </li>
+        <li class="cell reveal">
+          <div class="film">
+            <div class="frame-art notes" aria-hidden="true">
+              <div class="inks">
+                {inks.map((ink) => <span style={`background: ${ink}`} />)}
+              </div>
+              <div class="notif">
+                <img
+                  src={mochi.at(96)}
+                  srcset={mochi.srcset}
+                  sizes="36px"
+                  alt=""
+                  width="36"
+                  height="36"
+                  loading="lazy"
+                  decoding="async"
+                />
+                <span class="notif-text">New note on Mochi's board</span>
+                <span class="notif-at">now</span>
+              </div>
+            </div>
+          </div>
+          <h3>Notes on her board.</h3>
+          <p>
+            Type or draw a note, pick the paper, add a stamp. It goes up on Mochi's board and on your partner's Lock Screen
+            widget.
+          </p>
+        </li>
+        <li class="cell reveal">
+          <div class="film">
+            <div class="frame-art polaroid-wrap" aria-hidden="true">
+              <figure class="polaroid">
+                <div class="polaroid-pic">
+                  <img
+                    src={mochi.at(320)}
+                    srcset={mochi.srcset}
+                    sizes="160px"
+                    alt=""
+                    width={mochiSrc.width}
+                    height={mochiSrc.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </div>
+                <figcaption>sunday nap</figcaption>
+              </figure>
+            </div>
+          </div>
+          <h3>Moments, on film.</h3>
+          <p>Send a photo and it lands as a polaroid, with an instant-film look and your caption.</p>
+        </li>
+        <li class="cell reveal">
+          <div class="film">
+            <div class="frame-art inbox" aria-hidden="true">
+              <p class="inbox-day">Today</p>
+              <ul>
+                {
+                  inbox.map((line) => (
+                    <li>
+                      <span class:list={["dot", line.fresh && "fresh"]} />
+                      <span class="t">{line.text}</span>
+                      <span class="at">{line.at}</span>
+                    </li>
+                  ))
+                }
+              </ul>
+            </div>
+          </div>
+          <h3>Everything, by day.</h3>
+          <p>The Inbox keeps what you two did: who fed her, who drew what, what you bought.</p>
+        </li>
+        <li class="cell reveal">
+          <div class="film">
+            <div class="frame-art coats" aria-hidden="true">
+              <div class="coat-grid">
+                {coats.map((coat, i) => <span class={i === 0 ? "on" : undefined} style={`background: ${coat.fill}`} />)}
+              </div>
+              <span class="coat-name">{coats[0]!.name} <span>· 1 of {coats.length}</span></span>
+            </div>
+          </div>
+          <h3>Her own little life.</h3>
+          <p>
+            Mochi keeps a journal of her day, so both phones agree when she's full, sleepy or missing you. Pick her coat from
+            six.
+          </p>
+        </li>
+      </ol>
+    </div>
+  </section>
+
+  <!-- 05 · Plans, games and a flame: four posters on the wall. -->
+  <section class="scene beyond">
+    <div class="wrap">
+      <div class="head reveal">
+        <div>
+          <p class="eyebrow"><span class="no">05</span>Beyond the room</p>
+          <h2>Plans, games and a flame to keep lit.</h2>
+        </div>
+        <p class="lead">
+          Date night ideas you swipe together, wishlists, shared lists, a love streak, two games and six widgets. Apart for
+          now? See <a href="/long-distance-relationship-app/">Ourio for long-distance couples</a>.
+        </p>
+      </div>
+
+      <ul class="posters">
+        {
+          posters.map(({ feature, picture, srcset, src }) => (
+            <li class="reveal">
+              <a class="poster" href={`/features/${feature.slug}/`}>
+                <span class={`poster-art ${picture.kind === "scene" ? "scene-art" : "cutout-art"}`}>
+                  <img
+                    src={src}
+                    srcset={srcset}
+                    sizes="(max-width: 900px) 92vw, 560px"
+                    alt=""
+                    width={picture.src.width}
+                    height={picture.src.height}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </span>
+                <span class="poster-eyebrow">{feature.eyebrow}</span>
+                <span class="poster-title">{feature.h1}</span>
+                <span class="poster-more">Read more →</span>
+              </a>
+            </li>
+          ))
         }
-        const showsOwnButton = p < 0.1 || (p > 0.68 && rect.bottom > innerHeight);
-        const atEnd = final.getBoundingClientRect().top < innerHeight;
-        bar?.classList.toggle("translate-y-[150%]", showsOwnButton || atEnd);
-      }
-      addEventListener("scroll", update, { passive: true });
-      addEventListener("resize", update);
-      update();
-    </script>
+      </ul>
+      <a href="/features/" class="every reveal">See every feature</a>
+    </div>
+  </section>
+
+  <!-- 06 · Two minutes to move in: the steps beside the one phone they happen on. -->
+  <section class="scene setup">
+    <div class="wrap setup-grid">
+      <div class="setup-copy">
+        <div class="reveal">
+          <p class="eyebrow"><span class="no">06</span>Setup</p>
+          <h2>Two minutes to move in.</h2>
+          <p class="lead">One of you installs Ourio, the other types a code. Then it's your room.</p>
+        </div>
+        <ol class="steps">
+          {
+            steps.map((step, i) => (
+              <li class="step reveal">
+                <span class="step-n">{String(i + 1).padStart(2, "0")}</span>
+                <div>
+                  <h3>{step.title}</h3>
+                  <p>{step.body}</p>
+                </div>
+              </li>
+            ))
+          }
+        </ol>
+      </div>
+
+      <figure class="pair reveal" id="pair" aria-hidden="true">
+        <div class="phone">
+          <div class="screen pairing">
+            <div class="statusbar">
+              <span class="sb-time">9:41</span><span class="sb-icons"
+                ><i class="sb-signal"></i><i class="sb-wifi"></i><i class="sb-battery"></i></span
+              >
+            </div>
+            <span class="island"></span>
+            <div class="banner">
+              <img
+                src={mochi.at(96)}
+                srcset={mochi.srcset}
+                sizes="44px"
+                alt=""
+                width="44"
+                height="44"
+                loading="lazy"
+                decoding="async"
+              />
+              <span class="banner-text">
+                <span class="banner-meta"><b>Ourio</b><span>now</span></span>
+                <span class="banner-line">Your partner petted Mochi.</span>
+              </span>
+            </div>
+            <!-- The app's own invite screen (apps/ios/Nooki/Onboarding/OnboardingView.swift). -->
+            <div class="pair-body">
+              <div class="pair-group">
+                <div class="pair-head">
+                  <p class="pair-title">I'm happier with two of you!</p>
+                  <p class="pair-sub">Send them your code. They type it in Ourio to join you and Mochi.</p>
+                </div>
+                <div class="code-card">
+                  <span class="code-label">Your code</span>
+                  <span class="code-plate"><span>7KQM2</span><span>XWPRD</span></span>
+                  <span class="code-btns"><span>Copy</span><span class="gold">Share</span></span>
+                </div>
+              </div>
+              <p class="pair-foot">Expires in 24 h</p>
+            </div>
+            <span class="home-bar"></span>
+          </div>
+        </div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- 07 · Nothing here makes you feel guilty. -->
+  <section class="scene promise">
+    <div class="wrap">
+      <div class="reveal">
+        <p class="eyebrow"><span class="no">07</span>Cozy, never needy</p>
+        <h2 class="wide-title">Nothing here makes you feel guilty.</h2>
+      </div>
+      <div class="promise-grid">
+        <figure class="still reveal">
+          <img
+            src="/room/mochi-1000.webp"
+            srcset={room("mochi")}
+            sizes="(max-width: 900px) 92vw, 560px"
+            alt="Mochi sitting in her donut bed, the lamp on behind her"
+            width="2560"
+            height="1440"
+            loading="lazy"
+            decoding="async"
+          />
+        </figure>
+        <dl class="promises">
+          {
+            promises.map((promise) => (
+              <div class="reveal">
+                <dt>{promise.title}</dt>
+                <dd>{promise.body}</dd>
+              </div>
+            ))
+          }
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 · Before you move in. -->
+  <section class="scene faq" aria-labelledby="faq-title">
+    <div class="wrap faq-grid">
+      <div class="faq-side">
+        <div class="reveal">
+          <p class="eyebrow"><span class="no">08</span>Questions</p>
+          <h2 id="faq-title">Before you move in.</h2>
+        </div>
+        <figure class="still still-sm reveal">
+          <picture>
+            <source
+              media="(max-width: 900px)"
+              type="image/avif"
+              srcset="/room/room-clean-1000.avif 1000w, /room/room-clean-1600.avif 1600w"
+              sizes="92vw"
+            />
+            <source
+              media="(max-width: 900px)"
+              type="image/webp"
+              srcset="/room/room-clean-1000.webp 1000w, /room/room-clean-1600.webp 1600w"
+              sizes="92vw"
+            />
+            <img
+              src="/room/window-1000.webp"
+              srcset={room("window")}
+              sizes="(max-width: 900px) 92vw, 560px"
+              alt=""
+              width="2560"
+              height="1440"
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
+        </figure>
+      </div>
+      <div class="qs reveal">
+        {
+          faq.map((item) => (
+            <details>
+              <summary>
+                <h3>{item.question}</h3>
+                <span class="plus" aria-hidden="true" />
+              </summary>
+              <p>{item.answer}</p>
+            </details>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- 09 · The end card: the same room, later that night. -->
+  <EndCard title="She's waiting for you two.">
+    <p slot="lead" class="lead reveal">Free on iPhone. Your partner joins with one code.</p>
+    <div class="appcard reveal">
+      <img src={appIcon} alt="" width="80" height="80" loading="lazy" decoding="async" />
+      <div class="appcard-text">
+        <p class="appcard-name">Ourio</p>
+        <p class="appcard-sub">A cat you raise together</p>
+        <p class="appcard-tag">Free · iPhone</p>
+      </div>
+      {appStoreLive ? <a class="soon" href={appStoreUrl}>Get</a> : <span class="soon">Coming soon</span>}
+    </div>
+  </EndCard>
+
+  <Fragment slot="after">
+    <script src="../scripts/motes.js"></script>
+    <script src="../scripts/main.js"></script>
   </Fragment>
 </Page>

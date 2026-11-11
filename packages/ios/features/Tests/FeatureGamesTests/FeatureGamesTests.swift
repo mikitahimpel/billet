@@ -269,3 +269,33 @@ struct GameResultTests {
     #expect(GameResult.water(bowl).score < 50)
   }
 }
+
+struct GameClarityTests {
+  @Test func theLaserLessonRunsAcrossTheFloorAndStaysOnIt() {
+    let floor = FloorArea(x: 0.18...0.47, z: -0.08...0.3)
+    let lesson = LaserPlay.lesson(on: floor)
+    #expect(floor.clamp(lesson.start) == lesson.start)
+    #expect(floor.clamp(lesson.end) == lesson.end)
+    #expect(distance(lesson.start, lesson.end) > 0.15)
+  }
+
+  @Test func theGoalLinesNameTheGesture() {
+    #expect(LaserPlay.goal.contains("Drag"))
+    #expect(BrushStrokes.goal.contains("head to tail"))
+  }
+
+  @Test func theFurGuideShowsAtFirstAndAgainAfterAPause() {
+    var brush = BrushStrokes(length: 0.2)
+    #expect(brush.showsGuide(sinceTouch: 0))
+    for _ in 0..<40 { _ = brush.stroke(distance: 0.02, fit: 1) }
+    #expect(brush.groom >= 0.1)
+    #expect(!brush.showsGuide(sinceTouch: 1))
+    #expect(brush.showsGuide(sinceTouch: 5))
+  }
+
+  @Test func onlyAStrokeWithTheGrainCountsAsGood() {
+    #expect(BrushStrokes.goesWithFur(fit: 0.9))
+    #expect(!BrushStrokes.goesWithFur(fit: 0))
+    #expect(!BrushStrokes.goesWithFur(fit: -0.9))
+  }
+}

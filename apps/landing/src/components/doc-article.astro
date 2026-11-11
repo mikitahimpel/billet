@@ -1,0 +1,38 @@
+---
+interface Props {
+  eyebrow: string;
+  title: string;
+  lead: string;
+  updated: { iso: string; label: string };
+  // The page's own h2s, in order.
+  topics: { id: string; label: string }[];
+}
+
+const { eyebrow, title, lead, updated, topics } = Astro.props;
+---
+
+<article class="wrap doc">
+  <header class="doc-head">
+    <p class="eyebrow">{eyebrow}</p>
+    <h1>{title}</h1>
+    <p class="lead">{lead}</p>
+    <p class="doc-updated">Last updated: <time datetime={updated.iso}>{updated.label}</time></p>
+  </header>
+  <div class="doc-grid">
+    <nav class="doc-toc" aria-label="On this page">
+      <p class="eyebrow">On this page</p>
+      <ol>
+        {
+          topics.map((topic) => (
+            <li>
+              <a href={`#${topic.id}`}>{topic.label}</a>
+            </li>
+          ))
+        }
+      </ol>
+    </nav>
+    <div class="prose">
+      <slot />
+    </div>
+  </div>
+</article>

@@ -1,13 +1,15 @@
 ---
-import { appStoreLive, appStoreUrl } from "../config";
+import { getImage } from "astro:assets";
+import appIcon from "../assets/app-icon.png";
 
 interface Props {
-  // Over the home page's story the header floats; on every other page it sits on the page.
-  overlay?: boolean;
+  // On the home page the header is the first row of the pinned story; elsewhere it sits on the page.
+  home?: boolean;
 }
 
-const { overlay = false } = Astro.props;
+const { home = false } = Astro.props;
 const current = Astro.url.pathname;
+const icon = await getImage({ src: appIcon, width: 192, format: "webp" });
 const links = [
   { href: "/features/", label: "Features" },
   { href: "/how-it-works/", label: "How it works" },
@@ -16,62 +18,28 @@ const links = [
 ];
 ---
 
-<header
-  class:list={[
-    "inset-x-0 top-0 z-30",
-    overlay ? "fixed bg-linear-to-b from-page-deep/80 to-transparent" : "sticky border-b border-paper/10 bg-page-deep/80 backdrop-blur-xl",
-  ]}
->
-  <div class="container-page relative flex items-center justify-between gap-4 py-4 md:py-5">
-    <a href="/" class="text-[1.375rem] font-black tracking-[-0.03em]">Ourio</a>
-    <nav aria-label="Main" class="hidden items-center gap-1 md:flex">
-      {
-        links.map((link) => (
-          <a
-            href={link.href}
-            aria-current={current.startsWith(link.href) ? "page" : undefined}
-            class="rounded-full px-4 py-2 text-small font-semibold text-soft transition-colors hover:bg-paper/10 hover:text-paper aria-[current=page]:text-honey"
-          >
-            {link.label}
-          </a>
-        ))
-      }
+<header class:list={["chrome", !home && "page-chrome"]} id="chrome" data-md={home ? "skip" : undefined}>
+  <a class="mark" href="/" aria-label="Ourio">
+    <img src={icon.src} alt="" width="64" height="64" decoding="async" />
+    <span>Ourio</span>
+  </a>
+  <nav class="nav" aria-label="Main">
+    {
+      links.map((link) => (
+        <a href={link.href} aria-current={current.startsWith(link.href) ? "page" : undefined}>
+          {link.label}
+        </a>
+      ))
+    }
+  </nav>
+  <span class="nav-soon">Coming soon</span>
+  <details class="menu">
+    <summary aria-label="Menu">
+      <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"></path></svg>
+    </summary>
+    <nav class="menu-panel" aria-label="Main">
+      {links.map((link) => <a href={link.href}>{link.label}</a>)}
+      <a href="/support/">Support</a>
     </nav>
-    <div class="flex items-center gap-2">
-      <details class="md:hidden">
-        <summary
-          class="grid size-10 cursor-pointer list-none place-items-center rounded-full bg-plate/70 backdrop-blur-md [&::-webkit-details-marker]:hidden"
-          aria-label="Menu"
-        >
-          <svg viewBox="0 0 20 20" class="size-5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <path d="M3 6h14M3 10h14M3 14h14"></path>
-          </svg>
-        </summary>
-        <!-- Anchored to the header row, not the button, so it stays on screen beside the download button. -->
-        <nav aria-label="Main" class="lit-panel absolute top-full right-[clamp(1.25rem,0.5rem+3.5vw,3.5rem)] flex w-56 flex-col p-2">
-          {
-            links.map((link) => (
-              <a href={link.href} class="rounded-[14px] px-4 py-3 font-semibold hover:bg-paper/10">
-                {link.label}
-              </a>
-            ))
-          }
-          <a href="/support/" class="rounded-[14px] px-4 py-3 font-semibold hover:bg-paper/10">Support</a>
-        </nav>
-      </details>
-      {
-        appStoreLive ? (
-          <a
-            href={appStoreUrl}
-            class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md transition-colors hover:bg-gold hover:text-ink"
-            data-cta
-          >
-            Get the app
-          </a>
-        ) : (
-          <span class="rounded-full bg-plate/70 px-5 py-2.5 text-small font-bold backdrop-blur-md">Coming soon</span>
-        )
-      }
-    </div>
-  </div>
+  </details>
 </header>

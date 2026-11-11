@@ -35,6 +35,31 @@ enum Props {
         }
     }
 
+    /// A standing lamp: a round base, a slim stem and a warm shade that glows.
+    static func lamp(_ parent: Entity, at position: SIMD3<Float>) {
+        let g = parent.group(at: position)
+        g.cylinder(0.008, 0.03, Clay.matte(0x8A5A3C), at: [0, 0.004, 0])
+        g.cylinder(0.17, 0.004, Clay.matte(0x8A5A3C), at: [0, 0.09, 0])
+        g.cylinder(0.07, 0.04, Clay.glow(0xFFE2B0, intensity: 1.2), at: [0, 0.2, 0])
+        g.cylinder(0.004, 0.042, Clay.matte(0xE9C9A0), at: [0, 0.237, 0])
+    }
+
+    /// A round wicker basket with a rolled yarn ball in it.
+    static func basket(_ parent: Entity, at position: SIMD3<Float>) {
+        let g = parent.group(at: position)
+        g.cylinder(0.05, 0.052, Clay.matte(0xC9965C, roughness: 1), at: [0, 0.025, 0])
+        g.cylinder(0.006, 0.056, Clay.matte(0xA97A46, roughness: 1), at: [0, 0.052, 0])
+        g.sphere(0.03, Clay.matte(0xE98A5B, roughness: 1), at: [0.005, 0.07, 0])
+        g.sphere(0.02, Clay.matte(0x93A86A, roughness: 1), at: [-0.025, 0.062, 0.015])
+    }
+
+    /// A plump floor cushion.
+    static func cushion(_ parent: Entity, at position: SIMD3<Float>, tone: UInt32) {
+        let g = parent.group(at: position, rotation: .y(0.4))
+        g.box(0.1, 0.035, 0.1, r: 0.016, Clay.matte(tone, roughness: 1), at: [0, 0.018, 0])
+        g.sphere(0.006, Clay.matte(0xF3E6D2, roughness: 1), at: [0, 0.037, 0])
+    }
+
     static func cactus(_ parent: Entity, at position: SIMD3<Float>) {
         let g = parent.group(at: position)
         g.cylinder(0.03, 0.018, Clay.matte(0xD8653F), at: [0, 0.015, 0])

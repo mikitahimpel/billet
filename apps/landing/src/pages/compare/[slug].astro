@@ -1,8 +1,10 @@
 ---
 import type { GetStaticPaths } from "astro";
-import AppStoreBadge from "../../components/app-store-badge.astro";
+import { getImage } from "astro:assets";
+import mochiPortrait from "../../assets/mochi-portrait.webp";
 import CompareTable from "../../components/compare-table.astro";
-import GetApp from "../../components/get-app.astro";
+import EndCard from "../../components/end-card.astro";
+import StoreButton from "../../components/store-button.astro";
 import { alternatives, apps, checked, ourio, type Alternative } from "../../compare";
 import Page from "../../layouts/page.astro";
 
@@ -25,94 +27,99 @@ const fits = [
   { id: "they-fit", heading: `When ${page.app} is the better pick`, items: page.theyFit },
   { id: "ours-fit", heading: "When Ourio fits better", items: page.oursFit },
 ];
+const [mochiSmall, mochi] = await Promise.all(
+  [192, 320].map((width) => getImage({ src: mochiPortrait, width, format: "webp" })),
+);
 ---
 
-<Page title={page.title} description={page.description} schema={schema}>
-  <section class="container-page pt-10 pb-12 md:pt-14 md:pb-16">
-    <p class="eyebrow">{page.app} alternative</p>
-    <h1 class="mt-5 max-w-[18ch] text-h2">{page.h1}</h1>
-    <p class="mt-6 max-w-[44rem] text-lead text-soft">{page.lead}</p>
-    <p class="mt-4 text-small text-muted">
-      We make Ourio. {page.app}'s prices and features are from its own App Store page and website, checked{" "}
-      <time datetime={checked.iso}>{checked.label}</time>.
-    </p>
-    <AppStoreBadge qr class="mt-9" />
-  </section>
-
-  <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="side-by-side">
-    <div class="container-page">
-      <h2 id="side-by-side" class="text-h3">Ourio vs {page.app}</h2>
-      <div class="mt-8">
-        <CompareTable apps={[ourio, other]} caption={`Ourio and ${page.app} side by side.`} />
-      </div>
+<Page title={page.title} description={page.description} schema={schema} bodyClass="site-compare">
+  <section class="wrap pg-hero pg-hero-solo">
+    <div class="pg-hero-copy">
+      <p class="eyebrow">{page.app} alternative</p>
+      <h1>{page.h1}</h1>
+      <p class="lead">{page.lead}</p>
+      <p class="pg-small">
+        We make Ourio. {page.app}'s prices and features are from its own App Store page and website, checked <time
+          datetime={checked.iso}>{checked.label}</time
+        >.
+      </p>
+      <div class="pg-cta"><StoreButton /></div>
     </div>
   </section>
 
-  <div class="border-t border-paper/10 py-16 md:py-20">
-    <div class="container-page grid gap-4 md:grid-cols-2 md:gap-5">
-      {
-        fits.map((fit) => (
-          <section id={fit.id} class="lit-panel min-w-0 p-6 md:p-9">
-            <h2 class="text-h3">{fit.heading}</h2>
-            <ul class="mt-5 list-disc space-y-2 pl-5 text-body text-soft">
+  <section class="pg wrap" aria-labelledby="side-by-side">
+    <h2 id="side-by-side" class="pg-h2">Ourio vs {page.app}</h2>
+    <CompareTable apps={[ourio, other]} caption={`Ourio and ${page.app} side by side.`} />
+  </section>
+
+  <div class="pg wrap pg-cols">
+    {
+      fits.map((fit) => (
+        <section id={fit.id} class="pg-col">
+          <div class="txt">
+            <h2 class="pg-h2">{fit.heading}</h2>
+            <ul class="dots">
               {fit.items.map((item) => (
                 <li>{item}</li>
               ))}
             </ul>
-          </section>
+          </div>
+        </section>
+      ))
+    }
+  </div>
+
+  <section class="pg wrap pg-split" aria-labelledby="questions">
+    <div class="qs-side">
+      <h2 id="questions" class="pg-h2">Questions</h2>
+      <p class="pg-note">More answers in the <a href="/faq/">FAQ</a> and the <a href="/help/">help pages</a>.</p>
+      <img
+        class="qs-mochi"
+        src={mochi.src}
+        srcset={`${mochiSmall.src} 192w, ${mochi.src} 320w`}
+        sizes="150px"
+        alt=""
+        width="320"
+        height="320"
+        loading="lazy"
+        decoding="async"
+      />
+    </div>
+    <div class="qs qs-static">
+      {
+        page.questions.map((item) => (
+          <div>
+            <h3>{item.question}</h3>
+            <p>{item.answer}</p>
+          </div>
         ))
       }
     </div>
-  </div>
-
-  <section class="border-t border-paper/10 py-16 md:py-24" aria-labelledby="questions">
-    <div class="container-page grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:gap-24">
-      <h2 id="questions" class="text-h3">Questions</h2>
-      <div class="border-b border-paper/15">
-        {
-          page.questions.map((item) => (
-            <div class="border-t border-paper/15 py-5">
-              <h3 class="text-[1.125rem] font-extrabold md:text-[1.25rem]">{item.question}</h3>
-              <p class="mt-3 max-w-[38rem] text-body text-soft">{item.answer}</p>
-            </div>
-          ))
-        }
-      </div>
-    </div>
   </section>
 
-  <section class="border-t border-paper/10 py-16 md:py-20" aria-labelledby="more">
-    <div class="container-page">
-      <h2 id="more" class="text-h3">More comparisons</h2>
-      <p class="mt-4 max-w-[44rem] text-body text-soft">
-        See <a href="/compare/" class="text-honey underline underline-offset-4">all couples apps compared</a>
-        {
-          alternatives
-            .filter((alternative) => alternative.slug !== page.slug)
-            .map((alternative) => (
-              <>
-                , or the{" "}
-                <a href={`/compare/${alternative.slug}/`} class="text-honey underline underline-offset-4">
-                  {alternative.app} alternative
-                </a>
-              </>
-            ))
-        }
-        . Sources:{" "}
-        {
-          other.sources.map((url, i) => (
+  <section class="pg wrap" aria-labelledby="more">
+    <h2 id="more" class="pg-h2">More comparisons</h2>
+    <p class="pg-para">
+      See <a href="/compare/">all couples apps compared</a>{
+        alternatives
+          .filter((alternative) => alternative.slug !== page.slug)
+          .map((alternative) => (
             <>
-              {i > 0 && ", "}
-              <a href={url} rel="nofollow noopener" class="text-honey underline underline-offset-4">
-                {url.replace(/^https:\/\/(www\.)?/, "")}
-              </a>
+              , or the <a href={`/compare/${alternative.slug}/`}>{alternative.app} alternative</a>
             </>
           ))
-        }
-        .
-      </p>
-    </div>
+      }. Sources: {
+        other.sources.map((url, i) => (
+          <>
+            {i > 0 && ", "}
+            <a href={url} rel="nofollow noopener">
+              {url.replace(/^https:\/\/(www\.)?/, "")}
+            </a>
+          </>
+        ))
+      }.
+    </p>
   </section>
 
-  <GetApp />
+  <EndCard />
 </Page>

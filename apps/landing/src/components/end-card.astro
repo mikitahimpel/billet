@@ -1,0 +1,34 @@
+---
+import RoomPicture from "./room-picture.astro";
+import StoreButton from "./store-button.astro";
+
+interface Props {
+  title?: string;
+}
+
+const { title = "Move in together." } = Astro.props;
+---
+
+<section id="get" class="scene endcard">
+  <div class="end-stage reveal" aria-hidden="true">
+    <div class="room room-late">
+      <div class="room-img">
+        <RoomPicture sizes="(max-width: 900px) 165vw, min(1340px, 100vw)" />
+      </div>
+      <div class="night"></div>
+      <div class="bloom bloom-lamp"></div>
+      <div class="bloom bloom-flicker"></div>
+      <div class="bloom bloom-moon"></div>
+      <div class="bulbs"></div>
+    </div>
+  </div>
+  <div class="end-copy">
+    <h2 class="end-title reveal">{title}</h2>
+    <slot name="lead">
+      <p class="lead reveal">Ourio is free on iPhone. Your partner joins with one code.</p>
+    </slot>
+    <slot>
+      <div class="end-store reveal"><StoreButton /></div>
+    </slot>
+  </div>
+</section>
