@@ -3,6 +3,10 @@ import Testing
 
 @testable import Transport
 
+#if canImport(FoundationNetworking)
+  import FoundationNetworking
+#endif
+
 /// Reads the contracts' route table, so a route changed there fails here.
 @Suite struct RoutesContractTests {
   /// `name: route("METHOD", "/path")` lines of `routes.ts`, by name.

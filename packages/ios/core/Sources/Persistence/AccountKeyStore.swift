@@ -1,5 +1,8 @@
 import Foundation
-import Security
+
+#if canImport(Security)
+  import Security
+#endif
 
 /// 32 random bytes that are the anonymous account, kept in the iCloud Keychain so the user's other
 /// phones sign in with no prompt. Only the server's hash of it exists anywhere else.
@@ -61,11 +64,16 @@ public struct AccountKeyStore: Sendable {
   }
 
   public static let secureRandom: @Sendable (Int) -> Data? = { count in
-    var bytes = Data(count: count)
-    let status = bytes.withUnsafeMutableBytes {
-      SecRandomCopyBytes(kSecRandomDefault, count, $0.baseAddress!)
-    }
-    return status == errSecSuccess ? bytes : nil
+    #if canImport(Security)
+      var bytes = Data(count: count)
+      let status = bytes.withUnsafeMutableBytes {
+        SecRandomCopyBytes(kSecRandomDefault, count, $0.baseAddress!)
+      }
+      return status == errSecSuccess ? bytes : nil
+    #else
+      var generator = SystemRandomNumberGenerator()
+      return Data((0..<count).map { _ in UInt8.random(in: .min ... .max, using: &generator) })
+    #endif
   }
 
   /// Base64url without padding: 43 characters for 32 bytes, as the contract's `AccountKey`.

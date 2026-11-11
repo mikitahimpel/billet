@@ -1,5 +1,4 @@
 import Foundation
-import SwiftUI
 
 /// An opaque sRGB colour, kept as numbers so contrast can be measured without a renderer.
 public struct Swatch: Hashable, Sendable {
@@ -16,15 +15,6 @@ public struct Swatch: Hashable, Sendable {
   /// The `#RRGGBB` form stored in a stroke.
   public var hex: String {
     "#" + [red, green, blue].map { String(format: "%02X", $0) }.joined()
-  }
-
-  public var color: Color {
-    Color(
-      .sRGB,
-      red: Double(red) / 255,
-      green: Double(green) / 255,
-      blue: Double(blue) / 255
-    )
   }
 
   /// This colour at `opacity`, flattened onto `ground`.

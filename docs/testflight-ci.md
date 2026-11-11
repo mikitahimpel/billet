@@ -174,3 +174,48 @@ revoke their certificates, or a run killed before its last steps, left certifica
 If the limit comes back after a run that finished normally, look at that run's "Revoke this run's
 development certificate" step. It should list one revoked certificate. If it found none, Xcode put
 the certificate somewhere other than the run's keychain, and the step has to look there.
+
+## Tests on the PC
+
+The Mac is shared by every agent, so what does not need Apple's frameworks runs on the owner's
+Ubuntu PC (`ssh pc`, 12 cores, WSL) instead:
+
+```sh
+scripts/pc-test.sh                         # this worktree, backend and Swift
+scripts/pc-test.sh ../other-worktree --backend
+scripts/pc-test.sh origin/main --swift     # a git ref, exported with git archive
+```
+
+The worktree is rsynced to `~/billet-ci/<name>` (not `.git`, `node_modules`, `.build`, `DerivedData`,
+`.env`), so uncommitted changes run, and `node_modules`, the pnpm store (`~/billet-ci/.pnpm-store`)
+and `.build` stay between runs. One backend run and one Swift run go at a time on the PC; a second
+caller of the same suite waits for the lock. Backend tests keep their temporary files in `/dev/shm`:
+on the PC's disk the platform suite took twice as long and one test timed out.
+
+**Backend.** `pnpm install --frozen-lockfile`, `turbo run lint typecheck test`, `format:check`.
+Nothing fails on Linux that passes on the Mac; the workerd pool and SQLite behave the same.
+
+**Swift.** Swift 6.4.2, the release of Xcode 27.2's Swift (`.xcode-version`), is unpacked in
+`~/swift-toolchains/6.4.2`; `env.sh` there puts it on the `PATH`. It was installed without root:
+the tarball from download.swift.org plus `libncurses.so.6` copied into `usr/lib/swift/linux`. The
+script runs `check-design.mjs` and its fixture tests, `swift format lint --strict` on every package,
+and `swift test --explicit-target-dependency-import-check error -Xswiftc -warnings-as-errors` as
+`ios:test` does, in `contracts`, `core`, `pet`, `payments` and `features`.
+
+What builds on Linux is decided in each of those `Package.swift` files, under `#if os(Linux)`: a
+Swift file that has an `import` of SwiftUI, UIKit, CoreGraphics, QuartzCore, ImageIO, CoreText,
+Security, OSLog, simd, StoreKit, ActivityKit, WidgetKit, AppIntents, AuthenticationServices,
+RealityKit or Combine in column 0 is left out, and so are the targets named in the call at the
+bottom (`leaveOutAppleOnly`). On the Mac nothing changes. So:
+
+- A file with a guarded import (`#if canImport(SwiftUI)` with the import indented) is built on
+  Linux. Use that for the few places where one function needs an Apple API.
+- A new file that imports SwiftUI is skipped. If a file that is built needs a type from one that
+  is not, the PC run fails with "cannot find ... in scope": move the type into a file that imports
+  only Foundation (as `Reaction` and `Swatch` were).
+- `Sources/Pet/SimdLinux.swift` stands in for the few `simd_*` functions the cat's geometry uses.
+- Not on Linux, for lack of Apple frameworks: the `design` package, `PetScene`, `FeatureCanvas`,
+  `FeatureInbox`, `WidgetBridge`, the tests of `DesignSystem`, `Ink`, `FeatureOnboarding`,
+  `PaymentsStoreKit`, `PaymentsLive`, the test files that use `URLProtocol`, and `apps/ios`.
+  Those run on the Mac or in CI.
+

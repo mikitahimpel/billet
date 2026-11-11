@@ -65,13 +65,17 @@ public struct AppGroupStorage: Sendable {
 
   /// Storage in the container of the App Group `identifier`.
   public static func appGroup(identifier: String) throws(PersistenceError) -> AppGroupStorage {
-    guard
-      let container = FileManager.default.containerURL(
-        forSecurityApplicationGroupIdentifier: identifier)
-    else {
+    #if os(Linux)
       throw .appGroupUnavailable(identifier)
-    }
-    return directory(container)
+    #else
+      guard
+        let container = FileManager.default.containerURL(
+          forSecurityApplicationGroupIdentifier: identifier)
+      else {
+        throw .appGroupUnavailable(identifier)
+      }
+      return directory(container)
+    #endif
   }
 }
 
