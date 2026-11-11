@@ -244,6 +244,14 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     return next
   }
 
+  /// The same closet with these placements, as the server holds them.
+  public func replacing(placements spots: [Placement]) -> DecorLayout {
+    var next = self
+    next.placements = spots
+    next.stored.subtract(spots.map(\.item))
+    return next
+  }
+
   /// A placement for `item`, replacing where it stood.
   public func putting(_ placement: Placement) -> DecorLayout {
     var next = self

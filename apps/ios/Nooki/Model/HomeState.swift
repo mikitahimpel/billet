@@ -70,6 +70,7 @@ struct HomeStores {
     let lists: ListsModel
     let journal: Journal
     let decor: DecorStore
+    let decorSync: DecorSync
 
     static func live() -> HomeStores {
         let profile = CoupleStore()
@@ -81,20 +82,24 @@ struct HomeStores {
         let shop = ShopModel(wallet: wallet, couple: profile, care: care)
         let us = UsStore { shop.earn($0) }
         let members: GiftsModel.Members = { profile.couple.pair.map { (profile.couple.viewer, $0.users) } }
+        let decorSync = DecorSync()
+        let decor = DecorStore.decor(
+            DecorServices(
+                storage: .appGroup(.directory(AppGroup.container)),
+                feedback: { feedback in
+                    switch feedback {
+                    case .placed: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    case .blocked, .rejected: UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    }
+                },
+                share: { [weak decorSync] in decorSync?.push($0) }))
+        decorSync.store = decor
         return HomeStores(
             profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
             journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
-            decor: .decor(
-                DecorServices(
-                    storage: .appGroup(.directory(AppGroup.container)),
-                    feedback: { feedback in
-                        switch feedback {
-                        case .placed: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                        case .blocked, .rejected: UINotificationFeedbackGenerator().notificationOccurred(.warning)
-                        }
-                    })))
+            decor: decor, decorSync: decorSync)
     }
 }
 
@@ -155,6 +160,7 @@ final class HomeState {
     let care: CatCare
     let shop: ShopModel
     let decor: DecorStore
+    let decorSync: DecorSync
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
@@ -174,6 +180,7 @@ final class HomeState {
         lists = stores.lists
         journal = stores.journal
         decor = stores.decor
+        decorSync = stores.decorSync
         wallet = stores.wallet
         #if DEBUG
         // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.
