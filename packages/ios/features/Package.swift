@@ -79,7 +79,8 @@ let shop: Target = .target(
 // The room itself is in the app, where RealityKit is.
 let gamesInterface: Target = .target(name: "GamesInterface", dependencies: dependencies(["Wire"]))
 let roomInterface: Target = .target(
-  name: "RoomInterface", dependencies: dependencies(["GamesInterface", "Pet", "BilletKit"]))
+  name: "RoomInterface",
+  dependencies: dependencies(["GamesInterface", "DecorInterface", "Pet", "BilletKit"]))
 
 let products =
   features + [

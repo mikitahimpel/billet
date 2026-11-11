@@ -1,3 +1,5 @@
+import DecorInterface
+import FeatureDecor
 import FeatureGames
 import FeatureMood
 import MomentsInterface
@@ -66,6 +68,7 @@ struct HomeStores {
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
+    let decor: DecorStore
 
     static func live() -> HomeStores {
         let profile = CoupleStore()
@@ -81,7 +84,16 @@ struct HomeStores {
             profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
-            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) })
+            journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
+            decor: .decor(
+                DecorServices(
+                    storage: .appGroup(.directory(AppGroup.container)),
+                    feedback: { feedback in
+                        switch feedback {
+                        case .placed: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                        case .blocked, .rejected: UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                        }
+                    })))
     }
 }
 
@@ -141,6 +153,7 @@ final class HomeState {
     let rooms: RoomsChoice
     let care: CatCare
     let shop: ShopModel
+    let decor: DecorStore
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
@@ -159,6 +172,7 @@ final class HomeState {
         gifts = stores.gifts
         lists = stores.lists
         journal = stores.journal
+        decor = stores.decor
         wallet = stores.wallet
         #if DEBUG
         // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.

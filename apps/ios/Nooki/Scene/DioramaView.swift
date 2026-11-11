@@ -19,6 +19,7 @@ struct DioramaView: View {
         for entity in Array(content.entities) where entity !== rig.camera { content.remove(entity) }
         content.add(scene.root)
         scene.paused = paused
+        scene.unprojector = { point, plane in content.unproject(point, from: .local, to: .scene, ontoPlane: plane) }
         scene.onFocusChange = { focused in withAnimation(.easeOut(duration: 0.3)) { photoFocused = focused } }
         let bubble = bubble
         scene.start(updatesFrom: content, viewer: rig.camera, beforeProjecting: { dt in

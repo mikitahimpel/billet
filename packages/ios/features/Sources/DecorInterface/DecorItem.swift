@@ -15,8 +15,17 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
 
   /// The id the shop sells it under, such as `armchair`.
   public let id: String
-  /// The model in the app's bundle.
+  /// The shop's model, which the shop draws; the room draws `assetName`.
   public let model: String
+
+  /// The light copy the room draws: one mesh of at most `DecorItem.triangleBudget` triangles, from
+  /// `tools/decor-lod`.
+  public var assetName: String { "Decor_\(id)" }
+
+  public static let triangleBudget = 5_000
+  /// Most mesh parts (one per material) a model may have.
+  public static let partBudget = 3
+
   public let fit: Fit
   /// The measure `fit` names, scaled to this many metres.
   public let size: Double
@@ -64,9 +73,9 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   ]
 
   private static let footprints: [String: (width: Double, depth: Double)] = [
-    "armchair": (0.4, 0.38), "bookcase": (0.3, 0.14), "donutbed": (0.4, 0.4),
+    "armchair": (0.36, 0.3), "bookcase": (0.3, 0.12), "donutbed": (0.34, 0.34),
     "lamp": (0.14, 0.14), "lantern": (0.1, 0.1), "monstera": (0.22, 0.22),
-    "print": (0.2, 0), "rug": (0.6, 0.6), "teatable": (0.3, 0.3), "tower": (0.22, 0.22),
+    "print": (0.2, 0), "rug": (0.6, 0.6), "teatable": (0.26, 0.26), "tower": (0.2, 0.2),
     "yarn": (0.12, 0.12), "mouse": (0.08, 0.05),
   ]
 
