@@ -79,7 +79,7 @@ enum GalleryScreen: String, CaseIterable, Sendable {
     }
 
     @MainActor private func inbox(_ scenario: InboxFixture.Scenario) async -> Loaded {
-        let model = InboxFixture.model(scenario)
+        let model = InboxFixture.model(scenario, now: Self.now)
         await model.open()
         return .inbox(model)
     }
@@ -88,7 +88,8 @@ enum GalleryScreen: String, CaseIterable, Sendable {
         switch loaded {
         case .inbox(let model):
             NavigationStack {
-                InboxSheet(model: model, state: HomeState(stores: .live()), open: { _ in }, opensModel: false)
+                InboxSheet(model: model, state: HomeState(stores: .live()), open: { _ in }, opensModel: false,
+                           now: { Self.now })
             }
         case .whoKnows(let model):
             NavigationStack { WhoKnowsScreen(state: HomeState(stores: .live()), model: model) }
@@ -105,6 +106,10 @@ enum GalleryScreen: String, CaseIterable, Sendable {
             NavigationStack { SettingsView(state: HomeState(stores: .live())) {} }
         }
     }
+
+    /// An evening, so the Inbox's items of the last few hours are all today's.
+    private static let now = Calendar.current.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 20))
+        ?? Date(timeIntervalSince1970: 1_762_801_200)
 
     private static func freshStorage() -> UserDefaults {
         let suite = "gallery.screen"

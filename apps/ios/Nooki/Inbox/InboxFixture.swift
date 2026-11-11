@@ -35,8 +35,8 @@ enum InboxFixture {
     }
 
     /// A model that answers from the fixture: the newest three are unread until marked.
-    static func model(_ scenario: Scenario = .items) -> InboxModel {
-        let items = scenario == .items ? items() : []
+    static func model(_ scenario: Scenario = .items, now: Date = .now) -> InboxModel {
+        let items = scenario == .items ? items(now: now) : []
         return InboxModel(
             list: { (before) async throws(TransportError) in
                 switch scenario {
