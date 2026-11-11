@@ -94,7 +94,8 @@ struct SwayEnvelopeTests {
 
     @Test func aThrottleFiresFirstThenOnceAnInterval() {
         var throttle = Throttle(interval: 0.1)
-        #expect(throttle.fires(1.0 / 60))
+        let first = throttle.fires(1.0 / 60)
+        #expect(first)
         let fired = (0..<60).filter { _ in throttle.fires(1.0 / 60) }.count
         #expect(fired == 9 || fired == 10)
     }
