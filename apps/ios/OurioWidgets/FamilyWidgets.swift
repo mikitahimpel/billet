@@ -153,6 +153,25 @@ private struct PetPill: View {
     }
 }
 
+/// A quiet second button beside Pet: a hug for the partner, filled once it is sent today.
+private struct HugButton: View {
+    let sent: Bool
+    let partner: String
+
+    var body: some View {
+        Button(intent: SendHugIntent()) {
+            Image(systemName: sent ? "heart.fill" : "heart")
+                .font(.ourioHeadline)
+                .foregroundStyle(sent ? Color.blushPink : Ink.text)
+                .frame(width: Size.pill, height: Size.pill)
+                .background(Ink.surface, in: .circle)
+        }
+        .buttonStyle(PressScaleStyle())
+        .widgetAccentable(sent)
+        .accessibilityLabel(sent ? "Hug sent to \(partner)" : "Send \(partner) a hug")
+    }
+}
+
 private struct ReplyPill: View {
     var body: some View {
         Text("Tap to reply")
@@ -273,12 +292,15 @@ struct MochiFamilyView: View {
     private var medium: some View {
         HStack(spacing: Space.m) {
             VStack(alignment: .leading, spacing: Space.xs) {
-                Text(pose.word).font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
+                HStack(spacing: Space.s) {
+                    Text(pose.word).font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
+                    LevelChip(level: entry.facts.wallet.level)
+                }
                 Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(2)
                 Spacer(minLength: 0)
                 HStack(spacing: Space.s) {
                     PetPill(catName: s.catName)
-                    LevelChip(level: entry.facts.wallet.level)
+                    HugButton(sent: HugState.sent(s), partner: s.partner)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -300,7 +322,10 @@ struct MochiFamilyView: View {
             Spacer(minLength: 0)
             MochiPortrait(snapshot: s, pose: pose, size: 232, partnerMood: mood)
             Spacer(minLength: 0)
-            PetPill(catName: s.catName)
+            HStack(spacing: Space.s) {
+                PetPill(catName: s.catName)
+                HugButton(sent: HugState.sent(s), partner: s.partner)
+            }
         }
         .padding(Space.l)
     }

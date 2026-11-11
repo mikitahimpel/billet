@@ -81,6 +81,20 @@ struct SetMoodIntent: AppIntent {
     }
 }
 
+/// Tells the partner "I'm thinking of you": a Missing-you check-in, the one mood that says it. It reaches them when the
+/// app next runs, like any check-in made on a widget.
+struct SendHugIntent: AppIntent {
+    static let title: LocalizedStringResource = "Send a Hug"
+    static let description = IntentDescription("Lets your partner know you are thinking of them.")
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        MoodStore().set(.missing, for: CoupleStore().couple.viewer)
+        savedReloadingWidgets()
+        return .result()
+    }
+}
+
 /// Ticks a list item on or off. Carries the state to set rather than toggling, so a double tap can't undo itself.
 struct SetListItemIntent: AppIntent {
     static let title: LocalizedStringResource = "Tick List Item"

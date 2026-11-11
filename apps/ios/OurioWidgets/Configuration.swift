@@ -19,15 +19,6 @@ enum WidgetSlot: String, AppEnum {
     }
 }
 
-enum CircularShows: String, AppEnum {
-    case together, countdown
-
-    static let typeDisplayRepresentation: TypeDisplayRepresentation = "Shows"
-    static let caseDisplayRepresentations: [CircularShows: DisplayRepresentation] = [
-        .together: "Days together", .countdown: "Days to next event",
-    ]
-}
-
 /// One of the couple's lists, for the List module.
 struct ListEntity: AppEntity {
     let id: UUID
@@ -64,12 +55,4 @@ struct ModuleConfiguration: OurioConfiguration {
     @Parameter(title: "List") var list: ListEntity?
 
     var listID: UUID? { list?.id }
-}
-
-struct AccessoryConfiguration: OurioConfiguration {
-    static let title: LocalizedStringResource = "Us"
-
-    @Parameter(title: "Round widget shows", default: .countdown) var circular: CircularShows
-
-    var listID: UUID? { nil }
 }
