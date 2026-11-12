@@ -246,6 +246,14 @@ private func book(
     }
   }
 
+  @Test func aStoredPieceOfTheRoomsOwnFurnitureCanBePlacedAgain() {
+    let stored = M.Book(layout: DecorLayout().storing("base-cattree"), owned: [])
+    let (state, outputs) = M.transition(.closet(stored), .closetTapped("base-cattree"))
+    #expect(state.book.layout.isPlaced("base-cattree"))
+    #expect(state.selection == "base-cattree")
+    #expect(outputs == [.save(state.book.layout), .feedback(.placed)])
+  }
+
   @Test func aChangeCanBeTakenBackOnce() {
     let start = M.State.selected(book(), item: "yarn")
     let (turned, _) = M.transition(start, .turned)

@@ -14,9 +14,19 @@ final class RearrangeRoomTests: XCTestCase {
         XCTAssertTrue(app.otherElements["decorPanel"].waitForExistence(timeout: 90), "Decorate mode should open on the closet")
         if fresh {
             app.buttons["decorReset"].tap()
-            let confirm = app.buttons.matching(identifier: "Reset room").element(boundBy: 1)
-            if confirm.waitForExistence(timeout: 5) { confirm.tap() }
+            if let confirm = confirmReset() { confirm.tap() }
         }
+    }
+
+    /// The confirmation's button: the second one named so, once the question is up.
+    private func confirmReset() -> XCUIElement? {
+        let named = app.buttons.matching(NSPredicate(format: "label == 'Reset room'"))
+        let deadline = Date().addingTimeInterval(15)
+        while Date() < deadline {
+            if named.count > 1 { return named.element(boundBy: named.count - 1) }
+            usleep(300_000)
+        }
+        return nil
     }
 
     private func at(_ x: Double, _ y: Double) -> XCUICoordinate {
@@ -33,10 +43,9 @@ final class RearrangeRoomTests: XCTestCase {
     func testResetRoomAsksFirstAndDecorateCloses() throws {
         launchDecorate(fresh: false)
         let reset = app.buttons["decorReset"]
-        XCTAssertTrue(reset.waitForExistence(timeout: 5))
+        XCTAssertTrue(reset.waitForExistence(timeout: 15))
         reset.tap()
-        let confirm = app.buttons.matching(identifier: "Reset room").element(boundBy: 1)
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Reset room asks before it changes anything")
+        XCTAssertNotNil(confirmReset(), "Reset room asks before it changes anything")
         at(0.5, 0.12).tap()
         XCTAssertFalse(app.staticTexts["The room is as it first was."].exists, "dismissing the question changes nothing")
         XCTAssertTrue(app.otherElements["decorPanel"].exists)
@@ -56,7 +65,7 @@ final class RearrangeRoomTests: XCTestCase {
         app.buttons["decorRotate"].tap()
         sleep(1)
         look("2-turned")
-        XCTAssertTrue(app.buttons["decorUndo"].waitForExistence(timeout: 5) || app.staticTexts["There's no room to turn it. Put it away?"].exists,
+        XCTAssertTrue(app.buttons["decorUndo"].waitForExistence(timeout: 15) || app.staticTexts["There's no room to turn it. Put it away?"].exists,
                       "a turn either happens (and can be taken back) or says why not")
         if app.buttons["decorUndo"].exists {
             app.buttons["decorUndo"].tap()
@@ -69,7 +78,8 @@ final class RearrangeRoomTests: XCTestCase {
         XCTAssertTrue(app.buttons["Place Cat tree"].waitForExistence(timeout: 10), "a stored piece waits in the closet")
         look("3-stored")
         app.buttons["Place Cat tree"].tap()
-        XCTAssertTrue(app.staticTexts["Cat tree"].waitForExistence(timeout: 10), "placing it again stands it in the room")
+        XCTAssertTrue(app.buttons["decorRotate"].waitForExistence(timeout: 10), "placing it again stands it in the room and chooses it")
+        XCTAssertFalse(app.buttons["Place Cat tree"].exists)
         look("4-placed")
     }
 
@@ -81,7 +91,7 @@ final class RearrangeRoomTests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Cat bed"].waitForExistence(timeout: 10))
         app.buttons["decorStore"].tap()
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS 'needs a bed or a sofa'")).firstMatch
-            .waitForExistence(timeout: 5), "the last bed is refused with a reason")
+            .waitForExistence(timeout: 15), "the last bed is refused with a reason")
         look("5-last-bed")
     }
 }

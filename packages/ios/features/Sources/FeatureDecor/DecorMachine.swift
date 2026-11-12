@@ -21,6 +21,12 @@ public enum DecorMachine: Machine {
     }
 
     public var closet: [DecorItem] { layout.closet(owned: owned) }
+
+    /// A piece the pair can place: one it owns, or the room's own furniture.
+    public func has(_ item: String) -> Bool {
+      guard let known = DecorItem.item(shopID: item) else { return false }
+      return known.isBase || owned.contains(item)
+    }
   }
 
   public enum Notice: Equatable, Sendable {
@@ -386,7 +392,7 @@ public enum DecorMachine: Machine {
   }
 
   private static func opening(_ item: String?, in book: Book) -> (State, [Output]) {
-    guard let item, book.owned.contains(item), DecorItem.item(shopID: item) != nil else {
+    guard let item, book.has(item) else {
       return (.closet(book), [])
     }
     if book.layout.isPlaced(item) { return (.selected(book, item: item), []) }
@@ -394,7 +400,7 @@ public enum DecorMachine: Machine {
   }
 
   private static func placing(_ item: String, in book: Book) -> (State, [Output]) {
-    guard book.owned.contains(item), !book.layout.isPlaced(item) else {
+    guard book.has(item), !book.layout.isPlaced(item) else {
       return book.layout.isPlaced(item) ? (.selected(book, item: item), []) : (.closet(book), [])
     }
     guard let spot = book.layout.defaultPlacement(for: item) else {
