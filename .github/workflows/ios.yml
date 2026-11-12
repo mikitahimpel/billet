@@ -112,7 +112,7 @@ jobs:
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
       # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
-      - uses: mikitahimpel/warmbuild-action@0ff62d565d79faae979d98daa611d5cfa3b0589e # v1.4.2
+      - uses: mikitahimpel/warmbuild-action@f9204086e83a48431e9a545527b15f3b92f1907b # v1.6.0
         id: warmbuild
         with:
           select-tests: true
@@ -194,7 +194,11 @@ jobs:
             | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
             status=1
           fi
-          timing="build $((built - started)) s, Simulator boot $((booted - built)) s, tests $(($(date +%s) - booted)) s"
+          tested=$(date +%s)
+          # A running Simulator keeps the runner's CPUs busy, and Warmbuild's post step starts Xcode tools to read the
+          # result bundle.
+          xcrun simctl shutdown "$udid" 2>/dev/null || true
+          timing="build $((built - started)) s, Simulator boot $((booted - built)) s, tests $((tested - booted)) s"
           echo "App step: $timing"
           echo "::group::Build timing summary"
           sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
