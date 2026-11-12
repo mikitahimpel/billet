@@ -34,7 +34,7 @@ struct DecorPanel: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: Space.m) {
             VStack(alignment: .leading, spacing: Space.xs) {
                 Text("Decorate")
                     .font(.ourioHeadline)
@@ -107,18 +107,17 @@ struct DecorPanel: View {
                     ForEach(items) { item in
                         let name = Catalog.item(item.id, cat: state.petName)?.name ?? item.base?.title ?? item.id
                         Button { state.decor.send(.closetTapped(item.id)) } label: {
-                            VStack(spacing: Space.xs) {
+                            VStack(spacing: Space.s) {
                                 art(item.id)
-                                    .frame(width: Size.cardMark, height: Size.cardMark)
+                                    .aspectRatio(1, contentMode: .fit)
                                     .corners(.inner)
                                 Text(name)
-                                    .font(.ourioCaption)
+                                    .font(.ourioCallout)
                                     .foregroundStyle(Ink.text)
                                     .lineLimit(2)
-                                    .minimumScaleFactor(0.85)
                                     .multilineTextAlignment(.center)
                             }
-                            .frame(width: 76)
+                            .containerRelativeFrame(.horizontal, count: 3, spacing: Space.s)
                             .contentShape(.rect)
                         }
                         .buttonStyle(PressScaleStyle())
@@ -144,9 +143,9 @@ struct DecorPanel: View {
         HStack(spacing: Space.s) {
             PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
                 .accessibilityIdentifier("decorReset")
+            Spacer(minLength: 0)
             undoButton
         }
-        .fixedSize()
         .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
             Button("Cancel", role: .cancel) {}

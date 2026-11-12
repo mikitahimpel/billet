@@ -42,7 +42,7 @@ struct MomentsView: View {
                 .tabContentInsets()
             } else {
                 TabPage {
-                    WallStrip(store: store)
+                    WallStrip(store: store, pick: $pick)
                     feed
                 }
             }
@@ -126,59 +126,40 @@ struct MomentsView: View {
         }
     }
 
-    /// The board room shows underneath; its actions are in the header beside the switch (`BoardActions`), and only
-    /// a hint sits over an empty board.
-    @ViewBuilder private var boardOverlay: some View {
-        if notes.isEmpty, store.pinned.isEmpty {
-            Text("Leave a note or doodle for the board")
-                .font(.ourioCallout.weight(.semibold))
-                .foregroundStyle(Ink.glassGlyph)
-                .padding(.horizontal, Space.l)
-                .frame(minHeight: Size.control)
-                .glass(.capsule, role: .bar)
-                .padding(.bottom, Space.l)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        } else {
-            Color.clear
+    /// The board room shows underneath; adding is the tab bar's +, the history of notes sits at the top, and a hint
+    /// sits over an empty board.
+    private var boardOverlay: some View {
+        VStack(spacing: 0) {
+            if !notes.isEmpty {
+                BoardActions(state: state)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal, Space.l)
+            }
+            Spacer(minLength: 0)
+            if notes.isEmpty, store.pinned.isEmpty {
+                Text("Leave a note or doodle with the + below")
+                    .font(.ourioCallout.weight(.semibold))
+                    .foregroundStyle(Ink.glassGlyph)
+                    .padding(.horizontal, Space.l)
+                    .frame(minHeight: Size.control)
+                    .glass(.capsule, role: .bar)
+                    .padding(.bottom, Space.l)
+            }
         }
+        .tabContentInsets()
     }
 }
 
-/// The board's own buttons, after the Photos | Board switch in the header: all notes, and a + for notes and doodles,
-/// which the tab bar's + doesn't offer.
+/// All notes, at the top of the board.
 struct BoardActions: View {
     let state: HomeState
     @State private var showsHistory = false
 
-    private var onBoard: Int { min(state.notes.notes.count + state.moments.pinned.count, BoardRoomScene.slots) }
-
     var body: some View {
-        HStack(spacing: GlassMetrics.gap) {
-            if !state.notes.notes.isEmpty {
-                GlassIconButton(symbol: "clock.arrow.circlepath", label: "All notes") { showsHistory = true }
+        GlassIconButton(symbol: "clock.arrow.circlepath", label: "All notes") { showsHistory = true }
+            .sheet(isPresented: $showsHistory) {
+                NotesHistory(state: state)
             }
-
-            Menu {
-                Button { state.composingNote = .write } label: {
-                    Label("Note", systemImage: "note.text")
-                    Text("+5")
-                }
-                Button { state.composingNote = .draw } label: {
-                    Label("Doodle", systemImage: "scribble")
-                    Text("+5")
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.body.weight(.bold))
-                    .frame(width: Size.control, height: Size.control)
-            }
-            .accentGlass()
-            .accessibilityLabel("Add a note")
-            .accessibilityValue(onBoard > 0 ? "\(onBoard) on the board" : "")
-        }
-        .sheet(isPresented: $showsHistory) {
-            NotesHistory(state: state)
-        }
     }
 }
 
@@ -317,30 +298,52 @@ struct MomentPrint: View {
 /// slots as blank paper.
 private struct WallStrip: View {
     let store: MomentStore
+    @Binding var pick: PhotosPickerItem?
 
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.m) {
                 CardHeader("On \(CatProfile.name())'s wall",
-                           detail: "\(store.pinned.count) of \(MomentStore.wallSlots) · pin a photo to hang it",
+                           detail: "\(store.pinned.count) of \(MomentStore.wallSlots) · tap + to hang a photo",
                            symbol: "house.fill", opens: false)
                 HStack(spacing: Space.s) {
                     ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
                         let moment = slot < store.pinned.count ? store.pinned[slot] : nil
-                        PolaroidPaper.blank
-                            .aspectRatio(1, contentMode: .fit)
-                            .overlay {
-                                if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
+                        if let moment {
+                            WallSlot(store: store, moment: moment).accessibilityHidden(true)
+                        } else {
+                            PhotosPicker(selection: $pick, matching: .images) {
+                                WallSlot(store: store, moment: nil)
+                                    .overlay {
+                                        Image(systemName: "plus")
+                                            .font(.ourioCallout.weight(.bold))
+                                            .foregroundStyle(Ink.textSecondary)
+                                    }
                             }
-                            .clipped()
-                            .padding(Space.xs)
-                            .background { PaperSheet(lift: moment == nil ? nil : PaperSheet.Lift(radius: 2, y: 1)) }
-                            .rotationEffect(moment.map { $0.id.polaroidTilt } ?? .zero)
+                            .buttonStyle(PressScaleStyle())
+                            .accessibilityLabel("Add a photo to the wall")
+                        }
                     }
                 }
-                .accessibilityHidden(true)
             }
         }
+    }
+}
+
+private struct WallSlot: View {
+    let store: MomentStore
+    let moment: Moment?
+
+    var body: some View {
+        PolaroidPaper.blank
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
+            }
+            .clipped()
+            .padding(Space.xs)
+            .background { PaperSheet(lift: moment == nil ? nil : PaperSheet.Lift(radius: 2, y: 1)) }
+            .rotationEffect(moment.map { $0.id.polaroidTilt } ?? .zero)
     }
 }
 

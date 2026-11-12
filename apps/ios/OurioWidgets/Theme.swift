@@ -13,8 +13,9 @@ enum WidgetScene {
 }
 
 extension View {
-    /// Text styles follow Dynamic Type; past this size a widget's fixed frame would cut lines off.
-    func widgetTypeCap() -> some View { dynamicTypeSize(...DynamicTypeSize.xLarge) }
+    /// Text styles follow Dynamic Type up to the default size; a widget's frame is fixed, so past it lines are cut off
+    /// on the smallest screens.
+    func widgetTypeCap() -> some View { dynamicTypeSize(...DynamicTypeSize.large) }
 }
 
 /// What the widgets are laid on, for the gallery (OurioWidgetsTests), which has no WidgetKit to draw the container
