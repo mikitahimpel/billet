@@ -25,13 +25,13 @@ struct CalendarScreen: View {
                     if showsMonth {
                         let rows = inMonth
                         MonthGrid(month: $month, marked: Set(rows.map { Calendar.current.startOfDay(for: $0.date) }))
-                        ForEach(rows) { row($0) }
+                        if !rows.isEmpty { section(rows) }
                     } else {
                         let soon = us.upcoming(togetherSince: state.togetherSince, limit: 60)
                         if soon.isEmpty {
                             EmptyState(icon: .init(symbol: "calendar", tint: .sky), title: "Nothing coming up", text: "Add a birthday, a trip or anything you're both waiting for.")
                         } else {
-                            ForEach(soon) { row($0) }
+                            section(soon)
                         }
                     }
                 }
@@ -59,26 +59,25 @@ struct CalendarScreen: View {
         }
     }
 
+    private func section(_ items: [Upcoming]) -> some View {
+        GroupedSection {
+            ForEach(items) { row($0) }
+        }
+    }
+
     private func row(_ item: Upcoming) -> some View {
         Button {
             if case .event(let id) = item.source, let event = us.events.first(where: { $0.id == id }) { editing = event }
         } label: {
-            HStack(spacing: Space.m) {
-                UsIcon(glyph: item.icon, size: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.title)
-                        .font(.ourioHeadline)
-                        .foregroundStyle(Ink.text)
-                        .lineLimit(1)
-                    Text(item.date.formatted(.dateTime.weekday(.abbreviated).day().month(.wide)))
-                        .font(.ourioCaption)
-                        .foregroundStyle(Ink.textSecondary)
-                }
-                Spacer(minLength: 0)
-                VStack(spacing: 0) {
+            Row(
+                item.title,
+                detail: item.date.formatted(.dateTime.weekday(.abbreviated).day().month(.wide)),
+                symbol: item.icon.symbol, tint: item.icon.tint.color
+            ) {
+                VStack(alignment: .trailing, spacing: 0) {
                     Text(item.daysLeft == 0 ? "today" : "\(abs(item.daysLeft))")
                         .font((item.daysLeft == 0 ? Font.ourioCaption : Font.ourioTitle).monospacedDigit())
-                        .foregroundStyle((0...7).contains(item.daysLeft) ? Color.honey : Ink.text)
+                        .foregroundStyle((0...7).contains(item.daysLeft) ? Ink.accentText : Ink.text)
                     if item.daysLeft != 0 {
                         Text((abs(item.daysLeft) == 1 ? "day" : "days") + (item.daysLeft < 0 ? " ago" : ""))
                             .font(.ourioMicro)
@@ -86,10 +85,9 @@ struct CalendarScreen: View {
                     }
                 }
             }
-            .padding(CardMetrics.padding)
-            .cardSurface()
         }
-        .buttonStyle(PressScaleStyle())
+        .buttonStyle(RowButtonStyle())
+        .accessibilityElement(children: .combine)
     }
 }
 
@@ -192,24 +190,20 @@ struct EventEditor: View {
             }
             UsGlyphPicker(selection: $event.icon)
 
-            DatePicker("Date", selection: $event.date)
-                .datePickerStyle(.compact)
-                .tint(Color.honey)
-                .font(.ourioBody)
-                .foregroundStyle(Ink.text)
-                .fieldSurface()
-
-            Toggle("Every year", isOn: $event.yearly)
-                .tint(Color.honey)
-                .font(.ourioBody)
-                .foregroundStyle(Ink.text)
-                .fieldSurface()
-
-            HStack(spacing: Space.s) {
-                FilterChip("Ours", isSelected: event.owner == nil) { event.owner = nil }
-                ForEach([state.partners.0, state.partners.1], id: \.self) { p in
-                    FilterChip(p, isSelected: event.owner == p) { event.owner = p }
+            GroupedSection {
+                Row("Date", symbol: "calendar", tint: UsTint.sky.color) {
+                    DatePicker("Date", selection: $event.date)
+                        .datePickerStyle(.compact)
+                        .labelsHidden()
+                        .tint(Color.honey)
                 }
+                PickerRow("Whose", symbol: "person.2.fill", tint: UsTint.blush.color, selection: $event.owner) {
+                    Text("Ours").tag(String?.none)
+                    ForEach([state.partners.0, state.partners.1], id: \.self) { p in
+                        Text(p).tag(String?.some(p))
+                    }
+                }
+                ToggleRow("Every year", symbol: "repeat", tint: .honey, isOn: $event.yearly)
             }
 
             if !isNew {
