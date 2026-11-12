@@ -49,7 +49,7 @@ struct SwipeDeck: View {
         let depth = top ? 0 : CGFloat(index) - progress
         return DateIdeaCard(idea: idea)
             .overlay(alignment: .topLeading) {
-                stamp("LOVE", tint: Ink.blushPink, strength: top ? drag.width / Self.flingDistance : 0)
+                stamp("LOVE", tint: Color.blushPink, strength: top ? drag.width / Self.flingDistance : 0)
                     .padding(Space.section)
             }
             .overlay(alignment: .topTrailing) {
