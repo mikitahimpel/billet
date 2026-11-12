@@ -12,6 +12,8 @@ final class WaterStage: GameStage {
     private static let floorInside: Float = 0.005
     /// The water's thickness: a skin on the surface, lifted by the level.
     private static let skin: Float = 0.0008
+    /// How high the mat's top lies over the floor, where the puddle spreads.
+    private static let matTop: Float = 0.0075
     /// The tip of the jug's spout, in the jug's own space.
     private static let spoutTip: SIMD3<Float> = [0.046, 0.062, 0]
 
@@ -35,6 +37,16 @@ final class WaterStage: GameStage {
     private var served = false
     private var drinking: Float = 0
     private var shownHint: String?
+    private let puddle: ModelEntity
+    private let cloth: ModelEntity
+    private var shownPuddle: Float = 0
+    /// Where the finger is on the mat, while it wipes.
+    private var finger: SIMD3<Float>?
+    private var clothAt: SIMD3<Float>
+    private var sinceStroke: Float = 0
+    /// Seconds into the Clean up button's wipe, while it runs.
+    private var assisted: Float?
+    private var messSeen = false
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -76,6 +88,14 @@ final class WaterStage: GameStage {
         stream = root.cylinder(1, 0.0025, waterMaterial, at: bowlAt)
         stream.isEnabled = false
 
+        var puddleMaterial = waterMaterial
+        puddleMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.6))
+        puddle = root.cylinder(Self.skin, 1, puddleMaterial, at: bowlAt + [0, Self.matTop, 0])
+        puddle.isEnabled = false
+        cloth = root.box(0.05, 0.014, 0.034, r: 0.006, Clay.matte(0xF2C14E, roughness: 0.9), at: bowlAt)
+        cloth.isEnabled = false
+        clothAt = bowlAt
+
         // Behind the bowl, facing the player.
         let seat = spots.at(0, -0.13)
         root.contactBlob(at: bowlAt, width: 0.15, depth: 0.11)
@@ -90,42 +110,124 @@ final class WaterStage: GameStage {
         [bowlAt - spots.right * 0.12, bowlAt + spots.right * 0.1, bowlAt + [0, 0.2, 0], bowlAt + spots.toward * 0.08, spots.at(0, -0.13, up: 0.12), spots.at(0, -0.13, up: 0.2)]
     }
 
-    var action: String? { bowl.canServe && !holding && !served ? "Serve" : nil }
+    var action: String? { bowl.canServe && !holding && !served && bowl.phase != .settling ? "Serve" : nil }
 
     func act() { serve() }
 
+    var assist: String? { bowl.phase == .messy && !served && !holding && assisted == nil ? "Clean up" : nil }
+
+    func assistAct() {
+        guard bowl.phase == .messy, assisted == nil else { return }
+        if UIAccessibility.isReduceMotionEnabled {
+            bowl.wipe(WaterBowl.puddleCap)
+        } else {
+            assisted = 0
+        }
+    }
+
+    private var puddleCenter: SIMD3<Float> { bowlAt + spots.toward * 0.075 + [0, Self.matTop, 0] }
+    private var puddleRadius: Float { 0.025 + 0.1 * (shownPuddle / Float(WaterBowl.puddleCap)).squareRoot() }
+
     var cue: GameCue? {
-        guard !served, !bowl.canServe else { return nil }
+        guard !served else { return nil }
+        if bowl.phase == .messy {
+            let c = puddleCenter
+            return GameCue(step: 2, gesture: .drag(to: c + spots.right * 0.05), at: c - spots.right * 0.05)
+        }
+        guard !bowl.canServe else { return nil }
         return GameCue(step: 1, gesture: .hold, at: jug.position + [0, 0.035, 0])
     }
 
     var glance: CGSize? { served && drinking.truncatingRemainder(dividingBy: 2.6) < 1.8 ? CGSize(width: 0, height: 120) : nil }
 
-    func began(_ touch: GameTouch) { holding = !served }
+    func began(_ touch: GameTouch) {
+        guard !served else { return }
+        if bowl.phase == .messy {
+            finger = touch.onPlane(y: bowlAt.y + Self.matTop)
+        } else if bowl.phase == .pouring {
+            holding = true
+        }
+    }
 
-    func moved(_ touch: GameTouch) {}
+    func moved(_ touch: GameTouch) {
+        if bowl.phase == .messy { finger = touch.onPlane(y: bowlAt.y + Self.matTop) }
+    }
 
     func ended(_ touch: GameTouch?) {
         let was = holding
         holding = false
-        // Let go on the line: served.
-        if was, bowl.canServe, !served { serve() }
+        finger = nil
+        // Let go on the line: served. Past the band or in a puddle there is a mess to see to first.
+        if was, bowl.canServe, !bowl.isOverLine, bowl.phase == .pouring, !served { serve() }
     }
 
     func update(_ dt: Float) {
         deck.show(min(bowl.level / WaterBowl.line, 1), "Water level")
         sinceTap += dt
         if served { drinking += dt }
-        let full = bowl.level >= WaterBowl.line + WaterBowl.band * 0.8
-        flow += ((holding && !served && !full ? 1 : 0) - flow) * min(1, dt * 6)
+        flow += ((holding && !served && !bowl.isFlooded ? 1 : 0) - flow) * min(1, dt * 6)
         if flow < 0.01 { flow = 0 }
         bowl.pour(flow: Double(flow), dt: Double(dt))
         if flow > 0.1, sinceTap > 0.09 {
             sinceTap = 0
             deck.tap(CGFloat(0.25 + 0.4 * flow))
         }
+        tidy(dt)
         draw(dt)
         if !served { say(hint) }
+    }
+
+    /// The puddle spreads with the spill; a finger (or the Clean up button) drags the cloth over it, and what the cloth
+    /// covers is taken up. Once it is dry the bowl drops back to the band.
+    private func tidy(_ dt: Float) {
+        let calm = UIAccessibility.isReduceMotionEnabled
+        sinceStroke += dt
+        let messy = bowl.phase == .messy
+        if messy, !messSeen {
+            messSeen = true
+            deck.thump()
+        }
+        var target: SIMD3<Float>? = finger
+        if let t = assisted {
+            assisted = t + dt
+            let u = min(t / 1.1, 1)
+            target = puddleCenter + spots.right * (sin(u * 3 * .pi * 2) * puddleRadius * 0.8) + [0, 0.006, 0]
+            if u >= 1 {
+                assisted = nil
+                bowl.wipe(WaterBowl.puddleCap)
+            }
+        }
+        if messy, let target {
+            let step = simd_length(target - clothAt)
+            let inside = simd_length((target - puddleCenter) * [1, 0, 1]) < puddleRadius + 0.02
+            clothAt = simd_mix(clothAt, target, SIMD3(repeating: min(1, dt * 18)))
+            if inside, step < 0.2 {
+                let amount = Double(step) * 4.5
+                if assisted != nil { bowl.wipe(Double(dt) / 1.1 * WaterBowl.puddleCap) } else { bowl.wipe(amount) }
+                if step > 0.0008, sinceStroke > 0.12 {
+                    sinceStroke = 0
+                    deck.stroke()
+                }
+            }
+        } else if messy {
+            let rest = puddleCenter + spots.right * (puddleRadius + 0.04) + [0, 0.006, 0]
+            clothAt = simd_mix(clothAt, rest, SIMD3(repeating: min(1, dt * 6)))
+        }
+        if messSeen, bowl.phase == .settling, shownPuddle <= 0.01 {
+            bowl.settle(dt: Double(dt))
+        }
+        if bowl.phase == .pouring, bowl.isSpotless, messSeen, !served {
+            messSeen = false
+            deck.say("Spotless!", for: 1.4)
+            deck.cheer()
+        }
+        shownPuddle += (Float(bowl.puddle) - shownPuddle) * min(1, dt * (calm ? 30 : 7))
+        puddle.isEnabled = shownPuddle > Float(WaterBowl.dry) / 2
+        puddle.position = puddleCenter
+        puddle.scale = [puddleRadius, Self.skin, puddleRadius * 0.8]
+        cloth.isEnabled = messy
+        cloth.position = clothAt
+        cloth.orientation = simd_quatf(from: [1, 0, 0], to: spots.right)
     }
 
     private func draw(_ dt: Float) {
@@ -163,6 +265,12 @@ final class WaterStage: GameStage {
     }
 
     private var hint: String {
+        switch bowl.phase {
+        case .messy: return "Wipe up the puddle, or serve it as it is"
+        case .settling: return "Nearly dry"
+        case .pouring: break
+        }
+        if bowl.isOverLine { return "Careful, it's spilling over" }
         if bowl.canServe { return "Right there. Let go" }
         return bowl.level < 0.05 ? "Hold to pour, stop on the blue line" : "A little more"
     }
@@ -174,11 +282,18 @@ final class WaterStage: GameStage {
     }
 
     private func serve() {
-        guard bowl.canServe, !served else { return }
+        guard bowl.canServe, !served, bowl.phase != .settling else { return }
         served = true
+        finger = nil
+        assisted = nil
         holding = false
-        deck.say(bowl.rating == .perfect ? "Perfect!" : "Good!", for: 1.6)
-        deck.cheer(big: true)
+        if bowl.phase == .messy {
+            deck.say("A little messy", for: 1.6)
+            deck.thump()
+        } else {
+            deck.say(bowl.isSpotless ? "Spotless!" : bowl.rating == .perfect ? "Perfect!" : "Good!", for: 1.6)
+            deck.cheer(big: true)
+        }
         deck.result = GameResult.water(bowl)
     }
 

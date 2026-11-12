@@ -97,6 +97,50 @@ struct FeedTaskTests {
 }
 
 struct WaterBowlTests {
+  @Test func aPuddleGrowsToItsCapAndTheFloorDriesByWiping() {
+    var bowl = WaterBowl()
+    #expect(bowl.phase == .pouring)
+    bowl.pour(flow: 1, dt: 4)
+    #expect(bowl.phase == .messy && bowl.spilled)
+    let early = bowl.puddle
+    bowl.pour(flow: 1, dt: 30)
+    #expect(bowl.puddle > early && bowl.puddle == WaterBowl.puddleCap && bowl.isFlooded)
+    bowl.wipe(0.2)
+    #expect(bowl.phase == .messy && !bowl.isSpotless)
+    bowl.wipe(1)
+    #expect(bowl.puddle == 0 && bowl.phase == .settling)
+  }
+
+  @Test func theBowlSettlesToTheBandOnceTheFloorIsDry() {
+    var bowl = WaterBowl()
+    bowl.pour(flow: 1, dt: 20)
+    bowl.settle(dt: 5)
+    #expect(bowl.level == 1)
+    bowl.wipe(1)
+    bowl.settle(dt: 0.5)
+    #expect(bowl.level < 1 && bowl.phase == .settling)
+    bowl.settle(dt: 5)
+    #expect(bowl.level == WaterBowl.settled && bowl.phase == .pouring && bowl.isSpotless)
+    #expect(bowl.rating == .good)
+    let result = GameResult.water(bowl)
+    #expect(!result.tooMuch && result.spotless && result.score >= 80)
+    #expect(result.line(pronouns: .they) == "Spotless. Fresh water")
+  }
+
+  @Test func pouringAndSettlingDoNothingOutOfTurn() {
+    var bowl = WaterBowl()
+    bowl.settle(dt: 5)
+    bowl.wipe(1)
+    #expect(bowl.level == 0 && bowl.puddle == 0 && !bowl.spilled && !bowl.isSpotless)
+  }
+
+  @Test func aSkippedPuddleCostsTheScore() {
+    var bowl = WaterBowl()
+    bowl.pour(flow: 1, dt: 20)
+    let skipped = GameResult.water(bowl)
+    #expect(skipped.tooMuch && !skipped.spotless && skipped.score < 50)
+  }
+
   @Test func fullFlowReachesTheLineInTheFillTime() {
     var bowl = WaterBowl()
     #expect(!bowl.canServe)
@@ -109,7 +153,7 @@ struct WaterBowlTests {
     var bowl = WaterBowl()
     bowl.pour(flow: 1, dt: 10)
     #expect(bowl.level == 1)
-    #expect(bowl.isSpilling && bowl.puddle > 0.5)
+    #expect(bowl.isSpilling && bowl.puddle >= 0.5)
     #expect(bowl.rating == .spill)
     bowl.pourOut(dt: 3)
     #expect(bowl.level < 1)
@@ -245,7 +289,7 @@ struct GameResultTests {
     #expect(!GameResult.water(bowl).tooMuch)
     bowl.pour(flow: 1, dt: 10)
     #expect(GameResult.water(bowl).tooMuch)
-    #expect(GameResult.water(bowl).line(pronouns: .they).hasPrefix("Too much!"))
+    #expect(GameResult.water(bowl).line(pronouns: .they).hasPrefix("A little messy"))
   }
 
   @Test func eachGameGoesToTheJournalItsOwnWay() {
