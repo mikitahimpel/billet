@@ -343,7 +343,6 @@ private struct WhoKnowsRevealStep: View {
                 WhoKnowsArt(name: item.hit ? "WhoKnows-hit" : "WhoKnows-miss", size: 160)
                 if item.hit {
                     Chip("+\(WhoKnowsModel.hitCoins)", style: .honey)
-                        .monospacedDigit()
                         .accessibilityHidden(true)
                 }
             }
