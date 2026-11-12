@@ -65,17 +65,28 @@ enum Snapshot {
             controller.view.frame = window.bounds
             controller.view.layoutIfNeeded()
         }
-        // Lets `.task` and `onAppear` content, such as a list's first page, land before the drawing.
-        RunLoop.main.run(until: .now + (fits ? 0.3 : 2))
-        controller.view.layoutIfNeeded()
+        // Lets `.task` and `onAppear` content, such as a list's first page, land before the drawing: the run loop
+        // turns until two small drawings in a row agree, for 2 s at most (a spinner never settles).
+        let deadline = Date.now + (fits ? 0.3 : 2)
+        var last: Data?
+        repeat {
+            RunLoop.main.run(until: min(deadline, .now + 0.15))
+            controller.view.layoutIfNeeded()
+            let sketch = draw(controller.view, size: size, scale: 0.25).cgImage.flatMap(rgba).map { Data($0) }
+            if sketch != nil, sketch == last { break }
+            last = sketch
+        } while Date.now < deadline
+        return draw(controller.view, size: size, scale: scale).cgImage
+    }
+
+    private static func draw(_ view: UIView, size: CGSize, scale: CGFloat) -> UIImage {
         let format = UIGraphicsImageRendererFormat()
         format.scale = scale
         format.opaque = true
         format.preferredRange = .standard
-        let image = UIGraphicsImageRenderer(size: size, format: format).image { _ in
-            controller.view.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
+        return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            view.drawHierarchy(in: CGRect(origin: .zero, size: size), afterScreenUpdates: true)
         }
-        return image.cgImage
     }
 
     static func match(_ image: CGImage, name: String) throws {
@@ -96,11 +107,25 @@ enum Snapshot {
     /// The share of pixels that differ, or 1 when the sizes do.
     static func difference(_ a: CGImage, _ b: CGImage) -> Double {
         guard a.width == b.width, a.height == b.height, let left = rgba(a), let right = rgba(b) else { return 1 }
-        var changed = 0
-        for pixel in stride(from: 0, to: left.count, by: 4) {
-            for channel in 0..<4 where abs(Int(left[pixel + channel]) - Int(right[pixel + channel])) > channelTolerance {
-                changed += 1
-                break
+        if left == right { return 0 }
+        // Raw pointers: the tests build unoptimised, where indexing the arrays costs seconds per drawing.
+        let changed = left.withUnsafeBufferPointer { l in
+            right.withUnsafeBufferPointer { r in
+                var changed = 0
+                var pixel = 0
+                while pixel < l.count {
+                    var channel = 0
+                    while channel < 4 {
+                        let delta = Int(l[pixel + channel]) - Int(r[pixel + channel])
+                        if delta > channelTolerance || delta < -channelTolerance {
+                            changed += 1
+                            break
+                        }
+                        channel += 1
+                    }
+                    pixel += 4
+                }
+                return changed
             }
         }
         return Double(changed) / Double(a.width * a.height)

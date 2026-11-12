@@ -110,17 +110,23 @@ jobs:
         run: .github/scripts/select-xcode.sh .xcode-version
 
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
-      # cannot start, the build runs without it.
-      - uses: mikitahimpel/warmbuild-action@5baab4ecd3750b59b27c45091c3ef664e713a5de # v1.0.2
+      # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
+      # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
+      - uses: mikitahimpel/warmbuild-action@2cbc67ebd376a088aefedef017364c6a7a6eccdd # v1.3.0
+        id: warmbuild
+        with:
+          select-tests: true
+          select-tests-ignore: |
+            ^lint/
+            ^scripts/
 
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh
 
-      # A fresh runner's first Simulator boot takes minutes; it runs in the background while the app builds.
-      # Started after the Metal Toolchain install, which it slows down.
+      # Picks the test Simulator; it boots after the build (App tests step).
       # Only plain iOS runtimes (iOS-27-2): a device-specific one (iOS-27-2-iPhone19-4) holds a single
       # resizable-scene iPhone whose window is wider than the app's layout, so taps and frames miss.
-      - name: Boot the test Simulator
+      - name: Pick the test Simulator
         run: |
           udid=$(xcrun simctl list -j devices available | python3 -c '
           import json, re, sys
@@ -135,12 +141,12 @@ jobs:
             exit 1
           fi
           echo "TEST_SIMULATOR=$udid" >> "$GITHUB_ENV"
-          nohup xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
 
       - name: Install XcodeGen
         run: .github/scripts/install-xcodegen.sh
 
       - name: App tests (Simulator)
+        if: steps.warmbuild.outputs.tests != 'none'
         # A hung UI test must not hold a runner for an hour; each test is also capped below. On main the build
         # takes about 22 minutes without the compilation cache and the UI tests 10 to 17 more (a busy runner
         # took 39.5 of the 40 minutes this step once had and a slower one was cut off in the last test), so
@@ -150,9 +156,6 @@ jobs:
           (cd apps/ios && xcodegen generate --quiet)
           udid="$TEST_SIMULATOR"
           echo "Testing on $udid"
-          echo "::group::Simulator boot"
-          cat "$RUNNER_TEMP/simulator-boot.log" || true
-          echo "::endgroup::"
           set -o pipefail
           status=0
           # TEST_RUNNER_ variables reach the tests without the prefix.
@@ -161,22 +164,47 @@ jobs:
           export TEST_RUNNER_GITHUB_ACTIONS="$GITHUB_ACTIONS"
           skip=()
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
+          # Unquoted on purpose: one word per -only-testing/-skip-testing argument.
+          skip+=(${WARMBUILD_ONLY_TESTING:-})
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
-          if ! xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
-            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
+          # Building and testing are two runs so the summary can say how long each took.
+          app=(-project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid"
+            -derivedDataPath "$RUNNER_TEMP/app-tests" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO)
+          # Seconds since the step started on every line, to see what the build and the tests wait for.
+          stamp() { perl -MTime::HiRes=time -ne 'BEGIN { $| = 1 } printf "%7.1f %s", time - $ENV{STEP_START}, $_'; }
+          started=$(date +%s)
+          export STEP_START=$started
+          if ! xcodebuild build-for-testing "${app[@]}" -resultBundlePath "$RUNNER_TEMP/app-build.xcresult" \
+            -showBuildTimingSummary 2>&1 \
+            | tee "$RUNNER_TEMP/app-tests.log" >(stamp >> "$RUNNER_TEMP/app-timeline.log") \
+            | { grep --line-buffered -E 'error:' || true; }; then
+            status=1
+          fi
+          built=$(date +%s)
+          # Booted only now. A fresh Simulator's first boot keeps the runner's CPUs busy for minutes, and beside the
+          # build it held xcodebuild's first project load for up to 6 minutes; after the build the build time is its own.
+          xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 || true
+          booted=$(date +%s)
+          # Diagnostics after the tests (logs, spindumps) took minutes and nobody reads them on a green run.
+          if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" -collect-test-diagnostics never \
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 -showBuildTimingSummary \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \
-            | tee "$RUNNER_TEMP/app-tests.log" \
+            -maximum-test-execution-time-allowance 300 2>&1 \
+            | tee -a "$RUNNER_TEMP/app-tests.log" >(stamp >> "$RUNNER_TEMP/app-timeline.log") \
             | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
             status=1
           fi
+          timing="build $((built - started)) s, Simulator boot $((booted - built)) s, tests $(($(date +%s) - booted)) s"
+          echo "App step: $timing"
+          echo "::group::Build timing summary"
+          sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
+          echo "::endgroup::"
           grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)' \
             "$RUNNER_TEMP/app-tests.log" || true
           # Where the build's minutes go on a runner: compiling, linking, asset catalogs, the Metal shader.
           {
             echo "### Build timing"
+            echo "$timing"
             echo '```'
             sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
             echo '```'
@@ -195,6 +223,15 @@ jobs:
         with:
           name: samples
           path: ${{ runner.temp }}/samples
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Keep the app timeline
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: app-timeline
+          path: ${{ runner.temp }}/app-timeline.log
           if-no-files-found: ignore
           retention-days: 7
 
