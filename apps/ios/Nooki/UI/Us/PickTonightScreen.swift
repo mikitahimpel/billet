@@ -36,12 +36,12 @@ struct PickTonightScreen: View {
                     ? "\(partnerName) just swiped ♥ too"
                     : "\(partnerName) got a notification too"
                 PickMatchScreen(match: match, note: note, plan: { plan(match) }, keep: {
-                    withAnimation(.snappy(duration: 0.25)) { model.dismissMatch() }
+                    withAnimation(Motion.spring(0.25)) { model.dismissMatch() }
                 })
                 .transition(.opacity.combined(with: .scale(scale: 1.04)))
             }
         }
-        .animation(.snappy(duration: 0.3), value: model?.match)
+        .animation(Motion.spring(0.3), value: model?.match)
         .onChange(of: model?.match) { _, match in
             if match != nil { report(.pickTonightMatched) }
         }
@@ -129,7 +129,6 @@ struct PickTonightScreen: View {
                 .padding(Space.l)
             }
             .corners(.card)
-            .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(card.name), \(caption(card))")
     }
@@ -151,17 +150,7 @@ struct PickTonightScreen: View {
     }
 
     private func round(_ symbol: String, label: String, honey: Bool, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
-                .ourioScaledFont(size: 24, weight: .bold)
-                .dynamicTypeSize(...DynamicTypeSize.xxLarge)
-                .foregroundStyle(honey ? Ink.heroInk : Ink.text)
-                .frame(width: 64, height: 64)
-                .background(Circle().fill(honey ? AnyShapeStyle(.honeyGradient) : AnyShapeStyle(Ink.surfaceRaised)))
-                .shadow(color: .black.opacity(honey ? 0.2 : 0.08), radius: 8, y: 4)
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel(label)
+        RoundButton(symbol: symbol, label: label, style: honey ? .honey : .quiet, action: action)
     }
 
     private func swipeGesture(_ card: PickCard, _ model: PickTonightModel) -> some Gesture {
@@ -172,13 +161,13 @@ struct PickTonightScreen: View {
                 if abs(width) > 110 {
                     swipe(card, width > 0 ? .want : .pass, model)
                 } else {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { drag = .zero }
+                    withAnimation(Motion.spring(0.35)) { drag = .zero }
                 }
             }
     }
 
     private func swipe(_ card: PickCard, _ choice: PickChoice, _ model: PickTonightModel) {
-        withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.4, dampingFraction: 0.82)) {
+        withAnimation(reduceMotion ? Motion.fade() : Motion.spring(0.4)) {
             model.take(card)
             drag = .zero
         }
@@ -268,7 +257,7 @@ private struct PickMatchScreen: View {
                         }
                     }
                     .frame(width: 92, height: 92)
-                    .background(Circle().fill(Ink.surface))
+                    .background(Ink.well, in: .circle)
                     .clipShape(.circle)
                     Text("🍿")
                         .font(.system(size: 38))
@@ -284,7 +273,6 @@ private struct PickMatchScreen: View {
                 PosterImage(path: match.posterPath, title: match.name, size: .card)
                     .frame(width: 150, height: 225)
                     .corners(.inner)
-                    .shadow(color: .black.opacity(0.4), radius: 16, y: 8)
                     .padding(.vertical, Space.s)
                 Text(match.name)
                     .font(.ourioTitle)

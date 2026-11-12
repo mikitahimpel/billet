@@ -63,10 +63,10 @@ struct WishlistScreen: View {
     private var chips: some View {
         HStack(spacing: Space.s) {
             FilterChip(String(localized: "Mine"), isSelected: mine) {
-                withAnimation(.snappy(duration: 0.25)) { mine = true }
+                withAnimation(Motion.spring(0.25)) { mine = true }
             }
             FilterChip(String(localized: "\(otherName)'s"), isSelected: !mine) {
-                withAnimation(.snappy(duration: 0.25)) { mine = false }
+                withAnimation(Motion.spring(0.25)) { mine = false }
             }
         }
     }
@@ -77,12 +77,7 @@ struct WishlistScreen: View {
         let wishes = us.wishes(of: viewer)
         return VStack(alignment: .leading, spacing: Space.m) {
             if us.surpriseComing(for: viewer) {
-                Label("\(otherName) is planning a surprise 🤫", systemImage: "gift.fill")
-                    .font(.ourioCaption.weight(.semibold))
-                    .foregroundStyle(Ink.accentText)
-                    .padding(.horizontal, Space.m)
-                    .padding(.vertical, Space.s)
-                    .background(Ink.surfaceRaised, in: .capsule)
+                Chip("\(otherName) is planning a surprise 🤫", symbol: "gift.fill", style: .honey)
             }
             if wishes.isEmpty {
                 EmptyState(
@@ -104,13 +99,13 @@ struct WishlistScreen: View {
                     .buttonStyle(PressScaleStyle())
                     .contextMenu {
                         Button {
-                            withAnimation(.snappy(duration: 0.25)) { us.markReceived(wish.id, by: viewer) }
+                            withAnimation(Motion.spring(0.25)) { us.markReceived(wish.id, by: viewer) }
                         } label: {
                             Label("Got it ♥", systemImage: "heart.fill")
                         }
                         Button(role: .destructive) {
                             WishImage.remove(wish.id)
-                            withAnimation(.snappy(duration: 0.25)) { us.deleteWish(wish.id) }
+                            withAnimation(Motion.spring(0.25)) { us.deleteWish(wish.id) }
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
@@ -144,22 +139,14 @@ struct WishlistScreen: View {
     }
 
     private func animate(_ change: () -> Void) {
-        withAnimation(.snappy(duration: 0.25), change)
+        withAnimation(Motion.spring(0.25), change)
     }
 
     @ViewBuilder
     private func giverRow(_ wish: WishItem) -> some View {
         switch us.plan(for: wish.id, viewer: viewer)?.stage {
         case nil:
-            Button { animate { us.pick(wish.id, by: viewer) } } label: {
-                Label("I'll get this", systemImage: "gift.fill")
-                    .font(.ourioCallout.weight(.semibold))
-                    .foregroundStyle(Ink.heroInk)
-                    .padding(.horizontal, Space.l)
-                    .frame(height: 36)
-                    .background(Capsule().fill(.honeyGradient))
-            }
-            .buttonStyle(PressScaleStyle())
+            SecondaryButton("I'll get this", symbol: "gift.fill") { animate { us.pick(wish.id, by: viewer) } }
         case .planning?:
             HStack(spacing: Space.m) {
                 Text("You're getting this 🤫")
@@ -170,15 +157,7 @@ struct WishlistScreen: View {
                     .font(.ourioCaption.weight(.semibold))
                     .foregroundStyle(Ink.textSecondary)
                     .buttonStyle(PressScaleStyle())
-                Button { animate { us.setStage(.bought, of: wish.id, by: viewer) } } label: {
-                    Text("Bought it")
-                        .font(.ourioCaption.weight(.semibold))
-                        .foregroundStyle(Ink.heroInk)
-                        .padding(.horizontal, Space.m)
-                        .frame(height: 30)
-                        .background(Capsule().fill(.honeyGradient))
-                }
-                .buttonStyle(PressScaleStyle())
+                PrimaryButton("Bought it", fullWidth: false) { animate { us.setStage(.bought, of: wish.id, by: viewer) } }
             }
         case .bought?:
             HStack(spacing: Space.m) {
@@ -238,7 +217,7 @@ struct WishlistScreen: View {
         .contextMenu {
             if mine {
                 Button {
-                    withAnimation(.snappy(duration: 0.25)) { us.unmarkReceived(wish.id, by: viewer) }
+                    withAnimation(Motion.spring(0.25)) { us.unmarkReceived(wish.id, by: viewer) }
                 } label: {
                     Label("Not received yet", systemImage: "arrow.uturn.backward")
                 }
