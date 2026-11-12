@@ -112,7 +112,7 @@ jobs:
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
       # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
-      - uses: mikitahimpel/warmbuild-action@f9204086e83a48431e9a545527b15f3b92f1907b # v1.6.0
+      - uses: mikitahimpel/warmbuild-action@dfbcb713c9a545be725948cc03afd57fa0f6c476 # v1.7.0
         id: warmbuild
         with:
           select-tests: true

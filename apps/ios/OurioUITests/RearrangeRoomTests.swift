@@ -86,6 +86,7 @@ final class RearrangeRoomTests: XCTestCase {
 
     @MainActor
     func testAFineTurnTurnsFortyFiveDegreesAndCanBeTakenBack() throws {
+        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
         launchDecorate()
         // The cat tree stands in a corner with room round it, so a turn of 45 degrees fits.
         for _ in 0..<3 where !app.staticTexts["Cat tree"].exists {
