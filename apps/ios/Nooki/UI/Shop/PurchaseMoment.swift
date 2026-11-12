@@ -127,7 +127,7 @@ struct PurchaseMoment: View {
                     Text("\(purchase.title) is yours")
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
-                        .lineLimit(2)
+                        .lineLimit(3)
                     Text(detail(purchase))
                         .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
