@@ -20,13 +20,8 @@ final class RearrangeRoomTests: XCTestCase {
 
     /// The confirmation's button: the second one named so, once the question is up.
     private func confirmReset() -> XCUIElement? {
-        let named = app.buttons.matching(NSPredicate(format: "label == 'Reset room'"))
-        let deadline = Date().addingTimeInterval(15)
-        while Date() < deadline {
-            if named.count > 1 { return named.element(boundBy: named.count - 1) }
-            usleep(300_000)
-        }
-        return nil
+        let confirm = app.buttons.matching(identifier: "Reset room").element(boundBy: 1)
+        return confirm.waitForExistence(timeout: 20) ? confirm : nil
     }
 
     private func at(_ x: Double, _ y: Double) -> XCUICoordinate {
