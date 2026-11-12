@@ -6,7 +6,7 @@ import {
   emptyStreak,
   type LoveStreak,
   streakDayCoins,
-  streakMilestoneCoins,
+  streakRewardCoins,
 } from "@billet/contracts-domain/streak";
 import { activityOf } from "../src/activity.ts";
 import { decide } from "../src/decide.ts";
@@ -114,9 +114,7 @@ describe("the pair's love streak", () => {
     });
     const six = run(active, days(0, 1, 2, 3, 4, 5));
     const seventh = run(six, days(6));
-    expect(seventh.wallet.balance - six.wallet.balance).toBe(
-      streakDayCoins + (streakMilestoneCoins[7] ?? 0),
-    );
+    expect(seventh.wallet.balance - six.wallet.balance).toBe(streakRewardCoins(7));
   });
 
   it("says nothing when the day already counts", () => {

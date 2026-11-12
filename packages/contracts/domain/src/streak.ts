@@ -24,16 +24,21 @@ export const emptyStreak: LoveStreak = { days: 0, best: 0 };
 
 export const streakMilestones: ReadonlyArray<number> = [3, 7, 14, 30, 50, 100, 200, 365];
 
-/** Coins a lit day pays the pair. */
-export const streakDayCoins = 10;
+/** Coins a lit day pays the pair. A token: a week of lit days stays well under the cheapest paid
+ * shop piece, and care alone earns far more (docs/love-streak.md#coins). */
+export const streakDayCoins = 1;
 
-/** What a lit day pays on top when it reaches one of these. */
+/** What a lit day pays on top when it reaches one of these: small against the shop's prices. */
 export const streakMilestoneCoins: Readonly<Record<number, number>> = {
-  7: 25,
-  30: 50,
-  100: 100,
-  365: 200,
+  7: 5,
+  30: 10,
+  100: 15,
+  365: 20,
 };
+
+/** What the day that makes the streak `days` long pays the pair. */
+export const streakRewardCoins = (days: number): number =>
+  streakDayCoins + (streakMilestoneCoins[days] ?? 0);
 
 /** Days between restores. */
 export const streakRestoreCooldown = 30;
