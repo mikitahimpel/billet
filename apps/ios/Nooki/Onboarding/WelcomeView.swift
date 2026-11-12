@@ -4,8 +4,8 @@ import SwiftUI
 /// The first screen: Mochi alive in the warm room, and one clay card under her with the line, what the app is for
 /// in three rows and the terms as its footnote. The actions sit under it, in `OnboardingView.actions`. The stage takes
 /// whatever height the card leaves it; when that is too little (an SE, large text), the page scrolls with the
-/// smallest stage. The timeline in `WelcomeScript` only changes opacity, scale and offset, so nothing moves the
-/// layout while it plays.
+/// smallest stage and the terms stay under it, pinned and in full: App Review reads them on the first screen. The
+/// timeline in `WelcomeScript` only changes opacity, scale and offset, so nothing moves the layout while it plays.
 struct WelcomeView: View {
     let start: Date
     var coat = CatCoat.grey
@@ -14,6 +14,7 @@ struct WelcomeView: View {
     var probe: HitchProbe?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
     /// Seconds after `start` of the last tap on her.
     @State private var pokedAt: TimeInterval?
 
@@ -30,8 +31,11 @@ struct WelcomeView: View {
     var body: some View {
         // The fit is decided once, outside the clock: the script never changes a size.
         ViewThatFits(in: .vertical) {
-            playing(stage: nil)
-            ScrollView { playing(stage: Self.stageHeights.lowerBound) }
+            playing(stage: nil, pinsTerms: false)
+            // Pinned terms take a few lines; at accessibility sizes they would take the screen, so there they scroll
+            // with the rest.
+            if !typeSize.isAccessibilitySize { playing(stage: Self.stageHeights.lowerBound, pinsTerms: true) }
+            ScrollView { playing(stage: Self.stageHeights.lowerBound, pinsTerms: false) }
                 .ourioScrollEdges()
                 .scrollIndicators(.hidden)
                 .scrollBounceBehavior(.basedOnSize)
@@ -39,10 +43,27 @@ struct WelcomeView: View {
         .accessibilityElement(children: .contain)
     }
 
-    private func playing(stage: CGFloat?) -> some View {
+    private func playing(stage: CGFloat?, pinsTerms: Bool) -> some View {
         TimelineView(.animation(paused: reduceMotion)) { context in
             let time = reduceMotion ? script.duration : context.date.timeIntervalSince(start)
-            zones(time: time, stage: stage)
+            Group {
+                if pinsTerms {
+                    VStack(spacing: 0) {
+                        ScrollView { zones(time: time, stage: stage, terms: false) }
+                            .ourioScrollEdges()
+                            .scrollIndicators(.hidden)
+                            .scrollBounceBehavior(.basedOnSize)
+                        VStack(spacing: Space.s) {
+                            Hairline()
+                            termsText(time: time)
+                        }
+                        .padding(.horizontal, Space.gutter)
+                        .padding(.vertical, Space.s)
+                    }
+                } else {
+                    zones(time: time, stage: stage, terms: true)
+                }
+            }
                 // Only while the script plays: the frames after it are the UI test's, reading the probe.
                 .onChange(of: context.date) {
                     if time <= script.duration { probe?.frame(context.date) } else { probe?.finish() }
@@ -51,7 +72,7 @@ struct WelcomeView: View {
     }
 
     /// `stage` nil: the stage grows into the height left over, within `stageHeights`.
-    private func zones(time: TimeInterval, stage: CGFloat?) -> some View {
+    private func zones(time: TimeInterval, stage: CGFloat?, terms: Bool) -> some View {
         VStack(spacing: Space.m) {
             CatHeroStage(coat: coat, time: time, pokedAt: pokedAt, moving: !reduceMotion)
                 .frame(minHeight: stage ?? Self.stageHeights.lowerBound,
@@ -63,13 +84,13 @@ struct WelcomeView: View {
                     waved()
                 }
                 .modifier(Reveal(script.progress(.cat, at: time), rise: 12))
-            card(time: time)
+            card(time: time, terms: terms)
         }
         .padding(.horizontal, Space.gutter)
         .padding(.vertical, Space.m)
     }
 
-    private func card(time: TimeInterval) -> some View {
+    private func card(time: TimeInterval, terms: Bool) -> some View {
         Card(warm: true) {
             VStack(spacing: Space.m) {
                 Text("A cat for the two of you")
@@ -87,23 +108,29 @@ struct WelcomeView: View {
                             .modifier(Reveal(script.progress(.vignette(index), at: time), rise: 10))
                     }
                 }
-                Hairline()
-                // Both welcome actions accept these (OnboardingFlow.termsAcceptedKey). App Review 1.2 asks for terms that
-                // forbid objectionable content before anyone can send any.
-                Text("""
-                    By continuing you agree to the terms of use: no abusive or objectionable content, and every \
-                    report is acted on.
-                    """)
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity)
-                    .accessibilityIdentifier("welcome.terms")
-                    .modifier(Reveal(script.progress(.subtitle, at: time), rise: 0))
+                if terms {
+                    Hairline()
+                    termsText(time: time)
+                }
             }
         }
         .modifier(Reveal(script.progress(.title, at: time), rise: 14))
+    }
+
+    /// Both welcome actions accept these (OnboardingFlow.termsAcceptedKey). App Review 1.2 asks for terms that forbid
+    /// objectionable content before anyone can send any.
+    private func termsText(time: TimeInterval) -> some View {
+        Text("""
+            By continuing you agree to the terms of use: no abusive or objectionable content, and every \
+            report is acted on.
+            """)
+            .font(.ourioCaption)
+            .foregroundStyle(Ink.textSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity)
+            .accessibilityIdentifier("welcome.terms")
+            .modifier(Reveal(script.progress(.subtitle, at: time), rise: 0))
     }
 }
 
