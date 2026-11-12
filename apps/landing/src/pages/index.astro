@@ -774,7 +774,7 @@ const schema = [
         <p class="appcard-sub">A cat you raise together</p>
         <p class="appcard-tag">Free · iPhone</p>
       </div>
-      {appStoreLive ? <a class="soon" href={appStoreUrl}>Get</a> : <span class="soon">Coming soon</span>}
+      {appStoreLive ? <a class="soon" href={appStoreUrl} data-umami-event="app_store_click" data-umami-event-where="end_card">Get</a> : <span class="soon">Coming soon</span>}
     </div>
   </EndCard>
 
