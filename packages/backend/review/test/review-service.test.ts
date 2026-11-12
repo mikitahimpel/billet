@@ -10,7 +10,7 @@ import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { makeInMemoryPairingRepository } from "@billet/backend-pairing/test/in-memory-pairing-repository";
 import { ReviewCode, UserId } from "@billet/contracts-domain/ids";
 import { ReviewRepository } from "../src/review-repository.ts";
-import { ReviewService } from "../src/review-service.ts";
+import { ReviewService, reviewWelcomeNotes } from "../src/review-service.ts";
 import { makeInMemoryReviewRepository } from "./in-memory-review-repository.ts";
 
 const user = Schema.decodeSync(UserId);
@@ -41,7 +41,8 @@ const setup = () => {
     ),
   );
   const demoBots = Layer.succeed(DemoBots, {
-    start: (pairId, owner, bot) => Effect.sync(() => bots.push(`start ${pairId} ${owner} ${bot}`)),
+    start: (pairId, owner, bot, welcome) =>
+      Effect.sync(() => bots.push(`start ${pairId} ${owner} ${bot} ${welcome?.length ?? 0}`)),
     stop: (pairId) => Effect.sync(() => bots.push(`stop ${pairId}`)),
   });
   const layer = Layer.mergeAll(
@@ -91,7 +92,7 @@ describe("ReviewService", () => {
     const pairId = await run((service) => service.claim(reviewer, issued.code));
     const pair = await run((_, pairing) => pairing.pair(reviewer));
     expect(pair).toMatchObject({ pairId, members: [reviewer, partner] });
-    expect(bots).toEqual([`start ${pairId} ${reviewer} ${partner}`]);
+    expect(bots).toEqual([`start ${pairId} ${reviewer} ${partner} ${reviewWelcomeNotes.length}`]);
     expect(JSON.stringify(review.codes)).not.toContain(issued.code);
   });
 

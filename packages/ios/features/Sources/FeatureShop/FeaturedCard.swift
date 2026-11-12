@@ -6,11 +6,13 @@
   struct FeaturedCard: View {
     let state: any ShopHost
     let offer: FeaturedOffer
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var openSet: (FeaturedOffer) -> Void = { _ in }
 
     private var quote: (price: Int, sum: Int)? {
       state.shop.offers.price(of: offer, owned: state.shop.owned)
     }
+    private var isLargeText: Bool { dynamicTypeSize.isAccessibilitySize }
     private var items: [ShopItem] {
       offer.itemIDs.compactMap { Catalog.item($0, cat: state.petName) }
     }
@@ -42,9 +44,13 @@
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel("\(offer.name), see the pieces")
 
-        // The name and blurb take the card's width; the state and the buy sit under them on a row of their own,
-        // so a long blurb never squeezes the button.
-        VStack(alignment: .leading, spacing: Space.m) {
+        // The buy sits beside the name and blurb, centred on them; at accessibility sizes it goes under them
+        // so a long blurb never squeezes it.
+        let layout =
+          isLargeText
+          ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.m))
+          : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
+        layout {
           VStack(alignment: .leading, spacing: Space.xs) {
             Text(offer.name)
               .font(.ourioTitle)
@@ -57,14 +63,8 @@
               .lineLimit(2)
           }
           .frame(maxWidth: .infinity, alignment: .leading)
-
-          HStack(spacing: Space.m) {
-            if quote == nil {
-              Chip("Owned", symbol: "checkmark")
-            }
-            Spacer(minLength: 0)
-            SetBuyButton(state: state, set: offer)
-          }
+          SetBuyButton(state: state, set: offer)
+            .fixedSize()
         }
         .padding(.top, Space.s)
       }
@@ -84,7 +84,9 @@
     }
 
     @ViewBuilder private var valueBadge: some View {
-      if let quote, quote.price > 0, quote.sum > quote.price {
+      if quote == nil {
+        Chip("Owned", symbol: "checkmark").fixedSize()
+      } else if let quote, quote.price > 0, quote.sum > quote.price {
         DiscountRibbon(
           percent: Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()),
           saves: quote.sum - quote.price
