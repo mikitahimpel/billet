@@ -48,6 +48,7 @@ struct OurioApp: App {
         let canInvite = session.map { !$0.isPaired } ?? false
         Hints.configure()
         CatProfile.moveToAppGroup()
+        StreakNudge.moveToAppGroup()
         let hints = Hints(report: api.reportEvents)
         let onboarding = OnboardingFlow(
             client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,

@@ -204,8 +204,10 @@ targets:
     platform: iOS
     sources:
       - path: OurioNotifications
-      # The file the app keeps the streak in, which a streak push writes for the widgets.
+      # The file the app keeps the streak in, which a streak push writes for the widgets, and the evening nudge it
+      # plans again.
       - path: Nooki/Model/Streak.swift
+      - path: Nooki/Model/StreakNudge.swift
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
         # Places' flags and map are for the app's world map only.
