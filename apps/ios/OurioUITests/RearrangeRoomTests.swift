@@ -41,6 +41,7 @@ final class RearrangeRoomTests: XCTestCase {
 
     @MainActor
     func testTheRoomsOwnFurnitureTurnsStoresAndComesBack() throws {
+        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
         launchDecorate()
         look("0-start")
         // The cat tree stands in the right corner of the Living room.
@@ -71,6 +72,7 @@ final class RearrangeRoomTests: XCTestCase {
 
     @MainActor
     func testTheLastBedCannotBeStored() throws {
+        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
         launchDecorate()
         // The cat's bed is in the middle of the rug.
         at(0.55, 0.54).tap()
