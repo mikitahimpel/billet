@@ -99,7 +99,7 @@ struct DecorPanel: View {
             }
         } else {
             ScrollView(.horizontal) {
-                HStack(spacing: Space.s) {
+                HStack(alignment: .top, spacing: Space.s) {
                     ForEach(items) { item in
                         let name = Catalog.item(item.id)?.name ?? item.base?.title ?? item.id
                         Button { state.decor.send(.closetTapped(item.id)) } label: {
