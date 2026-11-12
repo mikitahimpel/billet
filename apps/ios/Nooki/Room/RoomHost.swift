@@ -81,7 +81,6 @@ private struct RoomStage: View {
                 .ignoresSafeArea()
 
                 if visible, controller.game == nil { CatVoice(name: input.catName, pronouns: input.catPronouns, controller: controller) }
-                if visible, controller.game == nil, input.decor.isArranging { DecorTouchLayer(controller: controller) }
             }
         }
         // The room's view no longer drives a room it doesn't show; the next look starts it again.

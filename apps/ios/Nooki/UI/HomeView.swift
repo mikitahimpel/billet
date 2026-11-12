@@ -324,6 +324,9 @@ struct HomeView: View {
             .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
+        .overlay {
+            if arranging, room.game == nil, state.tab == .world { DecorTouchLayer(controller: room) }
+        }
         .overlay(alignment: .bottom) {
             if arranging, room.game == nil {
                 DecorPanel(state: state) { state.decor.send(.closed) }

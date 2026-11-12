@@ -88,6 +88,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
         let room = DioramaScene()
         home = room
         room.pivot.addChild(decorStage.root)
+        decorStage.onBaseReady = { [weak room] in room?.baseFurnished = true }
         wire(room)
         showDecor(decor)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }

@@ -11,6 +11,7 @@ struct DecorPanel: View {
 
     private var machine: DecorMachine.State { state.decor.state }
     private var selected: String? { machine.selection }
+    @State private var confirmingReset = false
 
     var body: some View {
         Card {
@@ -49,19 +50,28 @@ struct DecorPanel: View {
     }
 
     private var hint: String {
+        switch machine.book.notice {
+        case .noRoomToTurn: return "There's no room to turn it. Put it away?"
+        case .slid: return "It didn't fit there, so it slid to the nearest spot."
+        case .swapped: return "Changed places."
+        case .rejected: return "That doesn't fit there."
+        case .lastRest: return "\(state.petName) needs a bed or a sofa to rest on."
+        case .reset: return "The room is as it first was."
+        case nil: break
+        }
         switch machine.verdict {
         case .fits:
-            selected == nil ? "Tap a piece, or place one below." : "Drag to move. Tap the floor for your closet."
-        case .blocksWay: "That would block \(state.petName)'s way."
-        case .occupied: "Something is already there."
-        case .outsideRoom: "That's outside the room."
-        case .wrongSurface: "It doesn't go there."
+            return selected == nil ? "Tap a piece, or place one below." : "Drag to move. Tap the floor for your closet."
+        case .blocksWay: return "That would block \(state.petName)'s way."
+        case .occupied: return "Something is already there."
+        case .outsideRoom: return "That's outside the room."
+        case .wrongSurface: return "It doesn't go there."
         }
     }
 
     private func controls(for id: String) -> some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            Text(Catalog.item(id)?.name ?? id)
+            Text(Catalog.item(id)?.name ?? DecorItem.item(shopID: id)?.base?.title ?? id)
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
@@ -72,6 +82,7 @@ struct DecorPanel: View {
                 }
                 PillButton("Store", symbol: "tray.and.arrow.down") { state.decor.send(.stored) }
                     .accessibilityIdentifier("decorStore")
+                undoButton
             }
             .fixedSize()
         }
@@ -80,18 +91,21 @@ struct DecorPanel: View {
     @ViewBuilder private var closet: some View {
         let items = machine.book.closet
         if items.isEmpty {
-            Text("Everything you own is in the room. Buy more in the Shop.")
-                .font(.ourioCaption)
-                .foregroundStyle(Ink.textSecondary)
+            VStack(alignment: .leading, spacing: Space.s) {
+                Text("Everything is in the room. Tap a piece to move, turn or put it away.")
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.textSecondary)
+                resetButton
+            }
         } else {
             ScrollView(.horizontal) {
                 HStack(spacing: Space.s) {
                     ForEach(items) { item in
-                        let name = Catalog.item(item.id)?.name ?? item.id
+                        let name = Catalog.item(item.id)?.name ?? item.base?.title ?? item.id
                         Button { state.decor.send(.closetTapped(item.id)) } label: {
                             VStack(spacing: Space.xs) {
                                 art(item.id)
-                                    .frame(width: Size.cardMark + Space.l, height: Size.cardMark + Space.l)
+                                    .frame(width: Size.cardMark, height: Size.cardMark)
                                     .corners(.inner)
                                 Text(name)
                                     .font(.ourioCaption)
@@ -100,7 +114,7 @@ struct DecorPanel: View {
                                     .minimumScaleFactor(0.85)
                                     .multilineTextAlignment(.center)
                             }
-                            .frame(width: 84)
+                            .frame(width: 76)
                             .contentShape(.rect)
                         }
                         .buttonStyle(PressScaleStyle())
@@ -111,6 +125,27 @@ struct DecorPanel: View {
             }
             .scrollIndicators(.hidden)
             .fixedSize(horizontal: false, vertical: true)
+            resetButton
+        }
+    }
+
+    @ViewBuilder private var undoButton: some View {
+        if machine.book.undo != nil {
+            PillButton("Undo", symbol: "arrow.uturn.backward") { state.decor.send(.undone) }
+                .accessibilityIdentifier("decorUndo")
+        }
+    }
+
+    private var resetButton: some View {
+        HStack(spacing: Space.s) {
+            PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
+                .accessibilityIdentifier("decorReset")
+            undoButton
+        }
+        .fixedSize()
+        .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
+            Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
+            Button("Cancel", role: .cancel) {}
         }
     }
 
@@ -118,7 +153,26 @@ struct DecorPanel: View {
         Ink.surfaceRaised.overlay {
             if let image = Thumbnails.image("Item_\(id)", maxPixels: 256) {
                 Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
+            } else {
+                Image(systemName: Self.symbol(id))
+                    .font(.ourioTitle)
+                    .foregroundStyle(Ink.textSecondary)
             }
+        }
+    }
+
+    private static func symbol(_ id: String) -> String {
+        switch id {
+        case "base-donutbed": "bed.double"
+        case "base-cattree": "tree"
+        case "base-plant": "leaf"
+        case "base-lamp": "lamp.floor"
+        case "base-rug": "square.grid.2x2"
+        case "base-bowls": "fork.knife"
+        case "base-books": "books.vertical"
+        case "base-windowseat": "window.vertical.open"
+        case "base-nightstand": "tablecells"
+        default: "shippingbox"
         }
     }
 }
