@@ -1,8 +1,4 @@
-# Cloudflare Pages response headers. /_astro/ names carry a content hash; fonts and room renders keep their names, so
-# they are cached for a month, not forever.
+# /_astro/ names carry a content hash, so they are cached for good. Everything else keeps Pages' default,
+# public, max-age=0, must-revalidate: a /* rule would be joined onto this one's value, not replace it.
 /_astro/*
   Cache-Control: public, max-age=31536000, immutable
-/fonts/*
-  Cache-Control: public, max-age=2592000
-/room/*
-  Cache-Control: public, max-age=2592000

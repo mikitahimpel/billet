@@ -164,8 +164,6 @@ jobs:
           export TEST_RUNNER_GITHUB_ACTIONS="$GITHUB_ACTIONS"
           skip=()
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
-          # Unquoted on purpose: one word per -only-testing/-skip-testing argument.
-          skip+=(${WARMBUILD_ONLY_TESTING:-})
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           # Building and testing are two runs so the summary can say how long each took.
           app=(-project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid"
@@ -181,12 +179,44 @@ jobs:
             status=1
           fi
           built=$(date +%s)
+          # Warmbuild also picks Swift package test targets (PetTests, InkTests), which the packages job runs and the
+          # Billet scheme doesn't hold; xcodebuild refuses an -only-testing outside the scheme. Keep the targets the
+          # built .xctestrun holds, and the UI tests only where they run; with none left there is nothing to test.
+          no_tests=
+          if [ "$status" = 0 ] && [ -n "${WARMBUILD_ONLY_TESTING:-}" ]; then
+            xctestrun=$(ls "$RUNNER_TEMP"/app-tests/Build/Products/*.xctestrun | head -n 1)
+            selected=$(plutil -convert json -o - "$xctestrun" | python3 -c '
+          import json, os, sys
+          run = json.load(sys.stdin)
+          # Format 2 lists targets under TestConfigurations, format 1 at the top level.
+          entries = [t for c in run.get("TestConfigurations", []) for t in c.get("TestTargets", [])]
+          entries += [v for v in run.values() if isinstance(v, dict) and "BlueprintName" in v]
+          targets = {t["BlueprintName"] for t in entries}
+          if not targets:
+              print("all")
+              sys.exit()
+          if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
+              targets.discard("OurioUITests")
+          picked = os.environ["WARMBUILD_ONLY_TESTING"].split()
+          print(" ".join(a for a in picked if a.split(":", 1)[-1].split("/")[0] in targets))')
+            echo "Selected tests in the Billet scheme: ${selected:-none}"
+            if [ "$selected" = all ]; then
+              echo "::warning::no test targets read from $xctestrun; running every test"
+            elif [ -z "$selected" ]; then
+              no_tests=1
+            else
+              # Unquoted on purpose: one word per -only-testing argument.
+              skip+=($selected)
+            fi
+          fi
           # Booted only now. A fresh Simulator's first boot keeps the runner's CPUs busy for minutes, and beside the
           # build it held xcodebuild's first project load for up to 6 minutes; after the build the build time is its own.
-          xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 || true
+          if [ -z "$no_tests" ]; then
+            xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 || true
+          fi
           booted=$(date +%s)
           # Diagnostics after the tests (logs, spindumps) took minutes and nobody reads them on a green run.
-          if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" -collect-test-diagnostics never \
+          if [ "$status" = 0 ] && [ -z "$no_tests" ] && ! xcodebuild test-without-building "${app[@]}" -collect-test-diagnostics never \
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 2>&1 \
