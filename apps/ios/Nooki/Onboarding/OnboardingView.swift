@@ -481,7 +481,6 @@ private struct Portrait: View {
         .background(RadialGradient(colors: [Color(hex: 0xFFF4E4), Color(hex: 0xF2C08A)], center: .init(x: 0.5, y: 0.35),
                                    startRadius: 0, endRadius: size * 0.75))
         .clipShape(.circle)
-        .overlay(Circle().stroke(Ink.separator, lineWidth: 1))
         .accessibilityHidden(true)
     }
 }
