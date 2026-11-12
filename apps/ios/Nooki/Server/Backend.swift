@@ -51,6 +51,6 @@ struct Backend {
         return Backend(
             baseURL: baseURL, api: api, accounts: accounts, keys: keys,
             onboarding: .live(http: http, token: token), catEvents: .live(http: http, token: token),
-            streak: .live(http: http, token: token), purchases: .live(http: http, caller: .session(token)))
+            streak: .live(http: http, token: token, you: { (try? accounts.load())?.record.userID }), purchases: .live(http: http, caller: .session(token)))
     }
 }

@@ -34,6 +34,7 @@ final class GameSession {
     @ObservationIgnored private var gaze = GameGaze()
     @ObservationIgnored private var finger: CGPoint?
     @ObservationIgnored private var sinceTwitch: Float = 9
+    @ObservationIgnored private var unseen: Float = 0
     @ObservationIgnored private var sparkles: GameSparkles?
     @ObservationIgnored private let spots: GameSpots
 
@@ -109,6 +110,7 @@ final class GameSession {
         camera?.push = stage.push
         for big in deck.takeCheers() { cheer(big: big) }
         look(dt)
+        keepInView(dt)
         coach = GameCoach.transition(coach, .tick(Double(dt))).0
         let cue = finished == nil ? stage.cue : nil
         coach = GameCoach.transition(coach, .step(cue?.step)).0
@@ -117,6 +119,23 @@ final class GameSession {
     }
 
     // MARK: - Her
+
+    /// She stays in the frame: should her head be off screen while she sits still, she is shown again and sent back
+    /// to her seat. A position no room can show, or a cat nothing of whom is drawn, is the room's own `CatWatch`'s.
+    private func keepInView(_ dt: Float) {
+        guard let walker = room.walker, let seat = stage?.seat, !walker.moving, CatWatch.isInRoom(walker.at), let head else {
+            return
+        }
+        if OnScreen.contains(deck.project(head), in: lens) {
+            unseen = 0
+            return
+        }
+        unseen += dt
+        guard unseen > 0.8 else { return }
+        unseen = 0
+        walker.show()
+        room.send(to: seat, facing: spots.facingPlayer, id: "keep-watch")
+    }
 
     /// Just above her eyes, in the pivot's space.
     private var head: SIMD3<Float>? {
@@ -162,6 +181,7 @@ final class GameSession {
 
     private func finish(_ result: GameResult) {
         finished = result
+        camera?.covered = 0.36
         finger = nil
         deck.bar = nil
         UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -172,6 +192,7 @@ final class GameSession {
 
     func playAgain() {
         stage?.tearDown()
+        camera?.covered = 0
         begin()
     }
 

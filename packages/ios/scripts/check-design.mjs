@@ -232,6 +232,24 @@ if (smallTargets.length > 0) {
   failed = true;
 }
 
+// The cat is "she", "he" or "they" as the pair chose, so copy about it never names a pronoun itself:
+// it is a CatPhrase, said by CatPronouns.say(_:) (Pet/CatPronouns.swift).
+const pronounWords = [];
+for (const [file, text] of sources) {
+  if (file.endsWith("Pet/CatPronouns.swift")) continue;
+  for (const match of text.matchAll(/"[^"\n]*\b(?:[Ss]he|[Hh]er|[Hh]ers|[Hh]erself)\b[^"\n]*"/g)) {
+    const line = text.slice(0, match.index).split("\n").length;
+    pronounWords.push(`${file}:${line}: ${match[0]}`);
+  }
+}
+if (pronounWords.length > 0) {
+  console.error(pronounWords.join("\n"));
+  console.error(
+    "Copy that says she or her about the cat is a CatPhrase in Pet/CatPronouns.swift, said by pronouns.say(_:), so he and they read right too (docs/design-system.md).",
+  );
+  failed = true;
+}
+
 // The closed vocabulary for feature code (design-rules.mjs). `--base <commit>` also fails when the
 // baseline grew since that commit, or the allow-list did without a change to the design package.
 const baseAt = process.argv.indexOf("--base");

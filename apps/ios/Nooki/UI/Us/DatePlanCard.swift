@@ -17,6 +17,7 @@ struct DateMatchOverlay: View {
             Color.black.opacity(0.6)
                 .ignoresSafeArea()
 
+            ScrollView {
             VStack(spacing: Space.m) {
                 Text("It's a match!")
                     .font(.ourioLargeTitle)
@@ -30,34 +31,22 @@ struct DateMatchOverlay: View {
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.accentText)
 
-                HStack(spacing: Space.m) {
-                    Button(action: onKeep) {
-                        Text("Keep swiping")
-                            .font(.ourioHeadline)
-                            .foregroundStyle(Ink.text)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: Size.control)
-                            .background(Ink.surfaceRaised, in: .capsule)
-                    }
-                    .buttonStyle(PressScaleStyle())
-
-                    Button(action: onPlan) {
-                        Text("Plan it")
-                            .font(.ourioHeadline)
-                            .foregroundStyle(Ink.heroInk)
-                            .frame(maxWidth: .infinity)
-                            .frame(minHeight: Size.control)
-                            .background(Capsule().fill(.honeyGradient))
-                    }
-                    .buttonStyle(PressScaleStyle())
+                VStack(spacing: Space.s) {
+                    PrimaryButton("Plan it", action: onPlan)
+                    SecondaryButton("Keep swiping", action: onKeep)
                 }
                 .padding(.top, Space.s)
             }
-            .padding(Space.section)
+            .padding(CardMetrics.padding)
             .frame(maxWidth: 330)
-            .cornerFill(.card, Ink.surface)
-            .shadow(color: .black.opacity(0.3), radius: 24, y: 10)
+            .cardSurface()
+            .padding(Space.gutter)
+            .frame(maxWidth: .infinity)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .ourioScrollEdges()
         }
+        .accessibilityAddTraits(.isModal)
     }
 }
 
@@ -157,21 +146,7 @@ struct DatePlanCard: View {
                 Spacer(minLength: 0)
             }
         } else if plan.date < .now {
-            Button(action: onDone) {
-                HStack(spacing: Space.s) {
-                    Image(systemName: "checkmark.circle.fill")
-                    Text("How was it? Mark it done")
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.ourioCaption.weight(.bold))
-                }
-                .font(.ourioCallout.weight(.semibold))
-                .foregroundStyle(Color.honey)
-                .padding(.horizontal, Space.m)
-                .frame(minHeight: 40)
-                .background(Color.honey.opacity(0.16), in: .capsule)
-            }
-            .buttonStyle(PressScaleStyle())
+            SecondaryButton("How was it? Mark it done", action: onDone)
         }
     }
 }

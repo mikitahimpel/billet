@@ -12,6 +12,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case rows
     case status
     case gauges
+    case kit
     case mochi
     case mochiAbout = "mochi-about"
     case postage
@@ -30,6 +31,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .rows: Self.rowsPage
             case .status: Self.statusPage
             case .gauges: Self.gaugesPage
+            case .kit: Self.kitPage
             case .mochi: Self.mochiPage
             case .mochiAbout: Self.mochiAboutPage
             case .postage: Self.postagePage
@@ -129,12 +131,38 @@ enum GalleryPage: String, CaseIterable, Sendable {
             PickerRow("Room lighting", symbol: "lightbulb.fill", selection: .constant("Follow the test")) {
                 Text("Follow the test").tag("Follow the test")
             }
+            PickerRow("Cat pronouns", symbol: "pawprint.fill", selection: .constant("They / them")) {
+                Text("They / them").tag("They / them")
+            }
             Row("Show hints again on the next launch", symbol: "lightbulb.fill") { RowChevron() }
             ToggleRow("Streak at risk reminders", isOn: .constant(false))
         }
     }
 
     /// The ring round an avatar, the bars, a raised tile beside one with a note, and a day's strip.
+    /// The one-system kit: a well, a hairline, a progress bar and the round control, on a card.
+    @MainActor @ViewBuilder private static var kitPage: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                Text("A well in a card").font(.ourioHeadline).foregroundStyle(Ink.text)
+                Text("Pressed in, with a hairline of shade on its upper edge.")
+                    .font(.ourioCaption).foregroundStyle(Ink.textSecondary)
+                Color.clear.frame(height: Size.control).frame(maxWidth: .infinity).wellSurface()
+                Hairline()
+                ProgressBar(value: 0)
+                ProgressBar(value: 3, total: 8)
+                ProgressBar(value: 1, tint: .blushPink)
+            }
+        }
+        Card {
+            HStack(spacing: Space.m) {
+                RoundButton(symbol: "plus", label: "Add", style: .honey) {}
+                RoundButton(symbol: "arrow.uturn.backward", label: "Undo") {}
+                RoundButton(symbol: "checkmark", label: "Added") {}.disabled(true)
+            }
+        }
+    }
+
     @MainActor @ViewBuilder private static var gaugesPage: some View {
         HStack(spacing: Space.l) {
             Circle().fill(Ink.surfaceRaised)
@@ -170,12 +198,12 @@ enum GalleryPage: String, CaseIterable, Sendable {
         MochiHero(mood: fixedCat.needs?.moodLine(name: "Mochi") ?? "", level: 2, progress: 0.4, days: 2) {
             PetPortrait(size: 88)
         }
-        MochiDay(name: "Mochi", doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
+        MochiDay(name: "Mochi", pronouns: .she, doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
                  locale: Locale(identifier: "en_GB"))
     }
 
     @MainActor @ViewBuilder private static var mochiAboutPage: some View {
-        if let about = fixedCat.about { MochiNature(about: about) }
+        if let about = fixedCat.about { MochiNature(about: about, pronouns: .she) }
     }
 
     private static let fixedCat: CatStatus = {

@@ -19,7 +19,6 @@ struct NoteComposer: View {
     @State private var flight = 0.0
     @State private var sending = false
     @State private var paperSize = CGSize(width: 280, height: 280)
-    @State private var pats = 0
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -38,19 +37,13 @@ struct NoteComposer: View {
                 ZStack {
                     ComposerPaper(model: model, size: size, focused: $focused)
                         .sendFlight(style: style, color: Color(hex: model.paper.hex), progress: flight)
-                        .overlay {
-                            if style == .desk {
-                                MochiOnDesk(activity: model.text.count + (model.hasInk ? 1 : 0) + pats, paper: size,
-                                            swiping: .constant(sending))
-                            }
-                        }
                         .onAppear { paperSize = size }
                         .onChange(of: size) { _, new in paperSize = new }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .padding(.horizontal, Space.gutter)
-            .padding(.top, Space.xl)
+            .padding(.top, Space.s)
             .safeAreaInset(edge: .bottom, spacing: 0) { tools }
         }
         .overlay { PurchaseMoment(state: state) }
@@ -61,8 +54,8 @@ struct NoteComposer: View {
     }
 
     private func paper(fitting available: CGSize) -> CGSize {
-        let room = CGSize(width: max(120, available.width), height: max(120, available.height - Space.xl))
-        let width = min(room.width, room.height * model.kind.aspect, 340)
+        let room = CGSize(width: max(120, available.width), height: max(120, available.height))
+        let width = min(room.width, room.height * model.kind.aspect)
         return CGSize(width: width, height: width / model.kind.aspect)
     }
 
@@ -88,20 +81,15 @@ struct NoteComposer: View {
                 .padding(.horizontal, Space.gutter)
                 .offset(y: -Space.l)
         }
-        .animation(.snappy(duration: 0.2), value: model.hasInk)
+        .animation(Motion.spring(0.2), value: model.hasInk)
     }
 
     private var toolToggle: some View {
-        Button { model.drawing.toggle() } label: {
-            Image(systemName: model.drawing ? "pencil.tip" : "character.cursor.ibeam")
-                .font(.ourioCallout.weight(.semibold))
-                .foregroundStyle(model.drawing ? Ink.heroInk : Ink.text)
-                .frame(width: Size.control, height: Size.control)
-                .background(model.drawing ? Color.honey : Ink.surface, in: .circle)
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel(model.drawing ? "Pen on" : "Pen off")
-        .accessibilityHint("Switches between drawing and typing")
+        RoundButton(
+            symbol: model.drawing ? "pencil.tip" : "character.cursor.ibeam",
+            label: model.drawing ? "Type" : "Draw", style: model.drawing ? .honey : .quiet
+        ) { model.drawing.toggle() }
+        .accessibilityHint(model.drawing ? "Back to typing" : "Draw on the note with a pen")
         .accessibilityIdentifier("composerPen")
     }
 
@@ -111,31 +99,23 @@ struct NoteComposer: View {
                 Button(option.rawValue.capitalized) { model.paper = option }
             }
         } label: {
-            Circle()
-                .fill(Color(hex: model.paper.hex))
-                .overlay(Circle().strokeBorder(Ink.text.opacity(0.3), lineWidth: 1))
-                .frame(width: 28, height: 28)
+            Image(systemName: "paintpalette")
+                .font(.ourioHeadline)
+                .foregroundStyle(Ink.text)
                 .frame(width: Size.control, height: Size.control)
+                .background { Circle().fill(Ink.well) }
         }
         .accessibilityLabel("Paper colour")
+        .accessibilityValue(model.paper.rawValue.capitalized)
         .accessibilityIdentifier("composerPaperColour")
     }
 
     private var kindPicker: some View {
-        Button {
+        RoundButton(symbol: model.kind.symbol, label: "Paper: \(model.kind.rawValue)") {
             let kinds = style.kinds
             let next = (kinds.firstIndex(of: model.kind) ?? 0) + 1
-            withAnimation(.snappy) { model.kind = kinds[next % kinds.count] }
-            pats += 1
-        } label: {
-            Image(systemName: model.kind.symbol)
-                .font(.ourioCallout.weight(.semibold))
-                .foregroundStyle(Ink.text)
-                .frame(width: Size.control, height: Size.control)
-                .background(Ink.surface, in: .circle)
+            withAnimation(Motion.spring()) { model.kind = kinds[next % kinds.count] }
         }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Paper: \(model.kind.rawValue)")
         .accessibilityIdentifier("composerPaperKind")
     }
 

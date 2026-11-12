@@ -69,19 +69,20 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureOnboardingTests", ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
   ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
+  ("WidgetInterfaceTests", ["WidgetInterface", "MoodInterface"]),
   ("WidgetBridgeTests", ["Delivery", "Persistence", "Pet", "WidgetBridge"]),
-  ("FeatureGamesTests", ["FeatureGames", "GamesInterface", "Transport", "Wire"]),
+  ("FeatureGamesTests", ["FeatureGames", "GamesInterface", "Pet", "Transport", "Wire"]),
   ("RoomInterfaceTests", ["RoomInterface", "Pet"]),
   ("FeatureInboxTests", ["Design", "FeatureInbox", "Transport", "Wire"]),
   ("FeatureMoodTests", ["FeatureMood", "MoodInterface", "Transport", "Wire"]),
-  ("ProfileInterfaceTests", ["ProfileInterface"]),
+  ("ProfileInterfaceTests", ["ProfileInterface", "Pet"]),
   ("DecorInterfaceTests", ["DecorInterface"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Wire"]),
 ]
 
 let games: Target = .target(
   name: "FeatureGames",
-  dependencies: dependencies(["GamesInterface", "BilletKit", "Transport", "Wire"]))
+  dependencies: dependencies(["GamesInterface", "BilletKit", "Pet", "Transport", "Wire"]))
 
 let shopInterface: Target = .target(name: "ShopInterface", dependencies: dependencies(["Wire"]))
 let inbox: Target = .target(
@@ -92,7 +93,7 @@ let decor: Target = .target(
   dependencies: dependencies(["DecorInterface", "BilletKit", "Persistence", "Wire"]))
 let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
 let profileInterface: Target = .target(
-  name: "ProfileInterface", dependencies: dependencies(["Persistence"]))
+  name: "ProfileInterface", dependencies: dependencies(["Persistence", "Pet"]))
 // Moved from the app, which builds with Xcode's approachable concurrency: a
 // nonisolated async method runs on its caller's actor, so the app's stores can call it from the UI.
 let fromTheApp: [SwiftSetting] = [.enableUpcomingFeature("NonisolatedNonsendingByDefault")]
@@ -125,7 +126,8 @@ let shop: Target = .target(
 )
 
 // The room itself is in the app, where RealityKit is.
-let gamesInterface: Target = .target(name: "GamesInterface", dependencies: dependencies(["Wire"]))
+let gamesInterface: Target = .target(
+  name: "GamesInterface", dependencies: dependencies(["Pet", "Wire"]))
 let roomInterface: Target = .target(
   name: "RoomInterface",
   dependencies: dependencies(["GamesInterface", "DecorInterface", "Pet", "BilletKit"]))

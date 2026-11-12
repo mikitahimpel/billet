@@ -60,6 +60,8 @@ protocol GameStage: AnyObject {
     var glance: CGSize? { get }
     /// 0...1: how far the camera leans in toward the game's center, for a game that has a moment to look at.
     var push: Float { get }
+    /// Where she sits for this game, in the pivot's space, so she can be put back if she is ever off screen.
+    var seat: SIMD3<Float>? { get }
     func act()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
@@ -70,6 +72,7 @@ extension GameStage {
     var cue: GameCue? { nil }
     var glance: CGSize? { nil }
     var push: Float { 0 }
+    var seat: SIMD3<Float>? { nil }
     func act() {}
 }
 

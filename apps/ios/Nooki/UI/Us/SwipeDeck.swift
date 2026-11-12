@@ -68,42 +68,20 @@ struct SwipeDeck: View {
 
     private func stamp(_ text: String, tint: Color, strength: CGFloat) -> some View {
         Text(text)
-            .font(.system(.title, design: .rounded, weight: .heavy))
+            .font(.ourioTitle)
             .foregroundStyle(tint)
             .padding(.horizontal, Space.m)
             .padding(.vertical, 3)
-            .overlay(
-                RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
-                    .stroke(tint, lineWidth: 3)
-            )
             .rotationEffect(.degrees(text == "LOVE" ? -14 : 14))
             .opacity(Double(min(1, max(0, strength))))
     }
 
     private var passButton: some View {
-        Button { fling(liked: false) } label: {
-            Image(systemName: "xmark")
-                .font(.system(.title2, weight: .bold))
-                .foregroundStyle(Ink.text)
-                .frame(width: 64, height: 64)
-                .background(Ink.surfaceRaised, in: .circle)
-                .overlay(Circle().stroke(Ink.separator, lineWidth: 0.5))
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Pass")
+        RoundButton(symbol: "xmark", label: "Pass") { fling(liked: false) }
     }
 
     private var likeButton: some View {
-        Button { fling(liked: true) } label: {
-            Image(systemName: "heart.fill")
-                .font(.system(.title2, weight: .bold))
-                .foregroundStyle(Ink.heroInk)
-                .frame(width: 64, height: 64)
-                .background(Circle().fill(.honeyGradient))
-                .shadow(color: Color.honeyDeep.opacity(0.4), radius: 10, y: 4)
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Love")
+        RoundButton(symbol: "heart.fill", label: "Love", style: .honey) { fling(liked: true) }
     }
 
     private var cardDrag: some Gesture {
@@ -119,7 +97,7 @@ struct SwipeDeck: View {
                 if abs(value.translation.width) > Self.flingDistance || abs(throwWidth) > Self.flingDistance * 2.5 {
                     fling(liked: throwWidth > 0)
                 } else {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.72)) { drag = .zero }
+                    withAnimation(Motion.spring(0.35)) { drag = .zero }
                 }
             }
     }
@@ -163,7 +141,7 @@ struct DateIdeaCard: View {
             .overlay(alignment: .bottomLeading) {
                 VStack(alignment: .leading, spacing: Space.s) {
                     Text(idea.title)
-                        .font(.system(.title, design: .rounded, weight: .bold))
+                        .font(.ourioTitle)
                         .foregroundStyle(.white)
                         .fixedSize(horizontal: false, vertical: true)
                     Text(idea.pitch)
@@ -183,8 +161,7 @@ struct DateIdeaCard: View {
             .frame(maxWidth: .infinity)
             .frame(height: Self.height)
             .clipShape(shape)
-            .overlay(shape.stroke(.white.opacity(0.14), lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.3), radius: 16, y: 8)
+            .cardSurface()
             .accessibilityElement(children: .combine)
     }
 

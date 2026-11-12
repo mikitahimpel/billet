@@ -119,12 +119,11 @@ public struct CountryFlag: View {
                     // The circle doesn't grow with Dynamic Type, so neither does the flag in it.
                     .dynamicTypeSize(.large)
                     .frame(width: size, height: size)
-                    .background(Ink.surfaceRaised, in: .circle)
+                    .background(Ink.well, in: .circle)
             }
         }
         .frame(width: size, height: size)
         .clipShape(.circle)
-        .overlay(Circle().strokeBorder(Ink.separator, lineWidth: 0.5))
         .accessibilityHidden(true)
     }
 }

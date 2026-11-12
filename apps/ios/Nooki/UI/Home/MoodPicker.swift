@@ -65,11 +65,7 @@ private struct MoodChip: View {
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, Space.l)
-            .background {
-                let shape = RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                shape.fill(picked ? Ink.surfaceRaised : Ink.surface)
-                if picked { shape.strokeBorder(Color.honey, lineWidth: 2) }
-            }
+            .cardSurface(state: picked ? .selected : .rest)
         }
         .buttonStyle(PressScaleStyle())
         .accessibilityLabel(mood.title.capitalized)

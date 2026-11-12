@@ -84,7 +84,7 @@ import Testing
     ])
     func eachNeedOpensItsCare(need: PetNeed, care: NeedCare?) {
         #expect(need.care == care)
-        #expect((need.note == nil) == (care != nil), "a need without care says why")
+        #expect((need.note(pronouns: .they) == nil) == (care != nil), "a need without care says why")
     }
 
     @Test func theCareUnderTheRowsIsNoNeedsOwn() {

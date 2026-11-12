@@ -72,14 +72,3 @@ struct BundleCard: View {
         }
     }
 }
-
-struct OwnedCheck: View {
-    var body: some View {
-        Image(systemName: "checkmark.circle.fill")
-            .font(.ourioCallout)
-            .symbolRenderingMode(.palette)
-            .foregroundStyle(Ink.heroInk, Color.honey)
-            .background(Circle().fill(Ink.surface).padding(1))
-            .accessibilityHidden(true)
-    }
-}

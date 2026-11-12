@@ -50,29 +50,33 @@ Lights come from `lights/room.json` (a copy of the RealityKit lights, as in `scr
 
 ## Kitchen corner (the feed, water and brush games)
 
-`kitchen.py` models the kitchen corner procedurally (clay boxes, cylinders, balls and lofted leaf blades in the Living
-room's palette: cream wall, honey cupboards, sage tiles, terracotta jars, a blush café curtain, a lit mustard pendant)
-and bakes it into two opaque images drawn unlit on two quads:
-
-```sh
-flock ~/billet-gpu/.klein.lock blender -b -P kitchen.py -- out/kitchen wall  --samples 256   # kitchen_wall.png
-flock ~/billet-gpu/.klein.lock blender -b -P kitchen.py -- out/kitchen floor --samples 256   # kitchen_floor.png
-flock ~/billet-gpu/.klein.lock blender -b -P kitchen.py -- out/kitchen look  --samples 64    # look_game.png, look_wide.png
-cwebp -q 82 -noalpha kitchen_wall.png -o kitchen_wall.webp   # and the same for the floor
-```
-
-Each run takes about 15 s on the 3070. Shipped in `apps/ios/Nooki/Resources/Kitchen/` with `kitchen.json`:
-
-| File | What |
-| --- | --- |
-| `kitchen_wall.webp` | the wall straight on, orthographic, 1.0 m x 1.1 m (1024x1126): counter run (top at 0.255 m), sage backsplash, window with sill and café curtain left of centre, shelf of jars, utensil rail, pendant lamp; the lower middle 0.5 m x 0.3 m is kept clear for the cat |
-| `kitchen_floor.webp` | the floor from above, 1.2 m wide x 0.9 m deep (1024x768), top of the image at the wall: neutral honey boards, a cream flat-weave rug with rounded corners (oat border, sage line, tonal end stripes, short fringe), the counter's contact shadow along the top edge and a soft vignette |
-| `kitchen.json` | sizes in metres; `rug` and `clear` as fractions of the image (origin top left) |
-
-The wall image's plane is the counter's front: stand the wall quad on the floor quad's back edge. `look` lays the two
-PNGs on quads in the game's room and renders them from `TabletopRoom`'s camera with a stand-in cat (`look_game`) and with
-a 40 degree lens from the same spot (`look_wide`), to judge the whole corner.
+The kitchen is no longer baked: `apps/ios/Nooki/Room/Games/KitchenSet.swift` builds it as a real corner (two walls with
+a ceiling fade, wood planks, counters with doors, window, shelf, utensils, pendant, stool, sack and rug) from meshes
+merged per material (`MeshBatch.swift`), with baked contact blobs. `kitchen.py` stays as the Blender model of the same
+corner, for stills of it.
 
 ## Style references
 
 `docs/city-room-style.md`.
+
+## Room pieces (the Living room's own furniture)
+
+The room's furniture a player can move is one USDZ each, `apps/ios/Nooki/Resources/Room/Base_<piece>.usdz` (windowseat,
+nightstand, plant, lamp, cattree, bowls, donutbed, basket, books, rug; catalog ids `base-<piece>`). Each has its origin on the
+boards (y = 0 at their top, 0.014 in the room) in the middle of the cell it stands in when the room is as it always was
+(`PIECES` in `apps/ios/Tools/make_room.py`, the cells of `tools/decor-lod/catalog.py` `BASE`), so a holder at that cell
+reproduces the room. `Room_furniture.usdz` keeps what never moves: the round window with `Glow_window`, the shelf, the picture
+and the fairy-light wire. Together they have the same 283,820 triangles the single model had.
+
+```sh
+rsync -a apps/ios/Tools/ pc:billet-gpu/rearr/Tools/
+ssh pc 'cd ~/billet-gpu/rearr && ~/billet-gpu/blender-app/blender-billet -b --python Tools/make_room.py -- new'   # about 5 s
+scp 'pc:billet-gpu/rearr/new/Base_*.usdz' pc:billet-gpu/rearr/new/Room_furniture.usdz apps/ios/Nooki/Resources/Room/
+# one piece only: ... make_room.py -- new Base_rug
+# bounds (width, depth, top, and the bounds' middle dx, dz from the cell middle) for tools/decor-lod/catalog.py
+blender -b -P tools/decor-lod/bounds.py -- apps/ios/Nooki/Resources tools/decor-lod/bounds.json
+# the floor decal holds only what stays: the shell and the fixed furniture; each piece draws its own blob
+scp apps/ios/Nooki/Resources/Room/Room_shell.usdz pc:billet-gpu/rearr/
+ssh pc 'cd ~/billet-gpu/rearr && flock ~/billet-gpu/.klein.lock ~/billet-gpu/blender-app/blender-billet -b -P contact_shadow.py -- room_contact.png 0.017 Room_shell.usdz,new/Room_furniture.usdz --size 1024 --bounds -0.595,-0.595,0.56,0.56'
+cwebp -quiet -q 82 -alpha_q 92 -m 6 room_contact.png -o apps/ios/Nooki/Resources/RoomBake/room_contact.webp
+```

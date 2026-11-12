@@ -6,6 +6,7 @@ import {
   CatName,
   CatNeeds,
   CatProfile,
+  CatPronouns,
   CatTemper,
   UtcOffsetSeconds,
 } from "@billet/contracts-domain/cat";
@@ -25,6 +26,8 @@ export type CatResponse = typeof CatResponse.Type;
 /** The first save adopts the cat; later saves change its name, look and the pair's clock. */
 export const SaveCatRequest = Schema.Struct({
   name: CatName,
+  /** Left out, it keeps what the room has. */
+  pronouns: Schema.optionalKey(CatPronouns),
   look: CatLook,
   utcOffsetSeconds: UtcOffsetSeconds,
 });

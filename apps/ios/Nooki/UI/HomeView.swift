@@ -84,6 +84,7 @@ struct HomeView: View {
         content
         .modifier(StreakNudging(streak: state.streak))
         .task {
+            LaunchSignposts.event("home first frame")
             OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 }, selectRoom: select)
             await lift()
         }
@@ -186,7 +187,7 @@ struct HomeView: View {
                     withAnimation(.spring(duration: 0.4)) { state.open(target) }
                 }
             } else {
-                InboxSignedOut(petName: state.petName)
+                InboxSignedOut(petName: state.petName, isPaired: state.profile.couple.pair != nil)
             }
         }
         .onChange(of: state.shop.coinsAsk) { _, ask in
@@ -232,7 +233,7 @@ struct HomeView: View {
         ZStack {
             // The bokeh drifts only around a room: under the Shop, Moments and Us it holds still, so their scrolling
             // and the glass over them never redraw a moving backdrop every frame.
-            WarmBackdrop(drifts: roomOnScreen)
+            WarmBackdrop(drifts: roomOnScreen && perfLab.isOn(.drift) && perfLab.tier.plan.sway)
 
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
             RoomHost(input: roomInput, controller: room).equatable()
@@ -324,6 +325,9 @@ struct HomeView: View {
             .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
+        .overlay {
+            if arranging, room.game == nil, state.tab == .world { DecorTouchLayer(controller: room) }
+        }
         .overlay(alignment: .bottom) {
             if arranging, room.game == nil {
                 DecorPanel(state: state) { state.decor.send(.closed) }
@@ -406,7 +410,9 @@ struct HomeView: View {
         case .active:
             // The first call is launch, where every store has just been read.
             state.refresh(reloading: old != phase)
+            for _ in 0..<state.takeWidgetFeeds() { room.feed() }
             room.appOpened()
+            state.sendPronouns = { room.pronounsChosen() }
             visitHints()
             Task {
                 await DrawingSync.requestPushes(asking: false)
@@ -422,6 +428,7 @@ struct HomeView: View {
             // download above doesn't hold them up.
             Task {
                 await room.syncCat()
+                state.refreshPronouns()
                 await state.streak.refresh()
             }
             // The room socket sends no game frames it missed while the app was away. Its own task, so missed
@@ -456,9 +463,11 @@ struct HomeView: View {
     private func lift() async {
         try? await Task.sleep(for: .seconds(1.6))
         await room.ready(timeout: .seconds(4.4))
+        LaunchSignposts.event("room ready")
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false } completion: { splashDrawn = false }
+        LaunchSignposts.event("splash lifting")
         // `-room city` on launch opens the City room, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" || state.rooms.variant.firstRoom == .city {
             select(.city)
@@ -517,13 +526,18 @@ struct HomeView: View {
     private var barGlass: GlassRendering { perfLab.isOn(.barGlass) ? hud.glass : .flat }
 
     private var roomInput: RoomInput {
+        let plan = perfLab.tier.plan
         let visibility: RoomVisibility =
-            roomOnScreen ? .visible : (showsRoom ? .covered : .hidden)
+            roomOnScreen && !plan.still ? .visible : (showsRoom ? .covered : .hidden)
+        let rate = perfLab.isOn(.splatRate) ? 30 : 0
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true, motes: perfLab.isOn(.motes),
-            sway: perfLab.isOn(.sway), decor: roomDecor,
-            rendering: RoomRendering(antialiasing: perfLab.isOn(.msaa), hdr: perfLab.isOn(.hdr)))
+            catName: state.petName, catPronouns: state.pronouns, partnerHere: session?.partnerHere == true,
+            motes: perfLab.isOn(.motes) && plan.motes,
+            sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,
+            rendering: RoomRendering(
+                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr),
+                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0))
     }
 
     private var arranging: Bool { state.decor.state.isArranging }

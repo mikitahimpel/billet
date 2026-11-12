@@ -1,7 +1,6 @@
 {
   "apps/ios/Nooki/Onboarding/OnboardingView.swift": 1,
   "apps/ios/Nooki/Onboarding/OnboardingView+Pieces.swift": 1,
-  "apps/ios/Nooki/Onboarding/WelcomeView.swift": 1,
   "apps/ios/Nooki/UI/Draw/LockCanvasView.swift": 1,
   "apps/ios/Nooki/UI/Home/HeaderControls.swift": 1,
   "apps/ios/Nooki/UI/Home/PetSheet.swift": 1,
@@ -13,9 +12,7 @@
   "apps/ios/Nooki/UI/Shop/ShopItemCard.swift": 1,
   "apps/ios/Nooki/UI/Us/AddTitleSheet.swift": 1,
   "apps/ios/Nooki/UI/Us/GrocerySuggestions.swift": 1,
-  "apps/ios/Nooki/UI/Us/ListCard.swift": 1,
   "apps/ios/Nooki/UI/Us/PlaceSheets.swift": 1,
-  "apps/ios/Nooki/UI/Us/WhoKnowsScreen.swift": 1,
   "apps/ios/Nooki/UI/Us/WishEditor.swift": 1,
   "apps/ios/OurioShare/ShareWishView.swift": 1,
   "packages/ios/payments/Sources/PaymentsMock/MockPaymentsLabsView.swift": 1

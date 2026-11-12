@@ -3,6 +3,7 @@ import MomentsInterface
 import Observation
 import WidgetInterface
 import WidgetUI
+import Pet
 import ProfileInterface
 import Transport
 import UsInterface
@@ -39,6 +40,7 @@ final class OnboardingFlow {
     static let underAge: OnboardingOptionId = "age-under-13"
     static let goalsStep: OnboardingStepId = "goals"
     static let widgetGoals: Set<OnboardingOptionId> = ["widgets", "stay-close"]
+    static let nameStep: OnboardingStepId = "name"
     static let catCoatStep: OnboardingStepId = "cat_coat"
     static let catNameStep: OnboardingStepId = "cat_name"
     static let inviteStep: OnboardingStepId = "invite_partner"
@@ -67,6 +69,8 @@ final class OnboardingFlow {
     var values: [OnboardingStepId: Int] = [:]
     var texts: [OnboardingStepId: String] = [:]
     var catName = ""
+    /// Worded as `they` until the person picks; saved with the name.
+    var catPronouns = CatPronouns.unchosen
     var coat: CatCoat
     /// The coat the room's cat wears; it changes once the picked coat is confirmed.
     private(set) var wornCoat: CatCoat
@@ -88,6 +92,7 @@ final class OnboardingFlow {
     @ObservationIgnored private let asksTogetherSince: Bool
     @ObservationIgnored private let togetherSinceChosen: (Date) -> Void
     @ObservationIgnored private let requestPushes: () async -> Void
+    @ObservationIgnored private let nameChosen: (String) -> Void
     @ObservationIgnored private let now: () -> Date
     @ObservationIgnored private let coatChanged: () -> Void
     @ObservationIgnored private var events: [ClientEvent] = []
@@ -105,6 +110,7 @@ final class OnboardingFlow {
         asksTogetherSince: Bool = false,
         togetherSinceChosen: @escaping (Date) -> Void = { _ in },
         requestPushes: @escaping () async -> Void = {},
+        nameChosen: @escaping (String) -> Void = { _ in },
         bundled: @escaping @Sendable () -> OnboardingResponse = { BundledOnboarding.load() },
         now: @escaping () -> Date = Date.init,
         coatChanged: @escaping () -> Void = {}
@@ -122,6 +128,7 @@ final class OnboardingFlow {
         self.asksTogetherSince = asksTogetherSince
         self.togetherSinceChosen = togetherSinceChosen
         self.requestPushes = requestPushes
+        self.nameChosen = nameChosen
         self.now = now
         self.bundled = bundled
         savedCatalogue = defaults.data(forKey: Self.catalogueKey)
@@ -314,11 +321,13 @@ final class OnboardingFlow {
             } else {
                 catNames.removeObject(forKey: CatProfile.nameKey)
             }
+            CatProfile.setPronouns(catPronouns, in: catNames)
             record(answer ?? .skipped)
             advance()
         case .question(let step):
             guard let answer else { return }
             if step.id == Self.ageStep, answer == .single(option: Self.underAge) { return stop() }
+            if step.id == Self.nameStep, case .text(let name) = answer { nameChosen(name) }
             record(answer)
             advance()
         }
@@ -326,7 +335,10 @@ final class OnboardingFlow {
 
     func skip() {
         guard canSkip else { return }
-        if page == .catName { catNames.removeObject(forKey: CatProfile.nameKey) }
+        if page == .catName {
+            catNames.removeObject(forKey: CatProfile.nameKey)
+            CatProfile.setPronouns(nil, in: catNames)
+        }
         if page == .catCoat {
             coat = .grey
             wear(.grey)

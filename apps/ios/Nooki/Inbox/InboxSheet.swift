@@ -21,7 +21,8 @@ struct InboxSheet: View {
 
     var body: some View {
         let partner = state.profile.name(of: state.otherPartner)
-        InboxView(model: model, names: .app(partner: partner, cat: state.petName), opensModel: opensModel, now: now,
+        InboxView(model: model, names: .app(partner: partner, cat: state.petName), isPaired: state.profile.couple.pair != nil,
+                  opensModel: opensModel, now: now,
                   open: open) { actor in
             InboxAvatar(actor: actor, state: state)
         } face: { mood in

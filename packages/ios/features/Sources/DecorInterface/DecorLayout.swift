@@ -192,9 +192,51 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     }
   }
 
-  /// Where she steps down from her bed: beside it while it stands, else where the room says.
+  /// Where she steps down from her bed: beside it while it stands, else beside the bed or sofa she rests on,
+  /// else where the room says.
   public func spawn(in room: DecorRoom = .home) -> Occupancy.Point {
-    point(of: room.spawnFollow) ?? room.spawn
+    point(of: room.spawnFollow) ?? restSpawn(in: room) ?? room.spawn
+  }
+
+  /// The piece she rests on and where she steps down from it.
+  public struct CatHome: Equatable, Sendable {
+    public let item: String
+    public let placement: Placement
+    /// Where she sits, on the piece's top.
+    public let seat: Occupancy.Point
+    /// How high that seat is above the floor, in metres; zero for the room's own bed, which the scene knows.
+    public let height: Double
+    public let spawn: Occupancy.Point
+
+    public static func == (a: CatHome, b: CatHome) -> Bool {
+      a.item == b.item && a.placement == b.placement
+    }
+  }
+
+  /// The bed or sofa she rests on: the room's own bed while it stands, else the first other by name.
+  public func catHome(in room: DecorRoom = .home) -> CatHome? {
+    let rests = allPlacements.filter { DecorItem.item(shopID: $0.item)?.isRest == true }
+      .sorted { $0.item < $1.item }
+    guard
+      let placement = rests.first(where: { $0.item == room.spawnFollow.piece }) ?? rests.first,
+      let item = DecorItem.item(shopID: placement.item),
+      let span = Self.span(of: placement, item: item)
+    else { return nil }
+    let own = item.isBase
+    return CatHome(
+      item: item.id, placement: placement, seat: (span.x, span.z),
+      height: own ? 0 : item.height * 0.9, spawn: spawn(in: room))
+  }
+
+  private func restSpawn(in room: DecorRoom) -> Occupancy.Point? {
+    let rests = allPlacements.filter { DecorItem.item(shopID: $0.item)?.isRest == true }
+      .sorted { $0.item < $1.item }
+    guard let placement = rests.first, let item = DecorItem.item(shopID: placement.item),
+      let span = Self.span(of: placement, item: item)
+    else { return nil }
+    let occupancy = occupancy(in: room)
+    let middle = occupancy.nearestFree(to: (span.x, span.z)) ?? (span.x, span.z)
+    return Self.approach(to: span, in: occupancy, from: middle) ?? middle
   }
 
   /// Where she walks up to each piece she must always be able to reach, while it stands: the cat tree. Nil

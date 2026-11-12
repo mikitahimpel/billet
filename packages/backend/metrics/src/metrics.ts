@@ -25,6 +25,8 @@ export class Metrics extends Context.Service<
   Metrics,
   {
     readonly record: (event: MetricEvent) => Effect.Effect<void>;
+    /** `record` of each at one moment, in one storage round trip: all or none. */
+    readonly recordMany: (events: ReadonlyArray<MetricEvent>) => Effect.Effect<void>;
   }
 >()("@billet/backend-metrics/Metrics") {
   static readonly layer: Layer.Layer<Metrics, never, MetricsRepository> = Layer.effect(
@@ -39,10 +41,30 @@ export class Metrics extends Context.Service<
             ),
             Effect.catchCause(() => Effect.logWarning("metric not recorded")),
           ),
+        recordMany: (events) =>
+          Clock.currentTimeMillis.pipe(
+            Effect.flatMap((at) =>
+              repository.recordMany(
+                events.map(({ userId, pairId, name, detail, value, client }) => ({
+                  pairId: pairId ?? "",
+                  userId,
+                  name,
+                  at,
+                  detail,
+                  value,
+                  client,
+                })),
+              ),
+            ),
+            Effect.catchCause(() => Effect.logWarning("metrics not recorded")),
+          ),
       });
     }),
   );
 
   /** Records nothing. For tests and for a Worker without a database. */
-  static readonly silent = Layer.succeed(Metrics, { record: () => Effect.void });
+  static readonly silent = Layer.succeed(Metrics, {
+    record: () => Effect.void,
+    recordMany: () => Effect.void,
+  });
 }

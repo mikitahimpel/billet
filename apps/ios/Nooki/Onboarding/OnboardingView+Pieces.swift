@@ -113,7 +113,7 @@ extension OnboardingView {
                 tapTick += 1
                 flow.join()
             }
-            .buttonStyle(QuietButtonStyle())
+            .buttonStyle(SecondaryButtonStyle())
         case .invite:
             if case .waiting(let code, _, _)? = pairing?.state, flow.invited {
                 ShareLink(item: inviteMessage(code)) { Text("Share again").frame(maxWidth: .infinity) }

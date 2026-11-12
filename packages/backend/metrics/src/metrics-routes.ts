@@ -39,11 +39,15 @@ export const MetricsRoutes = HttpRouter.use((router) =>
         const { appVersion, os } = clientInfoOf(
           (yield* HttpServerRequest.HttpServerRequest).headers,
         );
-        yield* Effect.forEach(
-          events,
-          ({ name, detail, value }) =>
-            metrics.record({ userId, pairId, name, detail, value, client: { appVersion, os } }),
-          { discard: true },
+        yield* metrics.recordMany(
+          events.map(({ name, detail, value }) => ({
+            userId,
+            pairId,
+            name,
+            detail,
+            value,
+            client: { appVersion, os },
+          })),
         );
 
         const pairHash =

@@ -8,6 +8,7 @@ import Observation
 import WidgetInterface
 import WidgetUI
 import Persistence
+import Pet
 import ProfileInterface
 import RoomInterface
 import SwiftUI
@@ -108,6 +109,11 @@ struct HomeStores {
 final class HomeState {
     /// Named in onboarding; Mochi until then.
     var petName: String { CatProfile.name() }
+    /// How the cat is worded, as the pair chose; `they` until then. Read from the app group again after the room is
+    /// synced, since the partner may have chosen.
+    private(set) var pronouns = CatProfile.pronouns()
+    /// Takes a choice made on the cat's sheet: kept for the widgets, and told to the room by `sendPronouns`.
+    @ObservationIgnored var sendPronouns: () -> Void = {}
     var tab: HomeTab = .world
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
@@ -117,6 +123,23 @@ final class HomeState {
     func openShop(_ focus: ShopFocus) {
         shopFocus = focus
         tab = .shop
+    }
+
+    func choosePronouns(_ choice: CatPronouns) {
+        guard choice != pronouns || CatProfile.chosenPronouns() == nil else { return }
+        pronouns = choice
+        CatProfile.setPronouns(choice)
+        WidgetCenter.shared.reloadAllTimelines()
+        sendPronouns()
+    }
+
+    /// After the room was read: the partner's choice is this phone's too.
+    func refreshPronouns() {
+        let current = CatProfile.pronouns()
+        if current != pronouns {
+            pronouns = current
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     /// Opens the World with its pieces arranged, `item` chosen when given: the Shop's Place and the purchase's
@@ -260,6 +283,14 @@ final class HomeState {
         for _ in 0..<min(pets, 5) { care.pet() }
     }
 
+    /// The meals given from a widget since the last look, for her room to serve.
+    func takeWidgetFeeds() -> Int {
+        var activity = WidgetActivity.load()
+        let feeds = activity.takePendingFeeds()
+        if feeds > 0 { activity.save() }
+        return min(feeds, 2)
+    }
+
     /// Deletes every store's files from the app group (or Documents) and this phone's preferences; the caller starts
     /// over with a fresh HomeState. The account stays: its record shares the folder, and its token in the Keychain
     /// would otherwise outlive it, signing the phone out halfway.
@@ -273,6 +304,7 @@ final class HomeState {
         }
         if let domain = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: domain) }
         CatProfile.store.removeObject(forKey: CatProfile.nameKey)
+        CatProfile.store.removeObject(forKey: CatProfile.pronounsKey)
         CatProfile.store.removeObject(forKey: CatProfile.coatKey)
         WidgetCenter.shared.reloadAllTimelines()
     }

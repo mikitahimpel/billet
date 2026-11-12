@@ -61,6 +61,20 @@ nonisolated struct PetMochiIntent: AppIntent {
     }
 }
 
+/// A meal for Mochi: the widget stops asking for dinner right away, and her room serves it on the app's next launch.
+nonisolated struct FeedMochiIntent: AppIntent {
+    static let title: LocalizedStringResource = "Feed Your Cat"
+
+    @MainActor
+    func perform() async throws -> some IntentResult {
+        var activity = WidgetActivity.load()
+        activity.feed()
+        activity.save()
+        savedReloadingWidgets()
+        return .result()
+    }
+}
+
 /// Leaves a check-in for the partner holding the phone.
 struct SetMoodIntent: AppIntent {
     static let title: LocalizedStringResource = "Set Mood"

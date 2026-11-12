@@ -66,7 +66,6 @@ struct PlusHero: View {
             }
         }
         .frame(width: 72, height: 72)
-        .background(Ink.surfaceRaised, in: .circle)
         .clipShape(.circle)
         .overlay(alignment: .top) {
             Image(systemName: "crown.fill")
@@ -84,11 +83,8 @@ struct PlusHero: View {
             PrimaryButton(on ? "Turn off (test)" : "Try Ourio Plus · \(PlusPass.price) / month") { on.toggle() }
                 .accessibilityIdentifier("plusMock")
         } else {
-            Text("\(PlusPass.price) / month · coming soon")
-                .font(.ourioHeadline)
-                .foregroundStyle(Ink.textSecondary)
-                .frame(maxWidth: .infinity, minHeight: Size.button)
-                .background(Ink.surfaceRaised, in: .capsule)
+            PrimaryButton("\(PlusPass.price) / month · coming soon") {}
+                .disabled(true)
         }
     }
 }
@@ -189,7 +185,7 @@ private struct PackCard: View {
     let buy: () -> Void
 
     var body: some View {
-        Card {
+        Card(state: isFit ? .selected : .rest) {
             HStack(spacing: Space.l) {
                 CoinPile(rows: PackStore.piles[tier])
                     .frame(width: 88)
@@ -219,11 +215,6 @@ private struct PackCard: View {
                 .buttonStyle(PrimaryButtonStyle(fullWidth: false))
                 .disabled(locked)
                 .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
-            }
-        }
-        .overlay {
-            if isFit {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.honey, lineWidth: 2)
             }
         }
         .accessibilityElement(children: .contain)

@@ -2,7 +2,9 @@
 // (apps/ios/Shared/Model/Drawings.swift); the Live Activity decodes `content-state`.
 import { Schema } from "effect";
 import type { Note } from "@billet/contracts-domain/note";
+import type { UserId } from "@billet/contracts-domain/ids";
 import type { Reaction } from "@billet/contracts-domain/reaction";
+import type { LoveStreak } from "@billet/contracts-domain/streak";
 import { PushPayload, pushPayloadKey } from "@billet/contracts-push/push-payload";
 
 const encodePayload = Schema.encodeSync(PushPayload);
@@ -66,6 +68,29 @@ export const reactionAlertBody = (reaction: {
       reaction: reaction.reaction,
     }),
   ),
+});
+
+/**
+ * The extension writes the partner's name into the title and the streak into the App Group, so the
+ * widgets show it before the app opens.
+ */
+export const streakAlertBody = (push: {
+  readonly you: UserId;
+  readonly lit: boolean;
+  readonly streak: LoveStreak;
+}): unknown => ({
+  aps: {
+    alert: {
+      title: "Ourio",
+      body: push.lit
+        ? `Today's flame is lit: ${push.streak.days} ${push.streak.days === 1 ? "day" : "days"} in a row 🔥`
+        : "Your partner did their part today. Your turn to light the flame.",
+    },
+    sound: "default",
+    "mutable-content": 1,
+    "thread-id": "streak",
+  },
+  [pushPayloadKey]: encodePayload(PushPayload.cases.Streak.make(push)),
 });
 
 /** No payload, so the notification extension leaves it as it is. */

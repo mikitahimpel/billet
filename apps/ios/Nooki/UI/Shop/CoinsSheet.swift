@@ -163,6 +163,7 @@ struct CoinLine: Hashable {
         case "note": return "A note"
         case "guess": return "Guessed right in Who knows who"
         case "round": return "Played Who knows who"
+        case "streak": return "A day of your love streak"
         default: return "Coins earned"
         }
     }

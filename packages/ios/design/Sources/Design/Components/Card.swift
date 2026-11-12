@@ -150,7 +150,7 @@ public struct GroupedSection<Content: View, Footer: View>: View {
         Group(subviews: content) { rows in
           ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
             if index > 0 {
-              Rectangle().fill(Ink.separator).frame(height: 0.5).padding(.leading, inset)
+              Hairline(inset: inset)
             }
             row
           }
@@ -187,6 +187,7 @@ public struct Row<Trailing: View>: View {
   let tint: Color?
   let destructive: Bool
   let trailing: Trailing
+  var stacksTrailing = false
 
   public init(
     _ title: String, detail: String? = nil, symbol: String? = nil, tint: Color? = nil,
@@ -202,11 +203,26 @@ public struct Row<Trailing: View>: View {
 
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
+  /// The same row with its trailing control on a line of its own, under the words and icon.
+  func stackedTrailing() -> Self {
+    var row = self
+    row.stacksTrailing = true
+    return row
+  }
+
   /// At accessibility sizes the icon and the trailing control share the first line and the words
   /// take the row's whole width under them; without an icon the control goes under the words.
   public var body: some View {
     Group {
-      if dynamicTypeSize.isAccessibilitySize {
+      if stacksTrailing {
+        VStack(alignment: .leading, spacing: Space.s) {
+          HStack(spacing: 14) {
+            if let symbol { icon(symbol) }
+            words
+          }
+          trailing.padding(.leading, symbol == nil ? 0 : RowMetrics.iconInset - Space.l)
+        }
+      } else if dynamicTypeSize.isAccessibilitySize {
         VStack(alignment: .leading, spacing: Space.s) {
           if let symbol {
             HStack(spacing: Space.m) {
@@ -383,6 +399,7 @@ public struct PickerRow<Value: Hashable, Options: View>: View {
   let tint: Color?
   @Binding var selection: Value
   let options: Options
+  @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
   public init(
     _ title: String, symbol: String? = nil, tint: Color? = nil, selection: Binding<Value>,
@@ -395,18 +412,28 @@ public struct PickerRow<Value: Hashable, Options: View>: View {
     self.options = options()
   }
 
+  /// A menu picker is a UIKit button: it takes the width of its value whatever the row has left and
+  /// reports less height than it draws once its title wraps. So the value goes on a line of its own
+  /// when the title and the value do not fit side by side.
   public var body: some View {
-    Row(title, symbol: symbol, tint: tint) {
-      // A menu picker is a UIKit button: it ignores `lineLimit` and reports less height than it
-      // draws once its value wraps, so its type stops growing where a short value still fits a line.
-      Picker(title, selection: $selection) { options }
-        .pickerStyle(.menu)
-        .labelsHidden()
-        .lineLimit(1)
-        .truncationMode(.middle)
-        .dynamicTypeSize(...Self.largestType)
-        .tint(Ink.accentText)
+    if dynamicTypeSize.isAccessibilitySize {
+      Row(title, symbol: symbol, tint: tint) { picker }
+    } else {
+      ViewThatFits(in: .horizontal) {
+        Row(title, symbol: symbol, tint: tint) { picker }
+        Row(title, symbol: symbol, tint: tint) { picker }.stackedTrailing()
+      }
     }
+  }
+
+  private var picker: some View {
+    Picker(title, selection: $selection) { options }
+      .pickerStyle(.menu)
+      .labelsHidden()
+      .lineLimit(1)
+      .truncationMode(.middle)
+      .dynamicTypeSize(...Self.largestType)
+      .tint(Ink.accentText)
   }
 
   static var largestType: DynamicTypeSize { .xxxLarge }

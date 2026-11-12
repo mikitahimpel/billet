@@ -152,4 +152,44 @@ export const describeMetricsRepositoryContract = (
       // The person's count is kept by name, as for any event.
       expect(await Effect.runPromise(repository.all)).toHaveLength(5);
     });
+
+    it("records many at once as if each were recorded alone, details included", async () => {
+      const repository = await make();
+      await Effect.runPromise(repository.recordMany([]));
+      await Effect.runPromise(
+        repository.recordMany([
+          { pairId: "p1", userId: ana, name: "NoteSent", at: day1 },
+          { pairId: "p1", userId: ana, name: "NoteSent", at: day1Later },
+          {
+            pairId: "p1",
+            userId: ana,
+            name: "ShopItemBought",
+            at: day1,
+            detail: "lamp",
+            value: 30,
+          },
+          {
+            pairId: "p1",
+            userId: ana,
+            name: "ShopItemBought",
+            at: day2,
+            detail: "lamp",
+            value: 30,
+          },
+        ]),
+      );
+      const rows = await Effect.runPromise(repository.all);
+      expect(rows).toHaveLength(3);
+      expect(rows.find((row) => row.name === "NoteSent")).toMatchObject({
+        count: 2,
+        firstAt: day1,
+        lastAt: day1Later,
+      });
+      expect(await Effect.runPromise(repository.details)).toEqual(
+        expect.arrayContaining([
+          { name: "ShopItemBought", detail: "lamp", day: "2026-11-02", count: 1, total: 30 },
+          { name: "ShopItemBought", detail: "lamp", day: "2026-11-03", count: 1, total: 30 },
+        ]),
+      );
+    });
   });

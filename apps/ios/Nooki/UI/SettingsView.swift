@@ -45,8 +45,12 @@ struct SettingsView: View {
     var body: some View {
         Page {
             GroupedSection(header: "General",
-                         footer: "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
+                         footer: "Haptics: small taps when you pet \(CatProfile.name()), buy something or add a wish. Pronouns: how Ourio talks about \(CatProfile.name()).") {
                 ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
+                PickerRow("Pronouns", symbol: "pawprint.fill", tint: UsTint.sun.color,
+                          selection: Binding(get: { state.pronouns }, set: { state.choosePronouns($0) })) {
+                    ForEach(CatPronouns.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
             }
 
             GroupedSection(header: "Hints",
@@ -138,9 +142,8 @@ struct SettingsView: View {
             }
 
             GroupedSection(header: "Labs",
-                         footer: "With the brain off, \(CatProfile.name()) lives on her own original timers. The "
-                             + "card shows what the brain has her doing and why: her state, needs and the last thing she "
-                             + "heard. All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
+                         footer: state.pronouns.say(.brainFooter(name: CatProfile.name()))
+                             + " All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
                              + "them baked, from the next launch. Look is the app's colours and faces, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
                              + "the controls over the room after a few seconds without a touch. Coins come from the dev "

@@ -18,6 +18,10 @@ export const CatName = Schema.String.check(
 ).pipe(Schema.brand("CatName"));
 export type CatName = typeof CatName.Type;
 
+/** How the app words the cat: "she", "he" or "they". Either partner chooses; the room keeps the last. */
+export const CatPronouns = Schema.Literals(["she", "he", "they"]);
+export type CatPronouns = typeof CatPronouns.Type;
+
 /** From the app's own catalog. The server only keeps it. */
 export const CatLookId = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9_-]{1,40}$/)).pipe(
   Schema.brand("CatLookId"),
@@ -46,6 +50,8 @@ export type UtcOffsetSeconds = typeof UtcOffsetSeconds.Type;
 /** `bornAt` and `natureSeed` are set once, at adoption. */
 export const CatProfile = Schema.Struct({
   name: CatName,
+  /** Absent until chosen; the apps word the cat neutrally then. */
+  pronouns: Schema.optionalKey(CatPronouns),
   look: CatLook,
   bornAt: EpochMillis,
   natureSeed: NatureSeed,

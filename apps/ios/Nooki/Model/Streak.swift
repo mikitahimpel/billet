@@ -1,9 +1,10 @@
 import Foundation
 import Observation
 import Persistence
+import Wire
 
-/// Grows by one each day the couple does something together (docs/love-streak.md); a whole missed day puts it out,
-/// and one missed day can be restored once a month.
+/// Grows by one each day both partners do something in the app (docs/love-streak.md); a whole missed day puts it
+/// out, and one missed day can be restored once a month. On a phone with no partner its own day is enough.
 public nonisolated struct LoveStreak: Codable, Hashable, Sendable {
     /// Days in a row up to `lastDay`; kept after the streak breaks so a restore can bring it back.
     public var count = 0
@@ -12,12 +13,43 @@ public nonisolated struct LoveStreak: Codable, Hashable, Sendable {
     public var best = 0
     /// Start of the day the last restore was used.
     public var lastRestore: Date?
+    /// Starts of the days after `lastDay` that this phone's person did their part on, and that the partner did.
+    public var mine: [Date] = []
+    public var partner: [Date] = []
 
-    public init(count: Int = 0, lastDay: Date? = nil, best: Int = 0, lastRestore: Date? = nil) {
+    public init(
+        count: Int = 0, lastDay: Date? = nil, best: Int = 0, lastRestore: Date? = nil, mine: [Date] = [],
+        partner: [Date] = []
+    ) {
         self.count = count
         self.lastDay = lastDay
         self.best = best
         self.lastRestore = lastRestore
+        self.mine = mine
+        self.partner = partner
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case count, lastDay, best, lastRestore, mine, partner
+    }
+
+    /// A file written before the marks reads with none.
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        count = try container.decode(Int.self, forKey: .count)
+        lastDay = try container.decodeIfPresent(Date.self, forKey: .lastDay)
+        best = try container.decode(Int.self, forKey: .best)
+        lastRestore = try container.decodeIfPresent(Date.self, forKey: .lastRestore)
+        mine = try container.decodeIfPresent([Date].self, forKey: .mine) ?? []
+        partner = try container.decodeIfPresent([Date].self, forKey: .partner) ?? []
+    }
+
+    /// Whose part today still waits for, while today isn't lit.
+    public enum Turn: Equatable, Sendable {
+        /// The partner did theirs; this phone's person hasn't.
+        case yours
+        /// This phone's person did theirs; the partner hasn't.
+        case partners
     }
 
     public static let milestones = [3, 7, 14, 30, 50, 100, 200, 365]
@@ -60,13 +92,37 @@ public nonisolated struct LoveStreak: Codable, Hashable, Sendable {
         return (Self.milestones.last { $0 <= days }, Self.milestones.first { $0 > days })
     }
 
-    /// A qualifying action happened; the first one each day grows the streak.
+    /// Nil once today is lit, or while neither partner did their part.
+    public func turn(on date: Date = .now, calendar: Calendar = .current) -> Turn? {
+        guard status(on: date, calendar: calendar) != .done else { return nil }
+        let today = calendar.startOfDay(for: date)
+        if mine.contains(today) { return .partners }
+        if partner.contains(today) { return .yours }
+        return nil
+    }
+
+    /// A qualifying action happened; the first one each day grows the streak. For a phone with no partner, and for
+    /// a day both partners did.
     public mutating func record(on date: Date = .now, calendar: Calendar = .current) {
         let day = calendar.startOfDay(for: date)
         if let lastDay, lastDay == day { return }
         count = lastDay.map { daysSince($0, to: date, calendar: calendar) == 1 } == true ? count + 1 : 1
         lastDay = day
         best = max(best, count)
+        mine.removeAll { $0 <= day }
+        partner.removeAll { $0 <= day }
+    }
+
+    /// This phone's person did their part: the day lights once the partner has too, as the room decides it.
+    public mutating func mark(on date: Date = .now, calendar: Calendar = .current) {
+        let day = calendar.startOfDay(for: date)
+        if let lastDay, lastDay >= day { return }
+        if mine.contains(day) { return }
+        if partner.contains(day) {
+            record(on: date, calendar: calendar)
+        } else {
+            mine.append(day)
+        }
     }
 
     /// Fills in the missed day, so today's first action continues the old streak.
@@ -85,6 +141,28 @@ public nonisolated struct LoveStreak: Codable, Hashable, Sendable {
 
     private func daysSince(_ day: Date, to date: Date, calendar: Calendar) -> Int {
         calendar.dateComponents([.day], from: calendar.startOfDay(for: day), to: calendar.startOfDay(for: date)).day ?? 0
+    }
+}
+
+extension LoveStreak {
+    /// The room's streak in this phone's days: each local day is the start of that day in `calendar`. `you` is this
+    /// phone's member, which tells its marks from the partner's; without it neither shows.
+    public init(_ wire: PairStreak, you: String?, calendar: Calendar = .current) {
+        let marks = wire.marks ?? []
+        func days(mine: Bool) -> [Date] {
+            guard let you else { return [] }
+            return marks.filter { ($0.user.rawValue == you) == mine }.compactMap { Self.day($0.day, calendar) }
+        }
+        self.init(count: wire.days, lastDay: wire.lastDay.flatMap { Self.day($0, calendar) }, best: wire.best,
+                  lastRestore: wire.restoredOn.flatMap { Self.day($0, calendar) }, mine: days(mine: true),
+                  partner: days(mine: false))
+    }
+
+    /// `YYYY-MM-DD` as the start of that day.
+    static func day(_ text: String, _ calendar: Calendar) -> Date? {
+        let parts = text.split(separator: "-").compactMap { Int($0) }
+        guard parts.count == 3 else { return nil }
+        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 }
 
@@ -126,7 +204,7 @@ public final class StreakStore {
 
     public init(file: String = "Us/streak.json") {
         self.file = file
-        unsentFile = file.replacingOccurrences(of: ".json", with: "-unsent.json")
+        unsentFile = Self.unsentFile(of: file)
         streak = SharedFile.read(LoveStreak.self, from: file) ?? LoveStreak()
         unsent = SharedFile.read([Date].self, from: unsentFile) ?? []
     }
@@ -159,8 +237,10 @@ public final class StreakStore {
         take(shared)
     }
 
+    /// Paired, this phone's day waits for the partner's; alone, it lights the day.
     public func record(at date: Date = .now) {
-        guard update({ $0.record(on: date) }), remote != nil else { return }
+        let paired = remote != nil
+        guard update({ paired ? $0.mark(on: date) : $0.record(on: date) }), paired else { return }
         unsent.append(date)
         SharedFile.write(unsent, to: unsentFile)
         Task { await flush() }
@@ -199,10 +279,33 @@ public final class StreakStore {
         }
     }
 
-    /// The room's streak, with the days still waiting counted on top.
-    private func take(_ shared: LoveStreak) {
+    /// The room's streak a push brought, for the widgets while the app may not be running; the app reads it when it
+    /// next comes to the front.
+    /// A push that comes after a later day lit (APNs keeps no order) is older than the file, and is dropped. Flushed,
+    /// as the widgets read the file next and the extension may end at once.
+    public nonisolated static func save(pushed shared: LoveStreak, file: String = "Us/streak.json") {
+        if let saved = SharedFile.read(LoveStreak.self, from: file)?.lastDay,
+           shared.lastDay.map({ $0 < saved }) ?? true {
+            return
+        }
+        let unsent = SharedFile.read([Date].self, from: unsentFile(of: file)) ?? []
+        SharedFile.write(merged(shared, unsent: unsent), to: file)
+        SharedFile.flush()
+    }
+
+    nonisolated static func unsentFile(of file: String) -> String {
+        file.replacingOccurrences(of: ".json", with: "-unsent.json")
+    }
+
+    /// The room's streak, with the days this phone has not sent yet marked on top.
+    nonisolated static func merged(_ shared: LoveStreak, unsent: [Date]) -> LoveStreak {
         var next = shared
-        for date in unsent { next.record(on: date) }
+        for date in unsent { next.mark(on: date) }
+        return next
+    }
+
+    private func take(_ shared: LoveStreak) {
+        let next = Self.merged(shared, unsent: unsent)
         guard next != streak else { return }
         streak = next
         SharedFile.write(streak, to: file)

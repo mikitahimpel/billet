@@ -88,13 +88,13 @@ public struct RoomAffordances: Codable, Hashable, Sendable {
 extension RoomAffordance.Kind {
   /// The place in a few words, as in "Favourite spot: the windowsill"; nil for a thing she uses
   /// but does not stay at.
-  public var spotName: String? {
+  public func spotName(for pronouns: CatPronouns) -> String? {
     switch self {
     case .window: "The windowsill"
     case .sunbeam: "The patch of sun"
     case .rug: "The rug"
-    case .bed, .catBed: "Her bed"
-    case .box, .crate: "Her box"
+    case .bed, .catBed: pronouns.say(.bedSpot)
+    case .box, .crate: pronouns.say(.boxSpot)
     case .shelf: "The top shelf"
     case .soft: "Your cardigan"
     case .desk: "The desk"
