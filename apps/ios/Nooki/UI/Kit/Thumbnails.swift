@@ -62,7 +62,9 @@ enum Thumbnails {
     @discardableResult
     private nonisolated static func trim(_ image: UIImage, _ name: String) -> UIImage {
         let clean = image.fadingShadowEdges() ?? image
-        let result = clean.trimmingTransparentEdges() ?? clean
+        let cropped = clean.trimmingTransparentEdges() ?? clean
+        // The crop cuts the shadow's faint tail along the artwork's box, which reads as a rectangle on a dark card.
+        let result = cropped.fadingShadowEdges() ?? cropped
         cache.setObject(result, forKey: trimmedKey(name))
         return result
     }
