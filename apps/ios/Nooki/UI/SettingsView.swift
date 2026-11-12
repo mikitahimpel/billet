@@ -266,6 +266,7 @@ private struct AccountRow: View {
         Row(title, detail: detail, symbol: symbol, tint: tint.color) {
             if case .failed = state {
                 RetryButton(compact: true, action: retry)
+                    .fixedSize()
             } else if case .signingIn = state {
                 ProgressView()
             }
