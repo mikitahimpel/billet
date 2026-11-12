@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { groupOf, limitRequest, limits, windowMillis } from "../src/rate-limit.ts";
+import { groupOf, limitRequest, limits, windowMillis, windowOf } from "../src/rate-limit.ts";
 import { resetDirectory } from "./directory-migrations.ts";
 
 const post = (path: string, ip = "203.0.113.7") =>
@@ -28,6 +28,8 @@ describe("rate limit groups", () => {
     ["/v1/pair", "pairing"],
     ["/v1/media", "media"],
     ["/v1/media/pairs/p/notes/n.png", "media"],
+    ["/v1/pair/report", "reports"],
+    ["/v1/pair/reports", undefined],
     ["/v1/events", "events"],
     ["/v1/onboarding/answers", "onboarding"],
     ["/v1/onboarding", undefined],
@@ -66,6 +68,26 @@ describe("limitRequest", () => {
     const now = 1_700_000_000_000;
     expect((await spend("/v1/auth/challenge", limits.auth + 1, undefined, now))?.status).toBe(429);
     expect(await spend("/v1/auth/challenge", 1, undefined, now + windowMillis)).toBeUndefined();
+  });
+
+  it("counts reports per hour, not per minute", async () => {
+    const now = 1_700_000_000_000;
+    const path = "/v1/pair/report";
+    expect(windowOf("reports")).toBe(60 * windowMillis);
+    expect(await spend(path, limits.reports, undefined, now)).toBeUndefined();
+    const refused = await spend(path, 1, undefined, now + 5 * windowMillis);
+    expect(refused?.status).toBe(429);
+    expect(Number(refused?.headers.get("retry-after"))).toBeGreaterThan(windowMillis / 1000);
+    expect(await spend(path, 1, undefined, now + 60 * windowMillis)).toBeUndefined();
+  });
+
+  it("keeps a report count while minute windows turn over", async () => {
+    const now = 1_700_000_000_000;
+    await spend("/v1/pair/report", limits.reports, undefined, now);
+    await spend("/v1/auth/challenge", 1, undefined, now + 10 * windowMillis);
+    expect((await spend("/v1/pair/report", 1, undefined, now + 11 * windowMillis))?.status).toBe(
+      429,
+    );
   });
 
   it("does not store the caller's address", async () => {
