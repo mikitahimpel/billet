@@ -16,6 +16,8 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   let avatar: (ActivityActor) -> Avatar
   let face: (CheckInMood) -> Face
   let notice: (EdgeInsets) -> Notice
+  /// Whether this phone is paired already, so an empty Inbox never says the partner has yet to join.
+  let isPaired: Bool
   /// False for a model that was opened already, as the gallery's.
   let opensModel: Bool
   /// The clock the days and the "4 minutes ago" lines are read against.
@@ -24,7 +26,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   @Environment(\.dismiss) private var dismiss
 
   public init(
-    model: InboxModel, names: InboxLine.Names, opensModel: Bool = true,
+    model: InboxModel, names: InboxLine.Names, isPaired: Bool = false, opensModel: Bool = true,
     now: @escaping () -> Date = { .now },
     open: @escaping (ActivityTarget) -> Void,
     @ViewBuilder avatar: @escaping (ActivityActor) -> Avatar,
@@ -37,6 +39,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     self.avatar = avatar
     self.face = face
     self.notice = notice
+    self.isPaired = isPaired
     self.opensModel = opensModel
     self.now = now
   }
@@ -56,7 +59,9 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     case .unpaired:
       EmptyState(
         symbol: "tray", title: "Nothing here yet",
-        text: "Once your partner joins, what you both do with \(names.cat) shows up here.")
+        text: isPaired
+          ? "What you both do with \(names.cat) shows up here."
+          : "Once your partner joins, what you both do with \(names.cat) shows up here.")
     case .failed:
       ErrorState("Couldn't load the Inbox", text: "Check your connection and try again.") {
         Task { await model.open() }
@@ -154,17 +159,20 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
 /// The Inbox for someone not connected yet.
 public struct InboxSignedOut: View {
   let petName: String
+  let isPaired: Bool
 
-  public init(petName: String) {
+  public init(petName: String, isPaired: Bool = false) {
     self.petName = petName
+    self.isPaired = isPaired
   }
 
   public var body: some View {
     BilletSheet("Inbox", size: InboxLayout.short.size) {
       EmptyState(
         symbol: "tray", title: "Nothing here yet",
-        text:
-          "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
+        text: isPaired
+          ? "What you both do with \(petName) shows up here once you're connected."
+          : "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
       )
     }
   }

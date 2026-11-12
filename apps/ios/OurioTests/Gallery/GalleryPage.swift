@@ -131,6 +131,9 @@ enum GalleryPage: String, CaseIterable, Sendable {
             PickerRow("Room lighting", symbol: "lightbulb.fill", selection: .constant("Follow the test")) {
                 Text("Follow the test").tag("Follow the test")
             }
+            PickerRow("Cat pronouns", symbol: "pawprint.fill", selection: .constant("They / them")) {
+                Text("They / them").tag("They / them")
+            }
             Row("Show hints again on the next launch", symbol: "lightbulb.fill") { RowChevron() }
             ToggleRow("Streak at risk reminders", isOn: .constant(false))
         }

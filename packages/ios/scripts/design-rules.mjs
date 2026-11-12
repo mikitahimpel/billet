@@ -145,6 +145,13 @@ export const rules = [
     pattern: /(?<=[)\]}]\s*|\w|\w[ \t]*\n\s*)\.stroke(?:Border)?\(/g,
   },
   {
+    id: "raw-motion",
+    what: "animation curves of our own",
+    fix: "Curves and times are Motion.quick, Motion.standard, Motion.spring(_:) and Motion.fade(_:) (docs/design/one-system.md#motion).",
+    pattern:
+      /(?<![\w.])\.(?:snappy|smooth)\b|\.ease(?:In|Out|InOut)\b|\.linear\(duration|\.spring\((?:duration|response)|\.interpolatingSpring\(/g,
+  },
+  {
     id: "blur-material",
     what: "blurs and materials",
     fix: "Floating surfaces are glass(_:role:); a sheet's ground is BilletSheet's.",

@@ -37,7 +37,7 @@ struct Pen: View {
             .overlay(Capsule().strokeBorder(.white.opacity(selected ? 0.9 : 0), lineWidth: 2).padding(-3))
             if !owned {
                 HStack(spacing: 2) {
-                    CoinIcon(size: 8)
+                    CoinIcon(size: 12)
                     Text("\(ink.price)").font(.ourioMicro.monospacedDigit())
                 }
                 .foregroundStyle(Ink.text)
