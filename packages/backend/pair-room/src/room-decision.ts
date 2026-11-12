@@ -89,12 +89,17 @@ export const RoomOutput = Schema.TaggedUnion({
     count: Schema.Int,
     text: ListItemText,
   },
-  /** The streak after `by`'s day grew it, or a restore; `reached` is that day's milestone. */
+  /**
+   * The streak after `by` did their part, or a restore. `lit` is the day it lit, `reached` that
+   * day's milestone; `waiting` is the day `by` marked that waits for the partner.
+   */
   StreakChanged: {
     streak: LoveStreak,
     by: UserId,
     at: EpochMillis,
     reached: Schema.optionalKey(Schema.Int),
+    lit: Schema.optionalKey(LocalDay),
+    waiting: Schema.optionalKey(LocalDay),
   },
   /** A member's new check-in, which replaced their last one. */
   MoodSet: { checkIn: MoodCheckIn },

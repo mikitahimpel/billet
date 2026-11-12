@@ -37,7 +37,8 @@ struct UsView: View {
     var body: some View {
         let upcoming = us.upcoming(togetherSince: state.togetherSince)
         TabPage {
-            StreakCard(store: state.streak, daysTogether: state.daysTogether)
+            StreakCard(store: state.streak, daysTogether: state.daysTogether,
+                       partner: state.profile.name(of: state.otherPartner))
             tiles(next: upcoming.first)
                 .padding(.bottom, Space.l)
             games

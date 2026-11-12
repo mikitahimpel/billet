@@ -50,7 +50,7 @@ public struct LatestDrawing: Codable, Hashable, Sendable {
       .widget(let noteId, _, let compact?, _, let paper),
       .liveActivity(let noteId, _, let compact, let paper):
       self.init(noteID: noteId.rawValue, seq: nil, sentAt: now, compact: compact, paper: paper)
-    case .alert, .widget, .reaction:
+    case .alert, .widget, .reaction, .streak:
       return nil
     }
   }
