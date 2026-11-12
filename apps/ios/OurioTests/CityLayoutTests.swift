@@ -1,3 +1,4 @@
+import DecorInterface
 import Testing
 @testable import Billet
 
@@ -25,5 +26,21 @@ struct CityLayoutTests {
 
     @Test func theRugLiesBesideTheBedNotUnderIt() {
         #expect(CityLayout.rugClearsBed())
+    }
+
+    @Test func theBedroomCatalogStartsWhereTheSceneBuildsIt() {
+        let built: [(String, SIMD2<Float>)] = [
+            ("base-bedroom-bed", CityLayout.bed.at), ("base-bedroom-nightstand", CityLayout.nightstand.at),
+            ("base-bedroom-dresser", CityLayout.dresser.at), ("base-bedroom-catbed", CityLayout.catBed.at),
+            ("base-bedroom-rug", CityLayout.rug.at),
+        ]
+        let layout = DecorLayout()
+        for (id, at) in built {
+            let spot = layout.placement(of: id)
+            #expect(spot != nil, "\(id)")
+            guard let spot else { continue }
+            #expect(abs(Float(DecorGrid.metres(spot.u)) - at.x) <= Float(DecorGrid.step), "\(id) x")
+            #expect(abs(Float(DecorGrid.metres(spot.v)) - at.y) <= Float(DecorGrid.step), "\(id) z")
+        }
     }
 }
