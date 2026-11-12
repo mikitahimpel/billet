@@ -2,6 +2,7 @@ import Design
 import SwiftUI
 import UsInterface
 import WidgetKit
+import WidgetUI
 
 /// Every widget and control Ourio has, drawn with the widgets' own views on sample data, and how to add one.
 struct WidgetsGalleryView: View {

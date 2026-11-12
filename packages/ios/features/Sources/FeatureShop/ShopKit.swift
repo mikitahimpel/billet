@@ -36,10 +36,6 @@
     }
   }
 
-  extension UsTint {
-    var color: Color { Color(hex: colors.top) }
-  }
-
   struct RarityFrame<Content: View>: View {
     let rarity: ShopRarity
     @ViewBuilder let content: Content

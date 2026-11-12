@@ -139,8 +139,8 @@ let widgetInterface: Target = .target(
 let widgetUI: Target = .target(
   name: "WidgetUI",
   dependencies: dependencies([
-    "Design", "DrawInterface", "Ink", "MomentsInterface", "ProfileInterface", "WidgetInterface",
-    "Wire",
+    "Design", "DrawInterface", "Ink", "MomentsInterface", "ProfileInterface", "UsInterface",
+    "WidgetInterface", "Wire",
   ]),
   swiftSettings: fromTheApp)
 let drawInterface: Target = .target(
