@@ -181,11 +181,13 @@ jobs:
           export STEP_START=$started
           # xcodebuild takes minutes to print its first line on a fresh runner. Until that is understood, the
           # busiest processes are sampled into the timeline while it starts.
-          { set +e; for _ in $(seq 30); do ps -Ao pcpu=,comm= -r | head -n 5 | sed 's/^/ps /'; sleep 15; done 2>/dev/null \
+          { set +e; for _ in $(seq 30); do ps -Ao pcpu=,comm= -r | head -n 6 | awk '{ n = split($2, p, "/"); print "ps", $1, p[n] }'; sleep 15; done 2>/dev/null \
             | stamp >> "$RUNNER_TEMP/app-timeline.log"; } &
           sampler=$!
-          /usr/bin/time -p xcrun simctl list devices 2>&1 | grep -E '^(real|user|sys)' | sed 's/^/simctl list: /' \
-            | stamp >> "$RUNNER_TEMP/app-timeline.log" || true
+          for probe in "xcrun simctl list devices" "xcodebuild -list -project apps/ios/Billet.xcodeproj" \
+            "xcodebuild -showdestinations -project apps/ios/Billet.xcodeproj -scheme Billet"; do
+            /usr/bin/time -p $probe 2>&1 | grep -E '^real' | sed "s|^|$probe: |" | stamp >> "$RUNNER_TEMP/app-timeline.log" || true
+          done
           if ! xcodebuild build-for-testing "${app[@]}" -resultBundlePath "$RUNNER_TEMP/app-build.xcresult" \
             -showBuildTimingSummary 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" >(stamp >> "$RUNNER_TEMP/app-timeline.log") \
