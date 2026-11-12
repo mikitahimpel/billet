@@ -69,6 +69,7 @@ export const StoredPlacement = Schema.Struct({
   u: Schema.Int,
   v: Schema.Int,
   quarterTurns: Schema.Int,
+  room: Schema.String,
   position: Schema.Int,
 });
 

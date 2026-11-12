@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import type { LayoutChange } from "@billet/contracts-domain/decor";
+import { canPutAway, homeRoomOf, roomOf, type LayoutChange } from "@billet/contracts-domain/decor";
 import { Placement, RoomItemId } from "@billet/contracts-domain/shop";
 import { decide } from "../src/decide.ts";
 import { shopOf } from "../src/shop-view.ts";
@@ -173,5 +173,53 @@ describe("the room's own furniture", () => {
     expect(bedGone.stowed).toEqual(["base-donutbed"]);
     expect(reason(bedGone, away(4, "armchair"))).toBe("last-rest");
     expect(accepted(bedGone, away(5, "base-plant")).state.stowed).toHaveLength(2);
+  });
+});
+
+describe("arranging the bedroom", () => {
+  const bedroom = (item: string, u: number, v = 0): Placement => ({
+    ...spot(item, u, v),
+    room: "bedroom",
+  });
+  const living = { ...owning, items: [...owning.items, piece("lamp")] };
+
+  it("keeps the two rooms apart: a spot taken in one is free in the other", () => {
+    const one = accepted(living, place(1, spot("armchair", -2, 6))).state;
+    const both = accepted(one, place(2, bedroom("lamp", -2, 6))).state;
+    expect(both.layout).toEqual([spot("armchair", -2, 6), bedroom("lamp", -2, 6)]);
+    expect(reason(both, place(3, spot("lamp", -2, 6)))).toBe("occupied");
+    expect(reason(both, place(4, bedroom("armchair", -2, 6)))).toBe("occupied");
+    expect(reason(both, place(5, bedroom("armchair", 5, 5)))).toBeUndefined();
+  });
+
+  it("moves a piece from one room to the other by placing it again", () => {
+    const one = accepted(living, place(1, spot("armchair", -2, 6))).state;
+    const moved = accepted(one, place(2, bedroom("armchair", 3, 3))).state;
+    expect(moved.layout).toEqual([bedroom("armchair", 3, 3)]);
+  });
+
+  it("never names the living room, so a layout in it reads as before", () => {
+    const named = { ...spot("armchair", -2, 6), room: "living" as const };
+    expect(accepted(living, place(1, named)).state.layout).toEqual([spot("armchair", -2, 6)]);
+  });
+
+  it("knows the room a piece belongs to and refuses an unknown room", () => {
+    expect(() =>
+      Schema.decodeUnknownSync(Placement)({ ...spot("armchair", -2, 6), room: "attic" }),
+    ).toThrow();
+    expect(homeRoomOf("base-bedroom-bed")).toBe("bedroom");
+    expect(homeRoomOf("base-plant")).toBe("living");
+    expect(homeRoomOf("armchair")).toBeUndefined();
+  });
+
+  it("keeps a bed or sofa in each room", () => {
+    const layout = [spot("armchair", -4, 0), bedroom("donutbed", 4, 0)];
+    expect(canPutAway(layout, "donutbed")).toBe(false);
+    expect(canPutAway([...layout, bedroom("armchair-round", 0, 5)], "donutbed")).toBe(true);
+  });
+
+  it("reads a placement without a room as the living room", () => {
+    expect(roomOf(spot("armchair", -2, 6))).toBe("living");
+    expect(roomOf(bedroom("armchair", -2, 6))).toBe("bedroom");
   });
 });

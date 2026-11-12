@@ -17,6 +17,7 @@ import {
   effectiveLayout,
   isBasePiece,
   canPutAway,
+  normalizedPlacement,
   placementProblem,
 } from "@billet/contracts-domain/decor";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
@@ -663,7 +664,8 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         return rejected(RoomRejection.cases.LayoutRefused.make({ reason: "last-rest" }));
       }
       const explicit = room.layout.filter((placement) => placement.item !== target);
-      const layout = change._tag === "Place" ? [...explicit, change.placement] : explicit;
+      const layout =
+        change._tag === "Place" ? [...explicit, normalizedPlacement(change.placement)] : explicit;
       const stowed = room.stowed.filter((item) => item !== target);
       return accepted(
         {
