@@ -87,10 +87,6 @@ struct MovieCard: View {
                     PosterImage(path: path, title: item.text, size: .card)
                         .frame(width: 96, height: 142)
                         .corners(.inner)
-                        .overlay {
-                            RoundedRectangle(cornerRadius: Radius.inner, style: .continuous)
-                                .strokeBorder(Ink.screen, lineWidth: 3)
-                        }
                         .perfShadow(color: .black.opacity(0.25), radius: 8, y: 4)
                         .padding(.leading, Space.gutter)
                         .offset(y: 40)
@@ -154,15 +150,7 @@ struct MovieCard: View {
     }
 
     private func provider(name: String, extra: String?) -> some View {
-        HStack(spacing: Space.xs) {
-            Text(name)
-            if let extra { Text(extra).foregroundStyle(Ink.textTertiary) }
-        }
-        .font(.ourioCallout)
-        .foregroundStyle(Ink.text)
-        .padding(.horizontal, Space.l)
-        .frame(minHeight: 34)
-        .background(Ink.surfaceRaised, in: .capsule)
+        Chip(extra.map { "\(name) · \($0)" } ?? name)
     }
 
     @ViewBuilder
@@ -192,17 +180,11 @@ struct MovieCard: View {
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
                 Spacer(minLength: 0)
-                Button("Want too") {
-                    withAnimation(.snappy(duration: 0.25)) {
+                PrimaryButton("Want too", fullWidth: false) {
+                    withAnimation(Motion.spring(0.25)) {
                         state.us.setWant(itemID, in: listID, wants: true, by: state.viewer)
                     }
                 }
-                .font(.ourioCallout.weight(.semibold))
-                .foregroundStyle(Ink.heroInk)
-                .padding(.horizontal, Space.l)
-                .frame(minHeight: 34)
-                .background(Color.honey, in: .capsule)
-                .buttonStyle(PressScaleStyle())
             }
         }
         .padding(CardMetrics.padding)
