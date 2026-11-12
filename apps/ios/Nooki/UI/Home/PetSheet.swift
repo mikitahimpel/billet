@@ -60,6 +60,8 @@ struct PetButton: View {
                     // Names the button: what she asks for, or simply that her needs are here.
                     Text(cue?.ask ?? "Needs")
                         .font(.ourioMicro)
+                        .lineLimit(1)
+                        .fixedSize()
                         .padding(.horizontal, 7)
                         .frame(height: 17)
                         .glassBadge()
