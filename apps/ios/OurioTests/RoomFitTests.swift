@@ -13,7 +13,8 @@ struct RoomFitTests {
     }
 
     @Test func aTallScreenSeesTheWidthTheReferenceSees() {
-        for aspect: Float in [440.0 / 956, 402.0 / 874, 0.3] {
+        let aspects: [Float] = [440.0 / 956, 402.0 / 874, 0.3]
+        for aspect in aspects {
             let fov = RoomFit.verticalFieldOfView(22, aspect: aspect)
             #expect(fov > 22)
             let reference = halfWidth(22, aspect: RoomFit.referenceAspect)
