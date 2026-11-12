@@ -13,7 +13,8 @@ import bpy
 
 argv = sys.argv[sys.argv.index("--") + 1 :]
 resources, out = argv
-files = sorted(glob.glob(os.path.join(resources, "Decor/Decor_*.usdz")) + glob.glob(os.path.join(resources, "Shop/Item_*.usdz")))
+files = sorted(glob.glob(os.path.join(resources, "Decor/Decor_*.usdz")) + glob.glob(os.path.join(resources, "Shop/Item_*.usdz"))
+                + glob.glob(os.path.join(resources, "Room/Base_*.usdz")))
 result = {}
 for path in files:
     bpy.ops.wm.read_factory_settings(use_empty=True)
@@ -30,6 +31,10 @@ for path in files:
     # Blender is Z up and USD's front is -Y: width is x, depth y, height z.
     name = os.path.basename(path)[: -len(".usdz")]
     result[name] = {"width": round(hi[0] - lo[0], 4), "depth": round(hi[1] - lo[1], 4), "height": round(hi[2] - lo[2], 4)}
+    if name.startswith("Base_"):
+        # A room piece has its origin on the floor in the middle of its cell: how far its bounds' middle is from
+        # it (dx across, dz into the room), and its top.
+        result[name].update(dx=round((hi[0] + lo[0]) / 2, 4), dz=round(-(hi[1] + lo[1]) / 2, 4), height=round(hi[2], 4))
 with open(out, "w") as f:
     f.write(json.dumps(result, indent=2, sort_keys=True) + "\n")
 print("BOUNDS", len(result))
