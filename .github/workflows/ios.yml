@@ -163,19 +163,23 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           # Building and testing are two runs so the summary can say how long each took.
-          app=(-project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid"
-            -derivedDataPath "$RUNNER_TEMP/app-tests" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO)
+          app=(-project apps/ios/Billet.xcodeproj -scheme Billet -derivedDataPath "$RUNNER_TEMP/app-tests"
+            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO)
           # Seconds since the step started on every line, to see what the build and the tests wait for.
           stamp() { perl -MTime::HiRes=time -ne 'BEGIN { $| = 1 } printf "%7.1f %s", time - $ENV{STEP_START}, $_'; }
           started=$(date +%s)
           export STEP_START=$started
-          if ! xcodebuild build-for-testing "${app[@]}" -showBuildTimingSummary 2>&1 \
+          # The build names no Simulator: one given by id held xcodebuild for 4 minutes before its first task while
+          # the Simulator was still booting. ARCHS keeps the generic destination to the runner's own architecture.
+          if ! xcodebuild build-for-testing "${app[@]}" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 \
+            -showBuildTimingSummary 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" >(stamp > "$RUNNER_TEMP/app-timeline.log") \
             | { grep --line-buffered -E 'error:' || true; }; then
             status=1
           fi
           built=$(date +%s)
-          if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" \
+          echo "Simulator boot: $(tail -n 1 "$RUNNER_TEMP/simulator-boot.log" 2>/dev/null)"
+          if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" -destination "id=$udid" ARCHS=arm64 \
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 2>&1 \
