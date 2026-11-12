@@ -57,6 +57,13 @@ struct OurioApp: App {
                 NotificationCenter.default.post(name: .coupleChanged, object: nil)
             },
             requestPushes: { await DrawingSync.requestPushes(asking: true) },
+            nameChosen: { name in
+                let profile = CoupleStore()
+                var names = profile.couple.names ?? [:]
+                names[profile.couple.viewer] = name
+                profile.update(names: names, togetherSince: profile.couple.togetherSince)
+                NotificationCenter.default.post(name: .coupleChanged, object: nil)
+            },
             coatChanged: { CatRoom.forgetMochi() })
         return Parts(session: session, hints: hints, onboarding: onboarding, home: HomeState(stores: .live()))
     }
