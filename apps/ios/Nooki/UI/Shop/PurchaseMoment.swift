@@ -57,7 +57,7 @@ struct PurchaseMoment: View {
         .haptic(.success, trigger: flights)
         .onChange(of: state.shop.lastPurchase) { _, purchase in
             guard let purchase else {
-                withAnimation(.spring(duration: 0.3)) { shown = nil }
+                withAnimation(Motion.spring(0.3)) { shown = nil }
                 return
             }
             withAnimation(.spring(duration: 0.45, bounce: 0.3).delay(reduceMotion ? 0 : 0.55)) { shown = purchase }
@@ -65,7 +65,7 @@ struct PurchaseMoment: View {
             AudioServicesPlaySystemSound(1057)
         }
         .onChange(of: state.shop.refused) { _, purchase in
-            withAnimation(.spring(duration: 0.35)) {
+            withAnimation(Motion.spring(0.35)) {
                 if purchase != nil { shown = nil }
                 refused = purchase
             }
@@ -73,14 +73,14 @@ struct PurchaseMoment: View {
         .task(id: refused?.id) {
             guard let current = refused else { return }
             try? await Task.sleep(for: .seconds(4))
-            if refused?.id == current.id { withAnimation(.spring(duration: 0.35)) { refused = nil } }
+            if refused?.id == current.id { withAnimation(Motion.spring(0.35)) { refused = nil } }
         }
         .task(id: shown?.id) {
             // The card leaves when its Undo window ends, counted from the buy itself.
             guard let current = shown else { return }
             let left = Purchase.undoWindow - Date.now.timeIntervalSince(current.date)
             try? await Task.sleep(for: .seconds(max(0, left)))
-            if shown?.id == current.id { withAnimation(.spring(duration: 0.35)) { shown = nil } }
+            if shown?.id == current.id { withAnimation(Motion.spring(0.35)) { shown = nil } }
         }
     }
 
@@ -105,7 +105,7 @@ struct PurchaseMoment: View {
         let placed = placedItem(purchase)
         if let item = placed ?? purchase.itemIDs.first(where: { DecorItem.item(shopID: $0) != nil }) {
             PillButton(placed == nil ? "Place now" : "Move it", symbol: "mappin") {
-                withAnimation(.spring(duration: 0.3)) { shown = nil }
+                withAnimation(Motion.spring(0.3)) { shown = nil }
                 state.decorate(item)
             }
             .fixedSize()
@@ -138,7 +138,7 @@ struct PurchaseMoment: View {
                     if purchase.kind == .item { decorateButton(purchase) }
                     if purchase.undoable {
                         PillButton("Undo", symbol: "arrow.uturn.backward") {
-                            if state.shop.undo(purchase) { withAnimation(.spring(duration: 0.3)) { shown = nil } }
+                            if state.shop.undo(purchase) { withAnimation(Motion.spring(0.3)) { shown = nil } }
                         }
                         .fixedSize()
                         .accessibilityHint("Gives back \(purchase.cost) coins")
@@ -211,8 +211,7 @@ private struct FlyingPiece: View {
             }
         }
         .frame(width: 110, height: 110)
-        .shadow(color: .black.opacity(0.25), radius: 8, y: 5)
-        .keyframeAnimator(initialValue: Flight(), trigger: trigger) { content, flight in
+                .keyframeAnimator(initialValue: Flight(), trigger: trigger) { content, flight in
             content
                 .scaleEffect(flight.scale)
                 .opacity(flight.opacity)

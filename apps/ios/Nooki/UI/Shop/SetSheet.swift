@@ -12,6 +12,7 @@ struct SetSheet: View {
     let pieces: any PieceSet
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var items: [ShopItem] { pieces.itemIDs.compactMap(Catalog.item) }
     private var quote: (price: Int, sum: Int)? { ShopOffers.price(of: pieces, owned: state.shop.owned) }
@@ -60,15 +61,18 @@ struct SetSheet: View {
             }
         }
         .padding(.horizontal, Space.m)
+        .padding(.vertical, Space.xl)
         .frame(maxWidth: .infinity)
-        .frame(height: 180)
         .cardSurface(warm: true)
         .accessibilityHidden(true)
     }
 
     private func row(_ item: ShopItem) -> some View {
         let owned = state.shop.owned.contains(item.id)
-        return HStack(spacing: Space.m) {
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+            : AnyLayout(HStackLayout(spacing: Space.m))
+        return layout {
             RarityFrame(rarity: item.rarity) {
                 if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
                     Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
@@ -76,15 +80,16 @@ struct SetSheet: View {
             }
             .frame(width: 56, height: 56)
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: Space.xxs) {
                 Text(item.name)
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text(item.rarity.title)
                     .font(.ourioCaption)
                     .foregroundStyle(item.rarity == .common ? Ink.textSecondary : item.rarity.tint)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: typeSize.isAccessibilitySize ? nil : .infinity, alignment: .leading)
 
             if owned {
                 Label("Owned", systemImage: "checkmark.circle.fill")

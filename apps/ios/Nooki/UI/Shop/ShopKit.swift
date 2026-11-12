@@ -50,12 +50,6 @@ struct RarityFrame<Content: View>: View {
             .overlay {
                 if rarity.shines, shine { ShineSweep(period: rarity == .legendary ? 2.6 : 3.6).clipShape(shape) }
             }
-            .overlay {
-                shape.strokeBorder(
-                    LinearGradient(colors: [rarity.tint, rarity.tint.opacity(rarity == .common ? 0.15 : 0.45)],
-                                   startPoint: .top, endPoint: .bottom),
-                    lineWidth: rarity == .common ? 1 : 1.5)
-            }
     }
 }
 
@@ -177,7 +171,7 @@ private struct ShopAppear: ViewModifier {
                 // A card already there when the page opens shows at once.
                 guard scrolling?.isScrolling == true else { return shown = true }
                 if visible {
-                    withAnimation(.spring(duration: 0.5, bounce: 0.25)) { shown = true }
+                    withAnimation(Motion.spring(0.5)) { shown = true }
                 } else {
                     shown = false
                 }
