@@ -49,11 +49,11 @@ struct SwipeDeck: View {
         let depth = top ? 0 : CGFloat(index) - progress
         return DateIdeaCard(idea: idea)
             .overlay(alignment: .topLeading) {
-                stamp("LOVE", tint: Color(hex: 0xE287A9), strength: top ? drag.width / Self.flingDistance : 0)
+                stamp("LOVE", tint: Color.blushPink, strength: top ? drag.width / Self.flingDistance : 0)
                     .padding(Space.section)
             }
             .overlay(alignment: .topTrailing) {
-                stamp("NOPE", tint: Color(hex: 0x5B3A28), strength: top ? -drag.width / Self.flingDistance : 0)
+                stamp("NOPE", tint: Ink.textSecondary, strength: top ? -drag.width / Self.flingDistance : 0)
                     .padding(Space.section)
             }
             .scaleEffect(reduceMotion ? 1 : 1 - depth * 0.05, anchor: .bottom)
@@ -166,12 +166,7 @@ struct DateIdeaCard: View {
     }
 
     private func tag(_ text: String, symbol: String) -> some View {
-        Label(text, systemImage: symbol)
-            .font(.ourioMicro)
-            .foregroundStyle(.white)
-            .padding(.horizontal, Space.m)
-            .padding(.vertical, Space.s)
-            .background(.white.opacity(0.18), in: .capsule)
+        Chip(text, symbol: symbol)
     }
 }
 
