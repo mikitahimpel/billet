@@ -99,6 +99,25 @@ let onboardingTests: Target = .testTarget(
     "Wire",
   ]))
 
+// Moved from the app, which builds with Xcode's approachable concurrency: a
+// nonisolated async method runs on its caller's actor, so the app's stores can call it from the UI.
+let fromTheApp: [SwiftSetting] = [.enableUpcomingFeature("NonisolatedNonsendingByDefault")]
+
+// What the app's server session builds on: the clients and syncs of the pair's room, over Foundation only.
+// Moved from the app, so it keeps the app's default of main-actor isolation.
+let serverSync: Target = .target(
+  name: "ServerSync",
+  dependencies: dependencies([
+    "DrawInterface", "MomentsInterface", "Payments", "Persistence", "ShopInterface", "Transport",
+    "UsInterface", "Wire",
+  ]),
+  swiftSettings: fromTheApp + [.defaultIsolation(MainActor.self)])
+
+let serverSyncTests: Target = .testTarget(
+  name: "ServerSyncTests",
+  dependencies: dependencies(["ServerSync", "Payments", "Transport", "Wire"]),
+  swiftSettings: [.defaultIsolation(MainActor.self)])
+
 let games: Target = .target(
   name: "FeatureGames",
   dependencies: dependencies(["GamesInterface", "BilletKit", "Pet", "Transport", "Wire"]))
@@ -112,9 +131,6 @@ let decor: Target = .target(
 let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
 let profileInterface: Target = .target(
   name: "ProfileInterface", dependencies: dependencies(["Persistence", "Pet"]))
-// Moved from the app, which builds with Xcode's approachable concurrency: a
-// nonisolated async method runs on its caller's actor, so the app's stores can call it from the UI.
-let fromTheApp: [SwiftSetting] = [.enableUpcomingFeature("NonisolatedNonsendingByDefault")]
 let shopInterface: Target = .target(
   name: "ShopInterface", dependencies: dependencies(["Persistence", "Wire"]),
   swiftSettings: fromTheApp)
@@ -190,7 +206,7 @@ let products =
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
-    "DecorInterface", "FeatureDecor", "FeatureUs",
+    "DecorInterface", "FeatureDecor", "FeatureUs", "ServerSync",
   ]
 
 let package = Package(
@@ -209,10 +225,10 @@ let package = Package(
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
       mood, drawInterface, profileInterface, usInterface, momentsInterface, widgetInterface,
       widgetUI,
-      decorInterface, decor, us, onboarding,
+      decorInterface, decor, us, onboarding, serverSync,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
-    + [usTests, shopTests, onboardingTests],
+    + [usTests, shopTests, onboardingTests, serverSyncTests],
   swiftLanguageModes: [.v6]
 )
 

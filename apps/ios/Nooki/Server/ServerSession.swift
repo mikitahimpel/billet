@@ -12,6 +12,7 @@ import WidgetInterface
 import WidgetUI
 import Payments
 import Persistence
+import ServerSync
 import SwiftUI
 import Transport
 import UsInterface
@@ -183,14 +184,14 @@ final class ServerSession {
 
     /// Nil until this account has a partner.
     var drawingSync: DrawingSync? {
-        isPaired ? DrawingSync(api: backend.api, accounts: backend.accounts) : nil
+        isPaired ? DrawingSync.app(api: backend.api, accounts: backend.accounts) : nil
     }
 
     /// Nil until this account has a partner.
     func photoSync(moments: MomentStore, partner: String) -> PhotoSync? {
         guard isPaired else { return nil }
         return PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner,
-                         receiving: photoReceiving)
+                         receiving: photoReceiving, defaults: .standard) { PhotoUpload(fileAt: $0) }
     }
 
     /// The pair as the server has it, this account first. `.api(.notFound)` once the server has no pair for it.
@@ -241,7 +242,7 @@ final class ServerSession {
     /// Nil until this account has a partner.
     func textSync(notes: NoteStore, partner: String) -> TextNoteSync? {
         guard isPaired else { return nil }
-        return TextNoteSync(api: backend.api, accounts: backend.accounts, notes: notes, partner: partner)
+        return TextNoteSync(api: backend.api, accounts: backend.accounts, notes: notes, partner: partner, defaults: .standard)
     }
 
     /// Asks the server about the demo partner. Any answer but the dev server's, offline included, hides the dev tools.
