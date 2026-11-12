@@ -63,7 +63,8 @@ struct ComposerPaper: View {
 
     private var textLayer: some View {
         let ink = Color(hex: model.ink.light)
-        return TextField("", text: $model.text, prompt: Text("Write a note…").foregroundStyle(ink.opacity(0.45)), axis: .vertical)
+        let prompt = Text("Write a note…").foregroundStyle(ink.opacity(0.45))
+        return TextField("", text: $model.text, prompt: prompt, axis: .vertical)
             .font(.custom(ComposerModel.font, size: model.kind.fontSize))
             .foregroundStyle(ink)
             .lineLimit(model.kind == .polaroid ? 2 : 8, reservesSpace: false)
