@@ -4,7 +4,7 @@
     "apps/ios/Nooki/Inks/InkPalette.swift": 1,
     "apps/ios/Nooki/Inks/PaletteInk.swift": 1,
     "apps/ios/Nooki/Model/HomeState.swift": 4,
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 17,
+    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 14,
     "apps/ios/Nooki/Onboarding/OnboardingView.swift": 2,
     "apps/ios/Nooki/OurioApp.swift": 1,
     "apps/ios/Nooki/Room/HeartBubble.swift": 4,
@@ -167,7 +167,6 @@
   },
   "shadow": {
     "apps/ios/Nooki/Inks/InkPalette.swift": 1,
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 2,
     "apps/ios/Nooki/Perf/PerfLab.swift": 1,
     "apps/ios/Nooki/Room/HeartBubble.swift": 1,
     "apps/ios/Nooki/UI/Composer/ComposerSend.swift": 1,
@@ -211,8 +210,6 @@
     "apps/ios/Nooki/Inbox/InboxSheet.swift": 1,
     "apps/ios/Nooki/Inks/InkPalette.swift": 1,
     "apps/ios/Nooki/Inks/InkShelf.swift": 2,
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 1,
-    "apps/ios/Nooki/Onboarding/OnboardingView.swift": 1,
     "apps/ios/Nooki/UI/Composer/ComposerPaper.swift": 2,
     "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 2,
     "apps/ios/Nooki/UI/Composer/ComposerPostage.swift": 1,
@@ -238,7 +235,6 @@
     "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 1
   },
   "blur-material": {
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 2,
     "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 1,
     "apps/ios/Nooki/UI/WarmBackdrop.swift": 1
   },
