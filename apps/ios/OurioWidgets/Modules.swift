@@ -59,7 +59,7 @@ private struct ModuleHeader: View {
             Spacer(minLength: 0)
             if smart {
                 Image(systemName: "sparkle")
-                    .font(.system(size: 9, weight: .bold))
+                    .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(Ink.accentText)
                     .widgetAccentable()
             }
@@ -150,7 +150,7 @@ struct MochiRoom: View {
     private func hearts(in size: CGSize) -> some View {
         ForEach(0..<3, id: \.self) { i in
             Image(systemName: "heart.fill")
-                .font(.system(size: [16, 11, 13][i]))
+                .font(.system(size: [16, 12, 13][i]))
                 .foregroundStyle(Color.blushPink)
                 .widgetAccentable()
                 .offset(x: size.width * [0.5, 0.62, 0.44][i], y: size.height * [0.12, 0.06, 0.24][i])
