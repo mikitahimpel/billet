@@ -1,5 +1,6 @@
 import Design
 import Foundation
+import ProfileInterface
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -7,7 +8,8 @@ import UsInterface
 import UserNotifications
 
 extension AppSettings {
-    /// Settings: the evening nudge while the love streak is at risk.
+    /// Settings: the evening nudge while the love streak is at risk. In the app group, as the notification extension
+    /// plans the nudge again when a streak push comes.
     static let streakNudgeKey = "streak.nudge"
 }
 
@@ -18,6 +20,21 @@ enum StreakNudge {
     static let id = "streak-at-risk"
     static let hour = 20
 
+    /// Where the Settings switch is kept.
+    nonisolated(unsafe) static let settings = CatProfile.store
+
+    static func isOn(in defaults: UserDefaults = settings) -> Bool {
+        defaults.object(forKey: AppSettings.streakNudgeKey) as? Bool ?? true
+    }
+
+    /// A switch set while it was this app's own setting moves to the app group.
+    static func moveToAppGroup(from old: UserDefaults = .standard, to group: UserDefaults = settings) {
+        guard group != old, group.object(forKey: AppSettings.streakNudgeKey) == nil,
+              let value = old.object(forKey: AppSettings.streakNudgeKey) as? Bool else { return }
+        group.set(value, forKey: AppSettings.streakNudgeKey)
+        old.removeObject(forKey: AppSettings.streakNudgeKey)
+    }
+
     struct Plan: Equatable {
         let fire: Date
         let title: String
@@ -25,7 +42,7 @@ enum StreakNudge {
     }
 
     /// The next evening the streak is at risk as this phone knows it: today's while it is still ahead, or tomorrow's
-    /// once today counts. Nil when nothing is at stake.
+    /// once today counts or this phone's person did their part. Nil when nothing is at stake.
     static func plan(for streak: LoveStreak, catName: String, now: Date, calendar: Calendar = .current) -> Plan? {
         let today = calendar.startOfDay(for: now)
         for offset in 0...1 {
@@ -33,8 +50,17 @@ enum StreakNudge {
                   let evening = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day),
                   evening > now,
                   streak.status(on: evening, calendar: calendar) == .atRisk else { continue }
-            return Plan(fire: evening, title: "\(catName) misses you two tonight",
-                        body: "Do one small thing together before midnight to keep your \(streak.count)-day streak.")
+            switch streak.turn(on: evening, calendar: calendar) {
+            case .partners: continue
+            case .yours:
+                return Plan(fire: evening, title: "\(catName) misses you tonight",
+                            body: "Your partner did their part. Do yours before midnight to keep your "
+                                + "\(streak.count)-day streak.")
+            case nil:
+                return Plan(fire: evening, title: "\(catName) misses you two tonight",
+                            body: "Do one small thing together before midnight to keep your "
+                                + "\(streak.count)-day streak.")
+            }
         }
         return nil
     }

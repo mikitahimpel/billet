@@ -1,4 +1,5 @@
 import DecorInterface
+import Pet
 
 /// Which of Mochi's rooms the host shows.
 public enum RoomScene: Equatable, Sendable {
@@ -24,9 +25,13 @@ public struct RoomRendering: Equatable, Sendable {
   /// The wide colour range the glow and bloom are drawn in.
   public var hdr: Bool
 
-  public init(antialiasing: Bool = false, hdr: Bool = true) {
+  /// The splat cat is rewritten and re-sorted at most this many times a second; 0 is every frame.
+  public var splatRate: Int
+
+  public init(antialiasing: Bool = false, hdr: Bool = true, splatRate: Int = 0) {
     self.antialiasing = antialiasing
     self.hdr = hdr
+    self.splatRate = splatRate
   }
 }
 
@@ -35,8 +40,8 @@ public struct RoomDecor: Equatable, Sendable {
   public enum Mode: Equatable, Sendable {
     case showing
     /// The pieces are individually addressable. `fits` is false while a dragged piece is somewhere it
-    /// does not fit.
-    case arranging(selected: String?, fits: Bool)
+    /// does not fit. `ghost` is where the dragged piece stood, drawn as an outline while it is away.
+    case arranging(selected: String?, fits: Bool, ghost: Placement? = nil)
   }
 
   public var layout: DecorLayout
@@ -63,6 +68,7 @@ public struct RoomInput: Equatable, Sendable {
   public var visibility: RoomVisibility
   /// What VoiceOver calls her.
   public var catName: String
+  public var catPronouns: CatPronouns
   /// The partner has the app open on their phone.
   public var partnerHere: Bool
   /// The dust drifting through the room. Its particles are stepped every frame the room is drawn, so
@@ -76,13 +82,15 @@ public struct RoomInput: Equatable, Sendable {
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
-    partnerHere: Bool = false, motes: Bool = false, sway: Bool = true,
+    catPronouns: CatPronouns = .unchosen, partnerHere: Bool = false, motes: Bool = false,
+    sway: Bool = true,
     decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering()
   ) {
     self.scene = scene
     self.coat = coat
     self.visibility = visibility
     self.catName = catName
+    self.catPronouns = catPronouns
     self.partnerHere = partnerHere
     self.motes = motes
     self.sway = sway

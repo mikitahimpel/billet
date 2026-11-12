@@ -1,3 +1,4 @@
+import ShopInterface
 import SwiftUI
 import Design
 
@@ -37,7 +38,7 @@ struct Pen: View {
             .overlay(Capsule().strokeBorder(.white.opacity(selected ? 0.9 : 0), lineWidth: 2).padding(-3))
             if !owned {
                 HStack(spacing: 2) {
-                    CoinIcon(size: 8)
+                    CoinIcon(size: 12)
                     Text("\(ink.price)").font(.ourioMicro.monospacedDigit())
                 }
                 .foregroundStyle(Ink.text)
@@ -46,7 +47,7 @@ struct Pen: View {
             }
         }
         .offset(y: selected ? -8 : 0)
-        .animation(.snappy(duration: 0.18), value: selected)
+        .animation(Motion.spring(0.18), value: selected)
     }
 }
 
@@ -82,8 +83,7 @@ struct PenHolder: View {
 
     var body: some View {
         switch style {
-        case .sticky: strip
-        case .desk: pencilCase
+        case .sticky, .desk: strip
         case .papers: cup
         }
     }
@@ -100,23 +100,8 @@ struct PenHolder: View {
     }
 
     private var strip: some View {
-        ScrollView(.horizontal) { pens(length: 34).frame(height: 62, alignment: .bottom) }
+        ScrollView(.horizontal) { pens(length: 40).frame(height: 56, alignment: .bottom) }
             .scrollIndicators(.hidden)
-    }
-
-    private var pencilCase: some View {
-        ZStack(alignment: .bottom) {
-            ScrollView(.horizontal) {
-                pens().frame(height: 76, alignment: .bottom).padding(.bottom, Space.l)
-            }
-            .scrollIndicators(.hidden)
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Ink.surface)
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Ink.textTertiary.opacity(0.25), lineWidth: 1))
-                .frame(height: 30)
-                .allowsHitTesting(false)
-        }
-        .frame(height: 90)
     }
 
     private var cup: some View {

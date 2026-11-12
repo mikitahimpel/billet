@@ -61,7 +61,7 @@ struct CoinPill: View {
             Text(coins, format: .number)
                 .font(.ourioHeadline.monospacedDigit())
                 .contentTransition(.numericText(value: Double(coins)))
-                .animation(.snappy(duration: 0.4), value: coins)
+                .animation(Motion.spring(0.4), value: coins)
         }
         .foregroundStyle(Ink.glassGlyph)
         .padding(.leading, Space.s)

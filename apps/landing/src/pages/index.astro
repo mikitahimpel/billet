@@ -48,7 +48,7 @@ const reducedMotionPixel = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALA
 const heroSizes = "(max-width: 900px) 100vw, 60vw";
 const heroAvif = [1000, 1600, 2560].map((width) => `${roomAsset(`room-none-${width}.avif`)} ${width}w`).join(", ");
 
-// Names, prices and blurbs are the shop's own (apps/ios/Nooki/Model/Shop.swift). The box is the piece's
+// Names, prices and blurbs are the shop's own (packages/ios/features/Sources/FeatureShop/Shop.swift). The box is the piece's
 // measured outline in its 1024 px image (x, y, width, height), which its glow and floor light centre on.
 const items = [
   { key: "armchair", src: armchair, name: "Cloud Armchair", price: 320, blurb: "Big enough for two and a cat who insists.", box: [186, 208, 754, 668] },
@@ -662,7 +662,7 @@ const schema = [
                 <span class="banner-line">Your partner petted Mochi.</span>
               </span>
             </div>
-            <!-- The app's own invite screen (apps/ios/Nooki/Onboarding/OnboardingView.swift). -->
+            <!-- The app's own invite screen (packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift). -->
             <div class="pair-body">
               <div class="pair-group">
                 <div class="pair-head">
@@ -779,7 +779,7 @@ const schema = [
         <p class="appcard-sub">A cat you raise together</p>
         <p class="appcard-tag">Free · iPhone</p>
       </div>
-      {appStoreLive ? <a class="soon" href={appStoreUrl}>Get</a> : <span class="soon">Coming soon</span>}
+      {appStoreLive ? <a class="soon" href={appStoreUrl} data-umami-event="app_store_click" data-umami-event-where="end_card">Get</a> : <span class="soon">Coming soon</span>}
     </div>
   </EndCard>
 

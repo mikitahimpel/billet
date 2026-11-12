@@ -4,7 +4,7 @@ import WidgetUI
 import Testing
 import UIKit
 import UsInterface
-@testable import Billet
+@testable import FeatureUs
 
 @Suite struct ItemIconTests {
     private let list = UsGlyph(symbol: "star.fill", tint: .sun)

@@ -1,6 +1,8 @@
 import FeatureGames
 import FeatureMood
+import FeatureShop
 import MomentsInterface
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -56,6 +58,7 @@ extension HomeView {
         guard let pair = state.profile.couple.catPair else { return }
         await state.streak.follow(session.streakRemote)
         await room.connectCat(session.catEvents, pair: pair)
+        state.refreshPronouns()
     }
 
     private func leavePair() async {

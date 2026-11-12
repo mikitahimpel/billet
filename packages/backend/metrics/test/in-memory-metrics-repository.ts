@@ -6,6 +6,10 @@ export const makeInMemoryMetricsRepository = () => {
   const rows = new Map<string, StoredMetric>();
   const details = new Map<string, StoredDetail>();
   const repository: MetricsRepository["Service"] = {
+    recordMany: (occurrences) =>
+      Effect.forEach(occurrences, (occurrence) => repository.record(occurrence), {
+        discard: true,
+      }),
     record: ({ pairId, userId, name, at, detail, value, client }) =>
       Effect.sync(() => {
         const day = new Date(at).toISOString().slice(0, 10);

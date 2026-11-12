@@ -6,7 +6,7 @@ import Wire
 /// Only the server changes coins; the balance is its last answer less buys not yet sent. A buy
 /// shows at once, waits out its Undo window, then is ordered under one id for every retry. One
 /// refused or never delivered is taken back and the room read again.
-public enum ShopMachine: Machine {
+public nonisolated enum ShopMachine: Machine {
   public static let treatPrice = 10
 
   /// What this phone last heard from the server: the wallet file keeps it between launches.
@@ -17,14 +17,18 @@ public enum ShopMachine: Machine {
     public var wishlist: Set<String>
     /// Where the pair stood its pieces; nil from a server before placements.
     public var layout: [RoomPlacement]?
+    /// The room's own furniture the pair put away; nil from a server that does not know it.
+    public var stowed: [RoomItemId]?
 
     public init(
-      balance: Int, owned: Set<String>, wishlist: Set<String>, layout: [RoomPlacement]? = nil
+      balance: Int, owned: Set<String>, wishlist: Set<String>, layout: [RoomPlacement]? = nil,
+      stowed: [RoomItemId]? = nil
     ) {
       self.balance = balance
       self.owned = owned
       self.wishlist = wishlist
       self.layout = layout
+      self.stowed = stowed
     }
 
     public init(_ shop: ShopResponse) {
@@ -32,6 +36,7 @@ public enum ShopMachine: Machine {
       owned = Set(shop.items.map(\.rawValue)).union(shop.inks.map(\.rawValue))
       wishlist = Set(shop.wishlist.map(\.rawValue))
       layout = shop.layout
+      stowed = shop.stowed
     }
   }
 
@@ -441,7 +446,7 @@ public enum ShopMachine: Machine {
   public static func utcOffset(at date: Date) -> Int { TimeZone.current.secondsFromGMT(for: date) }
 }
 
-extension ShopMachine.PairShop {
+nonisolated extension ShopMachine.PairShop {
   /// A gift or bonus refused, or a buy outspent, waits for the room to be read again before the
   /// card or the Coins sheet shows it.
   fileprivate mutating func settleChecks(request: Int) {

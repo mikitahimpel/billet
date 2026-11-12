@@ -1,3 +1,5 @@
+import FeatureShop
+import FeatureUs
 import FeaturePairing
 import SwiftUI
 import Design

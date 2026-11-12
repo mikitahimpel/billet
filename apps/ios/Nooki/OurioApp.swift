@@ -1,3 +1,5 @@
+import FeatureOnboarding
+import FeatureUs
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -17,6 +19,7 @@ struct OurioApp: App {
     @State private var home: HomeState
 
     init() {
+        LaunchSignposts.event("app init")
         #if LABS_YES
         // Metal reads it when it first draws; Labs > Performance switches it, and it starts off.
         if PerfLabMachine.State.saved(in: .standard).isOn(.metalHud) { setenv("MTL_HUD_ENABLED", "1", 1) }
@@ -24,7 +27,7 @@ struct OurioApp: App {
         NavigationBarStyle.prepare()
         // Date card pictures are immutable files the cards fetch through the shared session; room for all of them.
         URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 64 << 20)
-        let parts = Self.assemble()
+        let parts = LaunchSignposts.interval("assemble") { Self.assemble() }
         _session = State(initialValue: parts.session)
         _hints = State(initialValue: parts.hints)
         _onboarding = State(initialValue: parts.onboarding)
@@ -47,9 +50,10 @@ struct OurioApp: App {
         let canInvite = session.map { !$0.isPaired } ?? false
         Hints.configure()
         CatProfile.moveToAppGroup()
+        StreakNudge.moveToAppGroup()
         let hints = Hints(report: api.reportEvents)
         let onboarding = OnboardingFlow(
-            client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
+            client: client, report: api.reportEvents, queue: AnswerQueue(), defaults: .standard, catNames: CatProfile.store, canInvite: canInvite,
             hasServer: session != nil, asksTogetherSince: true,
             togetherSinceChosen: { day in
                 let profile = CoupleStore()
@@ -57,8 +61,16 @@ struct OurioApp: App {
                 NotificationCenter.default.post(name: .coupleChanged, object: nil)
             },
             requestPushes: { await DrawingSync.requestPushes(asking: true) },
+            nameChosen: { name in
+                let profile = CoupleStore()
+                var names = profile.couple.names ?? [:]
+                names[profile.couple.viewer] = name
+                profile.update(names: names, togetherSince: profile.couple.togetherSince)
+                NotificationCenter.default.post(name: .coupleChanged, object: nil)
+            },
             coatChanged: { CatRoom.forgetMochi() })
-        return Parts(session: session, hints: hints, onboarding: onboarding, home: HomeState(stores: .live()))
+        let stores = LaunchSignposts.interval("stores") { HomeStores.live() }
+        return Parts(session: session, hints: hints, onboarding: onboarding, home: HomeState(stores: stores))
     }
 
     private func startOver() {
@@ -80,20 +92,24 @@ struct OurioApp: App {
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
+                    .environment(\.usServer, session)
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
                     .overlay {
                         if !onboarding.isFinished {
                             OnboardingView(
-                                flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
+                                flow: onboarding, pairing: session?.pairing, scenery: AppOnboardingScenery(), signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
                                 demoPartner: demoPartnerPairing)
+                                // Drawn over Home, which hides itself from VoiceOver only while its splash shows;
+                                // a modal view is the only one VoiceOver reads.
+                                .accessibilityAddTraits(.isModal)
                                 .transition(.opacity)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.4), value: onboarding.isFinished)
+                    .animation(Motion.fade(0.4), value: onboarding.isFinished)
                     .onOpenURL { url in
                         if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
                     }

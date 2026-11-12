@@ -13,7 +13,13 @@ import {
   type EarnEvent,
 } from "@billet/contracts-domain/coins";
 import type { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
-import { placementProblem } from "@billet/contracts-domain/decor";
+import {
+  effectiveLayout,
+  isBasePiece,
+  canPutAway,
+  normalizedPlacement,
+  placementProblem,
+} from "@billet/contracts-domain/decor";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
 import type { PriceBook, PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import { earnsOnTick } from "@billet/contracts-domain/list";
@@ -39,9 +45,10 @@ import {
 } from "@billet/contracts-domain/shop";
 import {
   emptyStreak,
-  recordStreakDay,
+  markStreakDay,
   restoreStreak,
   streakMilestones,
+  streakRewardCoins,
 } from "@billet/contracts-domain/streak";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomCommand } from "./room-command.ts";
@@ -462,6 +469,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           items: [],
           wishlist: [],
           layout: [],
+          stowed: [],
           layoutLog: [],
           bonuses: [],
           moods: [],
@@ -530,22 +538,27 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       return accepted(after.room, [appended, ...after.outputs]);
     }
     case "SaveCat": {
-      const { user, name, look, utcOffsetSeconds, natureSeed, at } = command;
+      const { user, name, pronouns, look, utcOffsetSeconds, natureSeed, at } = command;
+      const chosen = pronouns === undefined ? {} : { pronouns };
       if (!isMember(room, user)) return rejected(RoomRejection.cases.NotAMember.make({ user }));
       // Birth and nature are the cat's for life: a later save changes only what can change.
       const cat: RoomCat =
         room.cat === undefined
           ? {
-              profile: { name, look, utcOffsetSeconds, natureSeed, bornAt: at },
+              profile: { name, ...chosen, look, utcOffsetSeconds, natureSeed, bornAt: at },
               temper: newTemper,
               lastSeq: 0,
             }
-          : { ...room.cat, profile: { ...room.cat.profile, name, look, utcOffsetSeconds } };
+          : {
+              ...room.cat,
+              profile: { ...room.cat.profile, name, ...chosen, look, utcOffsetSeconds },
+            };
       return accepted({ ...room, cat }, [
         RoomOutput.cases.CatSaved.make({
           cat: cat.profile,
           by: user,
           adopted: room.cat === undefined,
+          renamed: room.cat !== undefined && room.cat.profile.name !== name,
         }),
       ]);
     }
@@ -638,21 +651,31 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       if (!isMember(room, by)) return rejected(RoomRejection.cases.NotAMember.make({ user: by }));
       if (room.layoutLog.includes(id))
         return accepted(room, [RoomOutput.cases.LayoutRepeated.make({})]);
-      const others = room.layout.filter(
-        (placement) =>
-          placement.item !== (change._tag === "Place" ? change.placement.item : change.item),
-      );
+      const target = change._tag === "Place" ? change.placement.item : change.item;
+      const standing = effectiveLayout(room.layout, room.stowed);
+      const others = standing.filter((placement) => placement.item !== target);
       if (change._tag === "Place") {
-        if (!ownsItem(room, change.placement.item))
+        if (!isBasePiece(target) && !ownsItem(room, change.placement.item))
           return rejected(RoomRejection.cases.LayoutRefused.make({ reason: "not-owned" }));
         const problem = placementProblem(change.placement, others);
         if (problem !== undefined)
           return rejected(RoomRejection.cases.LayoutRefused.make({ reason: problem }));
+      } else if (!canPutAway(standing, target)) {
+        return rejected(RoomRejection.cases.LayoutRefused.make({ reason: "last-rest" }));
       }
-      const layout = change._tag === "Place" ? [...others, change.placement] : others;
-      return accepted({ ...room, layout, layoutLog: [...room.layoutLog, id].slice(-64) }, [
-        RoomOutput.cases.LayoutChanged.make({ layout }),
-      ]);
+      const explicit = room.layout.filter((placement) => placement.item !== target);
+      const layout =
+        change._tag === "Place" ? [...explicit, normalizedPlacement(change.placement)] : explicit;
+      const stowed = room.stowed.filter((item) => item !== target);
+      return accepted(
+        {
+          ...room,
+          layout,
+          stowed: change._tag === "Unplace" && isBasePiece(target) ? [...stowed, target] : stowed,
+          layoutLog: [...room.layoutLog, id].slice(-64),
+        },
+        [RoomOutput.cases.LayoutChanged.make({ layout })],
+      );
     }
     case "Welcome": {
       if (room.welcomed) return accepted(room);
@@ -714,11 +737,21 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       // A phone that was offline reports a day late; more than a day back, or ahead of the room's
       // clock, is held to that bound.
       const happenedAt = Math.min(Math.max(command.happenedAt, at - streakReportWindow), at);
-      const streak = recordStreakDay(room.streak, localDayOf(happenedAt, utcOffsetSeconds));
+      const day = localDayOf(happenedAt, utcOffsetSeconds);
+      const members = [room.members[0].user, room.members[1].user] as const;
+      const streak = markStreakDay(room.streak, members, by, day);
       if (streak === room.streak) return accepted(room);
+      if (streak.lastDay !== day || streak.lastDay === room.streak.lastDay) {
+        return accepted({ ...room, streak }, [
+          RoomOutput.cases.StreakChanged.make({ streak, by, at, waiting: day }),
+        ]);
+      }
       const reached = streakMilestones.includes(streak.days) ? { reached: streak.days } : {};
-      return accepted({ ...room, streak }, [
-        RoomOutput.cases.StreakChanged.make({ streak, by, at, ...reached }),
+      const coins = streakRewardCoins(streak.days);
+      const entry = coinEntry(`earn:streak:${day}`, "earn", coins, day, at);
+      return accepted(withCoins({ ...room, streak }, coins), [
+        RoomOutput.cases.StreakChanged.make({ streak, by, at, lit: day, ...reached }),
+        RoomOutput.cases.CoinsEntered.make({ entry }),
       ]);
     }
     case "RestoreStreak": {

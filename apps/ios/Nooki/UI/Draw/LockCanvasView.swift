@@ -1,3 +1,4 @@
+import FeatureShop
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -58,13 +59,11 @@ struct LockCanvasView: View {
             .onChange(of: geometry.size) { _, size in canvasSize = size }
         }
         .statusBarHidden()
-        .animation(.spring(duration: 0.3), value: choosingInk)
-        .animation(.easeInOut(duration: 0.25), value: model.isPartnerDrawing)
+        .animation(Motion.spring(0.3), value: choosingInk)
+        .animation(Motion.fade(0.25), value: model.isPartnerDrawing)
         .sensoryFeedback(.success, trigger: sent)
         .sensoryFeedback(.selection, trigger: model.ink)
         .onAppear { model.appeared() }
-        // The partner's drawings arrive as notifications; asked here, where it is plain why.
-        .task { await DrawingSync.requestPushes(asking: true) }
         .onDisappear { model.disappeared() }
         // Over the canvas: an ink bought here plays its moment and Undo where it was tapped.
         .overlay { PurchaseMoment(state: state) }
@@ -295,11 +294,14 @@ struct LockCanvasView: View {
                 if await model.send({ await riddle.send($0, canvas) }) {
                     sent += 1
                     dismiss()
+                    await DrawingSync.requestPushes(asking: true)
                 }
             } else if await model.send(api: api, canvas: canvasSize, state: state) {
                 sent += 1
                 state.tab = .moments
                 dismiss()
+                // Asked after the first send, where it is plain why: the partner's replies arrive as notifications.
+                await DrawingSync.requestPushes(asking: true)
             }
         }
     }

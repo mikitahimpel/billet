@@ -43,16 +43,19 @@ Swift choices in one PR, so the app never ships a variant it cannot show.
 
 ## App: compiled out of Release (`#if DEBUG`)
 
-Not in a release build; listed so nobody counts them. Launch arguments for screenshots:
+Not in a release build; listed so nobody counts them. The `-perf.script` hooks (`OurioPerf`, `ScenePerf`,
+`-perf.hud`, `-perf.game`, `-perf.pieces`, and the `perf.script` check in `Hints.swift`) are compiled in
+Debug and in a Release build made with `BILLET_PERF_HOOKS=YES` in the environment (`project.yml`
+`PERF_HOOKS_YES`, and `pet`'s `Package.swift` for `ScenePerf`). Only the perf CI
+(`.github/scripts/build-perf.sh`) and `apps/ios/scripts/perf/measure.sh --build` set it; the
+TestFlight workflow never does, and `check-archive.sh` fails an archive whose binary contains the
+hooks' strings or type names (#515). A Labs build does not have them either. Launch arguments for screenshots:
 `shotMoments`, `shotMoment`, `onboardingOpen`, `catCoat`, `inboxFixture` (`InboxFixture.swift`),
 `hint`, `uitestNoHints`, `tab`, `shopItem`, `shopSet`, and `ShopFixture`. Push tokens register
 for the APNs sandbox in Debug and for production otherwise (`DrawingSync.swift`).
 
 ## App: reachable in a release build
 
-- **`-perf.script` launch argument** (`OurioPerf.swift`, `ScenePerf`): starts a frame recorder
-  and a script that drives the room. It needs a launch argument, so users and reviewers never
-  trigger it, but it is test code in the binary. **`-perf.script` must be compiled out of Release** (#515: it touches the app and `packages/ios/pet`, and the perf CI measures Release builds, so it is not a small change).
 - **Mock store.** `BILLET_PAYMENTS` defaults to `mock` for local builds: the mock store credits
   coins without money on dev, and like StoreKit it sells only while `payments` is `on`. The
   TestFlight workflow always builds with `BILLET_PAYMENTS=storekit`, and `check-archive.sh` fails
@@ -81,7 +84,7 @@ test path (demo rooms) needs a migration and a deploy that this docs PR must not
 Fail the upload when any of these is true:
 
 1. The build was not made with `BILLET_PAYMENTS=storekit` (checked by `check-archive.sh`).
-2. The Labs section (checked by `check-archive.sh`) or `OurioPerf` (#515) is still compiled into
+2. The Labs section (checked by `check-archive.sh`) or the `-perf.script` hooks (`check-archive.sh`, #515) are still compiled into
    Release.
 3. `registry` has a flag whose status is `running` or whose `default` differs from the table
    above.

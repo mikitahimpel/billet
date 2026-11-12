@@ -22,7 +22,7 @@ final class Hints {
     static let actionWindow: TimeInterval = 24 * 3600
 
     static let all: [any HintTip.Type] = [
-        PetHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self,
+        PetHint.self, NeedsHint.self, AddHint.self, MomentsHint.self, ShopHint.self, RoomsHint.self, TreatHint.self,
     ]
 
     @ObservationIgnored private let report: @Sendable ([ClientEvent]) async throws(TransportError) -> Void
@@ -63,8 +63,10 @@ final class Hints {
             defaults.removeObject(forKey: resetKey)
         }
         if defaults.bool(forKey: showAllKey) { Tips.showAllTipsForTesting() }
-        // A `-perf.script` run (Release builds too) measures and photographs the room, not the hints over it.
+        #if DEBUG || PERF_HOOKS_YES
+        // A `-perf.script` run measures and photographs the room, not the hints over it.
         if defaults.string(forKey: "perf.script") != nil { Tips.hideAllTipsForTesting() }
+        #endif
         #if DEBUG
         // For screenshots: `-hint treat` shows only that hint, whatever its rules.
         if let only = defaults.string(forKey: "hint"), let hint = all.first(where: { $0.hintId == only }) {

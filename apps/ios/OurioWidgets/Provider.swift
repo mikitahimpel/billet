@@ -40,6 +40,7 @@ struct Stores {
     let couple = CoupleStore().couple
     let moods = MoodStore().latest
     let activity = WidgetActivity.load()
+    let needs = CatNeedsGlance.load()
     let us = UsStore()
     let moment: (preview: OurioSnapshot.MomentPreview, image: Data?, date: Date)?
 
@@ -68,7 +69,7 @@ struct FamilyProvider: TimelineProvider {
     var loadsPhoto = false
 
     func placeholder(in context: Context) -> FamilyEntry {
-        FamilyEntry(date: .now, snapshot: .sample(), facts: .sample(), momentImage: nil, momentDate: nil)
+        FamilyEntry(date: .now, snapshot: .sample(), facts: .sample(), momentImage: nil, momentDate: nil, want: .food)
     }
 
     func getSnapshot(in context: Context, completion: @escaping (FamilyEntry) -> Void) {
@@ -86,7 +87,9 @@ struct FamilyProvider: TimelineProvider {
 
     private func entry(at date: Date, stores: Stores, facts: WidgetFacts) -> FamilyEntry {
         let configured: OurioEntry<ModuleConfiguration> = stores.entry(at: date, configuration: ModuleConfiguration())
+        let want = stores.needs?.want(at: date, asleep: configured.snapshot.isNight, fedAt: stores.activity.lastFed,
+                                      pettedAt: stores.activity.lastPet)
         return FamilyEntry(date: date, snapshot: configured.snapshot, facts: facts, momentImage: configured.momentImage,
-                           momentDate: stores.moment?.date)
+                           momentDate: stores.moment?.date, want: want)
     }
 }

@@ -85,7 +85,7 @@ public enum ShopOffer: Codable, Hashable, Sendable {
 }
 
 /// Where a piece stands: `surface` is `floor`, `backWall` or `leftWall`; `u` and `v` are grid cells of 5 cm
-/// from the room's middle, `v` being 0 on a wall.
+/// from the room's middle, `v` being 0 on a wall. `quarterTurns` is 0 to 3, plus 4 for a further 45 degrees.
 public struct RoomPlacement: Codable, Hashable, Sendable {
   public let item: RoomItemId
   public let surface: String
@@ -164,6 +164,8 @@ public struct ShopResponse: Codable, Hashable, Sendable {
   public let bonuses: [String]
   /// Where the pair stood its pieces; absent from a server before placements.
   public let layout: [RoomPlacement]?
+  /// The room's own furniture the pair put away; absent from a server before it could be moved.
+  public let stowed: [RoomItemId]?
 
   public init(
     balance: Int,
@@ -172,7 +174,8 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     wishlist: [RoomItemId],
     giftDay: String? = nil,
     bonuses: [String] = [],
-    layout: [RoomPlacement]? = nil
+    layout: [RoomPlacement]? = nil,
+    stowed: [RoomItemId]? = nil
   ) {
     self.balance = balance
     self.inks = inks
@@ -181,10 +184,11 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     self.giftDay = giftDay
     self.bonuses = bonuses
     self.layout = layout
+    self.stowed = stowed
   }
 
   private enum CodingKeys: String, CodingKey {
-    case balance, inks, items, wishlist, giftDay, bonuses, layout
+    case balance, inks, items, wishlist, giftDay, bonuses, layout, stowed
   }
 
   public init(from decoder: any Decoder) throws {
@@ -197,6 +201,7 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     // A server from before collection bonuses sends none.
     bonuses = try container.decodeIfPresent([String].self, forKey: .bonuses) ?? []
     layout = try container.decodeIfPresent([RoomPlacement].self, forKey: .layout)
+    stowed = try container.decodeIfPresent([RoomItemId].self, forKey: .stowed)
   }
 }
 

@@ -1,3 +1,4 @@
+import FeatureUs
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -99,6 +100,8 @@ struct TabBar: View {
                 .ourioScaledFont(size: 18, weight: .semibold, design: dusk ? .rounded : .default)
             Text(tab.title)
                 .ourioScaledFont(size: 11, weight: dusk && shown ? .semibold : .medium, relativeTo: .caption2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         // The bar keeps its height: past this size its labels show in the large content viewer instead.
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
@@ -162,16 +165,13 @@ struct AddButton: View {
     var body: some View {
         Menu {
             Button { picking = true } label: {
-                Label("Moment", systemImage: "photo.badge.plus")
-                Text("Photo for the wall · +10")
+                Label("Moment · +10", systemImage: "photo.badge.plus")
             }
             Button { state.drawing = true } label: {
                 Label("Draw", systemImage: "scribble.variable")
-                Text("On \(state.otherPartner)'s lock screen")
             }
             Button { state.composingNote = .write } label: {
-                Label("Note", systemImage: "note.text")
-                Text("On the board · +5")
+                Label("Note · +5", systemImage: "note.text")
             }
             Menu {
                 ForEach(state.us.lists) { list in
@@ -185,15 +185,12 @@ struct AddButton: View {
             Divider()
             Button { route = .wish } label: {
                 Label("Wish", systemImage: "gift")
-                Text("On your wishlist")
             }
             Button { route = .event } label: {
                 Label("Event", systemImage: "calendar.badge.plus")
-                Text("On the shared calendar")
             }
             Button { route = .dates } label: {
                 Label("Date", systemImage: "heart.text.square")
-                Text("Find an idea or plan one")
             }
         } label: {
             Image(systemName: "plus")
@@ -222,7 +219,7 @@ struct AddButton: View {
             switch route {
             case .moment(let image):
                 ComposeSheet(image: image) { caption in
-                    withAnimation(.spring(duration: 0.4)) { _ = state.journal.addMoment(image, caption: caption, shares: true) }
+                    withAnimation(Motion.spring(0.4)) { _ = state.journal.addMoment(image, caption: caption, shares: true) }
                 }
             case .list(let id): ListScreen(state: state, listID: id, focusesField: true)
             case .newList: NewListSheet(state: state) { self.route = .list($0) }

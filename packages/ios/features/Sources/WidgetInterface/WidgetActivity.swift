@@ -9,11 +9,29 @@ public nonisolated struct WidgetActivity: Codable, Hashable, Sendable {
   /// Pets from outside the app that Mochi hasn't felt yet; the app takes them on its next launch.
   public var pendingPets = 0
   public var ideaID: Int?
+  public var lastFed: Date?
+  /// Meals from outside the app that her room hasn't seen yet.
+  public var pendingFeeds = 0
 
-  public init(lastPet: Date? = nil, pendingPets: Int = 0, ideaID: Int? = nil) {
+  public init(
+    lastPet: Date? = nil, pendingPets: Int = 0, ideaID: Int? = nil, lastFed: Date? = nil,
+    pendingFeeds: Int = 0
+  ) {
     self.lastPet = lastPet
     self.pendingPets = pendingPets
     self.ideaID = ideaID
+    self.lastFed = lastFed
+    self.pendingFeeds = pendingFeeds
+  }
+
+  /// A file saved before meals existed has no such keys.
+  public init(from decoder: any Decoder) throws {
+    let c = try decoder.container(keyedBy: CodingKeys.self)
+    lastPet = try c.decodeIfPresent(Date.self, forKey: .lastPet)
+    pendingPets = try c.decodeIfPresent(Int.self, forKey: .pendingPets) ?? 0
+    ideaID = try c.decodeIfPresent(Int.self, forKey: .ideaID)
+    lastFed = try c.decodeIfPresent(Date.self, forKey: .lastFed)
+    pendingFeeds = try c.decodeIfPresent(Int.self, forKey: .pendingFeeds) ?? 0
   }
 
   /// How long the widget shows Mochi purring after a pet.
@@ -40,5 +58,15 @@ public nonisolated struct WidgetActivity: Codable, Hashable, Sendable {
   public mutating func takePendingPets() -> Int {
     defer { pendingPets = 0 }
     return pendingPets
+  }
+
+  public mutating func feed(at date: Date = .now) {
+    lastFed = date
+    pendingFeeds += 1
+  }
+
+  public mutating func takePendingFeeds() -> Int {
+    defer { pendingFeeds = 0 }
+    return pendingFeeds
   }
 }

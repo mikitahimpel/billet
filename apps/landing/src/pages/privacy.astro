@@ -4,7 +4,7 @@ import Page from "../layouts/page.astro";
 import { supportEmail } from "../site";
 
 // Follows docs/legal/privacy-policy.md, the release policy written from what the code collects. Change both together.
-const updated = { iso: "2026-11-09", label: "November 9, 2026" };
+const updated = { iso: "2026-11-12", label: "November 12, 2026" };
 const topics = [
   { id: "summary", label: "In short" },
   { id: "what", label: "What the app handles" },
@@ -19,7 +19,7 @@ const topics = [
 
 <Page
   title="Privacy policy · Ourio"
-  description="What Ourio, the iPhone app for couples, stores about you and your partner, why, for how long, and how to delete it. No ads, no tracking, no AI training on your drawings or photos."
+  description="What Ourio stores about you and your partner, why, for how long, and how to delete it. No ads, no tracking, no AI training on your drawings or photos."
   bodyClass="site-doc"
 >
   <DocArticle
@@ -35,7 +35,7 @@ const topics = [
         <tr><th scope="col">Question</th><th scope="col">Answer</th></tr>
       </thead>
       <tbody>
-        <tr><td>Do you know my name or email?</td><td>No. Your account is anonymous; Sign in with Apple, if you add it, gives us only an identifier.</td></tr>
+        <tr><td>Do you know my name or email?</td><td>No. Your account is anonymous: the app has no sign-in, so we never receive a name, email address or Apple account from you.</td></tr>
         <tr><td>Who sees what I send?</td><td>Only your partner and you.</td></tr>
         <tr><td>Ads or tracking?</td><td>None. No third-party analytics.</td></tr>
         <tr><td>Do you train AI on my content?</td><td>No.</td></tr>
@@ -48,8 +48,8 @@ const topics = [
     <ul>
       <li>
         <strong>Your account.</strong> The app creates an anonymous account with a key kept in your iCloud Keychain. There
-        is no password and we never see your name or email address. If you choose “Save your cat and notes”, you link the
-        account to Sign in with Apple, and we then also keep an identifier that is unique to our app.
+        is no password and no sign-in, and we never see your name or email address. The app does not offer Sign in with
+        Apple or any other login today; if that changes, this policy will say what we then keep.
       </li>
       <li>
         <strong>Pairing.</strong> An invite code, valid for 24 hours, links your account to your partner's. We keep only a
@@ -116,6 +116,7 @@ const topics = [
     </ul>
     <p>
       Notifications are sent through Apple Push Notification service. Ourio has no in-app purchases. We don't sell your data or use it for advertising.
+      This website (not the app) counts page views with self-hosted Umami at stats.itsnexis.com: no cookies, and IP addresses are not stored.
     </p>
 
     <h2 id="device">Your data on your device</h2>

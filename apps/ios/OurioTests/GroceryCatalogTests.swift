@@ -5,6 +5,7 @@ import WidgetUI
 import Testing
 import UsInterface
 @testable import Billet
+@testable import FeatureUs
 
 @Suite struct GroceryCatalogTests {
     private let catalog = GroceryCatalog.bundled

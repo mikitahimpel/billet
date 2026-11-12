@@ -35,7 +35,7 @@ describe("the invite code in Swift", () => {
 describe("the invite link in Swift", () => {
   it("uses the contract's path", () => {
     const source = readFileSync(
-      join(root, "apps/ios/Nooki/Onboarding/OnboardingView.swift"),
+      join(root, "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift"),
       "utf8",
     );
     expect(source).toContain(`appending(path: "${inviteLinkPrefix.slice(1)}\\(code)")`);

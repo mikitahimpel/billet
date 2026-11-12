@@ -1158,7 +1158,7 @@ describe("notes", () => {
     expect((await setMood(owner, { mood: "happy", note: "a".repeat(81) })).status).toBe(400);
   });
 
-  it("keeps one love streak for the pair, counted from either partner's day", async () => {
+  it("keeps one love streak for the pair, lit once both partners did their part", async () => {
     const { owner, claimer } = await pairOf("subject-streak-owner", "subject-streak-claimer");
     const post = (token: string, path: string, body: unknown) =>
       call(path, {
@@ -1177,12 +1177,15 @@ describe("notes", () => {
       utcOffsetSeconds: 0,
     });
     expect(day.status).toBe(200);
-    expect(await day.json()).toMatchObject({ streak: { days: 1, best: 1 } });
-    // The partner's phone reads the same streak, and the same day counts once.
+    expect(await day.json()).toMatchObject({ streak: { days: 0, best: 0, marks: [{}] } });
+    // The partner's day lights it; both phones read the same streak, and the same day counts once.
     expect(
       (await post(owner, "/v1/streak/days", { at: 1_700_000_000_000, utcOffsetSeconds: 0 })).status,
     ).toBe(200);
-    expect(await streakOf(owner)).toMatchObject({ streak: { days: 1, best: 1 } });
+    expect(
+      (await post(owner, "/v1/streak/days", { at: 1_700_000_000_000, utcOffsetSeconds: 0 })).status,
+    ).toBe(200);
+    expect(await streakOf(claimer)).toMatchObject({ streak: { days: 1, best: 1 } });
     const restore = await post(owner, "/v1/streak/restore", { utcOffsetSeconds: 0 });
     expect(restore.status).toBe(409);
     expect(await restore.json()).toEqual({ _tag: "StreakNotRestorable" });

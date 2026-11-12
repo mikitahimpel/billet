@@ -1,8 +1,10 @@
 import Foundation
 import DrawInterface
 import MoodInterface
+import ShopInterface
 import WidgetInterface
 import Testing
+import UsInterface
 import Wire
 
 @MainActor
@@ -74,6 +76,10 @@ struct FamilyLogicTests {
         #expect(StreakGlance(LoveStreak(count: 5, lastDay: yesterday, best: 5), on: noon).caption == "Keep it today")
         #expect(StreakGlance(LoveStreak(), on: noon).caption == "Start a streak today")
         #expect(StreakGlance(LoveStreak(count: 400, lastDay: today, best: 400), on: noon).caption == "Best streak yet")
+        let theirs = LoveStreak(count: 5, lastDay: yesterday, best: 5, partner: [today])
+        #expect(StreakGlance(theirs, on: noon).caption == "Your turn today")
+        let mine = LoveStreak(count: 5, lastDay: yesterday, best: 5, mine: [today])
+        #expect(StreakGlance(mine, on: noon).caption == "Waiting on your partner")
     }
 
     @Test func coinsCaptionPrefersTheWishlist() {

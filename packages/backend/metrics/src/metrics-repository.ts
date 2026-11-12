@@ -52,6 +52,10 @@ export class MetricsRepository extends Context.Service<
   {
     /** Adds one to the day's count (and its detail's); concurrent calls both count. */
     readonly record: (occurrence: MetricOccurrence) => Effect.Effect<void, MetricsUnavailable>;
+    /** `record` of each, in one storage round trip; all or none. */
+    readonly recordMany: (
+      occurrences: ReadonlyArray<MetricOccurrence>,
+    ) => Effect.Effect<void, MetricsUnavailable>;
     /** Every row, oldest day first, for tests. */
     readonly all: Effect.Effect<ReadonlyArray<StoredMetric>, MetricsUnavailable>;
     /** Every detail row, oldest day first, for tests. */

@@ -99,6 +99,7 @@ const structuredData = {
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     {!noindex && <link rel="alternate" type="text/markdown" href={`${path}index.md`} />}
     {appStoreId && <meta name="apple-itunes-app" content={`app-id=${appStoreId}`} />}
+    {home && <meta name="msvalidate.01" content="8AEAABEF74E319BBE6FCB7F67E5AB3D5" />}
 
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Ourio" />
@@ -117,6 +118,10 @@ const structuredData = {
 
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
     <slot name="head" />
+    {/* Self-hosted Umami: no cookies, no IP stored; counts only on ourio.app, not on pages.dev previews.
+        umami-filter.js drops headless renders and must run first (defer keeps the order). */}
+    <script is:inline defer src="/umami-filter.js"></script>
+    <script is:inline defer src="https://stats.itsnexis.com/s.js" data-website-id="602fa9cd-5bb9-4de9-bc6d-bcdcce04c264" data-domains="ourio.app" data-before-send="umamiBeforeSend" data-auto-pageview="false"></script>
     <link rel="preload" href={bricolage} as="font" type="font/woff2" crossorigin />
     <link rel="preload" href={nunito} as="font" type="font/woff2" crossorigin />
     <!-- The first screen's rules (a subset of global.css); the whole sheet loads without blocking the paint. -->
@@ -140,6 +145,8 @@ const structuredData = {
     </script>
   </head>
   <body class:list={[!home && "site", bodyClass]}>
+    <!-- Cloudflare's Email Obfuscation would turn support@ourio.app into a script-only link that crawlers and agents can't read. -->
+    <!--email_off-->
     {!home && <SiteHeader />}
     <main>
       {
@@ -171,5 +178,6 @@ const structuredData = {
     </svg>
     {!home && <SiteScript />}
     <slot name="after" />
+    <!--/email_off-->
   </body>
 </html>

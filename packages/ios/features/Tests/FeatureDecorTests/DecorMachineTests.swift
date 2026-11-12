@@ -109,12 +109,14 @@ private func book(
   }
 
   @Test func lettingGoWhereItDoesNotFitPutsItBack() {
-    let onTheBed = Placement(item: "yarn", surface: .floor, u: 1, v: -1)
+    let onTheBed = Placement(item: "yarn", surface: .backWall, u: 1)
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(state, .dragged(onTheBed))
     #expect(!state.isValid)
     let (dropped, outputs) = M.transition(state, .dropped)
-    #expect(dropped == .selected(book(), item: "yarn"))
+    #expect(dropped.book.layout == book().layout)
+    #expect(dropped.selection == "yarn")
+    #expect(dropped.book.notice == .rejected)
     #expect(outputs == [.feedback(.rejected)])
   }
 
@@ -140,10 +142,61 @@ private func book(
     #expect(outputs == [.save(state.book.layout)])
   }
 
-  @Test func aTurnThatDoesNotFitIsRefused() {
+  @Test func aFineTurnTurnsFortyFiveDegreesAndSaves() {
+    let (state, outputs) = M.transition(.selected(book(), item: "yarn"), .turnedFine)
+    #expect(state.book.layout.placement(of: "yarn")?.eighthTurns == 1)
+    #expect(outputs == [.save(state.book.layout)])
+  }
+
+  @Test func aFineTurnIsIgnoredUnlessAPieceIsChosen() {
+    for state in [M.State.off(book()), .closet(book())] {
+      #expect(M.transition(state, .turnedFine) == (state, []))
+    }
+  }
+
+  @Test func aDraggedPieceKnowsWhereItStood() {
+    let from = Placement(item: "yarn", surface: .floor, u: 3, v: 6)
+    let (state, _) = M.transition(.selected(book([from]), item: "yarn"), .dragBegan("yarn"))
+    #expect(state.origin == from)
+    #expect(M.State.selected(book([from]), item: "yarn").origin == nil)
+  }
+
+  @Test func aTurnThatFitsNowhereSaysSoAndChangesNothing() {
+    // Turned, the bookcase meets the wall, the bed and the nightstand wherever it goes.
     let tight = Placement(item: "bookcase", surface: .floor, u: -1, v: 7)
     let state = M.State.selected(book([tight]), item: "bookcase")
-    #expect(M.transition(state, .turned) == (state, [.feedback(.blocked)]))
+    let (next, outputs) = M.transition(state, .turned)
+    #expect(next.book.layout == state.book.layout)
+    #expect(next.book.notice == .noRoomToTurn("bookcase"))
+    #expect(outputs == [.feedback(.noRoomToTurn)])
+  }
+
+  @Test func theLastBedOrSofaCannotBeStored() {
+    let fresh = M.Book(layout: DecorLayout(), owned: [])
+    let state = M.State.selected(fresh, item: "base-donutbed")
+    let (refused, refusal) = M.transition(state, .stored)
+    #expect(refused.book.layout == fresh.layout && refused.book.notice == .lastRest)
+    #expect(refusal == [.feedback(.lastRest)])
+    let (stored, outputs) = M.transition(
+      .selected(fresh, item: "base-plant"), .stored)
+    #expect(!stored.book.layout.isPlaced("base-plant"))
+    #expect(outputs == [.save(stored.book.layout)])
+  }
+
+  @Test func resettingTheRoomPutsTheFurnitureBack() {
+    let messy = M.Book(
+      layout: DecorLayout().putting(Placement(item: "base-cattree", surface: .floor, u: 7, v: 0))
+        .storing("base-plant"),
+      owned: [])
+    let (state, outputs) = M.transition(.closet(messy), .resetRoom)
+    guard case .closet(let reset) = state else {
+      Issue.record("not the closet")
+      return
+    }
+    #expect(reset.layout.placements.isEmpty && reset.layout.stowed.isEmpty)
+    #expect(outputs == [.save(reset.layout), .feedback(.reset)])
+    let (again, nothing) = M.transition(.closet(reset), .resetRoom)
+    #expect(again.book.layout == reset.layout && nothing.isEmpty)
   }
 
   @Test func aWallPieceCannotBeTurned() {
@@ -210,6 +263,32 @@ private func book(
     ] {
       #expect(M.transition(moving, event) == (moving, []))
     }
+  }
+
+  @Test func aStoredPieceOfTheRoomsOwnFurnitureCanBePlacedAgain() {
+    let stored = M.Book(layout: DecorLayout().storing("base-cattree"), owned: [])
+    let (state, outputs) = M.transition(.closet(stored), .closetTapped("base-cattree"))
+    #expect(state.book.layout.isPlaced("base-cattree"))
+    #expect(state.selection == "base-cattree")
+    #expect(outputs == [.save(state.book.layout), .feedback(.placed)])
+  }
+
+  @Test func aChangeCanBeTakenBackOnce() {
+    let start = M.State.selected(book(), item: "yarn")
+    let (turned, _) = M.transition(start, .turned)
+    #expect(turned.book.undo == book().layout)
+    let (undone, outputs) = M.transition(turned, .undone)
+    #expect(undone.book.layout == book().layout)
+    #expect(undone.book.undo == nil)
+    #expect(outputs == [.save(book().layout)])
+    #expect(M.transition(undone, .undone).1.isEmpty)
+  }
+
+  @Test func aServersWordClearsWhatCouldBeTakenBack() {
+    let (turned, _) = M.transition(.selected(book(), item: "yarn"), .turned)
+    let theirs = Placement(item: "mouse", surface: .floor, u: 7, v: 0)
+    let (heard, _) = M.transition(turned, .remote([theirs]))
+    #expect(heard.book.undo == nil)
   }
 }
 

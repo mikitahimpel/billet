@@ -1,3 +1,4 @@
+import FeatureShop
 import SwiftUI
 import Design
 
@@ -32,7 +33,7 @@ struct AppHeader<Below: View>: View {
                 .frame(height: Size.control)
                 below
             }
-            .animation(.easeInOut(duration: 0.2), value: state.tab)
+            .animation(Motion.fade(0.2), value: state.tab)
         }
         // Outside the group, so the badges it draws above its glass are capped too.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)

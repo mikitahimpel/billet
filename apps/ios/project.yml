@@ -19,7 +19,15 @@ settings:
     # environment. A Debug build always has them. The TestFlight workflow never sets it, because the binary it
     # uploads is the one App Review and the App Store get (check-archive.sh checks BilletLabs).
     BILLET_LABS_MODE: $(BILLET_LABS:default=NO)
+    # Whether the `-perf.script` measuring hooks (OurioPerf, ScenePerf) are compiled into a Release build: "NO" unless
+    # BILLET_PERF_HOOKS=YES is in the ENVIRONMENT (Package.swift of `pet` reads it too). Only the perf CI sets it;
+    # check-archive.sh fails an archive that carries them.
+    BILLET_PERF_HOOKS_MODE: $(BILLET_PERF_HOOKS:default=NO)
     CURRENT_PROJECT_VERSION: "23"
+    # Images and colours are looked up by name, never through generated `ImageResource`/`ColorResource` symbols.
+    # Generating them costs a minute or more per target on a fresh runner, and every Swift file waits for it.
+    ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: NO
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
   configs:
     Debug:
       # One compilation cache for every worktree on the Mac: a fresh checkout reuses what another one compiled from
@@ -75,7 +83,7 @@ targets:
         # What the build carries, for check-archive.sh: the store (mock or storekit) and Labs (YES or NO).
         BilletPayments: $(BILLET_PAYMENTS_MODE)
         BilletLabs: $(BILLET_LABS_MODE)
-        # The invite step scans the partner's QR code (Onboarding/InviteScanner).
+        # The invite step scans the partner's QR code (FeatureOnboarding/InviteScanner).
         NSCameraUsageDescription: Ourio uses the camera to scan the invite code on your partner's screen.
         # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename
         # (WidgetInterface/DeepLink.swift).
@@ -107,6 +115,7 @@ targets:
             FeatureOnboarding,
             FeaturePairing,
             FeatureShop,
+            FeatureUs,
             DecorInterface,
             DrawInterface,
             GamesInterface,
@@ -135,7 +144,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: >-
-          $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) LABS_$(BILLET_LABS_MODE:upper)
+          $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) LABS_$(BILLET_LABS_MODE:upper) PERF_HOOKS_$(BILLET_PERF_HOOKS_MODE:upper)
         # The application preset sets "1,2" per target, over the project's base; a portrait-only iPad build is rejected.
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES
@@ -161,10 +170,9 @@ targets:
     platform: iOS
     sources:
       - path: OurioWidgets
-      # The files the app keeps the streak and the wallet in, which the widgets read.
-      - path: Nooki/Model/Streak.swift
-      - path: Nooki/Model/Wallet.swift
       - path: Shared
+        # Places' map is for the app's world map only.
+        excludes: [Places/WorldMap.txt]
       - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
@@ -187,8 +195,11 @@ targets:
         products: [Ink, Persistence]
       - package: BilletDesign
         products: [Design]
+      - package: BilletPet
+        products: [Pet]
       - package: BilletFeatures
-        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface, WidgetInterface, WidgetUI]
+        products:
+          [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, ShopInterface, UsInterface, WidgetInterface, WidgetUI]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
@@ -200,10 +211,12 @@ targets:
     platform: iOS
     sources:
       - path: OurioNotifications
+      # The evening nudge a streak push plans again.
+      - path: Nooki/Model/StreakNudge.swift
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
-        # Places' flags and map are for the app and its widgets.
-        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
+        # Places' map is for the app's world map only.
+        excludes: [Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
     info:
@@ -240,11 +253,10 @@ targets:
     sources:
       - path: OurioShare
       - path: Shared
-        # Places' flags and map are for the app and its widgets.
-        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
+        # Places' map is for the app's world map only.
+        excludes: [Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
-      - path: Nooki/UI/Us/UsKit.swift
     info:
       path: OurioShare/Info.plist
       properties:
@@ -284,8 +296,6 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
-      - path: Nooki/Model/Streak.swift
-      - path: Nooki/Model/Wallet.swift
       - path: PerTarget
     # Wire, Ink and the interfaces come from the app it is loaded into, as for OurioTests: linking them here as well
     # makes Xcode build them as frameworks, and OurioTests then finds none of their symbols.

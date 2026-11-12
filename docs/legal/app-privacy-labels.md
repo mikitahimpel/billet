@@ -13,7 +13,7 @@ Every type below is **linked to the user** (it is stored per account) and **not 
 | Data type | Purpose | What it is |
 | --- | --- | --- |
 | Contact Info > Name | App Functionality | The name you give in onboarding and the name your partner calls you. Typed by the user, not taken from Apple. |
-| Identifiers > User ID | App Functionality | The account behind the anonymous key (and the app-specific Sign in with Apple identifier when linked), and the session. |
+| Identifiers > User ID | App Functionality | The account behind the anonymous key, and the session. |
 | Identifiers > Device ID | App Functionality | A random device ID, never the advertising identifier. |
 | User Content > Photos or Videos | App Functionality | Photos and drawing images sent in notes and Moments. |
 | User Content > Other User Content | App Functionality | Drawing strokes, Pick tonight swipes, Who knows who answers, wishes. |
@@ -38,5 +38,7 @@ domains. Check the list when adding an SDK or an API Apple lists as required-rea
 
 - Name is declared collected because onboarding stores it with the account; `docs/privacy.md` used
   to say contact info is not collected. Say so in the policy (the draft does) or stop storing it.
-- In-app account deletion is not in the app yet (`deleteAccount` exists in the client and server
-  only). The App Store requires it for an app with accounts.
+- In-app account deletion is in Settings (`PartnerAndAccountSections.swift`, `DELETE /v1/account`).
+  The app sends no Sign in with Apple authorization code with it, because the build has no screen
+  that links Apple (`SaveAccountCard` is not used by the app target); see
+  [release-checklist.md](release-checklist.md).

@@ -76,8 +76,8 @@ struct MomentViewer: View {
             }
         }
         .background(Ink.screen.ignoresSafeArea())
-        .animation(.snappy(duration: 0.25), value: moment)
-        .animation(.snappy(duration: 0.25), value: editing)
+        .animation(Motion.spring(0.25), value: moment)
+        .animation(Motion.spring(0.25), value: editing)
         .onAppear { caption = moment?.caption ?? "" }
         .onChange(of: caption) { _, text in
             if text.count > ComposeSheet.captionLimit { caption = String(text.prefix(ComposeSheet.captionLimit)) }
@@ -208,6 +208,6 @@ private struct ReactionPicker: View {
                 .accessibilityLabel(reaction.label)
             }
         }
-        .animation(.snappy(duration: 0.2), value: selected)
+        .animation(Motion.spring(0.2), value: selected)
     }
 }

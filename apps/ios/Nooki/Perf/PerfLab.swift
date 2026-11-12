@@ -24,6 +24,12 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     case motes
     /// The cat drawn as 131,000 splats; off, as the skinned mesh the Simulator draws. Read at launch.
     case splatCat
+    /// The warm bokeh drifting behind the room, redrawn at 10 Hz under the room layer and the glass; off, it holds still.
+    case drift
+    /// The cat's splats cut to about 55%, the least important first. Read when she loads.
+    case splatLean
+    /// The cat's splats rewritten and re-sorted at most 30 times a second instead of every frame.
+    case splatRate
     /// The room swaying under the sun and the bulbs and flame pulsing; off, a still room.
     case sway
     /// Four samples a pixel on the room's edges.
@@ -46,6 +52,9 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .flatten: "Flatten prints and cards"
         case .motes: "Dust motes in the room"
         case .splatCat: "Cat as splats (mesh when off; next launch)"
+        case .drift: "Backdrop bokeh drift"
+        case .splatLean: "Cat splats cut to 55% (next launch)"
+        case .splatRate: "Cat splats updated at 30 Hz"
         case .sway: "Room sway and light pulse"
         case .msaa: "Antialiasing (4 samples)"
         case .hdr: "HDR rendering"
@@ -64,6 +73,9 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .flatten: "square.stack.3d.down.right"
         case .motes: "sparkle"
         case .splatCat: "cat"
+        case .drift: "circle.dotted"
+        case .splatLean: "scissors"
+        case .splatRate: "metronome"
         case .sway: "waveform.path"
         case .msaa: "square.dashed"
         case .hdr: "sun.max"
@@ -76,8 +88,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     /// others start on.
     var shippedOn: Bool {
         switch self {
-        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .sway, .hdr: true
-        case .flatten, .motes, .msaa, .ownLoop, .metalHud: false
+        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .drift, .sway, .hdr: true
+        case .flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate: false
         }
     }
 }
@@ -90,6 +102,8 @@ nonisolated enum PerfLabMachine: Machine {
         /// The suspects set the other way from how they ship.
         var changed: Set<PerfSuspect> = []
         var meter = false
+        /// The quality tier Labs holds the room at, or nil to follow the phone's heat.
+        var forcedTier: RoomQualityTier?
 
         static let shipped = State()
 
@@ -105,6 +119,7 @@ nonisolated enum PerfLabMachine: Machine {
     enum Event: Equatable, Sendable {
         case set(PerfSuspect, on: Bool)
         case meter(Bool)
+        case force(RoomQualityTier?)
         case reset
     }
 
@@ -121,6 +136,9 @@ nonisolated enum PerfLabMachine: Machine {
         case .meter(let shows):
             guard state.meter != shows else { return (state, []) }
             next.meter = shows
+        case .force(let tier):
+            guard state.forcedTier != tier else { return (state, []) }
+            next.forcedTier = tier
         case .reset:
             guard state != .shipped else { return (state, []) }
             next = .shipped
@@ -133,7 +151,8 @@ nonisolated enum PerfLabMachine: Machine {
                         tabs: TabSwitchTimes? = nil, day: MetricsDigest? = nil) -> String {
         let changed = PerfSuspect.allCases.filter { state.changed.contains($0) }
             .map { "\($0.rawValue) \(state.isOn($0) ? "on" : "off")" }
-        let switches = changed.isEmpty ? "as shipped" : changed.joined(separator: ", ")
+        let forced = state.forcedTier.map { "tier \($0.title) forced" }
+        let switches = changed.isEmpty && forced == nil ? "as shipped" : (changed + [forced].compactMap { $0 }).joined(separator: ", ")
         return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line, day?.line].compactMap { $0 })
             .joined(separator: " · ")
     }
@@ -395,6 +414,39 @@ private final class TabSwitchLinkTarget: NSObject {
     @objc func frame(_ link: CADisplayLink) { tick(link) }
 }
 
+/// Follows the phone's heat and Low Power Mode and says which ``RoomQualityTier`` the room should draw at, degrading at
+/// once and recovering slowly (``RoomQualityPolicy``).
+@MainActor
+@Observable
+final class QualityMonitor {
+    private(set) var tier: RoomQualityTier
+    private(set) var conditions: RoomConditions
+
+    @ObservationIgnored private var policy: RoomQualityPolicy
+    @ObservationIgnored private let info: ProcessInfo
+
+    init(info: ProcessInfo = .processInfo) {
+        self.info = info
+        let conditions = RoomConditions(info)
+        var policy = RoomQualityPolicy()
+        tier = policy.update(conditions, at: info.systemUptime)
+        self.conditions = conditions
+        self.policy = policy
+        Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                self?.sample()
+            }
+        }
+    }
+
+    func sample() {
+        conditions = RoomConditions(info)
+        let next = policy.update(conditions, at: info.systemUptime)
+        if next != tier { tier = next }
+    }
+}
+
 /// Runs ``PerfLabMachine`` and keeps its state on this phone.
 @MainActor
 @Observable
@@ -404,6 +456,11 @@ final class PerfLab {
     private let store: Store<PerfLabMachine>
 
     var state: PerfLabMachine.State { store.state }
+
+    @ObservationIgnored let quality = QualityMonitor()
+
+    /// The tier the room draws at: the one Labs forces, else the one the phone's heat and power ask for.
+    var tier: RoomQualityTier { state.forcedTier ?? quality.tier }
 
     /// MetricKit's latest day for this build, once the system has delivered one.
     private(set) var day: MetricsDigest?
@@ -450,16 +507,11 @@ final class PerfLab {
         Binding { self.state.meter } set: { self.store.send(.meter($0)) }
     }
 
+    func force(_ tier: RoomQualityTier?) { store.send(.force(tier)) }
+
     func reset() { store.send(.reset) }
 
     func settled() async { await store.settled() }
-}
-
-extension EnvironmentValues {
-    /// Labs → Performance's switches the pages read; each is on as shipped.
-    @Entry var perfShadows = true
-    @Entry var perfShine = true
-    @Entry var perfFlatten = false
 }
 
 extension View {
@@ -470,33 +522,5 @@ extension View {
             .environment(\.perfShadows, lab.isOn(.shadows))
             .environment(\.perfShine, lab.isOn(.shine))
             .environment(\.perfFlatten, lab.isOn(.flatten))
-    }
-
-    /// Drawn into one layer while the lab's Flatten switch is on.
-    func perfFlattened() -> some View { modifier(PerfFlatten()) }
-
-    /// A shadow the lab's Shadows switch can take away.
-    func perfShadow(color: Color, radius: CGFloat, x: CGFloat = 0, y: CGFloat = 0) -> some View {
-        modifier(PerfShadow(color: color, radius: radius, x: x, y: y))
-    }
-}
-
-private struct PerfShadow: ViewModifier {
-    let color: Color
-    let radius: CGFloat
-    let x: CGFloat
-    let y: CGFloat
-    @Environment(\.perfShadows) private var shows
-
-    func body(content: Content) -> some View {
-        content.shadow(color: shows ? color : .clear, radius: shows ? radius : 0, x: x, y: y)
-    }
-}
-
-private struct PerfFlatten: ViewModifier {
-    @Environment(\.perfFlatten) private var flatten
-
-    @ViewBuilder func body(content: Content) -> some View {
-        if flatten { content.drawingGroup() } else { content }
     }
 }

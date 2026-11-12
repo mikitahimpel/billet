@@ -1,3 +1,5 @@
+import FeatureShop
+import ShopInterface
 import SwiftUI
 import Design
 
@@ -48,7 +50,7 @@ struct InkPalette: View {
                     .opacity(owned ? 1 : 0.7)
                 if !owned {
                     HStack(spacing: 2) {
-                        CoinIcon(size: 9)
+                        CoinIcon(size: 12)
                         Text("\(ink.price)")
                             .font(.ourioMicro.monospacedDigit())
                     }

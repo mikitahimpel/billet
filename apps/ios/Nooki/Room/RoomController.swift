@@ -6,6 +6,8 @@ import Pet
 import RealityKit
 import RoomInterface
 import SwiftUI
+import WidgetInterface
+import WidgetKit
 import WindowViews
 import Wire
 
@@ -36,6 +38,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     /// The cat's life the brain runs on; `connectCat` makes it the pair's.
     @ObservationIgnored let catLife: CatLife
     @ObservationIgnored let probe = RoomProbe()
+    @ObservationIgnored private var publishedNeeds: CatNeedsGlance?
 
     @ObservationIgnored private let usesStandIn: Bool
     @ObservationIgnored private let ownLoop: Bool
@@ -85,6 +88,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
         let room = DioramaScene()
         home = room
         room.pivot.addChild(decorStage.root)
+        decorStage.onBaseReady = { [weak room] in room?.baseFurnished = true }
+        room.flatSurfaces = { [decorStage] in decorStage.flatSurfaces() }
         wire(room)
         showDecor(decor)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }
@@ -234,6 +239,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
         tellHomecoming()
     }
 
+    func pronounsChosen() { catLife.pronounsChosen() }
+
     func syncCat() async {
         await catLife.sync()
         tellHomecoming()
@@ -337,7 +344,19 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     func refreshStatus() {
         let director = current?.director
-        let next = CatStatus(rounding: director?.needs, mind: director?.mind)
+        let next = CatStatus(rounding: director?.needs, mind: director?.mind, about: director?.about)
         if next != status { status = next }
+        publishNeeds(director?.needs)
+    }
+
+    /// Hands her needs to the widgets, which reload only when what she asks for changes.
+    private func publishNeeds(_ needs: PetNeeds?) {
+        guard let needs else { return }
+        let glance = CatNeedsGlance(full: needs.full, rested: needs.rested, loved: needs.loved,
+                                    playful: needs.playful, lowBelow: LifeConfig.standard.lowBelow, savedAt: .now)
+        guard glance.differsForWidgets(from: publishedNeeds) else { return }
+        publishedNeeds = glance
+        glance.save()
+        WidgetCenter.shared.reloadAllTimelines()
     }
 }

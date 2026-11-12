@@ -1,3 +1,6 @@
+import FeatureOnboarding
+import FeatureShop
+import FeatureUs
 import DecorInterface
 import FeatureDecor
 import FeatureGames
@@ -8,7 +11,9 @@ import Observation
 import WidgetInterface
 import WidgetUI
 import Persistence
+import Pet
 import ProfileInterface
+import ShopInterface
 import RoomInterface
 import SwiftUI
 import Design
@@ -17,13 +22,6 @@ import WidgetKit
 
 enum HomeTab: CaseIterable {
     case world, moments, shop, us
-}
-
-/// Where the Shop opens when something elsewhere points at it, e.g. a locked ink in the drawing palette.
-enum ShopFocus: Hashable {
-    /// The Inks block in Today, at that ink.
-    case ink(String)
-    case item(String)
 }
 
 enum RoomKind: CaseIterable {
@@ -79,7 +77,7 @@ struct HomeStores {
         let moments = MomentStore()
         let notes = NoteStore()
         let care = CatCare(wallet: wallet, streak: streak)
-        let shop = ShopModel(wallet: wallet, couple: profile, care: care)
+        let shop = ShopModel(wallet: wallet, couple: profile, care: care) { CatProfile.name() }
         let us = UsStore { shop.earn($0) }
         let members: GiftsModel.Members = { profile.couple.pair.map { (profile.couple.viewer, $0.users) } }
         let decorSync = DecorSync()
@@ -88,8 +86,8 @@ struct HomeStores {
                 storage: .appGroup(.directory(AppGroup.container)),
                 feedback: { feedback in
                     switch feedback {
-                    case .placed: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
-                    case .blocked, .rejected: UINotificationFeedbackGenerator().notificationOccurred(.warning)
+                    case .placed, .slid, .swapped, .reset: UIImpactFeedbackGenerator(style: .soft).impactOccurred()
+                    case .blocked, .rejected, .noRoomToTurn, .lastRest: UINotificationFeedbackGenerator().notificationOccurred(.warning)
                     }
                 },
                 share: { [weak decorSync] in decorSync?.push($0) }))
@@ -108,6 +106,11 @@ struct HomeStores {
 final class HomeState {
     /// Named in onboarding; Mochi until then.
     var petName: String { CatProfile.name() }
+    /// How the cat is worded, as the pair chose; `they` until then. Read from the app group again after the room is
+    /// synced, since the partner may have chosen.
+    private(set) var pronouns = CatProfile.pronouns()
+    /// Takes a choice made on the cat's sheet: kept for the widgets, and told to the room by `sendPronouns`.
+    @ObservationIgnored var sendPronouns: () -> Void = {}
     var tab: HomeTab = .world
     /// Set by `openShop`; the Shop scrolls or opens there, then clears it.
     var shopFocus: ShopFocus?
@@ -117,6 +120,23 @@ final class HomeState {
     func openShop(_ focus: ShopFocus) {
         shopFocus = focus
         tab = .shop
+    }
+
+    func choosePronouns(_ choice: CatPronouns) {
+        guard choice != pronouns || CatProfile.chosenPronouns() == nil else { return }
+        pronouns = choice
+        CatProfile.setPronouns(choice)
+        WidgetCenter.shared.reloadAllTimelines()
+        sendPronouns()
+    }
+
+    /// After the room was read: the partner's choice is this phone's too.
+    func refreshPronouns() {
+        let current = CatProfile.pronouns()
+        if current != pronouns {
+            pronouns = current
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     /// Opens the World with its pieces arranged, `item` chosen when given: the Shop's Place and the purchase's
@@ -137,7 +157,7 @@ final class HomeState {
     /// Asks the World tab to open the cat's sheet, as an Inbox row does.
     var showsPetSheet = false
     /// A shop item opened from outside the Shop, such as an Inbox row.
-    var openedShopItem: ShopItem?
+    var openedShopItem: FeatureShop.ShopItem?
     /// The Us tab's open sheet; widgets deep-link into it.
     var usRoute: UsView.Route?
     /// The open note composer; the Add menu and the new-note deep link set it.
@@ -260,6 +280,14 @@ final class HomeState {
         for _ in 0..<min(pets, 5) { care.pet() }
     }
 
+    /// The meals given from a widget since the last look, for her room to serve.
+    func takeWidgetFeeds() -> Int {
+        var activity = WidgetActivity.load()
+        let feeds = activity.takePendingFeeds()
+        if feeds > 0 { activity.save() }
+        return min(feeds, 2)
+    }
+
     /// Deletes every store's files from the app group (or Documents) and this phone's preferences; the caller starts
     /// over with a fresh HomeState. The account stays: its record shares the folder, and its token in the Keychain
     /// would otherwise outlive it, signing the phone out halfway.
@@ -273,6 +301,7 @@ final class HomeState {
         }
         if let domain = Bundle.main.bundleIdentifier { UserDefaults.standard.removePersistentDomain(forName: domain) }
         CatProfile.store.removeObject(forKey: CatProfile.nameKey)
+        CatProfile.store.removeObject(forKey: CatProfile.pronounsKey)
         CatProfile.store.removeObject(forKey: CatProfile.coatKey)
         WidgetCenter.shared.reloadAllTimelines()
     }

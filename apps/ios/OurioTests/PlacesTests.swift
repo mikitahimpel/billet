@@ -8,6 +8,7 @@ import UIKit
 import UsInterface
 import Wire
 @testable import Billet
+@testable import FeatureUs
 
 @Suite struct PlacesTests {
     private let path = "Tests/\(UUID().uuidString)-us.json"
@@ -27,7 +28,7 @@ import Wire
         let map = WorldMap.bundled
         for code in Country.codes {
             #expect(Country.name(code, locale: english) != code, "\(code) has no name")
-            #expect(UIImage(named: "flag-\(code.lowercased())") != nil, "\(code) has no flag")
+            #expect(Country.emoji(code).unicodeScalars.count == 2, "\(code) has no flag")
             #expect(map.shapes[code]?.isEmpty == false, "\(code) is not on the map")
         }
     }

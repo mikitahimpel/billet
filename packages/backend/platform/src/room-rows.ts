@@ -14,6 +14,7 @@ export const StoredRoom = Schema.Struct({
   streakBest: Schema.Int,
   streakLastDay: Schema.NullOr(Schema.String),
   streakRestoredOn: Schema.NullOr(Schema.String),
+  streakMarks: Schema.NullOr(Schema.String),
   lastReactionRev: Schema.NullOr(Schema.Int),
   giftDay: Schema.NullOr(Schema.String),
   welcomed: Schema.Boolean,
@@ -68,11 +69,17 @@ export const StoredPlacement = Schema.Struct({
   u: Schema.Int,
   v: Schema.Int,
   quarterTurns: Schema.Int,
+  room: Schema.String,
   position: Schema.Int,
 });
 
 export const StoredLayoutLog = Schema.Struct({
   changeId: Schema.String,
+  position: Schema.Int,
+});
+
+export const StoredStowedPiece = Schema.Struct({
+  itemId: Schema.String,
   position: Schema.Int,
 });
 

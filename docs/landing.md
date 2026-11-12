@@ -10,6 +10,27 @@ pnpm --filter @billet/landing dev     # http://pc:4321 with --host 0.0.0.0
 pnpm --filter @billet/landing build   # apps/landing/dist, with a Markdown twin beside every page
 ```
 
+## Markdown twins
+
+The build writes `index.md` beside every page. `functions/_middleware.js` serves it at the page's
+own URL to a request that asks for `text/markdown`, names it in each page's `Link` header, and
+sends `X-Robots-Tag: noindex` on every `*.pages.dev` host, so only the custom domain is indexed.
+
+## ourio.app
+
+ourio.app and www.ourio.app are custom domains of the Pages project `ourio-landing-prod` in the
+Cloudflare account that holds the ourio.app zone (https://ourio-landing-prod-1ym.pages.dev). The
+workflow's Production target is the repository's account, so a production release is deployed from
+a machine logged in to the zone's account:
+
+```sh
+pnpm --filter @billet/landing build
+cd apps/landing && pnpm exec wrangler pages deploy dist --project-name ourio-landing-prod --branch main
+pnpm --filter @billet/landing indexnow https://ourio.app/<changed>/   # changed URLs only; --all after a site-wide change
+```
+
+The middleware sends www.ourio.app to ourio.app with a 301.
+
 ## Images
 
 The room render and Mochi's loop are pre-sized in `src/assets/room/` (AVIF and WebP at 1000, 1600

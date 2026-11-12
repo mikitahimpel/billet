@@ -6,7 +6,7 @@ import Art from "../components/art.astro";
 import EndCard from "../components/end-card.astro";
 import Page from "../layouts/page.astro";
 
-// Steps of apps/ios/Nooki/Onboarding and packages/backend/pairing: a 10-character code, valid for 24 hours.
+// Steps of packages/ios/features/Sources/FeatureOnboarding and packages/backend/pairing: a 10-character code, valid for 24 hours.
 const steps = [
   {
     name: "Install Ourio on your iPhone",
@@ -49,7 +49,7 @@ const icon = await getImage({ src: appIcon, width: 192, format: "webp" });
 
 <Page
   title="How Ourio works: pair two iPhones with one code"
-  description="How to set up Ourio, the couples app: install it, pick your cat, send your partner a 10-character invite code valid for 24 hours, and share one room. Plus how to unpair."
+  description="How to set up Ourio: install it, pick your cat, send your partner a 10-character invite code valid for 24 hours, and share one room. Plus how to unpair."
   schema={schema}
   bodyClass="site-how"
 >

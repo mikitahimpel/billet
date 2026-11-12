@@ -1,38 +1,44 @@
 import Pet
+import RoomInterface
 import SwiftUI
 import Design
 
-/// Where the cat sheet reads Mochi's four needs (0...1) and tells her she ate: her brain on this phone today, the
-/// couple's cat journal on the server later, without the sheet changing.
+/// Where the cat sheet reads Mochi (her four needs, 0...1, her day and what kind of cat she is) and tells her she
+/// ate: her brain on this phone today, the couple's cat journal on the server later, without the sheet changing.
 @MainActor
 protocol PetNeedsSource: AnyObject {
-    var needs: PetNeeds? { get }
+    var status: CatStatus { get }
     func feed()
 }
 
-extension RoomController: PetNeedsSource {
+extension PetNeedsSource {
     var needs: PetNeeds? { status.needs }
 }
 
-/// Mochi's four needs, one row each: what it is, how she feels in a word, and the care a tap on the row gives. Only the
-/// lowest need, and only while it wants something, is raised.
-struct NeedList: View {
+extension RoomController: PetNeedsSource {}
+
+/// Mochi's four needs, a gauge each in two columns: how full it is as a ring and a number, how she feels in a word,
+/// when it next runs low, and the care a tap on the tile gives. Only the lowest need, and only while it wants
+/// something, is raised.
+struct NeedGrid: View {
     let name: String
+    let pronouns: CatPronouns
     let needs: PetNeeds?
+    let asleep: Bool
     var care: (NeedCare) -> Void
 
     var body: some View {
         if let needs {
             let raised = NeedLevel.cue(needs)
-            GroupedSection(inset: StatusRow.inset) {
+            ItemGrid {
                 ForEach(PetNeed.displayOrder, id: \.self) { need in
-                    row(need, value: needs[need], raised: need == raised)
+                    tile(need, in: needs, raised: need == raised)
                 }
             }
         } else {
-            // Before her needs are known: one calm line rather than four empty rows.
+            // Before her needs are known: one calm line rather than four empty gauges.
             Card {
-                Text("\(name) is settling in. Her needs show here soon.")
+                Text(pronouns.say(.needsSettlingIn(name: name)))
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
@@ -41,33 +47,36 @@ struct NeedList: View {
         }
     }
 
-    @ViewBuilder private func row(_ need: PetNeed, value: Double, raised: Bool) -> some View {
-        let level = NeedLevel(value)
-        let emphasis: StatusRow.Emphasis = raised ? .raised : .quiet
+    @ViewBuilder private func tile(_ need: PetNeed, in needs: PetNeeds, raised: Bool) -> some View {
+        let value = needs[need]
+        let state = need.word(NeedLevel(value))
+        let hint = need.hint(NeedForecast.outlook(need, in: needs, asleep: asleep))
+        let emphasis: GaugeTile.Emphasis = raised ? .raised : .quiet
         if let action = need.care {
-            StatusRow(need.title, state: need.word(level), symbol: need.symbol, tint: need.tint, emphasis: emphasis,
-                      value: need.spoken(value), action: action.title, hint: action.hint(name: name)) {
+            GaugeTile(need.title, state: state, hint: hint, value: value, symbol: need.symbol, tint: need.tint,
+                      emphasis: emphasis, action: action.title) {
                 care(action)
             }
+            .accessibilityHint(action.hint(name: name))
             .accessibilityIdentifier(action.title)
         } else {
-            StatusRow(need.title, state: need.word(level), symbol: need.symbol, tint: need.tint, emphasis: emphasis,
-                      value: need.spoken(value), note: need.note ?? "")
+            GaugeTile(need.title, state: state, hint: hint, value: value, symbol: need.symbol, tint: need.tint,
+                      emphasis: emphasis, note: need.note(pronouns: pronouns) ?? "")
         }
     }
 }
 
-/// Fixed needs for the UI tests and screenshots (`-uitestNeeds 0.2` sets all four to 20%); nil in normal use.
+/// A fixed cat for the UI tests and screenshots (`-uitestNeeds 0.2` sets all four needs to 20%); nil in normal use.
 final class FixedNeeds: PetNeedsSource {
-    let needs: PetNeeds?
+    let status: CatStatus
 
-    private init(_ value: Double) {
-        needs = PetNeeds(all: value)
+    init(_ status: CatStatus) {
+        self.status = status
     }
 
     func feed() {}
 
     static let fromLaunch: FixedNeeds? = UserDefaults.standard.string(forKey: "uitestNeeds")
         .flatMap(Double.init)
-        .map { FixedNeeds($0) }
+        .map { FixedNeeds(CatStatus(needs: PetNeeds(all: $0))) }
 }

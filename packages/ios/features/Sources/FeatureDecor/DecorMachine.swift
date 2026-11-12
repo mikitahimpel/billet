@@ -10,6 +10,10 @@ public enum DecorMachine: Machine {
     public var layout: DecorLayout
     /// Every shop piece the pair owns, placeable or not.
     public var owned: Set<String>
+    /// The layout before the player's last change, for Undo.
+    public var undo: DecorLayout?
+    /// What the last event came to, when the player should be told.
+    public var notice: Notice?
 
     public init(layout: DecorLayout = DecorLayout(), owned: Set<String> = []) {
       self.layout = layout
@@ -17,6 +21,26 @@ public enum DecorMachine: Machine {
     }
 
     public var closet: [DecorItem] { layout.closet(owned: owned) }
+
+    /// A piece the pair can place: one it owns, or the room's own furniture.
+    public func has(_ item: String) -> Bool {
+      guard let known = DecorItem.item(shopID: item) else { return false }
+      return known.isBase || owned.contains(item)
+    }
+  }
+
+  public enum Notice: Equatable, Sendable {
+    /// A turn fits nowhere in the room; the piece can only be put away.
+    case noRoomToTurn(String)
+    /// The turn fitted only at another spot, which the piece slid to.
+    case slid
+    /// A drop swapped two pieces, or moved one aside.
+    case swapped
+    /// A drop fits nowhere.
+    case rejected
+    /// Putting it away would leave her no bed or sofa.
+    case lastRest
+    case reset
   }
 
   public enum State: Equatable, Sendable {
@@ -59,10 +83,11 @@ public enum DecorMachine: Machine {
       }
     }
 
-    /// False while a dragged piece is somewhere it does not fit.
+    /// False while a dragged piece is somewhere it does not fit and no swap or nudge makes room.
     public var isValid: Bool {
       switch self {
-      case .moving(let book, _, _, let to): book.layout.accepts(to)
+      case .moving(let book, _, _, let to):
+        if case .rejected = book.layout.dropping(to) { false } else { true }
       case .off, .closet, .selected: true
       }
     }
@@ -73,6 +98,11 @@ public enum DecorMachine: Machine {
       case .moving(let book, _, _, let to): book.layout.verdict(to)
       case .off, .closet, .selected: .fits
       }
+    }
+
+    /// Where the dragged piece stood before the finger took it.
+    public var origin: Placement? {
+      if case .moving(_, _, let from, _) = self { from } else { nil }
     }
 
     /// Whether the chosen piece can be turned.
@@ -91,7 +121,10 @@ public enum DecorMachine: Machine {
     case loaded(DecorLayout)
     /// The pair's layout as the server holds it (a partner's change, or this phone's own refused): it replaces the
     /// placements and leaves what was put in the closet.
-    case remote([Placement])
+    ///
+    /// `stowed` is the room's own furniture it put away; nil from a server that does not know it, which leaves
+    /// this phone's.
+    case remote([Placement], stowed: Set<String>? = nil)
     /// Start arranging, with `item` chosen when it is given: a piece in the closet goes into the room
     /// first.
     case opened(item: String?)
@@ -107,7 +140,13 @@ public enum DecorMachine: Machine {
     case dropped
     case dragCancelled
     case turned
+    /// A further 45 degrees.
+    case turnedFine
     case stored
+    /// The room's own furniture back where it stood, and what was bought where it goes by itself.
+    case resetRoom
+    /// The last change taken back.
+    case undone
   }
 
   public enum Output: Equatable, Sendable {
@@ -121,13 +160,59 @@ public enum DecorMachine: Machine {
   public enum Feedback: Equatable, Sendable {
     /// A piece went into the room.
     case placed
-    /// There is no room for the piece in the closet's tap, or a turn that would not fit.
+    /// There is no room for the piece in the closet's tap.
     case blocked
     /// A drag ended where it does not fit.
     case rejected
+    /// A turn did not fit where the piece stood, so it slid to the nearest spot that does.
+    case slid
+    /// No spot in the room fits the turned piece: it can only be put away.
+    case noRoomToTurn
+    /// A drop changed two pieces' places.
+    case swapped
+    /// Putting it away would leave her no bed or sofa.
+    case lastRest
+    case reset
   }
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
+    let (next, outputs) = step(state, event)
+    var book = next.book
+    book.notice = nil
+    for output in outputs {
+      guard case .feedback(let feedback) = output else { continue }
+      switch feedback {
+      case .noRoomToTurn: book.notice = state.selection.map { .noRoomToTurn($0) }
+      case .slid: book.notice = .slid
+      case .swapped: book.notice = .swapped
+      case .rejected: book.notice = .rejected
+      case .lastRest: book.notice = .lastRest
+      case .reset: book.notice = .reset
+      case .placed, .blocked: break
+      }
+    }
+    let changing: Bool
+    switch event {
+    case .closetTapped, .dropped, .turned, .turnedFine, .stored, .resetRoom: changing = true
+    case .owned, .loaded, .remote, .opened, .closed, .roomTapped, .emptyTapped, .dragBegan,
+      .dragged,
+      .dragCancelled, .undone:
+      changing = false
+    }
+    if case .undone = event {
+      book.undo = nil
+    } else if !changing, next.book.layout != state.book.layout {
+      book.undo = nil
+    } else if changing, next.book.layout != state.book.layout {
+      book.undo = state.book.layout
+    } else {
+      book.undo = state.book.undo
+    }
+    if book == next.book { return (next, outputs) }
+    return (with(book, in: next), outputs)
+  }
+
+  private static func step(_ state: State, _ event: Event) -> (State, [Output]) {
     switch (state, event) {
     case (.off, .owned(let owned)), (.closet, .owned(let owned)), (.selected, .owned(let owned)),
       (.moving, .owned(let owned)):
@@ -138,9 +223,9 @@ public enum DecorMachine: Machine {
       (.moving, .loaded(let layout)):
       return loading(layout, in: state)
 
-    case (.off, .remote(let spots)), (.closet, .remote(let spots)), (.selected, .remote(let spots)),
-      (.moving, .remote(let spots)):
-      return receiving(spots, in: state)
+    case (.off, .remote(let spots, let stowed)), (.closet, .remote(let spots, let stowed)),
+      (.selected, .remote(let spots, let stowed)), (.moving, .remote(let spots, let stowed)):
+      return receiving(spots, stowed: stowed, in: state)
 
     case (.off(let book), .opened(let item)), (.closet(let book), .opened(let item)),
       (.selected(let book, _), .opened(let item)):
@@ -190,12 +275,17 @@ public enum DecorMachine: Machine {
       return (state, [])
 
     case (.moving(let book, let item, _, let to), .dropped):
-      guard book.layout.accepts(to) else {
-        return (.selected(book, item: item), [.feedback(.rejected)])
-      }
       var next = book
-      next.layout = book.layout.putting(to)
-      return (.selected(next, item: item), [.save(next.layout)])
+      switch book.layout.dropping(to) {
+      case .rejected:
+        return (.selected(book, item: item), [.feedback(.rejected)])
+      case .fits(let layout):
+        next.layout = layout
+        return (.selected(next, item: item), [.save(layout)])
+      case .swapped(let layout, _), .nudged(let layout, _, _):
+        next.layout = layout
+        return (.selected(next, item: item), [.save(layout), .feedback(.swapped)])
+      }
 
     case (.off, .dropped), (.closet, .dropped), (.selected, .dropped):
       return (state, [])
@@ -206,25 +296,49 @@ public enum DecorMachine: Machine {
     case (.off, .dragCancelled), (.closet, .dragCancelled), (.selected, .dragCancelled):
       return (state, [])
 
-    case (.selected(let book, let item), .turned):
-      guard let placement = book.layout.placement(of: item), placement.surface == .floor else {
-        return (state, [])
-      }
-      let turned = placement.turned
-      guard book.layout.accepts(turned) else { return (state, [.feedback(.blocked)]) }
+    case (.selected(let book, let item), .turned), (.selected(let book, let item), .turnedFine):
       var next = book
-      next.layout = book.layout.putting(turned)
-      return (.selected(next, item: item), [.save(next.layout)])
+      switch book.layout.turning(item, byEighths: event == .turnedFine ? 1 : 2) {
+      case nil: return (state, [])
+      case .turned(let layout):
+        next.layout = layout
+        return (.selected(next, item: item), [.save(layout)])
+      case .slid(let layout, _):
+        next.layout = layout
+        return (.selected(next, item: item), [.save(layout), .feedback(.slid)])
+      case .noRoom:
+        return (state, [.feedback(.noRoomToTurn)])
+      }
 
-    case (.off, .turned), (.closet, .turned), (.moving, .turned):
+    case (.off, .turned), (.closet, .turned), (.moving, .turned), (.off, .turnedFine),
+      (.closet, .turnedFine), (.moving, .turnedFine):
       return (state, [])
 
     case (.selected(let book, let item), .stored):
+      guard book.layout.canStore(item) else { return (state, [.feedback(.lastRest)]) }
       var next = book
       next.layout = book.layout.storing(item)
       return (.closet(next), [.save(next.layout)])
 
     case (.off, .stored), (.closet, .stored), (.moving, .stored):
+      return (state, [])
+
+    case (.closet(let book), .resetRoom), (.selected(let book, _), .resetRoom):
+      var next = book
+      next.layout = book.layout.reset(owned: book.owned)
+      guard next.layout != book.layout else { return (.closet(book), []) }
+      return (.closet(next), [.save(next.layout), .feedback(.reset)])
+
+    case (.off, .resetRoom), (.moving, .resetRoom):
+      return (state, [])
+
+    case (.closet(let book), .undone), (.selected(let book, _), .undone):
+      guard let before = book.undo else { return (state, []) }
+      var next = book
+      next.layout = before
+      return (.closet(next), [.save(before)])
+
+    case (.off, .undone), (.moving, .undone):
       return (state, [])
     }
   }
@@ -263,10 +377,14 @@ public enum DecorMachine: Machine {
     return (next, settled == layout ? [] : [.save(settled)])
   }
 
-  private static func receiving(_ spots: [Placement], in state: State) -> (State, [Output]) {
+  private static func receiving(_ spots: [Placement], stowed: Set<String>?, in state: State)
+    -> (State, [Output])
+  {
     var book = state.book
-    let settled = book.layout.replacing(placements: spots).keeping(owned: book.owned)
-      .settled(owned: book.owned)
+    let settled = book.layout.replacing(placements: spots, stowed: stowed).keeping(
+      owned: book.owned
+    )
+    .settled(owned: book.owned)
     guard settled != book.layout else { return (state, []) }
     book.layout = settled
     let next: State
@@ -282,7 +400,7 @@ public enum DecorMachine: Machine {
   }
 
   private static func opening(_ item: String?, in book: Book) -> (State, [Output]) {
-    guard let item, book.owned.contains(item), DecorItem.item(shopID: item) != nil else {
+    guard let item, book.has(item) else {
       return (.closet(book), [])
     }
     if book.layout.isPlaced(item) { return (.selected(book, item: item), []) }
@@ -290,7 +408,7 @@ public enum DecorMachine: Machine {
   }
 
   private static func placing(_ item: String, in book: Book) -> (State, [Output]) {
-    guard book.owned.contains(item), !book.layout.isPlaced(item) else {
+    guard book.has(item), !book.layout.isPlaced(item) else {
       return book.layout.isPlaced(item) ? (.selected(book, item: item), []) : (.closet(book), [])
     }
     guard let spot = book.layout.defaultPlacement(for: item) else {

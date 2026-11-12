@@ -1,5 +1,9 @@
+import FeatureUs
 import Design
+import Pet
+import RoomInterface
 import SwiftUI
+import WidgetUI
 @testable import Billet
 
 /// One page per family of design components, each in its usual states. A new public component gets a place on one.
@@ -9,6 +13,10 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case cards
     case rows
     case status
+    case gauges
+    case kit
+    case mochi
+    case mochiAbout = "mochi-about"
     case postage
     case tiles
     case fields
@@ -24,6 +32,10 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .cards: Self.cardsPage
             case .rows: Self.rowsPage
             case .status: Self.statusPage
+            case .gauges: Self.gaugesPage
+            case .kit: Self.kitPage
+            case .mochi: Self.mochiPage
+            case .mochiAbout: Self.mochiAboutPage
             case .postage: Self.postagePage
             case .tiles: Self.tilesPage
             case .fields: Self.fieldsPage
@@ -121,10 +133,96 @@ enum GalleryPage: String, CaseIterable, Sendable {
             PickerRow("Room lighting", symbol: "lightbulb.fill", selection: .constant("Follow the test")) {
                 Text("Follow the test").tag("Follow the test")
             }
+            PickerRow("Cat pronouns", symbol: "pawprint.fill", selection: .constant("They / them")) {
+                Text("They / them").tag("They / them")
+            }
             Row("Show hints again on the next launch", symbol: "lightbulb.fill") { RowChevron() }
             ToggleRow("Streak at risk reminders", isOn: .constant(false))
         }
     }
+
+    /// The ring round an avatar, the bars, a raised tile beside one with a note, and a day's strip.
+    /// The one-system kit: a well, a hairline, a progress bar and the round control, on a card.
+    @MainActor @ViewBuilder private static var kitPage: some View {
+        Card {
+            VStack(alignment: .leading, spacing: Space.m) {
+                Text("A well in a card").font(.ourioHeadline).foregroundStyle(Ink.text)
+                Text("Pressed in, with a hairline of shade on its upper edge.")
+                    .font(.ourioCaption).foregroundStyle(Ink.textSecondary)
+                Color.clear.frame(height: Size.control).frame(maxWidth: .infinity).wellSurface()
+                Hairline()
+                ProgressBar(value: 0)
+                ProgressBar(value: 3, total: 8)
+                ProgressBar(value: 1, tint: .blushPink)
+            }
+        }
+        Card {
+            HStack(spacing: Space.m) {
+                RoundButton(symbol: "plus", label: "Add", style: .honey) {}
+                RoundButton(symbol: "arrow.uturn.backward", label: "Undo") {}
+                RoundButton(symbol: "checkmark", label: "Added") {}.disabled(true)
+            }
+        }
+    }
+
+    @MainActor @ViewBuilder private static var gaugesPage: some View {
+        HStack(spacing: Space.l) {
+            Circle().fill(Ink.surfaceRaised)
+                .frame(width: Size.button + Space.m, height: Size.button + Space.m)
+                .overlay {
+                    SegmentedRing([
+                        .init(value: 0.3, tint: .honey), .init(value: 0.9, tint: .lilac),
+                        .init(value: 0.75, tint: .blushPink), .init(value: 0.55, tint: .sage),
+                    ])
+                }
+            VStack(spacing: Space.s) {
+                MeterBar(value: 0.4)
+                MeterBar(value: 0.02, tint: .lilac)
+                MeterBar(value: 1, tint: .sage)
+            }
+        }
+        ItemGrid {
+            GaugeTile("Full", state: "Hungry", hint: "Would love a meal", value: 0.3, symbol: "fork.knife",
+                      emphasis: .raised, action: "Feed") {}
+            GaugeTile("Rested", state: "Wide awake", hint: "Fine for today", value: 0.9, symbol: "moon.zzz.fill",
+                      tint: .lilac, note: "Naps on her own")
+        }
+        MomentStrip([
+            StripMoment(id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7:00"),
+            StripMoment(id: "2", symbol: "fork.knife", tint: .honey, title: "Ate", time: "8:12"),
+            StripMoment(id: "3", symbol: "heart.fill", tint: .blushPink, title: "Cuddles", time: "12:40"),
+        ])
+    }
+
+    /// The top of Mochi's sheet with a fixed cat: her hero and her day. Her needs are the `gauges` page's tiles; the
+    /// whole sheet at the largest text size is taller than a drawing can be.
+    @MainActor @ViewBuilder private static var mochiPage: some View {
+        MochiHero(mood: fixedCat.needs?.moodLine(name: "Mochi") ?? "", level: 2, progress: 0.4, days: 2) {
+            PetPortrait(size: 88)
+        }
+        MochiDay(name: "Mochi", pronouns: .she, doing: fixedCat.doing, moments: fixedCat.about?.day ?? [], zone: .gmt,
+                 locale: Locale(identifier: "en_GB"))
+    }
+
+    @MainActor @ViewBuilder private static var mochiAboutPage: some View {
+        if let about = fixedCat.about { MochiNature(about: about, pronouns: .she) }
+    }
+
+    private static let fixedCat: CatStatus = {
+        // 04:00 UTC on 10 November 2026, the start of her day.
+        let dawn = 1_794_283_200.0
+        func hour(_ hour: Double) -> Double { dawn + (hour - 4) * 3600 }
+        return CatStatus(
+            needs: PetNeeds(full: 0.3, rested: 0.9, loved: 0.75, playful: 0.55), mind: .exploring,
+            about: CatAbout(
+                temperament: .explorer, personality: CatTemperament.explorer.archetype, favourite: .window,
+                day: [
+                    CatDayMoment(kind: .slept, at: hour(4), until: hour(7), exact: false),
+                    CatDayMoment(kind: .ate, at: hour(8.2), exact: true),
+                    CatDayMoment(kind: .napped, at: hour(14), until: hour(16), exact: false),
+                    CatDayMoment(kind: .playedTogether, at: hour(18.1), exact: true),
+                ]))
+    }()
 
     /// A raised row and a quiet one, a row with a note, and the badge on a round control.
     @MainActor @ViewBuilder private static var statusPage: some View {
@@ -186,11 +284,11 @@ enum GalleryPage: String, CaseIterable, Sendable {
 
     @MainActor @ViewBuilder private static var posters: some View {
         PosterCard("Who knows who", status: "Your turn", emphasis: true, action: {}) {
-            GamePoster(game: .whoKnows, coat: .grey)
+            GamePoster(game: .whoKnows, coat: CatCoat.grey.rawValue, thumbnail: { Thumbnails.image($0, maxPixels: $1) })
         }
         .frame(minWidth: 150)
         PosterCard("Draw & guess", status: "Played yesterday", action: {}) {
-            GamePoster(game: .drawGuess, coat: .grey)
+            GamePoster(game: .drawGuess, coat: CatCoat.grey.rawValue, thumbnail: { Thumbnails.image($0, maxPixels: $1) })
         }
         .frame(minWidth: 150)
     }

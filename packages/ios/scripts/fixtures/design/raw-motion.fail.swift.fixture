@@ -1,0 +1,9 @@
+struct Bad: View {
+  @State private var on = false
+
+  var body: some View {
+    Card { EmptyView() }
+      .animation(.snappy(duration: 0.2), value: on)
+      .onTapGesture { withAnimation(.easeInOut(duration: 0.3)) { on.toggle() } }
+  }
+}

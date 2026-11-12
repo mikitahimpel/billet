@@ -28,6 +28,10 @@ extension Color {
   /// Honey that reads on dark, for marks drawn over a dark map or picture.
   public static let honeyBright = Color(hex: 0xFFE07A)
   public static let blushPink = Color(hex: 0xFF8FA3)
+  /// Night and rest. With `sage`, honey and blush, the four clay tints of the cat's needs.
+  public static let lilac = Color(hex: 0xB79BE0)
+  /// Play and the outdoors.
+  public static let sage = Color(hex: 0x9CBD76)
 
   /// A colour a drawing carries as `#RRGGBB`: the sender's ink, which may be one this build
   /// doesn't sell. Nil when the rest after the first character isn't hex.
@@ -77,6 +81,9 @@ public enum Ink {
   public static let surface = Palette.surface.color
   /// Selected rows, pressed cards, chips on a surface.
   public static let surfaceRaised = Palette.surfaceRaised.color
+  /// The recess of a well: a round or capsule mark that sits in a slab.
+  public static let well = Palette.well.color
+  static let wellShade = Palette.wellShade.color
   public static let separator = Palette.separator.color
   /// The card's own fill, lit from above. Opaque.
   public static let cardFill = LinearGradient(
@@ -114,9 +121,7 @@ public enum Ink {
   public static let paperEdge = Color(hex: 0xEADFCB)
   /// Light enough that the room still shows through, warm enough that the glass never turns grey.
   public static let glassTint = Color(hex: 0xF2A65E, opacity: 0.16)
-  /// The warm dark behind the tab roots, under the shared header so scrolled content never meets its glass.
-  public static let headerScrim = Palette.roomBackdrop.color
-  /// Behind the room: its glow, centre out, ending on the warm dark of `headerScrim`.
+  /// Behind the room: its glow, centre out, ending on the backdrop's warm dark.
   public static let roomGlow = Palette.current.backdrop.map(\.color)
   /// A honey control's fill: flat honey, or in Dusk the face lit from above, as clay catches a lamp.
   public static let accentFace: AnyShapeStyle =

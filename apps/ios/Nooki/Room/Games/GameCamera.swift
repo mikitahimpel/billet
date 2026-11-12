@@ -71,6 +71,9 @@ final class GameCamera {
     /// against the wall behind.
     var push: Float = 0
     var viewport = CGSize(width: 390, height: 844)
+    /// The share of the screen's height, from its bottom, a card covers: the subject is framed in what is left above it.
+    var covered: Float = 0
+    private var lift: Float = 0
     private var rest: (back: SIMD3<Float>, side: SIMD3<Float>)?
     private var amount: Float = 0
     private var goal: Float = 1
@@ -134,8 +137,12 @@ final class GameCamera {
         // Where the rig is looking: anywhere along its line of sight, as far out as the game's center will be.
         let reach: Float = simd_length(eye - goalEye)
         let looking: SIMD3<Float> = eye - back * reach
-        let target = simd_mix(looking, center, blend)
-        let position = simd_mix(eye, goalEye, blend)
+        lift += (covered - lift) * min(1, dt * 5)
+        // The view's center moves down by half of what the card covers, so the subject sits in the middle of the rest.
+        let down: SIMD3<Float> = -simd_normalize(SIMD3(base.columns.1.x, base.columns.1.y, base.columns.1.z))
+            * (lift / 2 * 2 * simd_length(goalEye - center) * tanHalf * s)
+        let target = simd_mix(looking, center, blend) + down
+        let position = simd_mix(eye, goalEye, blend) + down
         camera.look(at: target, from: position, relativeTo: nil)
     }
 }

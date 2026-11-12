@@ -21,7 +21,7 @@ public enum ApiError: Codable, Hashable, Sendable {
   /// Nothing was charged; `price` is the price now.
   case priceChanged(price: Int)
   /// A piece the pair does not own, or that does not fit where it was put: `not-owned`, `unknown-piece`,
-  /// `wrong-surface`, `outside-room` or `occupied`.
+  /// `wrong-surface`, `wrong-room`, `outside-room`, `occupied` or `last-rest` (the room keeps a bed or sofa for the cat).
   case layoutRefused(reason: String)
 
   private enum CodingKeys: String, CodingKey {

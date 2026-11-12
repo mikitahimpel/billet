@@ -13,8 +13,8 @@ import Testing
   @Test func aBadPositionSendsHerHome() {
     let nan = Float.nan
     let bad: [SIMD3<Float>] = [
-      [nan, 0, 0], [0, nan, 0], [0, 0, nan], [.infinity, 0, 0], [0, 0, -.infinity], [5, 0, 0], [0, 0, 9],
-      [0, -3, 0], [0, 40, 0],
+      [nan, 0, 0], [0, nan, 0], [0, 0, nan], [.infinity, 0, 0], [0, 0, -.infinity],
+      [5, 0, 0], [0, 0, 9], [0, -3, 0], [0, 40, 0],
     ]
     for at in bad {
       var watch = CatWatch()

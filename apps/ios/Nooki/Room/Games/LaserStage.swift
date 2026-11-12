@@ -1,3 +1,4 @@
+import DecorInterface
 import FeatureGames
 import GamesInterface
 import RealityKit
@@ -39,7 +40,7 @@ final class LaserStage: GameStage {
         laser = LaserPlay(length: Double(spots.length), floor: spots.area)
         lesson = LaserPlay.lesson(on: spots.area)
         dot = root.group()
-        dot.cylinder(0.002, 0.0085, Clay.glow(0xFF3B30, intensity: 8), at: .zero)
+        let core = dot.cylinder(0.002, 0.011, Clay.glow(0xFF2A1F, intensity: 3), at: .zero)
         var glow = UnlitMaterial(color: UIColor(red: 1, green: 0.25, blue: 0.2, alpha: 0.4))
         glow.blending = .transparent(opacity: .init(floatLiteral: 0.4))
         halo = dot.cylinder(0.001, 0.02, glow, at: [0, 0.0005, 0])
@@ -47,6 +48,10 @@ final class LaserStage: GameStage {
         trailDots = (0..<14).map { _ in
             root.cylinder(0.001, 0.006, Clay.glow(0xFF6A55, intensity: 3), at: .zero)
         }
+        // Drawn after the opaque room, still tested against its depth: a nap of fabric cannot swallow the dot, and
+        // a wall or a chair in front of it still hides it.
+        let late = ModelSortGroupComponent(group: ModelSortGroup(depthPass: .postPass), order: 1)
+        for entity in [core, halo] + trailDots { entity.components.set(late) }
         trailDots.forEach { $0.isEnabled = false }
         deck.say(LaserPlay.goal)
         deck.show(0, "Played")
@@ -66,7 +71,12 @@ final class LaserStage: GameStage {
         return GameCue(step: 0, gesture: .drag(to: lessonPoint(lesson.end)), at: lessonPoint(lesson.start))
     }
 
-    private func lessonPoint(_ p: SIMD2<Double>) -> SIMD3<Float> { [Float(p.x), spots.floor, Float(p.y)] }
+    private func lessonPoint(_ p: SIMD2<Double>) -> SIMD3<Float> { [Float(p.x), surface(p.x, p.y), Float(p.y)] }
+
+    /// The height of what lies under a floor point: the floor, or the top of a rug there.
+    private func surface(_ x: Double, _ z: Double) -> Float {
+        Float(FlatSurface.height(atX: x, z: z, floor: Double(spots.floor), over: room.flatSurfaces()))
+    }
 
     func began(_ touch: GameTouch) {
         moved(touch)
@@ -86,9 +96,9 @@ final class LaserStage: GameStage {
         let shown = laser.dot ?? (untouched > 1.2 && deck.result == nil ? lesson.start : nil)
         if let at = shown {
             dot.isEnabled = true
-            dot.position = [Float(at.x), spots.floor + 0.0015, Float(at.y)]
+            dot.position = [Float(at.x), surface(at.x, at.y) + 0.002, Float(at.y)]
             let pulse = sin(time * 30)
-            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.02, 0.001, 0.02]
+            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.027, 0.001, 0.027]
             sinceTrail += dt
             if laser.dot != nil, sinceTrail > 0.035 {
                 sinceTrail = 0
@@ -135,13 +145,13 @@ final class LaserStage: GameStage {
 
     /// Runs her to the dot, stopping short of it so her fore paws land on it; a pounce ends in paw pats.
     private func run(to p: SIMD2<Double>, from at: SIMD3<Float>, pounce: Bool) {
-        let target = SIMD3(Float(p.x), spots.floor, Float(p.y))
+        let target = SIMD3(Float(p.x), surface(p.x, p.y), Float(p.y))
         let gap = simd_distance(target, at)
         let short = min(0.3 * spots.length, gap * 0.9)
         let stop = gap > 0.001 ? target + (at - target) / gap * short : target
         chases += 1
         pouncing = pounce
-        room.send(to: [stop.x, spots.floor, stop.z], facing: GameSpots.yaw(from: at, to: target),
+        room.send(to: [stop.x, surface(Double(stop.x), Double(stop.z)), stop.z], facing: GameSpots.yaw(from: at, to: target),
                   id: "laser-\(chases)", play: pounce)
     }
 

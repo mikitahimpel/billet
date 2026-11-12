@@ -1,3 +1,4 @@
+import FeatureShop
 import Foundation
 import Wire
 
@@ -21,7 +22,7 @@ extension HomeState {
             tab = .world
         case .shopItem(let id):
             tab = .shop
-            openedShopItem = Catalog.item(id)
+            openedShopItem = Catalog.item(id, cat: petName)
         case .shopOffer:
             tab = .shop
         case .list(let id):

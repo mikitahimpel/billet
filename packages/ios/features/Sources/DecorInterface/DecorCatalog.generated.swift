@@ -3,6 +3,46 @@
 extension DecorItem {
   static let catalog: [DecorItem] = [
     DecorItem(
+      id: "base-windowseat", model: "", assetName: "Base_windowseat", fit: .width, size: 0.19,
+      mount: .floor, width: 0.19, depth: 0.42, isFlat: false, height: 0.26, cat: nil,
+      base: BaseSpot(title: "Window seat", u: -8, v: 0, isRest: false)),
+    DecorItem(
+      id: "base-nightstand", model: "", assetName: "Base_nightstand", fit: .width, size: 0.21,
+      mount: .floor, width: 0.21, depth: 0.23, isFlat: false, height: 0.18, cat: nil,
+      base: BaseSpot(title: "Nightstand", u: -8, v: 7, isRest: false)),
+    DecorItem(
+      id: "base-plant", model: "", assetName: "Base_plant", fit: .width, size: 0.12, mount: .floor,
+      width: 0.12, depth: 0.12, isFlat: false, height: 0.3, cat: nil,
+      base: BaseSpot(title: "Corner plant", u: -8, v: -8, isRest: false)),
+    DecorItem(
+      id: "base-lamp", model: "", assetName: "Base_lamp", fit: .width, size: 0.124, mount: .floor,
+      width: 0.124, depth: 0.124, isFlat: false, height: 0.35, cat: nil,
+      base: BaseSpot(title: "Stool and lamp", u: -2, v: -8, isRest: false)),
+    DecorItem(
+      id: "base-cattree", model: "", assetName: "Base_cattree", fit: .width, size: 0.2,
+      mount: .floor, width: 0.2, depth: 0.2, isFlat: false, height: 0.4, cat: nil,
+      base: BaseSpot(title: "Cat tree", u: 7, v: -7, isRest: false)),
+    DecorItem(
+      id: "base-bowls", model: "", assetName: "Base_bowls", fit: .width, size: 0.2, mount: .floor,
+      width: 0.2, depth: 0.09, isFlat: false, height: 0.04, cat: nil,
+      base: BaseSpot(title: "Bowls", u: 2, v: -7, isRest: false)),
+    DecorItem(
+      id: "base-donutbed", model: "", assetName: "Base_donutbed", fit: .width, size: 0.38,
+      mount: .floor, width: 0.38, depth: 0.38, isFlat: false, height: 0.14, cat: nil,
+      base: BaseSpot(title: "Cat bed", u: 1, v: -1, isRest: true)),
+    DecorItem(
+      id: "base-basket", model: "", assetName: "Base_basket", fit: .width, size: 0.16,
+      mount: .floor, width: 0.16, depth: 0.16, isFlat: false, height: 0.09, cat: nil,
+      base: BaseSpot(title: "Yarn basket", u: 7, v: 7, isRest: false)),
+    DecorItem(
+      id: "base-books", model: "", assetName: "Base_books", fit: .width, size: 0.12, mount: .floor,
+      width: 0.12, depth: 0.1, isFlat: false, height: 0.05, cat: nil,
+      base: BaseSpot(title: "Books", u: 4, v: 8, isRest: false)),
+    DecorItem(
+      id: "base-rug", model: "", assetName: "Base_rug", fit: .width, size: 0.64, mount: .floor,
+      width: 0.64, depth: 0.64, isFlat: true, height: 0.02, cat: nil,
+      base: BaseSpot(title: "Rug", u: 0, v: 1, isRest: false)),
+    DecorItem(
       id: "armchair", model: "Item_armchair", assetName: "Decor_armchair", fit: .width, size: 0.36,
       mount: .floor, width: 0.36, depth: 0.287, isFlat: false, height: 0.322, cat: .sofa),
     DecorItem(

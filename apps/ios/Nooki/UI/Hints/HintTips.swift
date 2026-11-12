@@ -1,3 +1,4 @@
+import FeatureShop
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -28,9 +29,19 @@ nonisolated struct PetHint: HintTip {
     static let hintId = "pet"
 
     var title: Text { Text("Say hi to \(CatProfile.name())") }
-    var message: Text? { Text("Tap her in the room to pet her. Her portrait shows what she would like.") }
+    var message: Text? { Text(CatProfile.pronouns().say(.tapToPet)) }
     var image: Image? { Image(systemName: "hand.wave.fill") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "pet" }] }
+}
+
+/// On her portrait: the ring round it is her needs, and a tap opens them.
+nonisolated struct NeedsHint: HintTip {
+    static let hintId = "needs"
+
+    var title: Text { Text("\(CatProfile.name())'s needs live here") }
+    var message: Text? { Text(CatProfile.pronouns().say(.ringExplained)) }
+    var image: Image? { Image(systemName: "chart.pie.fill") }
+    var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "needs" }] }
 }
 
 nonisolated struct AddHint: HintTip {
@@ -74,7 +85,7 @@ nonisolated struct TreatHint: HintTip {
     static let hintId = "treat"
 
     var title: Text { Text("A treat goes further") }
-    var message: Text? { Text("Her portrait opens her treats: one fills her up more than a pet, for \(ShopModel.treatPrice) coins.") }
+    var message: Text? { Text(CatProfile.pronouns().say(.portraitTreats(price: ShopModel.treatPrice))) }
     var image: Image? { Image(systemName: "fork.knife") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "treat" }] }
 }

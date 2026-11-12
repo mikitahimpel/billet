@@ -16,6 +16,8 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   let avatar: (ActivityActor) -> Avatar
   let face: (CheckInMood) -> Face
   let notice: (EdgeInsets) -> Notice
+  /// Whether this phone is paired already, so an empty Inbox never says the partner has yet to join.
+  let isPaired: Bool
   /// False for a model that was opened already, as the gallery's.
   let opensModel: Bool
   /// The clock the days and the "4 minutes ago" lines are read against.
@@ -24,7 +26,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   @Environment(\.dismiss) private var dismiss
 
   public init(
-    model: InboxModel, names: InboxLine.Names, opensModel: Bool = true,
+    model: InboxModel, names: InboxLine.Names, isPaired: Bool = false, opensModel: Bool = true,
     now: @escaping () -> Date = { .now },
     open: @escaping (ActivityTarget) -> Void,
     @ViewBuilder avatar: @escaping (ActivityActor) -> Avatar,
@@ -37,6 +39,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     self.avatar = avatar
     self.face = face
     self.notice = notice
+    self.isPaired = isPaired
     self.opensModel = opensModel
     self.now = now
   }
@@ -52,11 +55,13 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   @ViewBuilder private var content: some View {
     switch model.sheet {
     case .idle, .loading:
-      LoadingState("Loading the Inbox")
+      placeholderList
     case .unpaired:
       EmptyState(
         symbol: "tray", title: "Nothing here yet",
-        text: "Once your partner joins, what you both do with \(names.cat) shows up here.")
+        text: isPaired
+          ? "What you both do with \(names.cat) shows up here."
+          : "Once your partner joins, what you both do with \(names.cat) shows up here.")
     case .failed:
       ErrorState("Couldn't load the Inbox", text: "Check your connection and try again.") {
         Task { await model.open() }
@@ -74,9 +79,9 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   }
 
   private func list(_ page: InboxMachine.Page) -> some View {
-    List {
+    frame {
       ForEach(InboxDay.group(page.items, now: now()), id: \.day) { day in
-        Section(day.title) {
+        GroupedSection(header: day.title, inset: 0) {
           ForEach(day.items, id: \.id) { item in
             row(item, isNew: page.fresh.contains(item.id))
               .onAppear {
@@ -84,16 +89,31 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
               }
           }
         }
-        .listRowBackground(Ink.surface)
       }
     }
-    #if os(iOS)
-      .listStyle(.insetGrouped)
-    #endif
-    .scrollContentBackground(.hidden)
     .refreshable { await model.open() }
-    // Under the notice, which the header draws over it.
-    .sheetBarBacking()
+  }
+
+  /// While the first page loads: the loaded list's frame, notice and section header, with still rows
+  /// the size of real ones, so the page swaps rows in place instead of moving under the finger.
+  private var placeholderList: some View {
+    frame {
+      GroupedSection(header: "Today", inset: 0) {
+        ForEach(0..<InboxPlaceholderRow.count, id: \.self) { _ in InboxPlaceholderRow() }
+      }
+      .redacted(reason: .placeholder)
+      .accessibilityElement(children: .ignore)
+      .accessibilityLabel("Loading the Inbox")
+    }
+  }
+
+  private func frame(@ViewBuilder rows: () -> some View) -> some View {
+    ScrollView {
+      LazyVStack(spacing: Space.l) { rows() }
+        .padding(.horizontal, Space.gutter)
+        .padding(.vertical, Space.l)
+    }
+    .scrollIndicators(.hidden)
     .scrollHeader {
       VStack(spacing: 0) {
         if case .stale = model.sheet { staleNotice }
@@ -126,7 +146,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
       } label: {
         HStack {
           rowView
-          RowChevron()
+          RowChevron().padding(.trailing, Space.l)
         }
       }
       .buttonStyle(RowButtonStyle())
@@ -139,19 +159,49 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
 /// The Inbox for someone not connected yet.
 public struct InboxSignedOut: View {
   let petName: String
+  let isPaired: Bool
 
-  public init(petName: String) {
+  public init(petName: String, isPaired: Bool = false) {
     self.petName = petName
+    self.isPaired = isPaired
   }
 
   public var body: some View {
     BilletSheet("Inbox", size: InboxLayout.short.size) {
       EmptyState(
         symbol: "tray", title: "Nothing here yet",
-        text:
-          "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
+        text: isPaired
+          ? "What you both do with \(petName) shows up here once you're connected."
+          : "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
       )
     }
+  }
+}
+
+/// An Inbox row's frame: the avatar's side, the gap between its two lines and around them.
+private enum InboxRowMetrics {
+  static let avatar: CGFloat = 40
+  static let lineGap: CGFloat = 2
+  static let padding: CGFloat = Space.xs
+}
+
+/// A row while the Inbox loads: an avatar and the same two lines as a real row, redacted, never shimmering.
+private struct InboxPlaceholderRow: View {
+  static let count = 6
+
+  var body: some View {
+    HStack(spacing: Space.m) {
+      Color.clear
+        .frame(width: InboxRowMetrics.avatar, height: InboxRowMetrics.avatar)
+        .wellSurface(.control)
+      VStack(alignment: .leading, spacing: InboxRowMetrics.lineGap) {
+        Text("Someone did something lovely").font(.ourioCallout.weight(.medium))
+        Text("A minute ago").font(.ourioCaption)
+      }
+      Spacer(minLength: 0)
+    }
+    .padding(.horizontal, Space.l)
+    .padding(.vertical, InboxRowMetrics.padding)
   }
 }
 
@@ -166,7 +216,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
   var body: some View {
     HStack(spacing: Space.m) {
       avatar
-        .frame(width: 40, height: 40)
+        .frame(width: InboxRowMetrics.avatar, height: InboxRowMetrics.avatar)
         .overlay(alignment: .bottomTrailing) {
           if let mood = line.mood {
             face(mood)
@@ -182,7 +232,7 @@ private struct InboxRow<Avatar: View, Face: View>: View {
               .offset(x: 4, y: 4)
           }
         }
-      VStack(alignment: .leading, spacing: 2) {
+      VStack(alignment: .leading, spacing: InboxRowMetrics.lineGap) {
         Text(line.text)
           .font(.ourioCallout.weight(isNew ? .semibold : .medium))
           .foregroundStyle(Ink.text)
@@ -201,7 +251,8 @@ private struct InboxRow<Avatar: View, Face: View>: View {
           .accessibilityLabel("New")
       }
     }
-    .padding(.vertical, Space.xs)
+    .padding(.horizontal, Space.l)
+    .padding(.vertical, InboxRowMetrics.padding)
     .accessibilityElement(children: .combine)
   }
 

@@ -28,7 +28,7 @@ public struct GlassSegmented<Value: Hashable>: View {
       ForEach(segments, id: \.value) { segment in
         let isSelected = segment.value == selection
         Button {
-          withAnimation(.snappy(duration: 0.25)) { selection = segment.value }
+          withAnimation(Motion.spring(0.25)) { selection = segment.value }
         } label: {
           Text(segment.title)
             .font(.ourioCallout.weight(isSelected ? .semibold : .medium))

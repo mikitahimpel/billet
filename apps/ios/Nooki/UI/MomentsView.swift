@@ -58,7 +58,7 @@ struct MomentsView: View {
         }
         .sheet(item: $draft, onDismiss: develop) { draft in
             ComposeSheet(image: draft.image) { caption in
-                withAnimation(.spring(duration: 0.4)) {
+                withAnimation(Motion.spring(0.4)) {
                     if state.journal.addMoment(draft.image, caption: caption, shares: true), let added = store.moments.first {
                         undeveloped.insert(added.id)
                     }
@@ -170,10 +170,9 @@ struct BoardActions: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.body.weight(.bold))
-                    .foregroundStyle(Ink.heroInk)
                     .frame(width: Size.control, height: Size.control)
-                    .background(Color.honey, in: .circle)
             }
+            .accentGlass()
             .accessibilityLabel("Add a note")
             .accessibilityValue(onBoard > 0 ? "\(onBoard) on the board" : "")
         }
@@ -375,13 +374,5 @@ private struct MomentPhoto: View {
                     ? await store.filmPrint(for: moment, maxPixels: maxPixels)
                     : await store.thumbnail(for: moment, maxPixels: maxPixels)
             }
-    }
-}
-
-extension PhotosPickerItem {
-    /// The picked photo decoded at `maxPixels` off the main thread, never as the full 12 MP bitmap.
-    func loadImage(maxPixels: Int) async -> UIImage? {
-        guard let data = try? await loadTransferable(type: Data.self) else { return nil }
-        return await Task.detached(priority: .userInitiated) { Downsample.image(data: data, maxPixels: maxPixels) }.value
     }
 }

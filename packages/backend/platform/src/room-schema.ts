@@ -27,6 +27,8 @@ export const room = sqliteTable(
     // The pair's local days, YYYY-MM-DD: the last one that counted, and the last restore.
     streakLastDay: text("streak_last_day"),
     streakRestoredOn: text("streak_restored_on"),
+    // The days after the last lit one that only one partner did yet: `StreakMark`s as JSON.
+    streakMarks: text("streak_marks"),
     lastReactionRev: integer("last_reaction_rev"),
     // The pair's local day it last opened the daily gift on; null before the first.
     giftDay: text("gift_day"),
@@ -159,6 +161,14 @@ export const placement = sqliteTable("placement", {
   u: integer("u").notNull(),
   v: integer("v").notNull(),
   quarterTurns: integer("quarter_turns").notNull(),
+  // `living` or `bedroom`; a row kept before the bedroom could be arranged is in the living room.
+  room: text("room").notNull().default("living"),
+  position: integer("position").notNull(),
+});
+
+// The room's own furniture the pair put away. A piece of it with no placement and no row here stands at home.
+export const stowedPiece = sqliteTable("stowed_piece", {
+  itemId: text("item_id").primaryKey(),
   position: integer("position").notNull(),
 });
 

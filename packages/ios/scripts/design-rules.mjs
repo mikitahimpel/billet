@@ -131,6 +131,27 @@ export const rules = [
     pattern: /\.shadow\(/g,
   },
   {
+    id: "flat-surface",
+    what: "flat fills on content (cornerFill, Ink.surface, Ink.surfaceRaised, listRowBackground)",
+    fix: "Content sits on .cardSurface() (Card, GroupedSection, ItemCard); a recess in a card is .wellSurface(), a round control RoundButton, a bar ProgressBar (docs/design/one-system.md).",
+    pattern:
+      /\.cornerFill\(|\.listRowBackground\(|(?<!\.listRowBackground\(\s*)\bInk\.surface(?:Raised)?\b/g,
+  },
+  {
+    id: "raw-stroke",
+    what: "strokes of our own",
+    fix: "A card's edge, a well's and a selected ring are the design package's (cardSurface(state:), .wellSurface()); a line between rows is Hairline.",
+    // Called on a shape or a drawing context; an enum case named `.stroke(` is not one.
+    pattern: /(?<=[)\]}]\s*|\w|\w[ \t]*\n\s*)\.stroke(?:Border)?\(/g,
+  },
+  {
+    id: "raw-motion",
+    what: "animation curves of our own",
+    fix: "Curves and times are Motion.quick, Motion.standard, Motion.spring(_:) and Motion.fade(_:) (docs/design/one-system.md#motion).",
+    pattern:
+      /(?<![\w.])\.(?:snappy|smooth)\b|\.ease(?:In|Out|InOut)\b|\.linear\(duration|\.spring\((?:duration|response)|\.interpolatingSpring\(/g,
+  },
+  {
     id: "blur-material",
     what: "blurs and materials",
     fix: "Floating surfaces are glass(_:role:); a sheet's ground is BilletSheet's.",
@@ -431,6 +452,8 @@ function shrinkOnly({ root, base, baseline, allow }) {
   const before = show("packages/ios/design/lint/baseline.json");
   if (before) {
     for (const [id, files] of Object.entries(baseline)) {
+      // A rule the base did not have yet starts from what it finds.
+      if (!(id in before)) continue;
       for (const [file, count] of Object.entries(files)) {
         const was = before[id]?.[file] ?? 0;
         if (count > was) {

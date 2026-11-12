@@ -1,3 +1,4 @@
+import FeatureShop
 import Design
 import DrawInterface
 import FeatureInbox
@@ -21,7 +22,8 @@ struct InboxSheet: View {
 
     var body: some View {
         let partner = state.profile.name(of: state.otherPartner)
-        InboxView(model: model, names: .app(partner: partner, cat: state.petName), opensModel: opensModel, now: now,
+        InboxView(model: model, names: .app(partner: partner, cat: state.petName), isPaired: state.profile.couple.pair != nil,
+                  opensModel: opensModel, now: now,
                   open: open) { actor in
             InboxAvatar(actor: actor, state: state)
         } face: { mood in
@@ -36,7 +38,7 @@ extension InboxLine.Names {
     /// The app's words and symbols: catalogue titles, mood names, list icons and reaction emoji.
     static func app(partner: String, cat: String) -> Self {
         Self(
-            partner: partner, cat: cat, title: { Catalog.item($0)?.name },
+            partner: partner, cat: cat, title: { Catalog.item($0, cat: cat)?.name },
             mood: { PartnerMood(rawValue: $0.rawValue)?.title ?? $0.rawValue },
             list: { ListKind($0).icon.symbol },
             reaction: { $0.emoji })

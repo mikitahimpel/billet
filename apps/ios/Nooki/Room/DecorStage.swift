@@ -31,13 +31,21 @@ final class DecorStage {
     private struct Template {
         let entity: Entity
         let extents: SIMD3<Float>
+        /// Height of its top above the holder's origin.
+        let top: Float
     }
 
+    /// An outline where the dragged piece stood, so the player sees where it came from and where a bad drop returns it.
+    private let ghost = ModelEntity(mesh: DecorStage.unitBox, materials: [DecorStage.ghostMaterial])
     private var nodes: [String: Node] = [:]
     private var templates: [String: Template] = [:]
     private var loading: Set<String> = []
+    private var sharedMaterials: [String: any Material] = [:]
     private var decor = RoomDecor()
     private var receiver: ImageBasedLightReceiverComponent?
+    /// Told once, when every piece of the room's own furniture that stands has its model in.
+    var onBaseReady: (() -> Void)?
+    private var baseReadyTold = false
 
     static let floorY: Float = 0.014
     private static let wallInset: Float = 0.49
@@ -45,6 +53,7 @@ final class DecorStage {
     private static let unitBox = MeshResource.generateBox(size: 1, cornerRadius: 0.1)
     private static let unitPlane = MeshResource.generatePlane(width: 1, depth: 1)
     private static let fits = UnlitMaterial(color: UIColor(hex: 0x6BD08A, alpha: 0.55))
+    private static let ghostMaterial = UnlitMaterial(color: UIColor(white: 1, alpha: 0.3))
     private static let misfits = UnlitMaterial(color: UIColor(hex: 0xE0605A, alpha: 0.6))
     private static let blobMaterial: UnlitMaterial = {
         var material = UnlitMaterial(color: UIColor(white: 0, alpha: 0.28))
@@ -75,6 +84,8 @@ final class DecorStage {
 
     init() {
         root.name = "decor"
+        ghost.isEnabled = false
+        root.addChild(ghost)
     }
 
     // MARK: Drawing
@@ -85,17 +96,33 @@ final class DecorStage {
         self.decor = decor
         if receiver != nil { self.receiver = receiver }
 
-        let placed = Set(decor.layout.placements.map(\.item))
+        let drawn = decor.layout.allPlacements
+        let placed = Set(drawn.map(\.item))
         for (id, node) in nodes where !placed.contains(id) {
             node.holder.removeFromParent()
             nodes[id] = nil
         }
-        for placement in decor.layout.placements {
+        for placement in drawn {
             guard let item = DecorItem.item(shopID: placement.item) else { continue }
             let node = nodes[placement.item] ?? makeNode(for: item)
             if node.placement != placement || lightChanged || node.model == nil { place(node, at: placement) }
             showPlate(on: node)
         }
+        showGhost()
+        tellBaseReady()
+    }
+
+    private func showGhost() {
+        guard case .arranging(_, _, let origin?) = decor.mode, origin.surface == .floor,
+            let item = DecorItem.item(shopID: origin.item)
+        else {
+            ghost.isEnabled = false
+            return
+        }
+        let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: origin.eighthTurns)
+        ghost.scale = [Float(width), 0.003, Float(depth)]
+        ghost.position = [Float(DecorGrid.metres(origin.u)), Self.floorY + 0.0015, Float(DecorGrid.metres(origin.v))]
+        ghost.isEnabled = true
     }
 
     private func makeNode(for item: DecorItem) -> Node {
@@ -116,20 +143,42 @@ final class DecorStage {
         return node
     }
 
+    private func tellBaseReady() {
+        guard !baseReadyTold, let onBaseReady else { return }
+        let base = nodes.values.filter(\.item.isBase)
+        guard !base.isEmpty, base.allSatisfy({ $0.model != nil }) else { return }
+        baseReadyTold = true
+        onBaseReady()
+    }
+
     private func place(_ node: Node, at placement: Placement) {
+        let before = node.placement
         node.placement = placement
         let item = node.item
-        let turns = Float(placement.quarterTurns) * .pi / 2
+        let turns = Float(placement.angle)
+        let position: SIMD3<Float>
+        let orientation: simd_quatf
         switch placement.surface {
         case .floor:
-            node.holder.position = [Float(DecorGrid.metres(placement.u)), Self.floorY, Float(DecorGrid.metres(placement.v))]
-            node.holder.orientation = .y(turns)
+            position = [Float(DecorGrid.metres(placement.u)), Self.floorY, Float(DecorGrid.metres(placement.v))]
+            orientation = .y(turns)
         case .backWall:
-            node.holder.position = [Float(DecorGrid.metres(placement.u)), Float(DecorGrid.wallHeight), -Self.wallInset]
-            node.holder.orientation = .identity
+            position = [Float(DecorGrid.metres(placement.u)), Float(DecorGrid.wallHeight), -Self.wallInset]
+            orientation = .identity
         case .leftWall:
-            node.holder.position = [-Self.wallInset, Float(DecorGrid.wallHeight), Float(DecorGrid.metres(placement.u))]
-            node.holder.orientation = .y(.pi / 2)
+            position = [-Self.wallInset, Float(DecorGrid.wallHeight), Float(DecorGrid.metres(placement.u))]
+            orientation = .y(.pi / 2)
+        }
+        // A turn or a jump of several cells (a slide, a swap, a piece nudged aside) glides; a drag follows the finger.
+        if let before, node.model != nil,
+            before.eighthTurns != placement.eighthTurns || max(abs(before.u - placement.u), abs(before.v - placement.v)) > 2
+        {
+            node.holder.move(
+                to: Transform(scale: .one, rotation: orientation, translation: position), relativeTo: node.holder.parent,
+                duration: 0.2, timingFunction: .easeInOut)
+        } else {
+            node.holder.position = position
+            node.holder.orientation = orientation
         }
         if let template = templates[item.assetName] { attachModel(to: node, from: template) }
         if let blob = node.blob {
@@ -144,14 +193,39 @@ final class DecorStage {
             node.holder.addChild(model)
             node.model = model
             node.lit = false
+            if node.item.isBase { dress(model, casting: !node.item.isFlat) }
         }
         guard !node.lit, let receiver else { return }
         node.model?.forEachDescendant { $0.components.set(receiver) }
         node.lit = true
     }
 
+    /// The room's own pieces keep the glow and the grounding shadow the furniture model had; a rug lies flat, so it casts none.
+    private func dress(_ model: Entity, casting: Bool) {
+        model.forEachDescendant { entity in
+            if casting { entity.components.set(GroundingShadowComponent(castsShadow: true)) }
+            if !RoomPieces.glows.keys.contains(entity.name), var mesh = entity.components[ModelComponent.self] {
+                mesh.materials = mesh.materials.map { shared($0) }
+                entity.components.set(mesh)
+            }
+            if let glow = RoomPieces.glows[entity.name], var mesh = entity.components[ModelComponent.self] {
+                mesh.materials = mesh.materials.map { _ in Clay.glow(glow.tone, intensity: glow.intensity) }
+                entity.components.set(mesh)
+            }
+        }
+    }
+
+    /// One instance per named colour for every piece: the room's pieces repeat their clay colours, and each
+    /// import would otherwise make its own copy of each.
+    private func shared(_ material: any Material) -> any Material {
+        guard let name = material.name, !name.isEmpty else { return material }
+        if let known = sharedMaterials[name] { return known }
+        sharedMaterials[name] = material
+        return material
+    }
+
     private func showPlate(on node: Node) {
-        guard case .arranging(let selected, let fits) = decor.mode, selected == node.item.id,
+        guard case .arranging(let selected, let fits, _) = decor.mode, selected == node.item.id,
             let placement = node.placement
         else {
             node.plate.isEnabled = false
@@ -159,16 +233,15 @@ final class DecorStage {
         }
         node.plate.isEnabled = true
         node.plate.model?.materials = [fits ? Self.fits : Self.misfits]
-        let turned = placement.quarterTurns % 2 == 1
-        let width = Float(turned ? node.item.depth : node.item.width) + 0.02
-        let depth = Float(turned ? node.item.width : node.item.depth) + 0.02
         switch placement.surface {
         case .floor:
-            node.plate.scale = [width, 0.004, depth]
+            let (width, depth) = DecorLayout.footprint(of: node.item, eighthTurns: placement.eighthTurns)
+            node.plate.scale = [Float(width) + 0.02, 0.004, Float(depth) + 0.02]
             node.plate.position = [0, 0.002, 0]
+            node.plate.orientation = .y(-Float(placement.angle))
         case .backWall, .leftWall:
             let height = Float(node.item.fit == .height ? node.item.size : node.item.width) + 0.02
-            node.plate.scale = [width, height, 0.006]
+            node.plate.scale = [Float(node.item.width) + 0.02, height, 0.006]
             node.plate.position = [0, 0, 0.002]
         }
     }
@@ -191,6 +264,17 @@ final class DecorStage {
 
     private func loaded(_ model: Entity, for item: DecorItem) {
         let bounds = model.visualBounds(relativeTo: nil)
+        if item.isBase {
+            let template = Entity()
+            template.addChild(model)
+            let entry = Template(entity: template, extents: bounds.extents, top: bounds.max.y)
+            templates[item.assetName] = entry
+            for node in nodes.values where node.item.assetName == item.assetName && node.model == nil {
+                attachModel(to: node, from: entry)
+            }
+            tellBaseReady()
+            return
+        }
         let measure = item.fit == .width ? bounds.extents.x : bounds.extents.y
         guard measure > 0 else { return }
         let scale = Float(item.size) / measure
@@ -203,7 +287,7 @@ final class DecorStage {
         case .wall:
             model.position = [-bounds.center.x * scale, -bounds.center.y * scale, -bounds.min.z * scale]
         }
-        let entry = Template(entity: template, extents: bounds.extents * scale)
+        let entry = Template(entity: template, extents: bounds.extents * scale, top: bounds.extents.y * scale)
         templates[item.assetName] = entry
         for node in nodes.values where node.item.assetName == item.assetName && node.model == nil {
             attachModel(to: node, from: entry)
@@ -212,30 +296,49 @@ final class DecorStage {
 
     // MARK: Touch
 
-    /// The piece standing under the floor point `point`, in the pivot's space, nearest the top first.
-    func floorPiece(at point: SIMD3<Float>) -> String? {
+    /// The piece standing under the finger, nearest the top first. `hit` gives the floor point under the finger for a
+    /// horizontal plane that high above the floor, in the pivot's space: a tall piece is also met by its body, not
+    /// only by its base.
+    func floorPiece(hit: (Float) -> SIMD3<Float>?) -> String? {
         let layout = decor.layout
         let solid = layout.placements.reversed().filter { $0.surface == .floor && !isFlat($0.item) }
         let flat = layout.placements.reversed().filter { $0.surface == .floor && isFlat($0.item) }
         return (solid + flat).first { placement in
             guard let item = DecorItem.item(shopID: placement.item) else { return false }
-            let turned = placement.quarterTurns % 2 == 1
-            let halfX = (turned ? item.depth : item.width) / 2 + 0.02
-            let halfZ = (turned ? item.width : item.depth) / 2 + 0.02
-            return abs(Double(point.x) - DecorGrid.metres(placement.u)) <= halfX
-                && abs(Double(point.z) - DecorGrid.metres(placement.v)) <= halfZ
+            let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: placement.eighthTurns)
+            let halfX = width / 2 + 0.02
+            let halfZ = depth / 2 + 0.02
+            let height = item.isFlat ? 0 : templates[item.assetName]?.extents.y ?? 0
+            return [0, 0.25, 0.5, 0.75, 1].contains { fraction in
+                guard let point = hit(height * Float(fraction)) else { return false }
+                return abs(Double(point.x) - DecorGrid.metres(placement.u)) <= halfX
+                    && abs(Double(point.z) - DecorGrid.metres(placement.v)) <= halfZ
+            }
         }?.item
     }
 
     /// The wall piece under `point` on `surface`, in the pivot's space.
     func wallPiece(at point: SIMD3<Float>, on surface: Placement.Surface) -> String? {
         let along = Double(surface == .backWall ? point.x : point.z)
-        return decor.layout.placements.reversed().first { placement in
+        return decor.layout.allPlacements.reversed().first { placement in
             guard placement.surface == surface, let item = DecorItem.item(shopID: placement.item) else { return false }
             let height = item.fit == .height ? item.size : item.width
             return abs(along - DecorGrid.metres(placement.u)) <= item.width / 2 + 0.02
                 && abs(Double(point.y) - DecorGrid.wallHeight) <= height / 2 + 0.02
         }?.item
+    }
+
+    /// The flat pieces standing on the floor, where each lies and how high its top is, in the pivot's space.
+    func flatSurfaces() -> [FlatSurface] {
+        nodes.values.compactMap { node in
+            guard node.item.isFlat, let placement = node.placement, placement.surface == .floor,
+                let template = templates[node.item.assetName]
+            else { return nil }
+            return FlatSurface(
+                x: DecorGrid.metres(placement.u), z: DecorGrid.metres(placement.v),
+                halfWidth: Double(template.extents.x) / 2, halfDepth: Double(template.extents.z) / 2,
+                yaw: placement.angle, top: Double(Self.floorY + template.top))
+        }
     }
 
     private func isFlat(_ id: String) -> Bool { DecorItem.item(shopID: id)?.isFlat == true }

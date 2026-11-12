@@ -1,3 +1,4 @@
+import DecorInterface
 import Pet
 import RealityKit
 import SwiftUI
@@ -47,14 +48,15 @@ final class DioramaScene: CatRoom {
 
     private let wallHeight: Float = 0.8
 
-    /// The models' Glow_ parts and the light each gives off.
-    private static let glows: [String: (tone: UInt32, intensity: Float)] = [
-        "Glow_window": (Tone.windowGlow, 1.2), "Glow_lamp": (0xFFE2AE, 1.1), "Glow_jar": (0xFFE7B8, 0.6),
-    ]
-
     /// The furniture and Mochi are both in: the room looks finished, so the launch splash can lift.
-    var isReady: Bool { furnished && walker != nil }
+    var isReady: Bool { furnished && baseFurnished && walker != nil }
     private var furnished = false
+    /// Set by the stage once every piece of the room's own furniture that stands has its model.
+    var baseFurnished = false
+    private var layout = DecorLayout()
+    private var treeVisit: CatWalker.Destination?
+    private var lampLight = Entity()
+    private var catHomeFrame: (position: SIMD3<Float>, yaw: Float)?
 
     override init() {
         super.init()
@@ -122,7 +124,7 @@ final class DioramaScene: CatRoom {
     override func doubleTapped(_ entity: Entity) {
         if let photo = entity.children.first(where: { $0.name == Self.photoName }) { return focus(on: photo) }
         guard !isShowcasing, let walker else { return }
-        if entity === tree { send(to: walker.main) }
+        if entity === tree, let treeVisit, !cutOff.contains(.tree) { send(to: treeVisit) }
         if entity === sill, !cutOff.contains(.sill) { send(to: sillVisit) }
         if entity === bed { send(to: nil) }
     }
@@ -145,7 +147,7 @@ final class DioramaScene: CatRoom {
 
     override var catSpots: [NookiSpot: CatWalker.Destination] {
         var spots: [NookiSpot: CatWalker.Destination] = [:]
-        spots[.tree] = walker?.main
+        spots[.tree] = treeVisit
         if !cutOff.contains(.sill) { spots[.sill] = sillVisit }
         if !cutOff.contains(.ball) { spots[.ball] = ballVisit }
         if !cutOff.contains(.basket) { spots[.basket] = basketVisit }
@@ -154,6 +156,24 @@ final class DioramaScene: CatRoom {
     }
 
     override var catKeepOut: (center: SIMD2<Float>, radius: Float)? { (SIMD2(bedCenter.x, bedCenter.z), 0.22) }
+
+    override func catBuilt() {
+        arrange(layout)
+        // `-uitestSend tree|sill|ball|basket|home` sends her there a few seconds after she is built, for UI tests
+        // that cannot tap the room.
+        guard let target = UserDefaults.standard.string(forKey: "uitestSend") else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self else { return }
+            switch target {
+            case "tree": if let treeVisit { send(to: treeVisit) }
+            case "sill": if let sillVisit { send(to: sillVisit) }
+            case "ball": if let ballVisit { send(to: ballVisit) }
+            case "basket": if let basketVisit { send(to: basketVisit) }
+            default: send(to: nil)
+            }
+        }
+    }
 
     private func bounce(_ toy: Entity, spins: Bool) {
         guard !bounces.contains(where: { $0.toy === toy }) else { return }
@@ -314,7 +334,7 @@ final class DioramaScene: CatRoom {
                 model.forEachDescendant { entity in
                     if let iblReceiver { entity.components.set(iblReceiver) }
                     entity.components.set(GroundingShadowComponent(castsShadow: true))
-                    if let glow = Self.glows[entity.name], var mesh = entity.components[ModelComponent.self] {
+                    if let glow = RoomPieces.glows[entity.name], var mesh = entity.components[ModelComponent.self] {
                         mesh.materials = mesh.materials.map { _ in Clay.glow(glow.tone, intensity: glow.intensity) }
                         entity.components.set(mesh)
                     }
@@ -366,8 +386,8 @@ final class DioramaScene: CatRoom {
         candleLight.components.set(light)
 
         // The stool lamp's light.
-        let lamp = pivot.group(at: [-0.15, 0.314, -0.34])
-        lamp.components.set(PointLightComponent(color: UIColor(hex: 0xFFC27A), intensity: 700, attenuationRadius: 0.7))
+        lampLight = pivot.group(at: Self.lampLightHome)
+        lampLight.components.set(PointLightComponent(color: UIColor(hex: 0xFFC27A), intensity: 700, attenuationRadius: 0.7))
     }
 
     /// Where a tap or double tap sends her from the bed, each path starting where she sits in it.
@@ -384,6 +404,102 @@ final class DioramaScene: CatRoom {
             .init(at: [-0.24, 0.023, 0.04]),
             .init(at: [-0.38, 0.295, 0.01], move: .jump),
         ], rest: 0.75 + .pi)
+    }
+
+    // MARK: - Arranging
+
+    private static let treeHome: SIMD3<Float> = [0.36, 0.014, -0.36]
+    private static let sillHome: SIMD3<Float> = [-0.41, 0.262, 0]
+    private static let ballHome: SIMD3<Float> = [-0.19, 0.047, 0.325]
+    private static let basketHome: SIMD3<Float> = [0.37, 0.014, 0.36]
+    private static let flameHome: SIMD3<Float> = [-0.41, 0.287, 0.38]
+    private static let candleLightHome: SIMD3<Float> = [-0.37, 0.33, 0.38]
+    private static let lampLightHome: SIMD3<Float> = [-0.15, 0.314, -0.34]
+    private static let restYaw: Float = 0.75 + .pi
+
+    /// Brings what belongs to the room's own pieces (the hit boxes, the candle and the lamp light, the toys, and
+    /// every place she goes) to where the player stood them. Cheap when nothing moved.
+    func arrange(_ next: DecorLayout) {
+        layout = next
+        func place(_ entity: Entity, _ id: String, _ home: SIMD3<Float>) {
+            guard let frame = PieceFrame(id, in: next) else {
+                entity.isEnabled = false
+                return
+            }
+            entity.isEnabled = true
+            entity.position = frame.map(home)
+            entity.orientation = frame.orientation
+        }
+        place(tree, "base-cattree", Self.treeHome)
+        place(sill, "base-windowseat", Self.sillHome)
+        place(ball, "base-rug", Self.ballHome)
+        place(basket, "base-basket", Self.basketHome)
+        place(flame, "base-nightstand", Self.flameHome)
+        place(candleLight, "base-nightstand", Self.candleLightHome)
+        place(lampLight, "base-lamp", Self.lampLightHome)
+        flame.orientation = .identity
+
+        let spawn = next.spawn()
+        let floor: Float = 0.023
+        let from: SIMD3<Float> = [Float(spawn.x), floor, Float(spawn.z)]
+
+        func walk(to id: String, _ home: SIMD3<Float>, yaw extra: Float = 0) -> (SIMD3<Float>, Float)? {
+            guard let frame = PieceFrame(id, in: next) else { return nil }
+            let point = frame.map(home)
+            return (point, atan2(-(point.x - from.x), -(point.z - from.z)))
+        }
+
+        if let (to, rest) = walk(to: "base-rug", [-0.1, floor, 0.26]) {
+            ballVisit = .init(
+                id: "ball", path: [.init(at: from, move: .jump), .init(at: to, move: .jump)], rest: rest, play: true,
+                arrive: { [unowned self] in bounce(toyBall, spins: true) })
+        }
+        if let (to, _) = walk(to: "base-basket", [0.27, 0.014, 0.26]) {
+            basketVisit = .init(
+                id: "basket", path: [.init(at: from, move: .jump), .init(at: to)], rest: atan2(-1, -1), play: true,
+                arrive: { [unowned self] in bounce(yarn, spins: false) })
+        }
+        if let seat = PieceFrame("base-windowseat", in: next) {
+            sillVisit = .init(
+                id: "sill",
+                path: [
+                    .init(at: from, move: .jump), .init(at: seat.map([-0.24, floor, 0.04])),
+                    .init(at: seat.map([-0.38, 0.295, 0.01]), move: .jump),
+                ], rest: Self.restYaw + seat.yaw)
+        }
+
+        if let tree = PieceFrame("base-cattree", in: next), let approach = next.anchors().first {
+            let top = tree.map([0.36, 0.396, -0.36])
+            treeVisit = .init(
+                id: "main",
+                path: [
+                    .init(at: from, move: .jump), .init(at: [Float(approach.x), floor, Float(approach.z)]),
+                    .init(at: top, move: .jump),
+                ], rest: Self.restYaw)
+        } else {
+            treeVisit = nil
+        }
+
+        if let home = next.catHome() {
+            let seatPoint: SIMD3<Float>
+            let yaw: Float
+            if let bed = PieceFrame("base-donutbed", in: next), home.item == "base-donutbed" {
+                seatPoint = bed.map(bedCenter + [0, 0.05, 0.01])
+                yaw = Self.restYaw + bed.yaw
+            } else {
+                seatPoint = [Float(home.seat.x), 0.014 + Float(home.height) + 0.05, Float(home.seat.z)]
+                yaw = Self.restYaw + Float(home.placement.angle)
+            }
+            // Where the standing splat's origin goes for the seated one to sit on the cushion, `mount` behind it.
+            let mount: SIMD3<Float> = [0.01, 0, -0.058]
+            let origin = seatPoint - simd_quatf.y(yaw).act(mount * catScale)
+            bed.isEnabled = true
+            bed.position = [seatPoint.x, 0.014, seatPoint.z]
+            walker?.rehome(at: origin, yaw: yaw, main: treeVisit)
+        } else {
+            bed.isEnabled = false
+        }
+        director?.update(spots: catSpots)
     }
 
     private func buildLighting() {

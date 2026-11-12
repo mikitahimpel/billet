@@ -4,6 +4,7 @@ import WidgetInterface
 import WidgetUI
 import Pet
 import RealityKit
+import RoomInterface
 import SwiftUI
 import UsInterface
 
@@ -32,6 +33,9 @@ class CatRoom {
     var avoid: Occupancy? {
         didSet { walker?.avoid = avoid }
     }
+
+    /// The flat pieces lying on the floor now (rugs), which what rests on the floor rests on top of.
+    var flatSurfaces: () -> [FlatSurface] = { [] }
 
     private(set) var catGroup = Entity()
     private var catBody = Entity()
@@ -230,6 +234,9 @@ class CatRoom {
 
     // MARK: - Mochi
 
+    /// Called once she is built, for a room whose furniture may already stand elsewhere.
+    func catBuilt() {}
+
     /// Mochi sitting at `at` facing `rests.last`; with a route she walks between its ends, `rests` her yaws at each.
     /// Splats where the GPU draws them, else meshes of the same splats (Cat.usdz, CatStanding.usdz); loaded once in
     /// the background and shared by the rooms (see `adoptCat`).
@@ -262,6 +269,7 @@ class CatRoom {
             Self.rooms.add(self)
             walker.avoid = avoid
             self.walker = walker
+            defer { catBuilt() }
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })
             director?.appOpened()
@@ -303,6 +311,7 @@ class CatRoom {
             do {
                 let file = try await Task.detached {
                     try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
+                        .reduced(to: SplatDetail.chosen())
                 }.value
                 guard !Task.isCancelled else { return }
                 let rig = try CatRig(file)
@@ -343,8 +352,9 @@ class CatRoom {
             let files = try await Task.detached {
                 // Grey reads the original files from the app; another coat reads its recoloured copy (CatCoat.bundle).
                 let coat = try drawn ? CatCoat.current().bundle(poses: ["MochiStanding", "Mochi"]) : .main
-                return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat),
-                        try CatRig.Files(named: "Mochi", drawn: drawn, in: coat))
+                let detail = SplatDetail.chosen()
+                return (try CatRig.Files(named: "MochiStanding", drawn: drawn, in: coat).reduced(to: detail),
+                        try CatRig.Files(named: "Mochi", drawn: drawn, in: coat).reduced(to: detail))
             }.value
             let standing = try CatRig(files.0), seated = try CatRig(files.1)
             if !drawn {
@@ -365,6 +375,7 @@ class CatRoom {
                     do {
                         let file = try await Task.detached {
                             try CatRig.Files(named: name, drawn: true, in: CatCoat.current().bundle(poses: [name]))
+                                .reduced(to: SplatDetail.chosen())
                         }.value
                         let rig = try CatRig(file)
                         if let entity = rig.entity {

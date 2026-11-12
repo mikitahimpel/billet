@@ -1,5 +1,7 @@
 #if DEBUG
+import FeatureShop
 import Foundation
+import ShopInterface
 import Transport
 import Wire
 
@@ -54,7 +56,7 @@ final class ShopFixture {
         case .treat:
             return (ShopModel.treatPrice, [])
         case .item(let id):
-            guard let item = Catalog.item(id.rawValue) else { throw .api(.invalidRequest) }
+            guard let item = Catalog.item(id.rawValue, cat: offers.cat) else { throw .api(.invalidRequest) }
             guard !owned.contains(item.id) else { throw .api(.alreadyOwned(itemId: item.id)) }
             return (offers.deal(for: item.id, on: .now)?.price(of: item) ?? item.price, [item.id])
         case .ink(let id):
@@ -62,9 +64,9 @@ final class ShopFixture {
             guard !ink.isOwned(owned) else { throw .api(.alreadyOwned(itemId: ink.id)) }
             return (ink.price, [ink.id])
         case .set(let id):
-            let sets: [any PieceSet] = [offers.featured(on: .now)] + ShopOffers.bundles
+            let sets: [any PieceSet] = [offers.featured(on: .now)] + offers.bundles
             guard let set = sets.first(where: { $0.id == id.rawValue }) else { throw .api(.invalidRequest) }
-            guard let quote = ShopOffers.price(of: set, owned: owned) else {
+            guard let quote = offers.price(of: set, owned: owned) else {
                 throw .api(.alreadyOwned(itemId: set.id))
             }
             return (quote.price, set.itemIDs.filter { !owned.contains($0) })

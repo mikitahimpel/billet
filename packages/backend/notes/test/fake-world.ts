@@ -405,7 +405,10 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
       Layer.succeed(MediaStore, media),
       Layer.succeed(PairRooms, pairRooms),
       InMemoryShopStore(),
-      Layer.succeed(Metrics, { record: (event) => Effect.sync(() => void recorded.push(event)) }),
+      Layer.succeed(Metrics, {
+        record: (event) => Effect.sync(() => void recorded.push(event)),
+        recordMany: (events) => Effect.sync(() => void recorded.push(...events)),
+      }),
       SecureRandom.layerWebCrypto,
     ),
   };

@@ -147,7 +147,7 @@ private struct ArrowShape: Shape {
   BothSchemes {
     VStack(spacing: Space.l) {
       Callout(
-        symbol: "hand.wave.fill", title: "Say hi", message: "Tap her in the room to pet her.",
+        symbol: "hand.wave.fill", title: "Say hi", message: "Tap in the room to pet.",
         close: {}
       )
       .calloutBubble(pointer: CalloutPointer(edge: .bottom, position: 0.3))

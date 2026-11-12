@@ -26,7 +26,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     @AppStorage(AppSettings.quietRoomKey) private var quietRoom = QuietChrome.dim
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
-    @AppStorage(AppSettings.streakNudgeKey) private var streakNudge = true
+    @AppStorage(AppSettings.streakNudgeKey, store: StreakNudge.settings) private var streakNudge = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
@@ -45,8 +45,12 @@ struct SettingsView: View {
     var body: some View {
         Page {
             GroupedSection(header: "General",
-                         footer: "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
+                         footer: "Haptics: small taps when you pet \(CatProfile.name()), buy something or add a wish. Pronouns: how Ourio talks about \(CatProfile.name()).") {
                 ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
+                PickerRow("Pronouns", symbol: "pawprint.fill", tint: UsTint.sun.color,
+                          selection: Binding(get: { state.pronouns }, set: { state.choosePronouns($0) })) {
+                    ForEach(CatPronouns.allCases, id: \.self) { Text($0.label).tag($0) }
+                }
             }
 
             GroupedSection(header: "Hints",
@@ -138,9 +142,8 @@ struct SettingsView: View {
             }
 
             GroupedSection(header: "Labs",
-                         footer: "With the brain off, \(CatProfile.name()) lives on her own original timers. The "
-                             + "card shows what the brain has her doing and why: her state, needs and the last thing she "
-                             + "heard. All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
+                         footer: state.pronouns.say(.brainFooter(name: CatProfile.name()))
+                             + " All hints show at once from the next launch, for testing. Rooms shows the living room, the bedroom or "
                              + "both on this phone, whatever the test gave your pair. Room shell builds the walls and floor live or loads "
                              + "them baked, from the next launch. Look is the app's colours and faces, from the next launch. Composer style is how a new note looks. Quiet room dims or hides "
                              + "the controls over the room after a few seconds without a touch. Coins come from the dev "
@@ -263,6 +266,7 @@ private struct AccountRow: View {
         Row(title, detail: detail, symbol: symbol, tint: tint.color) {
             if case .failed = state {
                 RetryButton(compact: true, action: retry)
+                    .fixedSize()
             } else if case .signingIn = state {
                 ProgressView()
             }
@@ -323,12 +327,6 @@ private struct DataCreditsView: View {
                     Row("Streaming data by JustWatch", symbol: "play.tv.fill", tint: UsTint.sun.color) {
                         RowChevron()
                     }
-                }
-            }
-            GroupedSection(header: "Flags",
-                         footer: "Round flags from circle-flags by HatScripts, MIT License. Copyright (c) 2026 HatScripts.") {
-                Link(destination: URL(string: "https://github.com/HatScripts/circle-flags")!) {
-                    Row("circle-flags", symbol: "flag.fill", tint: UsTint.blush.color) { RowChevron() }
                 }
             }
             GroupedSection(header: "Map", footer: "The world map is Natural Earth's, in the public domain.") {

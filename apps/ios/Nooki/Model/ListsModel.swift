@@ -1,3 +1,4 @@
+import FeatureShop
 import Foundation
 import MomentsInterface
 import WidgetInterface

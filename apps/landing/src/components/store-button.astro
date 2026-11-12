@@ -4,7 +4,7 @@ import { appStoreLive, appStoreUrl } from "../config";
 
 {
   appStoreLive ? (
-    <a class="store" href={appStoreUrl}>
+    <a class="store" href={appStoreUrl} data-umami-event="app_store_click" data-umami-event-where="store_button">
       <svg viewBox="0 0 17 20" aria-hidden="true">
         <use href="#apple" />
       </svg>

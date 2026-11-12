@@ -1,3 +1,4 @@
+import FeatureUs
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -58,7 +59,9 @@ struct WhoKnowsScreen: View {
             ProgressView()
         case .unpaired:
             EmptyState(icon: UsGlyph(symbol: "person.2.fill", tint: .honey), title: "Pair up to play",
-                    text: "Who knows who takes two: one of you answers five questions about yourself, the other guesses.")
+                    text: "Who knows who takes two: one of you answers five questions about yourself, the other guesses.") {
+                PairToPlayButton()
+            }
         case .offline:
             VStack(spacing: Space.l) {
                 EmptyState(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach today's round",
@@ -114,7 +117,7 @@ struct WhoKnowsScreen: View {
                 .multilineTextAlignment(.center)
         } bottom: {
             PrimaryButton("Let's go") {
-                withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .snappy(duration: 0.3)) { introRound = round.id }
+                withAnimation(reduceMotion ? Motion.fade() : Motion.spring(0.3)) { introRound = round.id }
             }
         }
     }
@@ -160,8 +163,8 @@ struct WhoKnowsScreen: View {
             .transition(reduceMotion ? .opacity : .asymmetric(insertion: .move(edge: .trailing).combined(with: .opacity),
                                                                removal: .move(edge: .leading).combined(with: .opacity)))
         }
-        .softScrollEdges()
-        .animation(reduceMotion ? .easeOut(duration: 0.2) : .snappy(duration: 0.3), value: question.id)
+        .ourioScrollEdges()
+        .animation(reduceMotion ? Motion.fade() : Motion.spring(0.3), value: question.id)
     }
 
     private func pick(_ option: Int) {
@@ -189,7 +192,7 @@ struct WhoKnowsScreen: View {
                 .font(.ourioCaption.monospacedDigit())
                 .foregroundStyle(Ink.textSecondary)
                 .contentTransition(.numericText())
-                .animation(.snappy, value: model.partnerAnswered)
+                .animation(Motion.spring(), value: model.partnerAnswered)
         } bottom: {
             EmptyView()
         }
@@ -224,10 +227,10 @@ private struct WhoKnowsReveal: View {
                         .id(step)
                         .transition(reduceMotion ? .opacity : .push(from: .trailing))
                 }
-                .softScrollEdges()
+                .ourioScrollEdges()
                 PrimaryButton(step + 1 < reveal.count ? "Next" : "See the score") { advance() }
             } else {
-                ScrollView { summary }.softScrollEdges()
+                ScrollView { summary }.ourioScrollEdges()
                 PrimaryButton("See them again") { withAnimation(animation) { step = 0 } }
             }
         }
@@ -236,7 +239,7 @@ private struct WhoKnowsReveal: View {
         .padding(.bottom, Space.l)
     }
 
-    private var animation: Animation { reduceMotion ? .easeOut(duration: 0.2) : .snappy(duration: 0.3) }
+    private var animation: Animation { reduceMotion ? Motion.fade() : Motion.spring(0.3) }
 
     private func advance() {
         withAnimation(animation) { step += 1 }
@@ -342,12 +345,7 @@ private struct WhoKnowsRevealStep: View {
             ZStack(alignment: .topTrailing) {
                 WhoKnowsArt(name: item.hit ? "WhoKnows-hit" : "WhoKnows-miss", size: 160)
                 if item.hit {
-                    Text("+\(WhoKnowsModel.hitCoins)")
-                        .font(.ourioHeadline.monospacedDigit())
-                        .foregroundStyle(Ink.heroInk)
-                        .padding(.horizontal, Space.m)
-                        .padding(.vertical, Space.xs)
-                        .background(Capsule().fill(Color.honey))
+                    Chip("+\(WhoKnowsModel.hitCoins)", style: .honey)
                         .accessibilityHidden(true)
                 }
             }
@@ -368,7 +366,7 @@ private struct WhoKnowsRevealStep: View {
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
         .onAppear {
-            withAnimation(reduceMotion ? .easeOut(duration: 0.2) : .spring(response: 0.32, dampingFraction: 0.6)) {
+            withAnimation(reduceMotion ? Motion.fade() : Motion.spring(0.32)) {
                 popped = true
             }
         }
@@ -382,7 +380,6 @@ private struct WhoKnowsRevealStep: View {
 
     private func row(_ options: [String], _ option: Int, label: String, mark: Mark) -> some View {
         let text = options.indices.contains(option) ? options[option] : "Option \(option + 1)"
-        let shape = RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
         let symbol = switch mark {
         case .hit: "checkmark.circle.fill"
         case .miss: "xmark.circle.fill"
@@ -408,18 +405,9 @@ private struct WhoKnowsRevealStep: View {
             }
             Spacer(minLength: 0)
         }
-        .padding(Space.l)
+        .padding(CardMetrics.padding)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            shape.fill(Ink.surface)
-            if mark == .hit { shape.fill(Color.honey.opacity(0.18)) }
-        }
-        .overlay {
-            switch mark {
-            case .hit, .truth: shape.strokeBorder(Color.honey, lineWidth: 2)
-            case .miss: shape.strokeBorder(Color.blushPink.opacity(0.6), lineWidth: 1)
-            }
-        }
+        .cardSurface(radius: Radius.control, state: mark == .miss ? .rest : .selected)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(label): \(text)\(mark == .miss ? ", wrong" : mark == .hit ? ", right" : "")")
     }
@@ -432,14 +420,9 @@ private struct WhoKnowsProgress: View {
     let total: Int
 
     var body: some View {
-        HStack(spacing: Space.s) {
-            ForEach(0..<max(total, 1), id: \.self) { index in
-                Capsule()
-                    .fill(index < done ? AnyShapeStyle(Color.honey) : AnyShapeStyle(Ink.surfaceRaised))
-                    .frame(height: 6)
-            }
-        }
-        .animation(.snappy(duration: 0.25), value: done)
+        ProgressBar(value: Double(done), total: Double(max(total, 1)))
+            .animation(Motion.spring(0.25), value: done)
+            .accessibilityLabel("Question \(min(done + 1, max(total, 1))) of \(max(total, 1))")
     }
 }
 
@@ -454,7 +437,7 @@ private struct WhoKnowsOption: View {
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.accentText)
                 .frame(width: disc, height: disc)
-                .background(Circle().fill(Ink.surfaceRaised))
+                .background(Circle().fill(Ink.well))
                 .accessibilityHidden(true)
             Text(text)
                 .font(.ourioHeadline)
@@ -486,7 +469,7 @@ private struct FillingScroll<Content: View, Bottom: View>: View {
                     .frame(maxWidth: .infinity, minHeight: height)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .softScrollEdges()
+            .ourioScrollEdges()
             .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { height = $0 }
             bottom
                 .padding(.horizontal, Space.gutter)

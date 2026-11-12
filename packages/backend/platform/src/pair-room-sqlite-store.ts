@@ -8,6 +8,7 @@ import { type ListId, ListItem, SharedList } from "@billet/contracts-domain/list
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { StreakMark } from "@billet/contracts-domain/streak";
 import {
   RoomState,
   type ActiveRoom,
@@ -32,6 +33,7 @@ import {
   note,
   ownedInk,
   layoutLog,
+  stowedPiece,
   ownedItem,
   placement,
   reaction,
@@ -165,6 +167,17 @@ const activityFrom = (record: ActivityRecord): Option.Option<ActivityRow> =>
 
 type ListRow = typeof lists.$inferSelect;
 type ListItemRow = typeof listItems.$inferSelect;
+
+const MarksJson = Schema.fromJsonString(Schema.Array(StreakMark));
+const encodeMarks = Schema.encodeSync(MarksJson);
+const decodeMarks = Schema.decodeOption(MarksJson);
+
+/** Marks that no longer read are dropped: the partner's next day marks again. */
+const marksFrom = (text: string | null) => {
+  if (text === null) return {};
+  const marks = decodeMarks(text);
+  return Option.isSome(marks) && marks.value.length > 0 ? { marks: marks.value } : {};
+};
 
 const IdsJson = Schema.fromJsonString(Schema.Array(Schema.String));
 const encodeIds = Schema.encodeSync(IdsJson);
@@ -311,6 +324,7 @@ const roomFrom = (
   moods: ReadonlyArray<MoodCheckIn>,
   layout: ReadonlyArray<PlacementRow>,
   layoutIds: ReadonlyArray<string>,
+  stowed: ReadonlyArray<string>,
 ): RoomState =>
   decodeRoom(
     row === undefined
@@ -328,19 +342,22 @@ const roomFrom = (
             best: row.streakBest,
             ...(row.streakLastDay === null ? {} : { lastDay: row.streakLastDay }),
             ...(row.streakRestoredOn === null ? {} : { restoredOn: row.streakRestoredOn }),
+            ...marksFrom(row.streakMarks),
           },
           ...(row.lastReactionRev === null ? {} : { lastReactionRev: row.lastReactionRev }),
           inks,
           items,
           wishlist,
-          layout: layout.map(({ itemId, surface, u, v, quarterTurns }) => ({
+          layout: layout.map(({ itemId, surface, u, v, quarterTurns, room }) => ({
             item: itemId,
             surface,
             u,
             v,
             quarterTurns,
+            ...(room === "living" ? {} : { room }),
           })),
           layoutLog: layoutIds,
+          stowed,
           bonuses,
           // In the members' order, as the room keeps them.
           moods: [row.firstUser, row.secondUser].flatMap((user) =>
@@ -367,6 +384,7 @@ const roomValues = (state: ActiveRoom): typeof room.$inferInsert => {
     streakBest: state.streak.best,
     streakLastDay: state.streak.lastDay ?? null,
     streakRestoredOn: state.streak.restoredOn ?? null,
+    streakMarks: state.streak.marks === undefined ? null : encodeMarks(state.streak.marks),
     lastReactionRev: state.lastReactionRev ?? null,
     giftDay: state.giftDay ?? null,
     welcomed: state.welcomed,
@@ -393,9 +411,22 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(mood),
         db.select().from(placement).orderBy(asc(placement.position)),
         db.select().from(layoutLog).orderBy(asc(layoutLog.position)),
+        db.select().from(stowedPiece).orderBy(asc(stowedPiece.position)),
       ]).pipe(
         Effect.map(
-          ([[row], [catRow], inks, items, wishes, [walletRow], bonuses, moods, placed, logged]) =>
+          ([
+            [row],
+            [catRow],
+            inks,
+            items,
+            wishes,
+            [walletRow],
+            bonuses,
+            moods,
+            placed,
+            logged,
+            stowed,
+          ]) =>
             roomFrom(
               row,
               catRow,
@@ -407,6 +438,7 @@ export const SqliteRoomStore = Layer.effect(
               moodsFrom(moods),
               placed,
               logged.map(({ changeId }) => changeId),
+              stowed.map(({ itemId }) => itemId),
             ),
         ),
         Effect.orDie,
@@ -464,12 +496,17 @@ export const SqliteRoomStore = Layer.effect(
                   u: spot.u,
                   v: spot.v,
                   quarterTurns: spot.quarterTurns,
+                  room: spot.room ?? "living",
                   position,
                 });
               }
               yield* tx.delete(layoutLog);
               for (const [position, changeId] of state.layoutLog.entries()) {
                 yield* tx.insert(layoutLog).values({ changeId, position });
+              }
+              yield* tx.delete(stowedPiece);
+              for (const [position, itemId] of state.stowed.entries()) {
+                yield* tx.insert(stowedPiece).values({ itemId, position });
               }
               yield* tx.delete(wish);
               for (const [position, itemId] of state.wishlist.entries()) {

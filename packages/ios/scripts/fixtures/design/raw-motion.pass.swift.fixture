@@ -1,0 +1,9 @@
+struct Good: View {
+  @State private var on = false
+
+  var body: some View {
+    Card { EmptyView() }
+      .animation(Motion.spring(Motion.quick), value: on)
+      .onTapGesture { withAnimation(Motion.fade()) { on.toggle() } }
+  }
+}

@@ -74,7 +74,7 @@ export const featureList: Feature[] = [
     slug: "room-and-mochi",
     title: "Virtual pet app for couples: raise a cat together · Ourio",
     description:
-      "Ourio is a couples app with a shared virtual pet. You and your partner raise one cat, Mochi, in one cozy room on two iPhones: feed, water, play, brush and pet her, and the other sees it.",
+      "A couples app with a shared virtual pet: you and your partner raise one cat, Mochi, in one cozy room on two iPhones. Feed, play and pet her; the other sees it.",
     eyebrow: "Virtual pet for couples",
     h1: "A virtual pet you raise together, on two iPhones.",
     lead: "Ourio is a couples app with a shared pet: one cat, Mochi, in one cozy room that lives on both of your iPhones. Feed her, pour her water, play, brush or pet her, and your partner sees it. She has four needs, six coats and never gets sick when you're busy.",
@@ -171,9 +171,9 @@ export const featureList: Feature[] = [
   },
   {
     slug: "lock-screen-drawings",
-    title: "Lock screen drawing app for couples: draw on your partner's iPhone · Ourio",
+    title: "Lock screen drawing app for couples: draw on your partner's iPhone",
     description:
-      "Draw on a canvas that looks like your partner's Lock Screen. Ourio sends it to their iPhone with a notification and shows it in the Drawing widget on their Lock Screen or Home Screen.",
+      "Draw on a canvas shaped like your partner's Lock Screen. Ourio sends it to their iPhone with a notification and shows it in their Lock Screen widget.",
     eyebrow: "Lock Screen drawings",
     h1: "Draw on your partner's Lock Screen.",
     lead: "Ourio is a lock screen drawing app for couples. You draw on a canvas that shows your partner's Lock Screen, clock and wallpaper included. When you send it, they get a notification and the drawing appears in Ourio's Drawing widget on their Lock Screen or Home Screen. Seven ink colors, one free.",
@@ -267,7 +267,7 @@ export const featureList: Feature[] = [
     slug: "moments",
     title: "Shared photo wall for couples: photos as polaroids · Ourio",
     description:
-      "Send your partner a photo in Ourio and it lands on Mochi's wall as an instant-film polaroid with your caption. React with a heart, pin it, and share it as a polaroid.",
+      "Send your partner a photo in Ourio and it lands on Mochi's wall as an instant-film polaroid with your caption. React with a heart, pin it or share it.",
     eyebrow: "Moments",
     h1: "Your photos, as polaroids on a shared wall.",
     lead: "Moments is Ourio's shared photo wall for couples. Add a photo of the two of you with a short caption and it goes up on Mochi's wall as a little polaroid on both phones. Your partner can react with a heart, and each Moment earns 10 coins.",
@@ -328,9 +328,9 @@ export const featureList: Feature[] = [
   },
   {
     slug: "us",
-    title: "Couples planner app: dates, wishlists, lists and calendar in one tab · Ourio",
+    title: "Couples planner app: dates, wishlists, lists and calendar · Ourio",
     description:
-      "The Us tab in Ourio is a shared planner for two: days together and countdowns, a shared calendar, date night ideas you swipe together, wishlists with secret gifting, shared lists, movie night and a love streak.",
+      "Ourio's Us tab is a planner for two: countdowns, a shared calendar, date night ideas you swipe together, wishlists with secret gifting, shared lists and more.",
     eyebrow: "The Us tab",
     h1: "A shared planner for the two of you.",
     lead: "Ourio's Us tab keeps everything that's yours as a couple in one place: a day counter and countdowns, a shared calendar, 150 date night ideas you swipe together, wishlists with secret gifting, shared lists like Groceries and To watch, Pick tonight for movie night, Places to go and your love streak.",
@@ -406,7 +406,7 @@ export const featureList: Feature[] = [
     slug: "date-night",
     title: "Date night ideas app for couples: swipe together, match, plan · Ourio",
     description:
-      "Ourio's date night has 150 date ideas you each swipe on your own iPhone. When you both love one, it's a match; plan it, get reminders, and rate it. Ideas for home, out, outdoors and long distance.",
+      "150 date ideas you each swipe on your own iPhone. When you both love one, it's a match: plan it, get reminders, rate it. For home, out and long distance.",
     eyebrow: "Date night",
     h1: "Date night ideas you swipe together.",
     lead: "Date night in Ourio is a deck of 150 date ideas that you and your partner swipe on your own iPhones. When you both love an idea, it lands in “You both loved these”. Plan it for a day, get a reminder a day and an hour before, and rate it afterwards. 74 of the ideas are free.",
@@ -496,7 +496,7 @@ export const featureList: Feature[] = [
     slug: "wishlists",
     title: "Shared wishlist app for couples with secret gifting · Ourio",
     description:
-      "Ourio wishlists let partners keep gift ideas for each other: paste a link, mark what's most wanted, and keep sizes, coffee order and allergies. Claim a gift secretly with “I'll get this”. Add from Safari's share sheet.",
+      "Keep gift ideas for each other: paste a link, mark what's most wanted, save sizes and allergies, and claim a gift secretly with “I'll get this”.",
     eyebrow: "Wishlists",
     h1: "A shared wishlist where gifts stay a surprise.",
     lead: "Ourio's wishlists are a shared wishlist app for couples. Each of you keeps a list: paste a link or type a wish, mark what's most wanted, and keep the details that are easy to forget, like sizes, coffee order and allergies. On your partner's list, “I'll get this” claims a gift secretly.",
@@ -584,7 +584,7 @@ export const featureList: Feature[] = [
     slug: "shared-lists",
     title: "Shared to-do, grocery and bucket list app for couples · Ourio",
     description:
-      "Ourio's shared lists sync between two iPhones: Groceries sorted by aisle with suggestions, To watch, Places to go, Places to eat, To read, a Bucket list and lists of your own. Tick items off as done together.",
+      "Shared lists that sync between two iPhones: groceries sorted by aisle, To watch, Places to go, a Bucket list and lists of your own. Tick them off together.",
     eyebrow: "Shared lists",
     h1: "Shared lists for two: groceries, bucket list and more.",
     lead: "Ourio has shared lists for couples that stay in sync on both iPhones: Groceries, To watch, Places to go, Places to eat, To read and a Bucket list, plus any list you start together. Tick something off and it's ticked for both of you; each ticked item earns 5 coins.",
@@ -647,7 +647,7 @@ export const featureList: Feature[] = [
     slug: "movie-night",
     title: "App to pick a movie together: Pick tonight for couples · Ourio",
     description:
-      "Can't decide what to watch? In Ourio's Pick tonight you and your partner each swipe movies and shows: Not tonight, Seen it or Want to. When you both want the same title, it's a match. Plus a shared To watch list.",
+      "Can't decide what to watch? You and your partner each swipe movies and shows in Ourio's Pick tonight. When you both want the same title, it's a match.",
     eyebrow: "Movie night",
     h1: "Pick a movie together, without the debate.",
     lead: "Pick tonight is Ourio's movie picker for couples. You each swipe through movies and shows on your own iPhone, Not tonight, Seen it or Want to, and when you both want the same title, it's a match and your partner gets a notification. A shared To watch list keeps the rest for later.",
@@ -698,7 +698,7 @@ export const featureList: Feature[] = [
     slug: "calendar-and-countdown",
     title: "Couples calendar and countdown app: days together counter · Ourio",
     description:
-      "Ourio counts your days together, keeps a shared calendar of birthdays, trips and anniversaries that repeat every year, and counts down to them on both iPhones and in the Lock Screen widget.",
+      "Ourio counts your days together, keeps a shared calendar of birthdays, trips and anniversaries, and counts down to them on both iPhones and Lock Screens.",
     eyebrow: "Calendar and countdown",
     h1: "Days together, and every day you're counting down to.",
     lead: "Ourio counts your days together from the day your story started and keeps a shared calendar of birthdays, trips, concerts and anniversaries that can repeat every year. Each event counts down (“In 12 days”) on both iPhones, and the Us widget shows it on your Lock Screen.",
@@ -757,7 +757,7 @@ export const featureList: Feature[] = [
     slug: "love-streak",
     title: "Couples streak: a shared flame you keep lit every day · Ourio",
     description:
-      "Ourio's love streak grows each day either partner does something together. Milestones at 3, 7, 14, 30, 50, 100, 200 and 365 days, and a broken streak can be restored once a month.",
+      "Ourio's love streak grows each day either of you does something together. Milestones from 3 to 365 days; a broken streak can be restored once a month.",
     eyebrow: "Love streak",
     h1: "A streak the two of you keep lit.",
     lead: "The love streak in Ourio counts the days in a row that either of you does something together: pet Mochi, send a note or a photo, swipe a date idea or share your mood. It has milestones at 3, 7, 14, 30, 50, 100, 200 and 365 days, and a broken streak can be restored once a month.",
@@ -816,7 +816,7 @@ export const featureList: Feature[] = [
     slug: "games",
     title: "Couples games and daily questions app for iPhone · Ourio",
     description:
-      "Two free couples games in Ourio: Who knows who, a daily 5-question quiz about how well you know your partner, and Draw & guess, where one draws a word and the other spells it from letter tiles.",
+      "Two free couples games: Who knows who, a daily 5-question quiz about your partner, and Draw & guess, where one draws a word and the other guesses it.",
     eyebrow: "Games for two",
     h1: "Couples games and daily questions, across two phones.",
     lead: "Ourio has two free games for couples. Who knows who is a daily round of five questions about one of you, from 150 questions; the other guesses, and the answers open together. Draw & guess has one of you draw a word and the other spell it from 12 letter tiles. Both are turn-based and earn coins.",
@@ -890,9 +890,9 @@ export const featureList: Feature[] = [
   },
   {
     slug: "shop-and-coins",
-    title: "Shop and coins: decorate your room with coins you earn together · Ourio",
+    title: "Shop and coins: decorate your room with coins earned together · Ourio",
     description:
-      "In Ourio every coin is earned by doing things together: caring for Mochi, notes, photos, lists, dates and games. Spend them on furniture, decor, inks and toys. Nothing is for sale and there's no subscription.",
+      "In Ourio every coin is earned together: caring for Mochi, notes, photos, dates and games. Spend them on furniture, decor, inks and toys. Nothing is for sale.",
     eyebrow: "Shop and coins",
     h1: "Every coin is earned together. Nothing is for sale.",
     lead: "Coins in Ourio belong to the couple and only come from what you do together: caring for Mochi, notes, photos, lists, dates and games. A new pair starts with 560 coins. Spend them on furniture, decor, inks and toys for your shared room. Ourio has no in-app purchases and no subscription.",
@@ -962,7 +962,7 @@ export const featureList: Feature[] = [
     slug: "widgets-and-notifications",
     title: "Couple widget for iPhone: Lock Screen and Home Screen widgets · Ourio",
     description:
-      "Ourio's couple widgets put your shared cat, your partner's latest drawing and note, days together, mood and countdowns on your iPhone Home Screen and Lock Screen, plus Control Center buttons.",
+      "Couple widgets for iPhone: your shared cat, your partner's latest drawing and note, days together, mood and countdowns on your Home Screen and Lock Screen.",
     eyebrow: "Couple widgets",
     h1: "Couple widgets for your iPhone Home Screen and Lock Screen.",
     lead: "Ourio has six couple widgets for iPhone: the room with Mochi, the cat with a smart block, a single block, an Us widget for the Lock Screen, your partner's latest note and their latest drawing. Some are interactive: set your mood or tick a list item without opening the app.",
@@ -1054,9 +1054,9 @@ export const featureList: Feature[] = [
 // The page for long-distance couples: a use case, not a feature, so it lives at the site root.
 export const longDistance: Feature = {
   slug: "long-distance-relationship-app",
-  title: "Long distance relationship app for iPhone: stay close every day · Ourio",
+  title: "Long distance relationship app for iPhone: stay close daily · Ourio",
   description:
-    "Ourio is a free long distance relationship app for two iPhones: draw on each other's Lock Screen, raise a shared cat, play daily games, plan long-distance dates and count down to your next visit. No chat to keep up with.",
+    "A free long distance relationship app for two iPhones: draw on each other's Lock Screen, raise a shared cat, play daily games and count down to your next visit.",
   eyebrow: "Long distance",
   h1: "A long distance relationship app for the days in between.",
   lead: "Ourio is a free iPhone app for long-distance couples. Instead of another chat, it gives you small things to do for each other across any distance: a drawing that lands on their Lock Screen, a shared cat to look after, a daily quiz, 15 long-distance date ideas and a countdown to your next visit.",
@@ -1144,7 +1144,7 @@ export const freeApp: Feature = {
   slug: "free-couples-app",
   title: "Free couples app with no subscription and no in-app purchases · Ourio",
   description:
-    "Ourio is a free couples app for iPhone with no subscription, no in-app purchases and no ads. Every feature is free for both partners: the shared cat, Lock Screen drawings, games, date night, wishlists, lists and widgets.",
+    "Ourio is a free couples app for iPhone: no subscription, no in-app purchases, no ads. Every feature is free for both partners, from the shared cat to widgets.",
   eyebrow: "Free, no subscription",
   h1: "A couples app that's free. All of it.",
   lead: "Ourio is a free couples app for iPhone: no subscription, no in-app purchases, no ads and no premium tier. Both partners get every feature, from the shared cat and Lock Screen drawings to daily questions, 150 date ideas and six widgets. Coins for the shop are earned together and can't be bought.",
