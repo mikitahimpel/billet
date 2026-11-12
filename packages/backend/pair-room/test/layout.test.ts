@@ -192,17 +192,17 @@ describe("arranging the bedroom", () => {
 
   it("keeps the two rooms apart: a spot taken in one is free in the other", () => {
     const one = accepted(owning, place(1, spot("armchair", -2, 6))).state;
-    const both = accepted(one, place(2, bedroom("yarn", -6, 2))).state;
-    expect(both.layout).toEqual([spot("armchair", -2, 6), bedroom("yarn", -6, 2)]);
+    const both = accepted(one, place(2, bedroom("yarn", -5, 4))).state;
+    expect(both.layout).toEqual([spot("armchair", -2, 6), bedroom("yarn", -5, 4)]);
     expect(reason(both, place(3, spot("yarn", -2, 6)))).toBe("occupied");
-    expect(reason(both, place(4, spot("yarn", -3, 3)))).toBeUndefined();
+    expect(reason(both, place(4, spot("yarn", -4, -4)))).toBeUndefined();
     expect(reason(both, place(5, bedroom("armchair", -2, 6)))).toBe("occupied");
   });
 
   it("moves a piece from one room to the other by placing it again", () => {
-    const one = accepted(owning, place(1, spot("yarn", -3, 3))).state;
-    const moved = accepted(one, place(2, bedroom("yarn", -6, 3))).state;
-    expect(moved.layout).toEqual([bedroom("yarn", -6, 3)]);
+    const one = accepted(owning, place(1, spot("yarn", -4, -4))).state;
+    const moved = accepted(one, place(2, bedroom("yarn", -5, 5))).state;
+    expect(moved.layout).toEqual([bedroom("yarn", -5, 5)]);
   });
 
   it("never names the living room, so a layout in it reads as before", () => {
