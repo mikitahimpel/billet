@@ -41,6 +41,11 @@ import PackageDescription
 let billetKit: Target.Dependency = .product(name: "BilletKit", package: "core")
 let designSystem: Target.Dependency = .product(name: "DesignSystem", package: "core")
 
+// The `-perf.script` hooks (ScenePerf) exist in Debug, and in a Release build only when the environment
+// has BILLET_PERF_HOOKS=YES, as the perf CI sets it. The app target reads the same variable.
+var perfHooks: [SwiftSetting] = [.define("PERF_HOOKS", .when(configuration: .debug))]
+if Context.environment["BILLET_PERF_HOOKS"] == "YES" { perfHooks = [.define("PERF_HOOKS")] }
+
 let package = Package(
   name: "BilletPet",
   platforms: [.iOS(.v18), .macOS(.v15)],
@@ -48,7 +53,7 @@ let package = Package(
   dependencies: [.package(path: "../core")],
   targets: [
     .target(name: "Pet", dependencies: [billetKit, designSystem]),
-    .target(name: "PetScene", dependencies: [designSystem, "Pet"]),
+    .target(name: "PetScene", dependencies: [designSystem, "Pet"], swiftSettings: perfHooks),
     .testTarget(name: "PetTests", dependencies: [billetKit, "Pet"]),
     .testTarget(name: "PetSceneTests", dependencies: ["Pet", "PetScene"]),
   ],

@@ -294,18 +294,24 @@ final class DecorStage {
 
     // MARK: Touch
 
-    /// The piece standing under the floor point `point`, in the pivot's space, nearest the top first.
-    func floorPiece(at point: SIMD3<Float>) -> String? {
+    /// The piece standing under the finger, nearest the top first. `hit` gives the floor point under the finger for a
+    /// horizontal plane that high above the floor, in the pivot's space: a tall piece is also met by its body, not
+    /// only by its base.
+    func floorPiece(hit: (Float) -> SIMD3<Float>?) -> String? {
         let layout = decor.layout
-        let solid = layout.allPlacements.reversed().filter { $0.surface == .floor && !isFlat($0.item) }
-        let flat = layout.allPlacements.reversed().filter { $0.surface == .floor && isFlat($0.item) }
+        let solid = layout.placements.reversed().filter { $0.surface == .floor && !isFlat($0.item) }
+        let flat = layout.placements.reversed().filter { $0.surface == .floor && isFlat($0.item) }
         return (solid + flat).first { placement in
             guard let item = DecorItem.item(shopID: placement.item) else { return false }
             let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: placement.eighthTurns)
             let halfX = width / 2 + 0.02
             let halfZ = depth / 2 + 0.02
-            return abs(Double(point.x) - DecorGrid.metres(placement.u)) <= halfX
-                && abs(Double(point.z) - DecorGrid.metres(placement.v)) <= halfZ
+            let height = item.isFlat ? 0 : templates[item.assetName]?.extents.y ?? 0
+            return [0, 0.25, 0.5, 0.75, 1].contains { fraction in
+                guard let point = hit(height * Float(fraction)) else { return false }
+                return abs(Double(point.x) - DecorGrid.metres(placement.u)) <= halfX
+                    && abs(Double(point.z) - DecorGrid.metres(placement.v)) <= halfZ
+            }
         }?.item
     }
 

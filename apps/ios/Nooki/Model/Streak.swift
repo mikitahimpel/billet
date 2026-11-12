@@ -202,7 +202,9 @@ public final class StreakStore {
     @ObservationIgnored private var remote: StreakRemote?
     @ObservationIgnored private var flushing = false
 
-    public init(file: String = "Us/streak.json") {
+    public nonisolated static let file = "Us/streak.json"
+
+    public init(file: String = StreakStore.file) {
         self.file = file
         unsentFile = Self.unsentFile(of: file)
         streak = SharedFile.read(LoveStreak.self, from: file) ?? LoveStreak()
@@ -283,7 +285,7 @@ public final class StreakStore {
     /// next comes to the front.
     /// A push that comes after a later day lit (APNs keeps no order) is older than the file, and is dropped. Flushed,
     /// as the widgets read the file next and the extension may end at once.
-    public nonisolated static func save(pushed shared: LoveStreak, file: String = "Us/streak.json") {
+    public nonisolated static func save(pushed shared: LoveStreak, file: String = StreakStore.file) {
         if let saved = SharedFile.read(LoveStreak.self, from: file)?.lastDay,
            shared.lastDay.map({ $0 < saved }) ?? true {
             return

@@ -13,8 +13,8 @@ A private app for two people to send each other drawings and photos, and to shar
 small games. A pair is exactly two accounts. By using the app you accept these terms.
 
 ## Your account
-- The app creates an anonymous account for you. Keep your iCloud Keychain, or link Sign in with
-  Apple in the app, if you want a new phone to find your account.
+- The app creates an anonymous account for you. Keep your iCloud Keychain on if you want a new
+  phone to find your account; the app has no sign-in.
 - You must be at least 13. If you are under the age of majority where you live, you need a
   parent's or guardian's permission.
 - You are responsible for who you share your invite code with. Anyone with a valid code can become
@@ -38,7 +38,7 @@ anyone. We may change or stop features, for example the games or the shop, and w
 notice for changes that remove your data.
 
 ## Ending
-You can unpair or delete your account at any time (<TO CONFIRM: in-app deletion>). We may suspend
+You can unpair or delete your account at any time in Settings. We may suspend
 an account that breaks these terms.
 
 ## No promises

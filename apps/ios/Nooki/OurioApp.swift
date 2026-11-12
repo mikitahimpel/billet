@@ -48,6 +48,7 @@ struct OurioApp: App {
         let canInvite = session.map { !$0.isPaired } ?? false
         Hints.configure()
         CatProfile.moveToAppGroup()
+        StreakNudge.moveToAppGroup()
         let hints = Hints(report: api.reportEvents)
         let onboarding = OnboardingFlow(
             client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
@@ -105,7 +106,7 @@ struct OurioApp: App {
                                 .transition(.opacity)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.4), value: onboarding.isFinished)
+                    .animation(Motion.fade(0.4), value: onboarding.isFinished)
                     .onOpenURL { url in
                         if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
                     }

@@ -5,6 +5,8 @@ set -euo pipefail
 checkout=${1:?usage: build-perf.sh <checkout> <derived data>}
 derived=${2:?usage: build-perf.sh <checkout> <derived data>}
 cd "$checkout/apps/ios"
+# The only build that carries the -perf.script hooks in Release (docs/release-flags.md).
+export BILLET_PERF_HOOKS=YES
 xcodegen generate -q
 xcodebuild build -project Billet.xcodeproj -scheme Billet -configuration Release \
   -destination 'generic/platform=iOS Simulator' -derivedDataPath "$derived" \

@@ -14,6 +14,7 @@ export const StoredRateLimit = Schema.Struct({
 });
 
 export const windowMillis = 60_000;
+const hourMillis = 60 * windowMillis;
 
 /** Requests per client per window. A couple's real use is far below these. */
 export const limits = {
@@ -28,8 +29,13 @@ export const limits = {
   links: 30,
   // Search runs as the caller types, and the list fetches a card for each title it shows.
   titles: 120,
+  // A report is rare and each one reaches the team's alert: per hour, not per minute.
+  reports: 10,
 } as const;
 export type LimitedGroup = keyof typeof limits;
+
+const windows: Partial<Record<LimitedGroup, number>> = { reports: hourMillis };
+export const windowOf = (group: LimitedGroup): number => windows[group] ?? windowMillis;
 
 export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname.startsWith("/v1/auth/")) return "auth";
@@ -37,6 +43,7 @@ export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname === "/v1/invites" || pathname === "/v1/invites/claim" || pathname === "/v1/pair") {
     return "pairing";
   }
+  if (pathname === "/v1/pair/report") return "reports";
   if (pathname === "/v1/events") return "events";
   if (pathname === "/v1/onboarding/answers") return "onboarding";
   if (pathname === "/v1/purchases" || pathname === "/v1/purchases/mock") return "purchases";
@@ -69,7 +76,9 @@ export const limitRequest = async (
   try {
     const caller = request.headers.get("cf-connecting-ip") ?? "unknown";
     const bucket = await sha256Hex(`${group}:${caller}`);
-    const windowStart = now - (now % windowMillis);
+    const length = windowOf(group);
+    const windowStart = now - (now % length);
+    const expiredBefore = now - hourMillis;
     const [counted] = await db.batch<{ count: number }>([
       db
         .prepare(
@@ -78,11 +87,11 @@ export const limitRequest = async (
            RETURNING count`,
         )
         .bind(bucket, windowStart),
-      db.prepare("DELETE FROM rate_limits WHERE window_start < ?").bind(windowStart),
+      db.prepare("DELETE FROM rate_limits WHERE window_start < ?").bind(expiredBefore),
     ]);
     const count = counted?.results[0]?.count ?? 0;
     if (count <= limits[group]) return undefined;
-    return tooManyRequests(Math.max(1, Math.ceil((windowStart + windowMillis - now) / 1000)));
+    return tooManyRequests(Math.max(1, Math.ceil((windowStart + length - now) / 1000)));
   } catch {
     logLine("warn", "rate limit counter unavailable");
     return undefined;

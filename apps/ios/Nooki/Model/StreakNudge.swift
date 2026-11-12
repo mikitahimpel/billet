@@ -1,5 +1,6 @@
 import Design
 import Foundation
+import ProfileInterface
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -7,7 +8,8 @@ import UsInterface
 import UserNotifications
 
 extension AppSettings {
-    /// Settings: the evening nudge while the love streak is at risk.
+    /// Settings: the evening nudge while the love streak is at risk. In the app group, as the notification extension
+    /// plans the nudge again when a streak push comes.
     static let streakNudgeKey = "streak.nudge"
 }
 
@@ -17,6 +19,21 @@ extension AppSettings {
 enum StreakNudge {
     static let id = "streak-at-risk"
     static let hour = 20
+
+    /// Where the Settings switch is kept.
+    nonisolated(unsafe) static let settings = CatProfile.store
+
+    static func isOn(in defaults: UserDefaults = settings) -> Bool {
+        defaults.object(forKey: AppSettings.streakNudgeKey) as? Bool ?? true
+    }
+
+    /// A switch set while it was this app's own setting moves to the app group.
+    static func moveToAppGroup(from old: UserDefaults = .standard, to group: UserDefaults = settings) {
+        guard group != old, group.object(forKey: AppSettings.streakNudgeKey) == nil,
+              let value = old.object(forKey: AppSettings.streakNudgeKey) as? Bool else { return }
+        group.set(value, forKey: AppSettings.streakNudgeKey)
+        old.removeObject(forKey: AppSettings.streakNudgeKey)
+    }
 
     struct Plan: Equatable {
         let fire: Date

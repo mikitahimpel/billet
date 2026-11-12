@@ -10,12 +10,23 @@ import UsInterface
 @MainActor
 enum Thumbnails {
     /// NSCache is safe from any thread; `prefetch` fills it off the main one.
-    nonisolated(unsafe) private static let cache = NSCache<NSString, UIImage>()
+    /// Bounded by decoded bytes: a 512 px tile is about 1 MB, so this holds some twenty of them and the rest are
+    /// decoded again when drawn.
+    nonisolated(unsafe) private static let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.totalCostLimit = 24 << 20
+        return cache
+    }()
+
+    private nonisolated static func store(_ image: UIImage, _ key: NSString) {
+        let pixels = image.cgImage.map { $0.bytesPerRow * $0.height } ?? 0
+        cache.setObject(image, forKey: key, cost: pixels)
+    }
 
     static func image(_ name: String, maxPixels: Int) -> UIImage? {
         if let cached = cache.object(forKey: key(name, maxPixels)) { return cached }
         guard let image = decode(name, maxPixels: maxPixels) else { return nil }
-        cache.setObject(image, forKey: key(name, maxPixels))
+        store(image, key(name, maxPixels))
         return image
     }
 
@@ -25,7 +36,7 @@ enum Thumbnails {
         await Task.detached(priority: .userInitiated) {
             for name in names where cache.object(forKey: key(name, maxPixels)) == nil {
                 if Task.isCancelled { return }
-                if let image = decode(name, maxPixels: maxPixels) { cache.setObject(image, forKey: key(name, maxPixels)) }
+                if let image = decode(name, maxPixels: maxPixels) { store(image, key(name, maxPixels)) }
             }
         }.value
     }
@@ -65,7 +76,7 @@ enum Thumbnails {
         let cropped = clean.trimmingTransparentEdges() ?? clean
         // The crop cuts the shadow's faint tail along the artwork's box, which reads as a rectangle on a dark card.
         let result = cropped.fadingShadowEdges() ?? cropped
-        cache.setObject(result, forKey: trimmedKey(name))
+        store(result, trimmedKey(name))
         return result
     }
 }

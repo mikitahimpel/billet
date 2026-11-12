@@ -74,7 +74,7 @@ struct ListScreen: View {
                                     onTap: { toggle($0, in: list) },
                                     onEdit: { store.send(.open(.editing(itemID: $0.id))) },
                                     onClear: {
-                                        withAnimation(.snappy(duration: 0.25)) { state.us.clearDone(in: listID) }
+                                        withAnimation(Motion.spring(0.25)) { state.us.clearDone(in: listID) }
                                     })
                     } else {
                         if !list.open.isEmpty { openCard(list) }
@@ -89,7 +89,7 @@ struct ListScreen: View {
             .scrollIndicators(.hidden)
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: focused) { _, focused in
-                if focused { withAnimation(.snappy(duration: 0.25)) { scroll.scrollTo(Self.top, anchor: .top) } }
+                if focused { withAnimation(Motion.spring(0.25)) { scroll.scrollTo(Self.top, anchor: .top) } }
             }
         }
         .scrollHeader {
@@ -213,7 +213,7 @@ struct ListScreen: View {
         guard !text.isEmpty else { return }
         var details = ListItemDetails()
         if list.kind.isChecklist { details.aisle = state.us.groceries.entry(for: text)?.aisle }
-        withAnimation(.snappy(duration: 0.25)) {
+        withAnimation(Motion.spring(0.25)) {
             state.us.addItem(text, to: listID, author: state.viewer, details: details)
         }
         draft = ""
@@ -272,7 +272,7 @@ struct ListScreen: View {
         .contentShape(.rect)
         .contextMenu {
             Button("Delete", role: .destructive) {
-                withAnimation(.snappy(duration: 0.25)) { state.us.deleteItem(item.id, in: listID) }
+                withAnimation(Motion.spring(0.25)) { state.us.deleteItem(item.id, in: listID) }
             }
         }
         .overlay(alignment: .trailing) {
@@ -292,7 +292,7 @@ struct ListScreen: View {
 
     private func toggle(_ item: ListItem, in list: UsList) {
         let ticking = item.done == nil
-        withAnimation(.snappy(duration: 0.25)) {
+        withAnimation(Motion.spring(0.25)) {
             state.us.toggleItem(item.id, in: listID, by: state.viewer)
         }
         guard ticking, !list.kind.isChecklist else { return }

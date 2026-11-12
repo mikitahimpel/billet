@@ -99,11 +99,19 @@ jobs:
     if: inputs.shots == ''
     runs-on: xcode-27
     timeout-minutes: 65
+    permissions:
+      contents: read
+      # Warmbuild signs in with the job's OIDC token. Pushes to main fill the cache, everything else only reads.
+      id-token: write
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
+
+      # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
+      # cannot start, the build runs without it.
+      - uses: mikitahimpel/warmbuild-action@5baab4ecd3750b59b27c45091c3ef664e713a5de # v1.0.2
 
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh

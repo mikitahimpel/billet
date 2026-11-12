@@ -29,7 +29,7 @@ struct ShopView: View {
                     }
                 }
                 .tabContentInsets()
-                .animation(.spring(duration: 0.35), value: state.shopCategory)
+                .animation(Motion.spring(0.35), value: state.shopCategory)
             }
             .scrollIndicators(.hidden)
             .onScrollPhaseChange { _, phase in
@@ -73,12 +73,11 @@ struct ShopView: View {
                 #endif
             }
         }
-        .task {
-            // The cards draw their art at 512 px and the bundles and collections at 256: decoded now, off the main
-            // thread, the first scroll down the page doesn't stop for each picture.
-            let names = Catalog.items.map(\.thumbnail)
-            await Thumbnails.prefetch(names, maxPixels: 512)
-            await Thumbnails.prefetch(names, maxPixels: 256)
+        .task(id: state.shopCategory) {
+            // The cards draw their art at 512 px: the first rows of the open shelf are decoded now, off the main
+            // thread, so the first scroll doesn't stop for each picture. The rest decode as they come into view.
+            let names = Catalog.items(in: state.shopCategory).prefix(12).map(\.thumbnail)
+            await Thumbnails.prefetch(Array(names), maxPixels: 512)
         }
         .sheet(item: $sheetItem) { item in
             ItemSheet(item: item, state: state)
@@ -107,7 +106,6 @@ struct ShopView: View {
                 }
                 .accessibilityLabel("New deals at midnight")
             }
-            .padding(.horizontal, Space.l)
             dealsRow(state.shop.offers.deals(on: now).compactMap { Catalog.item($0.itemID) })
         }
         .id("deals")
@@ -204,7 +202,7 @@ struct ShopChips: View {
             }
             // The chosen chip comes whole into view, also when a link from elsewhere chose it.
             .onChange(of: state.shopCategory, initial: true) { _, category in
-                withAnimation(.snappy(duration: 0.3)) { reader.scrollTo(category, anchor: .center) }
+                withAnimation(Motion.spring(0.3)) { reader.scrollTo(category, anchor: .center) }
             }
         }
         .scrollIndicators(.hidden)

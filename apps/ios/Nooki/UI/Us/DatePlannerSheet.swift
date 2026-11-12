@@ -30,7 +30,7 @@ struct DateDoneSheet: View {
                     HStack(spacing: Space.l) {
                         ForEach(1...3, id: \.self) { value in
                             Button {
-                                withAnimation(.snappy(duration: 0.2)) { hearts = value }
+                                withAnimation(Motion.spring(0.2)) { hearts = value }
                             } label: {
                                 Image(systemName: value <= hearts ? "heart.fill" : "heart")
                                     .font(.system(.largeTitle, weight: .semibold))
@@ -62,7 +62,7 @@ struct DateDoneSheet: View {
             guard let item else { return }
             Task {
                 if let image = await item.loadImage(maxPixels: MomentStore.storedPixels) {
-                    withAnimation(.snappy(duration: 0.25)) { photo = image }
+                    withAnimation(Motion.spring(0.25)) { photo = image }
                 }
             }
         }

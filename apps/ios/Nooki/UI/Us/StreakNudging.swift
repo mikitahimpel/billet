@@ -9,7 +9,7 @@ import UsInterface
 /// Keeps the evening streak nudge in step with the streak and the Settings switch.
 struct StreakNudging: ViewModifier {
     let streak: StreakStore
-    @AppStorage(AppSettings.streakNudgeKey) private var enabled = true
+    @AppStorage(AppSettings.streakNudgeKey, store: StreakNudge.settings) private var enabled = true
 
     private struct Key: Equatable {
         let streak: LoveStreak

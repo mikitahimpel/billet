@@ -97,5 +97,7 @@ your partner".
 
 On a day the streak would go out at midnight and this phone's person hasn't done their part, the phone shows one
 local notification at 20:00 in the cat's voice (`StreakNudge`, `apps/ios/Nooki/Model/StreakNudge.swift`), saying so
-when the partner already did theirs. It is planned again whenever the streak changes. It is never sent once the
-evening has passed, nor asks for permission; Settings → Reminders turns it off.
+when the partner already did theirs. It is planned again whenever the streak changes: in the app, and in the
+notification extension when a streak push comes, so the next evening's is planned without the app being opened. It
+is never sent once the evening has passed, nor asks for permission; Settings → Reminders turns it off. The switch is
+in the app group's defaults, so the extension reads it too.
