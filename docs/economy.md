@@ -2,8 +2,7 @@
 
 How Ourio's coins are meant to work, so they can be sold later without inflation or refund
 problems. The mechanics (routes, ledger, flag) are in [payments.md](payments.md); this is the
-policy behind them and the plan for turning sales on. Every number here is a placeholder the owner
-sets, and the metrics below are how it gets set.
+policy behind them and the plan for turning sales on. Every number here is the owner's to set, and the metrics below are how it gets set.
 
 ## One currency
 
@@ -13,24 +12,48 @@ currency, no per-partner balance and no item that is only for sale for money. Ev
 ledger carries a `kind` (`earn`, `purchase`, `refund`, `gift`, `bonus`, `admin`, `spend`), so what
 a coin was for can always be told apart without reading ids.
 
+## Earning is slow on purpose
+
+Rewards for play are **very small against the shop's prices**, and items are hard to earn. Coins
+are a thank-you for doing things together, not a wage: nothing is worth playing for the coins.
+Every number lives in one place, in this table, and in the contracts that the server and the app
+share (`packages/contracts/domain/src/coins.ts` and `shop.ts`, the riddle's in
+`pair-room/src/riddle-rules.ts`). `coin-pacing.test.ts` fails if an edit makes earning faster than
+the targets below.
+
+| What | Coins | Limit |
+| --- | --- | --- |
+| Care for the cat (feed, pet, play, water) | 1 each | 2 a day (`earn.care`) |
+| A text note / a photo | 1 / 2 | 3 a day together with moments (`earn.notes`) |
+| A moment | 2 | in the same `earn.notes` cap |
+| A game won / lost | 3 / 1 | 4 a day (`earn.games`) |
+| Draw & guess: a solve (each hint takes 1, floor 1) / a give-up | 3 / 1 | in the same `earn.games` cap |
+| Ticking off a list item | 1 | 1 a day (`earn.lists`) |
+| A wish received / a date matched / a date rated | 5 / 2 / 6 | once per thing, no daily cap (`earn.other`) |
+| A guess hit / a round played in Who knows who | 1 / 2 | once per thing (`earn.other`) |
+| The love streak: a lit day / milestones | 1 / 5-20 | one a day; milestones at 7, 30, 100, 365 days |
+| The daily gift | 1 or 2 | once a day; one day in ten it is a cheap piece instead |
+| A finished collection | 40 / 25 | once ever per collection |
+| Welcome coins | 60 | once, when the room opens |
+| Packs (when `payments` is on) | pack size | money is the limit |
+
+The caps reset at the couple's midnight. A fully active day earns about **13 coins** (every cap,
+the gift at its best, a lit streak day). Prices are unchanged: a mouse costs 45, a yarn 60, mid
+pieces 90 to 320, the donut bed 380 and the tower 540. So:
+
+- the cheapest items take **3 to 4 days** of full play (the welcome 60 buys one on day one, and
+  never a big one);
+- mid items take **1 to 3 weeks**;
+- the top items take **4 weeks or more**.
+
+Existing pairs keep the balance they have: the new rates apply to what is earned from now on, and
+nothing already held or bought is reduced.
+
 ## Faucets and sinks
 
-**Faucets** (coins in), all paid by the server, never by the phone:
-
-| Faucet | Source | Limit |
-| --- | --- | --- |
-| Looking after the cat (feed, pet, play, water) | `earn.care` | 10 coins a day |
-| Notes and photos, moments | `earn.notes` | 30 coins a day |
-| Games (Who knows who, Draw & guess, cat games) | `earn.games` | 40 coins a day |
-| Ticking off lists | `earn.lists` | 15 coins a day |
-| Once-per-thing earns: a wish received, a date matched or rated, a guess, a round | `earn.other` | once per ref, no daily cap |
-| The daily gift, welcome coins, a finished collection | `gift`, `bonus` | once a day, once ever |
-| Packs, once `payments` is on | `purchase` | none: money is the limit |
-| Support credit | `admin` | by hand |
-
-The daily caps are per source and reset at the couple's midnight (the cat's local day). They are
-what keeps the faucet a pace and not a grind: playing more than the cap earns nothing more, so
-there is no reason to play for coins.
+**Faucets** (coins in) are the rows above, all paid by the server and never by the phone, plus
+`purchase` and `admin` (support credit). The daily caps are per source: playing more than the cap
+earns nothing more, so there is no reason to play for coins.
 
 **Sinks** (coins out), all `spend`: the shop's room pieces, bundles and sets, ink colours for
 notes, treats for the cat, and the week's featured set (sold at half price). Seasonal items are
@@ -46,23 +69,20 @@ more or less to anyone else.
 
 Price against **time to the next desired item**, for a pair that plays normally and pays nothing:
 
-- a first piece for the room: about **2 to 3 days**;
-- a premium piece, a set or a rare item: about **2 to 4 weeks**.
+- a first piece for the room: about **3 to 4 days** (2 to 3 days in the first week, helped by the
+  welcome coins);
+- a premium piece, a set or a rare item: about **4 weeks or more**.
 
 Packs only shorten that wait. They never unlock something that play cannot, nothing is pay-to-win,
 and everything for sale is cosmetic (room pieces, inks, the cat's look). A pair that never buys a
 pack can still own every item; a pair that buys a pack owns it sooner. When a price or a reward is
-changed, check it against these two waits first.
-
-With today's placeholders a caring day earns on the order of 50 to 90 coins, a first piece costs
-45 to 140 and a premium one 380 to 540: that reads as a few days and a few weeks, which is the
-target. The metrics below say whether real pairs agree.
+changed, check it against these waits first. The metrics below show the real "days to first item".
 
 ## Never devalue what a buyer holds
 
 The coins a pair holds, bought or earned, keep their worth. When the economy needs tuning:
 
-- **Do** lower earn rates or caps for new earning, and add sinks (new items, seasonal sets, new
+- **Do** change earn rates or caps for new earning only, and add sinks (new items, seasonal sets, new
   inks) for pairs to spend on.
 - **Do not** raise the price of what is already in the shop to burn a balance, shrink a balance,
   expire coins, or change what a pack grants after it is sold.
