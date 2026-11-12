@@ -137,7 +137,7 @@ struct WatchListBody: View {
 
     private func chip(_ title: String, _ value: WatchFilter) -> some View {
         FilterChip(title, isSelected: filter == value) {
-            withAnimation(.snappy(duration: 0.2)) { filter = value }
+            withAnimation(Motion.spring(0.2)) { filter = value }
         }
     }
 
@@ -159,7 +159,7 @@ struct WatchListBody: View {
         let watched = list.finished
         if !watched.isEmpty {
             Button {
-                withAnimation(.snappy(duration: 0.25)) { showsWatched.toggle() }
+                withAnimation(Motion.spring(0.25)) { showsWatched.toggle() }
             } label: {
                 HStack(spacing: Space.m) {
                     UsIcon(glyph: UsGlyph(symbol: "checkmark", tint: .coral), size: 34)
@@ -194,7 +194,7 @@ private struct AddTitleTile: View {
         Button(action: action) {
             Color.clear
                 .aspectRatio(2 / 3, contentMode: .fit)
-                .cornerFill(.inner, Ink.surfaceRaised)
+                .wellSurface()
                 .overlay {
                     VStack(spacing: Space.s) {
                         Image(systemName: "plus")
