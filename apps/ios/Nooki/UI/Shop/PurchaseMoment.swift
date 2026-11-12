@@ -18,6 +18,7 @@ struct PurchaseMoment: View {
     @State private var refused: Purchase?
     @State private var flights = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         GeometryReader { proxy in
@@ -108,7 +109,7 @@ struct PurchaseMoment: View {
                 withAnimation(Motion.spring(0.3)) { shown = nil }
                 state.decorate(item)
             }
-            .fixedSize()
+            .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: true)
         }
     }
 
@@ -121,26 +122,32 @@ struct PurchaseMoment: View {
 
     private func card(_ purchase: Purchase) -> some View {
         Toast {
-            HStack(spacing: Space.m) {
+            // At accessibility sizes the buttons go under the words, so neither is squeezed into a sliver.
+            let layout = typeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.m))
+                : AnyLayout(HStackLayout(spacing: Space.m))
+            layout {
                 MochiHop(trigger: flights)
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(purchase.title) is yours")
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
-                        .lineLimit(2)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text(detail(purchase))
                         .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(2)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                VStack(alignment: .trailing, spacing: Space.xs) {
+                VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: Space.xs) {
                     if purchase.kind == .item { decorateButton(purchase) }
                     if purchase.undoable {
                         PillButton("Undo", symbol: "arrow.uturn.backward") {
                             if state.shop.undo(purchase) { withAnimation(Motion.spring(0.3)) { shown = nil } }
                         }
-                        .fixedSize()
+                        .fixedSize(horizontal: !typeSize.isAccessibilitySize, vertical: true)
                         .accessibilityHint("Gives back \(purchase.cost) coins")
                     }
                 }
