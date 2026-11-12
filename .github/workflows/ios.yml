@@ -171,10 +171,11 @@ jobs:
           export STEP_START=$started
           # xcodebuild takes minutes to print its first line on a fresh runner. Until that is understood, the
           # busiest processes are sampled into the timeline while it starts.
-          { for _ in $(seq 30); do ps -Ao pcpu=,comm= -r | head -n 5 | sed 's/^/ps /'; sleep 15; done 2>/dev/null \
+          { set +e; for _ in $(seq 30); do ps -Ao pcpu=,comm= -r | head -n 5 | sed 's/^/ps /'; sleep 15; done 2>/dev/null \
             | stamp >> "$RUNNER_TEMP/app-timeline.log"; } &
           sampler=$!
-          /usr/bin/time -p xcodebuild -version 2>&1 | sed 's/^/xcodebuild -version: /' | stamp >> "$RUNNER_TEMP/app-timeline.log"
+          /usr/bin/time -p xcrun simctl list devices 2>&1 | grep -E '^(real|user|sys)' | sed 's/^/simctl list: /' \
+            | stamp >> "$RUNNER_TEMP/app-timeline.log" || true
           if ! xcodebuild build-for-testing "${app[@]}" -resultBundlePath "$RUNNER_TEMP/app-build.xcresult" \
             -showBuildTimingSummary 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" >(stamp >> "$RUNNER_TEMP/app-timeline.log") \
