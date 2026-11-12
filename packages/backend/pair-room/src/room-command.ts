@@ -3,6 +3,7 @@ import {
   CatEvent,
   CatLook,
   CatName,
+  CatPronouns,
   NatureSeed,
   UtcOffsetSeconds,
 } from "@billet/contracts-domain/cat";
@@ -46,6 +47,7 @@ export const RoomCommand = Schema.TaggedUnion({
   SaveCat: {
     user: UserId,
     name: CatName,
+    pronouns: Schema.optionalKey(CatPronouns),
     look: CatLook,
     utcOffsetSeconds: UtcOffsetSeconds,
     natureSeed: NatureSeed,

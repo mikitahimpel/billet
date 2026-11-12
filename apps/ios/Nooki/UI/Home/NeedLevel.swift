@@ -83,9 +83,9 @@ nonisolated extension PetNeed {
     }
 
     /// Why a need without care has no action.
-    var note: String? {
+    func note(pronouns: CatPronouns) -> String? {
         switch self {
-        case .rested: "Naps on her own"
+        case .rested: pronouns.say(.napsOnOwn)
         case .full, .playful, .loved: nil
         }
     }

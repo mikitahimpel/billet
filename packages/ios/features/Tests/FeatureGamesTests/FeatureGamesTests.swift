@@ -1,4 +1,5 @@
 import GamesInterface
+import Pet
 import Testing
 import Wire
 
@@ -225,7 +226,9 @@ struct GameResultTests {
     let mild = GameResult.feed(target: 40, food: 45)
     #expect(mild.tooMuch)
     #expect(mild.score == 30)
-    #expect(mild.line == "Too much! She's stuffed")
+    #expect(mild.line(pronouns: .she) == "Too much! She's stuffed")
+    #expect(mild.line(pronouns: .he) == "Too much! He's stuffed")
+    #expect(mild.line(pronouns: .they) == "Too much! They're stuffed")
     #expect(mild.events == [.fed(grams: 45), .gamePlayed(game: "feed", score: 30, won: true)])
     #expect(GameResult.feed(target: 40, food: 51).score == 0)
     let fine = GameResult.feed(target: 40, food: 42)
@@ -242,7 +245,7 @@ struct GameResultTests {
     #expect(!GameResult.water(bowl).tooMuch)
     bowl.pour(flow: 1, dt: 10)
     #expect(GameResult.water(bowl).tooMuch)
-    #expect(GameResult.water(bowl).line.hasPrefix("Too much!"))
+    #expect(GameResult.water(bowl).line(pronouns: .they).hasPrefix("Too much!"))
   }
 
   @Test func eachGameGoesToTheJournalItsOwnWay() {
@@ -281,7 +284,9 @@ struct GameClarityTests {
 
   @Test func theGoalLinesNameTheGesture() {
     #expect(LaserPlay.goal.contains("Drag"))
-    #expect(BrushStrokes.goal.contains("head to tail"))
+    for pronouns in CatPronouns.allCases {
+      #expect(BrushStrokes.goal(pronouns).contains("head to tail"))
+    }
   }
 
   @Test func theFurGuideShowsAtFirstAndAgainAfterAPause() {
