@@ -28,6 +28,10 @@ on:
         description: "UI test screenshots only: an -only-testing filter, e.g. OurioUITests/NeedBarsTests"
         required: false
         default: ""
+      full-tests:
+        description: "Run every test target, even those whose built products passed before"
+        type: boolean
+        default: false
 
 env:
   # The Debug builds' compilation cache (project.yml) is for a Mac's worktrees; a runner starts empty.
@@ -112,10 +116,11 @@ jobs:
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
       # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
-      - uses: mikitahimpel/warmbuild-action@dfbcb713c9a545be725948cc03afd57fa0f6c476 # v1.7.0
+      - uses: mikitahimpel/warmbuild-action@6f7ba1e68e0f603ac2bae602e2ce0d7e7b0e025a # v1.8.0
         id: warmbuild
         with:
           select-tests: true
+          select-tests-scheme: Billet
           select-tests-ignore: |
             ^lint/
             ^scripts/
@@ -141,83 +146,89 @@ jobs:
             exit 1
           fi
           echo "TEST_SIMULATOR=$udid" >> "$GITHUB_ENV"
+          # TEST_RUNNER_ variables reach the tests without the prefix. They are part of Warmbuild's test cache key,
+          # so they are set for the whole job. Tests that need a Simulator that can draw skip themselves on
+          # GITHUB_ACTIONS.
+          echo "TEST_RUNNER_GITHUB_ACTIONS=$GITHUB_ACTIONS" >> "$GITHUB_ENV"
+          echo "TEST_RUNNER_BILLET_SAMPLES=$RUNNER_TEMP/samples" >> "$GITHUB_ENV"
 
       - name: Install XcodeGen
         run: .github/scripts/install-xcodegen.sh
 
-      - name: App tests (Simulator)
+      - name: Build for testing
         if: steps.warmbuild.outputs.tests != 'none'
-        # A hung UI test must not hold a runner for an hour; each test is also capped below. On main the build
-        # takes about 22 minutes without the compilation cache and the UI tests 10 to 17 more (a busy runner
-        # took 39.5 of the 40 minutes this step once had and a slower one was cut off in the last test), so
-        # the cap sits well above a slow but healthy run.
-        timeout-minutes: 60
+        timeout-minutes: 45
         run: |
           (cd apps/ios && xcodegen generate --quiet)
-          udid="$TEST_SIMULATOR"
-          echo "Testing on $udid"
           set -o pipefail
           status=0
-          # TEST_RUNNER_ variables reach the tests without the prefix.
-          export TEST_RUNNER_BILLET_SAMPLES="$RUNNER_TEMP/samples"
-          # Tests that need a Simulator that can draw skip themselves on GITHUB_ACTIONS.
-          export TEST_RUNNER_GITHUB_ACTIONS="$GITHUB_ACTIONS"
-          skip=()
-          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
-          # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
-          # Building and testing are two runs so the summary can say how long each took.
-          app=(-project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid"
-            -derivedDataPath "$RUNNER_TEMP/app-tests" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO)
-          # Seconds since the step started on every line, to see what the build and the tests wait for.
+          # Seconds since the build started on every line, to see what the build and the tests wait for.
           stamp() { perl -MTime::HiRes=time -ne 'BEGIN { $| = 1 } printf "%7.1f %s", time - $ENV{STEP_START}, $_'; }
           started=$(date +%s)
           export STEP_START=$started
-          if ! xcodebuild build-for-testing "${app[@]}" -resultBundlePath "$RUNNER_TEMP/app-build.xcresult" \
-            -showBuildTimingSummary 2>&1 \
+          echo "STEP_START=$started" >> "$GITHUB_ENV"
+          if ! xcodebuild build-for-testing -project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$TEST_SIMULATOR" \
+            -derivedDataPath "$RUNNER_TEMP/app-tests" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO \
+            -resultBundlePath "$RUNNER_TEMP/app-build.xcresult" -showBuildTimingSummary 2>&1 \
             | tee "$RUNNER_TEMP/app-tests.log" >(stamp >> "$RUNNER_TEMP/app-timeline.log") \
             | { grep --line-buffered -E 'error:' || true; }; then
             status=1
           fi
-          built=$(date +%s)
-          # Warmbuild also picks Swift package test targets (PetTests, InkTests), which the packages job runs and the
-          # Billet scheme doesn't hold; xcodebuild refuses an -only-testing outside the scheme. Keep the targets the
-          # built .xctestrun holds, and the UI tests only where they run; with none left there is nothing to test.
-          no_tests=
-          if [ "$status" = 0 ] && [ -n "${WARMBUILD_ONLY_TESTING:-}" ]; then
-            xctestrun=$(ls "$RUNNER_TEMP"/app-tests/Build/Products/*.xctestrun | head -n 1)
-            selected=$(plutil -convert json -o - "$xctestrun" | python3 -c '
-          import json, os, sys
-          run = json.load(sys.stdin)
-          # Format 2 lists targets under TestConfigurations, format 1 at the top level.
-          entries = [t for c in run.get("TestConfigurations", []) for t in c.get("TestTargets", [])]
-          entries += [v for v in run.values() if isinstance(v, dict) and "BlueprintName" in v]
-          targets = {t["BlueprintName"] for t in entries}
-          if not targets:
-              print("all")
-              sys.exit()
-          if os.environ["GITHUB_EVENT_NAME"] == "pull_request":
-              targets.discard("OurioUITests")
-          picked = os.environ["WARMBUILD_ONLY_TESTING"].split()
-          print(" ".join(a for a in picked if a.split(":", 1)[-1].split("/")[0] in targets))')
-            echo "Selected tests in the Billet scheme: ${selected:-none}"
-            if [ "$selected" = all ]; then
-              echo "::warning::no test targets read from $xctestrun; running every test"
-            elif [ -z "$selected" ]; then
-              no_tests=1
-            else
-              # Unquoted on purpose: one word per -only-testing argument.
-              skip+=($selected)
-            fi
+          echo "Build: $(($(date +%s) - started)) s"
+          # Where the build's minutes go on a runner: compiling, linking, asset catalogs, the Metal shader.
+          echo "::group::Build timing summary"
+          sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
+          echo "::endgroup::"
+          {
+            echo "### Build timing"
+            echo "build $(($(date +%s) - started)) s"
+            echo '```'
+            sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          if [ "$status" != 0 ]; then
+            echo "::group::Last 120 lines of the build log"
+            tail -n 120 "$RUNNER_TEMP/app-tests.log"
+            echo "::endgroup::"
           fi
+          exit "$status"
+
+      # Leaves out the test targets whose built products already passed (on main, or earlier in this pull request),
+      # and adds test selection's arguments; WARMBUILD_ONLY_TESTING holds the result. `full-tests` or
+      # "[warmbuild full tests]" in a commit message or the pull request runs every target.
+      - uses: mikitahimpel/warmbuild-action/test-cache@6f7ba1e68e0f603ac2bae602e2ce0d7e7b0e025a # v1.8.0
+        id: tests
+        if: steps.warmbuild.outputs.tests != 'none'
+        with:
+          derived-data: ${{ runner.temp }}/app-tests
+          destination: id=${{ env.TEST_SIMULATOR }}
+          args: ${{ github.event_name == 'pull_request' && '-skip-testing:OurioUITests' || '' }}
+          cache-tests: ${{ inputs.full-tests != true }}
+
+      - name: App tests (Simulator)
+        if: steps.warmbuild.outputs.tests != 'none' && steps.tests.outputs.tests != 'none'
+        # A hung UI test must not hold a runner for an hour; each test is also capped below. The UI tests on main
+        # take 10 to 17 minutes (a busy runner once took 39.5 of 40), so the cap sits well above a slow but healthy run.
+        timeout-minutes: 45
+        run: |
+          udid="$TEST_SIMULATOR"
+          echo "Testing on $udid"
+          set -o pipefail
+          status=0
+          # Unquoted on purpose: one word per -only-testing/-skip-testing argument.
+          skip=(${WARMBUILD_ONLY_TESTING:-})
+          stamp() { perl -MTime::HiRes=time -ne 'BEGIN { $| = 1 } printf "%7.1f %s", time - $ENV{STEP_START}, $_'; }
+          export STEP_START
+          started=$(date +%s)
           # Booted only now. A fresh Simulator's first boot keeps the runner's CPUs busy for minutes, and beside the
           # build it held xcodebuild's first project load for up to 6 minutes; after the build the build time is its own.
-          if [ -z "$no_tests" ]; then
-            xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 || true
-          fi
+          xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 || true
           booted=$(date +%s)
+          # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           # Diagnostics after the tests (logs, spindumps) took minutes and nobody reads them on a green run.
-          if [ "$status" = 0 ] && [ -z "$no_tests" ] && ! xcodebuild test-without-building "${app[@]}" -collect-test-diagnostics never \
-            -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
+          if ! xcodebuild test-without-building -project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid" \
+            -derivedDataPath "$RUNNER_TEMP/app-tests" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO \
+            -collect-test-diagnostics never -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 2>&1 \
             | tee -a "$RUNNER_TEMP/app-tests.log" >(stamp >> "$RUNNER_TEMP/app-timeline.log") \
@@ -228,21 +239,11 @@ jobs:
           # A running Simulator keeps the runner's CPUs busy, and Warmbuild's post step starts Xcode tools to read the
           # result bundle.
           xcrun simctl shutdown "$udid" 2>/dev/null || true
-          timing="build $((built - started)) s, Simulator boot $((booted - built)) s, tests $((tested - booted)) s"
-          echo "App step: $timing"
-          echo "::group::Build timing summary"
-          sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
-          echo "::endgroup::"
+          timing="Simulator boot $((booted - started)) s, tests $((tested - booted)) s"
+          echo "App tests: $timing"
+          echo "$timing" >> "$GITHUB_STEP_SUMMARY"
           grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)' \
             "$RUNNER_TEMP/app-tests.log" || true
-          # Where the build's minutes go on a runner: compiling, linking, asset catalogs, the Metal shader.
-          {
-            echo "### Build timing"
-            echo "$timing"
-            echo '```'
-            sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
-            echo '```'
-          } >> "$GITHUB_STEP_SUMMARY"
           if [ "$status" != 0 ]; then
             echo "::group::Last 120 lines of the test log"
             tail -n 120 "$RUNNER_TEMP/app-tests.log"
