@@ -112,8 +112,10 @@ const structuredData = {
 
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
     <slot name="head" />
-    {/* Self-hosted Umami: no cookies, no IP stored; counts only on ourio.app, not on pages.dev previews. */}
-    <script is:inline defer src="https://stats.itsnexis.com/s.js" data-website-id="602fa9cd-5bb9-4de9-bc6d-bcdcce04c264" data-domains="ourio.app"></script>
+    {/* Self-hosted Umami: no cookies, no IP stored; counts only on ourio.app, not on pages.dev previews.
+        umami-filter.js drops headless renders and must run first (defer keeps the order). */}
+    <script is:inline defer src="/umami-filter.js"></script>
+    <script is:inline defer src="https://stats.itsnexis.com/s.js" data-website-id="602fa9cd-5bb9-4de9-bc6d-bcdcce04c264" data-domains="ourio.app" data-before-send="umamiBeforeSend" data-auto-pageview="false"></script>
     <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="preload" href="/fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin />
     <!-- The first screen's rules (a subset of global.css); the whole sheet loads without blocking the paint. -->
