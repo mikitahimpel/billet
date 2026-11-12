@@ -111,7 +111,7 @@ jobs:
 
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it.
-      - uses: mikitahimpel/warmbuild-action@5baab4ecd3750b59b27c45091c3ef664e713a5de # v1.0.2
+      - uses: mikitahimpel/warmbuild-action@a46ba311f69d48c98ba6944865badd6f69be437a # v1.1.0
 
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh
@@ -163,23 +163,29 @@ jobs:
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           # Building and testing are two runs so the summary can say how long each took.
-          app=(-project apps/ios/Billet.xcodeproj -scheme Billet -derivedDataPath "$RUNNER_TEMP/app-tests"
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO)
+          app=(-project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid"
+            -derivedDataPath "$RUNNER_TEMP/app-tests" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO)
           # Seconds since the step started on every line, to see what the build and the tests wait for.
           stamp() { perl -MTime::HiRes=time -ne 'BEGIN { $| = 1 } printf "%7.1f %s", time - $ENV{STEP_START}, $_'; }
           started=$(date +%s)
           export STEP_START=$started
-          # The build names no Simulator: one given by id held xcodebuild for 4 minutes before its first task while
-          # the Simulator was still booting. ARCHS keeps the generic destination to the runner's own architecture.
-          if ! xcodebuild build-for-testing "${app[@]}" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 \
+          # xcodebuild takes minutes to print its first line on a fresh runner. Until that is understood, the
+          # busiest processes are sampled into the timeline while it starts.
+          { for _ in $(seq 30); do ps -Ao pcpu=,comm= -r | head -n 5 | sed 's/^/ps /'; sleep 15; done 2>/dev/null \
+            | stamp >> "$RUNNER_TEMP/app-timeline.log"; } &
+          sampler=$!
+          /usr/bin/time -p xcodebuild -version 2>&1 | sed 's/^/xcodebuild -version: /' | stamp >> "$RUNNER_TEMP/app-timeline.log"
+          if ! xcodebuild build-for-testing "${app[@]}" -resultBundlePath "$RUNNER_TEMP/app-build.xcresult" \
             -showBuildTimingSummary 2>&1 \
-            | tee "$RUNNER_TEMP/app-tests.log" >(stamp > "$RUNNER_TEMP/app-timeline.log") \
+            | tee "$RUNNER_TEMP/app-tests.log" >(stamp >> "$RUNNER_TEMP/app-timeline.log") \
             | { grep --line-buffered -E 'error:' || true; }; then
             status=1
           fi
           built=$(date +%s)
+          kill "$sampler" 2>/dev/null || true
           echo "Simulator boot: $(tail -n 1 "$RUNNER_TEMP/simulator-boot.log" 2>/dev/null)"
-          if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" -destination "id=$udid" ARCHS=arm64 \
+          # Diagnostics after the tests (logs, spindumps) took minutes and nobody reads them on a green run.
+          if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" -collect-test-diagnostics never \
             -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
             -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
             -maximum-test-execution-time-allowance 300 2>&1 \
