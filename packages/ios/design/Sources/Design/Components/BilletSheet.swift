@@ -142,7 +142,7 @@ public struct BilletSheet<Content: View>: View {
   }
 
   private func expand() {
-    withAnimation(.snappy(duration: 0.3)) { expanded = true }
+    withAnimation(Motion.spring(0.3)) { expanded = true }
   }
 
   /// Once a page has asked for full height, large is the only detent, so the sheet goes there. So it
@@ -313,6 +313,12 @@ extension View {
 private struct ScrollHeader<Header: View>: ViewModifier {
   let header: Header
   @Environment(\.sheetGround) private var ground
+  /// How far the content has scrolled up under the header, 0 at rest.
+  @State private var scrolled: CGFloat = 0
+
+  /// The fade below the header grows in over the first `Space.l` of scrolling: at rest the content
+  /// starts right under the header and its first line, a section header or a card, stays sharp.
+  private var fade: Double { Double(min(1, max(0, scrolled / Space.l))) }
 
   func body(content: Content) -> some View {
     if #available(iOS 26, macOS 26, *) {
@@ -320,11 +326,26 @@ private struct ScrollHeader<Header: View>: ViewModifier {
       // header carries the sheet's ground itself, up through the title bar and fading out below.
       content
         .ourioScrollEdges()
-        .safeAreaBar(edge: .top, spacing: 0) { header.background { HeaderGround(ground: ground) } }
+        .trackingScrolled($scrolled)
+        .safeAreaBar(edge: .top, spacing: 0) {
+          header.background { HeaderGround(ground: ground, fade: fade) }
+        }
     } else {
-      content.safeAreaInset(edge: .top, spacing: 0) {
-        header.background { HeaderGround(ground: ground) }
-      }
+      content
+        .trackingScrolled($scrolled)
+        .safeAreaInset(edge: .top, spacing: 0) {
+          header.background { HeaderGround(ground: ground, fade: fade) }
+        }
+    }
+  }
+}
+
+extension View {
+  fileprivate func trackingScrolled(_ scrolled: Binding<CGFloat>) -> some View {
+    onScrollGeometryChange(for: CGFloat.self) { geometry in
+      max(0, geometry.contentOffset.y + geometry.contentInsets.top)
+    } action: { _, new in
+      scrolled.wrappedValue = new
     }
   }
 }
@@ -333,6 +354,8 @@ private struct ScrollHeader<Header: View>: ViewModifier {
 /// `Space.xl` below the header, so rows scrolled up sink away instead of meeting a line.
 private struct HeaderGround: View {
   let ground: SheetGroundStyle
+  /// 0 draws the ground only behind the header itself, 1 the whole fade below it.
+  let fade: Double
 
   var body: some View {
     fill
@@ -342,7 +365,8 @@ private struct HeaderGround: View {
           // Mostly gone by halfway, so a row's edge never shows as a sliver under the header.
           LinearGradient(
             stops: [
-              .init(color: .black, location: 0), .init(color: .black.opacity(0.7), location: 0.4),
+              .init(color: .black.opacity(fade), location: 0),
+              .init(color: .black.opacity(0.7 * fade), location: 0.4),
               .init(color: .clear, location: 1),
             ],
             startPoint: .top, endPoint: .bottom

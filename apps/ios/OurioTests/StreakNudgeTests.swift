@@ -1,3 +1,4 @@
+import Design
 import Foundation
 import MomentsInterface
 import WidgetInterface
@@ -66,5 +67,19 @@ import UsInterface
     ])
     func aStreakThatIsOutIsNeverNudged(days: [Int]) {
         #expect(Self.fire(Self.streak(days), now: Self.at(day: 9, hour: 10)) == nil)
+    }
+
+    @Test func theSwitchSetBeforeItWasSharedMovesToTheAppGroup() throws {
+        let old = try #require(UserDefaults(suiteName: "nudge-old-\(UUID().uuidString)"))
+        let group = try #require(UserDefaults(suiteName: "nudge-group-\(UUID().uuidString)"))
+        #expect(StreakNudge.isOn(in: group))
+        old.set(false, forKey: AppSettings.streakNudgeKey)
+        StreakNudge.moveToAppGroup(from: old, to: group)
+        #expect(!StreakNudge.isOn(in: group))
+        #expect(old.object(forKey: AppSettings.streakNudgeKey) == nil)
+        // A switch already in the group wins.
+        old.set(true, forKey: AppSettings.streakNudgeKey)
+        StreakNudge.moveToAppGroup(from: old, to: group)
+        #expect(!StreakNudge.isOn(in: group))
     }
 }

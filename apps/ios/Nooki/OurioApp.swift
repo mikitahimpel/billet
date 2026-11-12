@@ -1,3 +1,5 @@
+import FeatureOnboarding
+import FeatureUs
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -48,9 +50,10 @@ struct OurioApp: App {
         let canInvite = session.map { !$0.isPaired } ?? false
         Hints.configure()
         CatProfile.moveToAppGroup()
+        StreakNudge.moveToAppGroup()
         let hints = Hints(report: api.reportEvents)
         let onboarding = OnboardingFlow(
-            client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
+            client: client, report: api.reportEvents, queue: AnswerQueue(), defaults: .standard, catNames: CatProfile.store, canInvite: canInvite,
             hasServer: session != nil, asksTogetherSince: true,
             togetherSinceChosen: { day in
                 let profile = CoupleStore()
@@ -89,13 +92,14 @@ struct OurioApp: App {
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
+                    .environment(\.usServer, session)
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
                     .overlay {
                         if !onboarding.isFinished {
                             OnboardingView(
-                                flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
+                                flow: onboarding, pairing: session?.pairing, scenery: AppOnboardingScenery(), signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
                                 demoPartner: demoPartnerPairing)
@@ -105,7 +109,7 @@ struct OurioApp: App {
                                 .transition(.opacity)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.4), value: onboarding.isFinished)
+                    .animation(Motion.fade(0.4), value: onboarding.isFinished)
                     .onOpenURL { url in
                         if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
                     }

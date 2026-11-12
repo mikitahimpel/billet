@@ -83,7 +83,7 @@ public struct SignInControls: View {
   }
 }
 
-extension SignInFailure {
+nonisolated extension SignInFailure {
   /// What the screen tells the user.
   public var message: String {
     switch self {

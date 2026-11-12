@@ -1,0 +1,138 @@
+#if canImport(UIKit)
+  import Design
+  import SwiftUI
+  import WidgetUI
+
+  struct FeaturedCard: View {
+    let state: any ShopHost
+    let offer: FeaturedOffer
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    var openSet: (FeaturedOffer) -> Void = { _ in }
+
+    private var quote: (price: Int, sum: Int)? {
+      state.shop.offers.price(of: offer, owned: state.shop.owned)
+    }
+    private var isLargeText: Bool { dynamicTypeSize.isAccessibilitySize }
+    private var items: [ShopItem] {
+      offer.itemIDs.compactMap { Catalog.item($0, cat: state.petName) }
+    }
+
+    var body: some View {
+      VStack(alignment: .leading, spacing: 0) {
+        // Side by side while both fit; at large text sizes the badge goes under the countdown instead of the
+        // countdown wrapping into a column of single words.
+        ViewThatFits(in: .horizontal) {
+          HStack(spacing: Space.s) {
+            countdown.fixedSize()
+            Spacer(minLength: 0)
+            valueBadge
+          }
+          VStack(alignment: .leading, spacing: Space.s) {
+            countdown.fixedSize(horizontal: false, vertical: true)
+            valueBadge
+          }
+        }
+
+        Button {
+          openSet(offer)
+        } label: {
+          art
+            .frame(maxWidth: .infinity)
+            .frame(height: ShopLayout.featuredArt)
+            .contentShape(.rect)
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityLabel("\(offer.name), see the pieces")
+
+        // The buy sits beside the name and blurb, centred on them; at accessibility sizes it goes under them
+        // so a long blurb never squeezes it.
+        let layout =
+          isLargeText
+          ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.m))
+          : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
+        layout {
+          VStack(alignment: .leading, spacing: Space.xs) {
+            Text(offer.name)
+              .font(.ourioTitle)
+              .foregroundStyle(Ink.text)
+              .lineLimit(1)
+              .minimumScaleFactor(0.8)
+            Text(offer.blurb)
+              .font(.ourioCaption)
+              .foregroundStyle(Ink.textSecondary)
+              .lineLimit(2)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+          SetBuyButton(state: state, set: offer)
+            .fixedSize()
+        }
+        .padding(.top, Space.s)
+      }
+      .padding(CardMetrics.padding)
+      .cardSurface(warm: true)
+    }
+
+    private var countdown: some View {
+      Label {
+        (Text("New in ") + Text(offer.endsAt, style: .relative))
+          .monospacedDigit()
+      } icon: {
+        Image(systemName: "clock")
+      }
+      .font(.ourioMicro)
+      .foregroundStyle(Ink.textSecondary)
+    }
+
+    @ViewBuilder private var valueBadge: some View {
+      if quote == nil {
+        Chip("Owned", symbol: "checkmark").fixedSize()
+      } else if let quote, quote.price > 0, quote.sum > quote.price {
+        DiscountRibbon(
+          percent: Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()),
+          saves: quote.sum - quote.price
+        )
+        .fixedSize()
+      }
+    }
+
+    private var art: some View {
+      GeometryReader { proxy in
+        let overlap = Space.l
+        let others = CGFloat(max(0, items.count - 1))
+        // The side pieces are 72% of the middle one and each overlaps its neighbour by `overlap`.
+        let centre = min(
+          176, proxy.size.height, (proxy.size.width + others * overlap) / (1 + others * 0.72))
+        HStack(alignment: .bottom, spacing: -overlap) {
+          ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+            let isCentre = index == items.count / 2
+            Group {
+              if let image = Thumbnails.trimmed(item.thumbnail) {
+                Image(uiImage: image).resizable().scaledToFit()
+              } else {
+                Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
+              }
+            }
+            .frame(
+              width: isCentre ? centre : centre * 0.72, height: isCentre ? centre : centre * 0.72
+            )
+            .zIndex(isCentre ? 1 : 0)
+            .opacity(state.shop.owned.contains(item.id) ? 0.45 : 1)
+          }
+        }
+        .frame(width: proxy.size.width, height: proxy.size.height, alignment: .bottom)
+      }
+      .accessibilityHidden(true)
+    }
+  }
+
+  private struct DiscountRibbon: View {
+    let percent: Int
+    let saves: Int
+
+    var body: some View {
+      Chip("−\(percent)% · save \(saves)", style: .honey)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("\(percent) percent off, saves \(saves) coins")
+    }
+  }
+#endif

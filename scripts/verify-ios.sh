@@ -9,9 +9,11 @@
 # build at a time across worktrees, so it never runs under another lock helper. The Simulator is
 # BILLET_TEST_SIMULATOR; the app's DerivedData is deleted after.
 #
-# The app build maps this checkout and its DerivedData to fixed names, so the compilation cache every worktree shares
-# (project.yml) hits for another worktree's build of the same source: about twice as fast as a cold build. Only
-# command-line settings reach the Swift packages' targets, so the mapping is passed here, not in project.yml.
+# With Warmbuild running on this Mac (`warmbuild start` in the repository), the app build reads what CI compiled on main
+# through its xcconfig. Without it, the build maps this checkout and its DerivedData to fixed names, so the compilation
+# cache every worktree shares (project.yml) hits for another worktree's build of the same source. Only command-line
+# settings reach the Swift packages' targets, so that mapping is passed here, not in project.yml. DerivedData stays
+# under ~/Library/Caches: Swift compile keys from a DerivedData under /tmp never match CI's.
 set -euo pipefail
 
 part=all
@@ -49,7 +51,8 @@ if [[ $part != app ]]; then
 fi
 
 if [[ $part != packages ]]; then
-  derived=$(mktemp -d "${TMPDIR:-/tmp}/billet-verify.XXXXXX")
+  mkdir -p "$HOME/Library/Caches/billet-verify"
+  derived=$(mktemp -d "$HOME/Library/Caches/billet-verify/dd.XXXXXX")
   log=$derived.log
   trap 'rm -rf "$derived"; xcrun simctl shutdown "$simulator" 2>/dev/null || true' EXIT
   (cd apps/ios && xcodegen generate --quiet)
@@ -62,6 +65,13 @@ if [[ $part != packages ]]; then
     # A session file's path and time are part of every Clang module's key.
     CLANG_MODULES_BUILD_SESSION_FILE=
   )
+  # Warmbuild's xcconfig maps paths the way CI does; command-line mappings would override it.
+  warmbuild=$HOME/.warmbuild/warmbuild.xcconfig
+  if grep -q '^COMPILATION_CACHE_REMOTE_SERVICE_PATH' "$warmbuild" 2>/dev/null; then
+    echo "Warmbuild: on"
+    export XCODE_XCCONFIG_FILE=$warmbuild
+    prefix_mapping=()
+  fi
   result=0
   # TEST_RUNNER_ variables reach the tests without the prefix: Repo.root, which a mapped #filePath can't give.
   locked env TEST_RUNNER_BILLET_REPO="$root" xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$simulator" \

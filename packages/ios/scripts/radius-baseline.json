@@ -4,7 +4,6 @@
   "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 5,
   "apps/ios/Nooki/UI/Moments/Polaroid.swift": 1,
   "apps/ios/Nooki/UI/MomentsView.swift": 1,
-  "apps/ios/Nooki/UI/Shop/DailyGiftCard.swift": 2,
   "apps/ios/OurioWidgets/Modules.swift": 2,
   "apps/ios/WindowViews/Views/DesertStars.swift": 2,
   "apps/ios/WindowViews/Views/DormQuad.swift": 2,
@@ -18,5 +17,6 @@
   "apps/ios/WindowViews/Views/SuburbNight.swift": 2,
   "apps/ios/WindowViews/Views/ViewLife.swift": 1,
   "apps/ios/WindowViews/Views/ViewRecipe.swift": 1,
-  "apps/ios/WindowViews/Views/ViewWalker.swift": 3
+  "apps/ios/WindowViews/Views/ViewWalker.swift": 3,
+  "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 2
 }

@@ -5,12 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "astro dev",
-    "build": "astro build",
+    "build": "node scripts/check-public.mjs && astro build",
     "preview": "astro preview",
+    "indexnow": "node scripts/indexnow.mjs",
     "lint": "oxlint .",
     "format:check": "oxfmt --check .",
     "typecheck": "astro sync && tsc --noEmit -p tsconfig.json",
-    "test": "node --test scripts/ai/page-to-markdown.test.mjs"
+    "test": "node --test scripts/ai/page-to-markdown.test.mjs scripts/ai/negotiate.test.mjs"
   },
   "dependencies": {
     "astro": "catalog:"

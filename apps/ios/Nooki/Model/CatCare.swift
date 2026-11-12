@@ -1,5 +1,7 @@
+import FeatureShop
 import MomentsInterface
 import Observation
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import UsInterface
@@ -66,3 +68,5 @@ final class CatCare {
         }
     }
 }
+
+extension CatCare: CatTending {}

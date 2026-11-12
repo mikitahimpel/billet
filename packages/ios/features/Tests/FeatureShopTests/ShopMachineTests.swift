@@ -7,17 +7,17 @@ import Wire
 
 typealias M = ShopMachine
 
-private let lampID = UUID()
-private let placedAt = Date(timeIntervalSince1970: 1_700_000_000)
-private let lamp = ShopOrder(
+private nonisolated let lampID = UUID()
+private nonisolated let placedAt = Date(timeIntervalSince1970: 1_700_000_000)
+private nonisolated let lamp = ShopOrder(
   offer: .item(RoomItemId("lamp")), itemIDs: ["lamp"], cost: 140, title: "Lamp")
-private let gift = ShopOrder(
+private nonisolated let gift = ShopOrder(
   offer: .item(RoomItemId("rug")), itemIDs: ["rug"], cost: 180, title: "Rug", asGift: true)
 
-private let ink = ShopOrder(
+private nonisolated let ink = ShopOrder(
   offer: .ink(InkId("ink-plum")), itemIDs: ["ink-plum"], cost: 60, title: "Plum ink", kind: .ink)
 
-private func room(
+private nonisolated func room(
   _ balance: Int, items: [String] = ["lamp0"], giftDay: String? = nil, bonuses: [String] = []
 ) -> ShopResponse {
   ShopResponse(
@@ -26,7 +26,7 @@ private func room(
 }
 
 /// A shop following its room, read once.
-private func open(_ balance: Int, items: [String] = ["lamp0"]) -> M.PairShop {
+private nonisolated func open(_ balance: Int, items: [String] = ["lamp0"]) -> M.PairShop {
   var shop = M.PairShop(mirror: M.Mirror(balance: 0, owned: [], wishlist: []))
   _ = shop.read()
   let (state, _) = M.transition(.open(shop), .fetched(room(balance, items: items), request: 1))
@@ -34,12 +34,12 @@ private func open(_ balance: Int, items: [String] = ["lamp0"]) -> M.PairShop {
   return read
 }
 
-private func shop(_ state: M.State) -> M.PairShop {
+private nonisolated func shop(_ state: M.State) -> M.PairShop {
   guard case .open(let shop) = state else { fatalError("not open") }
   return shop
 }
 
-@Suite struct ShopMachineTests {
+@Suite nonisolated struct ShopMachineTests {
   @Test func followingARoomReadsItAndLeavingForgetsIt() {
     let last = M.Mirror(balance: 70, owned: ["lamp0"], wishlist: [])
     var (state, outputs) = M.transition(.initial, .connected(last: last))

@@ -3,7 +3,7 @@ import Wire
 
 /// The pair's shop and wallet on the server: what it has, and every request that changes it. The
 /// server prices every order and keeps the only balance; the app's prices are only shown.
-public struct ShopClient: Sendable {
+public nonisolated struct ShopClient: Sendable {
   public var fetch: @Sendable () async throws(TransportError) -> ShopResponse
   public var order: @Sendable (OrderRequest) async throws(TransportError) -> OrderResponse
   public var wish: @Sendable (WishRequest) async throws(TransportError) -> ShopResponse

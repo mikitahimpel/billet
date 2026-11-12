@@ -129,7 +129,7 @@ Stop `alchemy dev` with Ctrl-C. Killing only the `pnpm` wrapper leaves Alchemy a
 Secrets are Proton Pass references, never values. `.env.pass` (dev, vault `Billet`) and
 `.env.pass.release` (prod, vault `Billet Release`) hold them:
 
-| Variable | Vault item | Field |
+| Variable | Vault item (`Apple` is read from `Billet` by both stages) | Field |
 | --- | --- | --- |
 | `CLOUDFLARE_ACCOUNT_ID` | `cloudflare` | `account_id` |
 | `CLOUDFLARE_API_TOKEN` | `cloudflare` | `api_token` |
@@ -145,16 +145,10 @@ Apple key (`APPLE_SIGN_IN_KEY`, the `.p8` PEM, which lets the Worker revoke a us
 when they delete their account, App Store guideline 5.1.1(v)). The same `.p8` files work for every
 stage, so every stage binds them (`alchemy.run.ts`); only `DEMO_ROOM` stays dev-only. A `dev` or `prod`
 deploy stops before planning, naming the missing variables, if one is absent (local `alchemy dev`
-needs none). Before the first
-`prod` deploy the owner:
-
-1. creates the item `Apple` in the vault `Billet Release` with the four fields above, named
-   exactly so, and copies each value from the item `Apple` in the vault `Billet` (copy in Proton
-   Pass; never print or paste a value elsewhere). The Sign in with Apple key has `com.ourio.app`
-   as its primary App ID; the Worker still accepts tokens and revokes codes for the first app,
-   `com.mikitahimpel.billet`, until the owner retires it;
-2. checks that `.env.pass.release` has the four `pass://Billet Release/Apple/<field>` lines
-   (committed).
+needs none). Because the keys are the same, `.env.pass.release` reads
+them from the item `Apple` in the vault `Billet`, like `.env.pass`; there is no second copy to keep in
+step. The Sign in with Apple key has `com.ourio.app` as its primary App ID; the Worker still accepts
+tokens and revokes codes for the first app, `com.mikitahimpel.billet`, until the owner retires it.
 
 ```sh
 PROTON_PASS_AGENT_REASON="billet deploy dev" pp run --env-file .env.pass -- pnpm exec alchemy deploy --stage dev

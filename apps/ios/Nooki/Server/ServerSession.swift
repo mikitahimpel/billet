@@ -1,8 +1,10 @@
 import FeatureCanvas
 import FeatureInbox
+import FeatureShop
 import Foundation
 import FeatureMoments
 import FeatureOnboarding
+import FeatureUs
 import FeaturePairing
 import MomentsInterface
 import Observation
@@ -10,6 +12,7 @@ import WidgetInterface
 import WidgetUI
 import Payments
 import Persistence
+import SwiftUI
 import Transport
 import UsInterface
 import Wire
@@ -299,10 +302,14 @@ final class ServerSession {
         drawGuess = Self.drawGuessModel(backend, paired: false)
     }
 
-    /// Does nothing while the pairing is still under way.
+    /// Does nothing while the pairing is still under way. The server saying the account already has a
+    /// partner means this phone's saved pairing is stale, so it is brought up to date.
     func pairingFinished() {
-        guard case .paired(let pairID) = pairing.state else { return }
-        paired(pairID)
+        switch pairing.state {
+        case .paired(let pairID): paired(pairID)
+        case .choosing(failure: .alreadyPaired?, _): paired(nil)
+        case .choosing, .creating, .waiting, .claiming: return
+        }
     }
 
     private func paired(_ pairID: String?) {
@@ -312,5 +319,13 @@ final class ServerSession {
         whoKnows = Self.whoKnowsModel(backend, paired: true)
         drawGuess = Self.drawGuessModel(backend, paired: true)
         pairing = PairingModel(api: backend.api)
+    }
+}
+
+extension ServerSession: UsServer {
+    var hasFinishedSignIn: Bool { signIn.state == .signedIn }
+
+    func pairingSheet() -> AnyView {
+        AnyView(PairingSheet(model: pairing) { [weak self] in self?.pairingFinished() })
     }
 }

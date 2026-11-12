@@ -1,3 +1,4 @@
+import FeatureUs
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -58,7 +59,9 @@ struct WhoKnowsScreen: View {
             ProgressView()
         case .unpaired:
             EmptyState(icon: UsGlyph(symbol: "person.2.fill", tint: .honey), title: "Pair up to play",
-                    text: "Who knows who takes two: one of you answers five questions about yourself, the other guesses.")
+                    text: "Who knows who takes two: one of you answers five questions about yourself, the other guesses.") {
+                PairToPlayButton()
+            }
         case .offline:
             VStack(spacing: Space.l) {
                 EmptyState(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach today's round",

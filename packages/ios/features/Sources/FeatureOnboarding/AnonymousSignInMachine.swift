@@ -7,7 +7,7 @@ import Wire
 /// From launch to a saved session with no question asked: read (or make) the iCloud Keychain
 /// account key and trade it for a session. Only the network stops it: `failed` waits for a retry.
 /// `request` counts the backend calls so a late answer changes nothing.
-public enum AnonymousSignInMachine: Machine {
+public nonisolated enum AnonymousSignInMachine: Machine {
   public enum State: Equatable, Sendable {
     case idle
     case signingIn(request: Int)
@@ -51,7 +51,7 @@ public enum AnonymousSignInMachine: Machine {
   }
 }
 
-extension AnonymousSignInMachine {
+nonisolated extension AnonymousSignInMachine {
   public static func run(
     _ output: Output, api: APIClient, keys: AccountKeyStore, accounts: AccountStore
   ) async -> Event? {

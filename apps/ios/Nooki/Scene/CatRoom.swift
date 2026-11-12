@@ -34,6 +34,9 @@ class CatRoom {
         didSet { walker?.avoid = avoid }
     }
 
+    /// The flat pieces lying on the floor now (rugs), which what rests on the floor rests on top of.
+    var flatSurfaces: () -> [FlatSurface] = { [] }
+
     private(set) var catGroup = Entity()
     private var catBody = Entity()
     private var catModel = Entity()

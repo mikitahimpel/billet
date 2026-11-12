@@ -1,3 +1,4 @@
+import FeatureShop
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -58,8 +59,8 @@ struct LockCanvasView: View {
             .onChange(of: geometry.size) { _, size in canvasSize = size }
         }
         .statusBarHidden()
-        .animation(.spring(duration: 0.3), value: choosingInk)
-        .animation(.easeInOut(duration: 0.25), value: model.isPartnerDrawing)
+        .animation(Motion.spring(0.3), value: choosingInk)
+        .animation(Motion.fade(0.25), value: model.isPartnerDrawing)
         .sensoryFeedback(.success, trigger: sent)
         .sensoryFeedback(.selection, trigger: model.ink)
         .onAppear { model.appeared() }

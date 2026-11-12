@@ -6,6 +6,7 @@ import Testing
 import UsInterface
 import Wire
 @testable import Billet
+@testable import UsInterface
 
 private let cal = Calendar.current
 private let day1 = cal.date(from: DateComponents(year: 2026, month: 11, day: 4, hour: 12))!

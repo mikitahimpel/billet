@@ -10,5 +10,3 @@ it:
 - `tools/cat-gen/idol-sdk` is the inference code of [Idol](https://huggingface.co/speridlabs/idol)
   by Speridlabs, under the Apache License 2.0; its `LICENSE` is kept beside it. No model weights
   are in the repository; the setup script downloads them.
-- The round flags come from [circle-flags](https://github.com/HatScripts/circle-flags) by
-  HatScripts, MIT License ([docs/third-party/circle-flags-LICENSE.md](docs/third-party/circle-flags-LICENSE.md)).

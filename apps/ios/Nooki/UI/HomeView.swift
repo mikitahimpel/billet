@@ -1,3 +1,5 @@
+import FeatureShop
+import FeatureUs
 import DecorInterface
 import FeatureDecor
 import FeatureGames
@@ -184,7 +186,7 @@ struct HomeView: View {
         .sheet(isPresented: $state.showsInbox) {
             if let inbox = session?.inbox {
                 InboxSheet(model: inbox, state: state) { target in
-                    withAnimation(.spring(duration: 0.4)) { state.open(target) }
+                    withAnimation(Motion.spring(0.4)) { state.open(target) }
                 }
             } else {
                 InboxSignedOut(petName: state.petName, isPaired: state.profile.couple.pair != nil)
@@ -223,7 +225,7 @@ struct HomeView: View {
         .onReceive(NotificationCenter.default.publisher(for: .coupleChanged)) { _ in state.profile.reload() }
         .onOpenURL { url in
             guard let link = DeepLink(url: url) else { return }
-            withAnimation(.spring(duration: 0.4)) { state.open(link) }
+            withAnimation(Motion.spring(0.4)) { state.open(link) }
         }
         .environment(\.sheetGround, sheetGround)
         .environment(perfLab)
@@ -334,7 +336,7 @@ struct HomeView: View {
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
-        .animation(.snappy(duration: 0.3), value: arranging)
+        .animation(Motion.spring(0.3), value: arranging)
         .background { TouchWatcher { [quiet] in quiet.send(.touched) } }
         #if DEBUG || LABS_YES
         .overlay(alignment: .topTrailing) {
@@ -466,7 +468,7 @@ struct HomeView: View {
         LaunchSignposts.event("room ready")
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
-        withAnimation(.easeInOut(duration: 0.8)) { launching = false } completion: { splashDrawn = false }
+        withAnimation(Motion.fade(0.8)) { launching = false } completion: { splashDrawn = false }
         LaunchSignposts.event("splash lifting")
         // `-room city` on launch opens the City room, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" || state.rooms.variant.firstRoom == .city {
@@ -493,14 +495,14 @@ struct HomeView: View {
         still.disablesAnimations = true
         withTransaction(still) { roomLive = false }
         // The switch moves at once; the room under the stand-in follows it.
-        withAnimation(.snappy(duration: 0.25)) { state.room = kind }
+        withAnimation(Motion.spring(0.25)) { state.room = kind }
         Task {
             // One pass for the stand-in to be on screen before the room under it changes.
             try? await Task.sleep(for: .milliseconds(60))
             self.room.show(kind.scene)
             self.room.perfShown(kind)
             await self.room.nextFrame()
-            withAnimation(.easeInOut(duration: 0.25)) { roomLive = true }
+            withAnimation(Motion.fade(0.25)) { roomLive = true }
             try? await Task.sleep(for: .milliseconds(300))
             if roomLive { worldSnapshot = nil }
             switchingRoom = false
@@ -545,19 +547,19 @@ struct HomeView: View {
     private var roomDecor: RoomDecor {
         let arranging = state.decor.state
         let mode: RoomDecor.Mode =
-            arranging.isArranging ? .arranging(selected: arranging.selection, fits: arranging.isValid) : .showing
+            arranging.isArranging ? .arranging(selected: arranging.selection, fits: arranging.isValid, ghost: arranging.origin) : .showing
         return RoomDecor(layout: arranging.layout, mode: mode)
     }
 
     private func handle(_ event: RoomEvent) {
         switch event {
         case .decor(let gesture): handleDecor(gesture)
-        case .catPetted: withAnimation(.spring(duration: 0.4)) { state.care.pet() }
+        case .catPetted: withAnimation(Motion.spring(0.4)) { state.care.pet() }
         case .pinOpened(let id): state.openedPin = PinRoute(id: id)
         case .drawAsked: state.composingNote = .draw
         case .careAsked: state.showsPetSheet = true
         case .partnerCared(let care):
-            withAnimation(.snappy(duration: 0.3)) {
+            withAnimation(Motion.spring(0.3)) {
                 homecoming = HomecomingLine(care, partner: state.otherPartner, cat: CatProfile.name())
             }
         }

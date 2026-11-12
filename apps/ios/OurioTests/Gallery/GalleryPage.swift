@@ -1,7 +1,9 @@
+import FeatureUs
 import Design
 import Pet
 import RoomInterface
 import SwiftUI
+import WidgetUI
 @testable import Billet
 
 /// One page per family of design components, each in its usual states. A new public component gets a place on one.
@@ -282,11 +284,11 @@ enum GalleryPage: String, CaseIterable, Sendable {
 
     @MainActor @ViewBuilder private static var posters: some View {
         PosterCard("Who knows who", status: "Your turn", emphasis: true, action: {}) {
-            GamePoster(game: .whoKnows, coat: .grey)
+            GamePoster(game: .whoKnows, coat: CatCoat.grey.rawValue, thumbnail: { Thumbnails.image($0, maxPixels: $1) })
         }
         .frame(minWidth: 150)
         PosterCard("Draw & guess", status: "Played yesterday", action: {}) {
-            GamePoster(game: .drawGuess, coat: .grey)
+            GamePoster(game: .drawGuess, coat: CatCoat.grey.rawValue, thumbnail: { Thumbnails.image($0, maxPixels: $1) })
         }
         .frame(minWidth: 150)
     }

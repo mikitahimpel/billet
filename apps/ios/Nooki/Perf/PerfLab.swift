@@ -514,13 +514,6 @@ final class PerfLab {
     func settled() async { await store.settled() }
 }
 
-extension EnvironmentValues {
-    /// Labs → Performance's switches the pages read; each is on as shipped.
-    @Entry var perfShadows = true
-    @Entry var perfShine = true
-    @Entry var perfFlatten = false
-}
-
 extension View {
     /// The lab's switches for a page: its glass, shadows, shine and flattening. The bars take theirs in `HomeView`.
     func perfLab(_ lab: PerfLab) -> some View {
@@ -529,33 +522,5 @@ extension View {
             .environment(\.perfShadows, lab.isOn(.shadows))
             .environment(\.perfShine, lab.isOn(.shine))
             .environment(\.perfFlatten, lab.isOn(.flatten))
-    }
-
-    /// Drawn into one layer while the lab's Flatten switch is on.
-    func perfFlattened() -> some View { modifier(PerfFlatten()) }
-
-    /// A shadow the lab's Shadows switch can take away.
-    func perfShadow(color: Color, radius: CGFloat, x: CGFloat = 0, y: CGFloat = 0) -> some View {
-        modifier(PerfShadow(color: color, radius: radius, x: x, y: y))
-    }
-}
-
-private struct PerfShadow: ViewModifier {
-    let color: Color
-    let radius: CGFloat
-    let x: CGFloat
-    let y: CGFloat
-    @Environment(\.perfShadows) private var shows
-
-    func body(content: Content) -> some View {
-        content.shadow(color: shows ? color : .clear, radius: shows ? radius : 0, x: x, y: y)
-    }
-}
-
-private struct PerfFlatten: ViewModifier {
-    @Environment(\.perfFlatten) private var flatten
-
-    @ViewBuilder func body(content: Content) -> some View {
-        if flatten { content.drawingGroup() } else { content }
     }
 }

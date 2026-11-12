@@ -488,7 +488,7 @@ final class DioramaScene: CatRoom {
                 yaw = Self.restYaw + bed.yaw
             } else {
                 seatPoint = [Float(home.seat.x), 0.014 + Float(home.height) + 0.05, Float(home.seat.z)]
-                yaw = Self.restYaw + Float(home.placement.quarterTurns) * .pi / 2
+                yaw = Self.restYaw + Float(home.placement.angle)
             }
             // Where the standing splat's origin goes for the seated one to sit on the cushion, `mount` behind it.
             let mount: SIMD3<Float> = [0.01, 0, -0.058]

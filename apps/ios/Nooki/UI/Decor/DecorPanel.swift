@@ -1,7 +1,9 @@
+import FeatureShop
 import DecorInterface
 import Design
 import FeatureDecor
 import SwiftUI
+import WidgetUI
 
 /// The closet and the chosen piece's controls, over the room while its pieces are arranged. Not a system sheet:
 /// the room stays under the player's finger.
@@ -32,7 +34,7 @@ struct DecorPanel: View {
     }
 
     private var header: some View {
-        HStack(alignment: .firstTextBaseline) {
+        HStack(alignment: .center, spacing: Space.m) {
             VStack(alignment: .leading, spacing: Space.xs) {
                 Text("Decorate")
                     .font(.ourioHeadline)
@@ -71,7 +73,7 @@ struct DecorPanel: View {
 
     private func controls(for id: String) -> some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            Text(Catalog.item(id)?.name ?? DecorItem.item(shopID: id)?.base?.title ?? id)
+            Text(Catalog.item(id, cat: state.petName)?.name ?? DecorItem.item(shopID: id)?.base?.title ?? id)
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
@@ -79,6 +81,8 @@ struct DecorPanel: View {
                 if machine.canTurn {
                     PillButton("Rotate", symbol: "rotate.right") { state.decor.send(.turned) }
                         .accessibilityIdentifier("decorRotate")
+                    PillButton("45°", symbol: "rotate.right") { state.decor.send(.turnedFine) }
+                        .accessibilityIdentifier("decorRotateFine")
                 }
                 PillButton("Store", symbol: "tray.and.arrow.down") { state.decor.send(.stored) }
                     .accessibilityIdentifier("decorStore")
@@ -101,20 +105,19 @@ struct DecorPanel: View {
             ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: Space.s) {
                     ForEach(items) { item in
-                        let name = Catalog.item(item.id)?.name ?? item.base?.title ?? item.id
+                        let name = Catalog.item(item.id, cat: state.petName)?.name ?? item.base?.title ?? item.id
                         Button { state.decor.send(.closetTapped(item.id)) } label: {
-                            VStack(spacing: Space.xs) {
+                            VStack(spacing: Space.s) {
                                 art(item.id)
-                                    .frame(width: Size.cardMark, height: Size.cardMark)
+                                    .aspectRatio(1, contentMode: .fit)
                                     .corners(.inner)
                                 Text(name)
-                                    .font(.ourioCaption)
+                                    .font(.ourioCallout)
                                     .foregroundStyle(Ink.text)
                                     .lineLimit(2)
-                                    .minimumScaleFactor(0.85)
                                     .multilineTextAlignment(.center)
                             }
-                            .frame(width: 76)
+                            .containerRelativeFrame(.horizontal, count: 3, spacing: Space.s)
                             .contentShape(.rect)
                         }
                         .buttonStyle(PressScaleStyle())
@@ -140,9 +143,9 @@ struct DecorPanel: View {
         HStack(spacing: Space.s) {
             PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
                 .accessibilityIdentifier("decorReset")
+            Spacer(minLength: 0)
             undoButton
         }
-        .fixedSize()
         .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
             Button("Cancel", role: .cancel) {}

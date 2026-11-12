@@ -89,6 +89,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
         home = room
         room.pivot.addChild(decorStage.root)
         decorStage.onBaseReady = { [weak room] in room?.baseFurnished = true }
+        room.flatSurfaces = { [decorStage] in decorStage.flatSurfaces() }
         wire(room)
         showDecor(decor)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }

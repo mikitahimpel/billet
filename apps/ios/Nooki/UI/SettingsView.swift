@@ -26,7 +26,7 @@ struct SettingsView: View {
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     @AppStorage(AppSettings.quietRoomKey) private var quietRoom = QuietChrome.dim
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
-    @AppStorage(AppSettings.streakNudgeKey) private var streakNudge = true
+    @AppStorage(AppSettings.streakNudgeKey, store: StreakNudge.settings) private var streakNudge = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
@@ -266,6 +266,7 @@ private struct AccountRow: View {
         Row(title, detail: detail, symbol: symbol, tint: tint.color) {
             if case .failed = state {
                 RetryButton(compact: true, action: retry)
+                    .fixedSize()
             } else if case .signingIn = state {
                 ProgressView()
             }
@@ -326,12 +327,6 @@ private struct DataCreditsView: View {
                     Row("Streaming data by JustWatch", symbol: "play.tv.fill", tint: UsTint.sun.color) {
                         RowChevron()
                     }
-                }
-            }
-            GroupedSection(header: "Flags",
-                         footer: "Round flags from circle-flags by HatScripts, MIT License. Copyright (c) 2026 HatScripts.") {
-                Link(destination: URL(string: "https://github.com/HatScripts/circle-flags")!) {
-                    Row("circle-flags", symbol: "flag.fill", tint: UsTint.blush.color) { RowChevron() }
                 }
             }
             GroupedSection(header: "Map", footer: "The world map is Natural Earth's, in the public domain.") {

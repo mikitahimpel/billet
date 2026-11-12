@@ -1,3 +1,6 @@
+import FeatureOnboarding
+import FeatureShop
+import FeatureUs
 import DecorInterface
 import FeatureDecor
 import FeatureGames
@@ -10,6 +13,7 @@ import WidgetUI
 import Persistence
 import Pet
 import ProfileInterface
+import ShopInterface
 import RoomInterface
 import SwiftUI
 import Design
@@ -18,13 +22,6 @@ import WidgetKit
 
 enum HomeTab: CaseIterable {
     case world, moments, shop, us
-}
-
-/// Where the Shop opens when something elsewhere points at it, e.g. a locked ink in the drawing palette.
-enum ShopFocus: Hashable {
-    /// The Inks block in Today, at that ink.
-    case ink(String)
-    case item(String)
 }
 
 enum RoomKind: CaseIterable {
@@ -80,7 +77,7 @@ struct HomeStores {
         let moments = MomentStore()
         let notes = NoteStore()
         let care = CatCare(wallet: wallet, streak: streak)
-        let shop = ShopModel(wallet: wallet, couple: profile, care: care)
+        let shop = ShopModel(wallet: wallet, couple: profile, care: care) { CatProfile.name() }
         let us = UsStore { shop.earn($0) }
         let members: GiftsModel.Members = { profile.couple.pair.map { (profile.couple.viewer, $0.users) } }
         let decorSync = DecorSync()
@@ -160,7 +157,7 @@ final class HomeState {
     /// Asks the World tab to open the cat's sheet, as an Inbox row does.
     var showsPetSheet = false
     /// A shop item opened from outside the Shop, such as an Inbox row.
-    var openedShopItem: ShopItem?
+    var openedShopItem: FeatureShop.ShopItem?
     /// The Us tab's open sheet; widgets deep-link into it.
     var usRoute: UsView.Route?
     /// The open note composer; the Add menu and the new-note deep link set it.

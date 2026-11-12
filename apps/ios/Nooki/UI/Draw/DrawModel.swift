@@ -4,6 +4,7 @@ import Foundation
 import Ink
 import MomentsInterface
 import Observation
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import QuartzCore

@@ -2,6 +2,7 @@ import Design
 import DrawInterface
 import Foundation
 import MoodInterface
+import ShopInterface
 import WidgetInterface
 import Persistence
 import SwiftUI

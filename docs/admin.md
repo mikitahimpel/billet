@@ -223,7 +223,7 @@ To add one, on **Shop → New item**:
    and be made inactive when the season ends; pairs that bought one keep it.
 
 Until the Shop lists furniture from this catalog, the app's shelves still show only their own
-bundled pieces (`Catalog` in `apps/ios/Nooki/Model/Shop.swift`). An active row makes the server
+bundled pieces (`Catalog` in `packages/ios/features/Sources/FeatureShop/Shop.swift`). An active row makes the server
 sell the item, but no shelf shows it until the app reads its furniture from `GET /v1/shop/catalog`,
 which is a separate app change.
 
@@ -248,6 +248,10 @@ pair, the note or photo a report is about (`note_id`) and what the reporter type
 act on a report (block, delete the account) within a day. Each report also logs the warning
 `partner report received` with its reason, so an alert on that message reaches the team at once.
 `GET /admin/api/reports[?limit=<1-1000>]`. Not in the agent API, since it holds what users typed.
+
+`POST /v1/pair/report` has its own rate-limit group, `reports`: 10 an hour per address (an hour-long
+window; the other groups count per minute), so one caller cannot flood this page or the alert. Over
+the limit the route answers 429; nothing else about reporting changes.
 
 ## Seed data
 

@@ -1,0 +1,166 @@
+#if canImport(UIKit)
+  import MomentsInterface
+  import WidgetInterface
+  import WidgetUI
+  import SwiftUI
+  import Design
+  import UsInterface
+
+  public struct SheetSubtitle: View {
+    let text: String
+
+    public init(text: String) {
+      self.text = text
+    }
+
+    public var body: some View {
+      Text(text)
+        .font(.ourioCaption)
+        .foregroundStyle(Ink.textSecondary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+  }
+
+  extension View {
+    func addToolbarButton(_ label: String = "Add", action: @escaping () -> Void) -> some View {
+      toolbar {
+        ToolbarItem(placement: .topBarLeading) {
+          Button(action: action) { Image(systemName: "plus") }
+            .accessibilityLabel(label)
+        }
+      }
+    }
+  }
+
+  struct UsCheck: View {
+    let done: Bool
+
+    var body: some View {
+      ZStack {
+        Circle()
+          .strokeBorder(done ? .clear : Ink.textSecondary, lineWidth: 1.5)
+        if done {
+          Circle().fill(Color.honey)
+          Image(systemName: "checkmark")
+            .font(.ourioMicro)
+            .foregroundStyle(Ink.heroInk)
+        }
+      }
+      .frame(width: 26, height: 26)
+      .contentShape(.circle)
+    }
+  }
+
+  public struct UsField: View {
+    let placeholder: String
+    @Binding var text: String
+
+    public init(placeholder: String, text: Binding<String>) {
+      self.placeholder = placeholder
+      _text = text
+    }
+
+    public var body: some View {
+      Field(placeholder, text: $text)
+    }
+  }
+
+  /// A list's own "add" line: what is typed goes in as it is with Add or Return, and the field stays up for the next one.
+  struct AddItemField: View {
+    let placeholder: String
+    @Binding var text: String
+    var focused: FocusState<Bool>.Binding
+    var onAdd: () -> Void
+
+    private var canAdd: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    var body: some View {
+      let layout =
+        dynamicTypeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+        : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
+      layout {
+        Field(placeholder, text: $text)
+          .focused(focused)
+          .submitLabel(.done)
+          .onSubmit(onAdd)
+        PrimaryButton(
+          "Add", symbol: "plus", fullWidth: dynamicTypeSize.isAccessibilitySize, action: onAdd
+        )
+        .disabled(!canAdd)
+        .accessibilityLabel(canAdd ? "Add \(text)" : "Add")
+      }
+    }
+  }
+
+  /// The first row of a list that adds through a sheet: says what tapping it adds.
+  struct AddRow: View {
+    let title: String
+    var action: () -> Void
+
+    var body: some View {
+      Button(action: action) {
+        Row(title, symbol: "plus") { EmptyView() }
+      }
+      .buttonStyle(RowButtonStyle())
+    }
+  }
+
+  public struct UsIcon: View {
+    let glyph: UsGlyph
+    var size: CGFloat = 44
+
+    public init(glyph: UsGlyph, size: CGFloat = 44) {
+      self.glyph = glyph
+      self.size = size
+    }
+
+    public var body: some View {
+      RowIcon(symbol: glyph.symbol, tint: glyph.tint.color, size: size)
+    }
+  }
+
+  struct UsGlyphPicker: View {
+    @Binding var selection: UsGlyph
+
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 8)
+
+    var body: some View {
+      LazyVGrid(columns: columns, spacing: Space.m) {
+        ForEach(UsGlyph.palette, id: \.self) { glyph in
+          Button {
+            selection = glyph
+          } label: {
+            UsIcon(glyph: glyph, size: 34)
+              .opacity(selection == glyph ? 1 : 0.55)
+              .scaleEffect(selection == glyph ? 1.08 : 1)
+              .overlay(
+                Circle()
+                  .stroke(Ink.text, lineWidth: selection == glyph ? 2 : 0)
+                  .padding(-3)
+              )
+          }
+          .buttonStyle(PressScaleStyle())
+          .animation(Motion.spring(0.2), value: selection)
+        }
+      }
+      .padding(CardMetrics.padding)
+      .cardSurface()
+    }
+  }
+
+  extension EmptyState where Actions == EmptyView {
+    public init(icon: UsGlyph, title: String, text: String) {
+      self.init(symbol: icon.symbol, title: title, text: text, tint: icon.tint.color)
+    }
+  }
+
+  extension EmptyState {
+    public init(icon: UsGlyph, title: String, text: String, @ViewBuilder actions: () -> Actions) {
+      self.init(
+        symbol: icon.symbol, title: title, text: text, tint: icon.tint.color, actions: actions)
+    }
+  }
+#endif

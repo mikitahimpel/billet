@@ -7,17 +7,17 @@ import simd
 struct PieceFrame: Equatable {
     let home: SIMD2<Float>
     let now: SIMD2<Float>
-    let turns: Int
+    let angle: Double
 
     /// Nil while the piece is stored.
     init?(_ id: String, in layout: DecorLayout) {
         guard let base = DecorItem.item(shopID: id)?.base, let placement = layout.placement(of: id) else { return nil }
         home = SIMD2(Float(DecorGrid.metres(base.u)), Float(DecorGrid.metres(base.v)))
         now = SIMD2(Float(DecorGrid.metres(placement.u)), Float(DecorGrid.metres(placement.v)))
-        turns = placement.quarterTurns
+        angle = placement.angle
     }
 
-    var yaw: Float { Float(turns) * .pi / 2 }
+    var yaw: Float { Float(angle) }
     var orientation: simd_quatf { .y(yaw) }
 
     func map(_ point: SIMD3<Float>) -> SIMD3<Float> {

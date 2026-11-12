@@ -1,6 +1,7 @@
 import DrawInterface
 import MomentsInterface
 import MoodInterface
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -86,6 +87,27 @@ struct WidgetGalleryTests {
                     add("mochi-purring", entry(purring, facts)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
                     add("mochi-hungry", entry(day, facts, want: .food)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
                     add("mochi-cuddly", entry(day, facts, want: .love)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("mochi-sleepy", entry(day, facts, want: .rest)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("mochi-playful", entry(day, facts, want: .play)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("mochi-cold", entry(day, empty, want: .food)) { AnyView(MochiFamilyView(entry: $0, family: $1)) }
+                    add("us-cold", entry(day, empty)) { AnyView(UsFamilyView(entry: $0, family: $1)) }
+                } else {
+                    // The largest type a widget allows, on the smallest screen.
+                    func large(_ view: some View) -> AnyView {
+                        AnyView(view.environment(\.dynamicTypeSize, .accessibility3).widgetTypeCap())
+                    }
+                    pieces.append(("mochi-hungry-xl-\(label)-\(device)", size,
+                                   large(MochiFamilyView(entry: entry(day, facts, want: .food), family: family))))
+                    pieces.append(("us-xl-\(label)-\(device)", size, large(UsFamilyView(entry: entry(day, facts), family: family))))
+                    if family != .systemLarge {
+                        pieces.append(("partner-xl-\(label)-\(device)", size,
+                                       large(PartnerFamilyView(entry: entry(day, drawn), family: family))))
+                        pieces.append(("coins-xl-\(label)-\(device)", size,
+                                       large(CoinsFamilyView(entry: entry(day, facts), family: family))))
+                    } else {
+                        pieces.append(("day-xl-\(label)-\(device)", size,
+                                       large(DayFamilyView(entry: entry(waiting, drawn), family: family))))
+                    }
                 }
                 add("us", entry(day, facts)) { AnyView(UsFamilyView(entry: $0, family: $1)) }
                 if family != .systemLarge {
@@ -97,6 +119,7 @@ struct WidgetGalleryTests {
                 add("memory", entry(day, facts, photo: true)) { AnyView(MemoryFamilyView(entry: $0, family: $1)) }
                 if family == .systemLarge {
                     add("day", entry(waiting, drawn)) { AnyView(DayFamilyView(entry: $0, family: $1)) }
+                    add("day-hungry", entry(day, drawn, want: .food)) { AnyView(DayFamilyView(entry: $0, family: $1)) }
                 }
             }
         }
@@ -116,6 +139,12 @@ struct WidgetGalleryTests {
                 pieces.append(("lock-cat-hungry-\(label)-\(device)", size,
                                AnyView(CatLockView(entry: entry(day, drawn, want: .food), family: family))))
                 pieces.append(("lock-partner-\(label)-\(device)", size, AnyView(PartnerLockView(entry: e, family: family))))
+            }
+        }
+        for module in WidgetModule.allCases {
+            for (label, size) in [("small", Self.small), ("medium", Self.medium), ("small-se", Self.seSmall)] {
+                pieces.append(("block-\(module.rawValue)-\(label)", size,
+                               AnyView(ModuleView(module: module, snapshot: day, momentImage: Self.photo()))))
             }
         }
         pieces += [

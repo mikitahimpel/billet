@@ -1,7 +1,8 @@
+import RoomInterface
 import SwiftUI
 import Testing
 import UIKit
-@testable import Billet
+@testable import FeatureOnboarding
 
 struct CoatPickerTests {
     /// The rows and columns of the image where the cat is (alpha above about 10%).
@@ -25,8 +26,8 @@ struct CoatPickerTests {
     /// The stage cuts every portrait to the cat with the same numbers (ears at 5%, paws at 94.75% of the height), so
     /// every coat must be framed alike at any pixel size: 3:4, same paw line, centred, and no ear above the cut.
     /// Ear tips differ by coat: some are rounder and sit up to 2.5% lower.
-    @Test(arguments: CatCoat.allCases)
-    func everyPortraitIsFramedLikeTheStageExpects(coat: CatCoat) throws {
+    @Test(arguments: RoomInterface.CatCoat.allCases)
+    func everyPortraitIsFramedLikeTheStageExpects(coat: RoomInterface.CatCoat) throws {
         let image = try #require(UIImage(named: coat.portrait))
         let cg = try #require(image.cgImage)
         #expect(cg.width * 4 == cg.height * 3)
@@ -39,8 +40,8 @@ struct CoatPickerTests {
 
     @Test
     func everyChipHasItsOwnColours() {
-        let bases = CatCoat.allCases.map { UIColor($0.swatch.base).cgColor.components ?? [] }
-        #expect(Set(bases.map { $0.map { Int(($0 * 255).rounded()) } }).count == CatCoat.allCases.count)
-        for coat in [CatCoat.grey, .ginger, .cream, .tuxedo, .calico] { #expect(!coat.swatch.marks.isEmpty) }
+        let bases = RoomInterface.CatCoat.allCases.map { UIColor($0.swatch.base).cgColor.components ?? [] }
+        #expect(Set(bases.map { $0.map { Int(($0 * 255).rounded()) } }).count == RoomInterface.CatCoat.allCases.count)
+        for coat in [RoomInterface.CatCoat.grey, .ginger, .cream, .tuxedo, .calico] { #expect(!coat.swatch.marks.isEmpty) }
     }
 }

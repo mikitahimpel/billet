@@ -142,20 +142,27 @@ export type CollectionId = typeof CollectionId.Type;
 export const PlacementSurface = Schema.Literals(["floor", "backWall", "leftWall"]);
 export type PlacementSurface = typeof PlacementSurface.Type;
 
+/** The rooms a piece can stand in. A placement that names none is in the living room. */
+export const DecorRoom = Schema.Literals(["living", "bedroom"]);
+export type DecorRoom = typeof DecorRoom.Type;
+
 /** A grid cell of 5 cm, counted from the room's middle. */
 export const Cell = Schema.Int.check(Schema.isBetween({ minimum: -9, maximum: 9 }));
 
 /**
  * Where a piece stands. `u` runs across the floor and the back wall (x) and along the left wall (z);
  * `v` runs into the room on the floor and is 0 on a wall. A piece is owned once, so one placement
- * per item.
+ * per item. `quarterTurns` is 0 to 3 for turns of 90 degrees; 4 to 7 add a further 45 degrees to
+ * the turn of `quarterTurns - 4`, so a layout kept before fine turns reads the same. `room` is absent
+ * for the living room, so a layout kept before the bedroom could be arranged reads the same.
  */
 export const Placement = Schema.Struct({
   item: RoomItemId,
   surface: PlacementSurface,
   u: Cell,
   v: Cell,
-  quarterTurns: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 3 })),
+  quarterTurns: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 7 })),
+  room: Schema.optionalKey(DecorRoom),
 });
 export type Placement = typeof Placement.Type;
 

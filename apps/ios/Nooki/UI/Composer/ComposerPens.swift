@@ -1,3 +1,4 @@
+import ShopInterface
 import SwiftUI
 import Design
 
@@ -46,7 +47,7 @@ struct Pen: View {
             }
         }
         .offset(y: selected ? -8 : 0)
-        .animation(.snappy(duration: 0.18), value: selected)
+        .animation(Motion.spring(0.18), value: selected)
     }
 }
 
