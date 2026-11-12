@@ -18,6 +18,7 @@
     "./demo-route": "./src/demo-route.ts",
     "./directory-database": "./src/directory-database.ts",
     "./directory-schema": "./src/directory-schema.ts",
+    "./economy-sink-live": "./src/economy-sink-live.ts",
     "./event-sink-live": "./src/event-sink-live.ts",
     "./flag-config-repository-live": "./src/flag-config-repository-live.ts",
     "./flags-repository-live": "./src/flags-repository-live.ts",

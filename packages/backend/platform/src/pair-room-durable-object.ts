@@ -63,6 +63,7 @@ import {
 import { type RiddleRow, riddleView } from "@billet/backend-pair-room/riddle-rules";
 import { RiddleId } from "@billet/contracts-domain/riddle";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
+import { EconomyTapLive } from "./economy-sink-live.ts";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
@@ -186,7 +187,9 @@ export class PairRoom extends DurableObject {
   private readonly runtime = this.database.then((database) =>
     ManagedRuntime.make(
       Layer.mergeAll(
-        PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database))),
+        PairRoomLive(EconomyTapLive(this.roomEnv.DB)).pipe(
+          Layer.provide(Layer.succeed(RoomDb, database)),
+        ),
         Observability,
         Layer.succeed(
           Clock.Clock,
