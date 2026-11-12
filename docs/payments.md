@@ -113,8 +113,23 @@ the phone adds coins.
   Inbox socket follows it, so a partner's buy shows without a refresh.
 - **`GET /v1/coins?after=<entry id>&limit=<1-100>`:** `CoinsResponse {balance, entries}`, oldest
   first, `no-store`.
-- **Bought coins** (`coin_ledger` in D1, through `/v1/purchases*`) are not in this wallet yet. They
-  join it when payments are switched on; until then the flag is off and nothing is bought.
+- **Bought coins** are in this wallet. A verified purchase is entered in the room as
+  `purchase:<originalTransactionId>` (kind `purchase`) after the `coin_ledger` in D1 commits it, once per id, so
+  a retry or a transaction sent again credits nothing twice. The wallet is the one signed balance
+  the app shows and spends from; `coin_ledger` stays the record of what Apple sold and is what
+  `GET /v1/purchases` and the admin read. A demo room has no pair and keeps only the ledger.
+- **Entry kinds.** Every entry carries `kind`, apart from the id's prefix: `earn`, `purchase`,
+  `refund`, `gift`, `bonus`, `admin` or `spend` (`buy` is only how `purchase` was once written and
+  still decodes). A `refund:` id is an Apple refund; the shop's five-second Undo is not an Apple
+  refund and never takes that kind.
+- **Refunds and debt.** An App Store `REFUND` or `REVOKE` writes `refund:<originalTransactionId>`
+  for exactly the coins that purchase credited, whatever the pair has spent since, so the balance
+  can go below 0, and only a refund can do that. Nothing else is taken back. While it is negative a
+  spend is refused (`409 NotEnoughCoins {needed, have}` with a negative `have`: spending needs a
+  balance of at least the price), and earning goes on and pays the debt down: the debt is the
+  signed balance, with no second counter. `REFUND_REVERSED` gives the coins back as
+  `restore:<originalTransactionId>`. Coins never expire. The purchase is `flagged` when its
+  refund left the wallet below 0. The whole policy is in [economy.md](economy.md#refunds).
 - **Still to come:** daily deals, the daily gift, collection bonuses, undo, and Inbox items for buys.
 
 ## Three builds: none, mock and StoreKit
