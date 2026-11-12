@@ -67,7 +67,9 @@ struct DrawGuessScreen: View {
             ProgressView()
         case .unpaired:
             EmptyState(icon: UsGlyph(symbol: "person.2.fill", tint: .honey), title: "Pair up to play",
-                    text: "Draw & guess takes two: one of you draws a word, the other guesses it from the letters.")
+                    text: "Draw & guess takes two: one of you draws a word, the other guesses it from the letters.") {
+                PairToPlayButton()
+            }
         case .offline:
             VStack(spacing: Space.l) {
                 EmptyState(icon: UsGlyph(symbol: "wifi.slash", tint: .sky), title: "Can't reach your riddles",
