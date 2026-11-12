@@ -6,7 +6,7 @@ import Testing
 import Transport
 import UsInterface
 import Wire
-@testable import Billet
+@testable import FeatureUs
 
 private let arrival = ItemMedia(kind: .movie, tmdb: 329_865, year: 2016)
 private let severance = ItemMedia(kind: .tv, tmdb: 95_396)

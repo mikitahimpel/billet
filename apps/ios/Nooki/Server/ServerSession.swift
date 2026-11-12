@@ -3,6 +3,7 @@ import FeatureInbox
 import Foundation
 import FeatureMoments
 import FeatureOnboarding
+import FeatureUs
 import FeaturePairing
 import MomentsInterface
 import Observation
@@ -10,6 +11,7 @@ import WidgetInterface
 import WidgetUI
 import Payments
 import Persistence
+import SwiftUI
 import Transport
 import UsInterface
 import Wire
@@ -312,5 +314,13 @@ final class ServerSession {
         whoKnows = Self.whoKnowsModel(backend, paired: true)
         drawGuess = Self.drawGuessModel(backend, paired: true)
         pairing = PairingModel(api: backend.api)
+    }
+}
+
+extension ServerSession: UsServer {
+    var hasFinishedSignIn: Bool { signIn.state == .signedIn }
+
+    func pairingSheet() -> AnyView {
+        AnyView(PairingSheet(model: pairing) { [weak self] in self?.pairingFinished() })
     }
 }
