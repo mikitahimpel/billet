@@ -19,7 +19,7 @@ stay in `src/assets/` at their source size; the build makes their WebP steps. No
 is shipped.
 
 Only `/_astro/` is cached for good, because every name there carries a content hash; every other
-file is revalidated on each visit (`public/_headers`). So `public/` holds only files that must keep
+file is revalidated on each visit, Pages' default (`public/_headers`). So `public/` holds only files that must keep
 their name (the icons, `og.png`, `_headers`), and `scripts/check-public.mjs` fails the build on
 anything else there.
 
