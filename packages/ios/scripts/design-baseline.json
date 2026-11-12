@@ -1,5 +1,4 @@
 {
-  "apps/ios/Nooki/Onboarding/OnboardingView.swift": 1,
   "apps/ios/Nooki/Room/Games/LaserStage.swift": 1,
   "apps/ios/Nooki/Room/Games/WaterStage.swift": 1,
   "apps/ios/Nooki/Room/HeartBubble.swift": 2,
@@ -12,6 +11,7 @@
   "apps/ios/OurioWidgets/DrawingWidget.swift": 1,
   "apps/ios/OurioWidgets/Modules.swift": 5,
   "apps/ios/WindowViews/FlatWindowView.swift": 1,
+  "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift": 1,
   "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 1,
   "packages/ios/features/Sources/FeatureUs/PickTonightScreen.swift": 2,
   "packages/ios/features/Sources/WidgetUI/Monogram.swift": 1

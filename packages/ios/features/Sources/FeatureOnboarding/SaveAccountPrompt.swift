@@ -4,7 +4,7 @@ import Persistence
 /// When to offer "Save your cat and notes" (Sign in with Apple) to an unlinked anonymous account:
 /// after about a week of use or a few notes. Closing the card hides it for a month; the "Us"
 /// screen always keeps the Sign in with Apple row.
-public struct SaveAccountPrompt: Codable, Equatable, Sendable {
+public nonisolated struct SaveAccountPrompt: Codable, Equatable, Sendable {
   /// When this phone first used the account.
   public var startedAt: Date
   public var dismissedAt: Date?
@@ -33,7 +33,7 @@ public struct SaveAccountPrompt: Codable, Equatable, Sendable {
 
 /// Keeps ``SaveAccountPrompt`` in the App Group. A file that can't be read starts over, which at
 /// worst offers the card a week later than it would have.
-public struct SaveAccountPromptStore: Sendable {
+public nonisolated struct SaveAccountPromptStore: Sendable {
   public var load: @Sendable (_ now: Date) -> SaveAccountPrompt
   public var save: @Sendable (SaveAccountPrompt) -> Void
 

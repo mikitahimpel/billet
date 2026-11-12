@@ -1,7 +1,8 @@
+import RoomInterface
 import SwiftUI
 import Testing
 import UIKit
-@testable import Billet
+@testable import FeatureOnboarding
 
 struct CoatPickerTests {
     /// The rows and columns of the image where the cat is (alpha above about 10%).

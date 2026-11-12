@@ -1,3 +1,4 @@
+import FeatureOnboarding
 import Foundation
 import MomentsInterface
 import WidgetInterface

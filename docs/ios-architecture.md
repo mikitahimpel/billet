@@ -872,6 +872,15 @@ draw. `payments` stays its own package: `FeatureShop` imports `Payments` only, a
 makes the store (`AppPayments`, `PaymentsLive`), so a Release build has none and nothing in the
 feature names the mock.
 
+Onboarding moved into `FeatureOnboarding` the same way: `OnboardingFlow`, `OnboardingView` and its
+pages, the welcome and its script, the coat picker, the pronoun picker, the invite code input and
+scanner, `AnswerQueue` and `OnboardingClient`. What only the app can draw is passed in as
+`OnboardingScenery`: the hero cat (`CatHeroStage`) and the two backdrops stay in the app, with their
+dust and the room's glow. The invite and code steps drive an `OnboardingPairing`, which `PairingModel`
+conforms to in the app, so the feature does not import `FeaturePairing`. The flow takes both
+`UserDefaults` (its own and the cat's) in `init` and reads the cat's name through the one it is given,
+never `CatProfile.store`. The bundled questions (`Onboarding.json`) are still a resource of the app.
+
 PRs 3 to 11 can be reordered around other agents' work; 1 and 2 cannot. Where a PR would touch
 more than about 25 files of UI that others are editing, it splits: the store and interface first
 (the views keep reading the old property through a one-line forward for a day), the views next.

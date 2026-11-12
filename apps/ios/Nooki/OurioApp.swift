@@ -1,3 +1,4 @@
+import FeatureOnboarding
 import FeatureUs
 import MomentsInterface
 import WidgetInterface
@@ -52,7 +53,7 @@ struct OurioApp: App {
         StreakNudge.moveToAppGroup()
         let hints = Hints(report: api.reportEvents)
         let onboarding = OnboardingFlow(
-            client: client, report: api.reportEvents, queue: AnswerQueue(), canInvite: canInvite,
+            client: client, report: api.reportEvents, queue: AnswerQueue(), defaults: .standard, catNames: CatProfile.store, canInvite: canInvite,
             hasServer: session != nil, asksTogetherSince: true,
             togetherSinceChosen: { day in
                 let profile = CoupleStore()
@@ -98,7 +99,7 @@ struct OurioApp: App {
                     .overlay {
                         if !onboarding.isFinished {
                             OnboardingView(
-                                flow: onboarding, pairing: session?.pairing, signedIn: session?.isSignedIn ?? false,
+                                flow: onboarding, pairing: session?.pairing, scenery: AppOnboardingScenery(), signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
                                 demoPartner: demoPartnerPairing)

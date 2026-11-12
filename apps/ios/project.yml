@@ -83,7 +83,7 @@ targets:
         # What the build carries, for check-archive.sh: the store (mock or storekit) and Labs (YES or NO).
         BilletPayments: $(BILLET_PAYMENTS_MODE)
         BilletLabs: $(BILLET_LABS_MODE)
-        # The invite step scans the partner's QR code (Onboarding/InviteScanner).
+        # The invite step scans the partner's QR code (FeatureOnboarding/InviteScanner).
         NSCameraUsageDescription: Ourio uses the camera to scan the invite code on your partner's screen.
         # ourio:// links from the widgets and controls, and nooki:// from invites sent before the rename
         # (WidgetInterface/DeepLink.swift).
