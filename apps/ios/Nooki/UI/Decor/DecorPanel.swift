@@ -65,17 +65,17 @@ struct DecorPanel: View {
         }
         switch machine.verdict {
         case .fits:
-            selected == nil ? "Tap a piece, or place one below." : "Drag to move. Tap the floor for your closet."
-        case .blocksWay: "That would block \(state.petName)'s way."
-        case .occupied: "Something is already there."
-        case .outsideRoom: "That's outside the room."
-        case .wrongSurface: "It doesn't go there."
+            return selected == nil ? "Tap a piece, or place one below." : "Drag to move. Tap the floor for your closet."
+        case .blocksWay: return "That would block \(state.petName)'s way."
+        case .occupied: return "Something is already there."
+        case .outsideRoom: return "That's outside the room."
+        case .wrongSurface: return "It doesn't go there."
         }
     }
 
     private func controls(for id: String) -> some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            Text(Catalog.item(id)?.name ?? id)
+            Text(Catalog.item(id)?.name ?? DecorItem.item(shopID: id)?.base?.title ?? id)
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
@@ -104,7 +104,7 @@ struct DecorPanel: View {
             ScrollView(.horizontal) {
                 HStack(spacing: Space.s) {
                     ForEach(items) { item in
-                        let name = Catalog.item(item.id)?.name ?? item.id
+                        let name = Catalog.item(item.id)?.name ?? item.base?.title ?? item.id
                         Button { state.decor.send(.closetTapped(item.id)) } label: {
                             VStack(spacing: Space.xs) {
                                 art(item.id)
@@ -145,7 +145,26 @@ struct DecorPanel: View {
         Ink.surfaceRaised.overlay {
             if let image = Thumbnails.image("Item_\(id)", maxPixels: 256) {
                 Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
+            } else {
+                Image(systemName: Self.symbol(id))
+                    .font(.ourioTitle)
+                    .foregroundStyle(Ink.textSecondary)
             }
+        }
+    }
+
+    private static func symbol(_ id: String) -> String {
+        switch id {
+        case "base-donutbed": "bed.double"
+        case "base-cattree": "tree"
+        case "base-plant": "leaf"
+        case "base-lamp": "lamp.floor"
+        case "base-rug": "square.grid.2x2"
+        case "base-bowls": "fork.knife"
+        case "base-books": "books.vertical"
+        case "base-windowseat": "window.vertical.open"
+        case "base-nightstand": "tablecells"
+        default: "shippingbox"
         }
     }
 }
