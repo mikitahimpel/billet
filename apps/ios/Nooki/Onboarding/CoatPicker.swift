@@ -29,7 +29,7 @@ struct CoatPicker: View {
                 .accessibilityHidden(true)
             chips
         }
-        .animation(reduceMotion ? .easeInOut(duration: 0.2) : .spring(duration: 0.35), value: coat)
+        .animation(reduceMotion ? Motion.fade() : Motion.spring(0.35), value: coat)
     }
 
     @ViewBuilder private var stage: some View {
@@ -94,15 +94,10 @@ struct CatStage: View {
                 .frame(width: height * 1.2, height: height * 1.2)
                 .offset(y: -height * 0.04)
             Ellipse()
-                .fill(.black.opacity(0.2))
+                .fill(RadialGradient(colors: [.black.opacity(0.4), .black.opacity(0.12), .clear],
+                                     center: .center, startRadius: 0, endRadius: height * 0.35))
                 .frame(width: height * 0.7, height: ground * 1.1)
-                .blur(radius: height * 0.03)
                 .offset(y: ground * 0.1)
-            Ellipse()
-                .fill(.black.opacity(0.5))
-                .frame(width: height * 0.4, height: ground * 0.4)
-                .blur(radius: height * 0.012)
-                .offset(y: -ground * 0.05)
             TimelineView(.animation(minimumInterval: 1 / 30, paused: reduceMotion)) { context in
                 let t = context.date.timeIntervalSinceReferenceDate
                 let breath = reduceMotion ? 0 : sin(t * 2 * .pi / 3.4)
@@ -132,7 +127,6 @@ struct CatStage: View {
                     .blendMode(.softLight)
                     .mask(image.scaledToFit())
             }
-            .shadow(color: Color(hex: 0xFFB866).opacity(0.3), radius: height * 0.03, x: -height * 0.015)
             .frame(height: tall)
             .offset(y: tall * (1 - Self.pawsAt))
             .frame(height: cat, alignment: .bottom)
@@ -153,7 +147,7 @@ struct CoatChip: View {
             CoatSwatchShape(swatch: coat.swatch)
                 .frame(width: min(size, 80), height: min(size, 80))
                 .padding(Space.xs)
-                .overlay(Circle().stroke(picked ? Color.honey : .clear, lineWidth: 2.5))
+                .background { if picked { Circle().fill(Color.honey) } }
                 .scaleEffect(picked ? 1.06 : 1)
             Text(coat.title)
                 .font(.ourioCaption)
@@ -191,7 +185,6 @@ struct CoatSwatchShape: View {
             context.fill(disc, with: .radialGradient(Gradient(colors: [.black.opacity(0), .black.opacity(0.3)]),
                                                      center: CGPoint(x: r * 0.85, y: r * 0.8), startRadius: r * 0.7, endRadius: r * 1.45))
         }
-        .shadow(color: .black.opacity(0.25), radius: 3, y: 2)
         .accessibilityHidden(true)
     }
 }
