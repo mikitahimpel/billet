@@ -33,12 +33,25 @@ private struct PartnerSight: Equatable {
     }
 }
 
+/// Whether the room's view is a point while no room can be seen. Its size changes only while the app is in front:
+/// a view that shrank as the app left the front and grew as it returned drew nothing after a game had been played,
+/// with the game open or closed, though its frames ran and its room was attached. It renders nothing in the
+/// background, so it keeps the size it had.
+enum RoomViewSize {
+    static func isShrunk(wanted: Bool, inFront: Bool, phase: ScenePhase) -> Bool {
+        phase == .active ? wanted : inFront
+    }
+}
+
 /// What is drawn for one input: the City's window under the room and the room itself while it can be seen.
 private struct RoomStage: View {
     let input: RoomInput
     let controller: RoomController
 
+    @Environment(\.scenePhase) private var scenePhase
+    @State private var shrunkInFront = false
     private var visible: Bool { input.visibility == .visible }
+    private var wantsShrunk: Bool { !visible && controller.loop == nil }
 
     var body: some View {
         let _ = controller.probe.stageBody()
@@ -68,12 +81,13 @@ private struct RoomStage: View {
                 // On its own renderer the view is never freed and its frames stop while it is not shown, so it stays
                 // full size and keeps its room.
                 let loop = controller.loop
+                let shrunk = RoomViewSize.isShrunk(wanted: wantsShrunk, inFront: shrunkInFront, phase: scenePhase)
                 DioramaView(scene: visible || loop != nil ? scene : controller.offStage,
                             paused: !visible || controller.corner != nil, petPulse: controller.petPulse,
                             showsBubble: !input.decor.isArranging, rendering: input.rendering, loop: loop) {
                     controller.petted()
                 }
-                .frame(width: visible || loop != nil ? nil : 1, height: visible || loop != nil ? nil : 1)
+                .frame(width: shrunk ? 1 : nil, height: shrunk ? 1 : nil)
                 .allowsHitTesting(visible && controller.game == nil)
                 .opacity(visible ? 1 : 0)
                 .accessibilityHidden(true)
@@ -82,6 +96,12 @@ private struct RoomStage: View {
 
                 if visible, controller.game == nil { CatVoice(name: input.catName, pronouns: input.catPronouns, controller: controller) }
             }
+        }
+        .onChange(of: wantsShrunk, initial: true) { _, wanted in
+            if scenePhase == .active { shrunkInFront = wanted }
+        }
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active { shrunkInFront = wantsShrunk }
         }
         // The room's view no longer drives a room it doesn't show; the next look starts it again.
         .onChange(of: visible) { _, visible in

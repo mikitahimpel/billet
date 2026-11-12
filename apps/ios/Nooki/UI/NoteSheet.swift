@@ -25,7 +25,6 @@ struct NoteSheet: View {
                 VStack(spacing: Space.section) {
                     face(note)
                         .rotationEffect(.degrees(-1))
-                        .shadow(color: .black.opacity(0.35), radius: 14, y: 6)
                         .padding(.top, Space.s)
 
                     HStack(spacing: Space.s) {
@@ -62,7 +61,7 @@ struct NoteSheet: View {
                 .frame(maxWidth: .infinity)
             }
         }
-        .animation(.snappy(duration: 0.25), value: note)
+        .animation(Motion.spring(0.25), value: note)
         .task(id: id) { await loadDoodle() }
         .alert("Couldn't send the report", isPresented: $reportFailed) {
             Button("OK", role: .cancel) {}
