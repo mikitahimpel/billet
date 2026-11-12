@@ -97,6 +97,7 @@ struct TabBar: View {
         return VStack(spacing: 3) {
             Image(systemName: dusk ? tab.symbol(filled: shown) : tab.symbol)
                 .ourioScaledFont(size: 18, weight: .semibold, design: dusk ? .rounded : .default)
+                .frame(height: 24)
             Text(tab.title)
                 .ourioScaledFont(size: 11, weight: dusk && shown ? .semibold : .medium, relativeTo: .caption2)
                 .lineLimit(1)
