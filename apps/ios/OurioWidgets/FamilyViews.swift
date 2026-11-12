@@ -146,12 +146,13 @@ private struct LevelChip: View {
 private struct SpeechBubble: View {
     let text: String
     var font: Font = .ourioMicro
+    var lines = 2
 
     var body: some View {
         Text(text)
             .font(font)
             .foregroundStyle(Ink.text)
-            .lineLimit(2)
+            .lineLimit(lines)
             .multilineTextAlignment(.leading)
             .padding(.horizontal, Space.m)
             .padding(.vertical, Space.s)
@@ -330,9 +331,8 @@ struct MochiFamilyView: View {
                     Text(pose.word).font(.ourioTitle).foregroundStyle(Ink.text).lineLimit(1).minimumScaleFactor(0.7)
                     if !calm { LevelChip(level: entry.facts.wallet.level) }
                 }
-                SpeechBubble(text: pose.speech(s, drawing: entry.facts.drawing), font: .ourioCaption)
-                Text(line).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(1)
-                Spacer(minLength: 0)
+                SpeechBubble(text: pose.speech(s, drawing: entry.facts.drawing), font: .ourioCaption, lines: 1)
+                Spacer(minLength: Space.xs)
                 HStack(spacing: Space.s) {
                     CareButton(care: pose.care, catName: s.catName)
                     if !calm { HugButton(sent: HugState.sent(s), partner: s.partner) }
