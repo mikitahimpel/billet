@@ -252,6 +252,30 @@ private struct QualityTierPicker: View {
     }
 }
 
+/// The visible room's counts, read when this card appears and again on Refresh; what moved since the reading before.
+private struct RoomStatsReadout: View {
+    let lab: PerfLab
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            if let stats = lab.roomStats {
+                ForEach(Array(stats.lines.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(.ourioMicro.monospacedDigit())
+                        .foregroundStyle(Ink.text)
+                }
+                if let previous = lab.previousStats, let moved = stats.changes(since: previous) {
+                    Text(moved).font(.ourioMicro.monospacedDigit()).foregroundStyle(Ink.textSecondary)
+                }
+            } else {
+                Text("Room stats: no room to count yet.").font(.ourioMicro).foregroundStyle(Ink.textSecondary)
+            }
+            SecondaryButton("Refresh room stats", fullWidth: true) { lab.refreshRoomStats() }
+        }
+        .onAppear { lab.refreshRoomStats() }
+    }
+}
+
 /// Each suspect's switch, the copy line and a reset, in one card: on Home under the meter and in Settings › Labs.
 struct PerfLabSwitches: View {
     let lab: PerfLab
@@ -266,13 +290,16 @@ struct PerfLabSwitches: View {
                     ToggleRow(suspect.title, symbol: suspect.symbol, tint: UsTint.honey.color, isOn: lab.binding(suspect))
                 }
                 QualityTierPicker(lab: lab)
+                RoomStatsReadout(lab: lab)
                 Text(lab.day?.line ?? "MetricKit: no day delivered yet; the system sends one about once a day.")
                     .font(.ourioMicro)
                     .foregroundStyle(Ink.textSecondary)
                 HStack(spacing: Space.s) {
                     SecondaryButton("Copy settings", fullWidth: true) {
+                        lab.refreshRoomStats()
                         UIPasteboard.general.string = PerfLabMachine.summary(lab.state, reading: reading,
-                                                                             energy: energy, tabs: tabs, day: lab.day)
+                                                                             energy: energy, tabs: tabs, day: lab.day,
+                                                                             room: lab.roomStats?.line)
                     }
                     if let json = MetricsReceiver.savedJSON() {
                         SecondaryButton("Copy MetricKit", fullWidth: false) { UIPasteboard.general.string = json }

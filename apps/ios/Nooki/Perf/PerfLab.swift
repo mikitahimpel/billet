@@ -148,12 +148,12 @@ nonisolated enum PerfLabMachine: Machine {
 
     /// One line to paste into a message: what is switched and the meter's last reading.
     static func summary(_ state: State, reading: FrameStats?, energy: EnergyStats? = nil,
-                        tabs: TabSwitchTimes? = nil, day: MetricsDigest? = nil) -> String {
+                        tabs: TabSwitchTimes? = nil, day: MetricsDigest? = nil, room: String? = nil) -> String {
         let changed = PerfSuspect.allCases.filter { state.changed.contains($0) }
             .map { "\($0.rawValue) \(state.isOn($0) ? "on" : "off")" }
         let forced = state.forcedTier.map { "tier \($0.title) forced" }
         let switches = changed.isEmpty && forced == nil ? "as shipped" : (changed + [forced].compactMap { $0 }).joined(separator: ", ")
-        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line, day?.line].compactMap { $0 })
+        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line, day?.line, room].compactMap { $0 })
             .joined(separator: " · ")
     }
 }
@@ -466,6 +466,10 @@ final class PerfLab {
     private(set) var day: MetricsDigest?
     #if DEBUG || LABS_YES
     @ObservationIgnored let energy = EnergyMeter()
+    /// Counts of the visible room's live scene, read when Labs asks (set by the screen that owns the room).
+    @ObservationIgnored var statsSource: (@MainActor (RoomQualityTier) -> RoomStats?)?
+    private(set) var roomStats: RoomStats?
+    private(set) var previousStats: RoomStats?
     @ObservationIgnored private var metrics: MetricsReceiver?
     @ObservationIgnored private var sampling: Task<Void, Never>?
     #endif
@@ -498,6 +502,15 @@ final class PerfLab {
     }
 
     func isOn(_ suspect: PerfSuspect) -> Bool { state.isOn(suspect) }
+
+    #if DEBUG || LABS_YES
+    /// Walks the room again; the reading before it is kept to show what changed.
+    func refreshRoomStats() {
+        guard let stats = statsSource?(tier) else { return }
+        if stats != roomStats { previousStats = roomStats }
+        roomStats = stats
+    }
+    #endif
 
     func binding(_ suspect: PerfSuspect) -> Binding<Bool> {
         Binding { self.isOn(suspect) } set: { self.store.send(.set(suspect, on: $0)) }

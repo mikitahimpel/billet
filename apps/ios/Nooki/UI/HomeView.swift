@@ -229,6 +229,9 @@ struct HomeView: View {
         }
         .environment(\.sheetGround, sheetGround)
         .environment(perfLab)
+        #if DEBUG || LABS_YES
+        .onAppear { perfLab.statsSource = { [room] tier in room.roomStats(tier: tier) } }
+        #endif
     }
 
     private var layout: some View {
