@@ -132,11 +132,11 @@ struct PurchaseMoment: View {
                     Text("\(purchase.title) is yours")
                         .font(.ourioHeadline)
                         .foregroundStyle(Ink.text)
-                        .lineLimit(3)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
                     Text(detail(purchase))
                         .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(3)
+                        .lineLimit(typeSize.isAccessibilitySize ? nil : 3)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: typeSize.isAccessibilitySize ? .leading : .trailing, spacing: Space.xs) {
