@@ -34,7 +34,6 @@
     "apps/ios/Nooki/UI/Us/SwipeDeck.swift": 8,
     "apps/ios/Nooki/UI/Us/UsKit.swift": 1,
     "apps/ios/Nooki/UI/Us/WatchList.swift": 3,
-    "apps/ios/Nooki/UI/Us/WishEditor.swift": 2,
     "apps/ios/Nooki/UI/WarmBackdrop.swift": 2
   },
   "raw-font": {
@@ -142,8 +141,8 @@
     "apps/ios/Nooki/UI/Us/UsKit.swift": 1,
     "apps/ios/Nooki/UI/Us/WatchList.swift": 1,
     "apps/ios/Nooki/UI/Us/WhoKnowsScreen.swift": 3,
-    "apps/ios/Nooki/UI/Us/WishEditor.swift": 2,
-    "apps/ios/Nooki/UI/Us/WishlistScreen.swift": 3,
+    "apps/ios/Nooki/UI/Us/WishEditor.swift": 1,
+    "apps/ios/Nooki/UI/Us/WishlistScreen.swift": 1,
     "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 3
   },
   "corner-shape": {
@@ -195,8 +194,6 @@
     "apps/ios/Nooki/UI/Us/PlaceSheets.swift": 3,
     "apps/ios/Nooki/UI/Us/SwipeDeck.swift": 1,
     "apps/ios/Nooki/UI/Us/WhoKnowsScreen.swift": 3,
-    "apps/ios/Nooki/UI/Us/WishEditor.swift": 1,
-    "apps/ios/Nooki/UI/Us/WishlistScreen.swift": 1,
     "apps/ios/Nooki/UI/Us/WorldMap.swift": 1,
     "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 1
   },
