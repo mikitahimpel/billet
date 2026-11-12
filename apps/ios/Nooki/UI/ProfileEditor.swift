@@ -82,9 +82,10 @@ struct ProfileEditor: View {
                         .font(.ourioCaption)
                         .foregroundStyle(Ink.accentText)
                 } else if profile.couple.pair == nil {
-                    Button("This is me") { profile.setViewer(partner) }
+                    Button("Use this phone for \(profile.name(of: partner))") { profile.setViewer(partner) }
                         .font(.ourioCaption)
-                        .foregroundStyle(Ink.textSecondary)
+                        .foregroundStyle(Ink.accentText)
+                        .underline()
                 }
             }
         }
