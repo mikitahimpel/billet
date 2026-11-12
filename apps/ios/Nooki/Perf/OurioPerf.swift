@@ -17,7 +17,11 @@ enum HUDArm: String {
     case flat
     case hidden
 
+    #if DEBUG || PERF_HOOKS_YES
     static let launch = HUDArm(rawValue: UserDefaults.standard.string(forKey: "perf.hud") ?? "") ?? .glass
+    #else
+    static let launch = HUDArm.glass
+    #endif
 
     var glass: GlassRendering {
         switch self {
@@ -28,6 +32,7 @@ enum HUDArm: String {
     }
 }
 
+#if DEBUG || PERF_HOOKS_YES
 /// Ourio's side of a `-perf.script` run (`ScenePerf`, read by apps/ios/scripts/perf/measure.sh). Silent without the
 /// launch argument. Orbits turn the room as a drag does; no zoom, since the pinch lives inside `DioramaView`.
 @MainActor
@@ -335,3 +340,14 @@ extension RoomKind {
     /// What a perf run marks the room on screen as.
     var perfName: String { self == .city ? "city room" : "room" }
 }
+#else
+@MainActor
+enum OurioPerf {
+    static func start(state: HomeState, hud: @escaping (HUDArm) -> Void,
+                      sheetGround: @escaping (SheetGroundStyle) -> Void, selectRoom: @escaping (RoomKind) -> Void) {}
+    static func game() -> MiniGame? { nil }
+    static func shown(_ room: CatRoom, kind: RoomKind) {}
+    static func catPlaced() {}
+    static func tabShown(_ tab: HomeTab) {}
+}
+#endif

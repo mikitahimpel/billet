@@ -19,6 +19,10 @@ settings:
     # environment. A Debug build always has them. The TestFlight workflow never sets it, because the binary it
     # uploads is the one App Review and the App Store get (check-archive.sh checks BilletLabs).
     BILLET_LABS_MODE: $(BILLET_LABS:default=NO)
+    # Whether the `-perf.script` measuring hooks (OurioPerf, ScenePerf) are compiled into a Release build: "NO" unless
+    # BILLET_PERF_HOOKS=YES is in the ENVIRONMENT (Package.swift of `pet` reads it too). Only the perf CI sets it;
+    # check-archive.sh fails an archive that carries them.
+    BILLET_PERF_HOOKS_MODE: $(BILLET_PERF_HOOKS:default=NO)
     CURRENT_PROJECT_VERSION: "23"
   configs:
     Debug:
@@ -135,7 +139,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: >-
-          $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) LABS_$(BILLET_LABS_MODE:upper)
+          $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper) LABS_$(BILLET_LABS_MODE:upper) PERF_HOOKS_$(BILLET_PERF_HOOKS_MODE:upper)
         # The application preset sets "1,2" per target, over the project's base; a portrait-only iPad build is rejected.
         TARGETED_DEVICE_FAMILY: "1"
         GENERATE_INFOPLIST_FILE: YES

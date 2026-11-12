@@ -6,6 +6,7 @@ import Pet
   import UIKit
 #endif
 
+#if PERF_HOOKS
 /// A measuring run of the scenes, set by `-perf.script <name>` and silent otherwise. Each result
 /// is one line on standard error starting with `PERF`, read by `apps/ios/scripts/perf/measure.sh`.
 @MainActor
@@ -397,3 +398,9 @@ public enum ScenePerf {
     String(format: "%.1f", value)
   }
 }
+#else
+/// The release build carries no measuring hooks (`BILLET_PERF_HOOKS`, docs/release-flags.md).
+public enum ScenePerf {
+  public nonisolated static var isOn: Bool { false }
+}
+#endif

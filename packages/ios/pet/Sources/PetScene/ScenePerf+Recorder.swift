@@ -6,6 +6,7 @@ import Pet
   import UIKit
 #endif
 
+#if PERF_HOOKS
 // MARK: - Recorder
 
 extension ScenePerf {
@@ -187,3 +188,4 @@ extension ScenePerf {
     }
   }
 }
+#endif

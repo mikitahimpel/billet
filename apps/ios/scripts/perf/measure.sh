@@ -67,6 +67,7 @@ if ((build)); then
     echo "another xcodebuild is running" >&2
     exit 1
   fi
+  export BILLET_PERF_HOOKS=YES
   (cd $app_dir && xcodegen generate -q)
   xcodebuild build -project $app_dir/Billet.xcodeproj -scheme Billet -configuration Release \
     -destination 'generic/platform=iOS Simulator' -derivedDataPath $derived \
