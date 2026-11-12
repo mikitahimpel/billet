@@ -140,18 +140,21 @@ Secrets are Proton Pass references, never values. `.env.pass` (dev, vault `Bille
 
 The API token needs Workers Scripts, D1 and R2 edit on the account. Create one item per vault.
 
-`APPLE_SIGN_IN_KEY` (the `.p8` key's PEM) and its key id let the Worker revoke a user's Sign in
-with Apple token when they delete their account (App Store guideline 5.1.1(v)). Only the `dev`
-stage binds them for now. Before `prod` serves real accounts, the owner:
+The four `Apple` fields are account-wide Apple keys: the APNs key (push) and the Sign in with
+Apple key (`APPLE_SIGN_IN_KEY`, the `.p8` PEM, which lets the Worker revoke a user's Apple token
+when they delete their account, App Store guideline 5.1.1(v)). The same `.p8` files work for every
+stage, so every stage binds them (`alchemy.run.ts`); only `DEMO_ROOM` stays dev-only. A `dev` or `prod`
+deploy stops before planning, naming the missing variables, if one is absent (local `alchemy dev`
+needs none). Before the first
+`prod` deploy the owner:
 
-1. adds the fields `APPLE_SIGN_IN_KEY` and `APPLE_SIGN_IN_KEY_ID` to an `Apple` item in
-   `Billet Release` (the same key works: it is the team's Sign in with Apple key, with
-   `com.ourio.app` as its primary App ID; the Worker still accepts tokens and revokes codes for
-   the first app, `com.mikitahimpel.billet`, until the owner retires it);
-2. adds both `pass://Billet Release/Apple/...` lines to `.env.pass.release`;
-3. moves the two bindings in `alchemy.run.ts` out of the `dev`-only block.
-
-Without them deletion still deletes everything and logs `not-configured` for the revocation.
+1. creates the item `Apple` in the vault `Billet Release` with the four fields above, named
+   exactly so, and copies each value from the item `Apple` in the vault `Billet` (copy in Proton
+   Pass; never print or paste a value elsewhere). The Sign in with Apple key has `com.ourio.app`
+   as its primary App ID; the Worker still accepts tokens and revokes codes for the first app,
+   `com.mikitahimpel.billet`, until the owner retires it;
+2. checks that `.env.pass.release` has the four `pass://Billet Release/Apple/<field>` lines
+   (committed).
 
 ```sh
 PROTON_PASS_AGENT_REASON="billet deploy dev" pp run --env-file .env.pass -- pnpm exec alchemy deploy --stage dev
