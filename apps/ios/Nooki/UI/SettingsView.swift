@@ -328,12 +328,6 @@ private struct DataCreditsView: View {
                     }
                 }
             }
-            GroupedSection(header: "Flags",
-                         footer: "Round flags from circle-flags by HatScripts, MIT License. Copyright (c) 2026 HatScripts.") {
-                Link(destination: URL(string: "https://github.com/HatScripts/circle-flags")!) {
-                    Row("circle-flags", symbol: "flag.fill", tint: UsTint.blush.color) { RowChevron() }
-                }
-            }
             GroupedSection(header: "Map", footer: "The world map is Natural Earth's, in the public domain.") {
                 Link(destination: URL(string: "https://www.naturalearthdata.com")!) {
                     Row("Natural Earth", symbol: "globe.europe.africa.fill", tint: UsTint.sage.color) { RowChevron() }
