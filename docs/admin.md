@@ -249,6 +249,10 @@ act on a report (block, delete the account) within a day. Each report also logs 
 `partner report received` with its reason, so an alert on that message reaches the team at once.
 `GET /admin/api/reports[?limit=<1-1000>]`. Not in the agent API, since it holds what users typed.
 
+`POST /v1/pair/report` has its own rate-limit group, `reports`: 10 an hour per address (an hour-long
+window; the other groups count per minute), so one caller cannot flood this page or the alert. Over
+the limit the route answers 429; nothing else about reporting changes.
+
 ## Seed data
 
 `pnpm admin:seed` writes `admin-seed.sql`: about 170 made-up pairs formed over the last 10 weeks
