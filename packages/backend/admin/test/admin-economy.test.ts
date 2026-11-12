@@ -149,12 +149,10 @@ describe("hoarding", () => {
   });
 
   it("uses the mean over the days a pair earned on", () => {
-    const rows = [
-      ...["a", "b", "c", "d", "e"].flatMap((id) => [
-        pairDay(id, "2026-11-11", { earned: 10, balance: 0 }),
-        pairDay(id, "2026-11-12", { earned: 30, balance: 300 }),
-      ]),
-    ];
+    const rows = ["a", "b", "c", "d", "e"].flatMap((id) => [
+      pairDay(id, "2026-11-11", { earned: 10, balance: 0 }),
+      pairDay(id, "2026-11-12", { earned: 30, balance: 300 }),
+    ]);
     // 20 a day typically: 300 is 15 days of it.
     expect(report([], rows, { holdDays: 14 }).hoarding).toMatchObject({
       share: 1,
