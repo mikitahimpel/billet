@@ -26,6 +26,7 @@ final class RearrangeRoomTests: XCTestCase {
 
     @MainActor
     func testResetRoomAsksFirstAndDecorateCloses() throws {
+        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
         launchDecorate()
         let reset = app.buttons["decorReset"]
         XCTAssertTrue(reset.waitForExistence(timeout: 15))
