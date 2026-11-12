@@ -181,6 +181,7 @@ final class GameSession {
 
     private func finish(_ result: GameResult) {
         finished = result
+        camera?.covered = 0.36
         finger = nil
         deck.bar = nil
         UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -191,6 +192,7 @@ final class GameSession {
 
     func playAgain() {
         stage?.tearDown()
+        camera?.covered = 0
         begin()
     }
 

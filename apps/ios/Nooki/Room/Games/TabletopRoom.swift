@@ -157,23 +157,42 @@ final class TabletopRoom: CatRoom {
     }
 }
 
-/// The corner as a full-screen view over the warm backdrop; it takes no touches, the game's layer does.
-struct TabletopView: View {
-    let room: TabletopRoom
+/// The one view corners are drawn in, for the app's life, over the warm backdrop; it takes no touches, the game's layer
+/// does. A RealityView that goes away takes the GPU side of what it drew, shared meshes and materials among it, so a
+/// corner built in a new view after that drew nothing for minutes: each corner swaps its root into this view instead.
+/// While no corner is shown it holds nothing, shrunk to one point and transparent.
+struct CornerStage: View {
+    let controller: RoomController
 
     var body: some View {
+        let room = controller.corner
         ZStack {
-            WarmBackdrop(drifts: false)
-            RealityView { content in
-                content.camera = .virtual
-                content.add(room.root)
-                room.start(on: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
+            if room != nil { WarmBackdrop(drifts: false) }
+            if !controller.isStandIn {
+                RealityView { content in
+                    content.camera = .virtual
+                    Self.show(room, in: content)
+                } update: { content in
+                    Self.show(room, in: content)
+                }
             }
             // A soft shade at the corners: the corner reads as a space, the middle stays as bright as it was.
-            RadialGradient(colors: [.clear, Color.honeyDeep.opacity(0.22)], center: .center, startRadius: 220, endRadius: 560)
+            if room != nil {
+                RadialGradient(colors: [.clear, Color.honeyDeep.opacity(0.22)], center: .center, startRadius: 220, endRadius: 560)
+            }
         }
+        .frame(width: room == nil ? 1 : nil, height: room == nil ? 1 : nil)
+        .opacity(room == nil ? 0 : 1)
+        .animation(.easeInOut(duration: 0.25), value: room == nil)
         .ignoresSafeArea()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
+    }
+
+    private static func show(_ room: TabletopRoom?, in content: RealityViewCameraContent) {
+        for entity in Array(content.entities) where entity !== room?.root { content.remove(entity) }
+        guard let room, !content.entities.contains(where: { $0 === room.root }) else { return }
+        content.add(room.root)
+        room.start(on: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
     }
 }

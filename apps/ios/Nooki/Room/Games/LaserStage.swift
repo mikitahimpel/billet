@@ -39,7 +39,7 @@ final class LaserStage: GameStage {
         laser = LaserPlay(length: Double(spots.length), floor: spots.area)
         lesson = LaserPlay.lesson(on: spots.area)
         dot = root.group()
-        dot.cylinder(0.002, 0.0085, Clay.glow(0xFF3B30, intensity: 8), at: .zero)
+        dot.cylinder(0.002, 0.011, Clay.glow(0xFF2A1F, intensity: 3), at: .zero)
         var glow = UnlitMaterial(color: UIColor(red: 1, green: 0.25, blue: 0.2, alpha: 0.4))
         glow.blending = .transparent(opacity: .init(floatLiteral: 0.4))
         halo = dot.cylinder(0.001, 0.02, glow, at: [0, 0.0005, 0])
@@ -88,7 +88,7 @@ final class LaserStage: GameStage {
             dot.isEnabled = true
             dot.position = [Float(at.x), spots.floor + 0.0015, Float(at.y)]
             let pulse = sin(time * 30)
-            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.02, 0.001, 0.02]
+            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.027, 0.001, 0.027]
             sinceTrail += dt
             if laser.dot != nil, sinceTrail > 0.035 {
                 sinceTrail = 0

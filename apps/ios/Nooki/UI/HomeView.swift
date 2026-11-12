@@ -408,6 +408,7 @@ struct HomeView: View {
             state.refresh(reloading: old != phase)
             for _ in 0..<state.takeWidgetFeeds() { room.feed() }
             room.appOpened()
+            state.sendPronouns = { room.pronounsChosen() }
             visitHints()
             Task {
                 await DrawingSync.requestPushes(asking: false)
@@ -423,6 +424,7 @@ struct HomeView: View {
             // download above doesn't hold them up.
             Task {
                 await room.syncCat()
+                state.refreshPronouns()
                 await state.streak.refresh()
             }
             // The room socket sends no game frames it missed while the app was away. Its own task, so missed
@@ -524,7 +526,7 @@ struct HomeView: View {
         let rate = perfLab.isOn(.splatRate) ? 30 : 0
         return RoomInput(
             scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
-            catName: state.petName, partnerHere: session?.partnerHere == true,
+            catName: state.petName, catPronouns: state.pronouns, partnerHere: session?.partnerHere == true,
             motes: perfLab.isOn(.motes) && plan.motes,
             sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,
             rendering: RoomRendering(

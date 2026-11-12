@@ -3,6 +3,7 @@ import { NoteId, UserId } from "@billet/contracts-domain/ids";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
 import { NoteText, PaperColor } from "@billet/contracts-domain/note";
 import { Reaction } from "@billet/contracts-domain/reaction";
+import { LoveStreak } from "@billet/contracts-domain/streak";
 
 const fields = {
   noteId: NoteId,
@@ -24,6 +25,9 @@ export const PushPayload = Schema.TaggedUnion({
   Alert: fields,
   /** To the photo's author. */
   Reaction: { noteId: NoteId, by: UserId, reaction: Reaction },
+  /** To the partner who hasn't done their part yet (`lit` false), or who did it first (`lit`
+   * true). `you` is the recipient, so the phone can tell its own marks from the partner's. */
+  Streak: { you: UserId, lit: Schema.Boolean, streak: LoveStreak },
   LiveActivity: {
     noteId: NoteId,
     author: UserId,

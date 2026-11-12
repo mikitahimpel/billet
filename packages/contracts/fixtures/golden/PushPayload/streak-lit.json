@@ -1,0 +1,10 @@
+{
+  "_tag": "Streak",
+  "lit": true,
+  "streak": {
+    "best": 9,
+    "days": 5,
+    "lastDay": "2026-11-05"
+  },
+  "you": "user-bob"
+}

@@ -327,7 +327,7 @@ public struct GaugeTile: View {
         ) {}
         GaugeTile(
           "Rested", state: "Wide awake", hint: "Fine for today", value: 0.9,
-          symbol: "moon.zzz.fill", tint: .lilac, note: "Naps on her own")
+          symbol: "moon.zzz.fill", tint: .lilac, note: "Only sleep fills it")
         GaugeTile(
           "Playful", state: "Curious", hint: "Bored in about 4 h", value: 0.6,
           symbol: "tennisball.fill", tint: .sage, action: "Play"

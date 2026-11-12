@@ -28,7 +28,7 @@ nonisolated struct PetHint: HintTip {
     static let hintId = "pet"
 
     var title: Text { Text("Say hi to \(CatProfile.name())") }
-    var message: Text? { Text("Tap her in the room to pet her.") }
+    var message: Text? { Text(CatProfile.pronouns().say(.tapToPet)) }
     var image: Image? { Image(systemName: "hand.wave.fill") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "pet" }] }
 }
@@ -38,7 +38,7 @@ nonisolated struct NeedsHint: HintTip {
     static let hintId = "needs"
 
     var title: Text { Text("\(CatProfile.name())'s needs live here") }
-    var message: Text? { Text("The ring shows how full, rested, playful and loved she is. Tap her portrait to care for her.") }
+    var message: Text? { Text(CatProfile.pronouns().say(.ringExplained)) }
     var image: Image? { Image(systemName: "chart.pie.fill") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "needs" }] }
 }
@@ -84,7 +84,7 @@ nonisolated struct TreatHint: HintTip {
     static let hintId = "treat"
 
     var title: Text { Text("A treat goes further") }
-    var message: Text? { Text("Her portrait opens her treats: one fills her up more than a pet, for \(ShopModel.treatPrice) coins.") }
+    var message: Text? { Text(CatProfile.pronouns().say(.portraitTreats(price: ShopModel.treatPrice))) }
     var image: Image? { Image(systemName: "fork.knife") }
     var rules: [Rule] { [#Rule(HintStage.$current) { $0 == "treat" }] }
 }

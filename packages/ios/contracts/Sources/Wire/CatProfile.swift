@@ -14,6 +14,9 @@ public struct CatLook: Codable, Hashable, Sendable {
 /// each phone draws at launch.
 public struct CatProfile: Codable, Hashable, Sendable {
   public let name: String
+  /// "she", "he" or "they"; nil until either partner chooses. Kept as text so a newer value from the
+  /// server never fails the decode.
+  public let pronouns: String?
   public let look: CatLook
   public let bornAt: Int
   public let natureSeed: String
@@ -21,9 +24,11 @@ public struct CatProfile: Codable, Hashable, Sendable {
   public let utcOffsetSeconds: Int
 
   public init(
-    name: String, look: CatLook, bornAt: Int, natureSeed: String, utcOffsetSeconds: Int
+    name: String, pronouns: String? = nil, look: CatLook, bornAt: Int, natureSeed: String,
+    utcOffsetSeconds: Int
   ) {
     self.name = name
+    self.pronouns = pronouns
     self.look = look
     self.bornAt = bornAt
     self.natureSeed = natureSeed
@@ -31,6 +36,25 @@ public struct CatProfile: Codable, Hashable, Sendable {
   }
 
   public var seed: UInt64? { UInt64(natureSeed) }
+
+  private enum CodingKeys: String, CodingKey {
+    case name
+    case pronouns
+    case look
+    case bornAt
+    case natureSeed
+    case utcOffsetSeconds
+  }
+
+  public init(from decoder: any Decoder) throws {
+    let container = try decoder.container(keyedBy: CodingKeys.self)
+    name = try container.decode(String.self, forKey: .name)
+    pronouns = try container.decodeOptionalKey(String.self, forKey: .pronouns)
+    look = try container.decode(CatLook.self, forKey: .look)
+    bornAt = try container.decode(Int.self, forKey: .bornAt)
+    natureSeed = try container.decode(String.self, forKey: .natureSeed)
+    utcOffsetSeconds = try container.decode(Int.self, forKey: .utcOffsetSeconds)
+  }
 }
 
 /// Each from 0.1 to 0.9, 0.5 at adoption.

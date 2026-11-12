@@ -1,4 +1,5 @@
 import Foundation
+import Pet
 import Wire
 
 /// The four mini-games, each started from the need it fills.
@@ -58,10 +59,10 @@ public struct GameResult: Equatable, Sendable {
   }
 
   /// The toast's line.
-  public var line: String {
+  public func line(pronouns: CatPronouns) -> String {
     switch game {
     case .feed:
-      if tooMuch { return "Too much! She's stuffed" }
+      if tooMuch { return pronouns.say(.tooMuchResult) }
       return score == 100 ? "Exactly right. Dinner's served" : "Close enough. Dinner's served"
     case .water:
       if tooMuch { return "Too much! A puddle, but fresh water" }

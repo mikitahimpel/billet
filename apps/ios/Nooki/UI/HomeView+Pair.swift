@@ -56,6 +56,7 @@ extension HomeView {
         guard let pair = state.profile.couple.catPair else { return }
         await state.streak.follow(session.streakRemote)
         await room.connectCat(session.catEvents, pair: pair)
+        state.refreshPronouns()
     }
 
     private func leavePair() async {

@@ -1,5 +1,6 @@
 import Design
 import MomentsInterface
+import Pet
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -42,14 +43,14 @@ struct StyleGallery: View {
             }
             GroupedSection(header: "Status rows", inset: StatusRow.inset) {
                 StatusRow("Food", state: "Hungry", symbol: "fork.knife", emphasis: .raised, action: "Feed") {}
-                StatusRow("Rest", state: "Wide awake", symbol: "moon.zzz.fill", note: "Naps on her own")
+                StatusRow("Rest", state: "Wide awake", symbol: "moon.zzz.fill", note: CatPronouns.unchosen.say(.napsOnOwn))
                 StatusRow("Love", state: "Adored", symbol: "heart.fill", tint: .blushPink, action: "Pet") {}
             }
             ItemGrid {
                 GaugeTile("Full", state: "Hungry", hint: "Would love a meal", value: 0.3, symbol: "fork.knife",
                           emphasis: .raised, action: "Feed") {}
                 GaugeTile("Rested", state: "Wide awake", hint: "Fine for today", value: 0.9, symbol: "moon.zzz.fill",
-                          tint: .lilac, note: "Naps on her own")
+                          tint: .lilac, note: CatPronouns.unchosen.say(.napsOnOwn))
             }
             MomentStrip([
                 StripMoment(id: "1", symbol: "moon.zzz.fill", tint: .lilac, title: "Slept", time: "till 7"),
@@ -102,7 +103,7 @@ struct StyleGallery: View {
                 LoadingState("Loading the Inbox")
                 ErrorState("Couldn't load the Inbox", text: "Check your connection and try again.") {}
             }
-            Callout(symbol: "hand.wave.fill", title: "Say hi to Mochi", message: "Tap her in the room to pet her.", close: {})
+            Callout(symbol: "hand.wave.fill", title: "Say hi to Mochi", message: CatPronouns.unchosen.say(.tapToPet), close: {})
                 .calloutBubble(pointer: CalloutPointer(edge: .top, position: 0.3))
             Card(state: .selected) {
                 CardHeader("Selected", detail: "A honey ring in place of the highlight edge", symbol: "checkmark",

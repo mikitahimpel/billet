@@ -140,6 +140,10 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 - Don't make two sizes of header control; the avatars, the glass buttons and the coin pill are all 44 pt.
 - Don't label a button with a bare symbol outside a toolbar: its tap area is the glyph. Frame the label
   `Size.control` square with `.contentShape(.rect)`, or use `GlassIconButton` (check-design fails otherwise).
+- Don't write "she" or "her" about the cat in copy. The pair chooses she, he or they (`CatProfile.pronouns()`, `they`
+  until chosen), so a line about the cat is a `CatPhrase` said by `pronouns.say(_:)` (`packages/ios/pet`), with all three
+  wordings and a test; `check-design.mjs` fails on a string literal that names one. The choice is `PronounPicker`
+  (onboarding's naming step, the cat sheet) and a `PickerRow` in Settings.
 - Don't show a mood as an emoji. `MoodArt(mood:size:)` (`apps/ios/Shared/Mood`) draws its clay cat face from
   `Moods.xcassets`, and the plain face when there is no mood; the words beside it carry the label.
 

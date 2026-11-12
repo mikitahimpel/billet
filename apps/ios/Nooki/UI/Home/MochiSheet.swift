@@ -7,12 +7,15 @@ import SwiftUI
 /// what kind of cat she is. It draws what it is given, so the gallery shows its parts with a fixed cat.
 struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
     let name: String
+    let pronouns: CatPronouns
     let status: CatStatus
     let level: Int
     /// The way to the next level, 0...1.
     let progress: Double
     let days: Int
     var care: (NeedCare) -> Void
+    /// Nil where the pronouns can't be changed, as in the gallery.
+    var choosePronouns: ((CatPronouns) -> Void)?
     @ViewBuilder var portrait: Portrait
     /// The care no need's tile offers, under the tiles.
     @ViewBuilder var extraCare: ExtraCare
@@ -22,12 +25,15 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
             MochiHero(mood: status.needs?.moodLine(name: name) ?? "Settling in", level: level, progress: progress,
                       days: days) { portrait }
             VStack(alignment: .leading, spacing: Space.m) {
-                NeedGrid(name: name, needs: status.needs, asleep: status.about?.asleep ?? false, care: care)
+                NeedGrid(name: name, pronouns: pronouns, needs: status.needs, asleep: status.about?.asleep ?? false, care: care)
                 extraCare
             }
             if let about = status.about {
-                MochiDay(name: name, doing: status.doing, moments: about.day)
-                MochiNature(about: about)
+                MochiDay(name: name, pronouns: pronouns, doing: status.doing, moments: about.day)
+                MochiNature(about: about, pronouns: pronouns)
+            }
+            if let choosePronouns {
+                PronounsCard(name: name, selection: pronouns, choose: choosePronouns)
             }
         }
     }
@@ -100,6 +106,7 @@ struct MochiHero<Portrait: View>: View {
 /// Her day so far as a strip of moments, with what she is doing now beside the title.
 struct MochiDay: View {
     let name: String
+    let pronouns: CatPronouns
     let doing: String
     let moments: [CatDayMoment]
     /// The zone and locale her day's times are told in.
@@ -111,7 +118,7 @@ struct MochiDay: View {
             SectionHeader("\(name)'s day", symbol: "sun.max.fill") { Text("Now: \(doing.lowercased())") }
             if moments.isEmpty {
                 Card {
-                    Text("Her day is only starting. What she gets up to shows here.")
+                    Text(pronouns.say(.dayStarting))
                         .font(.ourioCallout)
                         .foregroundStyle(Ink.textSecondary)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -129,10 +136,11 @@ struct MochiDay: View {
 /// What kind of cat she is: her type and its line, her six traits as bars, and her favourite spot.
 struct MochiNature: View {
     let about: CatAbout
+    let pronouns: CatPronouns
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeader("About her", symbol: "pawprint.fill")
+            SectionHeader(pronouns.say(.aboutHeading), symbol: "pawprint.fill")
             Card {
                 VStack(alignment: .leading, spacing: Space.l) {
                     CardHeader(about.temperament.title, detail: about.temperament.line,
@@ -151,7 +159,7 @@ struct MochiNature: View {
                             .accessibilityValue("\(PetNeed.percent(about.personality[trait])) percent")
                         }
                     }
-                    if let spot = about.favourite?.spotName {
+                    if let spot = about.favourite?.spotName(for: pronouns) {
                         ViewThatFits(in: .horizontal) {
                             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                                 spotLabel

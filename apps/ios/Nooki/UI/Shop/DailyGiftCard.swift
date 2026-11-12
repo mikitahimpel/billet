@@ -181,18 +181,7 @@ private struct GiftBox: View {
                 SpringKeyframe(1, duration: 0.35, spring: .bouncy)
             }
         }
-        .phaseAnimator([0.0, -7, 7, 0], trigger: opened || reduceMotion ? 0 : idleTicks) { content, angle in
-            content.rotationEffect(.degrees(angle), anchor: .bottom)
-        } animation: { _ in .easeInOut(duration: 0.09) }
-        .task(id: opened) {
-            while !opened, !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(3))
-                idleTicks += 1
-            }
-        }
     }
-
-    @State private var idleTicks = 0
 
     private var boxBody: some View {
         RoundedRectangle(cornerRadius: 5, style: .continuous)
