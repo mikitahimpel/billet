@@ -111,7 +111,7 @@
               AddItemField(
                 placeholder: placeholder(for: list.kind), text: $draft, focused: $focused
               ) {
-                add(draft, to: list)
+                add(draft)
               }
               .onAppear { if focusesField { focused = true } }
               .padding(.horizontal, Space.gutter)
@@ -247,15 +247,11 @@
       }
     }
 
-    /// A grocery the pair moved to another aisle before goes there again.
-    private func add(_ text: String, to list: UsList) {
-      let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !text.isEmpty else { return }
-      var details = ListItemDetails()
-      if list.kind.isChecklist { details.aisle = state.us.groceries.entry(for: text)?.aisle }
-      withAnimation(Motion.spring(0.25)) {
-        state.us.addItem(text, to: listID, author: state.viewer, details: details)
+    private func add(_ text: String) {
+      let added = withAnimation(Motion.spring(0.25)) {
+        state.us.addTyped(text, to: listID, author: state.viewer)
       }
+      guard added else { return }
       draft = ""
       focused = true
     }
