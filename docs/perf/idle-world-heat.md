@@ -359,6 +359,62 @@ How to read it: the step with the largest battery/GPU drop is the next thing to 
 splat is not the bill and the batching and light work (8.1, last bullet) is next. If steps 1 to 3 save most of it,
 ship pruning at 55% as the default and re-run.
 
+## 9. Room and furniture audit
+
+Numbers are from Labs → Performance → Room stats on a Simulator (iPhone 17 Pro, iOS 27.2, Debug), so the cat is her
+mesh stand-in there: the triangle counts include her 131k-splat mesh and are far above a phone's. The counts of
+entities, parts, lights and shadows do not depend on that. Nothing here is a GPU measurement.
+
+### 9.1 What the scenes hold
+
+| | Living room | Bedroom |
+| --- | --- | --- |
+| Entities enabled (+ disabled) | 191 (+12) | 270 (+0) |
+| Models / mesh parts (draw units per pass) | 106 / 176 | 236 / 236 |
+| Distinct materials by value / slots | 87 / 181 | 64 / 236 |
+| Directional lights (with a shadow map) | 1 (1) | 2 (1) |
+| Point lights | 3 (window 1800 lm r 1.1, lamp 700 r 0.7, candle 450 r 0.6) | 4 (sky 2500 r 1.2, lamp 2200 r 1.1, fairy 900 r 1.0, candle 500 r 0.5) |
+| Image-based light | 1 | 1 |
+| Grounding shadows (cast, receive) | 51, 51 | 0 |
+| Contact blobs | 9 (+10 plates, off until selected) | 0 |
+| IBL receivers | 171 | 263 |
+
+Stowing the window seat removed 8 entities, 32 parts and 4 grounding shadows: cost scales with the pieces' parts, not
+with the pieces.
+
+### 9.2 Ranked findings
+
+| # | Finding | Est. impact | Switch |
+| --- | --- | --- | --- |
+| 1 | The sun's shadow map redraws every shadow-casting model from the light each frame the room renders (both rooms; size is not settable, `maximumDistance` is 4 m for a 1 m room). Draw calls roughly double | High on GPU and `encodeDrawCalls` | `noSunShadow` |
+| 2 | Living room has 176 parts and Bedroom 236, each drawn at least once, plus again in the shadow pass; the 10 base pieces carry 62 material parts that never move outside Decorate | High (CPU encode, shadow pass) | `mergeFurniture` |
+| 3 | Dynamic lights: 4 in the Living room, 6 in the Bedroom. Every light adds to the per-fragment loop and the light constant buffers; the Bedroom rewrites all of them whenever the hour moves 0.1 h | Medium-high | `fewerLights` |
+| 4 | 9 transparent blob quads, each its own blended draw, plus 51 grounding shadows | Medium | `bakedBlobs` (blobs); grounding shadows fall with merging |
+| 5 | Bloom (iOS 27 only, unbounded scope): a full-screen downsample chain | Medium on GPU, if the phone is on iOS 27 | `noBloom` |
+| 6 | Living room pulse runs while `swaying` is true, which is the setting, not idleness: flame scale at 30 Hz, candle light intensity at 15 Hz (a light update), 26 bulb scales at 10 Hz, in an idle room | Medium (keeps the light data dirty) | `sway` (existing) |
+| 7 | Bedroom tick every frame: `Calendar.dateComponents` and `Daylight.sample`, two clock-hand orientation writes (a same-value write still dirties the subtree), 12 projections for the window | Low-medium CPU; keeps the scene dirty. Not changed here: Bedroom code is being reworked | none |
+| 8 | Sway rewrites `pivot.orientation` each frame while active, so every descendant transforms; scales with entity count (191 / 270) | Low-medium while she walks or a finger is down; idle is already still (`SwayEnvelope`) | merging cuts the entity count |
+| 9 | `showDecor` recomputes occupancy and cat routes per input change (not per frame) | Low | none |
+
+Already fine: the camera pose is guarded against rewrites, the pivot turns only when the yaw changed, motes and AA are
+off by default, a covered or hidden room does not render, and `ownLoop` caps an idle room at 30 fps. A scene-tick cap
+was not added: the tick is cheap next to the render, and `ownLoop` is the cap.
+
+### 9.3 Labs switches (all off by default, runtime toggles)
+
+`mergeFurniture` bakes the opaque plain-PBR parts of the stage's pieces into one mesh per material and shadow
+behaviour while the player is not arranging; opening Decorate or changing the layout puts every piece's own model back
+at once, and the merge is rebuilt after 0.4 s of stillness. `bakedBlobs` replaces the 9 blobs with one 512 px layer.
+`noSunShadow` removes the shadow component from every directional light. `fewerLights` keeps each room's widest point
+light. `noBloom` removes the bloom pass. Tests count each switch with the room stats and check that switching back
+restores the scene.
+
+### 9.4 Phone steps
+
+Labs → Performance: Refresh room stats, Copy settings (baseline). Flip one of `noSunShadow`, `fewerLights`,
+`mergeFurniture`, `bakedBlobs`, `noBloom` at a time, leave Home alone for 60 s, Copy settings, paste it back, and flip
+it off again. The line holds the switches, fps, CPU, heat, battery slope and the room stats.
+
 ## Sources
 
 - [RealityRenderer](https://developer.apple.com/documentation/realitykit/realityrenderer),
