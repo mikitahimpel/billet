@@ -36,7 +36,10 @@ xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
 ```
 
 Debug builds in every worktree share one compilation cache, `~/Library/Caches/billet-compilation-cache`
-(project.yml); a build that fails for no reason in the code is retried after deleting it.
+(project.yml); a build that fails for no reason in the code is retried after deleting it. When Warmbuild runs on
+this Mac (`~/.warmbuild/bin/warmbuild status`), builds read what CI compiled on main: pass
+`XCODE_XCCONFIG_FILE=~/.warmbuild/warmbuild.xcconfig` to `xcodebuild` (`scripts/verify-ios.sh` does it). Keep
+`-derivedDataPath` under `~/Library/Caches/<name>`, never under `/tmp`: Swift keys from there never match CI's.
 
 `<iPhone>`: any from `xcrun simctl list devices available`. Swift scripts are named `ios:*`, never
 `test` or `build`, so the TypeScript commands skip them on Linux.
