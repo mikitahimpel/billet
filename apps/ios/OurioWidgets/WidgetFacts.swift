@@ -94,12 +94,14 @@ enum PartnerNews: Equatable {
 struct StreakGlance: Equatable {
     var count: Int
     var status: LoveStreak.Status
+    var turn: LoveStreak.Turn?
     var next: Int?
     /// 0...1 from the milestone behind to the one ahead.
     var progress: Double
 
     init(_ streak: LoveStreak, on date: Date) {
         status = streak.status(on: date)
+        turn = streak.turn(on: date)
         count = streak.current(on: date)
         let ahead = streak.milestone(on: date)
         next = ahead.next
@@ -117,7 +119,12 @@ struct StreakGlance: Equatable {
     var isAtRisk: Bool { status == .atRisk }
 
     var caption: String {
-        switch status {
+        switch turn {
+        case .yours: return "Your turn today"
+        case .partners: return "Waiting on your partner"
+        case nil: break
+        }
+        return switch status {
         case .cold: "Start a streak today"
         case .restorable: "Restore it in Ourio"
         case .atRisk: "Keep it today"

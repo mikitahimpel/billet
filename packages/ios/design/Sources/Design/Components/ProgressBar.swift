@@ -4,10 +4,10 @@ import SwiftUI
 /// to `value` of `total`. It reads to VoiceOver as a percentage; the caller gives it a label.
 public struct ProgressBar: View {
   let fraction: Double
-  let tint: Color
+  let tint: Color?
   @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-  public init(value: Double, total: Double = 1, tint: Color = .honey) {
+  public init(value: Double, total: Double = 1, tint: Color? = nil) {
     self.fraction = total > 0 ? min(max(value / total, 0), 1) : 0
     self.tint = tint
   }
@@ -21,7 +21,7 @@ public struct ProgressBar: View {
       .overlay {
         // Scaled, not resized: the fill moves without laying the card out again.
         Rectangle()
-          .fill(tint)
+          .fill(tint ?? Ink.accentText)
           .scaleEffect(x: fraction, y: 1, anchor: .leading)
       }
       .clipShape(.capsule)

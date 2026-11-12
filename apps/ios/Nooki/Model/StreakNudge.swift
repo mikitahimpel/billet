@@ -25,7 +25,7 @@ enum StreakNudge {
     }
 
     /// The next evening the streak is at risk as this phone knows it: today's while it is still ahead, or tomorrow's
-    /// once today counts. Nil when nothing is at stake.
+    /// once today counts or this phone's person did their part. Nil when nothing is at stake.
     static func plan(for streak: LoveStreak, catName: String, now: Date, calendar: Calendar = .current) -> Plan? {
         let today = calendar.startOfDay(for: now)
         for offset in 0...1 {
@@ -33,8 +33,17 @@ enum StreakNudge {
                   let evening = calendar.date(bySettingHour: hour, minute: 0, second: 0, of: day),
                   evening > now,
                   streak.status(on: evening, calendar: calendar) == .atRisk else { continue }
-            return Plan(fire: evening, title: "\(catName) misses you two tonight",
-                        body: "Do one small thing together before midnight to keep your \(streak.count)-day streak.")
+            switch streak.turn(on: evening, calendar: calendar) {
+            case .partners: continue
+            case .yours:
+                return Plan(fire: evening, title: "\(catName) misses you tonight",
+                            body: "Your partner did their part. Do yours before midnight to keep your "
+                                + "\(streak.count)-day streak.")
+            case nil:
+                return Plan(fire: evening, title: "\(catName) misses you two tonight",
+                            body: "Do one small thing together before midnight to keep your "
+                                + "\(streak.count)-day streak.")
+            }
         }
         return nil
     }

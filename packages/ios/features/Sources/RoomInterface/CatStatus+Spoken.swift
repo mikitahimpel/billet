@@ -22,7 +22,7 @@ extension CatStatus {
     case .napping: "Napping"
     case .deepSleep: "Fast asleep"
     case .beingPetted: "Enjoying a pet"
-    case .greetingPartner: "Greeting her person"
+    case .greetingPartner: "Saying hello"
     case .sulking: "Sulking a little"
     }
   }

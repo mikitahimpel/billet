@@ -197,6 +197,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_streak"),
       expect.stringContaining("_layout"),
       expect.stringContaining("_stowed_piece"),
+      expect.stringContaining("_streak_marks"),
     ]);
   });
 
@@ -1028,7 +1029,9 @@ describe("PairRoom realtime across eviction", () => {
     await until(() => older.frames.some((f) => f._tag === "NoteReceived"));
 
     const today = { at: 1_700_000_000_000, utcOffsetSeconds: 0 };
+    // Bob's part waits for Alice's; hers lights the day.
     expect(await room.recordStreakDay(bob, today)).toMatchObject({ _tag: "Accepted" });
+    expect(await room.recordStreakDay(alice, today)).toMatchObject({ _tag: "Accepted" });
     // The same day again, and a restore the room refuses, change nothing and send nothing.
     expect(await room.recordStreakDay(alice, today)).toMatchObject({
       _tag: "Accepted",
@@ -1038,12 +1041,15 @@ describe("PairRoom realtime across eviction", () => {
       _tag: "Rejected",
       rejection: { _tag: "StreakNotRestorable" },
     });
-    await until(() => streaksOf(partner.frames).length === 2);
-    await until(() => streaksOf(ownOther.frames).length === 2);
-    expect(streaksOf(partner.frames)[1]).toEqual(expect.objectContaining({ days: 1, best: 1 }));
+    await until(() => streaksOf(partner.frames).length === 3);
+    await until(() => streaksOf(ownOther.frames).length === 3);
+    expect(streaksOf(partner.frames)[1]).toEqual(
+      expect.objectContaining({ days: 0, marks: [expect.objectContaining({ user: bob })] }),
+    );
+    expect(streaksOf(partner.frames)[2]).toEqual(expect.objectContaining({ days: 1, best: 1 }));
     await room.sendNote(alice, photo());
     await until(() => partner.frames.filter((f) => f._tag === "NoteReceived").length === 2);
-    expect(streaksOf(partner.frames)).toHaveLength(2);
+    expect(streaksOf(partner.frames)).toHaveLength(3);
     expect(streaksOf(older.frames)).toEqual([]);
 
     await evictDurableObject(room);

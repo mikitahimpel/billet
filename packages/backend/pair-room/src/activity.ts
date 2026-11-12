@@ -135,7 +135,9 @@ export const activityOf = (
         return row === undefined ? [] : [row];
       }
       case "CatSaved": {
-        const { cat, by, adopted } = output;
+        const { cat, by, adopted, renamed } = output;
+        // Pronouns, look and clock are saved without a word to the pair.
+        if (!adopted && !renamed) return [];
         // A burst of saves while typing is one item per minute, and the last name wins: rows
         // are written over by id.
         const minute = Math.floor(at / 60_000);

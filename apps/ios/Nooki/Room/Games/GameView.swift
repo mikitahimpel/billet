@@ -12,8 +12,6 @@ import UsInterface
 /// shows meanwhile.
 struct GameView: View {
     @State var session: GameSession
-    /// The corner the game is played in, or nil for the room itself.
-    var corner: TabletopRoom?
     var scenes: GameSceneSwitch
     var close: () -> Void
     @State private var touching = false
@@ -26,7 +24,6 @@ struct GameView: View {
             let insets = proxy.safeAreaInsets
             let full = CGSize(width: proxy.size.width, height: proxy.size.height + insets.top + insets.bottom)
             ZStack {
-                if let corner { TabletopView(room: corner).ignoresSafeArea() }
                 Color.clear
                     .ignoresSafeArea()
                     .contentShape(.rect)
@@ -360,7 +357,7 @@ private struct ResultToast: View {
     var body: some View {
         Toast {
             VStack(alignment: .leading, spacing: Space.m) {
-                Text(result.line)
+                Text(result.line(pronouns: CatProfile.pronouns()))
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                 HStack(spacing: Space.s) {

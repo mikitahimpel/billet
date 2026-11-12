@@ -1,7 +1,9 @@
 // Pure over its dependencies, so the room and the tests supply them.
 import type { DeliveryEntry, DeliveryOutcome } from "@billet/backend-pair-room/delivery-ledger";
 import type { Note } from "@billet/contracts-domain/note";
+import type { UserId } from "@billet/contracts-domain/ids";
 import type { NoteReaction } from "@billet/contracts-domain/reaction";
+import type { LoveStreak } from "@billet/contracts-domain/streak";
 import type { ApnsEnvironment, ApnsPush, ApnsPushType, ApnsResult } from "./apns-client.ts";
 import {
   alertBody,
@@ -13,6 +15,7 @@ import {
   riddleAlertBody,
   riddleEndedAlertBody,
   reactionAlertBody,
+  streakAlertBody,
   widgetBody,
 } from "./apns-payloads.ts";
 
@@ -76,6 +79,10 @@ export interface PushLaneDependencies {
         readonly state: "Open" | "Solved" | "GivenUp";
       }
     | undefined
+  >;
+  /** The pair's streak and its members; undefined while the room is not open. */
+  readonly streak: () => Promise<
+    { readonly streak: LoveStreak; readonly members: ReadonlyArray<string> } | undefined
   >;
   /** The member who did not write the note. */
   readonly recipient: (note: Note) => Promise<string | undefined>;
@@ -154,6 +161,27 @@ const riddleOfDelivery = (
     return { id: deliveryId.slice(riddleEndPrefix.length), ended: true };
   }
   return undefined;
+};
+
+const streakTurnPrefix = "streak-turn:";
+const streakLitPrefix = "streak-lit:";
+
+/** `by` did their part on `day`; the partner hears it's their turn, while it still is. */
+export const streakTurnDeliveryId = (day: string, by: string): string =>
+  `${streakTurnPrefix}${day}:${by}`;
+
+/** `by` lit `day`; the partner who did their part first hears it. */
+export const streakLitDeliveryId = (day: string, by: string): string =>
+  `${streakLitPrefix}${day}:${by}`;
+
+const streakOfDelivery = (
+  deliveryId: string,
+): { readonly day: string; readonly by: string; readonly lit: boolean } | undefined => {
+  const lit = deliveryId.startsWith(streakLitPrefix);
+  if (!lit && !deliveryId.startsWith(streakTurnPrefix)) return undefined;
+  const rest = deliveryId.slice((lit ? streakLitPrefix : streakTurnPrefix).length);
+  const colon = rest.indexOf(":");
+  return colon > 0 ? { day: rest.slice(0, colon), by: rest.slice(colon + 1), lit } : undefined;
 };
 
 const sendToAll = async (
@@ -247,6 +275,31 @@ const sendRiddleLane = async (
   }
 };
 
+/**
+ * Alert lane only. A turn is not sent once the day lit or the partner did their part; a lit day not
+ * once a later day lit.
+ */
+const sendStreakLane = async (
+  lane: PushLane,
+  delivery: { readonly day: string; readonly by: string; readonly lit: boolean },
+  deps: PushLaneDependencies,
+): Promise<DeliveryOutcome> => {
+  if (lane !== "AlertPush") return "Delivered";
+  const found = await deps.streak();
+  if (found === undefined) return "Abandon";
+  const { streak, members } = found;
+  const partner = members.find((member) => member !== delivery.by);
+  if (partner === undefined) return "Abandon";
+  const marked = (user: string) =>
+    (streak.marks ?? []).some((mark) => mark.user === user && mark.day === delivery.day);
+  const current = delivery.lit
+    ? streak.lastDay === delivery.day
+    : streak.lastDay !== delivery.day && marked(delivery.by) && !marked(partner);
+  if (!current) return "Abandon";
+  const body = streakAlertBody({ you: partner as UserId, lit: delivery.lit, streak });
+  return sendToAll(partner, lane, body, `s-${delivery.day}`, deps);
+};
+
 /** Abandon when there is no one to send to or nothing will be accepted; n/a lanes count as done. */
 export const sendPushLane = async (
   entry: Pick<DeliveryEntry, "noteId" | "lane">,
@@ -261,6 +314,8 @@ export const sendPushLane = async (
   if (part !== undefined) return sendGuessLane(entry.lane, part, deps);
   const riddle = riddleOfDelivery(entry.noteId);
   if (riddle !== undefined) return sendRiddleLane(entry.lane, riddle, deps);
+  const streak = streakOfDelivery(entry.noteId);
+  if (streak !== undefined) return sendStreakLane(entry.lane, streak, deps);
   const note = await deps.note(entry.noteId);
   if (note === undefined) return "Abandon";
   const body = bodyFor(entry.lane, note, deps.nowSeconds());

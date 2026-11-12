@@ -22,6 +22,7 @@ extension RoomController: PetNeedsSource {}
 /// something, is raised.
 struct NeedGrid: View {
     let name: String
+    let pronouns: CatPronouns
     let needs: PetNeeds?
     let asleep: Bool
     var care: (NeedCare) -> Void
@@ -37,7 +38,7 @@ struct NeedGrid: View {
         } else {
             // Before her needs are known: one calm line rather than four empty gauges.
             Card {
-                Text("\(name) is settling in. Her needs show here soon.")
+                Text(pronouns.say(.needsSettlingIn(name: name)))
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.textSecondary)
                     .multilineTextAlignment(.center)
@@ -60,7 +61,7 @@ struct NeedGrid: View {
             .accessibilityIdentifier(action.title)
         } else {
             GaugeTile(need.title, state: state, hint: hint, value: value, symbol: need.symbol, tint: need.tint,
-                      emphasis: emphasis, note: need.note ?? "")
+                      emphasis: emphasis, note: need.note(pronouns: pronouns) ?? "")
         }
     }
 }

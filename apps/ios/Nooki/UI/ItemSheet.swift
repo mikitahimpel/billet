@@ -68,13 +68,6 @@ struct ItemSheet: View {
 
     private var stage: some View {
         ZStack {
-            Rectangle()
-                .fill(RadialGradient(colors: [Color(hex: 0xF4BF7E).opacity(0.6),
-                                              Color(hex: 0xB36E3A).opacity(0.32),
-                                              Color(hex: 0x2A1A12).opacity(0.05)],
-                                     center: UnitPoint(x: 0.5, y: 0.46),
-                                     startRadius: 6, endRadius: 230))
-
             // Same camera as the thumbnail (ItemTurntable.frame), so the still dissolves into the model
             // without the two showing side by side. Always on screen, so RealityKit is already drawing; the
             // model stays hidden until the turntable fades it in (ItemTurntable.isRevealed).
@@ -99,12 +92,9 @@ struct ItemSheet: View {
                 onEnded: { turntable.isDragging = false }
             )
         }
-                .frame(height: CGFloat(ItemTurntable.stageHeight))
+        .frame(height: CGFloat(ItemTurntable.stageHeight))
+        .wellSurface(.card)
         .corners(.card)
-        .overlay {
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .strokeBorder(item.rarity == .common ? Ink.separator : item.rarity.tint.opacity(0.7), lineWidth: 1.5)
-        }
         .scaleEffect(celebrating ? 1.03 : 1)
         .accessibilityElement()
         .accessibilityLabel(item.name)
@@ -117,7 +107,7 @@ struct ItemSheet: View {
         guard showsPlaceholder, turntable.isDrawn else { return }
         // The model fades in under the still first, so lifting the still never uncovers an empty stage.
         turntable.isRevealed = true
-        withAnimation(.easeInOut(duration: 0.3).delay(0.5)) { showsPlaceholder = false }
+        withAnimation(Motion.fade(0.3).delay(0.5)) { showsPlaceholder = false }
     }
 
     // MARK: Actions
@@ -164,7 +154,7 @@ struct ItemSheet: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .animation(.snappy(duration: 0.25), value: owned)
+        .animation(Motion.spring(Motion.quick), value: owned)
     }
 
     private var buyLabel: some View {
@@ -198,7 +188,7 @@ struct ItemSheet: View {
         send(.bought)
         turntable.celebrate()
         withAnimation(.spring(duration: 0.3, bounce: 0.5)) { celebrating = true }
-        withAnimation(.spring(duration: 0.4).delay(0.3)) { celebrating = false }
+        withAnimation(Motion.spring(0.4).delay(0.3)) { celebrating = false }
     }
 }
 
