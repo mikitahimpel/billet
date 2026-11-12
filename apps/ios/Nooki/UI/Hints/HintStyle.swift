@@ -23,6 +23,8 @@ struct HintStyle: TipViewStyle {
                 CalloutButton(action: action.handler) { action.label() }
             }
         }
+        // The popover is sized by TipKit, which clips a card taller than it allows; chrome caps its text as the header does.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .onAppear { hints.appeared(configuration.tip) }
     }
 }

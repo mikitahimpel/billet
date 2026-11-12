@@ -186,7 +186,7 @@ struct HomeView: View {
                     withAnimation(.spring(duration: 0.4)) { state.open(target) }
                 }
             } else {
-                InboxSignedOut(petName: state.petName)
+                InboxSignedOut(petName: state.petName, isPaired: state.profile.couple.pair != nil)
             }
         }
         .onChange(of: state.shop.coinsAsk) { _, ask in
@@ -323,6 +323,9 @@ struct HomeView: View {
             }
             .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
+        }
+        .overlay {
+            if arranging, room.game == nil, state.tab == .world { DecorTouchLayer(controller: room) }
         }
         .overlay(alignment: .bottom) {
             if arranging, room.game == nil {

@@ -45,9 +45,9 @@ struct SettingsView: View {
     var body: some View {
         Page {
             GroupedSection(header: "General",
-                         footer: "Small taps when you pet \(CatProfile.name()), buy something or add a wish.") {
+                         footer: "Haptics: small taps when you pet \(CatProfile.name()), buy something or add a wish. Pronouns: how Ourio talks about \(CatProfile.name()).") {
                 ToggleRow("Haptics", symbol: "hand.tap.fill", tint: UsTint.lilac.color, isOn: $haptics)
-                PickerRow("Cat pronouns", symbol: "pawprint.fill", tint: UsTint.sun.color,
+                PickerRow("Pronouns", symbol: "pawprint.fill", tint: UsTint.sun.color,
                           selection: Binding(get: { state.pronouns }, set: { state.choosePronouns($0) })) {
                     ForEach(CatPronouns.allCases, id: \.self) { Text($0.label).tag($0) }
                 }

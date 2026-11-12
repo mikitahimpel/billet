@@ -183,7 +183,7 @@ for each look in light and dark: body text 4.5:1 on a slab's lightest stop and i
 
 - No blur, material or live shadow on content. The system's bars and scroll edge are the only blur.
 - A slab's shadow is the kit's stretched texture. A `.shadow(` in feature code is a blur pass per frame.
-- No text under 12 pt (`.ourioMicro`).
+- No text under 12 pt (`.ourioMicro`). Widgets take the largest size that fits; only the system's own minimums (a lock-screen accessory's) are smaller.
 - Every tap target is `Size.control` or larger; a symbol button has a VoiceOver label.
 - At accessibility sizes a row stacks (the kit's `Row`, `SectionHeader`, `ItemGrid`, `ActionRow` already
   do); a hand-made `HStack` row does not, which is one more reason there are none.

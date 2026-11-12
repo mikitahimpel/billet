@@ -231,6 +231,9 @@ class CatRoom {
 
     // MARK: - Mochi
 
+    /// Called once she is built, for a room whose furniture may already stand elsewhere.
+    func catBuilt() {}
+
     /// Mochi sitting at `at` facing `rests.last`; with a route she walks between its ends, `rests` her yaws at each.
     /// Splats where the GPU draws them, else meshes of the same splats (Cat.usdz, CatStanding.usdz); loaded once in
     /// the background and shared by the rooms (see `adoptCat`).
@@ -263,6 +266,7 @@ class CatRoom {
             Self.rooms.add(self)
             walker.avoid = avoid
             self.walker = walker
+            defer { catBuilt() }
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })
             director?.appOpened()

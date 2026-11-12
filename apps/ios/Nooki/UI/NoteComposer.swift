@@ -81,19 +81,14 @@ struct NoteComposer: View {
                 .padding(.horizontal, Space.gutter)
                 .offset(y: -Space.l)
         }
-        .animation(.snappy(duration: 0.2), value: model.hasInk)
+        .animation(Motion.spring(0.2), value: model.hasInk)
     }
 
     private var toolToggle: some View {
-        Button { model.drawing.toggle() } label: {
-            Image(systemName: model.drawing ? "pencil.tip" : "character.cursor.ibeam")
-                .font(.ourioCallout.weight(.semibold))
-                .foregroundStyle(model.drawing ? Ink.heroInk : Ink.text)
-                .frame(width: Size.control, height: Size.control)
-                .background(model.drawing ? Color.honey : Ink.surface, in: .circle)
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel(model.drawing ? "Type" : "Draw")
+        RoundButton(
+            symbol: model.drawing ? "pencil.tip" : "character.cursor.ibeam",
+            label: model.drawing ? "Type" : "Draw", style: model.drawing ? .honey : .quiet
+        ) { model.drawing.toggle() }
         .accessibilityHint(model.drawing ? "Back to typing" : "Draw on the note with a pen")
         .accessibilityIdentifier("composerPen")
     }
@@ -104,11 +99,11 @@ struct NoteComposer: View {
                 Button(option.rawValue.capitalized) { model.paper = option }
             }
         } label: {
-            Circle()
-                .fill(Color(hex: model.paper.hex))
-                .overlay(Circle().strokeBorder(Ink.text.opacity(0.3), lineWidth: 1))
-                .frame(width: 28, height: 28)
+            Image(systemName: "paintpalette")
+                .font(.ourioHeadline)
+                .foregroundStyle(Ink.text)
                 .frame(width: Size.control, height: Size.control)
+                .background { Circle().fill(Ink.well) }
         }
         .accessibilityLabel("Paper colour")
         .accessibilityValue(model.paper.rawValue.capitalized)
@@ -116,19 +111,11 @@ struct NoteComposer: View {
     }
 
     private var kindPicker: some View {
-        Button {
+        RoundButton(symbol: model.kind.symbol, label: "Paper: \(model.kind.rawValue)") {
             let kinds = style.kinds
             let next = (kinds.firstIndex(of: model.kind) ?? 0) + 1
-            withAnimation(.snappy) { model.kind = kinds[next % kinds.count] }
-        } label: {
-            Image(systemName: model.kind.symbol)
-                .font(.ourioCallout.weight(.semibold))
-                .foregroundStyle(Ink.text)
-                .frame(width: Size.control, height: Size.control)
-                .background(Ink.surface, in: .circle)
+            withAnimation(Motion.spring()) { model.kind = kinds[next % kinds.count] }
         }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityLabel("Paper: \(model.kind.rawValue)")
         .accessibilityIdentifier("composerPaperKind")
     }
 

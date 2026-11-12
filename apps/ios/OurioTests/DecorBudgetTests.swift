@@ -25,13 +25,24 @@ struct DecorBudgetTests {
         return (triangles, parts)
     }
 
-    @Test(arguments: DecorItem.all)
+    @Test(arguments: DecorItem.all.filter { !$0.isBase })
     func everyPieceFitsItsBudget(item: DecorItem) async throws {
         let model = try await Entity(named: item.assetName, in: .main)
         let (triangles, parts) = counts(model)
         #expect(triangles > 0)
         #expect(triangles <= DecorItem.triangleBudget, "\(item.id) has \(triangles) triangles")
         #expect(parts <= DecorItem.partBudget, "\(item.id) has \(parts) parts")
+    }
+
+    /// The room's own pieces were one model of about this many triangles before they were split; split they stay
+    /// under it.
+    @Test func theRoomsOwnPiecesAreNoHeavierThanTheModelTheyCameFrom() async throws {
+        var triangles = 0
+        for item in DecorItem.baseItems {
+            triangles += counts(try await Entity(named: item.assetName, in: .main)).triangles
+        }
+        #expect(triangles > 0)
+        #expect(triangles <= 284_000, "\(triangles) triangles")
     }
 
     @Test func aFullRoomStaysInTheWholeBudget() {
