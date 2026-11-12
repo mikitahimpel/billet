@@ -35,19 +35,19 @@ struct DateFilterSheet: View {
                         HStack(spacing: Space.s) {
                             ForEach(DatePreset.all) { preset in
                                 FilterChip(preset.title, isSelected: filter == preset.filter) {
-                                    withAnimation(.snappy(duration: 0.2)) { filter = preset.filter }
+                                    withAnimation(Motion.spring(0.2)) { filter = preset.filter }
                                 }
                             }
                         }
                     }
                     group("Where") {
-                        options(DateIdea.Place.allCases.map(DateFilter.Tag.place), columns: 2)
+                        options(DateIdea.Place.allCases.map(DateFilter.Tag.place))
                     }
                     group("Budget") {
-                        options(DateIdea.Cost.allCases.map(DateFilter.Tag.cost), columns: 3)
+                        options(DateIdea.Cost.allCases.map(DateFilter.Tag.cost))
                     }
                     group("Time") {
-                        options(DateIdea.Length.allCases.map(DateFilter.Tag.length), columns: 3)
+                        options(DateIdea.Length.allCases.map(DateFilter.Tag.length))
                     }
                 }
                 .padding(.horizontal, Space.gutter)
@@ -66,7 +66,7 @@ struct DateFilterSheet: View {
         .toolbar {
             if !filter.isEmpty {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button("Reset") { withAnimation(.snappy(duration: 0.2)) { filter = DateFilter() } }
+                    Button("Reset") { withAnimation(Motion.spring(0.2)) { filter = DateFilter() } }
                 }
             }
         }
@@ -82,41 +82,17 @@ struct DateFilterSheet: View {
         }
     }
 
-    private func options(_ tags: [DateFilter.Tag], columns: Int) -> some View {
-        LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Space.s), count: columns), spacing: Space.s) {
+    private func options(_ tags: [DateFilter.Tag]) -> some View {
+        FlowRow(spacing: Space.s) {
             ForEach(tags, id: \.self) { tag in
-                option(tag)
+                FilterChip(tag.title, symbol: tag.symbol, isSelected: filter.contains(tag)) {
+                    withAnimation(Motion.spring(0.2)) { filter.toggle(tag) }
+                }
             }
         }
-    }
-
-    private func option(_ tag: DateFilter.Tag) -> some View {
-        let selected = filter.contains(tag)
-        return Button {
-            withAnimation(.snappy(duration: 0.2)) { filter.toggle(tag) }
-        } label: {
-            HStack(spacing: Space.s) {
-                Image(systemName: tag.symbol)
-                    .font(.ourioHeadline)
-                    .foregroundStyle(selected ? Color.honey : Ink.textSecondary)
-                Text(tag.title)
-                    .font(.ourioHeadline)
-                    .foregroundStyle(Ink.text)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                Spacer(minLength: 0)
-            }
-            .padding(.horizontal, Space.l)
-            .frame(height: 50)
-            .background(selected ? Color.honey.opacity(0.22) : Ink.surface,
-                        in: .rect(cornerRadius: Radius.control, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: Radius.control, style: .continuous)
-                .stroke(selected ? Color.honey : Ink.separator, lineWidth: selected ? 1.5 : 0.5))
-        }
-        .buttonStyle(PressScaleStyle())
-        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 }
+
 
 extension DateIdea.Place {
     var title: String {
