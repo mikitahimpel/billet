@@ -23,7 +23,10 @@ class CatRoom {
     var onShowcase: ((String?) -> Void)?
     /// While set the room neither animates nor draws, though it stays attached to its view.
     var paused = false {
-        didSet { root.isEnabled = !paused }
+        didSet {
+            root.isEnabled = !paused
+            if oldValue, !paused, subscription != nil { claimCat() }
+        }
     }
     var isPlayingGame = false
     /// Screen point to world point on a plane (a transform whose Y axis is its normal); set by the view that draws
@@ -176,8 +179,7 @@ class CatRoom {
     /// spot above Mochi's head lands on screen. `viewer` is the camera.
     func start(on surface: any RoomSurface, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
-        Self.shown = self
-        adoptCat()
+        if Self.takesCat(paused: paused) { claimCat() }
         subscription?.cancel()
         subscription = surface.updates { [weak self] event in
             guard let self, !paused else { return }
@@ -188,6 +190,15 @@ class CatRoom {
             let anchor = catGroup.position(relativeTo: nil) + [0, catHeadTop, 0]
             onFrame(walker == nil ? nil : surface.project(anchor))
         }
+    }
+
+    /// A paused room is held under a game played in a corner, or is an empty stand-in while the app is not in front;
+    /// either way the cat is drawn somewhere else, and a room that took her on starting would empty that one.
+    static func takesCat(paused: Bool) -> Bool { !paused }
+
+    private func claimCat() {
+        Self.shown = self
+        adoptCat()
     }
 
     /// Also ends any showcase.
