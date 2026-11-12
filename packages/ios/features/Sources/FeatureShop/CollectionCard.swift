@@ -15,6 +15,12 @@
     private var items: [ShopItem] {
       collection.itemIDs.compactMap { Catalog.item($0, cat: state.petName) }
     }
+    private static let columns = 4
+    private var rows: [[ShopItem]] {
+      stride(from: 0, to: items.count, by: Self.columns).map {
+        Array(items[$0..<min($0 + Self.columns, items.count)])
+      }
+    }
     private var have: Int { collection.owned(of: state.shop.owned) }
     private var claimed: Bool { state.shop.bonuses.contains(collection.id) }
 
@@ -33,12 +39,18 @@
         ProgressBar(value: Double(have), total: Double(collection.itemIDs.count))
           .accessibilityLabel("\(have) of \(collection.itemIDs.count) collected")
 
-        LazyVGrid(
-          columns: Array(repeating: GridItem(.flexible(), spacing: Space.s), count: 4),
-          spacing: Space.s
-        ) {
-          ForEach(items) { item in
-            slot(item)
+        // Not lazy: a card is a handful of tiles, and rows built on scroll made the card's height and rows jump.
+        VStack(spacing: Space.s) {
+          ForEach(rows.indices, id: \.self) { row in
+            HStack(spacing: Space.s) {
+              ForEach(0..<Self.columns, id: \.self) { column in
+                if column < rows[row].count {
+                  slot(rows[row][column])
+                } else {
+                  Color.clear.frame(maxWidth: .infinity).aspectRatio(1, contentMode: .fit)
+                }
+              }
+            }
           }
         }
 

@@ -150,7 +150,6 @@
         }
         ForEach(Catalog.collections(cat: state.petName)) { collection in
           CollectionCard(state: state, collection: collection) { sheetItem = $0 }
-            .shopAppear()
         }
       }
       .padding(.horizontal, Space.l)
@@ -167,7 +166,7 @@
     /// The day's deals side by side in one row that scrolls sideways, each tile as wide as a grid tile on an iPhone.
     private func dealsRow(_ items: [ShopItem]) -> some View {
       ScrollView(.horizontal) {
-        LazyHStack(alignment: .top, spacing: Space.m) {
+        HStack(alignment: .top, spacing: Space.m) {
           ForEach(items) { item in
             ShopItemCard(item: item, state: state) { sheetItem = item }
               .modifier(DealWidth())
