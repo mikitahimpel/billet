@@ -1,5 +1,7 @@
 import Design
+import FeaturePairing
 import SwiftUI
+import Transport
 
 struct PairToPlayButton: View {
     @Environment(ServerSession.self) private var session: ServerSession?
