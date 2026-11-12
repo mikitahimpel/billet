@@ -16,9 +16,13 @@ struct PartnerAndAccountSections: View {
     @Environment(\.startOver) private var startOver
     @State private var confirming: Action?
     @State private var reporting = false
-    @State private var working = false
+    @State private var working: Busy?
     @State private var failed = false
     @State private var reported = false
+
+    private enum Busy {
+        case unpair, report, block, deleteAccount
+    }
 
     private enum Action: Identifiable {
         case unpair, block, deleteAccount
@@ -31,21 +35,21 @@ struct PartnerAndAccountSections: View {
                 GroupedSection(header: "Partner", footer: reported
                     ? "Thank you. We read every report."
                     : "Unpairing ends the pair for both of you. Blocking also keeps the two of you from pairing again.") {
-                    button("Unpair", symbol: "person.2.slash.fill", tint: .honey) { confirming = .unpair }
-                    button("Report partner", symbol: "flag.fill", tint: .sun) { reporting = true }
-                    button("Block partner", symbol: "hand.raised.fill", tint: .coral, destructive: true) {
+                    button("Unpair", busy: .unpair, symbol: "person.2.slash.fill", tint: .honey) { confirming = .unpair }
+                    button("Report partner", busy: .report, symbol: "flag.fill", tint: .sun) { reporting = true }
+                    button("Block partner", busy: .block, symbol: "hand.raised.fill", tint: .coral, destructive: true) {
                         confirming = .block
                     }
                 }
             }
             GroupedSection(header: "Delete account",
                            footer: "Removes your account and what you sent from the server, and takes this phone back to the start.") {
-                button("Delete account", symbol: "person.crop.circle.badge.minus", tint: .coral, destructive: true) {
+                button("Delete account", busy: .deleteAccount, symbol: "person.crop.circle.badge.minus", tint: .coral, destructive: true) {
                     confirming = .deleteAccount
                 }
             }
         }
-        .disabled(working)
+        .disabled(working != nil)
         .confirmationDialog(title, isPresented: isConfirming, titleVisibility: .visible, presenting: confirming) { action in
             Button(label(action), role: .destructive) { run(action) }
             Button("Cancel", role: .cancel) {}
@@ -68,11 +72,11 @@ struct PartnerAndAccountSections: View {
     }
 
     private func button(
-        _ title: String, symbol: String, tint: UsTint, destructive: Bool = false, action: @escaping () -> Void
+        _ title: String, busy: Busy, symbol: String, tint: UsTint, destructive: Bool = false, action: @escaping () -> Void
     ) -> some View {
         Button(action: action) {
             Row(title, symbol: symbol, tint: tint.color, destructive: destructive) {
-                if working { ProgressView() }
+                if working == busy { ProgressView() }
             }
         }
         .buttonStyle(PressScaleStyle())
@@ -109,10 +113,18 @@ struct PartnerAndAccountSections: View {
         }
     }
 
+    private static func busy(for action: Action) -> Busy {
+        switch action {
+        case .unpair: .unpair
+        case .block: .block
+        case .deleteAccount: .deleteAccount
+        }
+    }
+
     private func run(_ action: Action) {
         Task {
-            working = true
-            defer { working = false }
+            working = Self.busy(for: action)
+            defer { working = nil }
             do {
                 switch action {
                 case .unpair: try await session.unpair()
@@ -130,8 +142,8 @@ struct PartnerAndAccountSections: View {
 
     private func report(_ reason: ReportReason) {
         Task {
-            working = true
-            defer { working = false }
+            working = .report
+            defer { working = nil }
             do {
                 try await session.reportPartner(reason, details: nil)
                 reported = true
