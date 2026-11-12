@@ -10,11 +10,20 @@ public enum CatPronouns: String, CaseIterable, Codable, Sendable {
 
   /// The picker's label: "She / her".
   public var label: String {
-    switch self {
-    case .she: String(localized: "She / her")
-    case .he: String(localized: "He / him")
-    case .they: String(localized: "They / them")
-    }
+    #if canImport(Darwin)
+      switch self {
+      case .she: String(localized: "She / her")
+      case .he: String(localized: "He / him")
+      case .they: String(localized: "They / them")
+      }
+    #else
+      // swift-corelibs-foundation has no `String(localized:)`; the Linux build only runs the tests.
+      switch self {
+      case .she: "She / her"
+      case .he: "He / him"
+      case .they: "They / them"
+      }
+    #endif
   }
 
   /// Every phrase about the cat goes through here, so no screen picks a pronoun itself.
