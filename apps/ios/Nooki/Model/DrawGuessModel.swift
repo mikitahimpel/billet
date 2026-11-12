@@ -17,10 +17,10 @@ final class DrawGuessModel {
     typealias Tile = DrawGuessMachine.Tile
 
     /// What a round pays the guesser (`solveReward` and `giveUpReward` on the server).
-    nonisolated static let solveCoins = 10
-    nonisolated static let hintCost = 2
-    nonisolated static let solveFloor = 4
-    nonisolated static let giveUpCoins = 3
+    nonisolated static let solveCoins = 3
+    nonisolated static let hintCost = 1
+    nonisolated static let solveFloor = 1
+    nonisolated static let giveUpCoins = 1
     nonisolated static let maxLetters = 12
     nonisolated static let maxLength = 24
 

@@ -262,7 +262,7 @@
       }
     }
 
-    /// "Your 8th country together · +5 coins" the first time; the coins are what a tick on any list earns.
+    /// "Your 8th country together · +1 coin" the first time; the coins are what a tick on any list earns.
     @ViewBuilder
     private var subtitle: some View {
       let countries = state.us.list(listID)?.beenCountries ?? []
@@ -271,9 +271,9 @@
       HStack(spacing: Space.xs) {
         if item.isCountry, !been, let code = item.country, !countries.contains(code) {
           Text("Your \(ordinal) country together ·")
-          Text("+5 coins").foregroundStyle(Color.honey)
+          Text("+1 coin").foregroundStyle(Color.honey)
         } else if !been {
-          Text("+5 coins").foregroundStyle(Color.honey)
+          Text("+1 coin").foregroundStyle(Color.honey)
         } else if let done = item.done {
           Text("Ticked \(done.formatted(.dateTime.day().month().year()))")
         }

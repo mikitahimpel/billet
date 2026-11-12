@@ -5,7 +5,8 @@ import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, InkId } from "@billet/contracts-domain/inks";
 import { PairId } from "@billet/contracts-domain/pair-id";
-import { CollectionId, RoomItemId } from "@billet/contracts-domain/shop";
+import { CollectionId, RoomItemId, welcomeCoins } from "@billet/contracts-domain/shop";
+import { solveCoins } from "@billet/backend-pair-room/riddle-rules";
 import { NatureSeed } from "@billet/contracts-domain/cat";
 import { RecordCatEventRequest, SaveCatRequest } from "@billet/contracts-http-api/cat";
 import { ChangeListRequest } from "@billet/contracts-http-api/lists";
@@ -157,8 +158,15 @@ describe("PairRoom storage", () => {
       bonuses: [],
       moods: [],
       welcomed: true,
-      // The welcome coins, and the note's 10.
-      wallet: { balance: 570, day: expect.anything(), care: 0, notes: 10, games: 0, lists: 0 },
+      // The welcome coins, and the photo note's 2.
+      wallet: {
+        balance: welcomeCoins + 2,
+        day: expect.anything(),
+        care: 0,
+        notes: 2,
+        games: 0,
+        lists: 0,
+      },
     });
     await room.sendNote(bob, photo());
     expect((await room.notes(0, 10)).map((n) => n.seq)).toEqual([1, 2]);
@@ -224,11 +232,11 @@ describe("PairRoom storage", () => {
     });
     await evictDurableObject(room);
 
-    expect(await room.coins(undefined, 10)).toMatchObject({ balance: 590 });
+    expect(await room.coins(undefined, 10)).toMatchObject({ balance: 30 + welcomeCoins });
     await room.setPresence(alice, "drawing");
     await evictDurableObject(room);
     const coins = await room.coins(undefined, 10);
-    expect(coins?.balance).toBe(590);
+    expect(coins?.balance).toBe(30 + welcomeCoins);
     expect(coins?.entries.map((entry) => entry.id)).toEqual(["gift:welcome"]);
     expect(await room.snapshot()).toMatchObject({ welcomed: true });
   });
@@ -895,7 +903,7 @@ describe("PairRoom realtime across eviction", () => {
     });
     await until(() => a.frames.filter((f) => f._tag === "ShopChanged").length > 1);
     const coins = await room.coins(undefined, 100);
-    expect(coins?.entries.find((entry) => entry.id === `earn:${id(1)}`)?.amount).toBe(10);
+    expect(coins?.entries.find((entry) => entry.id === `earn:${id(1)}`)?.amount).toBe(solveCoins);
     expect(notesOnly.frames.some((f) => f._tag === "RiddleChanged")).toBe(false);
     expect(await room.riddle(mallory, { _tag: "View" })).toEqual({
       _tag: "Refused",

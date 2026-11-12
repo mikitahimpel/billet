@@ -127,7 +127,7 @@ struct DrawGuessScreen: View {
                     Button("Give up") { givingUp = true }
                         .buttonStyle(SecondaryButtonStyle())
                 }
-                Text("Each hint costs 2 of the 10 coins a solve pays.")
+                Text("Each hint costs 1 of the 3 coins a solve pays.")
                     .font(.ourioCaption)
                     .foregroundStyle(Ink.textTertiary)
                     .multilineTextAlignment(.center)

@@ -1,9 +1,9 @@
 import { Clock, Effect, Layer, Redacted, Schema } from "effect";
 import { HttpRouter } from "effect/http";
-import { afterAll, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
 import { DeviceId } from "@billet/contracts-domain/ids";
-import { LocalDay } from "@billet/contracts-domain/coins";
+import { CoinEntryId, LocalDay } from "@billet/contracts-domain/coins";
 import { dealsOn, welcomeCoins } from "@billet/contracts-domain/shop";
 import { OrderResponse, ShopResponse } from "@billet/contracts-http-api/shop";
 import { priceBookOf } from "@billet/backend-shop/price-book";
@@ -79,6 +79,22 @@ const newKey = () => `00000000-0000-4000-9000-${String((keys += 1)).padStart(12,
 const admin = <A, E>(use: (store: ShopStore["Service"]) => Effect.Effect<A, E>) =>
   Effect.runPromise(ShopStore.use(use).pipe(Effect.provide(world.layer)));
 
+/** The welcome coins alone pay for none of these pieces, so the pair buys a pack first. */
+const packCoins = 500;
+const startBalance = welcomeCoins + packCoins;
+
+beforeAll(async () => {
+  await call("GET", "/v1/shop", "ana");
+  await Effect.runPromise(
+    world.pairRooms.creditPurchase(pair("pair-a"), {
+      kind: "purchase",
+      id: Schema.decodeSync(CoinEntryId)("purchase:1"),
+      ref: "pack",
+      coins: packCoins,
+    }),
+  );
+});
+
 const entry = (id: string) => {
   const found = seedItems.find((item) => item.id === id);
   if (found === undefined) throw new Error(`no ${id}`);
@@ -103,7 +119,7 @@ describe("an order is priced by the server's catalog", () => {
     expect(response.status).toBe(200);
     const bought = Schema.decodeUnknownSync(OrderResponse)(await response.json());
     expect(bought.entry.amount).toBe(-90);
-    expect(bought.shop.balance).toBe(welcomeCoins - 90);
+    expect(bought.shop.balance).toBe(startBalance - 90);
   });
 
   it("refuses an order whose price rose after the buyer saw it, charging nothing", async () => {
@@ -123,7 +139,7 @@ describe("an order is priced by the server's catalog", () => {
     const shop = Schema.decodeUnknownSync(ShopResponse)(
       await (await call("GET", "/v1/shop", "ana")).json(),
     );
-    expect(shop.balance).toBe(welcomeCoins - 90);
+    expect(shop.balance).toBe(startBalance - 90);
     expect(shop.items).not.toContain("yarn");
     // The buyer asks again with the new price and pays it.
     const again = Schema.decodeUnknownSync(OrderResponse)(

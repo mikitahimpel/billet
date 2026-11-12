@@ -6,7 +6,7 @@ import SwiftUI
 import Design
 import UsInterface
 
-/// Sending pins the note and earns 5 coins.
+/// Sending pins the note and earns a coin.
 struct NoteComposer: View {
     enum Mode: String, Identifiable {
         case write, draw

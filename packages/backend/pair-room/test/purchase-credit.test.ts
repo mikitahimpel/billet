@@ -37,7 +37,8 @@ describe("coins bought with money", () => {
   });
 
   it("takes a refunded pack back", () => {
-    const decision = accept(welcomed, credit("refund", 550, "refund:2000"));
+    const topped = { ...welcomed, wallet: { ...welcomed.wallet, balance: 560 } };
+    const decision = accept(topped, credit("refund", 550, "refund:2000"));
     expect(decision.state.wallet.balance).toBe(10);
     expect(decision.outputs).toEqual([
       {
@@ -102,10 +103,10 @@ describe("RoomService: coins bought with money", () => {
     expect(result.repeat).toMatchObject({
       _tag: "Accepted",
       outputs: [{ _tag: "CoinsRepeated", entry: { id: purchase, amount: 550 } }],
-      state: { wallet: { balance: 1110 } },
+      state: { wallet: { balance: 610 } },
     });
     expect(result.entries.map(({ id, amount }) => [id, amount])).toEqual([
-      ["gift:welcome", 560],
+      ["gift:welcome", 60],
       [purchase, 550],
     ]);
   });
@@ -132,14 +133,14 @@ describe("RoomService: coins bought with money", () => {
         return { before, first, repeat };
       }),
     );
-    expect(result.before).toBe(1050);
+    expect(result.before).toBe(550);
     expect(result.first).toMatchObject({
       outputs: [{ _tag: "CoinsEntered", entry: { id: refund, kind: "refund", amount: -550 } }],
-      state: { wallet: { balance: 500 } },
+      state: { wallet: { balance: 0 } },
     });
     expect(result.repeat).toMatchObject({
       outputs: [{ _tag: "CoinsRepeated", entry: { id: refund, amount: -550 } }],
-      state: { wallet: { balance: 500 } },
+      state: { wallet: { balance: 0 } },
     });
   });
 
@@ -163,14 +164,14 @@ describe("RoomService: coins bought with money", () => {
         return { restored, unknown };
       }),
     );
-    // The welcome 560 plus 1000 is 1560, all of which the refund could take back.
+    // The welcome 60 plus 1000 is 1060, all of which the refund could take back.
     expect(result.restored).toMatchObject({
       outputs: [{ entry: { id: restore, kind: "purchase", amount: 1000 } }],
-      state: { wallet: { balance: 1560 } },
+      state: { wallet: { balance: 1060 } },
     });
     expect(result.unknown).toMatchObject({
       outputs: [{ entry: { amount: 0 } }],
-      state: { wallet: { balance: 1560 } },
+      state: { wallet: { balance: 1060 } },
     });
   });
 });
