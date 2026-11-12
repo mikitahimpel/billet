@@ -43,10 +43,6 @@ struct DecorPanel: View {
                     .lineLimit(2)
             }
             Spacer(minLength: 0)
-            if machine.book.undo != nil {
-                PillButton("Undo", symbol: "arrow.uturn.backward") { state.decor.send(.undone) }
-                    .accessibilityIdentifier("decorUndo")
-            }
             Button("Done") { done() }
                 .buttonStyle(PrimaryButtonStyle(fullWidth: false))
                 .accessibilityIdentifier("decorDone")
@@ -86,6 +82,7 @@ struct DecorPanel: View {
                 }
                 PillButton("Store", symbol: "tray.and.arrow.down") { state.decor.send(.stored) }
                     .accessibilityIdentifier("decorStore")
+                undoButton
             }
             .fixedSize()
         }
@@ -132,13 +129,24 @@ struct DecorPanel: View {
         }
     }
 
+    @ViewBuilder private var undoButton: some View {
+        if machine.book.undo != nil {
+            PillButton("Undo", symbol: "arrow.uturn.backward") { state.decor.send(.undone) }
+                .accessibilityIdentifier("decorUndo")
+        }
+    }
+
     private var resetButton: some View {
-        PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
-            .accessibilityIdentifier("decorReset")
-            .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
-                Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
-                Button("Cancel", role: .cancel) {}
-            }
+        HStack(spacing: Space.s) {
+            PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
+                .accessibilityIdentifier("decorReset")
+            undoButton
+        }
+        .fixedSize()
+        .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
+            Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
+            Button("Cancel", role: .cancel) {}
+        }
     }
 
     private func art(_ id: String) -> some View {

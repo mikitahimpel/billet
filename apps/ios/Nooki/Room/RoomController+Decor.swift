@@ -195,7 +195,10 @@ struct DecorTouchLayer: View {
                         }
                     }
             )
-            .accessibilityHidden(true)
+            .accessibilityElement()
+            .accessibilityLabel("Room")
+            .accessibilityIdentifier("decorTouchLayer")
+            .accessibilityAddTraits(.allowsDirectInteraction)
             .ignoresSafeArea()
     }
 }

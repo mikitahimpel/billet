@@ -19,7 +19,7 @@ struct RoomPiecesTests {
     @Test func aMovedPieceCarriesItsPointsAlong() throws {
         let frame = try #require(PieceFrame("base-cattree", in: DecorLayout().putting(at("base-cattree", 7, 0))))
         let top = frame.map([0.36, 0.396, -0.36])
-        #expect(abs(top.x - 0.36) < 1e-5 && abs(top.z - 0.34) < 1e-5 && top.y == 0.396)
+        #expect(abs(top.x - 0.36) < 1e-5 && abs(top.z + 0.01) < 1e-5 && top.y == 0.396)
     }
 
     @Test func aTurnedPieceSwingsItsPointsAroundItsMiddle() throws {

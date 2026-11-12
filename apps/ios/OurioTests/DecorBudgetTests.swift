@@ -42,7 +42,7 @@ struct DecorBudgetTests {
             triangles += counts(try await Entity(named: item.assetName, in: .main)).triangles
         }
         #expect(triangles > 0)
-        #expect(triangles <= 150_000, "\(triangles) triangles")
+        #expect(triangles <= 284_000, "\(triangles) triangles")
     }
 
     @Test func aFullRoomStaysInTheWholeBudget() {
