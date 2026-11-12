@@ -28,7 +28,7 @@ public struct ProgressRing<Center: View>: View {
     }
     .padding(line / 2)
     .frame(width: side, height: side)
-    .animation(.snappy(duration: 0.4), value: value)
+    .animation(Motion.spring(0.4), value: value)
   }
 }
 

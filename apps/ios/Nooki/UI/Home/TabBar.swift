@@ -218,7 +218,7 @@ struct AddButton: View {
             switch route {
             case .moment(let image):
                 ComposeSheet(image: image) { caption in
-                    withAnimation(.spring(duration: 0.4)) { _ = state.journal.addMoment(image, caption: caption, shares: true) }
+                    withAnimation(Motion.spring(0.4)) { _ = state.journal.addMoment(image, caption: caption, shares: true) }
                 }
             case .list(let id): ListScreen(state: state, listID: id, focusesField: true)
             case .newList: NewListSheet(state: state) { self.route = .list($0) }

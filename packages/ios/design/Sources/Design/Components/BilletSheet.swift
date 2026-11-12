@@ -142,7 +142,7 @@ public struct BilletSheet<Content: View>: View {
   }
 
   private func expand() {
-    withAnimation(.snappy(duration: 0.3)) { expanded = true }
+    withAnimation(Motion.spring(0.3)) { expanded = true }
   }
 
   /// Once a page has asked for full height, large is the only detent, so the sheet goes there. So it

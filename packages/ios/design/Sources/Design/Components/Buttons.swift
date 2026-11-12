@@ -15,7 +15,7 @@ public struct PrimaryButtonStyle: ButtonStyle {
       .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Size.button)
       .background(isEnabled ? Ink.accentFace : AnyShapeStyle(Ink.disabledFill), in: .capsule)
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
-      .animation(.spring(duration: 0.2), value: configuration.isPressed)
+      .animation(Motion.spring(0.2), value: configuration.isPressed)
   }
 }
 
@@ -36,7 +36,7 @@ public struct SecondaryButtonStyle: ButtonStyle {
         if isEnabled { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
       }
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
-      .animation(.spring(duration: 0.2), value: configuration.isPressed)
+      .animation(Motion.spring(0.2), value: configuration.isPressed)
   }
 }
 
@@ -288,7 +288,7 @@ public struct PillButtonStyle: ButtonStyle {
       .frame(minHeight: Size.control)
       .contentShape(.rect)
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
-      .animation(.spring(duration: 0.2), value: configuration.isPressed)
+      .animation(Motion.spring(0.2), value: configuration.isPressed)
   }
 }
 
@@ -318,7 +318,7 @@ public struct ToggleButtonStyle: ButtonStyle {
       )
       .contentShape(.capsule)
       .scaleEffect(configuration.isPressed ? 0.97 : 1)
-      .animation(.spring(duration: 0.2), value: configuration.isPressed)
+      .animation(Motion.spring(0.2), value: configuration.isPressed)
       .accessibilityAddTraits(isOn ? .isSelected : [])
   }
 }

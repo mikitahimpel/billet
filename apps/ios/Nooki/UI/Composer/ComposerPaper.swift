@@ -24,8 +24,8 @@ struct ComposerPaper: View {
         }
         .frame(width: size.width, height: size.height)
         .postage(stamp: model.stamp?.art, seal: model.seal?.art, width: size.width)
-        .animation(.snappy(duration: 0.2), value: model.stamp)
-        .animation(.snappy(duration: 0.2), value: model.seal)
+        .animation(Motion.spring(0.2), value: model.stamp)
+        .animation(Motion.spring(0.2), value: model.seal)
         .accessibilityElement(children: .contain)
     }
 

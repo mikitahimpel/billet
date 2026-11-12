@@ -118,7 +118,7 @@ struct UsGlyphPicker: View {
                         )
                 }
                 .buttonStyle(PressScaleStyle())
-                .animation(.snappy(duration: 0.2), value: selection)
+                .animation(Motion.spring(0.2), value: selection)
             }
         }
         .padding(CardMetrics.padding)
