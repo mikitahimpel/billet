@@ -5,7 +5,7 @@ import Wire
 /// The pair's cat in its room: the profile (`GET`/`PUT /v1/cat`), the journal of what both partners did
 /// (`GET /v1/cat/journal`), and this phone's own events (`POST /v1/cat/events`). The server folds the journal into
 /// her needs and pays the coins, capped by day.
-public struct CatEventsClient: Sendable {
+public nonisolated struct CatEventsClient: Sendable {
   public var record:
     @Sendable (RecordCatEventRequest) async throws(TransportError) -> RecordCatEventResponse
   public var load: @Sendable () async throws(TransportError) -> CatResponse

@@ -2,7 +2,7 @@ import Transport
 import Wire
 
 /// The pair's shared lists in its room. Every call answers all of them as they are after it.
-public struct ListSync: Sendable {
+public nonisolated struct ListSync: Sendable {
   public var fetch: @Sendable () async throws(TransportError) -> ListsResponse
   public var change: @Sendable (ChangeListRequest) async throws(TransportError) -> ListsResponse
 

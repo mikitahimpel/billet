@@ -2,7 +2,7 @@ import Transport
 import Wire
 
 /// The pair's gift wishes in its room. Every call answers the gifts as this account may see them: its own plans only.
-public struct GiftSync: Sendable {
+public nonisolated struct GiftSync: Sendable {
   public var fetch: @Sendable () async throws(TransportError) -> GiftsResponse
   public var saveWish: @Sendable (SaveGiftWishRequest) async throws(TransportError) -> GiftsResponse
   public var deleteWish:
