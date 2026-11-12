@@ -1,3 +1,4 @@
+import FeatureUs
 import Design
 import MomentsInterface
 import Pet
@@ -113,7 +114,7 @@ struct StyleGallery: View {
                 Text("Disabled").font(.ourioHeadline).foregroundStyle(Ink.disabledText)
             }
             PosterCard("Who knows who", status: "Your turn", emphasis: true, action: {}) {
-                GamePoster(game: .whoKnows)
+                GamePoster(game: .whoKnows, coat: CatCoat.current().rawValue, thumbnail: { Thumbnails.image($0, maxPixels: $1) })
             }
             Toast {
                 Label("Added to Moments", systemImage: "checkmark.circle.fill")

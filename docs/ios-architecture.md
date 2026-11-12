@@ -851,6 +851,15 @@ the app's `PartnerMood` and `ListKind` in `apps/ios/Shared`. What only the app k
 avatars, a mood's face and the delivery notice. The next features do the same, and don't move
 `Shared`'s copies of `Wire` types into a package.
 
+The Us views moved into `FeatureUs` (every screen of the tab, `UsView` and the list, wish, date and
+Pick tonight models). What they ask of the app is two protocols in `UsHost.swift`: `UsHost`, which
+`HomeState` conforms to (the couple, the stores, the route and the few things only the app does),
+and `UsServer`, which `ServerSession` conforms to and the app puts in the environment as
+`\.usServer`. The Games shelf and the two game sheets come from `UsHost`, since Who knows who and Draw &
+guess stay in the app until `arch/games`. The package builds for macOS
+with its view files compiled out (`#if canImport(UIKit)`), so its models and their tests run under
+`swift test`; the views build for iOS only.
+
 PRs 3 to 11 can be reordered around other agents' work; 1 and 2 cannot. Where a PR would touch
 more than about 25 files of UI that others are editing, it splits: the store and interface first
 (the views keep reading the old property through a one-line forward for a day), the views next.

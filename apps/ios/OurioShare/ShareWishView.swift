@@ -64,9 +64,9 @@ struct ShareWishView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 if loading || image != nil { picture }
-                UsField(placeholder: String(localized: "What would you love?"), text: $title)
-                UsField(placeholder: String(localized: "Price (optional)"), text: $price)
-                UsField(placeholder: String(localized: "Colour, size, details (optional)"), text: $note)
+                Field(String(localized: "What would you love?"), text: $title)
+                Field(String(localized: "Price (optional)"), text: $price)
+                Field(String(localized: "Colour, size, details (optional)"), text: $note)
                 Toggle(isOn: $mostWanted) {
                     Label {
                         Text("Most wanted")

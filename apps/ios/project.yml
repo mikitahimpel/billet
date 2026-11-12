@@ -111,6 +111,7 @@ targets:
             FeatureOnboarding,
             FeaturePairing,
             FeatureShop,
+            FeatureUs,
             DecorInterface,
             DrawInterface,
             GamesInterface,
@@ -165,8 +166,7 @@ targets:
     platform: iOS
     sources:
       - path: OurioWidgets
-      # The files the app keeps the streak and the wallet in, which the widgets read.
-      - path: Nooki/Model/Streak.swift
+      # The file the app keeps the wallet in, which the widgets read.
       - path: Nooki/Model/Wallet.swift
       - path: Shared
         # Places' flags and map are for the app's world map only.
@@ -208,9 +208,7 @@ targets:
     platform: iOS
     sources:
       - path: OurioNotifications
-      # The file the app keeps the streak in, which a streak push writes for the widgets, and the evening nudge it
-      # plans again.
-      - path: Nooki/Model/Streak.swift
+      # The evening nudge a streak push plans again.
       - path: Nooki/Model/StreakNudge.swift
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
@@ -256,7 +254,6 @@ targets:
         excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
-      - path: Nooki/UI/Us/UsKit.swift
     info:
       path: OurioShare/Info.plist
       properties:
@@ -296,7 +293,6 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
-      - path: Nooki/Model/Streak.swift
       - path: Nooki/Model/Wallet.swift
       - path: PerTarget
     # Wire, Ink and the interfaces come from the app it is loaded into, as for OurioTests: linking them here as well

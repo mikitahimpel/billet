@@ -8,6 +8,7 @@ import UIKit
 import UsInterface
 import Wire
 @testable import Billet
+@testable import FeatureUs
 
 @Suite struct PlacesTests {
     private let path = "Tests/\(UUID().uuidString)-us.json"

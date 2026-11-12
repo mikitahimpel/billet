@@ -80,6 +80,11 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Wire"]),
 ]
 
+let usTests: Target = .testTarget(
+  name: "FeatureUsTests",
+  dependencies: dependencies(["FeatureUs", "UsInterface", "Transport", "Persistence", "Wire"]),
+  swiftSettings: [.defaultIsolation(MainActor.self)])
+
 let games: Target = .target(
   name: "FeatureGames",
   dependencies: dependencies(["GamesInterface", "BilletKit", "Pet", "Transport", "Wire"]))
@@ -101,6 +106,15 @@ let fromTheApp: [SwiftSetting] = [.enableUpcomingFeature("NonisolatedNonsendingB
 let usInterface: Target = .target(
   name: "UsInterface", dependencies: dependencies(["Persistence", "ProfileInterface", "Wire"]),
   swiftSettings: fromTheApp)
+// Moved from the app, so it keeps the app's default of main-actor isolation.
+let us: Target = .target(
+  name: "FeatureUs",
+  dependencies: dependencies([
+    "UsInterface", "MomentsInterface", "ProfileInterface", "WidgetInterface", "WidgetUI",
+    "BilletKit", "Design", "DesignSystem", "Ink", "Persistence",
+    "Pet", "Transport", "WidgetBridge", "Wire",
+  ]),
+  swiftSettings: fromTheApp + [.defaultIsolation(MainActor.self)])
 let momentsInterface: Target = .target(
   name: "MomentsInterface", dependencies: dependencies(["Persistence", "Wire"]),
   swiftSettings: fromTheApp)
@@ -114,7 +128,10 @@ let widgetInterface: Target = .target(
 // The views the widgets and the app both draw.
 let widgetUI: Target = .target(
   name: "WidgetUI",
-  dependencies: dependencies(["Design", "DrawInterface", "Ink", "WidgetInterface", "Wire"]),
+  dependencies: dependencies([
+    "Design", "DrawInterface", "Ink", "MomentsInterface", "ProfileInterface", "WidgetInterface",
+    "Wire",
+  ]),
   swiftSettings: fromTheApp)
 let drawInterface: Target = .target(
   name: "DrawInterface", dependencies: dependencies(["Persistence", "Wire"]))
@@ -137,7 +154,7 @@ let products =
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
-    "DecorInterface", "FeatureDecor",
+    "DecorInterface", "FeatureDecor", "FeatureUs",
   ]
 
 let package = Package(
@@ -155,9 +172,10 @@ let package = Package(
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
       mood, drawInterface, profileInterface, usInterface, momentsInterface, widgetInterface,
       widgetUI,
-      decorInterface, decor,
+      decorInterface, decor, us,
     ]
-    + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) },
+    + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
+    + [usTests],
   swiftLanguageModes: [.v6]
 )
 
@@ -167,6 +185,6 @@ let package = Package(
     targets: [
       "FeatureCanvas", "FeatureCanvasTests", "FeatureInbox", "FeatureInboxTests",
       "FeatureOnboardingTests",
-      "WidgetBridge", "WidgetBridgeTests", "WidgetUI",
+      "WidgetBridge", "WidgetBridgeTests", "WidgetUI", "FeatureUs", "FeatureUsTests",
     ])
 #endif

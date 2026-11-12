@@ -1,3 +1,4 @@
+import FeatureUs
 import Design
 import Pet
 import RoomInterface
@@ -282,11 +283,11 @@ enum GalleryPage: String, CaseIterable, Sendable {
 
     @MainActor @ViewBuilder private static var posters: some View {
         PosterCard("Who knows who", status: "Your turn", emphasis: true, action: {}) {
-            GamePoster(game: .whoKnows, coat: .grey)
+            GamePoster(game: .whoKnows, coat: CatCoat.grey.rawValue, thumbnail: { Thumbnails.image($0, maxPixels: $1) })
         }
         .frame(minWidth: 150)
         PosterCard("Draw & guess", status: "Played yesterday", action: {}) {
-            GamePoster(game: .drawGuess, coat: .grey)
+            GamePoster(game: .drawGuess, coat: CatCoat.grey.rawValue, thumbnail: { Thumbnails.image($0, maxPixels: $1) })
         }
         .frame(minWidth: 150)
     }

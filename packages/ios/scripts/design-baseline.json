@@ -7,12 +7,12 @@
   "apps/ios/Nooki/Scene/Daylight.swift": 1,
   "apps/ios/Nooki/Scene/DioramaView.swift": 1,
   "apps/ios/Nooki/Scene/TownPicture.swift": 1,
-  "apps/ios/Nooki/UI/Kit/Monogram.swift": 1,
   "apps/ios/Nooki/UI/Moments/Polaroid.swift": 1,
   "apps/ios/Nooki/UI/MomentsView.swift": 2,
   "apps/ios/Nooki/UI/Shop/DailyGiftCard.swift": 1,
-  "apps/ios/Nooki/UI/Us/PickTonightScreen.swift": 2,
   "apps/ios/OurioWidgets/DrawingWidget.swift": 1,
   "apps/ios/OurioWidgets/Modules.swift": 5,
-  "apps/ios/WindowViews/FlatWindowView.swift": 1
+  "apps/ios/WindowViews/FlatWindowView.swift": 1,
+  "packages/ios/features/Sources/FeatureUs/PickTonightScreen.swift": 2,
+  "packages/ios/features/Sources/WidgetUI/Monogram.swift": 1
 }

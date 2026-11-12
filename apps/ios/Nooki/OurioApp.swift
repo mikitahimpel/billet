@@ -1,3 +1,4 @@
+import FeatureUs
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -90,6 +91,7 @@ struct OurioApp: App {
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
+                    .environment(\.usServer, session)
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
