@@ -3,6 +3,7 @@ import MomentsInterface
 import SwiftUI
 import UIKit
 import WidgetBridge
+import WidgetUI
 
 extension HomeState: UsHost {
     var remoteFlags: RemoteFlags { rooms.remote }

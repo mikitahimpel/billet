@@ -1,4 +1,5 @@
 import FeatureGames
+import FeatureShop
 import GamesInterface
 import MomentsInterface
 import WidgetInterface

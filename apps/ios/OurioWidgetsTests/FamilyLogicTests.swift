@@ -1,6 +1,7 @@
 import Foundation
 import DrawInterface
 import MoodInterface
+import ShopInterface
 import WidgetInterface
 import Testing
 import UsInterface

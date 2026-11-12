@@ -8,7 +8,7 @@ public typealias ShopStore = Store<ShopMachine>
 
 /// What the shop's outputs run on. The closures on the main actor touch the wallet file and the
 /// cat, which the app owns.
-public struct ShopServices: Sendable {
+public nonisolated struct ShopServices: Sendable {
   /// The pair's room on the server; nil while this phone follows none.
   public var client: @MainActor @Sendable () -> ShopClient?
   public var undoWindow: @MainActor @Sendable () -> Duration
@@ -193,7 +193,7 @@ extension ShopStore {
   }
 }
 
-extension ShopError {
+nonisolated extension ShopError {
   public init(_ error: TransportError) {
     switch error {
     case .api(.notEnoughCoins(let needed, let have)):

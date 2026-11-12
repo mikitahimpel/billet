@@ -1,0 +1,28 @@
+#if canImport(UIKit)
+  import CoreGraphics
+  import Design
+  import Testing
+
+  @testable import FeatureShop
+
+  /// Where the "is yours" card floats: clear of the tab bar on Home, clear of the home indicator elsewhere.
+  @MainActor
+  @Suite struct PurchaseMomentTests {
+    @Test func overTheTabBarItKeepsAGapAboveItsTopEdge() {
+      // A 874 pt screen whose tab bar starts at 790.
+      let lift = PurchaseMoment.lift(bottom: 874, floor: 790, safeBottom: 34)
+      #expect(874 - lift == 790 - Space.m)
+    }
+
+    @Test func withoutABarItSitsOverTheHomeIndicator() {
+      let noBar: CGFloat? = nil
+      let lift = PurchaseMoment.lift(bottom: 874, floor: noBar, safeBottom: 34)
+      #expect(lift == 34 + Space.l)
+    }
+
+    @Test func aBarBelowTheContainerIsIgnored() {
+      let lift = PurchaseMoment.lift(bottom: 700, floor: 790, safeBottom: 0)
+      #expect(lift == Space.l)
+    }
+  }
+#endif

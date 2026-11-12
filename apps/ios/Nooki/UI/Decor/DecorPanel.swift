@@ -1,7 +1,9 @@
+import FeatureShop
 import DecorInterface
 import Design
 import FeatureDecor
 import SwiftUI
+import WidgetUI
 
 /// The closet and the chosen piece's controls, over the room while its pieces are arranged. Not a system sheet:
 /// the room stays under the player's finger.
@@ -71,7 +73,7 @@ struct DecorPanel: View {
 
     private func controls(for id: String) -> some View {
         VStack(alignment: .leading, spacing: Space.s) {
-            Text(Catalog.item(id)?.name ?? DecorItem.item(shopID: id)?.base?.title ?? id)
+            Text(Catalog.item(id, cat: state.petName)?.name ?? DecorItem.item(shopID: id)?.base?.title ?? id)
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
@@ -103,7 +105,7 @@ struct DecorPanel: View {
             ScrollView(.horizontal) {
                 HStack(alignment: .top, spacing: Space.s) {
                     ForEach(items) { item in
-                        let name = Catalog.item(item.id)?.name ?? item.base?.title ?? item.id
+                        let name = Catalog.item(item.id, cat: state.petName)?.name ?? item.base?.title ?? item.id
                         Button { state.decor.send(.closetTapped(item.id)) } label: {
                             VStack(spacing: Space.xs) {
                                 art(item.id)

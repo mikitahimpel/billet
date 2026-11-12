@@ -1,8 +1,10 @@
 import SwiftUI
 
 extension EnvironmentValues {
-  /// Labs → Performance's Shadows switch; on as shipped.
+  /// Labs → Performance's switches the pages read; each is on as shipped.
   @Entry public var perfShadows = true
+  @Entry public var perfShine = true
+  @Entry public var perfFlatten = false
 }
 
 extension View {
@@ -10,6 +12,17 @@ extension View {
   public func perfShadow(color: Color, radius: CGFloat, x: CGFloat = 0, y: CGFloat = 0) -> some View
   {
     modifier(PerfShadow(color: color, radius: radius, x: x, y: y))
+  }
+
+  /// Drawn into one layer while the lab's Flatten switch is on.
+  public func perfFlattened() -> some View { modifier(PerfFlatten()) }
+}
+
+private struct PerfFlatten: ViewModifier {
+  @Environment(\.perfFlatten) private var flatten
+
+  @ViewBuilder func body(content: Content) -> some View {
+    if flatten { content.drawingGroup() } else { content }
   }
 }
 

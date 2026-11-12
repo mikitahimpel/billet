@@ -1,5 +1,6 @@
 import MomentsInterface
 import Observation
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import PencilKit

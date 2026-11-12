@@ -223,7 +223,7 @@ To add one, on **Shop → New item**:
    and be made inactive when the season ends; pairs that bought one keep it.
 
 Until the Shop lists furniture from this catalog, the app's shelves still show only their own
-bundled pieces (`Catalog` in `apps/ios/Nooki/Model/Shop.swift`). An active row makes the server
+bundled pieces (`Catalog` in `packages/ios/features/Sources/FeatureShop/Shop.swift`). An active row makes the server
 sell the item, but no shelf shows it until the app reads its furniture from `GET /v1/shop/catalog`,
 which is a separate app change.
 

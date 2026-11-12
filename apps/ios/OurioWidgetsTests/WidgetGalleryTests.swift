@@ -1,6 +1,7 @@
 import DrawInterface
 import MomentsInterface
 import MoodInterface
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
