@@ -131,7 +131,7 @@ struct PurchaseMoment: View {
                     Text(detail(purchase))
                         .font(.ourioCaption)
                         .foregroundStyle(Ink.textSecondary)
-                        .lineLimit(2)
+                        .lineLimit(3)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 VStack(alignment: .trailing, spacing: Space.xs) {
