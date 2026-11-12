@@ -142,6 +142,25 @@ private func book(
     #expect(outputs == [.save(state.book.layout)])
   }
 
+  @Test func aFineTurnTurnsFortyFiveDegreesAndSaves() {
+    let (state, outputs) = M.transition(.selected(book(), item: "yarn"), .turnedFine)
+    #expect(state.book.layout.placement(of: "yarn")?.eighthTurns == 1)
+    #expect(outputs == [.save(state.book.layout)])
+  }
+
+  @Test func aFineTurnIsIgnoredUnlessAPieceIsChosen() {
+    for state in [M.State.off(book()), .closet(book())] {
+      #expect(M.transition(state, .turnedFine) == (state, []))
+    }
+  }
+
+  @Test func aDraggedPieceKnowsWhereItStood() {
+    let from = Placement(item: "yarn", surface: .floor, u: 3, v: 6)
+    let (state, _) = M.transition(.selected(book([from]), item: "yarn"), .dragBegan("yarn"))
+    #expect(state.origin == from)
+    #expect(M.State.selected(book([from]), item: "yarn").origin == nil)
+  }
+
   @Test func aTurnThatFitsNowhereSaysSoAndChangesNothing() {
     // Turned, the bookcase meets the wall, the bed and the nightstand wherever it goes.
     let tight = Placement(item: "bookcase", surface: .floor, u: -1, v: 7)

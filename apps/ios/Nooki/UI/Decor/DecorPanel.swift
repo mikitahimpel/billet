@@ -79,6 +79,8 @@ struct DecorPanel: View {
                 if machine.canTurn {
                     PillButton("Rotate", symbol: "rotate.right") { state.decor.send(.turned) }
                         .accessibilityIdentifier("decorRotate")
+                    PillButton("45°", symbol: "rotate.right") { state.decor.send(.turnedFine) }
+                        .accessibilityIdentifier("decorRotateFine")
                 }
                 PillButton("Store", symbol: "tray.and.arrow.down") { state.decor.send(.stored) }
                     .accessibilityIdentifier("decorStore")

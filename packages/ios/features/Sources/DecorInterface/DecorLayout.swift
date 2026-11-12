@@ -17,22 +17,68 @@ public struct Placement: Codable, Equatable, Hashable, Sendable {
   public var u: Int
   /// Into the room on the floor (z); unused on a wall.
   public var v: Int
-  /// Turns of 90 degrees, 0 to 3. A wall piece faces out of its wall and has none.
-  public var quarterTurns: Int
+  /// Turns of 45 degrees, 0 to 7. A wall piece faces out of its wall and has none.
+  public var eighthTurns: Int
 
-  public init(item: String, surface: Surface, u: Int, v: Int = 0, quarterTurns: Int = 0) {
+  public init(item: String, surface: Surface, u: Int, v: Int = 0, eighthTurns: Int) {
     self.item = item
     self.surface = surface
     self.u = u
     self.v = v
-    self.quarterTurns = ((quarterTurns % 4) + 4) % 4
+    self.eighthTurns = ((eighthTurns % 8) + 8) % 8
   }
 
-  /// The same piece one turn on, or itself on a wall.
-  public var turned: Placement {
+  public init(item: String, surface: Surface, u: Int, v: Int = 0, quarterTurns: Int = 0) {
+    self.init(item: item, surface: surface, u: u, v: v, eighthTurns: quarterTurns * 2)
+  }
+
+  /// Whole quarter turns, the 45 degrees of a half step left out.
+  public var quarterTurns: Int { eighthTurns / 2 }
+
+  /// Whether it stands at 45 degrees to the walls.
+  public var isDiagonal: Bool { !eighthTurns.isMultiple(of: 2) }
+
+  /// How far the scene turns it about the up axis.
+  public var angle: Double { Double(eighthTurns) * .pi / 4 }
+
+  /// What the server stores: the quarter turns 0 to 3 as they always were, plus 4 for a further 45 degrees,
+  /// so a layout kept before fine turns reads the same.
+  public var wireTurns: Int { eighthTurns / 2 + (isDiagonal ? 4 : 0) }
+
+  public init(item: String, surface: Surface, u: Int, v: Int = 0, wireTurns: Int) {
+    self.init(
+      item: item, surface: surface, u: u, v: v,
+      eighthTurns: (wireTurns % 4) * 2 + (wireTurns >= 4 ? 1 : 0))
+  }
+
+  /// The same piece a quarter turn on, or itself on a wall.
+  public var turned: Placement { turned(byEighths: 2) }
+
+  /// The same piece `eighths` turns of 45 degrees on, or itself on a wall.
+  public func turned(byEighths eighths: Int) -> Placement {
     var next = self
-    if surface == .floor { next.quarterTurns = (quarterTurns + 1) % 4 }
+    if surface == .floor { next.eighthTurns = ((eighthTurns + eighths) % 8 + 8) % 8 }
     return next
+  }
+
+  private enum CodingKeys: String, CodingKey { case item, surface, u, v, quarterTurns }
+
+  public init(from decoder: any Decoder) throws {
+    let values = try decoder.container(keyedBy: CodingKeys.self)
+    self.init(
+      item: try values.decode(String.self, forKey: .item),
+      surface: try values.decode(Surface.self, forKey: .surface),
+      u: try values.decode(Int.self, forKey: .u), v: try values.decode(Int.self, forKey: .v),
+      wireTurns: try values.decode(Int.self, forKey: .quarterTurns))
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var values = encoder.container(keyedBy: CodingKeys.self)
+    try values.encode(item, forKey: .item)
+    try values.encode(surface, forKey: .surface)
+    try values.encode(u, forKey: .u)
+    try values.encode(v, forKey: .v)
+    try values.encode(wireTurns, forKey: .quarterTurns)
   }
 
   public func moved(to surface: Surface, u: Int, v: Int) -> Placement {
@@ -40,7 +86,7 @@ public struct Placement: Codable, Equatable, Hashable, Sendable {
     next.surface = surface
     next.u = u
     next.v = surface == .floor ? v : 0
-    if surface != .floor { next.quarterTurns = 0 }
+    if surface != .floor { next.eighthTurns = 0 }
     return next
   }
 }
@@ -178,17 +224,20 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   /// Where `follow` is now, or nil while its piece is stored.
   public func point(of follow: DecorFollow) -> Occupancy.Point? {
     guard let placement = placement(of: follow.piece) else { return nil }
-    let (dx, dz) = Self.turn(follow.dx, follow.dz, quarterTurns: placement.quarterTurns)
+    let (dx, dz) = Self.turn(follow.dx, follow.dz, eighthTurns: placement.eighthTurns)
     return (DecorGrid.metres(placement.u) + dx, DecorGrid.metres(placement.v) + dz)
   }
 
-  /// Quarter turns about the up axis, as the scene turns a piece.
-  static func turn(_ x: Double, _ z: Double, quarterTurns: Int) -> (Double, Double) {
-    switch quarterTurns % 4 {
-    case 1: (z, -x)
-    case 2: (-x, -z)
-    case 3: (-z, x)
-    default: (x, z)
+  /// Turns of 45 degrees about the up axis, as the scene turns a piece.
+  static func turn(_ x: Double, _ z: Double, eighthTurns: Int) -> (Double, Double) {
+    switch eighthTurns % 8 {
+    case 2: return (z, -x)
+    case 4: return (-x, -z)
+    case 6: return (-z, x)
+    case 0: return (x, z)
+    default:
+      let angle = Double(eighthTurns) * .pi / 4
+      return (x * cos(angle) + z * sin(angle), -x * sin(angle) + z * cos(angle))
     }
   }
 
@@ -298,13 +347,23 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     (a.u - b.u) * (a.u - b.u) + (a.v - b.v) * (a.v - b.v)
   }
 
+  /// The box a piece of `item` fills on the floor turned by `eighthTurns`: the sides swap on a quarter turn,
+  /// and at 45 degrees it is the box round the turned footprint, so a fit is never overstated.
+  public static func footprint(of item: DecorItem, eighthTurns: Int) -> (
+    width: Double, depth: Double
+  ) {
+    guard eighthTurns % 2 == 0 else {
+      let side = (item.width + item.depth) / 2 * 0.5.squareRoot()
+      return (side * 2, side * 2)
+    }
+    return eighthTurns % 4 == 0 ? (item.width, item.depth) : (item.depth, item.width)
+  }
+
   /// On a wall the span runs along its x, whichever wall it is.
   static func span(of placement: Placement, item: DecorItem) -> Span? {
     switch placement.surface {
     case .floor:
-      let turned = placement.quarterTurns.isMultiple(of: 2) == false
-      let width = turned ? item.depth : item.width
-      let depth = turned ? item.width : item.depth
+      let (width, depth) = Self.footprint(of: item, eighthTurns: placement.eighthTurns)
       return Span(
         x: DecorGrid.metres(placement.u), z: DecorGrid.metres(placement.v), halfX: width / 2,
         halfZ: depth / 2)

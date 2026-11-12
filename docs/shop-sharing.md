@@ -61,7 +61,9 @@ the shop already has a read, a push and an owner. What is built:
 - `ShopResponse.layout` is the whole layout, on `GET /v1/shop` and in every `ShopChanged` push, so a
   partner's change reaches the other phone live and a phone that was away reads it on connect.
 - A placement is `item`, `surface` (`floor`, `backWall`, `leftWall`), `u`, `v` (cells of 5 cm from
-  the room's middle; `v` is 0 on a wall) and `quarterTurns`. A piece is owned once, so there is one
+  the room's middle; `v` is 0 on a wall) and `quarterTurns` (0 to 3 turns of 90 degrees; 4 to 7 add a further 45 degrees, so a layout
+  kept before fine turns reads the same and no migration was needed). A piece turned 45 degrees is
+  measured by the box round it, in the app and in the room's referee alike. A piece is owned once, so there is one
   placement per piece. A flat piece (the rug) shares its floor with what stands on it.
 - The room refuses a piece that is not the pair's, off its surface, outside the room or on another
   piece. The footprints are in `packages/contracts/domain/src/decor.ts`, the same table the app
