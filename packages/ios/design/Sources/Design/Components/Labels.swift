@@ -118,17 +118,28 @@ public struct Chip: View {
 
   let title: String
   let symbol: String?
+  let showsCoin: Bool
   let style: Style
 
   public init(_ title: String, symbol: String? = nil, style: Style = .quiet) {
     self.title = title
     self.symbol = symbol
+    self.showsCoin = false
+    self.style = style
+  }
+
+  /// A chip for coins: the coin mark where a symbol would be.
+  public init(_ title: String, coinStyle style: Style = .quiet) {
+    self.title = title
+    self.symbol = nil
+    self.showsCoin = true
     self.style = style
   }
 
   public var body: some View {
     HStack(spacing: Space.xs) {
       if let symbol { Image(systemName: symbol).foregroundStyle(accent) }
+      if showsCoin { CoinIcon(size: Space.l, relativeTo: .caption) }
       Text(title)
     }
     .font(.ourioMicro)
