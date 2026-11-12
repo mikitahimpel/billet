@@ -99,6 +99,8 @@ struct TabBar: View {
                 .ourioScaledFont(size: 18, weight: .semibold, design: dusk ? .rounded : .default)
             Text(tab.title)
                 .ourioScaledFont(size: 11, weight: dusk && shown ? .semibold : .medium, relativeTo: .caption2)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
         // The bar keeps its height: past this size its labels show in the large content viewer instead.
         .dynamicTypeSize(...DynamicTypeSize.xLarge)

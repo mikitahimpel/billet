@@ -83,6 +83,8 @@ struct OurioApp: App {
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
+                    // Onboarding is drawn over Home: without this VoiceOver reads Home's controls behind it.
+                    .accessibilityHidden(!onboarding.isFinished)
                     .overlay {
                         if !onboarding.isFinished {
                             OnboardingView(
