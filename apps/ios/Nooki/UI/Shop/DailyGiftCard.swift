@@ -8,11 +8,16 @@ struct DailyGiftCard: View {
     @State private var bursts = 0
     @State private var opening = false
     @State private var failed = false
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var ready: Bool { state.shop.canClaimGift() && reward == nil }
 
     var body: some View {
-        HStack(spacing: Space.m) {
+        // At accessibility sizes Open goes under the words instead of squeezing them.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.m))
+            : AnyLayout(HStackLayout(spacing: Space.m))
+        layout {
             box
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
@@ -29,7 +34,7 @@ struct DailyGiftCard: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if ready {
-                PrimaryButton("Open", fullWidth: false) { Task { await claim() } }
+                PrimaryButton("Open", fullWidth: typeSize.isAccessibilitySize) { Task { await claim() } }
                     .disabled(opening)
                     .accessibilityHint("Opens today's free gift")
             }
