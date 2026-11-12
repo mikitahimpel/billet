@@ -110,8 +110,15 @@ jobs:
         run: .github/scripts/select-xcode.sh .xcode-version
 
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
-      # cannot start, the build runs without it.
-      - uses: mikitahimpel/warmbuild-action@a46ba311f69d48c98ba6944865badd6f69be437a # v1.1.0
+      # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
+      # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
+      - uses: mikitahimpel/warmbuild-action@2cbc67ebd376a088aefedef017364c6a7a6eccdd # v1.3.0
+        id: warmbuild
+        with:
+          select-tests: true
+          select-tests-ignore: |
+            ^lint/
+            ^scripts/
 
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh
@@ -141,6 +148,7 @@ jobs:
         run: .github/scripts/install-xcodegen.sh
 
       - name: App tests (Simulator)
+        if: steps.warmbuild.outputs.tests != 'none'
         # A hung UI test must not hold a runner for an hour; each test is also capped below. On main the build
         # takes about 22 minutes without the compilation cache and the UI tests 10 to 17 more (a busy runner
         # took 39.5 of the 40 minutes this step once had and a slower one was cut off in the last test), so
@@ -161,6 +169,8 @@ jobs:
           export TEST_RUNNER_GITHUB_ACTIONS="$GITHUB_ACTIONS"
           skip=()
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
+          # Unquoted on purpose: one word per -only-testing/-skip-testing argument.
+          skip+=(${WARMBUILD_ONLY_TESTING:-})
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
           # Building and testing are two runs so the summary can say how long each took.
           app=(-project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid"
