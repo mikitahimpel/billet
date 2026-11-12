@@ -7,24 +7,34 @@ struct DailyGiftCard: View {
     @State private var reward: GiftReward?
     @State private var bursts = 0
     @State private var opening = false
+    @State private var failed = false
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     private var ready: Bool { state.shop.canClaimGift() && reward == nil }
 
     var body: some View {
-        HStack(spacing: Space.m) {
+        // At accessibility sizes Open goes under the words instead of squeezing them.
+        let layout = typeSize.isAccessibilitySize
+            ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.m))
+            : AnyLayout(HStackLayout(spacing: Space.m))
+        layout {
             box
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.ourioHeadline)
                     .foregroundStyle(Ink.text)
-                subtitle
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
+                if failed && ready {
+                    ErrorLine("Could not open it right now. Try again in a bit.")
+                } else {
+                    subtitle
+                        .font(.ourioCaption)
+                        .foregroundStyle(Ink.textSecondary)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
             if ready {
-                PrimaryButton("Open", fullWidth: false) { Task { await claim() } }
+                PrimaryButton("Open", fullWidth: typeSize.isAccessibilitySize) { Task { await claim() } }
                     .disabled(opening)
                     .accessibilityHint("Opens today's free gift")
             }
@@ -79,14 +89,18 @@ struct DailyGiftCard: View {
 
     private func claim() async {
         opening = true
+        failed = false
         defer { opening = false }
         switch await state.shop.openGift() {
         case .opened(let got):
             withAnimation(.spring(duration: 0.45, bounce: 0.45)) { reward = got }
             bursts += 1
-        case .taken, nil:
-            // Opened already (by the partner, or a try whose answer was lost): the card shows it as opened.
+        case .taken:
+            // Opened already by the partner: the card shows it as opened.
             break
+        case nil:
+            // The server wasn't reached; the card stays closed with Open still there to try again.
+            failed = true
         }
     }
 }
