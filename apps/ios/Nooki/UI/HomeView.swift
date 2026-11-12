@@ -84,6 +84,7 @@ struct HomeView: View {
         content
         .modifier(StreakNudging(streak: state.streak))
         .task {
+            LaunchSignposts.event("home first frame")
             OurioPerf.start(state: state, hud: { hud = $0 }, sheetGround: { sheetGround = $0 }, selectRoom: select)
             await lift()
         }
@@ -462,9 +463,11 @@ struct HomeView: View {
     private func lift() async {
         try? await Task.sleep(for: .seconds(1.6))
         await room.ready(timeout: .seconds(4.4))
+        LaunchSignposts.event("room ready")
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
         withAnimation(.easeInOut(duration: 0.8)) { launching = false } completion: { splashDrawn = false }
+        LaunchSignposts.event("splash lifting")
         // `-room city` on launch opens the City room, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" || state.rooms.variant.firstRoom == .city {
             select(.city)

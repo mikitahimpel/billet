@@ -36,6 +36,7 @@ final class DecorStage {
     private var nodes: [String: Node] = [:]
     private var templates: [String: Template] = [:]
     private var loading: Set<String> = []
+    private var sharedMaterials: [String: any Material] = [:]
     private var decor = RoomDecor()
     private var receiver: ImageBasedLightReceiverComponent?
     /// Told once, when every piece of the room's own furniture that stands has its model in.
@@ -171,22 +172,35 @@ final class DecorStage {
             node.holder.addChild(model)
             node.model = model
             node.lit = false
-            if node.item.isBase { dress(model) }
+            if node.item.isBase { dress(model, casting: !node.item.isFlat) }
         }
         guard !node.lit, let receiver else { return }
         node.model?.forEachDescendant { $0.components.set(receiver) }
         node.lit = true
     }
 
-    /// The room's own pieces keep the glow and the grounding shadow the furniture model had.
-    private func dress(_ model: Entity) {
+    /// The room's own pieces keep the glow and the grounding shadow the furniture model had; a rug lies flat, so it casts none.
+    private func dress(_ model: Entity, casting: Bool) {
         model.forEachDescendant { entity in
-            entity.components.set(GroundingShadowComponent(castsShadow: true))
+            if casting { entity.components.set(GroundingShadowComponent(castsShadow: true)) }
+            if !RoomPieces.glows.keys.contains(entity.name), var mesh = entity.components[ModelComponent.self] {
+                mesh.materials = mesh.materials.map { shared($0) }
+                entity.components.set(mesh)
+            }
             if let glow = RoomPieces.glows[entity.name], var mesh = entity.components[ModelComponent.self] {
                 mesh.materials = mesh.materials.map { _ in Clay.glow(glow.tone, intensity: glow.intensity) }
                 entity.components.set(mesh)
             }
         }
+    }
+
+    /// One instance per named colour for every piece: the room's pieces repeat their clay colours, and each
+    /// import would otherwise make its own copy of each.
+    private func shared(_ material: any Material) -> any Material {
+        guard let name = material.name, !name.isEmpty else { return material }
+        if let known = sharedMaterials[name] { return known }
+        sharedMaterials[name] = material
+        return material
     }
 
     private func showPlate(on node: Node) {
