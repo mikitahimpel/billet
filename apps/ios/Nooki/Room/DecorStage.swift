@@ -239,7 +239,7 @@ final class DecorStage {
             node.plate.orientation = .y(-Float(placement.angle))
         case .backWall, .leftWall:
             let height = Float(node.item.fit == .height ? node.item.size : node.item.width) + 0.02
-            node.plate.scale = [width, height, 0.006]
+            node.plate.scale = [Float(node.item.width) + 0.02, height, 0.006]
             node.plate.position = [0, 0, 0.002]
         }
     }

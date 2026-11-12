@@ -84,11 +84,14 @@ final class RearrangeRoomTests: XCTestCase {
     @MainActor
     func testAFineTurnTurnsFortyFiveDegreesAndCanBeTakenBack() throws {
         launchDecorate()
-        at(0.55, 0.54).tap()
-        XCTAssertTrue(app.staticTexts["Cat bed"].waitForExistence(timeout: 10))
+        // The cat tree stands in a corner with room round it, so a turn of 45 degrees fits.
+        for _ in 0..<3 where !app.staticTexts["Cat tree"].exists {
+            at(0.893, 0.558).tap()
+            _ = app.staticTexts["Cat tree"].waitForExistence(timeout: 10)
+        }
+        XCTAssertTrue(app.staticTexts["Cat tree"].exists, "a touch on the tree chooses it")
+        XCTAssertTrue(app.buttons["decorRotateFine"].exists)
         app.buttons["decorRotateFine"].tap()
-        sleep(1)
-        look("6-fine-turn")
         XCTAssertTrue(app.buttons["decorUndo"].waitForExistence(timeout: 15), "a 45 degree turn is a change that can be taken back")
         app.buttons["decorUndo"].tap()
         XCTAssertFalse(app.buttons["decorUndo"].exists)
