@@ -93,7 +93,7 @@ struct OurioApp: App {
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
-                    .environment(\.usServer, session)
+                    .environment(\.usServer, usServer)
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
@@ -124,6 +124,13 @@ struct OurioApp: App {
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
             }
         }
+    }
+
+    private var usServer: (any UsServer)? {
+        #if DEBUG
+        if let demo = LandingDemo.server { return demo }
+        #endif
+        return session
     }
 
     /// Built on its own: written inline, the compiler cannot check `body`.
