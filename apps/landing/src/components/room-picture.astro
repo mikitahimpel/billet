@@ -1,8 +1,11 @@
 ---
-// The clay room render (2560×1440), pre-sized in public/room as AVIF and WebP at 1000, 1600 and 2560 px.
+// The clay room render (2560×1440), pre-sized in src/assets/room as AVIF and WebP at 1000, 1600 and 2560 px.
+import { roomAsset } from "../lib/room-assets";
+
 interface Props {
-  // "nocat" is the same room with Mochi's bed empty, for her animated loop to sit in.
-  room?: "clean" | "nocat";
+  // The other renders have Mochi's bed empty, for her animated loop to sit in: "nocat" fully lit,
+  // "lamp" with only the lamp and candle on, "none" with every light off.
+  room?: "clean" | "nocat" | "lamp" | "none";
   sizes: string;
   class?: string;
   eager?: boolean;
@@ -14,7 +17,7 @@ interface Props {
 const { room = "clean", sizes, class: className = "room-pic clean", eager = false, fetchpriority, motionOnly = false } =
   Astro.props;
 const set = (format: "avif" | "webp") =>
-  [1000, 1600, 2560].map((width) => `/room/room-${room}-${width}.${format} ${width}w`).join(", ");
+  [1000, 1600, 2560].map((width) => `${roomAsset(`room-${room}-${width}.${format}`)} ${width}w`).join(", ");
 ---
 
 <picture class={className}>
@@ -22,7 +25,7 @@ const set = (format: "avif" | "webp") =>
   <source type="image/avif" srcset={set("avif")} sizes={sizes} />
   <source type="image/webp" srcset={set("webp")} sizes={sizes} />
   <img
-    src={`/room/room-${room}-1600.webp`}
+    src={roomAsset(`room-${room}-1600.webp`)}
     alt=""
     width="2560"
     height="1440"
