@@ -80,7 +80,7 @@ import {
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
 import * as roomSchema from "./room-schema.ts";
-import type { Note } from "@billet/contracts-domain/note";
+import type { Note, NoteText } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns } from "./apns-client.ts";
 import {
   enabledPushLanes,
@@ -815,9 +815,9 @@ export class PairRoom extends DurableObject {
   }
 
   /** Acts through the calls a phone reaches. Repeating it for the same bot keeps its plans. */
-  async startDemo(owner: UserId, bot: UserId): Promise<void> {
+  async startDemo(owner: UserId, bot: UserId, welcome?: ReadonlyArray<NoteText>): Promise<void> {
     if ((await this.demoBot())?.bot !== bot) {
-      await this.ctx.storage.put(demoBotKey, startDemoBot(bot, owner, this.clock()));
+      await this.ctx.storage.put(demoBotKey, startDemoBot(bot, owner, this.clock(), welcome));
     }
     await this.scheduleAlarm();
   }

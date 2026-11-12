@@ -90,6 +90,28 @@ export default Alchemy.Stack(
     const liveActivityPush = yield* Config.String("LIVE_ACTIVITY_PUSH").pipe(
       Config.withDefault(""),
     );
+    // Apple's push and Sign in with Apple keys are account-wide: `dev` and `prod` bind the same
+    // four values, each from its own vault (.env.pass, .env.pass.release). Without them a deployed
+    // Worker would send no pushes and could not revoke Apple tokens, so those two stages stop here
+    // and name what is missing (names only, never a value). Local `alchemy dev` needs no keys.
+    const apple = {
+      APNS_KEY: yield* Config.option(Config.Redacted("APNS_KEY")),
+      APNS_KEY_ID: yield* Config.option(Config.Redacted("APNS_KEY_ID")),
+      APPLE_SIGN_IN_KEY: yield* Config.option(Config.Redacted("APPLE_SIGN_IN_KEY")),
+      APPLE_SIGN_IN_KEY_ID: yield* Config.option(Config.Redacted("APPLE_SIGN_IN_KEY_ID")),
+    };
+    const missingApple = Object.entries(apple)
+      .filter(([, value]) => Option.isNone(value))
+      .map(([name]) => name);
+    if ((stage === "dev" || stage === "prod") && missingApple.length > 0) {
+      return yield* Effect.die(
+        new Error(
+          `Stage "${stage}" needs ${missingApple.join(", ")} in the environment. Run the deploy ` +
+            "through pp with the stage's env file (.env.pass for dev, .env.pass.release for " +
+            "prod); the vault item `Apple` must exist first (docs/alchemy.md).",
+        ),
+      );
+    }
     const observability = {
       enabled: true,
       headSamplingRate: samplingRate,
@@ -131,19 +153,18 @@ export default Alchemy.Stack(
             }
           : {}),
         PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
-        // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
-        // The Sign in with Apple key revokes a deleted account's Apple token. Only the dev vault
-        // has it; prod needs it in "Billet Release" first (docs/alchemy.md).
-        ...(stage === "dev"
-          ? {
-              DEMO_ROOM: Cloudflare.DurableObject("DemoRoom"),
-              APNS_KEY: Config.Redacted("APNS_KEY"),
-              APNS_KEY_ID: Config.Redacted("APNS_KEY_ID"),
-              LIVE_ACTIVITY_PUSH: liveActivityPush,
-              APPLE_SIGN_IN_KEY: Config.Redacted("APPLE_SIGN_IN_KEY"),
-              APPLE_SIGN_IN_KEY_ID: Config.Redacted("APPLE_SIGN_IN_KEY_ID"),
-            }
+        LIVE_ACTIVITY_PUSH: liveActivityPush,
+        // The Sign in with Apple key revokes a deleted account's Apple token.
+        ...(Option.isSome(apple.APNS_KEY) ? { APNS_KEY: apple.APNS_KEY.value } : {}),
+        ...(Option.isSome(apple.APNS_KEY_ID) ? { APNS_KEY_ID: apple.APNS_KEY_ID.value } : {}),
+        ...(Option.isSome(apple.APPLE_SIGN_IN_KEY)
+          ? { APPLE_SIGN_IN_KEY: apple.APPLE_SIGN_IN_KEY.value }
           : {}),
+        ...(Option.isSome(apple.APPLE_SIGN_IN_KEY_ID)
+          ? { APPLE_SIGN_IN_KEY_ID: apple.APPLE_SIGN_IN_KEY_ID.value }
+          : {}),
+        // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
+        ...(stage === "dev" ? { DEMO_ROOM: Cloudflare.DurableObject("DemoRoom") } : {}),
       },
       observability,
       dev: { host: "0.0.0.0", port: 8787 },
