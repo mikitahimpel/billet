@@ -40,12 +40,12 @@ struct FeaturedCard: View {
                 VStack(alignment: .leading, spacing: Space.xs) {
                     Text(offer.name)
                         .font(.ourioTitle)
-                        .foregroundStyle(.white)
+                        .foregroundStyle(Ink.text)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                     Text(offer.blurb)
                         .font(.ourioCaption)
-                        .foregroundStyle(.white.opacity(0.85))
+                        .foregroundStyle(Ink.textSecondary)
                         .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -61,16 +61,7 @@ struct FeaturedCard: View {
             .padding(.top, Space.s)
         }
         .padding(CardMetrics.padding)
-        .background {
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .fill(ShopInk.lamplight)
-                .cardShadow()
-        }
-        .overlay {
-            RoundedRectangle(cornerRadius: Radius.card, style: .continuous)
-                .strokeBorder(LinearGradient(colors: [.white.opacity(0.45), .white.opacity(0.05)],
-                                             startPoint: .top, endPoint: .bottom), lineWidth: 1)
-        }
+        .cardSurface(warm: true)
     }
 
     private var countdown: some View {
@@ -81,13 +72,8 @@ struct FeaturedCard: View {
             Image(systemName: "clock")
         }
         .font(.ourioMicro)
-        .foregroundStyle(.white)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .glass(.capsule, tint: Ink.heroInk.opacity(0.25))
+        .foregroundStyle(Ink.textSecondary)
         .fixedSize()
-        // A glass badge, capped as the app's chrome is: past this its one line would push the card off the screen.
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
     }
 
     @ViewBuilder private var valueBadge: some View {
@@ -111,7 +97,7 @@ struct FeaturedCard: View {
                         if let image = Thumbnails.trimmed(item.thumbnail) {
                             Image(uiImage: image).resizable().scaledToFit()
                         } else {
-                            Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(.white.opacity(0.4))
+                            Image(systemName: "cube.box").font(.largeTitle).foregroundStyle(Ink.textTertiary)
                         }
                     }
                     .frame(width: isCentre ? centre : centre * 0.72, height: isCentre ? centre : centre * 0.72)
@@ -130,17 +116,8 @@ private struct DiscountRibbon: View {
     let saves: Int
 
     var body: some View {
-        VStack(spacing: 0) {
-            Text("−\(percent)%")
-                .font(.ourioTitleDigits)
-            Text("save \(saves)")
-                .font(.ourioMicro.monospacedDigit())
-        }
-        .foregroundStyle(Ink.heroInk)
-        .padding(.horizontal, Space.m)
-        .padding(.vertical, Space.xs + 2)
-        .cornerFill(.inner, ShopInk.gold)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(percent) percent off, saves \(saves) coins")
+        Chip("−\(percent)% · save \(saves)", style: .honey)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(percent) percent off, saves \(saves) coins")
     }
 }
