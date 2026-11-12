@@ -25,9 +25,30 @@ local `YYYY-MM-DD`. The rules are pure functions there, run by the room's `decid
   30 or more days ago. It sets `lastDay` to yesterday and `restoredOn` to today, so today's day continues the old run.
   Marks for today stay. Either partner can restore.
 
-A lit day pays the pair wallet `streakDayCoins` (10), plus `streakMilestoneCoins` at 7, 30, 100 and 365 days (25, 50,
-100, 200), as one `earn:streak:<day>` coin entry. A day reaching a milestone (3, 7, 14, 30, 50, 100, 200, 365) adds a
-`StreakReached` Inbox item, by the partner who lit it, and moves the other's unread count.
+A lit day pays the pair wallet `streakRewardCoins(days)` as one `earn:streak:<day>` coin entry. A day reaching a
+milestone (3, 7, 14, 30, 50, 100, 200, 365) adds a `StreakReached` Inbox item, by the partner who lit it, and moves the
+other's unread count.
+
+### Coins
+
+The numbers live in one place, `packages/contracts/domain/src/streak.ts`; `test/streak-rewards.test.ts` pins them to
+the shop's prices. The streak is a thank-you, never an income: the shop sells things for care, and a streak must not
+empty it.
+
+| Source | Coins |
+| --- | --- |
+| A lit day (`streakDayCoins`) | 1 |
+| Day 7 / 30 / 100 / 365 on top (`streakMilestoneCoins`) | 5 / 10 / 15 / 20 |
+
+Against the catalogue (`roomItems`, `inks`, placeholders until the owner sets them): the cheapest paid piece is the
+mouse at 45, inks start at 60, the median paid piece is about 120, a rug 180, a tower 540. A treat costs 10.
+
+- A full week of lit days pays 12 (7 days plus the day-7 bonus): about a quarter of the cheapest piece.
+- The day-7 bonus is 5, the day-30 bonus 10, day 100 20, day 365 30: each at most a sixth of a mid-priced piece.
+- A year of lit days pays about 415 in all, less than the welcome gift (560) and about five days of care (a caring day
+  earns around 80, caps 95).
+
+Tests fail when a number breaks one of these, so raising a reward is a deliberate change to the test as well.
 
 ## API
 

@@ -46,9 +46,8 @@ import {
   emptyStreak,
   markStreakDay,
   restoreStreak,
-  streakDayCoins,
-  streakMilestoneCoins,
   streakMilestones,
+  streakRewardCoins,
 } from "@billet/contracts-domain/streak";
 import type { PresenceState } from "@billet/contracts-realtime/client-message";
 import { RoomCommand } from "./room-command.ts";
@@ -741,7 +740,7 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         ]);
       }
       const reached = streakMilestones.includes(streak.days) ? { reached: streak.days } : {};
-      const coins = streakDayCoins + (streakMilestoneCoins[streak.days] ?? 0);
+      const coins = streakRewardCoins(streak.days);
       const entry = coinEntry(`earn:streak:${day}`, "earn", coins, day, at);
       return accepted(withCoins({ ...room, streak }, coins), [
         RoomOutput.cases.StreakChanged.make({ streak, by, at, lit: day, ...reached }),
