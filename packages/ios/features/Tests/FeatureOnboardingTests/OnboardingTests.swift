@@ -117,7 +117,11 @@ struct OnboardingFlowTests {
     flow.continueTapped()
     #expect(flow.isFinished)
     #expect(defaults.bool(forKey: OnboardingFlow.doneKey))
-    await settle { sent.answers.withLock { $0.count } == 5 }
+    await settle {
+      sent.answers.withLock { $0.count } == 5
+        && sent.events.withLock { $0 }.contains(
+          ClientEvent(.onboardingStepSkipped, detail: "goals"))
+    }
     let answers = sent.answers.withLock { $0 }
     #expect(answers.map(\.stepId) == ["age", "goals", "cat_coat", "cat_name", "invite_partner"])
     #expect(

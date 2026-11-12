@@ -1,3 +1,4 @@
+import RoomInterface
 import SwiftUI
 
 #if canImport(UIKit)
@@ -7,7 +8,9 @@ import SwiftUI
     func heroBackdrop() -> AnyView
     func warmBackdrop() -> AnyView
     /// Mochi on her stage; `time` is seconds since the welcome appeared.
-    func heroStage(coat: CatCoat, time: TimeInterval, pokedAt: TimeInterval?, moving: Bool)
+    func heroStage(
+      coat: RoomInterface.CatCoat, time: TimeInterval, pokedAt: TimeInterval?, moving: Bool
+    )
       -> AnyView
   }
 #endif
