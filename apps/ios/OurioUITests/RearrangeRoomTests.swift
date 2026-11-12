@@ -6,25 +6,12 @@ final class RearrangeRoomTests: XCTestCase {
     private var app: XCUIApplication!
 
     @MainActor
-    private func launchDecorate(fresh: Bool = true) {
+    private func launchDecorate() {
         app = XCUIApplication()
         app.launchArguments += ["-onboardingDone", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES",
                                 "-decorate", "closet"]
         app.launch()
         XCTAssertTrue(app.otherElements["decorPanel"].waitForExistence(timeout: 90), "Decorate mode should open on the closet")
-        if fresh {
-            app.buttons["decorReset"].tap()
-            if let confirm = confirmReset() { confirm.tap() }
-        }
-    }
-
-    /// The confirmation's button, once the question is up: the last button named so.
-    private func confirmReset() -> XCUIElement? {
-        let named = app.buttons.matching(NSPredicate(format: "label == 'Reset room' OR identifier == 'Reset room'"))
-        guard named.element(boundBy: 0).waitForExistence(timeout: 20) else { return nil }
-        // The pill that asked is one of them while the question is up; the confirm is the other.
-        let all = named.allElementsBoundByIndex
-        return all.last(where: { $0.identifier != "decorReset" }) ?? (all.count > 1 ? all.last : nil)
     }
 
     private func at(_ x: Double, _ y: Double) -> XCUICoordinate {
@@ -39,11 +26,12 @@ final class RearrangeRoomTests: XCTestCase {
 
     @MainActor
     func testResetRoomAsksFirstAndDecorateCloses() throws {
-        launchDecorate(fresh: false)
+        launchDecorate()
         let reset = app.buttons["decorReset"]
         XCTAssertTrue(reset.waitForExistence(timeout: 15))
         reset.tap()
-        XCTAssertNotNil(confirmReset(), "Reset room asks before it changes anything")
+        let question = app.descendants(matching: .any).matching(NSPredicate(format: "label CONTAINS 'Put everything back'")).firstMatch
+        XCTAssertTrue(question.waitForExistence(timeout: 20), "Reset room asks before it changes anything")
         at(0.5, 0.12).tap()
         XCTAssertFalse(app.staticTexts["The room is as it first was."].exists, "dismissing the question changes nothing")
         XCTAssertTrue(app.otherElements["decorPanel"].exists)
