@@ -58,7 +58,7 @@ struct MomentsView: View {
         }
         .sheet(item: $draft, onDismiss: develop) { draft in
             ComposeSheet(image: draft.image) { caption in
-                withAnimation(.spring(duration: 0.4)) {
+                withAnimation(Motion.spring(0.4)) {
                     if state.journal.addMoment(draft.image, caption: caption, shares: true), let added = store.moments.first {
                         undeveloped.insert(added.id)
                     }

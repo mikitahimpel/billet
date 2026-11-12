@@ -138,7 +138,7 @@ public struct LipButtonStyle: ButtonStyle {
         Capsule().fill(Color.honeyDeep).offset(y: Lip.depth)
       }
       .padding(.bottom, Lip.depth)
-      .animation(.snappy(duration: 0.12), value: configuration.isPressed)
+      .animation(Motion.spring(0.12), value: configuration.isPressed)
   }
 }
 
