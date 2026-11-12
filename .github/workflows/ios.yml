@@ -123,11 +123,10 @@ jobs:
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh
 
-      # A fresh runner's first Simulator boot takes minutes; it runs in the background while the app builds.
-      # Started after the Metal Toolchain install, which it slows down.
+      # Picks the test Simulator; it boots after the build (App tests step).
       # Only plain iOS runtimes (iOS-27-2): a device-specific one (iOS-27-2-iPhone19-4) holds a single
       # resizable-scene iPhone whose window is wider than the app's layout, so taps and frames miss.
-      - name: Boot the test Simulator
+      - name: Pick the test Simulator
         run: |
           udid=$(xcrun simctl list -j devices available | python3 -c '
           import json, re, sys
@@ -142,7 +141,6 @@ jobs:
             exit 1
           fi
           echo "TEST_SIMULATOR=$udid" >> "$GITHUB_ENV"
-          nohup xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 &
 
       - name: Install XcodeGen
         run: .github/scripts/install-xcodegen.sh
@@ -196,6 +194,9 @@ jobs:
           fi
           built=$(date +%s)
           kill "$sampler" 2>/dev/null || true
+          # Booted only now: booting beside the build held xcodebuild's first project load for minutes.
+          xcrun simctl bootstatus "$udid" -b > "$RUNNER_TEMP/simulator-boot.log" 2>&1 || true
+          echo "Simulator booted in $(($(date +%s) - built)) s"
           echo "Simulator boot: $(tail -n 1 "$RUNNER_TEMP/simulator-boot.log" 2>/dev/null)"
           # Diagnostics after the tests (logs, spindumps) took minutes and nobody reads them on a green run.
           if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" -collect-test-diagnostics never \
