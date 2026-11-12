@@ -90,6 +90,9 @@ struct OurioApp: App {
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
                                 demoPartner: demoPartnerPairing)
+                                // Drawn over Home, which hides itself from VoiceOver only while its splash shows;
+                                // a modal view is the only one VoiceOver reads.
+                                .accessibilityAddTraits(.isModal)
                                 .transition(.opacity)
                         }
                     }
