@@ -1,0 +1,1 @@
+ALTER TABLE `placement` ADD `room` text DEFAULT 'living' NOT NULL;

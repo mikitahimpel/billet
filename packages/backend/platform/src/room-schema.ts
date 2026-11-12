@@ -161,6 +161,8 @@ export const placement = sqliteTable("placement", {
   u: integer("u").notNull(),
   v: integer("v").notNull(),
   quarterTurns: integer("quarter_turns").notNull(),
+  // `living` or `bedroom`; a row kept before the bedroom could be arranged is in the living room.
+  room: text("room").notNull().default("living"),
   position: integer("position").notNull(),
 });
 

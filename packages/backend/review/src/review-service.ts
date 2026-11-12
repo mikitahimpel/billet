@@ -11,6 +11,7 @@ import {
   reviewCodeLength,
   UserId,
 } from "@billet/contracts-domain/ids";
+import { NoteText } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { PairResponse } from "@billet/contracts-http-api/pair";
 import { ReviewUnavailable } from "./review-error.ts";
@@ -22,6 +23,13 @@ import {
 
 /** How long a new code lives, at most. App Review rarely takes more than a week. */
 export const reviewCodeMaxDays = 30;
+
+/** What the review partner has already written when the reviewer first opens the room. */
+export const reviewWelcomeNotes = Schema.decodeSync(Schema.NonEmptyArray(NoteText))([
+  "hi, I'm so glad you're here",
+  "the cat has been waiting for you",
+  "draw me something?",
+]);
 
 const decodeReviewCode = Schema.decodeSync(ReviewCode);
 const decodeUserId = Schema.decodeSync(UserId);
@@ -153,7 +161,7 @@ export class ReviewService extends Context.Service<
         yield* repository.claimed(codeHash, now);
         // A bot that never wakes still leaves a partner to pair with, so this does not fail it.
         yield* bots
-          .start(pairId, claimerId, partner)
+          .start(pairId, claimerId, partner, reviewWelcomeNotes)
           .pipe(Effect.catch((error) => Effect.logWarning("review bot not started", error)));
         return pairId;
       });

@@ -370,7 +370,7 @@ h1 .w {
 
 .js h1 .w {
   animation: title-in 0.6s var(--ease-out) both;
-  animation-delay: calc(0.1s + var(--i) * 0.04s);
+  animation-delay: calc(0.1s + var(--i) * 0.04s); /* from .lamp-on, see the lights */
 }
 
 .amber {
@@ -386,7 +386,7 @@ h1 .w {
 }
 
 .js .credits {
-  animation: rise 0.6s var(--ease-out) 0.25s both;
+  animation: rise 0.6s var(--ease-out) 0.9s both;
 }
 
 .credits .lead {
@@ -506,41 +506,141 @@ h1 .w {
 }
 
 /*
- * The lights coming on. The room image paints at full strength from the first frame, under a
- * night layer with the lamp, window and fairy lights off; a beat after the image decodes, main.js
- * adds .lit and they ease up. Only with script and motion allowed: otherwise the room is lit.
+ * The lights coming on, as crossfades between real renders of the room (no cat in any of them):
+ * none (all off, moonlight only) at the bottom, lamp (lamp and candle on) above it, full (everything
+ * on) above that; Mochi's loop sits over all three. All paint from the first frame; main.js adds
+ * .lamp-on to the story a short dark beat after "none" decodes, and .lamp-settled when it's over.
+ * From .lamp-on:   0 ms  the lamp switches on: its render flickers to full in 350 ms, its hot core
+ *                        with it, and Mochi comes into its light
+ *                650 ms  the full render fades in (500 ms), the warm glows with it, and the
+ *                        fairy lights catch one after another along the string
+ *               ~700 ms  the title's words land, the lead and button just after
+ *               1200 ms  motes
+ * Only with script and motion allowed; otherwise the full lit room is there from the start.
  */
-.lit-entrance::after {
-  content: "";
-  position: absolute;
-  inset: -12%;
-  z-index: 5;
-  pointer-events: none;
-  opacity: 0;
-  background: radial-gradient(
-    closest-side,
-    rgba(8, 7, 18, 0.8),
-    rgba(8, 7, 18, 0.66) 72%,
-    transparent
-  );
-  transition: opacity 0.9s cubic-bezier(0.33, 0, 0.2, 1);
-}
-
-.lit-entrance :is(.bloom-lamp, .bloom-flicker, .bloom-window, .bulbs) {
-  transition:
-    filter 0.6s cubic-bezier(0.33, 0, 0.2, 1),
-    opacity 1.4s ease,
-    scale 1.6s var(--ease-out);
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  .js .lit-entrance:not(.lit)::after {
-    opacity: 1;
+  .js .story:not(.lamp-on) :is(.room-pic.lamp, .room-pic.full) {
+    opacity: 0;
   }
 
-  /* filter, not opacity: the lamp's breathe and flicker animate opacity. */
-  .js .lit-entrance:not(.lit) :is(.bloom-lamp, .bloom-flicker, .bloom-window, .bulbs) {
+  /* filter, not opacity: the glows' and bulbs' own loops animate opacity. */
+  .js .story:not(.lamp-on) :is(.bloom-lamp, .bloom-flicker, .bloom-window, .bulb) {
     filter: opacity(0);
+  }
+
+  .js .story:not(.lamp-on) .mochi-loop {
+    filter: brightness(0.35) saturate(0.7);
+  }
+
+  .js .story:not(.lamp-on) .motes {
+    opacity: 0;
+  }
+
+  .js .story:not(.lamp-on) :is(h1 .w, .credits) {
+    animation-play-state: paused;
+  }
+
+  .story.lamp-on:not(.lamp-settled) .room-pic.lamp {
+    animation: lamp-switch 0.35s both;
+  }
+
+  .story.lamp-on:not(.lamp-settled) .bloom-flicker {
+    animation: core-switch 0.35s both;
+  }
+
+  .story.lamp-on:not(.lamp-settled) .mochi-loop {
+    animation: lamp-lit 0.35s both;
+  }
+
+  .story.lamp-on:not(.lamp-settled) .room-pic.full {
+    transition: opacity 0.5s ease 0.65s;
+  }
+
+  .story.lamp-on:not(.lamp-settled) :is(.bloom-lamp, .bloom-window) {
+    transition:
+      filter 0.5s ease 0.65s,
+      opacity 1.4s ease,
+      scale 1.6s var(--ease-out);
+  }
+
+  .story.lamp-on:not(.lamp-settled) .bulb {
+    animation:
+      bulb-pop 0.3s var(--ease-out) calc(0.65s + var(--k, 0) * 36ms) both,
+      twinkle var(--d, 5s) ease-in-out var(--delay, 3s) infinite alternate;
+  }
+
+  .js .motes {
+    transition: opacity 1s ease 1.2s;
+  }
+}
+
+/* A real switch: on, nearly off, on. Short eases between the steps. */
+@keyframes lamp-switch {
+  0% {
+    opacity: 0;
+    animation-timing-function: ease-out;
+  }
+  14% {
+    opacity: 0.7;
+    animation-timing-function: ease-in;
+  }
+  32% {
+    opacity: 0.15;
+    animation-timing-function: ease-out;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes core-switch {
+  0% {
+    filter: opacity(0);
+    animation-timing-function: ease-out;
+  }
+  14% {
+    filter: opacity(0.7);
+    animation-timing-function: ease-in;
+  }
+  32% {
+    filter: opacity(0.15);
+    animation-timing-function: ease-out;
+  }
+  100% {
+    filter: opacity(1);
+  }
+}
+
+@keyframes lamp-lit {
+  0% {
+    filter: brightness(0.35) saturate(0.7);
+    animation-timing-function: ease-out;
+  }
+  14% {
+    filter: brightness(0.8) saturate(0.9);
+    animation-timing-function: ease-in;
+  }
+  32% {
+    filter: brightness(0.45) saturate(0.75);
+    animation-timing-function: ease-out;
+  }
+  100% {
+    filter: none;
+  }
+}
+
+@keyframes bulb-pop {
+  0% {
+    filter: opacity(0);
+    transform: scale(0.4);
+  }
+  60% {
+    filter: opacity(1);
+    transform: scale(1.35);
+  }
+  100% {
+    filter: opacity(1);
+    transform: none;
   }
 }
 
@@ -567,8 +667,7 @@ h1 .w {
 
 /*
  * The animated Mochi: a 140×140 crop of the 2560×1440 frame at x 1240, y 690, laid over the
- * room without her, as an animated WebP with alpha. It shows only once it and the cat-less room
- * have decoded; until then, and under reduced motion, the still room with Mochi in it stays.
+ * cat-less renders, as an animated WebP with alpha. It shows once it has decoded.
  */
 .mochi-loop {
   position: absolute;
@@ -594,24 +693,39 @@ h1 .w {
 }
 
 /*
- * Both rooms paint from the first frame: the cat-less one underneath, the clean one over it. The loop
- * only fades the clean one out; neither picture is ever hidden or toggled.
+ * The hero's stack, bottom to top: none, lamp, full, clean, the loop. "clean" (lit, with Mochi in it)
+ * is the room without script or motion, and the fallback when the loop can't play; otherwise it
+ * stays clear and Mochi is the loop. The end card's room is the clean picture alone.
  */
-.room-pic.empty {
+.room-pic.none {
   z-index: 0;
 }
 
-.room-pic.clean {
+.room-pic.lamp {
   z-index: 1;
-  transition: opacity 0.3s ease;
 }
 
-.mochi-loop {
+.room-pic.full {
   z-index: 2;
 }
 
-.room.has-loop .room-pic.clean {
-  opacity: 0;
+.room-pic.clean {
+  z-index: 3;
+  transition: opacity 0.5s ease;
+}
+
+.mochi-loop {
+  z-index: 4;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .js .lit-entrance .room-pic.clean {
+    opacity: 0;
+  }
+
+  .js .story.lamp-settled .lit-entrance.no-loop .room-pic.clean {
+    opacity: 1;
+  }
 }
 
 .room.has-loop .mochi-loop {
@@ -837,10 +951,6 @@ h1 .w {
   height: 100%;
   mix-blend-mode: screen;
   pointer-events: none;
-}
-
-.js .motes {
-  animation: fade-in 1s ease-out 0.4s both;
 }
 
 .scroll-hint {
