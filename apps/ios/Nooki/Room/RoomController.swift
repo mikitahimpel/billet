@@ -237,6 +237,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
         tellHomecoming()
     }
 
+    func pronounsChosen() { catLife.pronounsChosen() }
+
     func syncCat() async {
         await catLife.sync()
         tellHomecoming()

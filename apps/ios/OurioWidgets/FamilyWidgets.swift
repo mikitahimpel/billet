@@ -1,6 +1,8 @@
 import Design
 import DrawInterface
 import MoodInterface
+import Pet
+import ProfileInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -15,7 +17,7 @@ struct MochiFamilyWidget: Widget {
             FamilyBody { MochiFamilyView(entry: entry, family: $0) }.familyGround()
         }
         .configurationDisplayName("Mochi")
-        .description("Your cat, how she is right now, and a pet button.")
+        .description(CatProfile.pronouns().say(.widgetBlurb))
         .supportedFamilies([.systemSmall, .systemMedium, .systemLarge])
         .contentMarginsDisabled()
     }

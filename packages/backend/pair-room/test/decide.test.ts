@@ -475,7 +475,12 @@ describe("tagged unions", () => {
       entry: { seq: 1, note: photoFrom(alice) },
     }),
     PresenceChanged: RoomOutput.cases.PresenceChanged.make({ user: alice, state: "drawing" }),
-    CatSaved: RoomOutput.cases.CatSaved.make({ cat: catProfile, by: alice, adopted: true }),
+    CatSaved: RoomOutput.cases.CatSaved.make({
+      cat: catProfile,
+      by: alice,
+      adopted: true,
+      renamed: false,
+    }),
     CatEntryAppended: RoomOutput.cases.CatEntryAppended.make({ entry: petEntry }),
     CatEntryRepeated: RoomOutput.cases.CatEntryRepeated.make({ entry: petEntry }),
     InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),

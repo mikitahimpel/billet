@@ -79,9 +79,12 @@ private nonisolated final class FakeCatRoom: Sendable {
                 try self.state.withLock { (state) throws(TransportError) in
                     guard state.online else { throw .network("offline") }
                     state.adoptions.append(request)
-                    state.profile = state.profile ?? Wire.CatProfile(
-                        name: request.name, look: request.look, bornAt: state.now, natureSeed: "424242",
-                        utcOffsetSeconds: request.utcOffsetSeconds)
+                    let kept = state.profile
+                    state.profile = Wire.CatProfile(
+                        name: kept?.name ?? request.name, pronouns: request.pronouns ?? kept?.pronouns,
+                        look: kept?.look ?? request.look, bornAt: kept?.bornAt ?? state.now,
+                        natureSeed: kept?.natureSeed ?? "424242",
+                        utcOffsetSeconds: kept?.utcOffsetSeconds ?? request.utcOffsetSeconds)
                     return self.response(state)
                 }
             },
@@ -108,8 +111,15 @@ private let profile = Wire.CatProfile(
         defaults = UserDefaults(suiteName: "CatLifeTests-\(UUID().uuidString)")!
     }
 
-    private func life() -> CatLife {
-        CatLife(defaults: defaults, formerOutbox: formerOutbox, catName: { "Pancake" }, catCoat: { "ginger" })
+    /// What this phone has chosen for the cat, as the app group would keep it.
+    private final class Chosen {
+        var pronouns: CatPronouns?
+        init(_ pronouns: CatPronouns?) { self.pronouns = pronouns }
+    }
+
+    private func life(chosen: Chosen = Chosen(nil)) -> CatLife {
+        CatLife(defaults: defaults, formerOutbox: formerOutbox, catName: { "Pancake" }, catCoat: { "ginger" },
+                chosenPronouns: { chosen.pronouns }, adoptPronouns: { chosen.pronouns = $0 })
     }
 
     /// Lets the outbox's own task run.
@@ -143,6 +153,77 @@ private let profile = Wire.CatProfile(
         #expect(adoptions.map(\.name) == ["Pancake"])
         #expect(adoptions.first?.look == CatLook(model: "mochi", coat: "ginger"))
         #expect(life.seed == 424_242)
+    }
+
+    @Test func theAdoptionCarriesThePronounsThisPhoneChose() async {
+        let room = FakeCatRoom()
+        await life(chosen: Chosen(.he)).connect(room.client, pair: pair)
+        #expect(room.state.withLock { $0.adoptions }.map(\.pronouns) == ["he"])
+        #expect(room.state.withLock { $0.profile?.pronouns } == "he")
+    }
+
+    @Test func aPhoneWithoutAChoiceTakesTheRoomsSoBothWordTheCatAlike() async {
+        let room = FakeCatRoom(profile: Wire.CatProfile(
+            name: "Pancake", pronouns: "she", look: profile.look, bornAt: profile.bornAt,
+            natureSeed: profile.natureSeed, utcOffsetSeconds: 3600))
+        let chosen = Chosen(nil)
+        await life(chosen: chosen).connect(room.client, pair: pair)
+        #expect(chosen.pronouns == .she)
+        #expect(room.state.withLock { $0.adoptions }.isEmpty)
+    }
+
+    @Test func theRoomsChoiceBeatsAnOlderLocalOne() async {
+        let room = FakeCatRoom(profile: Wire.CatProfile(
+            name: "Pancake", pronouns: "they", look: profile.look, bornAt: profile.bornAt,
+            natureSeed: profile.natureSeed, utcOffsetSeconds: 3600))
+        let chosen = Chosen(.he)
+        await life(chosen: chosen).connect(room.client, pair: pair)
+        #expect(chosen.pronouns == .they)
+    }
+
+    @Test func aRoomWithoutPronounsHearsThisPhonesChoiceAndKeepsItsOwnName() async {
+        let room = FakeCatRoom(profile: profile)
+        await life(chosen: Chosen(.they)).connect(room.client, pair: pair)
+        let adoptions = room.state.withLock { $0.adoptions }
+        #expect(adoptions.map(\.pronouns) == ["they"])
+        #expect(adoptions.map(\.name) == ["Pancake"])
+        #expect(room.state.withLock { $0.profile?.pronouns } == "they")
+    }
+
+    @Test func aChoiceMadeLaterGoesUpAndTheRoomsStaysOtherwise() async {
+        let room = FakeCatRoom(profile: Wire.CatProfile(
+            name: "Pancake", pronouns: "she", look: profile.look, bornAt: profile.bornAt,
+            natureSeed: profile.natureSeed, utcOffsetSeconds: 3600))
+        let chosen = Chosen(.she)
+        let life = life(chosen: chosen)
+        await life.connect(room.client, pair: pair)
+        #expect(room.state.withLock { $0.adoptions }.isEmpty)
+
+        chosen.pronouns = .he
+        life.pronounsChosen()
+        await settle()
+        #expect(room.state.withLock { $0.profile?.pronouns } == "he")
+        #expect(chosen.pronouns == .he)
+
+        // Nothing is pending now: a sync leaves the choice alone.
+        await life.sync()
+        #expect(room.state.withLock { $0.adoptions }.count == 1)
+    }
+
+    @Test func aChoiceMadeOfflineWaitsForTheRoom() async {
+        let room = FakeCatRoom(profile: profile)
+        room.set(online: false)
+        let chosen = Chosen(nil)
+        let life = life(chosen: chosen)
+        await life.connect(room.client, pair: pair)
+        chosen.pronouns = .she
+        life.pronounsChosen()
+        await settle()
+        #expect(room.state.withLock { $0.profile?.pronouns } == nil)
+
+        room.set(online: true)
+        await life.sync()
+        #expect(room.state.withLock { $0.profile?.pronouns } == "she")
     }
 
     @Test func thePartnersCareReachesThisPhonesCat() async {

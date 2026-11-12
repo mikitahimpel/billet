@@ -66,7 +66,6 @@ struct PlusHero: View {
             }
         }
         .frame(width: 72, height: 72)
-        .background(Ink.surfaceRaised, in: .circle)
         .clipShape(.circle)
         .overlay(alignment: .top) {
             Image(systemName: "crown.fill")
@@ -186,7 +185,7 @@ private struct PackCard: View {
     let buy: () -> Void
 
     var body: some View {
-        Card {
+        Card(state: isFit ? .selected : .rest) {
             HStack(spacing: Space.l) {
                 CoinPile(rows: PackStore.piles[tier])
                     .frame(width: 88)
@@ -216,11 +215,6 @@ private struct PackCard: View {
                 .buttonStyle(PrimaryButtonStyle(fullWidth: false))
                 .disabled(locked)
                 .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
-            }
-        }
-        .overlay {
-            if isFit {
-                RoundedRectangle(cornerRadius: Radius.card, style: .continuous).strokeBorder(Color.honey, lineWidth: 2)
             }
         }
         .accessibilityElement(children: .contain)

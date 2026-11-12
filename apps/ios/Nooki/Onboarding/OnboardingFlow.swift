@@ -3,6 +3,7 @@ import MomentsInterface
 import Observation
 import WidgetInterface
 import WidgetUI
+import Pet
 import ProfileInterface
 import Transport
 import UsInterface
@@ -67,6 +68,8 @@ final class OnboardingFlow {
     var values: [OnboardingStepId: Int] = [:]
     var texts: [OnboardingStepId: String] = [:]
     var catName = ""
+    /// Worded as `they` until the person picks; saved with the name.
+    var catPronouns = CatPronouns.unchosen
     var coat: CatCoat
     /// The coat the room's cat wears; it changes once the picked coat is confirmed.
     private(set) var wornCoat: CatCoat
@@ -314,6 +317,7 @@ final class OnboardingFlow {
             } else {
                 catNames.removeObject(forKey: CatProfile.nameKey)
             }
+            CatProfile.setPronouns(catPronouns, in: catNames)
             record(answer ?? .skipped)
             advance()
         case .question(let step):
@@ -326,7 +330,10 @@ final class OnboardingFlow {
 
     func skip() {
         guard canSkip else { return }
-        if page == .catName { catNames.removeObject(forKey: CatProfile.nameKey) }
+        if page == .catName {
+            catNames.removeObject(forKey: CatProfile.nameKey)
+            CatProfile.setPronouns(nil, in: catNames)
+        }
         if page == .catCoat {
             coat = .grey
             wear(.grey)

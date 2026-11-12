@@ -8,15 +8,16 @@ import Wire
 
 extension StreakRemote {
     /// `/v1/streak` over `http`.
+    /// `you`: this phone's member, to tell its marks from the partner's.
     static func live(http: HTTPService, token: @escaping @Sendable () async -> String?,
-                     calendar: Calendar = .current) -> StreakRemote {
+                     you: @escaping @Sendable () -> String?, calendar: Calendar = .current) -> StreakRemote {
         @Sendable func call(_ request: HTTPRequest) async -> Answer {
             guard let token = await token() else { return .offline }
             var request = request
             request.headers[Routes.authorizationHeader] = Routes.bearerPrefix + token
             do throws(TransportError) {
                 let response = try await http.perform(request, as: StreakResponse.self)
-                return .streak(LoveStreak(response.streak, calendar: calendar))
+                return .streak(LoveStreak(response.streak, you: you(), calendar: calendar))
             } catch {
                 return answer(to: error)
             }
@@ -52,20 +53,5 @@ extension StreakRemote {
              .api(.bonusTaken), .api(.catNotAdopted), .api(.priceChanged), .api(.layoutRefused):
             .refused
         }
-    }
-}
-
-extension LoveStreak {
-    /// The room's streak in this phone's days: each local day is the start of that day in `calendar`.
-    init(_ wire: PairStreak, calendar: Calendar = .current) {
-        self.init(count: wire.days, lastDay: wire.lastDay.flatMap { Self.day($0, calendar) }, best: wire.best,
-                  lastRestore: wire.restoredOn.flatMap { Self.day($0, calendar) })
-    }
-
-    /// `YYYY-MM-DD` as the start of that day.
-    static func day(_ text: String, _ calendar: Calendar) -> Date? {
-        let parts = text.split(separator: "-").compactMap { Int($0) }
-        guard parts.count == 3 else { return nil }
-        return calendar.date(from: DateComponents(year: parts[0], month: parts[1], day: parts[2]))
     }
 }

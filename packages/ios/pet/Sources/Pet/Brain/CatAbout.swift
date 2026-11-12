@@ -30,7 +30,7 @@ extension CatBrain {
     for trait in CatPersonality.Trait.allCases {
       traits[trait] = (traits[trait] * 20).rounded() / 20
     }
-    let spot = memory.favourite.flatMap { $0.spotName == nil ? nil : $0 }
+    let spot = memory.favourite.flatMap { $0.spotName(for: .they) == nil ? nil : $0 }
     return CatAbout(
       asleep: asleep, temperament: temperament ?? .fitting(nature), personality: traits,
       favourite: spot, day: dayMoments(events: events))
