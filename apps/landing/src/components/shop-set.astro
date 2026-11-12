@@ -1,0 +1,37 @@
+---
+// The shop window: the eight pieces on two clay shelves, each lit round its measured outline.
+import { shopItems } from "../lib/shop";
+
+interface Props {
+  // The home page's set is the one main.js lights piece by piece from the credits beside it.
+  id?: string;
+  class?: string;
+}
+
+const { id, class: className } = Astro.props;
+---
+
+<div class:list={["set", className]} id={id} aria-hidden={id ? "true" : undefined}>
+  <div class="set-floor"></div>
+  <span class="set-cord"></span>
+  <div class="set-props">
+    {
+      shopItems.map((item) => (
+        <div class={`prop prop-${item.key}`} data-prop={item.key}>
+          <div class="art" style={item.style}>
+            <img
+              src={item.small}
+              srcset={`${item.small} 300w, ${item.large} 600w`}
+              sizes="(max-width: 600px) 45vw, 300px"
+              alt=""
+              width="600"
+              height="600"
+              loading="lazy"
+              decoding="async"
+            />
+          </div>
+        </div>
+      ))
+    }
+  </div>
+</div>

@@ -1,6 +1,7 @@
 ---
 import CompareTable from "../../components/compare-table.astro";
 import EndCard from "../../components/end-card.astro";
+import PairPhones from "../../components/pair-phones.astro";
 import StoreButton from "../../components/store-button.astro";
 import { alternatives, apps, checked, ourio } from "../../compare";
 import Page from "../../layouts/page.astro";
@@ -36,7 +37,7 @@ const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name
   schema={schema}
   bodyClass="site-compare"
 >
-  <section class="wrap pg-hero pg-hero-solo">
+  <section class="wrap pg-hero">
     <div class="pg-hero-copy">
       <p class="eyebrow">Compare</p>
       <h1>Couples apps for iPhone, compared.</h1>
@@ -50,6 +51,7 @@ const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name
         checked <time datetime={checked.iso}>{checked.label}</time>; sources are at the bottom.
       </p>
     </div>
+    <PairPhones yours="invite" class="pg-hero-art" />
   </section>
 
   <section class="pg wrap" aria-labelledby="by-need">

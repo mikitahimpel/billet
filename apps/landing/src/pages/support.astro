@@ -1,6 +1,5 @@
 ---
-import oops from "../assets/art/whoknows-miss.webp";
-import Art from "../components/art.astro";
+import EndCard from "../components/end-card.astro";
 import Page from "../layouts/page.astro";
 import { supportEmail } from "../site";
 
@@ -48,7 +47,7 @@ const schema = [
   schema={schema}
   bodyClass="site-support"
 >
-  <section class="wrap pg-hero">
+  <section class="wrap pg-hero pg-hero-solo">
     <div class="pg-hero-copy">
       <p class="eyebrow">Support</p>
       <h1>Something not right? Tell us.</h1>
@@ -58,7 +57,6 @@ const schema = [
       </p>
       <div class="pg-cta"><a class="btn btn-gold" href={`mailto:${supportEmail}?subject=Ourio%20support`}>Email support</a></div>
     </div>
-    <Art picture={{ src: oops, alt: "Mochi lying on her back with her tongue out", kind: "cutout" }} class="pg-hero-art" eager />
   </section>
 
   <section class="pg wrap" aria-labelledby="fixes">
@@ -80,4 +78,5 @@ const schema = [
     </div>
     <p class="pg-para pg-after">More in <a href="/help/">Help</a> and the <a href="/faq/">FAQ</a>.</p>
   </section>
+  <EndCard />
 </Page>

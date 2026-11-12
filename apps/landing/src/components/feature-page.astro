@@ -1,7 +1,6 @@
 ---
 import { getImage } from "astro:assets";
-import mochi from "../assets/mochi-portrait.webp";
-import { dateIdeas } from "../dates";
+import { dateIdeas, fanCards } from "../dates";
 import type { Feature, FeatureSection } from "../features";
 import Page from "../layouts/page.astro";
 import { features, pages } from "../site";
@@ -48,15 +47,23 @@ if (feature.steps)
     step: feature.steps.map((step, i) => ({ "@type": "HowToStep", position: i + 1, name: step.title, text: step.text })),
   });
 
-const [mochiSmall, mochiLarge] = await Promise.all(
-  [192, 320].map((width) => getImage({ src: mochi, width, format: "webp" })),
-);
 const ideas =
   feature.gallery === "dates"
     ? await Promise.all(
         dateIdeas.map(async (idea) => ({
           idea,
           small: (await getImage({ src: idea.art, width: 400, format: "webp" })).src,
+        })),
+      )
+    : [];
+// The hand of cards fans from -12° to 12°, the outer ones lower.
+const fan =
+  feature.gallery === "dates"
+    ? await Promise.all(
+        fanCards.map(async (art, i) => ({
+          art,
+          small: (await getImage({ src: art, width: 400, format: "webp" })).src,
+          style: `--r: ${(i - 2) * 6}deg; --y: ${[26, 8, 0, 8, 26][i]}px`,
         })),
       )
     : [];
@@ -89,6 +96,24 @@ const ideas =
             </li>
           ))}
         </ol>
+        {fan.length > 0 && (
+          <ul class="fan reveal" aria-hidden="true">
+            {fan.map(({ art, small, style }) => (
+              <li style={style}>
+                <img
+                  src={small}
+                  srcset={`${small} 400w, ${art.src} ${art.width}w`}
+                  sizes="(max-width: 640px) 30vw, 200px"
+                  alt=""
+                  width={art.width}
+                  height={art.height}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     )
   }
@@ -152,17 +177,6 @@ const ideas =
     <div class="qs-side">
       <h2 id="questions" class="pg-h2">Questions</h2>
       <p class="pg-note">More answers in the <a href="/faq/">FAQ</a> and the <a href="/help/">help pages</a>.</p>
-      <img
-        class="qs-mochi"
-        src={mochiLarge!.src}
-        srcset={`${mochiSmall!.src} 192w, ${mochiLarge!.src} 320w`}
-        sizes="150px"
-        alt=""
-        width="320"
-        height="320"
-        loading="lazy"
-        decoding="async"
-      />
     </div>
     <div>
       <div class="qs">
