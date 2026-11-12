@@ -3,8 +3,6 @@
     "apps/ios/Nooki/Inbox/InboxSheet.swift": 3,
     "apps/ios/Nooki/Inks/InkPalette.swift": 1,
     "apps/ios/Nooki/Model/HomeState.swift": 4,
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 14,
-    "apps/ios/Nooki/Onboarding/OnboardingView.swift": 2,
     "apps/ios/Nooki/OurioApp.swift": 1,
     "apps/ios/Nooki/Room/HeartBubble.swift": 4,
     "apps/ios/Nooki/Scene/DioramaView.swift": 1,
@@ -22,6 +20,8 @@
     "apps/ios/Nooki/UI/NotesHistory.swift": 4,
     "apps/ios/Nooki/UI/Us/DrawGuessScreen.swift": 1,
     "apps/ios/Nooki/UI/WarmBackdrop.swift": 2,
+    "packages/ios/features/Sources/FeatureOnboarding/CoatPicker.swift": 14,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift": 2,
     "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 8,
     "packages/ios/features/Sources/FeatureShop/PaletteInk+Color.swift": 1,
     "packages/ios/features/Sources/FeatureShop/ShopKit.swift": 8,
@@ -36,8 +36,6 @@
     "packages/ios/features/Sources/WidgetUI/UsTint+Color.swift": 1
   },
   "raw-font": {
-    "apps/ios/Nooki/Onboarding/OnboardingView+Pieces.swift": 2,
-    "apps/ios/Nooki/Onboarding/OnboardingView.swift": 3,
     "apps/ios/Nooki/Room/HeartBubble.swift": 2,
     "apps/ios/Nooki/Scene/DioramaView.swift": 1,
     "apps/ios/Nooki/UI/BoardFaces.swift": 2,
@@ -51,6 +49,8 @@
     "apps/ios/Nooki/UI/NoteSheet.swift": 1,
     "apps/ios/Nooki/UI/NotesHistory.swift": 2,
     "apps/ios/Nooki/UI/PairingSheet.swift": 1,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView+Pieces.swift": 2,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift": 3,
     "packages/ios/features/Sources/FeatureShop/CoinStore.swift": 2,
     "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 1,
     "packages/ios/features/Sources/FeatureShop/FeaturedCard.swift": 1,
@@ -89,8 +89,6 @@
   "frame-literal": {
     "apps/ios/Nooki/Inbox/InboxSheet.swift": 2,
     "apps/ios/Nooki/Inks/InkPalette.swift": 1,
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 1,
-    "apps/ios/Nooki/Onboarding/OnboardingView.swift": 1,
     "apps/ios/Nooki/Perf/PerfLabViews.swift": 1,
     "apps/ios/Nooki/Room/HeartBubble.swift": 2,
     "apps/ios/Nooki/Scene/DioramaView.swift": 1,
@@ -115,6 +113,8 @@
     "apps/ios/Nooki/UI/Us/DrawGuessScreen.swift": 6,
     "apps/ios/Nooki/UI/Us/WhoKnowsScreen.swift": 2,
     "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 3,
+    "packages/ios/features/Sources/FeatureOnboarding/CoatPicker.swift": 1,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift": 1,
     "packages/ios/features/Sources/FeatureShop/BundleCard.swift": 1,
     "packages/ios/features/Sources/FeatureShop/CoinStore.swift": 1,
     "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 6,
@@ -165,7 +165,6 @@
   },
   "flat-surface": {
     "apps/ios/Nooki/Inbox/InboxSheet.swift": 1,
-    "apps/ios/Nooki/Onboarding/OnboardingView.swift": 1,
     "apps/ios/Nooki/Room/BrainCard.swift": 2,
     "apps/ios/Nooki/UI/Composer/ComposerPens.swift": 1,
     "apps/ios/Nooki/UI/Composer/ComposerPostage.swift": 1,
@@ -175,7 +174,8 @@
     "apps/ios/Nooki/UI/Kit/CatHeroStage.swift": 1,
     "apps/ios/Nooki/UI/MomentsView.swift": 1,
     "apps/ios/Nooki/UI/StyleGallery.swift": 2,
-    "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 1
+    "packages/ios/features/Sources/FeatureInbox/InboxView.swift": 1,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift": 1
   },
   "raw-stroke": {
     "apps/ios/Nooki/Inbox/InboxSheet.swift": 1,
@@ -200,7 +200,6 @@
     "packages/ios/features/Sources/WidgetUI/Monogram.swift": 2
   },
   "raw-motion": {
-    "apps/ios/Nooki/Onboarding/OnboardingView.swift": 1,
     "apps/ios/Nooki/Room/DecorStage.swift": 1,
     "apps/ios/Nooki/Room/Games/GameView.swift": 5,
     "apps/ios/Nooki/Room/Games/TabletopRoom.swift": 1,
@@ -213,6 +212,7 @@
     "apps/ios/Nooki/UI/Moments/Polaroid.swift": 1,
     "apps/ios/Nooki/UI/NoteComposer.swift": 1,
     "packages/ios/features/Sources/FeatureCanvas/CanvasView.swift": 2,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift": 1,
     "packages/ios/features/Sources/FeatureShop/CoinsSheet.swift": 2,
     "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 3,
     "packages/ios/features/Sources/FeatureShop/ItemSheet.swift": 1,
@@ -229,7 +229,6 @@
     "apps/ios/Nooki/UI/WarmBackdrop.swift": 1
   },
   "geometry-reader": {
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 1,
     "apps/ios/Nooki/Room/BrainCard.swift": 1,
     "apps/ios/Nooki/Room/Games/GameView.swift": 2,
     "apps/ios/Nooki/UI/Draw/LockCanvasView.swift": 1,
@@ -239,22 +238,21 @@
     "apps/ios/Nooki/UI/NoteComposer.swift": 1,
     "apps/ios/Nooki/UI/NotesHistory.swift": 1,
     "packages/ios/features/Sources/FeatureCanvas/CanvasView.swift": 1,
+    "packages/ios/features/Sources/FeatureOnboarding/CoatPicker.swift": 1,
     "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 1,
     "packages/ios/features/Sources/FeatureShop/FeaturedCard.swift": 1,
     "packages/ios/features/Sources/FeatureShop/PurchaseMoment.swift": 1,
     "packages/ios/features/Sources/FeatureShop/ShopKit.swift": 1
   },
   "button-style": {
-    "apps/ios/Nooki/Onboarding/OnboardingView+Pieces.swift": 1,
     "apps/ios/Nooki/Room/Games/GameView.swift": 1,
     "apps/ios/Nooki/Scene/DioramaView.swift": 1,
     "apps/ios/Nooki/UI/PairingSheet.swift": 1,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView+Pieces.swift": 1,
     "packages/ios/features/Sources/FeatureUs/WishEditor.swift": 1
   },
   "tip": {},
   "text-role": {
-    "apps/ios/Nooki/Onboarding/CoatPicker.swift": 2,
-    "apps/ios/Nooki/Onboarding/OnboardingView+Pieces.swift": 1,
     "apps/ios/Nooki/UI/MomentViewer.swift": 1,
     "apps/ios/Nooki/UI/MomentsView.swift": 2,
     "apps/ios/Nooki/UI/NoteSheet.swift": 1,
@@ -263,6 +261,8 @@
     "apps/ios/Nooki/UI/Us/DrawGuessScreen.swift": 1,
     "packages/ios/features/Sources/FeatureCanvas/CanvasView.swift": 1,
     "packages/ios/features/Sources/FeatureCanvas/LivePartnerView.swift": 1,
+    "packages/ios/features/Sources/FeatureOnboarding/CoatPicker.swift": 2,
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView+Pieces.swift": 1,
     "packages/ios/features/Sources/FeatureOnboarding/SaveAccountCard.swift": 2,
     "packages/ios/features/Sources/FeatureOnboarding/SignInControls.swift": 1,
     "packages/ios/features/Sources/FeatureShop/DailyGiftCard.swift": 3,

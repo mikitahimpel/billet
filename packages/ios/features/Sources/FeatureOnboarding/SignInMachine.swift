@@ -4,7 +4,7 @@ import Transport
 import Wire
 
 /// Why signing in did not finish, as the screen words it.
-public enum SignInFailure: Equatable, Sendable {
+public nonisolated enum SignInFailure: Equatable, Sendable {
   /// Apple refused or could not answer. A cancelled sheet is not a failure.
   case appleRefused
   /// The backend did not accept the identity token.
@@ -33,7 +33,7 @@ public enum SignInFailure: Equatable, Sendable {
 /// From launch to a saved session: fetch a nonce, let Apple sign it into an identity token, and
 /// trade the token for a session. `request` counts the backend calls so a late answer changes
 /// nothing.
-public enum SignInMachine: Machine {
+public nonisolated enum SignInMachine: Machine {
   public enum State: Equatable, Sendable {
     case idle
     case fetchingNonce(request: Int)
@@ -123,14 +123,14 @@ public enum SignInMachine: Machine {
 }
 
 /// What the Apple identity token is for.
-public enum SignInPurpose: Equatable, Sendable {
+public nonisolated enum SignInPurpose: Equatable, Sendable {
   /// Sign in to the account linked to this Apple ID, or open one, and save its session.
   case signIn
   /// Link the account already signed in on this phone. Its session stays as it is.
   case link
 }
 
-extension SignInMachine {
+nonisolated extension SignInMachine {
   public static func run(
     _ output: Output, api: APIClient, accounts: AccountStore, purpose: SignInPurpose = .signIn
   ) async -> Event? {

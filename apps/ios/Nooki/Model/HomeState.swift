@@ -1,3 +1,4 @@
+import FeatureOnboarding
 import FeatureShop
 import FeatureUs
 import DecorInterface

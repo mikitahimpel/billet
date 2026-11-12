@@ -55,7 +55,7 @@ func dependencies(_ names: [String]) -> [Target.Dependency] {
   }
 }
 
-let features = ["FeatureOnboarding", "FeaturePairing", "FeatureCanvas", "FeatureMoments"]
+let features = ["FeaturePairing", "FeatureCanvas", "FeatureMoments"]
 
 let featureDependencies = ["BilletKit", "Wire", "Ink", "DesignSystem", "Transport", "Persistence"]
 
@@ -66,7 +66,6 @@ let widgetBridge: Target = .target(
 
 let tests: [(name: String, dependencies: [String])] = [
   ("FeatureCanvasTests", ["FeatureCanvas", "Wire"]),
-  ("FeatureOnboardingTests", ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
   ("FeatureMomentsTests", ["FeatureMoments", "Transport", "Wire"]),
   ("WidgetInterfaceTests", ["WidgetInterface", "MoodInterface"]),
@@ -92,6 +91,13 @@ let shopTests: Target = .testTarget(
     "Wire",
   ]),
   swiftSettings: [.defaultIsolation(MainActor.self)])
+
+let onboardingTests: Target = .testTarget(
+  name: "FeatureOnboardingTests",
+  dependencies: dependencies([
+    "FeatureOnboarding", "ProfileInterface", "RoomInterface", "Pet", "Persistence", "Transport",
+    "Wire",
+  ]))
 
 let games: Target = .target(
   name: "FeatureGames",
@@ -160,6 +166,17 @@ let shop: Target = .target(
   swiftSettings: fromTheApp + [.defaultIsolation(MainActor.self)]
 )
 
+// Moved from the app, so it keeps the app's default of main-actor isolation.
+let onboarding: Target = .target(
+  name: "FeatureOnboarding",
+  dependencies: dependencies(
+    featureDependencies + [
+      "Design", "MomentsInterface", "Pet", "ProfileInterface", "RoomInterface", "UsInterface",
+      "WidgetInterface", "WidgetUI",
+    ]),
+  swiftSettings: [.defaultIsolation(MainActor.self)]
+)
+
 // The room itself is in the app, where RealityKit is.
 let gamesInterface: Target = .target(
   name: "GamesInterface", dependencies: dependencies(["Pet", "Wire"]))
@@ -169,6 +186,7 @@ let roomInterface: Target = .target(
 
 let products =
   features + [
+    "FeatureOnboarding",
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
@@ -191,10 +209,10 @@ let package = Package(
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
       mood, drawInterface, profileInterface, usInterface, momentsInterface, widgetInterface,
       widgetUI,
-      decorInterface, decor, us,
+      decorInterface, decor, us, onboarding,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
-    + [usTests, shopTests],
+    + [usTests, shopTests, onboardingTests],
   swiftLanguageModes: [.v6]
 )
 
@@ -203,7 +221,7 @@ let package = Package(
     package,
     targets: [
       "FeatureCanvas", "FeatureCanvasTests", "FeatureInbox", "FeatureInboxTests",
-      "FeatureOnboardingTests",
+      "FeatureOnboardingTests", "FeatureOnboarding",
       "WidgetBridge", "WidgetBridgeTests", "WidgetUI", "FeatureUs", "FeatureUsTests", "FeatureShop",
       "FeatureShopTests",
     ])
