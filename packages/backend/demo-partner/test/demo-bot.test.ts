@@ -63,6 +63,20 @@ describe("demo bot", () => {
     expect(startDemoBot(bot, owner, t0)).toEqual(startDemoBot(bot, owner, t0));
   });
 
+  it("sends its welcome notes in seconds, in order, then goes on as any bot", () => {
+    const welcome = ["hi there", "the cat misses you"].map((w) => Schema.decodeSync(NoteText)(w));
+    const { actions } = run(startDemoBot(bot, owner, t0, welcome), t0 + 20 * minute);
+    const sent = actions.flatMap(({ action }) =>
+      action._tag === "SendNote" && action.request._tag === "Text" ? [action.request.text] : [],
+    );
+    expect(sent).toEqual(welcome);
+    expect(actions[1]!.at - t0).toBeLessThan(10_000);
+    expect(actions.slice(2).map(({ action }) => action._tag)).toEqual([
+      "RecordCatEvent",
+      "OpenGift",
+    ]);
+  });
+
   it("pets or feeds the cat a minute or few after it joins, then opens the gift", () => {
     const { actions } = run(startDemoBot(bot, owner, t0), t0 + 20 * minute);
     expect(actions.map(({ action }) => action._tag)).toEqual(["RecordCatEvent", "OpenGift"]);

@@ -164,7 +164,7 @@ struct GameSpots {
         } else {
             floor = 0.023
             center = [0.3, floor, 0.12]
-            area = FloorArea(x: 0.18...0.47, z: -0.08...0.3)
+            area = FloorArea(x: 0.05...0.55, z: -0.2...0.36)
             length = 0.22
         }
     }

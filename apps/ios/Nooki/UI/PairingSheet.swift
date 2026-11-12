@@ -26,6 +26,12 @@ struct PairingSheet: View {
         .onDisappear { if !isPaired { model.cancel() } }
         .interactiveDismissDisabled(isPaired)
         .onAppear { if code.isEmpty { code = prefill } }
+        // The server already has a partner for this account; there is nothing to pair, so the sheet closes.
+        .onChange(of: model.state) { _, state in
+            guard case .choosing(failure: .alreadyPaired?, _) = state else { return }
+            finished()
+            dismiss()
+        }
         .task(id: waitingCode) {
             guard waitingCode != nil else { return }
             while !Task.isCancelled {

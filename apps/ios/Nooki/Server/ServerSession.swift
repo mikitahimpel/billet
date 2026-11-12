@@ -302,10 +302,14 @@ final class ServerSession {
         drawGuess = Self.drawGuessModel(backend, paired: false)
     }
 
-    /// Does nothing while the pairing is still under way.
+    /// Does nothing while the pairing is still under way. The server saying the account already has a
+    /// partner means this phone's saved pairing is stale, so it is brought up to date.
     func pairingFinished() {
-        guard case .paired(let pairID) = pairing.state else { return }
-        paired(pairID)
+        switch pairing.state {
+        case .paired(let pairID): paired(pairID)
+        case .choosing(failure: .alreadyPaired?, _): paired(nil)
+        case .choosing, .creating, .waiting, .claiming: return
+        }
     }
 
     private func paired(_ pairID: String?) {
