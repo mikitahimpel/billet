@@ -162,24 +162,28 @@ jobs:
           skip=()
           if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
           # Each test may run 3 min (5 at most); progress streams into the job log, the full log goes to the file.
-          # The first line of testing marks where the build ends, so the summary splits the step's time in two.
+          # Building and testing are two runs so the summary can say how long each took.
+          app=(-project apps/ios/Billet.xcodeproj -scheme Billet -destination "id=$udid"
+            -derivedDataPath "$RUNNER_TEMP/app-tests" CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO)
           started=$(date +%s)
-          if ! xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
-            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/app-tests" \
-            -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
-            -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
-            -maximum-test-execution-time-allowance 300 -showBuildTimingSummary \
-            CODE_SIGNING_ALLOWED=NO COMPILER_INDEX_STORE_ENABLE=NO 2>&1 \
-            | tee "$RUNNER_TEMP/app-tests.log" \
-            | { awk -v mark="$RUNNER_TEMP/testing-started" \
-                '!seen && /Testing started|Test Suite .* started/ { seen = 1; system("date +%s > " mark) }
-                 /Test Case .* (started|passed|failed)|exceeded execution time/ { print; fflush() }' || true; }; then
+          if ! xcodebuild build-for-testing "${app[@]}" -showBuildTimingSummary 2>&1 \
+            | tee "$RUNNER_TEMP/app-tests.log" | { grep --line-buffered -E 'error:' || true; }; then
             status=1
           fi
-          finished=$(date +%s)
-          tested=$(cat "$RUNNER_TEMP/testing-started" 2>/dev/null || echo "$finished")
-          timing="build $((tested - started)) s, tests $((finished - tested)) s"
+          built=$(date +%s)
+          if [ "$status" = 0 ] && ! xcodebuild test-without-building "${app[@]}" \
+            -resultBundlePath "$RUNNER_TEMP/app-tests.xcresult" "${skip[@]}" \
+            -test-timeouts-enabled YES -default-test-execution-time-allowance 180 \
+            -maximum-test-execution-time-allowance 300 2>&1 \
+            | tee -a "$RUNNER_TEMP/app-tests.log" \
+            | { grep --line-buffered -E "Test Case '.*' (started|passed|failed)|exceeded execution time" || true; }; then
+            status=1
+          fi
+          timing="build $((built - started)) s, tests $(($(date +%s) - built)) s"
           echo "App step: $timing"
+          echo "::group::Build timing summary"
+          sed -n '/Build Timing Summary/,/^\*\*/p' "$RUNNER_TEMP/app-tests.log" | head -n 60
+          echo "::endgroup::"
           grep -E 'error:|✘|✔ Test run|Test .*(passed|failed)|\*\* TEST (SUCCEEDED|FAILED)' \
             "$RUNNER_TEMP/app-tests.log" || true
           # Where the build's minutes go on a runner: compiling, linking, asset catalogs, the Metal shader.
