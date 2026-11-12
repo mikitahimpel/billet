@@ -55,6 +55,21 @@ enum CityDiorama {
         return CGRect(x: x, y: y, width: size.width * scale, height: size.height * scale)
     }()
 
+    /// A layer's frame moved, and grown up to `growth` times, until it covers `opening` and a margin of the camera's
+    /// own wobble. The opening turns away from a layer that follows the room only in part, so without this its
+    /// edge would show inside the window as a hard line; sliding a layer keeps its picture undistorted and only
+    /// the sky, which has nothing to distort, grows without limit.
+    static func covering(_ frame: CGRect, opening: CGRect, growth: CGFloat, pad: CGFloat = 0.02) -> CGRect {
+        let need = opening.insetBy(dx: -opening.width * pad, dy: -opening.height * pad)
+        let scale = min(growth, max(1, need.width / frame.width, need.height / frame.height))
+        var out = frame.insetBy(dx: -frame.width * (scale - 1) / 2, dy: -frame.height * (scale - 1) / 2)
+        out.origin.x = min(out.minX, need.minX)
+        out.origin.x = max(out.minX, need.maxX - out.width)
+        out.origin.y = min(out.minY, need.minY)
+        out.origin.y = max(out.minY, need.maxY - out.height)
+        return out
+    }
+
     /// How much of day, dusk and night is on show at `hour`; they sum to one and only neighbours mix.
     static func weights(hour: Float) -> [Float] {
         let h = hour.truncatingRemainder(dividingBy: 24) + (hour < 0 ? 24 : 0)

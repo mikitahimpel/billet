@@ -48,4 +48,26 @@ struct CityDioramaTests {
         let a = CityDiorama.sky(hour: hour), b = CityDiorama.sky(hour: hour + 0.5)
         #expect(simd_length(a.top - b.top) < 0.45 && simd_length(a.horizon - b.horizon) < 0.45)
     }
+
+    @Test(arguments: [CGFloat(1.12), .infinity])
+    func aLayerSlidesOverAnOpeningThatTurnedPastItsEdge(growth: CGFloat) {
+        let frame = CGRect(x: 0, y: 0, width: 112, height: 70)
+        for shift in stride(from: CGFloat(-12), through: 12, by: 4) {
+            let opening = CGRect(x: 6 + shift, y: 4, width: 100, height: 58)
+            let covered = CityDiorama.covering(frame, opening: opening, growth: growth)
+            #expect(covered.contains(opening), "shift \(shift)")
+        }
+    }
+
+    @Test func aLayerAlreadyCoveringTheOpeningStaysWhereItIs() {
+        let frame = CGRect(x: -6, y: -4, width: 112, height: 70)
+        #expect(CityDiorama.covering(frame, opening: CGRect(x: 0, y: 0, width: 100, height: 58), growth: 1.12) == frame)
+    }
+
+    @Test func onlyTheSkyGrowsPastItsLimit() {
+        let frame = CGRect(x: 0, y: 0, width: 100, height: 60)
+        let opening = CGRect(x: 0, y: 0, width: 160, height: 90)
+        #expect(CityDiorama.covering(frame, opening: opening, growth: .infinity).contains(opening))
+        #expect(CityDiorama.covering(frame, opening: opening, growth: 1.12).width <= 112.001)
+    }
 }
