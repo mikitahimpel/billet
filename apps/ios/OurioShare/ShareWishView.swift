@@ -143,7 +143,7 @@ struct ShareWishView: View {
         if let imageData { WishImage.save(imageData, for: wish.id) }
         UsStore().upsertWish(wish)
         SharedFile.flush()
-        withAnimation(.snappy(duration: 0.25)) { saved = true }
+        withAnimation(Motion.spring(0.25)) { saved = true }
         Task {
             try? await Task.sleep(for: .milliseconds(900))
             done()

@@ -106,7 +106,7 @@ struct OurioApp: App {
                                 .transition(.opacity)
                         }
                     }
-                    .animation(.easeInOut(duration: 0.4), value: onboarding.isFinished)
+                    .animation(Motion.fade(0.4), value: onboarding.isFinished)
                     .onOpenURL { url in
                         if case .invite(let code) = DeepLink(url: url) { onboarding.join(code: code) }
                     }

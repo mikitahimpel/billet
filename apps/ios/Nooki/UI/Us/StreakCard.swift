@@ -57,7 +57,7 @@ struct StreakCard: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel(label(days: days, turn: turn, next: next))
-        .animation(.snappy(duration: 0.3), value: days)
+        .animation(Motion.spring(0.3), value: days)
     }
 
     private var together: some View {

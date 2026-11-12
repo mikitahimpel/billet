@@ -52,7 +52,7 @@ struct GroceryItemSheet: View {
 
             Button(role: .destructive) {
                 deleted = true
-                withAnimation(.snappy(duration: 0.25)) { state.us.deleteItem(item.id, in: listID) }
+                withAnimation(Motion.spring(0.25)) { state.us.deleteItem(item.id, in: listID) }
                 dismiss()
             } label: {
                 Label("Delete", systemImage: "trash")

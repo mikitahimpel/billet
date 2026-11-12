@@ -36,7 +36,7 @@ struct ComposeSheet: View {
                     Image(uiImage: film ?? image).resizable().scaledToFill()
                 }
                 .rotationEffect(.degrees(focused ? 0 : -2))
-                .animation(.snappy(duration: 0.25), value: focused)
+                .animation(Motion.spring(0.25), value: focused)
                 .onChange(of: caption) { _, text in
                     if text.count > Self.captionLimit { caption = String(text.prefix(Self.captionLimit)) }
                 }

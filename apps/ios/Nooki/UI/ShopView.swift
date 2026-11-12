@@ -29,7 +29,7 @@ struct ShopView: View {
                     }
                 }
                 .tabContentInsets()
-                .animation(.spring(duration: 0.35), value: state.shopCategory)
+                .animation(Motion.spring(0.35), value: state.shopCategory)
             }
             .scrollIndicators(.hidden)
             .onScrollPhaseChange { _, phase in
@@ -202,7 +202,7 @@ struct ShopChips: View {
             }
             // The chosen chip comes whole into view, also when a link from elsewhere chose it.
             .onChange(of: state.shopCategory, initial: true) { _, category in
-                withAnimation(.snappy(duration: 0.3)) { reader.scrollTo(category, anchor: .center) }
+                withAnimation(Motion.spring(0.3)) { reader.scrollTo(category, anchor: .center) }
             }
         }
         .scrollIndicators(.hidden)
