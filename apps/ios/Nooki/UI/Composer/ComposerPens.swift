@@ -1,3 +1,4 @@
+import ShopInterface
 import SwiftUI
 import Design
 

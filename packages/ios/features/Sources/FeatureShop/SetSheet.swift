@@ -1,0 +1,163 @@
+#if canImport(UIKit)
+  import Design
+  import SwiftUI
+  import WidgetUI
+
+  struct SetChoice: Identifiable {
+    let pieces: any PieceSet
+    var id: String { pieces.id }
+  }
+
+  /// Pieces already owned are left out of the price and marked.
+  struct SetSheet: View {
+    let state: any ShopHost
+    let pieces: any PieceSet
+
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var items: [ShopItem] {
+      pieces.itemIDs.compactMap { Catalog.item($0, cat: state.petName) }
+    }
+    private var quote: (price: Int, sum: Int)? {
+      state.shop.offers.price(of: pieces, owned: state.shop.owned)
+    }
+    private var affordable: Bool { quote.map { state.shop.coins >= $0.price } ?? false }
+
+    var body: some View {
+      BilletSheet(pieces.name, size: .fit) {
+        VStack(alignment: .leading, spacing: Space.l) {
+          HStack(spacing: Space.s) {
+            if let quote, quote.sum > quote.price {
+              Chip(
+                "−\(Int(((1 - Double(quote.price) / Double(quote.sum)) * 100).rounded()))%",
+                style: .honey)
+            }
+            Chip("\(items.count) pieces")
+          }
+
+          art
+
+          Text(pieces.blurb)
+            .font(.ourioCallout)
+            .foregroundStyle(Ink.textSecondary)
+            .fixedSize(horizontal: false, vertical: true)
+
+          GroupedSection(inset: 56 + Space.m + Space.l) {
+            ForEach(items) { item in row(item) }
+          }
+
+          actions
+        }
+      }
+      // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
+      .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
+    }
+
+    private var art: some View {
+      HStack(alignment: .bottom, spacing: -Space.l) {
+        ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+          let centre = index == items.count / 2
+          Group {
+            if let image = Thumbnails.trimmed(item.thumbnail) {
+              Image(uiImage: image).resizable().scaledToFit()
+            }
+          }
+          .frame(width: centre ? 136 : 96, height: centre ? 136 : 96)
+          .zIndex(centre ? 1 : 0)
+          .opacity(state.shop.owned.contains(item.id) ? 0.45 : 1)
+        }
+      }
+      .padding(.horizontal, Space.m)
+      .padding(.vertical, Space.xl)
+      .frame(maxWidth: .infinity)
+      .cardSurface(warm: true)
+      .accessibilityHidden(true)
+    }
+
+    private func row(_ item: ShopItem) -> some View {
+      let owned = state.shop.owned.contains(item.id)
+      let layout =
+        typeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+        : AnyLayout(HStackLayout(spacing: Space.m))
+      return layout {
+        RarityFrame(rarity: item.rarity) {
+          if let image = Thumbnails.image(item.thumbnail, maxPixels: 256) {
+            Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
+          }
+        }
+        .frame(width: 56, height: 56)
+
+        VStack(alignment: .leading, spacing: Space.xxs) {
+          Text(item.name)
+            .font(.ourioHeadline)
+            .foregroundStyle(Ink.text)
+            .fixedSize(horizontal: false, vertical: true)
+          Text(item.rarity.title)
+            .font(.ourioCaption)
+            .foregroundStyle(item.rarity == .common ? Ink.textSecondary : item.rarity.tint)
+        }
+        .frame(maxWidth: typeSize.isAccessibilitySize ? nil : .infinity, alignment: .leading)
+
+        if owned {
+          Label("Owned", systemImage: "checkmark.circle.fill")
+            .font(.ourioCallout)
+            .foregroundStyle(Ink.textSecondary)
+        } else {
+          CoinPrice(price: state.shop.price(of: item))
+            .font(.ourioCallout)
+            .foregroundStyle(Ink.textSecondary)
+        }
+      }
+      .padding(.horizontal, Space.l)
+      .padding(.vertical, Space.s)
+      .accessibilityElement(children: .combine)
+    }
+
+    private var actions: some View {
+      VStack(spacing: Space.s) {
+        if let quote {
+          Button(action: buy) {
+            HStack(spacing: Space.s) {
+              if affordable {
+                Text("Buy the set for")
+                CoinPrice(price: quote.price, was: quote.sum)
+              } else {
+                Image(systemName: "plus.circle.fill")
+                Text("Need \(quote.price - state.shop.coins) more coins").monospacedDigit()
+              }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .frame(maxWidth: .infinity)
+          }
+          .buttonStyle(PrimaryButtonStyle())
+          if !affordable {
+            Text(
+              "Earn coins by answering today's question, keeping your streak and opening the daily gift."
+            )
+            .font(.ourioCaption)
+            .foregroundStyle(Ink.textSecondary)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+          }
+        } else {
+          Label("The whole set is in your closet", systemImage: "checkmark.circle.fill")
+            .font(.ourioCaption)
+            .foregroundStyle(Ink.textSecondary)
+        }
+      }
+      .frame(maxWidth: .infinity)
+    }
+
+    private func buy() {
+      guard state.shop.buy(pieces) else { return }
+      // The purchase moment plays over the app once the sheet is out of the way.
+      Task {
+        try? await Task.sleep(for: .milliseconds(350))
+        dismiss()
+      }
+    }
+  }
+#endif

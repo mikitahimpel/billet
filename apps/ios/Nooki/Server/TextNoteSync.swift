@@ -1,5 +1,6 @@
 import Foundation
 import MomentsInterface
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import Persistence

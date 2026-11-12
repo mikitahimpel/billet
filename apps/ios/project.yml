@@ -170,8 +170,6 @@ targets:
     platform: iOS
     sources:
       - path: OurioWidgets
-      # The file the app keeps the wallet in, which the widgets read.
-      - path: Nooki/Model/Wallet.swift
       - path: Shared
         # Places' map is for the app's world map only.
         excludes: [Places/WorldMap.txt]
@@ -200,7 +198,8 @@ targets:
       - package: BilletPet
         products: [Pet]
       - package: BilletFeatures
-        products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface, WidgetInterface, WidgetUI]
+        products:
+          [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, ShopInterface, UsInterface, WidgetInterface, WidgetUI]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.widget
@@ -297,7 +296,6 @@ targets:
       - path: OurioWidgetsTests
       - path: OurioWidgets
         excludes: [Widgets.swift]
-      - path: Nooki/Model/Wallet.swift
       - path: PerTarget
     # Wire, Ink and the interfaces come from the app it is loaded into, as for OurioTests: linking them here as well
     # makes Xcode build them as frameworks, and OurioTests then finds none of their symbols.

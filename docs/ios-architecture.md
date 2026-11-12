@@ -208,7 +208,7 @@ Every screen and flow state is such a machine:
 ### 4.2 Worked example: Coins and Shop
 
 What `ShopModel` + `WalletStore` + `CatCare.fed/notice` + `CoinsAsk` + `Purchase` do today
-(`apps/ios/Nooki/Model/ShopModel.swift`), as a machine. Behaviour is the same: only the server
+(`packages/ios/features/Sources/FeatureShop/ShopModel.swift`), as a machine. Behaviour is the same: only the server
 changes coins; a buy shows at once, waits out its Undo window, then is ordered under one
 idempotency key with retries; a refused buy is taken back and the room read again; the Coins
 sheet opens for a buy the balance doesn't cover and finishes it once it does.
@@ -859,6 +859,18 @@ and `UsServer`, which `ServerSession` conforms to and the app puts in the enviro
 guess stay in the app until `arch/games`. The package builds for macOS
 with its view files compiled out (`#if canImport(UIKit)`), so its models and their tests run under
 `swift test`; the views build for iOS only.
+
+The Shop moved into `FeatureShop` the same way: its screens (`ShopView`, `ItemSheet`, the Coins sheet,
+the purchase moment, the cards), `ShopModel`, the catalog and the day's offers, `CoinPacksModel`. What
+they ask of the app is `ShopHost` (`ShopHost.swift`, `HomeState` conforms): the Shop's store, the
+shelf and focus, the cat's name and avatar, where a piece stands in the room, and the launch
+arguments Debug builds read. `ShopModel` takes the cat as `CatTending` (`CatCare` conforms) and the
+cat's name as a closure, and the catalog and offers take the name as `cat:`, so the feature reads no
+`CatProfile`. `Wallet`/`WalletStore` (the widgets read the file), `PaletteInk` and `ShopFocus` are in
+`ShopInterface`; `Thumbnails` is in `WidgetUI`, which already holds what the Shop, Us and the app all
+draw. `payments` stays its own package: `FeatureShop` imports `Payments` only, and the app still
+makes the store (`AppPayments`, `PaymentsLive`), so a Release build has none and nothing in the
+feature names the mock.
 
 PRs 3 to 11 can be reordered around other agents' work; 1 and 2 cannot. Where a PR would touch
 more than about 25 files of UI that others are editing, it splits: the store and interface first

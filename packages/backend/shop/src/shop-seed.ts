@@ -13,7 +13,7 @@ interface Shown {
   readonly isNew?: true;
 }
 
-// Mirrors apps/ios/Nooki/Model/Shop.swift. `{cat}` is the cat's name.
+// Mirrors packages/ios/features/Sources/FeatureShop/Shop.swift. `{cat}` is the cat's name.
 const shown: Record<string, Shown> = {
   armchair: {
     name: "Cloud Armchair",

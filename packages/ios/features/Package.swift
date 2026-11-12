@@ -44,8 +44,9 @@ let packageOf = [
   "Wire": "contracts",
   "BilletKit": "core", "DesignSystem": "core", "Ink": "core", "Transport": "core",
   "Persistence": "core", "Delivery": "core",
-  "Pet": "pet",
+  "Pet": "pet", "PetScene": "pet",
   "Design": "design",
+  "Payments": "payments",
 ]
 
 func dependencies(_ names: [String]) -> [Target.Dependency] {
@@ -64,7 +65,6 @@ let widgetBridge: Target = .target(
 )
 
 let tests: [(name: String, dependencies: [String])] = [
-  ("FeatureShopTests", ["FeatureShop", "ShopInterface", "Transport", "Wire"]),
   ("FeatureCanvasTests", ["FeatureCanvas", "Wire"]),
   ("FeatureOnboardingTests", ["FeatureOnboarding", "Persistence", "Transport", "Wire"]),
   ("FeaturePairingTests", ["FeaturePairing", "Transport", "Wire"]),
@@ -85,11 +85,18 @@ let usTests: Target = .testTarget(
   dependencies: dependencies(["FeatureUs", "UsInterface", "Transport", "Persistence", "Wire"]),
   swiftSettings: [.defaultIsolation(MainActor.self)])
 
+let shopTests: Target = .testTarget(
+  name: "FeatureShopTests",
+  dependencies: dependencies([
+    "FeatureShop", "ShopInterface", "ProfileInterface", "Payments", "Persistence", "Transport",
+    "Wire",
+  ]),
+  swiftSettings: [.defaultIsolation(MainActor.self)])
+
 let games: Target = .target(
   name: "FeatureGames",
   dependencies: dependencies(["GamesInterface", "BilletKit", "Pet", "Transport", "Wire"]))
 
-let shopInterface: Target = .target(name: "ShopInterface", dependencies: dependencies(["Wire"]))
 let inbox: Target = .target(
   name: "FeatureInbox", dependencies: dependencies(["BilletKit", "Design", "Transport", "Wire"]))
 let decorInterface: Target = .target(name: "DecorInterface", dependencies: dependencies(["Pet"]))
@@ -102,6 +109,9 @@ let profileInterface: Target = .target(
 // Moved from the app, which builds with Xcode's approachable concurrency: a
 // nonisolated async method runs on its caller's actor, so the app's stores can call it from the UI.
 let fromTheApp: [SwiftSetting] = [.enableUpcomingFeature("NonisolatedNonsendingByDefault")]
+let shopInterface: Target = .target(
+  name: "ShopInterface", dependencies: dependencies(["Persistence", "Wire"]),
+  swiftSettings: fromTheApp)
 
 let usInterface: Target = .target(
   name: "UsInterface", dependencies: dependencies(["Persistence", "ProfileInterface", "Wire"]),
@@ -129,17 +139,25 @@ let widgetInterface: Target = .target(
 let widgetUI: Target = .target(
   name: "WidgetUI",
   dependencies: dependencies([
-    "Design", "DrawInterface", "Ink", "MomentsInterface", "ProfileInterface", "WidgetInterface",
-    "Wire",
+    "Design", "DrawInterface", "Ink", "MomentsInterface", "ProfileInterface", "UsInterface",
+    "WidgetInterface", "Wire",
   ]),
   swiftSettings: fromTheApp)
 let drawInterface: Target = .target(
   name: "DrawInterface", dependencies: dependencies(["Persistence", "Wire"]))
 let mood: Target = .target(
   name: "FeatureMood", dependencies: dependencies(["MoodInterface", "Transport", "Wire"]))
+// Moved from the app, so it keeps the app's default of main-actor isolation.
 let shop: Target = .target(
   name: "FeatureShop",
-  dependencies: dependencies(["ShopInterface", "BilletKit", "Transport", "Wire"])
+  dependencies: dependencies([
+    "ShopInterface", "BilletKit", "DecorInterface", "Design", "MomentsInterface", "Payments",
+    "Persistence", "Pet", "PetScene", "ProfileInterface", "Transport", "UsInterface",
+    "WidgetBridge",
+    "WidgetUI",
+    "Wire",
+  ]),
+  swiftSettings: fromTheApp + [.defaultIsolation(MainActor.self)]
 )
 
 // The room itself is in the app, where RealityKit is.
@@ -166,6 +184,7 @@ let package = Package(
     .package(path: "../core"),
     .package(path: "../design"),
     .package(path: "../pet"),
+    .package(path: "../payments"),
   ],
   targets: features.map { .target(name: $0, dependencies: dependencies(featureDependencies)) }
     + [
@@ -175,7 +194,7 @@ let package = Package(
       decorInterface, decor, us,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
-    + [usTests],
+    + [usTests, shopTests],
   swiftLanguageModes: [.v6]
 )
 
@@ -185,6 +204,7 @@ let package = Package(
     targets: [
       "FeatureCanvas", "FeatureCanvasTests", "FeatureInbox", "FeatureInboxTests",
       "FeatureOnboardingTests",
-      "WidgetBridge", "WidgetBridgeTests", "WidgetUI", "FeatureUs", "FeatureUsTests",
+      "WidgetBridge", "WidgetBridgeTests", "WidgetUI", "FeatureUs", "FeatureUsTests", "FeatureShop",
+      "FeatureShopTests",
     ])
 #endif

@@ -155,8 +155,4 @@
         symbol: icon.symbol, title: title, text: text, tint: icon.tint.color, actions: actions)
     }
   }
-
-  extension UsTint {
-    public var color: Color { Color(hex: colors.top) }
-  }
 #endif

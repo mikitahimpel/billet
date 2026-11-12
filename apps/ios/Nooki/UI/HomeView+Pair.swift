@@ -1,6 +1,8 @@
 import FeatureGames
 import FeatureMood
+import FeatureShop
 import MomentsInterface
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI

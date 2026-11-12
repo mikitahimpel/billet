@@ -1,3 +1,5 @@
+import FeatureShop
+import WidgetUI
 import Testing
 import UIKit
 @testable import Billet
@@ -5,7 +7,7 @@ import UIKit
 @MainActor
 @Suite struct ThumbnailsTests {
     @Test func everyCatalogItemHasADecodableBundledPicture() {
-        for item in Catalog.items {
+        for item in Catalog.items(cat: "Mochi") {
             #expect(Thumbnails.image(item.thumbnail, maxPixels: 128) != nil, "\(item.thumbnail)")
         }
     }
