@@ -213,6 +213,7 @@ The kit is the only easy way, and the lint is the only door.
 | `corner-shape`, `shadow`, `blur-material`, `raw-color`, `raw-font`, `padding-literal`, `frame-literal`, `button-style`, `text-role`, `geometry-reader`, `tip` | see [design-system.md](../design-system.md#enforcement) | before |
 | `flat-surface` | `.cornerFill(`, `Ink.surface`, `Ink.surfaceRaised`, `.listRowBackground(` in feature code | this system |
 | `raw-stroke` | `.stroke(`, `.strokeBorder(` in feature code | this system |
+| `raw-motion` | `.snappy`, `.smooth`, `.easeIn/Out/InOut`, `.linear(duration:`, `.spring(duration:/response:` in feature code | this system |
 
 Art that draws with strokes and fills by nature (`Scene`, `Room`, `Perf`) is exempt from these two in
 `lint/allow.json`. Every rule has a baseline per file in `packages/ios/design/lint/baseline.json` that may only shrink. A
