@@ -111,7 +111,7 @@ jobs:
 
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it.
-      - uses: mikitahimpel/warmbuild-action@adf4c6a32a5ba1d44df0bbbacbea4aec5238af3c # v1.0.1
+      - uses: mikitahimpel/warmbuild-action@5baab4ecd3750b59b27c45091c3ef664e713a5de # v1.0.2
 
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh
