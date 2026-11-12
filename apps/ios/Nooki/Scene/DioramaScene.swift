@@ -157,7 +157,23 @@ final class DioramaScene: CatRoom {
 
     override var catKeepOut: (center: SIMD2<Float>, radius: Float)? { (SIMD2(bedCenter.x, bedCenter.z), 0.22) }
 
-    override func catBuilt() { arrange(layout) }
+    override func catBuilt() {
+        arrange(layout)
+        // `-uitestSend tree|sill|ball|basket|home` sends her there a few seconds after she is built, for UI tests
+        // that cannot tap the room.
+        guard let target = UserDefaults.standard.string(forKey: "uitestSend") else { return }
+        Task { [weak self] in
+            try? await Task.sleep(for: .seconds(4))
+            guard let self else { return }
+            switch target {
+            case "tree": if let treeVisit { send(to: treeVisit) }
+            case "sill": if let sillVisit { send(to: sillVisit) }
+            case "ball": if let ballVisit { send(to: ballVisit) }
+            case "basket": if let basketVisit { send(to: basketVisit) }
+            default: send(to: nil)
+            }
+        }
+    }
 
     private func bounce(_ toy: Entity, spins: Bool) {
         guard !bounces.contains(where: { $0.toy === toy }) else { return }

@@ -105,7 +105,7 @@ struct DecorPanel: View {
                         Button { state.decor.send(.closetTapped(item.id)) } label: {
                             VStack(spacing: Space.xs) {
                                 art(item.id)
-                                    .frame(width: Size.cardMark + Space.l, height: Size.cardMark + Space.l)
+                                    .frame(width: Size.cardMark, height: Size.cardMark)
                                     .corners(.inner)
                                 Text(name)
                                     .font(.ourioCaption)
@@ -114,7 +114,7 @@ struct DecorPanel: View {
                                     .minimumScaleFactor(0.85)
                                     .multilineTextAlignment(.center)
                             }
-                            .frame(width: 84)
+                            .frame(width: 76)
                             .contentShape(.rect)
                         }
                         .buttonStyle(PressScaleStyle())
