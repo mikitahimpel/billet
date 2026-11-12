@@ -73,11 +73,11 @@ extension RoomController {
     private enum Plane {
         case floor, back, left
 
-        func matrix(_ pivot: Entity) -> simd_float4x4 {
+        func matrix(_ pivot: Entity, lifted: Float = 0) -> simd_float4x4 {
             let base = pivot.transformMatrix(relativeTo: nil)
             switch self {
             case .floor:
-                return base * Self.translation([0, DecorStage.floorY, 0])
+                return base * Self.translation([0, DecorStage.floorY + lifted, 0])
             case .back:
                 return base * Self.translation([0, 0, -0.49]) * simd_float4x4(simd_quatf.x(.pi / 2))
             case .left:
@@ -92,17 +92,16 @@ extension RoomController {
         }
     }
 
-    private func hit(_ point: CGPoint, _ plane: Plane) -> SIMD3<Float>? {
+    private func hit(_ point: CGPoint, _ plane: Plane, lifted: Float = 0) -> SIMD3<Float>? {
         guard let home else { return nil }
-        return world(point, onto: plane.matrix(home.pivot))
+        return world(point, onto: plane.matrix(home.pivot, lifted: lifted))
     }
 
     /// The piece under the screen point, a wall piece first.
     func decorPiece(at point: CGPoint) -> String? {
         if let back = hit(point, .back), let id = decorStage.wallPiece(at: back, on: .backWall) { return id }
         if let left = hit(point, .left), let id = decorStage.wallPiece(at: left, on: .leftWall) { return id }
-        if let floor = hit(point, .floor) { return decorStage.floorPiece(at: floor) }
-        return nil
+        return decorStage.floorPiece { hit(point, .floor, lifted: $0) }
     }
 
     /// How many cells the piece's middle is from where the finger first touched, so it does not jump.
