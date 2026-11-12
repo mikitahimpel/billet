@@ -25,13 +25,11 @@ struct AddPlaceSheet: View {
             VStack(alignment: .leading, spacing: Space.m) {
                 let found = Country.search(trimmed)
                 if !found.isEmpty {
-                    VStack(spacing: 0) {
-                        ForEach(Array(found.prefix(30).enumerated()), id: \.element) { index, code in
-                            if index > 0 { Divider().overlay(Ink.separator).padding(.leading, 62) }
+                    GroupedSection(inset: 62) {
+                        ForEach(found.prefix(30), id: \.self) { code in
                             countryRow(code)
                         }
                     }
-                    .cardSurface()
                 } else if !trimmed.isEmpty, place != nil {
                     Text("No country by that name.")
                         .font(.ourioCallout)

@@ -78,12 +78,7 @@ struct DateDoneSheet: View {
                 .frame(height: 260)
                 .corners(.card)
                 .overlay(alignment: .bottomTrailing) {
-                    Label("Change", systemImage: "photo")
-                        .font(.ourioCaption.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, Space.m)
-                        .padding(.vertical, Space.s)
-                        .background(.black.opacity(0.45), in: .capsule)
+                    Chip("Change", symbol: "photo")
                         .padding(Space.m)
                 }
                 .accessibilityLabel("Change photo")
@@ -173,22 +168,14 @@ struct DatePlannerSheet: View {
                         }
                     }
 
-                    Toggle("Surprise mode", isOn: $surprise)
-                        .font(.ourioBody)
-                        .foregroundStyle(Ink.text)
-                        .tint(.honey)
-                        .fieldSurface()
+                    GroupedSection(inset: 0) {
+                        ToggleRow("Surprise mode", isOn: $surprise)
+                        ToggleRow("Remind us a day and an hour before", isOn: $remind)
+                    }
 
                     if surprise {
                         UsField(placeholder: "Hint, e.g. dress warm", text: $hint)
                     }
-
-                    Toggle("Remind us a day and an hour before", isOn: $remind)
-                        .font(.ourioBody)
-                        .foregroundStyle(Ink.text)
-                        .tint(.honey)
-                        .fieldSurface()
-
                 }
         }
     }

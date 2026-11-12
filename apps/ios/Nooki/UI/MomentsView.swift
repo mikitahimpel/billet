@@ -170,10 +170,9 @@ struct BoardActions: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.body.weight(.bold))
-                    .foregroundStyle(Ink.heroInk)
                     .frame(width: Size.control, height: Size.control)
-                    .background(Color.honey, in: .circle)
             }
+            .accentGlass()
             .accessibilityLabel("Add a note")
             .accessibilityValue(onBoard > 0 ? "\(onBoard) on the board" : "")
         }
