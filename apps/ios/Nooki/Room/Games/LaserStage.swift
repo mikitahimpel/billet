@@ -60,7 +60,7 @@ final class LaserStage: GameStage {
     }
 
     var focus: [SIMD3<Float>] {
-        var points = [spots.at(-0.2, -0.14), spots.at(0.2, -0.14), spots.at(-0.2, 0.2), spots.at(0.2, 0.2), spots.at(0, 0, up: 0.12)]
+        var points = [spots.at(-0.36, -0.26), spots.at(0.36, -0.26), spots.at(-0.36, 0.3), spots.at(0.36, 0.3), spots.at(0, 0, up: 0.12)]
         points += [lessonPoint(lesson.start), lessonPoint(lesson.end)]
         if room is TabletopRoom { points.append(spots.at(0, -0.6, up: 0.4)) }
         return points
