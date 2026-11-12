@@ -100,6 +100,11 @@ public enum DecorMachine: Machine {
       }
     }
 
+    /// Where the dragged piece stood before the finger took it.
+    public var origin: Placement? {
+      if case .moving(_, _, let from, _) = self { from } else { nil }
+    }
+
     /// Whether the chosen piece can be turned.
     public var canTurn: Bool {
       guard case .selected(let book, let item) = self,
@@ -135,6 +140,8 @@ public enum DecorMachine: Machine {
     case dropped
     case dragCancelled
     case turned
+    /// A further 45 degrees.
+    case turnedFine
     case stored
     /// The room's own furniture back where it stood, and what was bought where it goes by itself.
     case resetRoom
@@ -186,7 +193,7 @@ public enum DecorMachine: Machine {
     }
     let changing: Bool
     switch event {
-    case .closetTapped, .dropped, .turned, .stored, .resetRoom: changing = true
+    case .closetTapped, .dropped, .turned, .turnedFine, .stored, .resetRoom: changing = true
     case .owned, .loaded, .remote, .opened, .closed, .roomTapped, .emptyTapped, .dragBegan,
       .dragged,
       .dragCancelled, .undone:
@@ -289,9 +296,9 @@ public enum DecorMachine: Machine {
     case (.off, .dragCancelled), (.closet, .dragCancelled), (.selected, .dragCancelled):
       return (state, [])
 
-    case (.selected(let book, let item), .turned):
+    case (.selected(let book, let item), .turned), (.selected(let book, let item), .turnedFine):
       var next = book
-      switch book.layout.turning(item) {
+      switch book.layout.turning(item, byEighths: event == .turnedFine ? 1 : 2) {
       case nil: return (state, [])
       case .turned(let layout):
         next.layout = layout
@@ -303,7 +310,8 @@ public enum DecorMachine: Machine {
         return (state, [.feedback(.noRoomToTurn)])
       }
 
-    case (.off, .turned), (.closet, .turned), (.moving, .turned):
+    case (.off, .turned), (.closet, .turned), (.moving, .turned), (.off, .turnedFine),
+      (.closet, .turnedFine), (.moving, .turnedFine):
       return (state, [])
 
     case (.selected(let book, let item), .stored):

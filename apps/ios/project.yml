@@ -24,6 +24,10 @@ settings:
     # check-archive.sh fails an archive that carries them.
     BILLET_PERF_HOOKS_MODE: $(BILLET_PERF_HOOKS:default=NO)
     CURRENT_PROJECT_VERSION: "23"
+    # Images and colours are looked up by name, never through generated `ImageResource`/`ColorResource` symbols.
+    # Generating them costs a minute or more per target on a fresh runner, and every Swift file waits for it.
+    ASSETCATALOG_COMPILER_GENERATE_ASSET_SYMBOLS: NO
+    ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: NO
   configs:
     Debug:
       # One compilation cache for every worktree on the Mac: a fresh checkout reuses what another one compiled from
@@ -169,8 +173,8 @@ targets:
       # The file the app keeps the wallet in, which the widgets read.
       - path: Nooki/Model/Wallet.swift
       - path: Shared
-        # Places' flags and map are for the app's world map only.
-        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
+        # Places' map is for the app's world map only.
+        excludes: [Places/WorldMap.txt]
       - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
@@ -212,8 +216,8 @@ targets:
       - path: Nooki/Model/StreakNudge.swift
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
-        # Places' flags and map are for the app's world map only.
-        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
+        # Places' map is for the app's world map only.
+        excludes: [Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
     info:
@@ -250,8 +254,8 @@ targets:
     sources:
       - path: OurioShare
       - path: Shared
-        # Places' flags and map are for the app's world map only.
-        excludes: [Places/Flags.xcassets, Places/WorldMap.txt]
+        # Places' map is for the app's world map only.
+        excludes: [Places/WorldMap.txt]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
     info:

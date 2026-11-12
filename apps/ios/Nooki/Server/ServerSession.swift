@@ -11,6 +11,7 @@ import WidgetInterface
 import WidgetUI
 import Payments
 import Persistence
+import SwiftUI
 import Transport
 import UsInterface
 import Wire

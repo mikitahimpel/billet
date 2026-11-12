@@ -40,8 +40,8 @@ public struct RoomDecor: Equatable, Sendable {
   public enum Mode: Equatable, Sendable {
     case showing
     /// The pieces are individually addressable. `fits` is false while a dragged piece is somewhere it
-    /// does not fit.
-    case arranging(selected: String?, fits: Bool)
+    /// does not fit. `ghost` is where the dragged piece stood, drawn as an outline while it is away.
+    case arranging(selected: String?, fits: Bool, ghost: Placement? = nil)
   }
 
   public var layout: DecorLayout

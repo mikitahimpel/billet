@@ -85,7 +85,7 @@ public enum ShopOffer: Codable, Hashable, Sendable {
 }
 
 /// Where a piece stands: `surface` is `floor`, `backWall` or `leftWall`; `u` and `v` are grid cells of 5 cm
-/// from the room's middle, `v` being 0 on a wall.
+/// from the room's middle, `v` being 0 on a wall. `quarterTurns` is 0 to 3, plus 4 for a further 45 degrees.
 public struct RoomPlacement: Codable, Hashable, Sendable {
   public let item: RoomItemId
   public let surface: String

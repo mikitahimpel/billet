@@ -1,7 +1,6 @@
 #if canImport(UIKit)
   import SwiftUI
   import Design
-  import UIKit
   import UsInterface
 
   /// Every country's outline from Natural Earth (public domain), simplified to half a degree, on an equirectangular
@@ -105,7 +104,7 @@
     }
   }
 
-  /// A country's round flag from circle-flags (MIT), or its emoji flag on a circle when the bundle has none.
+  /// A country's emoji flag on a circle.
   public struct CountryFlag: View {
     public let code: String
     public var size: CGFloat = 34
@@ -116,23 +115,13 @@
     }
 
     public var body: some View {
-      Group {
-        if let image = UIImage(named: "flag-\(code.lowercased())") {
-          Image(uiImage: image)
-            .resizable()
-            .interpolation(.high)
-        } else {
-          Text(Country.emoji(code))
-            .ourioScaledFont(size: size * 0.62)
-            // The circle doesn't grow with Dynamic Type, so neither does the flag in it.
-            .dynamicTypeSize(.large)
-            .frame(width: size, height: size)
-            .background(Ink.well, in: .circle)
-        }
-      }
-      .frame(width: size, height: size)
-      .clipShape(.circle)
-      .accessibilityHidden(true)
+      Text(Country.emoji(code))
+        .ourioScaledFont(size: size * 0.62)
+        // The circle doesn't grow with Dynamic Type, so neither does the flag in it.
+        .dynamicTypeSize(.large)
+        .frame(width: size, height: size)
+        .background(Ink.well, in: .circle)
+        .accessibilityHidden(true)
     }
   }
 #endif

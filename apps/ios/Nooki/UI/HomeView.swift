@@ -546,7 +546,7 @@ struct HomeView: View {
     private var roomDecor: RoomDecor {
         let arranging = state.decor.state
         let mode: RoomDecor.Mode =
-            arranging.isArranging ? .arranging(selected: arranging.selection, fits: arranging.isValid) : .showing
+            arranging.isArranging ? .arranging(selected: arranging.selection, fits: arranging.isValid, ghost: arranging.origin) : .showing
         return RoomDecor(layout: arranging.layout, mode: mode)
     }
 
