@@ -3,6 +3,8 @@ import SiteFooter from "../components/site-footer.astro";
 import SiteHeader from "../components/site-header.astro";
 import SiteScript from "../components/site-script.astro";
 import { appStoreId } from "../config";
+import bricolage from "../assets/fonts/bricolage-grotesque-latin.woff2?url";
+import nunito from "../assets/fonts/nunito-latin.woff2?url";
 import { pages } from "../site";
 import criticalHome from "../styles/critical-home.css?raw";
 import criticalSite from "../styles/critical-site.css?raw";
@@ -35,6 +37,10 @@ const {
   noindex = false,
 } = Astro.props;
 const path = Astro.url.pathname;
+// A ?raw import keeps the critical sheets' url()s as written, so their font paths become the hashed build URLs here.
+const critical = (home ? criticalHome : criticalSite)
+  .replaceAll("../assets/fonts/bricolage-grotesque-latin.woff2", bricolage)
+  .replaceAll("../assets/fonts/nunito-latin.woff2", nunito);
 const canonical = new URL(path, Astro.site).href;
 const ogImage = new URL("/og.png", Astro.site).href;
 const homeUrl = new URL("/", Astro.site).href;
@@ -111,10 +117,10 @@ const structuredData = {
 
     <script type="application/ld+json" set:html={JSON.stringify(structuredData)} />
     <slot name="head" />
-    <link rel="preload" href="/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin />
-    <link rel="preload" href="/fonts/nunito-latin.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={bricolage} as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href={nunito} as="font" type="font/woff2" crossorigin />
     <!-- The first screen's rules (a subset of global.css); the whole sheet loads without blocking the paint. -->
-    <style is:inline set:html={home ? criticalHome : criticalSite} />
+    <style is:inline set:html={critical} />
     <link rel="stylesheet" href={sheet} media="print" onload="this.media='all'" data-sheet />
     <noscript><link rel="stylesheet" href={sheet} /></noscript>
     <script is:inline>

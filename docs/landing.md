@@ -12,10 +12,16 @@ pnpm --filter @billet/landing build   # apps/landing/dist, with a Markdown twin 
 
 ## Images
 
-The room render and Mochi's loop are pre-sized in `public/room/` (AVIF and WebP at 1000, 1600 and
-2560 px; the loop at 80 and 140 px). Art, screenshots, date ideas and shop items stay in
-`src/assets/` at their source size; the build makes their WebP steps. No multi-megabyte PNG is
-shipped.
+The room render and Mochi's loop are pre-sized in `src/assets/room/` (AVIF and WebP at 1000, 1600
+and 2560 px; the loop at 80 and 140 px) and imported as URLs through `src/lib/room-assets.ts`, so
+the build hashes their names without re-encoding them. Art, screenshots, date ideas and shop items
+stay in `src/assets/` at their source size; the build makes their WebP steps. No multi-megabyte PNG
+is shipped.
+
+Only `/_astro/` is cached for good, because every name there carries a content hash; every other
+file is revalidated on each visit (`public/_headers`). So `public/` holds only files that must keep
+their name (the icons, `og.png`, `_headers`), and `scripts/check-public.mjs` fails the build on
+anything else there.
 
 ## Deploys
 

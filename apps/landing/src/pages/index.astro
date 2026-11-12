@@ -9,6 +9,7 @@ import { appStoreId, appStoreLive, appStoreUrl, siteDescription, siteTitle } fro
 import { faq } from "../faq";
 import { featureList, hubArt } from "../features";
 import Page from "../layouts/page.astro";
+import { roomAsset } from "../lib/room-assets";
 
 import appIconSrc from "../assets/app-icon.png";
 import sharedRoomSrc from "../assets/art/shared-room.webp";
@@ -39,12 +40,13 @@ async function variants(src: ImageMetadata, steps: number[]) {
 const appIcon = (await getImage({ src: appIconSrc, width: 192, format: "webp" })).src;
 const sharedRoom = await variants(sharedRoomSrc, [400, 800, 1200]);
 const mochi = await variants(mochiSrc, [96, 192, 320]);
-// The window and bed close-ups of the room render (2560×1440), pre-sized in public/room.
-const room = (name: "window" | "mochi") => `/room/${name}-1000.webp 1000w, /room/${name}-1600.webp 1600w`;
+// The window and bed close-ups of the room render (2560×1440), pre-sized in src/assets/room.
+const room = (name: "window" | "mochi") =>
+  [1000, 1600].map((width) => `${roomAsset(`${name}-${width}.webp`)} ${width}w`).join(", ");
 const reducedMotionPixel = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 // The preload and the unlit room's AVIF source share this srcset and sizes, so the browser fetches one file.
 const heroSizes = "(max-width: 900px) 100vw, 60vw";
-const heroAvif = [1000, 1600, 2560].map((width) => `/room/room-none-${width}.avif ${width}w`).join(", ");
+const heroAvif = [1000, 1600, 2560].map((width) => `${roomAsset(`room-none-${width}.avif`)} ${width}w`).join(", ");
 
 // Names, prices and blurbs are the shop's own (apps/ios/Nooki/Model/Shop.swift). The box is the piece's
 // measured outline in its 1024 px image (x, y, width, height), which its glow and floor light centre on.
@@ -244,10 +246,10 @@ const schema = [
               <RoomPicture sizes={heroSizes} eager fetchpriority="low" />
               <picture>
                 <source media="(prefers-reduced-motion: reduce)" srcset={reducedMotionPixel} />
-                <source media="(max-width: 600px)" srcset="/room/mochi-wide-80.webp" />
+                <source media="(max-width: 600px)" srcset={roomAsset("mochi-wide-80.webp")} />
                 <img
                   class="mochi-loop"
-                  src="/room/mochi-wide-140.webp"
+                  src={roomAsset("mochi-wide-140.webp")}
                   alt=""
                   width="140"
                   height="140"
@@ -338,7 +340,7 @@ const schema = [
             <div class="screen lock" id="lock">
               <img
                 class="wall"
-                src="/room/window-1000.webp"
+                src={roomAsset("window-1000.webp")}
                 srcset={room("window")}
                 sizes="(max-width: 640px) 62vw, 300px"
                 alt=""
@@ -692,7 +694,7 @@ const schema = [
       <div class="promise-grid">
         <figure class="still reveal">
           <img
-            src="/room/mochi-1000.webp"
+            src={roomAsset("mochi-1000.webp")}
             srcset={room("mochi")}
             sizes="(max-width: 900px) 92vw, 560px"
             alt="Mochi sitting in her donut bed, the lamp on behind her"
@@ -729,17 +731,17 @@ const schema = [
             <source
               media="(max-width: 900px)"
               type="image/avif"
-              srcset="/room/room-clean-1000.avif 1000w, /room/room-clean-1600.avif 1600w"
+              srcset={`${roomAsset("room-clean-1000.avif")} 1000w, ${roomAsset("room-clean-1600.avif")} 1600w`}
               sizes="92vw"
             />
             <source
               media="(max-width: 900px)"
               type="image/webp"
-              srcset="/room/room-clean-1000.webp 1000w, /room/room-clean-1600.webp 1600w"
+              srcset={`${roomAsset("room-clean-1000.webp")} 1000w, ${roomAsset("room-clean-1600.webp")} 1600w`}
               sizes="92vw"
             />
             <img
-              src="/room/window-1000.webp"
+              src={roomAsset("window-1000.webp")}
               srcset={room("window")}
               sizes="(max-width: 900px) 92vw, 560px"
               alt=""
