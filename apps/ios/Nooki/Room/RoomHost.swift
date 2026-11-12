@@ -127,6 +127,13 @@ struct RoomGameLayer: View {
     let controller: RoomController
 
     var body: some View {
+        ZStack {
+            CornerStage(controller: controller)
+            game
+        }
+    }
+
+    @ViewBuilder private var game: some View {
         if let game = controller.game, let room = controller.gameRoom {
             let switcher = GameSceneSwitch(
                 options: GameScenery.options(for: game), selected: controller.scenery,
@@ -135,7 +142,7 @@ struct RoomGameLayer: View {
                 if let corner = controller.corner {
                     GameView(
                         session: GameSession(game: game, room: corner, catLife: controller.catLife),
-                        corner: corner, scenes: switcher
+                        scenes: switcher
                     ) { controller.endGame() }
                     .id(GameKey(game: game, inCorner: true))
                     .transition(.opacity)
