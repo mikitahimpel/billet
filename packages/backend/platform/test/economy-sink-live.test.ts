@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { runInDurableObject } from "cloudflare:test";
 import { Effect, Schema } from "effect";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CoinEntryId, type CoinEntry } from "@billet/contracts-domain/coins";
@@ -126,6 +127,10 @@ describe("the pair room", () => {
     const room = PAIR_ROOM.get(PAIR_ROOM.newUniqueId());
     const alice = Schema.decodeSync(UserId)("user-alice");
     const bob = Schema.decodeSync(UserId)("user-bob");
+    // The first D1 call of a fresh object stalls the test harness unless the object is already awake.
+    await runInDurableObject(room, async () => {
+      await env.DB.prepare("SELECT 1").first();
+    });
     await room.open(pairId, [alice, bob]);
     await room.creditPurchase({
       kind: "purchase",

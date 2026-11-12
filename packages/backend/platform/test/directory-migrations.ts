@@ -70,6 +70,8 @@ export const resetDirectory = async () => {
   await env.DB.batch(
     [
       "pair_events",
+      "economy_days",
+      "economy_pair_days",
       "event_details",
       "pair_flags",
       "flag_configs",
