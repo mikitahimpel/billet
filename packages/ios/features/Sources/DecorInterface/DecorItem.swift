@@ -3,6 +3,12 @@ public enum CatUse: String, CaseIterable, Sendable {
   case sofa, windowSeat, post, catBed, crate
 }
 
+/// The rooms a piece can stand in. On the wire the living room is never named.
+public enum DecorSpace: String, Codable, CaseIterable, Sendable {
+  case living
+  case bedroom
+}
+
 /// What makes a piece the room's own furniture: every pair has it, it is not for sale, and a room nobody has
 /// arranged has it standing in `u`, `v` (grid cells).
 public struct BaseSpot: Equatable, Sendable {
@@ -11,12 +17,15 @@ public struct BaseSpot: Equatable, Sendable {
   public let v: Int
   /// The cat lies on it, so a room keeps at least one such piece.
   public let isRest: Bool
+  /// The room it belongs to: it stands there, and only there, in a room nobody has arranged.
+  public let space: DecorSpace
 
-  public init(title: String, u: Int, v: Int, isRest: Bool = false) {
+  public init(title: String, u: Int, v: Int, isRest: Bool = false, space: DecorSpace = .living) {
     self.title = title
     self.u = u
     self.v = v
     self.isRest = isRest
+    self.space = space
   }
 }
 
@@ -97,9 +106,17 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   /// The room's own furniture, which every pair has.
   public static var baseItems: [DecorItem] { all.filter(\.isBase) }
 
+  /// The room's own furniture of one room.
+  public static func baseItems(in space: DecorSpace) -> [DecorItem] {
+    baseItems.filter { $0.base?.space == space }
+  }
+
   /// What the player can place out of everything owned, in the shop's order: the room's own furniture first.
-  public static func placeable(among owned: Set<String>) -> [DecorItem] {
-    all.filter { $0.isBase || owned.contains($0.id) }
+  /// The own furniture is of `space` only; a bought piece waits in either room's closet.
+  public static func placeable(among owned: Set<String>, in space: DecorSpace = .living)
+    -> [DecorItem]
+  {
+    all.filter { item in item.base.map { $0.space == space } ?? owned.contains(item.id) }
   }
 
   /// The pieces the pair starts with. The room is built with a lamp and a rug of its own, so these

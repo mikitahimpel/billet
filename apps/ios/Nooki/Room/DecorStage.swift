@@ -96,7 +96,7 @@ final class DecorStage {
         self.decor = decor
         if receiver != nil { self.receiver = receiver }
 
-        let drawn = decor.layout.allPlacements
+        let drawn = decor.layout.allPlacements(in: .home)
         let placed = Set(drawn.map(\.item))
         for (id, node) in nodes where !placed.contains(id) {
             node.holder.removeFromParent()
@@ -301,8 +301,9 @@ final class DecorStage {
     /// only by its base.
     func floorPiece(hit: (Float) -> SIMD3<Float>?) -> String? {
         let layout = decor.layout
-        let solid = layout.placements.reversed().filter { $0.surface == .floor && !isFlat($0.item) }
-        let flat = layout.placements.reversed().filter { $0.surface == .floor && isFlat($0.item) }
+        let here = layout.allPlacements(in: .home).reversed().filter { $0.surface == .floor }
+        let solid = here.filter { !isFlat($0.item) }
+        let flat = here.filter { isFlat($0.item) }
         return (solid + flat).first { placement in
             guard let item = DecorItem.item(shopID: placement.item) else { return false }
             let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: placement.eighthTurns)
@@ -320,7 +321,7 @@ final class DecorStage {
     /// The wall piece under `point` on `surface`, in the pivot's space.
     func wallPiece(at point: SIMD3<Float>, on surface: Placement.Surface) -> String? {
         let along = Double(surface == .backWall ? point.x : point.z)
-        return decor.layout.allPlacements.reversed().first { placement in
+        return decor.layout.allPlacements(in: .home).reversed().first { placement in
             guard placement.surface == surface, let item = DecorItem.item(shopID: placement.item) else { return false }
             let height = item.fit == .height ? item.size : item.width
             return abs(along - DecorGrid.metres(placement.u)) <= item.width / 2 + 0.02

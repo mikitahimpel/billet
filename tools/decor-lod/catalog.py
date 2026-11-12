@@ -67,10 +67,26 @@ BASE = [
     ("base-rug", "Rug", False, 0.64, 0.64, 0.02, True, (0, 1)),
 ]
 
+# The Bedroom's own furniture, built in code by CityRoomScene from CityLayout: the same columns. Middles are
+# CityLayout's rounded to the 5 cm grid (a test holds them within a cell). The window, its sill and the wall
+# fittings stay fixed, so they are not here. Sizes are the turn-0 footprint: the dresser runs along the wall.
+BEDROOM = [
+    ("base-bedroom-bed", "Bed", True, 0.76, 0.36, 0.2, False, (1, -3)),
+    ("base-bedroom-nightstand", "Nightstand and lamp", False, 0.13, 0.13, 0.28, False, (-8, -3)),
+    ("base-bedroom-dresser", "Dresser", False, 0.12, 0.24, 0.2, False, (-8, 6)),
+    ("base-bedroom-catbed", "Cat bed", True, 0.23, 0.23, 0.06, False, (5, 6)),
+    ("base-bedroom-rug", "Rug", False, 0.44, 0.44, 0.02, True, (1, 5)),
+    ("base-bedroom-bowls", "Bowls", False, 0.08, 0.14, 0.03, False, (8, 2)),
+    ("base-bedroom-slippers", "Slippers", False, 0.12, 0.1, 0.04, False, (-4, 2)),
+    ("base-bedroom-books", "Books", False, 0.1, 0.08, 0.05, False, (-4, 8)),
+    ("base-bedroom-mouse", "Toy mouse", False, 0.05, 0.1, 0.03, False, (0, 5)),
+]
+
 items = []
-for id, name, rest, width, depth, height, flat, (u, v) in BASE:
-    items.append(dict(id=id, model="", asset="Base_" + id[len("base-"):], fit="width", size=width, mount="floor", width=width, depth=depth,
-                      flat=flat, height=height, base=True, name=name, rest=rest, home=(u, v)))
+for id, name, rest, width, depth, height, flat, (u, v) in BASE + BEDROOM:
+    bedroom = id.startswith("base-bedroom-")
+    items.append(dict(id=id, model="", asset="" if bedroom else "Base_" + id[len("base-"):], fit="width", size=width, mount="floor", width=width, depth=depth,
+                      flat=flat, height=height, base=True, name=name, rest=rest, home=(u, v), space="bedroom" if bedroom else "living"))
 for id, fit, size, mount, flat in HAND:
     width, depth, height = measured(f"Decor_{id}", fit, size)
     width, depth = CORE.get(id, (width, depth))
@@ -93,7 +109,8 @@ for i in items:
             f'mount: .floor, width: {i["width"]}, depth: {i["depth"]}, '
             f'isFlat: {"true" if i["flat"] else "false"}, height: {i["height"]}, cat: nil, '
             f'base: BaseSpot(title: "{i["name"]}", u: {i["home"][0]}, v: {i["home"][1]}, '
-            f'isRest: {"true" if i["rest"] else "false"})),')
+            f'isRest: {"true" if i["rest"] else "false"}'
+            f'{", space: .bedroom" if i["space"] == "bedroom" else ""})),')
         continue
     swift.append(
         f'    DecorItem(id: "{i["id"]}", model: "{i["model"]}", assetName: "{i["asset"]}", '
