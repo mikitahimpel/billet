@@ -87,7 +87,7 @@ struct WishEditor: View {
                     .resizable()
                     .scaledToFill()
             } else {
-                Ink.surfaceRaised
+                Ink.well
                 ProgressView()
             }
         }
@@ -96,28 +96,18 @@ struct WishEditor: View {
         .corners(.card)
         .overlay(alignment: .topTrailing) {
             if image != nil {
-                Button {
-                    withAnimation(.snappy(duration: 0.2)) {
+                RoundButton(symbol: "xmark", label: "Remove picture") {
+                    withAnimation(Motion.spring(0.2)) {
                         image = nil
                         picture = .remove
                     }
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.ourioMicro)
-                        .foregroundStyle(.white)
-                        .frame(width: 28, height: 28)
-                        .background(.black.opacity(0.45), in: .circle)
-                        .frame(width: Size.control, height: Size.control)
-                        .contentShape(.circle)
                 }
-                .buttonStyle(PressScaleStyle())
-                .accessibilityLabel("Remove picture")
             }
         }
     }
 
     private var mostWantedToggle: some View {
-        Toggle(isOn: $mostWanted.animation(.snappy(duration: 0.2))) {
+        Toggle(isOn: $mostWanted.animation(Motion.spring(0.2))) {
             Label {
                 Text("Most wanted")
                     .font(.ourioCallout.weight(.semibold))
@@ -179,7 +169,7 @@ struct WishEditor: View {
     private func existingActions(_ wish: WishItem) -> some View {
         HStack {
             Button {
-                withAnimation(.snappy(duration: 0.25)) { state.us.markReceived(wish.id, by: state.viewer) }
+                withAnimation(Motion.spring(0.25)) { state.us.markReceived(wish.id, by: state.viewer) }
                 dismiss()
             } label: {
                 Label("Got it ♥", systemImage: "heart.fill")
@@ -188,7 +178,7 @@ struct WishEditor: View {
             Spacer()
             Button(role: .destructive) {
                 WishImage.remove(wish.id)
-                withAnimation(.snappy(duration: 0.25)) { state.us.deleteWish(wish.id) }
+                withAnimation(Motion.spring(0.25)) { state.us.deleteWish(wish.id) }
                 dismiss()
             } label: {
                 Label("Delete", systemImage: "trash")
@@ -209,7 +199,7 @@ struct WishEditor: View {
         loadingPreview = image == nil
         defer { loadingPreview = false }
         guard let preview = await LinkPreview.fetch(url), !Task.isCancelled else { return }
-        withAnimation(.snappy(duration: 0.25)) {
+        withAnimation(Motion.spring(0.25)) {
             if trimmedTitle.isEmpty, let fetched = preview.title { title = fetched }
             if image == nil, let data = preview.image, let fetched = UIImage(data: data) {
                 image = fetched
@@ -232,7 +222,7 @@ struct WishEditor: View {
         case .set(let data): WishImage.save(data, for: wish.id)
         case .remove: WishImage.remove(wish.id)
         }
-        withAnimation(.snappy(duration: 0.25)) { state.us.upsertWish(wish) }
+        withAnimation(Motion.spring(0.25)) { state.us.upsertWish(wish) }
         dismiss()
     }
 }

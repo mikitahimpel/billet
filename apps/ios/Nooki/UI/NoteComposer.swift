@@ -93,6 +93,23 @@ struct NoteComposer: View {
         .accessibilityIdentifier("composerPen")
     }
 
+    private var paperColours: some View {
+        Menu {
+            ForEach(Note.Paper.allCases, id: \.self) { option in
+                Button(option.rawValue.capitalized) { model.paper = option }
+            }
+        } label: {
+            Image(systemName: "paintpalette")
+                .font(.ourioHeadline)
+                .foregroundStyle(Ink.text)
+                .frame(width: Size.control, height: Size.control)
+                .background { Circle().fill(Ink.well) }
+        }
+        .accessibilityLabel("Paper colour")
+        .accessibilityValue(model.paper.rawValue.capitalized)
+        .accessibilityIdentifier("composerPaperColour")
+    }
+
     private var kindPicker: some View {
         RoundButton(symbol: model.kind.symbol, label: "Paper: \(model.kind.rawValue)") {
             let kinds = style.kinds

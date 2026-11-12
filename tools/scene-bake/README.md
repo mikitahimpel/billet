@@ -58,3 +58,25 @@ corner, for stills of it.
 ## Style references
 
 `docs/city-room-style.md`.
+
+## Room pieces (the Living room's own furniture)
+
+The room's furniture a player can move is one USDZ each, `apps/ios/Nooki/Resources/Room/Base_<piece>.usdz` (windowseat,
+nightstand, plant, lamp, cattree, bowls, donutbed, basket, books, rug; catalog ids `base-<piece>`). Each has its origin on the
+boards (y = 0 at their top, 0.014 in the room) in the middle of the cell it stands in when the room is as it always was
+(`PIECES` in `apps/ios/Tools/make_room.py`, the cells of `tools/decor-lod/catalog.py` `BASE`), so a holder at that cell
+reproduces the room. `Room_furniture.usdz` keeps what never moves: the round window with `Glow_window`, the shelf, the picture
+and the fairy-light wire. Together they have the same 283,820 triangles the single model had.
+
+```sh
+rsync -a apps/ios/Tools/ pc:billet-gpu/rearr/Tools/
+ssh pc 'cd ~/billet-gpu/rearr && ~/billet-gpu/blender-app/blender-billet -b --python Tools/make_room.py -- new'   # about 5 s
+scp 'pc:billet-gpu/rearr/new/Base_*.usdz' pc:billet-gpu/rearr/new/Room_furniture.usdz apps/ios/Nooki/Resources/Room/
+# one piece only: ... make_room.py -- new Base_rug
+# bounds (width, depth, top, and the bounds' middle dx, dz from the cell middle) for tools/decor-lod/catalog.py
+blender -b -P tools/decor-lod/bounds.py -- apps/ios/Nooki/Resources tools/decor-lod/bounds.json
+# the floor decal holds only what stays: the shell and the fixed furniture; each piece draws its own blob
+scp apps/ios/Nooki/Resources/Room/Room_shell.usdz pc:billet-gpu/rearr/
+ssh pc 'cd ~/billet-gpu/rearr && flock ~/billet-gpu/.klein.lock ~/billet-gpu/blender-app/blender-billet -b -P contact_shadow.py -- room_contact.png 0.017 Room_shell.usdz,new/Room_furniture.usdz --size 1024 --bounds -0.595,-0.595,0.56,0.56'
+cwebp -quiet -q 82 -alpha_q 92 -m 6 room_contact.png -o apps/ios/Nooki/Resources/RoomBake/room_contact.webp
+```

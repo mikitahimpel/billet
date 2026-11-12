@@ -132,10 +132,10 @@ final class CatWalker {
     private let gait: Gait
     private let tailSpring: TailSpring
     /// Where she rests between outings, facing `homeYaw`.
-    private let home: SIMD3<Float>
-    private let homeYaw: Float
+    private var home: SIMD3<Float>
+    private var homeYaw: Float
     /// The route's far end, where `trip()` takes her.
-    let main: Destination?
+    private(set) var main: Destination?
     /// Where she is sitting now, nil at home.
     private var away: Destination?
     private var yaw: Float
@@ -309,6 +309,17 @@ final class CatWalker {
         if bodies[rest] != nil { settleTime = 0 }
         rest = .sit
         fade(seatAmount)
+    }
+
+    /// Moves where she rests and the way to the route's far end, as the player moves the bed and the tree. She is set
+    /// down at the new place at once when anything changed.
+    func rehome(at position: SIMD3<Float>, yaw: Float, main next: Destination?) {
+        let samePath = main?.path.map(\.at) == next?.path.map(\.at) && main?.rest == next?.rest
+        guard position != home || yaw != homeYaw || !samePath else { return }
+        home = position
+        homeYaw = yaw
+        main = next
+        snapHome()
     }
 
     /// Back on her bed at once, sitting, with whatever she was doing dropped.
