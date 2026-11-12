@@ -15,12 +15,12 @@ struct FeaturedCard: View {
             // countdown wrapping into a column of single words.
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Space.s) {
-                    countdown
+                    countdown.fixedSize()
                     Spacer(minLength: 0)
                     valueBadge
                 }
                 VStack(alignment: .leading, spacing: Space.s) {
-                    countdown
+                    countdown.fixedSize(horizontal: false, vertical: true)
                     valueBadge
                 }
             }
@@ -73,7 +73,6 @@ struct FeaturedCard: View {
         }
         .font(.ourioMicro)
         .foregroundStyle(Ink.textSecondary)
-        .fixedSize()
     }
 
     @ViewBuilder private var valueBadge: some View {
