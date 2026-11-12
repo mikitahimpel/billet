@@ -1,0 +1,9 @@
+{
+  "look": {
+    "coat": "greyWhite",
+    "model": "detailed"
+  },
+  "name": "Tofu",
+  "pronouns": "they",
+  "utcOffsetSeconds": 3600
+}

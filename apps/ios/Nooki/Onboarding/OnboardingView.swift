@@ -2,6 +2,7 @@ import FeaturePairing
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
+import Pet
 import ProfileInterface
 import SwiftUI
 import Design
@@ -235,12 +236,16 @@ struct OnboardingView: View {
     private static let nameIdeas = ["Mochi", "Tofu", "Biscuit", "Pumpkin", "Luna", "Miso"]
 
     private var catName: some View {
-        form(say: "What should we call me?", subtitle: String(localized: "You can change it later. Skip and she stays Mochi.")) {
+        form(say: "What should we call me?", subtitle: String(localized: "You can change it later. Skip and I stay Mochi.")) {
             Field(CatProfile.defaultName, text: $flow.catName, font: .ourioHeadline)
                 .submitLabel(.done)
                 .onChange(of: flow.catName) { _, new in
                     if new.count > CatProfile.nameLimit { flow.catName = String(new.prefix(CatProfile.nameLimit)) }
                 }
+            VStack(alignment: .leading, spacing: Space.s) {
+                SectionHeader(String(localized: "Pronouns"))
+                PronounPicker(selection: flow.catPronouns) { flow.catPronouns = $0 }
+            }
             GroupedSection(header: String(localized: "Ideas"), inset: Space.l) {
                 ForEach(Self.nameIdeas, id: \.self) { idea in
                     optionRow(OnboardingOption(id: OnboardingOptionId(idea), label: LocalizedText(en: idea, ru: idea)),

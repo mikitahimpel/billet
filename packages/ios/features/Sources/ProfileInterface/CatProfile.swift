@@ -1,5 +1,6 @@
 import Foundation
 import Persistence
+import Pet
 
 /// Mochi until named in onboarding. In the app group so the widgets use it too; the server gets it as `cat_name`.
 public enum CatProfile {
@@ -17,6 +18,27 @@ public enum CatProfile {
     let saved =
       defaults.string(forKey: nameKey)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
     return saved.isEmpty ? defaultName : saved
+  }
+
+  /// "she", "he" or "they", as the pair chose; absent until then.
+  public static let pronounsKey = "catPronouns"
+
+  /// What the pair chose, or nil until either did.
+  public static func chosenPronouns(in defaults: UserDefaults = store) -> CatPronouns? {
+    defaults.string(forKey: pronounsKey).flatMap(CatPronouns.init(rawValue:))
+  }
+
+  /// How the app words the cat: the choice, or `they` until there is one. The widgets read it here too.
+  public static func pronouns(in defaults: UserDefaults = store) -> CatPronouns {
+    chosenPronouns(in: defaults) ?? .unchosen
+  }
+
+  public static func setPronouns(_ pronouns: CatPronouns?, in defaults: UserDefaults = store) {
+    if let pronouns {
+      defaults.set(pronouns.rawValue, forKey: pronounsKey)
+    } else {
+      defaults.removeObject(forKey: pronounsKey)
+    }
   }
 
   /// The coat picked in onboarding, mirrored here from the app's own defaults (`CatCoat.key`) so the widgets can

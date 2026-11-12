@@ -189,6 +189,8 @@ targets:
         products: [Ink, Persistence]
       - package: BilletDesign
         products: [Design]
+      - package: BilletPet
+        products: [Pet]
       - package: BilletFeatures
         products: [DrawInterface, MomentsInterface, MoodInterface, ProfileInterface, UsInterface, WidgetInterface, WidgetUI]
     settings:
@@ -202,6 +204,8 @@ targets:
     platform: iOS
     sources:
       - path: OurioNotifications
+      # The file the app keeps the streak in, which a streak push writes for the widgets.
+      - path: Nooki/Model/Streak.swift
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
         # Places' flags and map are for the app's world map only.

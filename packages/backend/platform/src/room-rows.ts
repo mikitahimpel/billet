@@ -14,6 +14,7 @@ export const StoredRoom = Schema.Struct({
   streakBest: Schema.Int,
   streakLastDay: Schema.NullOr(Schema.String),
   streakRestoredOn: Schema.NullOr(Schema.String),
+  streakMarks: Schema.NullOr(Schema.String),
   lastReactionRev: Schema.NullOr(Schema.Int),
   giftDay: Schema.NullOr(Schema.String),
   welcomed: Schema.Boolean,

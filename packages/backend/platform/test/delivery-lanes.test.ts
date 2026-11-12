@@ -256,19 +256,23 @@ describe("delivery lanes", () => {
     expect(reactAt).toBeGreaterThan(testNowOf(env));
     expect(reactAt).toBeLessThan(botWake!);
 
-    // At the reaction, the bot reacts and its reaction is handed to the lane on the same alarm.
+    // At the reaction, the bot reacts and its reaction is handed to the lane on the same alarm. Its streak day
+    // meets Alice's and lights it, as a partner's phone would.
     await runInDurableObject(room, (instance) =>
       (instance as unknown as { advanceClock(ms: number): void }).advanceClock(
         reactAt! - testNowOf(env),
       ),
     );
+    await room.recordStreakDay(alice, { at: reactAt!, utcOffsetSeconds: 0 });
     await runAlarm(room);
     expect((await room.reactions(0, 10)).map(({ by }) => by)).toEqual([bob]);
+    expect(await room.streak()).toMatchObject({ days: 1 });
     await runAlarm(room);
-    expect((await room.deliveries()).map((entry) => entry.status)).toEqual([
-      "delivered",
-      "delivered",
-    ]);
+    const deliveries = await room.deliveries();
+    expect(deliveries.map((entry) => entry.noteId.split(":")[0])).toEqual(
+      expect.arrayContaining(["reaction", "streak-turn", "streak-lit"]),
+    );
+    expect(deliveries.every((entry) => entry.status === "delivered")).toBe(true);
 
     await room.stopDemo();
     expect(await alarmAt(room)).toBeNull();

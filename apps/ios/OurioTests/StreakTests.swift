@@ -4,6 +4,7 @@ import WidgetInterface
 import WidgetUI
 import Testing
 import UsInterface
+import Wire
 @testable import Billet
 
 private let cal = Calendar.current
@@ -50,6 +51,77 @@ private func day(_ offset: Int) -> Date { cal.date(byAdding: .day, value: offset
         #expect(s.milestone(on: day(7)).reached == 7)
         #expect(s.milestone(on: day(7)).next == 14)
     }
+
+    @Test func aDayLightsOnceBothPartnersDidTheirPart() {
+        var s = LoveStreak()
+        s.mark(on: day(0))
+        #expect(s.current(on: day(0)) == 0)
+        #expect(s.turn(on: day(0)) == .partners)
+        s.mark(on: day(0).addingTimeInterval(60))
+        #expect(s.mine == [cal.startOfDay(for: day(0))])
+        s.partnerMark(on: day(0))
+        #expect(s.status(on: day(0)) == .done)
+        #expect(s.turn(on: day(0)) == nil)
+        #expect(s.mine.isEmpty && s.partner.isEmpty)
+
+        s.partnerMark(on: day(1))
+        #expect(s.turn(on: day(1)) == .yours)
+        #expect(s.current(on: day(1)) == 1)
+        s.mark(on: day(1))
+        #expect(s.current(on: day(1)) == 2)
+        // A day already lit takes no mark.
+        s.mark(on: day(0))
+        #expect(s.mine.isEmpty)
+    }
+
+    @Test func theRoomsStreakTellsThisPhonesMarksFromThePartners() {
+        let wire = PairStreak(
+            days: 4, best: 9, lastDay: "2026-11-04", restoredOn: nil,
+            marks: [StreakMark(user: UserId("me"), day: "2026-11-05")])
+        let mine = LoveStreak(wire, you: "me", calendar: cal)
+        #expect(mine.count == 4)
+        #expect(mine.lastDay == cal.startOfDay(for: day(0)))
+        #expect(mine.turn(on: day(1), calendar: cal) == .partners)
+        #expect(LoveStreak(wire, you: "partner", calendar: cal).turn(on: day(1), calendar: cal) == .yours)
+        #expect(LoveStreak(wire, you: nil, calendar: cal).turn(on: day(1), calendar: cal) == nil)
+    }
+
+    @Test func aStreakSavedBeforeMarksStillReads() throws {
+        let old = #"{"count":3,"best":5,"lastDay":0}"#
+        let s = try JSONDecoder().decode(LoveStreak.self, from: Data(old.utf8))
+        #expect(s.count == 3 && s.best == 5 && s.mine.isEmpty && s.partner.isEmpty)
+    }
+
+    @Test func aPushOlderThanTheSavedStreakIsDropped() {
+        let file = "Tests/\(UUID().uuidString)-streak.json"
+        var lit = LoveStreak()
+        lit.record(on: day(0))
+        lit.record(on: day(1))
+        StreakStore.save(pushed: lit, file: file)
+        var turn = LoveStreak()
+        turn.record(on: day(0))
+        turn.partnerMark(on: day(1))
+        StreakStore.save(pushed: turn, file: file)
+        #expect(StreakStore(file: file).streak == lit)
+    }
+
+    @Test func aPushedStreakKeepsThisPhonesUnsentDaysOnTop() {
+        var room = LoveStreak()
+        room.record(on: day(0))
+        room.partnerMark(on: day(1))
+        let merged = StreakStore.merged(room, unsent: [day(1)])
+        #expect(merged.count == 2)
+        #expect(merged.status(on: day(1)) == .done)
+    }
+}
+
+extension LoveStreak {
+    /// The partner's part, as the room counts it.
+    mutating func partnerMark(on date: Date) {
+        swap(&mine, &partner)
+        mark(on: date)
+        swap(&mine, &partner)
+    }
 }
 
 /// The pair's room, counting one streak for the couple with `LoveStreak`'s own rules.
@@ -66,7 +138,7 @@ private final class FakeStreakRoom {
             record: { @MainActor [self] at in
                 guard online else { return .offline }
                 days.append(at)
-                shared.record(on: at)
+                shared.mark(on: at)
                 return .streak(shared)
             },
             restore: { @MainActor [self] in
@@ -87,7 +159,7 @@ private final class FakeStreakRoom {
         for _ in 0..<20 { await Task.yield() }
     }
 
-    @Test func aDayHereCountsInThePairsRoomAndThePartnersDayShowsHere() async {
+    @Test func aDayHereWaitsForThePartnersInThePairsRoom() async {
         let room = FakeStreakRoom()
         let store = StreakStore(file: file)
         await store.follow(room.remote)
@@ -95,14 +167,22 @@ private final class FakeStreakRoom {
         store.record(at: day(0))
         await settle()
         #expect(room.days == [day(0)])
-        #expect(store.streak.current(on: day(0)) == 1)
+        #expect(store.streak.current(on: day(0)) == 0)
+        #expect(store.streak.turn(on: day(0)) == .partners)
         // The same day again is nothing new to send.
         store.record(at: day(0).addingTimeInterval(60))
         #expect(store.unsent.isEmpty)
 
-        // The partner's phone counted the next day.
-        room.shared.record(on: day(1))
+        room.shared.partnerMark(on: day(0))
         await store.refresh()
+        #expect(store.streak.status(on: day(0)) == .done)
+
+        // The partner went first the next day: it's this phone's turn, and its day lights it.
+        room.shared.partnerMark(on: day(1))
+        await store.refresh()
+        #expect(store.streak.turn(on: day(1)) == .yours)
+        store.record(at: day(1))
+        await settle()
         #expect(store.streak.current(on: day(1)) == 2)
         #expect(store.streak.status(on: day(1)) == .done)
     }
@@ -117,6 +197,7 @@ private final class FakeStreakRoom {
 
         var pushed = room.shared
         pushed.record(on: day(1))
+        pushed.partnerMark(on: day(2))
         store.received(pushed)
         #expect(store.streak.count == 3)
         #expect(store.streak.lastDay == cal.startOfDay(for: day(2)))
@@ -144,11 +225,12 @@ private final class FakeStreakRoom {
         await settle()
         await store.refresh()
         #expect(store.unsent == [day(1)])
-        #expect(store.streak.current(on: day(1)) == 2)
+        #expect(store.streak.turn(on: day(1)) == .partners)
         // Kept across a launch.
         #expect(StreakStore(file: file).unsent == [day(1)])
 
         room.online = true
+        room.shared.partnerMark(on: day(1))
         await store.refresh()
         #expect(room.days == [day(1)])
         #expect(store.unsent.isEmpty)
