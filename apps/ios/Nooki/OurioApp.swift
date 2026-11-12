@@ -83,8 +83,6 @@ struct OurioApp: App {
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
-                    // Onboarding is drawn over Home: without this VoiceOver reads Home's controls behind it.
-                    .accessibilityHidden(!onboarding.isFinished)
                     .overlay {
                         if !onboarding.isFinished {
                             OnboardingView(
@@ -92,6 +90,9 @@ struct OurioApp: App {
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
                                 demoPartner: demoPartnerPairing)
+                                // Drawn over Home, which hides itself from VoiceOver only while its splash shows;
+                                // a modal view is the only one VoiceOver reads.
+                                .accessibilityAddTraits(.isModal)
                                 .transition(.opacity)
                         }
                     }
