@@ -117,7 +117,6 @@ private struct DiscountRibbon: View {
 
     var body: some View {
         Chip("−\(percent)% · save \(saves)", style: .honey)
-            .monospacedDigit()
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(percent) percent off, saves \(saves) coins")
     }
