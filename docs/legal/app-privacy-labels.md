@@ -13,7 +13,7 @@ Every type below is **linked to the user** (it is stored per account) and **not 
 | Data type | Purpose | What it is |
 | --- | --- | --- |
 | Contact Info > Name | App Functionality | The name you give in onboarding and the name your partner calls you. Typed by the user, not taken from Apple. |
-| Identifiers > User ID | App Functionality | The account behind the anonymous key (and the app-specific Sign in with Apple identifier when linked), and the session. |
+| Identifiers > User ID | App Functionality | The account behind the anonymous key, and the session. |
 | Identifiers > Device ID | App Functionality | A random device ID, never the advertising identifier. |
 | User Content > Photos or Videos | App Functionality | Photos and drawing images sent in notes and Moments. |
 | User Content > Other User Content | App Functionality | Drawing strokes, Pick tonight swipes, Who knows who answers, wishes. |
