@@ -1,0 +1,11 @@
+{
+  "bornAt": 1700000000000,
+  "look": {
+    "coat": "natural",
+    "model": "marmalade"
+  },
+  "name": "Mochi",
+  "natureSeed": "12345678901234567890",
+  "pronouns": "he",
+  "utcOffsetSeconds": 3600
+}

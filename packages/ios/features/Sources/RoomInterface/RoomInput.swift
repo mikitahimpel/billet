@@ -1,4 +1,5 @@
 import DecorInterface
+import Pet
 
 /// Which of Mochi's rooms the host shows.
 public enum RoomScene: Equatable, Sendable {
@@ -67,6 +68,7 @@ public struct RoomInput: Equatable, Sendable {
   public var visibility: RoomVisibility
   /// What VoiceOver calls her.
   public var catName: String
+  public var catPronouns: CatPronouns
   /// The partner has the app open on their phone.
   public var partnerHere: Bool
   /// The dust drifting through the room. Its particles are stepped every frame the room is drawn, so
@@ -80,13 +82,15 @@ public struct RoomInput: Equatable, Sendable {
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
-    partnerHere: Bool = false, motes: Bool = false, sway: Bool = true,
+    catPronouns: CatPronouns = .unchosen, partnerHere: Bool = false, motes: Bool = false,
+    sway: Bool = true,
     decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering()
   ) {
     self.scene = scene
     self.coat = coat
     self.visibility = visibility
     self.catName = catName
+    self.catPronouns = catPronouns
     self.partnerHere = partnerHere
     self.motes = motes
     self.sway = sway

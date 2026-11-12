@@ -1,7 +1,9 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { NoteId, UserId, MediaKey } from "@billet/contracts-domain/ids";
+import { LocalDay } from "@billet/contracts-domain/coins";
 import { CompactStrokes } from "@billet/contracts-domain/ink";
+import type { LoveStreak } from "@billet/contracts-domain/streak";
 import { Note } from "@billet/contracts-domain/note";
 import { PushPayload, pushPayloadKey } from "@billet/contracts-push/push-payload";
 import type { ApnsPush, ApnsResult } from "../src/apns-client.ts";
@@ -13,6 +15,8 @@ import {
   riddleDeliveryId,
   riddleEndDeliveryId,
   sendPushLane,
+  streakLitDeliveryId,
+  streakTurnDeliveryId,
   type PushLaneDependencies,
 } from "../src/apns-lanes.ts";
 import {
@@ -75,6 +79,7 @@ const deps = (overrides: Partial<PushLaneDependencies> = {}) => {
       tries: 0,
       state: "Open",
     }),
+    streak: async () => undefined,
     recipient: async (note) => (note.author === alice ? bob : alice),
     tokens: async () => [
       { token: "aa", environment: "production" },
@@ -317,6 +322,81 @@ describe("a finished Who knows who part", () => {
       "Abandon",
     );
     expect([...widget.sent, ...gone.sent]).toEqual([]);
+  });
+});
+
+describe("the love streak", () => {
+  const today = Schema.decodeUnknownSync(LocalDay)("2026-11-05");
+  const yesterday = Schema.decodeUnknownSync(LocalDay)("2026-11-04");
+  const waiting: LoveStreak = {
+    days: 4,
+    best: 9,
+    lastDay: yesterday,
+    marks: [{ user: alice, day: today }],
+  };
+  const lit: LoveStreak = { days: 5, best: 9, lastDay: today };
+  const room = (streak: LoveStreak) => async () => ({ streak, members: [alice, bob] });
+  const decode = Schema.decodeUnknownSync(PushPayload);
+  const turn = { noteId: streakTurnDeliveryId(today, alice), lane: "AlertPush" } as const;
+  const litDay = { noteId: streakLitDeliveryId(today, bob), lane: "AlertPush" } as const;
+
+  it("tells the partner it's their turn, with the streak for the widgets", async () => {
+    const tokens: string[] = [];
+    const { dependencies, sent } = deps({
+      streak: room(waiting),
+      tokens: async (user) => {
+        tokens.push(user);
+        return [{ token: "aa", environment: "production" }];
+      },
+    });
+    expect(await sendPushLane(turn, dependencies)).toBe("Delivered");
+    expect(tokens).toEqual([bob]);
+    const body = sent[0]!.body as Record<string, unknown>;
+    expect(decode(body[pushPayloadKey])).toEqual(
+      PushPayload.cases.Streak.make({ you: bob, lit: false, streak: waiting }),
+    );
+    expect(sent[0]!.collapseId).toBe("s-2026-11-05");
+  });
+
+  it("tells the partner who went first that the day lit", async () => {
+    const tokens: string[] = [];
+    const { dependencies, sent } = deps({
+      streak: room(lit),
+      tokens: async (user) => {
+        tokens.push(user);
+        return [{ token: "aa", environment: "production" }];
+      },
+    });
+    expect(await sendPushLane(litDay, dependencies)).toBe("Delivered");
+    expect(tokens).toEqual([alice]);
+    expect((sent[0]!.body as { aps: { alert: unknown } }).aps.alert).toEqual({
+      title: "Ourio",
+      body: "Today's flame is lit: 5 days in a row 🔥",
+    });
+  });
+
+  it("drops a turn once the day lit or the partner did their part, and other lanes", async () => {
+    const answered: LoveStreak = {
+      ...waiting,
+      marks: [
+        { user: alice, day: today },
+        { user: bob, day: today },
+      ],
+    };
+    for (const streak of [lit, answered]) {
+      const { dependencies, sent } = deps({ streak: room(streak) });
+      expect(await sendPushLane(turn, dependencies)).toBe("Abandon");
+      expect(sent).toEqual([]);
+    }
+    const later = deps({
+      streak: room({ ...lit, lastDay: Schema.decodeUnknownSync(LocalDay)("2026-11-06") }),
+    });
+    expect(await sendPushLane(litDay, later.dependencies)).toBe("Abandon");
+    const widget = deps({ streak: room(waiting) });
+    expect(await sendPushLane({ ...turn, lane: "WidgetPush" }, widget.dependencies)).toBe(
+      "Delivered",
+    );
+    expect(widget.sent).toEqual([]);
   });
 });
 

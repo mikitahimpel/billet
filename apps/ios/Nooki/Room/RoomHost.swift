@@ -1,5 +1,6 @@
 import FeatureGames
 import GamesInterface
+import Pet
 import RoomInterface
 import SwiftUI
 
@@ -79,7 +80,7 @@ private struct RoomStage: View {
                 .modifier(RoomTapCounter())
                 .ignoresSafeArea()
 
-                if visible, controller.game == nil { CatVoice(name: input.catName, controller: controller) }
+                if visible, controller.game == nil { CatVoice(name: input.catName, pronouns: input.catPronouns, controller: controller) }
                 if visible, controller.game == nil, input.decor.isArranging { DecorTouchLayer(controller: controller) }
             }
         }
@@ -104,6 +105,7 @@ private struct RoomStage: View {
 /// Its own view, so her status changing re-evaluates only this and never the stage.
 private struct CatVoice: View {
     let name: String
+    let pronouns: CatPronouns
     let controller: RoomController
 
     var body: some View {
@@ -113,7 +115,7 @@ private struct CatVoice: View {
             .accessibilityElement()
             .accessibilityLabel(name)
             .accessibilityValue(controller.status.spoken)
-            .accessibilityHint("Double tap to pet her.")
+            .accessibilityHint(pronouns.say(.doubleTapToPet))
             .accessibilityAddTraits(.isButton)
             .accessibilityAction { controller.petted() }
             .accessibilityAction(named: "Treat or play") { controller.careAsked() }

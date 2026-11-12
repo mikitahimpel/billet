@@ -1,4 +1,6 @@
 import Foundation
+import Pet
+import ProfileInterface
 
 /// What the widget gallery in Settings lists: each widget Ourio ships, which of its views to draw live, and the words
 /// that say what it is for.
@@ -40,9 +42,11 @@ struct WidgetShowcase: Identifiable, Equatable {
     let preview: Preview?
     let symbol: String
 
-    static let all: [WidgetShowcase] = [
+    static var all: [WidgetShowcase] {
+        let pronouns = CatProfile.pronouns()
+        return [
         .init(id: "cat", group: .homeScreen, title: "Mochi",
-              detail: "How she is right now, asleep, waiting or purring, with a pet button and a hug for your partner.",
+              detail: pronouns.say(.widgetShowcaseState),
               preview: .cat(.medium), symbol: "pawprint.fill"),
         .init(id: "us", group: .homeScreen, title: "Days together",
               detail: "Your days together, the next date and the streak.",
@@ -66,7 +70,7 @@ struct WidgetShowcase: Identifiable, Equatable {
               detail: "A ring that fills toward the next milestone.",
               preview: .lockStreak, symbol: "flame.fill"),
         .init(id: "lock-cat", group: .lockScreen, title: "Mochi",
-              detail: "A glyph for her mood.",
+              detail: pronouns.say(.widgetShowcaseMood),
               preview: .lockCat, symbol: "pawprint.fill"),
         .init(id: "lock-partner", group: .lockScreen, title: "Your partner",
               detail: "How they are, and when they drew you something. Hidden while the phone is locked.",
@@ -75,7 +79,8 @@ struct WidgetShowcase: Identifiable, Equatable {
               detail: "Mochi purrs, no need to open Ourio.", preview: nil, symbol: "pawprint.fill"),
         .init(id: "control-hug", group: .controls, title: "Send a Hug",
               detail: "Lets your partner know you are thinking of them.", preview: nil, symbol: "heart.fill"),
-    ]
+        ]
+    }
 
     static func items(in group: Group) -> [WidgetShowcase] { all.filter { $0.group == group } }
 }

@@ -63,7 +63,7 @@ final class BrushStage: GameStage {
         seat = spots.at(0, -0.02)
         let facing = spots.toward * cos(Self.turn) - spots.right * sin(Self.turn)
         room.send(to: seat, facing: GameSpots.yaw(from: seat, to: seat + facing), id: "brush")
-        deck.say(BrushStrokes.goal)
+        deck.say(BrushStrokes.goal(CatProfile.pronouns()))
         deck.show(0, "Groomed")
     }
 

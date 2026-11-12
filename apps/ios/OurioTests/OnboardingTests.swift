@@ -3,6 +3,7 @@ import Foundation
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
+import Pet
 import ProfileInterface
 import Synchronization
 import Testing
@@ -164,6 +165,23 @@ struct OnboardingFlowTests {
         flow.back()
         flow.skip()
         #expect(CatProfile.name(in: defaults) == "Mochi")
+    }
+
+    @Test func theCatIsTheyUntilPickedAndThePickIsKeptWithTheName() {
+        let (flow, defaults, _) = makeFlow()
+        flow.start()
+        flow.skip()
+        flow.skip()
+        flow.skip()
+        #expect(flow.catPronouns == .they)
+        flow.catPronouns = .he
+        flow.continueTapped()
+        #expect(CatProfile.chosenPronouns(in: defaults) == .he)
+        #expect(CatProfile.pronouns(in: defaults) == .he)
+        flow.back()
+        flow.skip()
+        #expect(CatProfile.chosenPronouns(in: defaults) == nil)
+        #expect(CatProfile.pronouns(in: defaults) == .they)
     }
 
     @Test func theServerQuestionsReplaceTheBundledOnesOnlyBeforeTheFirstQuestion() async {

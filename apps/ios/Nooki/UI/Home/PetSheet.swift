@@ -83,7 +83,7 @@ struct PetButton: View {
         .hint(TreatHint(), arrowEdge: .bottom, target: Circle())
         .accessibilityLabel("\(state.petName)'s needs")
         .accessibilityValue(current.map(Self.spoken) ?? "")
-        .accessibilityHint("Opens her needs and care")
+        .accessibilityHint(state.pronouns.say(.opensNeeds))
         .accessibilityIdentifier("pet")
         .onChange(of: cue) { _, cue in
             if cue != nil, !reduceMotion { asks += 1 }
@@ -113,8 +113,9 @@ private struct PetSheet: View {
     var body: some View {
         let source = FixedNeeds.fromLaunch ?? needs()
         BilletSheet(state.petName, size: .fit) {
-            MochiSheetContent(name: state.petName, status: source?.status ?? CatStatus(), level: state.care.level,
-                              progress: state.care.progress, days: state.daysTogether, care: give) {
+            MochiSheetContent(name: state.petName, pronouns: state.pronouns, status: source?.status ?? CatStatus(), level: state.care.level,
+                              progress: state.care.progress, days: state.daysTogether, care: give,
+                              choosePronouns: { state.choosePronouns($0) }) {
                 PetPortrait(size: 88)
                     .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
                         view.scaleEffect(scale)

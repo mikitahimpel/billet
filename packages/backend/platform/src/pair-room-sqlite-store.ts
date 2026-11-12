@@ -8,6 +8,7 @@ import { type ListId, ListItem, SharedList } from "@billet/contracts-domain/list
 import { Note } from "@billet/contracts-domain/note";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { StreakMark } from "@billet/contracts-domain/streak";
 import {
   RoomState,
   type ActiveRoom,
@@ -166,6 +167,17 @@ const activityFrom = (record: ActivityRecord): Option.Option<ActivityRow> =>
 
 type ListRow = typeof lists.$inferSelect;
 type ListItemRow = typeof listItems.$inferSelect;
+
+const MarksJson = Schema.fromJsonString(Schema.Array(StreakMark));
+const encodeMarks = Schema.encodeSync(MarksJson);
+const decodeMarks = Schema.decodeOption(MarksJson);
+
+/** Marks that no longer read are dropped: the partner's next day marks again. */
+const marksFrom = (text: string | null) => {
+  if (text === null) return {};
+  const marks = decodeMarks(text);
+  return Option.isSome(marks) && marks.value.length > 0 ? { marks: marks.value } : {};
+};
 
 const IdsJson = Schema.fromJsonString(Schema.Array(Schema.String));
 const encodeIds = Schema.encodeSync(IdsJson);
@@ -330,6 +342,7 @@ const roomFrom = (
             best: row.streakBest,
             ...(row.streakLastDay === null ? {} : { lastDay: row.streakLastDay }),
             ...(row.streakRestoredOn === null ? {} : { restoredOn: row.streakRestoredOn }),
+            ...marksFrom(row.streakMarks),
           },
           ...(row.lastReactionRev === null ? {} : { lastReactionRev: row.lastReactionRev }),
           inks,
@@ -370,6 +383,7 @@ const roomValues = (state: ActiveRoom): typeof room.$inferInsert => {
     streakBest: state.streak.best,
     streakLastDay: state.streak.lastDay ?? null,
     streakRestoredOn: state.streak.restoredOn ?? null,
+    streakMarks: state.streak.marks === undefined ? null : encodeMarks(state.streak.marks),
     lastReactionRev: state.lastReactionRev ?? null,
     giftDay: state.giftDay ?? null,
     welcomed: state.welcomed,

@@ -360,7 +360,7 @@ private struct ResultToast: View {
     var body: some View {
         Toast {
             VStack(alignment: .leading, spacing: Space.m) {
-                Text(result.line)
+                Text(result.line(pronouns: CatProfile.pronouns()))
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                 HStack(spacing: Space.s) {

@@ -1,4 +1,5 @@
 import Foundation
+import Pet
 
 /// Brushing the cat: strokes head to tail fill the groom bar and make her content; a stroke
 /// against the grain makes her flinch, and the hint says which way.
@@ -64,7 +65,7 @@ public struct BrushStrokes: Equatable, Sendable {
     if !isPurring { content = max(0, content - dt * 0.12) }
   }
 
-  public static let goal = "Stroke her back, head to tail"
+  public static func goal(_ pronouns: CatPronouns) -> String { pronouns.say(.brushGoal) }
 
   /// Whether the fur-direction guide shows on her back: until the first real strokes, and again once
   /// the finger has been away for a while.
