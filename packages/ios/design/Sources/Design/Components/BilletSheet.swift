@@ -41,6 +41,8 @@ public struct BilletSheet<Content: View>: View {
   @Environment(\.dismiss) private var dismiss
   @Environment(\.sheetGround) private var ground
   @State private var fitHeight: CGFloat = 0
+  /// The tallest this sheet has been: its large height, which the first layout (large alone) reaches.
+  @State private var tallest: CGFloat = 0
   @State private var askingToDiscard = false
   /// A page pushed with `expandsSheet()` took the sheet to full height; it stays there.
   @State private var expanded = false
@@ -82,6 +84,11 @@ public struct BilletSheet<Content: View>: View {
           Button("Discard changes", role: .destructive) { dismiss() }
           Button("Keep editing", role: .cancel) {}
         }
+    }
+    .onGeometryChange(for: CGFloat.self) {
+      $0.size.height + $0.safeAreaInsets.top
+    } action: {
+      tallest = max(tallest, ceil($0))
     }
     // On the stack, not its root, so the pages pushed onto it get it too.
     .environment(\.expandSheet, SheetExpansion { expand() })
@@ -138,16 +145,22 @@ public struct BilletSheet<Content: View>: View {
     withAnimation(.snappy(duration: 0.3)) { expanded = true }
   }
 
-  /// Once a page has asked for full height, large is the only detent, so the sheet goes there.
+  /// Once a page has asked for full height, large is the only detent, so the sheet goes there. So it
+  /// is for content that fills the screen: a height detent as tall as large (or taller) makes the system
+  /// keep the sheet an inset card even at full height, with the room showing at its sides.
   private var detents: Set<PresentationDetent> {
     if expanded { return [.large] }
     return switch size {
-    case .fit where scrolls && fitHeight > 0: [.height(fitHeight + Self.chrome), .large]
+    case .fit where scrolls && fitHeight > 0 && fitHeight + Self.chrome < tallest - Self.nearLarge:
+      [.height(fitHeight + Self.chrome), .large]
     case .fit, .large: [.large]
     case .medium: [.medium]
     case .mediumLarge: [.medium, .large]
     }
   }
+
+  /// A fit detent closer to large than this is no step worth having, and reads as large to the system.
+  private static var nearLarge: CGFloat { 120 }
 
   /// The navigation bar and the home indicator around the content of a fitted sheet.
   private static var chrome: CGFloat { 56 + 34 }
