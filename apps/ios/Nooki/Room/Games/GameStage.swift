@@ -206,13 +206,13 @@ extension Entity {
     }()
 
     /// A soft contact shadow on the floor under a prop: a baked blob, no light and no shadow map.
-    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float) {
+    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float, lift: Float = 0.0015) {
         guard let texture = Self.blobTexture else { return }
         var material = UnlitMaterial(applyPostProcessToneMap: false)
         material.color = .init(tint: .white, texture: .init(texture))
         material.blending = .transparent(opacity: .init(floatLiteral: 1))
         let blob = ModelEntity(mesh: .generatePlane(width: width, depth: depth), materials: [material])
-        blob.position = position + [0, 0.0015, 0]
+        blob.position = position + [0, lift, 0]
         addChild(blob)
     }
 }
