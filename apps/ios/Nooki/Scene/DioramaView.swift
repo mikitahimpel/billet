@@ -95,6 +95,10 @@ struct DioramaView: View {
 
     var body: some View {
         canvas
+        .onGeometryChange(for: Float.self) { Float($0.size.width / max($0.size.height, 1)) } action: { aspect in
+            rig.aspect = aspect
+            loop?.rig.aspect = aspect
+        }
         .overlay { BubbleOverlay(spot: bubble, pulse: petPulse).opacity(photoFocused || !showsBubble ? 0 : 1) }
         .overlay(alignment: .bottom) {
             if photoFocused {
@@ -200,6 +204,15 @@ final class ZoomRig {
     var targetZoom: Float = 0.25
     private var zoom: Float = 0.25
 
+    /// Width over height of the view the camera draws into; the field of view follows it (`RoomFit`).
+    var aspect: Float = RoomFit.referenceAspect {
+        didSet {
+            guard aspect != oldValue else { return }
+            camera.camera.fieldOfViewInDegrees = RoomFit.verticalFieldOfView(Self.baseFieldOfView, aspect: aspect)
+        }
+    }
+    private static let baseFieldOfView: Float = 22
+
     private var framing = CatRoom.Framing()
     private var focusDistance: Float = 0.8
     private var photo: Float = 0
@@ -207,7 +220,7 @@ final class ZoomRig {
     private var placed: (target: SIMD3<Float>, eye: SIMD3<Float>)?
 
     init() {
-        camera.camera.fieldOfViewInDegrees = 22
+        camera.camera.fieldOfViewInDegrees = Self.baseFieldOfView
         apply(zoom: zoom, yaw: 0, focus: [0.06, 0.12, -0.04])
     }
 
