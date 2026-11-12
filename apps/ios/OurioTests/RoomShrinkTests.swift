@@ -16,3 +16,15 @@ struct RoomShrinkTests {
         }
     }
 }
+
+/// A room held paused, under a game in a corner or as the empty stand-in of an app that is not in front, never takes
+/// the cat from the room that draws her.
+struct CatClaimTests {
+    @Test func aPausedRoomLeavesHerWhereSheIsDrawn() {
+        #expect(!CatRoom.takesCat(paused: true))
+    }
+
+    @Test func aRoomThatRunsTakesHer() {
+        #expect(CatRoom.takesCat(paused: false))
+    }
+}
