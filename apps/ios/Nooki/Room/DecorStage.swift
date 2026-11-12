@@ -33,6 +33,8 @@ final class DecorStage {
         let extents: SIMD3<Float>
     }
 
+    /// An outline where the dragged piece stood, so the player sees where it came from and where a bad drop returns it.
+    private let ghost = ModelEntity(mesh: DecorStage.unitBox, materials: [DecorStage.ghostMaterial])
     private var nodes: [String: Node] = [:]
     private var templates: [String: Template] = [:]
     private var loading: Set<String> = []
@@ -49,6 +51,7 @@ final class DecorStage {
     private static let unitBox = MeshResource.generateBox(size: 1, cornerRadius: 0.1)
     private static let unitPlane = MeshResource.generatePlane(width: 1, depth: 1)
     private static let fits = UnlitMaterial(color: UIColor(hex: 0x6BD08A, alpha: 0.55))
+    private static let ghostMaterial = UnlitMaterial(color: UIColor(white: 1, alpha: 0.3))
     private static let misfits = UnlitMaterial(color: UIColor(hex: 0xE0605A, alpha: 0.6))
     private static let blobMaterial: UnlitMaterial = {
         var material = UnlitMaterial(color: UIColor(white: 0, alpha: 0.28))
@@ -79,6 +82,8 @@ final class DecorStage {
 
     init() {
         root.name = "decor"
+        ghost.isEnabled = false
+        root.addChild(ghost)
     }
 
     // MARK: Drawing
@@ -101,7 +106,21 @@ final class DecorStage {
             if node.placement != placement || lightChanged || node.model == nil { place(node, at: placement) }
             showPlate(on: node)
         }
+        showGhost()
         tellBaseReady()
+    }
+
+    private func showGhost() {
+        guard case .arranging(_, _, let origin?) = decor.mode, origin.surface == .floor,
+            let item = DecorItem.item(shopID: origin.item)
+        else {
+            ghost.isEnabled = false
+            return
+        }
+        let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: origin.eighthTurns)
+        ghost.scale = [Float(width), 0.003, Float(depth)]
+        ghost.position = [Float(DecorGrid.metres(origin.u)), Self.floorY + 0.0015, Float(DecorGrid.metres(origin.v))]
+        ghost.isEnabled = true
     }
 
     private func makeNode(for item: DecorItem) -> Node {
@@ -134,7 +153,7 @@ final class DecorStage {
         let before = node.placement
         node.placement = placement
         let item = node.item
-        let turns = Float(placement.quarterTurns) * .pi / 2
+        let turns = Float(placement.angle)
         let position: SIMD3<Float>
         let orientation: simd_quatf
         switch placement.surface {
@@ -150,7 +169,7 @@ final class DecorStage {
         }
         // A turn or a jump of several cells (a slide, a swap, a piece nudged aside) glides; a drag follows the finger.
         if let before, node.model != nil,
-            before.quarterTurns != placement.quarterTurns || max(abs(before.u - placement.u), abs(before.v - placement.v)) > 2
+            before.eighthTurns != placement.eighthTurns || max(abs(before.u - placement.u), abs(before.v - placement.v)) > 2
         {
             node.holder.move(
                 to: Transform(scale: .one, rotation: orientation, translation: position), relativeTo: node.holder.parent,
@@ -204,7 +223,7 @@ final class DecorStage {
     }
 
     private func showPlate(on node: Node) {
-        guard case .arranging(let selected, let fits) = decor.mode, selected == node.item.id,
+        guard case .arranging(let selected, let fits, _) = decor.mode, selected == node.item.id,
             let placement = node.placement
         else {
             node.plate.isEnabled = false
@@ -212,13 +231,12 @@ final class DecorStage {
         }
         node.plate.isEnabled = true
         node.plate.model?.materials = [fits ? Self.fits : Self.misfits]
-        let turned = placement.quarterTurns % 2 == 1
-        let width = Float(turned ? node.item.depth : node.item.width) + 0.02
-        let depth = Float(turned ? node.item.width : node.item.depth) + 0.02
         switch placement.surface {
         case .floor:
-            node.plate.scale = [width, 0.004, depth]
+            let (width, depth) = DecorLayout.footprint(of: node.item, eighthTurns: placement.eighthTurns)
+            node.plate.scale = [Float(width) + 0.02, 0.004, Float(depth) + 0.02]
             node.plate.position = [0, 0.002, 0]
+            node.plate.orientation = .y(-Float(placement.angle))
         case .backWall, .leftWall:
             let height = Float(node.item.fit == .height ? node.item.size : node.item.width) + 0.02
             node.plate.scale = [width, height, 0.006]
@@ -283,9 +301,9 @@ final class DecorStage {
         let flat = layout.allPlacements.reversed().filter { $0.surface == .floor && isFlat($0.item) }
         return (solid + flat).first { placement in
             guard let item = DecorItem.item(shopID: placement.item) else { return false }
-            let turned = placement.quarterTurns % 2 == 1
-            let halfX = (turned ? item.depth : item.width) / 2 + 0.02
-            let halfZ = (turned ? item.width : item.depth) / 2 + 0.02
+            let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: placement.eighthTurns)
+            let halfX = width / 2 + 0.02
+            let halfZ = depth / 2 + 0.02
             return abs(Double(point.x) - DecorGrid.metres(placement.u)) <= halfX
                 && abs(Double(point.z) - DecorGrid.metres(placement.v)) <= halfZ
         }?.item

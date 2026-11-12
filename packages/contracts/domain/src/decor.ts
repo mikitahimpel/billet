@@ -62,6 +62,11 @@ const spanOf = (placement: Placement): Span | undefined => {
   if (placement.surface !== "floor") {
     return { x: placement.u * step, z: 0, halfX: size.width / 2, halfZ: 0.01 };
   }
+  if (placement.quarterTurns >= 4) {
+    // At 45 degrees the box round the turned footprint, so a fit is never overstated.
+    const half = ((size.width + size.depth) / 2) * Math.SQRT1_2;
+    return { x: placement.u * step, z: placement.v * step, halfX: half, halfZ: half };
+  }
   const turned = placement.quarterTurns % 2 === 1;
   return {
     x: placement.u * step,

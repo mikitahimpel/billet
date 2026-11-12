@@ -11,11 +11,13 @@ extension DecorLayout {
     case noRoom
   }
 
-  /// A quarter turn that never fails for lack of room while any spot fits the turned piece. A wall piece has
+  /// A turn (a quarter by default, 45 degrees for `byEighths: 1`) that never fails for lack of room while any spot fits the turned piece. A wall piece has
   /// no turn and answers nil.
-  public func turning(_ item: String, in room: DecorRoom = .home) -> Turn? {
+  public func turning(_ item: String, byEighths eighths: Int = 2, in room: DecorRoom = .home)
+    -> Turn?
+  {
     guard let placement = placement(of: item), placement.surface == .floor else { return nil }
-    let turned = placement.turned
+    let turned = placement.turned(byEighths: eighths)
     if accepts(turned, in: room) { return .turned(putting(turned)) }
     if let spot = nearestFit(to: turned, in: room) { return .slid(putting(spot), to: spot) }
     return .noRoom

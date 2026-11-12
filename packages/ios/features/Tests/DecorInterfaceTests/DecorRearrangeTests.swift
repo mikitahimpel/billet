@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import DecorInterface
@@ -124,6 +125,41 @@ import Testing
       return
     }
     #expect(layout.placement(of: "base-bowls")?.quarterTurns == 1)
+  }
+
+  @Test func aFineTurnIsFortyFiveDegreesAndItsBoxIsTheOneRoundTheTurnedFootprint() throws {
+    let layout = fresh.storing("base-donutbed")
+    guard case .turned(let turned) = layout.turning("base-bowls", byEighths: 1) else {
+      Issue.record("did not turn")
+      return
+    }
+    let placement = try #require(turned.placement(of: "base-bowls"))
+    #expect(placement.eighthTurns == 1 && placement.isDiagonal && placement.quarterTurns == 0)
+    #expect(abs(placement.angle - .pi / 4) < 1e-9)
+    let item = try #require(DecorItem.item(shopID: "base-bowls"))
+    let span = try #require(DecorLayout.span(of: placement, item: item))
+    let half = (item.width + item.depth) / 2 * 0.5.squareRoot()
+    #expect(abs(span.halfX - half) < 1e-9 && abs(span.halfZ - half) < 1e-9)
+    #expect(turned.placement(of: "base-bowls")?.turned.eighthTurns == 3)
+  }
+
+  @Test func theServersTurnsKeepOldLayoutsAndRoundTrip() throws {
+    for wire in 0...7 {
+      let placement = Placement(item: "yarn", surface: .floor, u: 1, v: 2, wireTurns: wire)
+      #expect(placement.wireTurns == wire)
+      let decoded = try JSONDecoder().decode(Placement.self, from: JSONEncoder().encode(placement))
+      #expect(decoded == placement)
+    }
+    #expect(Placement(item: "yarn", surface: .floor, u: 0, v: 0, wireTurns: 1).quarterTurns == 1)
+    #expect(Placement(item: "yarn", surface: .floor, u: 0, v: 0, wireTurns: 5).eighthTurns == 3)
+    let old = Data(#"{"item":"yarn","surface":"floor","u":1,"v":2,"quarterTurns":3}"#.utf8)
+    #expect(try JSONDecoder().decode(Placement.self, from: old).eighthTurns == 6)
+  }
+
+  @Test func aDiagonalPieceNeedsMoreRoomThanAStraightOneAtTheWall() {
+    let straight = Placement(item: "base-windowseat", surface: .floor, u: -7, v: 0)
+    #expect(fresh.storing("base-windowseat").accepts(straight))
+    #expect(!fresh.storing("base-windowseat").accepts(straight.turned(byEighths: 1)))
   }
 
   @Test func aTurnWithNoRoomSlidesToTheNearestSpotThatFits() {

@@ -80,4 +80,17 @@ final class RearrangeRoomTests: XCTestCase {
             .waitForExistence(timeout: 15), "the last bed is refused with a reason")
         look("5-last-bed")
     }
+
+    @MainActor
+    func testAFineTurnTurnsFortyFiveDegreesAndCanBeTakenBack() throws {
+        launchDecorate()
+        at(0.55, 0.54).tap()
+        XCTAssertTrue(app.staticTexts["Cat bed"].waitForExistence(timeout: 10))
+        app.buttons["decorRotateFine"].tap()
+        sleep(1)
+        look("6-fine-turn")
+        XCTAssertTrue(app.buttons["decorUndo"].waitForExistence(timeout: 15), "a 45 degree turn is a change that can be taken back")
+        app.buttons["decorUndo"].tap()
+        XCTAssertFalse(app.buttons["decorUndo"].exists)
+    }
 }

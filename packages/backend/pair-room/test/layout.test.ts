@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import type { LayoutChange } from "@billet/contracts-domain/decor";
-import { type Placement, RoomItemId } from "@billet/contracts-domain/shop";
+import { Placement, RoomItemId } from "@billet/contracts-domain/shop";
 import { decide } from "../src/decide.ts";
 import { shopOf } from "../src/shop-view.ts";
 import { RoomCommand } from "../src/room-command.ts";
@@ -88,6 +88,25 @@ describe("arranging the room", () => {
     const first = accepted(owning, place(1, spot("armchair", -2, 6))).state;
     expect(reason(first, place(2, spot("yarn", -2, 6)))).toBe("occupied");
     expect(accepted(first, place(3, spot("yarn", 6, -3))).state.layout).toHaveLength(2);
+  });
+
+  it("measures a piece turned 45 degrees by the box round it, and keeps the 90 degree layouts valid", () => {
+    const room: ActiveRoom = { ...owning, stowed: [piece("base-donutbed")] };
+    const diagonal = (u: number) => ({ ...spot("armchair", u, 0), quarterTurns: 4 });
+    expect(accepted(room, place(1, diagonal(5))).state.layout).toEqual([diagonal(5)]);
+    expect(reason(room, place(2, diagonal(6)))).toBe("outside-room");
+    expect(accepted(room, place(3, spot("armchair", 6, 0))).state.layout).toHaveLength(1);
+    const first = accepted(room, place(4, diagonal(0))).state;
+    expect(reason(first, place(5, spot("yarn", 4, 0)))).toBe("occupied");
+    expect(() =>
+      Schema.decodeUnknownSync(Placement)({ ...spot("armchair", 0, 0), quarterTurns: 8 }),
+    ).toThrow();
+    for (const turns of [0, 1, 2, 3, 5, 7]) {
+      expect(
+        Schema.decodeUnknownSync(Placement)({ ...spot("armchair", 0, 0), quarterTurns: turns })
+          .quarterTurns,
+      ).toBe(turns);
+    }
   });
 
   it("lets a piece stand on a rug", () => {
