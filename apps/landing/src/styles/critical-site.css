@@ -6,7 +6,7 @@
   font-weight: 400 800;
   font-stretch: 75% 100%;
   font-display: swap;
-  src: url(/fonts/bricolage-grotesque-latin.woff2) format("woff2");
+  src: url(../assets/fonts/bricolage-grotesque-latin.woff2) format("woff2");
   unicode-range:
     U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F,
     U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
@@ -16,7 +16,7 @@
   font-style: normal;
   font-weight: 400 800;
   font-display: swap;
-  src: url(/fonts/nunito-latin.woff2) format("woff2");
+  src: url(../assets/fonts/nunito-latin.woff2) format("woff2");
   unicode-range:
     U+??, U+131, U+152-153, U+2BB-2BC, U+2C6, U+2DA, U+2DC, U+304, U+308, U+329, U+2000-206F,
     U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
@@ -169,6 +169,17 @@ h1 {
   font-size: clamp(44px, min(var(--colW) / 2.95, (var(--H) - 200px) / 2.85), 150px);
   text-shadow: 0 0 40px #ffaa6433;
   line-height: 0.92;
+}
+.bulb {
+  aspect-ratio: 1;
+  mix-blend-mode: screen;
+  opacity: 0.5;
+  width: 3.2%;
+  animation: twinkle var(--d, 5s) ease-in-out var(--delay, 3s) infinite alternate;
+  background: radial-gradient(closest-side, #fff0cdbf, #ffc88242 45%, #0000);
+  border-radius: 50%;
+  position: absolute;
+  translate: -50% -50%;
 }
 @media (prefers-reduced-motion: reduce) {
   *,
@@ -390,6 +401,17 @@ main > section:not(:first-child) {
   }
   to {
     opacity: 1;
+  }
+}
+@keyframes twinkle {
+  0% {
+    opacity: 0.28;
+  }
+  60% {
+    opacity: 0.85;
+  }
+  to {
+    opacity: 0.55;
   }
 }
 ol {

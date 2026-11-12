@@ -74,15 +74,23 @@
 
     private var canAdd: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-      HStack(spacing: Space.s) {
+      let layout =
+        dynamicTypeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+        : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
+      layout {
         Field(placeholder, text: $text)
           .focused(focused)
           .submitLabel(.done)
           .onSubmit(onAdd)
-        PillButton("Add", symbol: "plus", action: onAdd)
-          .disabled(!canAdd)
-          .accessibilityLabel(canAdd ? "Add \(text)" : "Add")
+        PrimaryButton(
+          "Add", symbol: "plus", fullWidth: dynamicTypeSize.isAccessibilitySize, action: onAdd
+        )
+        .disabled(!canAdd)
+        .accessibilityLabel(canAdd ? "Add \(text)" : "Add")
       }
     }
   }
