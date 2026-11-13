@@ -1,6 +1,7 @@
 #if DEBUG || LABS_YES
 import DecorInterface
 import RealityKit
+import RoomInterface
 
 extension RoomPerfCoordinator {
     /// Brings the merged furniture and the baked contact shadow to the switches and the layout: put back at once when

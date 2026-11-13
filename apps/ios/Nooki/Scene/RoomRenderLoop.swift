@@ -1,6 +1,7 @@
 import Metal
 import QuartzCore
 import RealityKit
+import RoomInterface
 import SwiftUI
 import UIKit
 
