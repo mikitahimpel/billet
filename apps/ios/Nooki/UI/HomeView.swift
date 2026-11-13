@@ -92,6 +92,9 @@ struct HomeView: View {
             await lift()
         }
         .onChange(of: state.shop.owned, initial: true) { _, owned in state.decor.send(.owned(owned)) }
+        .onChange(of: state.room, initial: true) { _, kind in
+            state.decor.send(.roomChanged(kind == .city ? .bedroom : .living))
+        }
         .onChange(of: state.shop.serverLayout, initial: true) { _, layout in
             state.decorSync.client = { [weak session] in session?.shopSync }
             state.decorSync.heard(layout, stowed: state.shop.serverStowed)
@@ -386,14 +389,12 @@ struct HomeView: View {
                 PetButton(state: state, needs: { room }) { room.play($0) }
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
-                if state.room == .home {
-                    let waiting = state.decor.state.closetCount
-                    GlassIconButton(
-                        symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
-                    ) { state.decor.send(.opened(item: nil)) }
-                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                    .accessibilityIdentifier("decorate")
-                }
+                let waiting = state.decor.state.closetCount
+                GlassIconButton(
+                    symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
+                ) { state.decor.send(.opened(item: nil)) }
+                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                .accessibilityIdentifier("decorate")
             }
             .padding(.horizontal, Space.xs)
         }
