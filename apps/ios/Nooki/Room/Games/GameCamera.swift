@@ -1,4 +1,4 @@
-import Combine
+import FeatureGames
 import RealityKit
 import SwiftUI
 
@@ -55,13 +55,18 @@ struct RoomLens {
     }
 }
 
-/// Brings the room's camera in to frame a game, and lets it go again. The room's own camera rig places the camera
-/// each frame; this runs after it and moves the camera from there toward the game's framing, blended in and out so
-/// nothing jumps.
+/// Where a camera stands and what it looks at.
+struct CameraPose: Equatable {
+    var eye: SIMD3<Float>
+    var target: SIMD3<Float>
+}
+
+/// Frames a game: takes the pose the room's own camera rig has worked out and moves it toward the game's framing,
+/// blended in and out so nothing jumps. The room applies it as the last step of placing its camera (`CatRoom.cameraAdjust`),
+/// so nothing else can write the pose over it, and the framing is a function of the points, the lens and the view alone.
 @MainActor
 final class GameCamera {
     private weak var room: CatRoom?
-    private var subscription: (any Cancellable)?
     private(set) var camera: Entity?
     /// Points the frame must hold, in the room's pivot space.
     var focus: [SIMD3<Float>] = []
@@ -74,7 +79,7 @@ final class GameCamera {
     /// The share of the screen's height, from its bottom, a card covers: the subject is framed in what is left above it.
     var covered: Float = 0
     private var lift: Float = 0
-    private var rest: (back: SIMD3<Float>, side: SIMD3<Float>)?
+    private var distance: Float?
     private var amount: Float = 0
     private var goal: Float = 1
     private var onGone: (() -> Void)?
@@ -83,15 +88,12 @@ final class GameCamera {
         self.room = room
         guard let scene = room.root.scene else { return }
         camera = scene.performQuery(EntityQuery(where: .has(PerspectiveCameraComponent.self))).first { _ in true }
-        subscription = scene.subscribe(to: SceneEvents.Update.self) { [weak self] (event: SceneEvents.Update) in
-            MainActor.assumeIsolated { self?.update(Float(event.deltaTime)) }
-        }
+        room.cameraAdjust = { [weak self] dt, pose in self?.adjust(dt, pose) ?? pose }
     }
 
     /// Lets go at once, for a camera nothing else steers.
     func cancel() {
-        subscription?.cancel()
-        subscription = nil
+        room?.cameraAdjust = nil
         onGone = nil
     }
 
@@ -99,50 +101,46 @@ final class GameCamera {
     func release(_ done: @escaping () -> Void) {
         goal = 0
         onGone = done
-        if subscription == nil { finish() }
+        if room?.cameraAdjust == nil { finish() }
     }
 
     private func finish() {
-        subscription?.cancel()
-        subscription = nil
+        room?.cameraAdjust = nil
         let done = onGone
         onGone = nil
         done?()
     }
 
-    private func update(_ dt: Float) {
-        amount += (goal - amount) * min(1, dt * 3.2)
-        if goal == 0, amount < 0.01 { return finish() }
-        guard let camera, let room, !focus.isEmpty else { return }
-        let base = camera.transformMatrix(relativeTo: nil)
-        let eye = SIMD3(base.columns.3.x, base.columns.3.y, base.columns.3.z)
-        // The camera is placed once in a corner, so what it was turned to before it leaned is kept, and the lean is
-        // measured from there each frame.
-        if push < 0.001 || rest == nil {
-            rest = (simd_normalize(SIMD3(base.columns.2.x, base.columns.2.y, base.columns.2.z)),
-                    simd_normalize(SIMD3(base.columns.0.x, base.columns.0.y, base.columns.0.z)))
+    private func adjust(_ dt: Float, _ pose: CameraPose) -> CameraPose {
+        amount = GameFraming.smooth(amount, toward: goal, dt: dt, rate: 3.2)
+        if goal == 0, amount < 0.01 {
+            finish()
+            return pose
         }
-        guard let (back, side) = rest else { return }
+        guard let camera, let room, !focus.isEmpty else { return pose }
+        // The line the room's camera looks along, and the sides of it, as `look(at:from:)` makes them.
+        let back = simd_normalize(pose.eye - pose.target)
+        let side = simd_normalize(simd_cross([0, 1, 0], back))
+        let up = simd_cross(back, side)
         let points: [SIMD3<Float>] = focus.map { room.pivot.convert(position: $0, to: nil) }
         let center: SIMD3<Float> = points.reduce(SIMD3<Float>.zero, +) / Float(points.count)
         let radius: Float = points.map { simd_length($0 - center) }.max() ?? 0.1
         let lens = camera.components[PerspectiveCameraComponent.self]
         let tanHalf = tan((lens?.fieldOfViewInDegrees ?? 22) * .pi / 360)
         let aspect = Float(viewport.width / max(viewport.height, 1))
-        let narrow = tanHalf * min(aspect, 1)
-        let distance = max(radius, 0.05) / (narrow * fill) * (1 - 0.1 * push)
-        let goalEye: SIMD3<Float> = center + back * distance + side * (0.035 * push)
+        // A view or a lens that changes moves the camera there over a moment; one that does not leaves it still.
+        let wanted = GameFraming.distance(radius: radius, tanHalf: tanHalf, aspect: aspect, fill: fill, push: push)
+        let held = GameFraming.smooth(distance ?? wanted, toward: wanted, dt: dt, rate: 6)
+        distance = held
+        let goalEye: SIMD3<Float> = center + back * held + side * (0.035 * push)
         let s: Float = amount * amount * (3 - 2 * amount)
         let blend = SIMD3<Float>(repeating: s)
         // Where the rig is looking: anywhere along its line of sight, as far out as the game's center will be.
-        let reach: Float = simd_length(eye - goalEye)
-        let looking: SIMD3<Float> = eye - back * reach
-        lift += (covered - lift) * min(1, dt * 5)
+        let looking: SIMD3<Float> = pose.eye - back * simd_length(pose.eye - goalEye)
+        lift = GameFraming.smooth(lift, toward: covered, dt: dt, rate: 5)
         // The view's center moves down by half of what the card covers, so the subject sits in the middle of the rest.
-        let down: SIMD3<Float> = -simd_normalize(SIMD3(base.columns.1.x, base.columns.1.y, base.columns.1.z))
-            * (lift / 2 * 2 * simd_length(goalEye - center) * tanHalf * s)
-        let target = simd_mix(looking, center, blend) + down
-        let position = simd_mix(eye, goalEye, blend) + down
-        camera.look(at: target, from: position, relativeTo: nil)
+        let down: SIMD3<Float> = -up * (lift * simd_length(goalEye - center) * tanHalf * s)
+        return CameraPose(eye: simd_mix(pose.eye, goalEye, blend) + down,
+                          target: simd_mix(looking, center, blend) + down)
     }
 }

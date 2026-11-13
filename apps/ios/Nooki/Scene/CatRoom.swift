@@ -29,6 +29,9 @@ class CatRoom {
         }
     }
     var isPlayingGame = false
+    /// Last say on where the camera goes each frame, given the dt and the pose the room's own camera works out. A game
+    /// frames itself here, so no other writer of the pose can undo it.
+    var cameraAdjust: ((Float, CameraPose) -> CameraPose)?
     /// Screen point to world point on a plane (a transform whose Y axis is its normal); set by the view that draws
     /// the room, for the arranging of its pieces.
     var unprojector: ((CGPoint, simd_float4x4) -> SIMD3<Float>?)?
@@ -220,8 +223,8 @@ class CatRoom {
         let t = time
 
         yaw += (targetYaw - yaw) * min(1, dt * 8)
-        sway.update(dt: dt, active: walker?.moving == true || t - touchedAt < 1 || isShowcasing || isPlayingGame,
-                    enabled: swaying)
+        sway.update(dt: dt, active: walker?.moving == true || t - touchedAt < 1 || isShowcasing,
+                    enabled: swaying && !isPlayingGame)
         // Setting an orientation, even the same one, makes every entity under it move; a still room sets none.
         let turn = simd_quatf.y(yaw + 0.035 * sway.strength * sin(t * 0.35))
         if turn != turned {
