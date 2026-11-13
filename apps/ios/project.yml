@@ -216,8 +216,8 @@ targets:
       - path: Nooki/Model/StreakNudge.swift
       # The Live Activity attributes need ActivityKit, which this extension has no use for.
       - path: Shared
-        # Places' map is for the app's world map only.
-        excludes: [Places/WorldMap.txt]
+        # Places' map is for the app's world map only; the portraits are for the widgets and the app.
+        excludes: [Places/WorldMap.txt, Resources]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
     info:
@@ -254,8 +254,8 @@ targets:
     sources:
       - path: OurioShare
       - path: Shared
-        # Places' map is for the app's world map only.
-        excludes: [Places/WorldMap.txt]
+        # Places' map is for the app's world map only; the portraits are for the widgets and the app.
+        excludes: [Places/WorldMap.txt, Resources]
       - path: PerTarget
         excludes: [DrawingActivity.swift]
     info:
