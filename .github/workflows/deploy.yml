@@ -68,13 +68,18 @@ jobs:
           set -uo pipefail
           missing=""
           for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN APNS_KEY APNS_KEY_ID \
-            APPLE_SIGN_IN_KEY APPLE_SIGN_IN_KEY_ID ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN; do
+            APPLE_SIGN_IN_KEY APPLE_SIGN_IN_KEY_ID; do
             if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
           done
           if [ -n "$missing" ]; then
-            echo "::error::Missing secrets in the prod environment:$missing. Run scripts/sync-prod-secrets.sh (docs/alchemy.md#deploy-workflow)."
+            echo "::error::Missing secrets in the prod environment:$missing. See docs/alchemy.md#deploy-workflow."
             exit 1
           fi
+          # Optional: the first deploy runs before the Access application and the TMDB key exist.
+          # Empty ACCESS_* keep /admin closed; without TMDB_TOKEN prod serves no titles.
+          for name in ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN; do
+            if [ -z "${!name:-}" ]; then echo "::warning::Optional secret $name is not set; deploying without it."; fi
+          done
           echo "::add-mask::$CLOUDFLARE_ACCOUNT_ID"
           status=0
           pnpm exec alchemy deploy --stage "$STAGE" --yes --no-input > "$RUNNER_TEMP/deploy.log" 2>&1 || status=$?
