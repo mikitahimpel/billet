@@ -107,8 +107,8 @@ export const PairingObserverLive: Layer.Layer<
         );
       if (all.coins > 0) {
         yield* rooms.creditPurchase(pairId, {
-          kind: "buy",
-          id: decodeEntryId(`buy:kept-${pairId}`),
+          kind: "purchase",
+          id: decodeEntryId(`purchase:kept-${pairId}`),
           ref: "kept",
           coins: all.coins,
         });

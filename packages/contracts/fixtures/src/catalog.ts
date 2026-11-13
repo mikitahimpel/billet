@@ -279,6 +279,27 @@ const spendEntry = decodeCoinEntry({
   ref: "ink-rose",
   at: 1762350060000,
 });
+const purchaseEntry = decodeCoinEntry({
+  id: "purchase:2000000812345678",
+  kind: "purchase",
+  amount: 550,
+  ref: "com.ourio.app.coins.550",
+  at: 1762350240000,
+});
+const refundEntry = decodeCoinEntry({
+  id: "refund:2000000812345678",
+  kind: "refund",
+  amount: -550,
+  ref: "com.ourio.app.coins.550",
+  at: 1762436640000,
+});
+const adminEntry = decodeCoinEntry({
+  id: "admin:support-2026-11-06",
+  kind: "admin",
+  amount: 100,
+  ref: "support",
+  at: 1762436700000,
+});
 const giftEntry = decodeCoinEntry({
   id: "gift:2026-11-05",
   kind: "gift",
@@ -1193,9 +1214,13 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("CoinEntry", CoinEntry, {
     default: earnEntry,
     spend: spendEntry,
+    purchase: purchaseEntry,
+    refund: refundEntry,
+    admin: adminEntry,
   }),
   fixture("CoinsResponse", CoinsResponse, {
     default: { balance: 65, entries: [earnEntry, spendEntry] },
+    "in-debt": { balance: -480, entries: [earnEntry, purchaseEntry, spendEntry, refundEntry] },
     empty: { balance: 0, entries: [] },
   }),
   fixture("BuyRequest", BuyRequest, {
@@ -1230,6 +1255,14 @@ export const catalog: ReadonlyArray<Fixture> = [
     treat: ShopOffer.cases.Treat.make({}),
   }),
   fixture("ShopResponse", ShopResponse, {
+    "in-debt": {
+      balance: -480,
+      inks: [freeInk, rose],
+      items: [lamp, rug, tower],
+      wishlist: [yarn],
+      giftDay,
+      bonuses: [cozyAutumn],
+    },
     default: {
       balance: 65,
       inks: [freeInk, rose],

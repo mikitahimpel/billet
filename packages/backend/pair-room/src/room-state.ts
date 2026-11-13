@@ -39,7 +39,8 @@ export type RoomCat = typeof RoomCat.Type;
 
 /** The pair's coins: the balance, and what was earned on `day` against each daily cap. */
 export const RoomWallet = Schema.Struct({
-  balance: Count,
+  /** Signed: only an Apple refund of spent coins takes it below 0. */
+  balance: Schema.Int,
   /** The local day the earned counts are for, absent before the first coin is earned. */
   day: Schema.optionalKey(LocalDay),
   care: Count,

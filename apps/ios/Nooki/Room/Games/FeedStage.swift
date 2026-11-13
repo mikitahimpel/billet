@@ -27,6 +27,10 @@ final class FeedStage: GameStage {
     /// The scale's body under the bowl: width, depth and height in metres, its display on the front face.
     private static let scaleSize = SIMD3<Float>(0.21, 0.026, 0.17)
     private static let bowlRadius: Float = 0.05
+    private static let floorInside: Float = 0.006
+    private static let heapRadius: Float = 0.04
+    private static let heapTone = Clay.matte(0x8A5528, roughness: 0.8)
+    private static let heapOver = Clay.matte(0xA85A38, roughness: 0.8)
     private static let ringRadius: Float = 0.074
     private static let beads = 36
     /// Grams one kibble on screen stands for.
@@ -47,6 +51,12 @@ final class FeedStage: GameStage {
     private let bagPour: SIMD3<Float>
     private let bowl: Entity
     private let bag: Entity
+    /// The kibble's mound in the bowl: one shared sphere, squashed, rising with the grams in the bowl.
+    private let heap: ModelEntity
+    private var shownHeap: Float = 0
+    private var heapIsOver = false
+    private var shake: Float = 0
+    private var clock: Float = 0
     private var ring: [ModelEntity] = []
     private let materials: (empty: PhysicallyBasedMaterial, filled: PhysicallyBasedMaterial, zone: PhysicallyBasedMaterial,
                             zoneFilled: PhysicallyBasedMaterial, over: PhysicallyBasedMaterial,
@@ -104,10 +114,13 @@ final class FeedStage: GameStage {
 
         bowl = root.group(at: bowlAt)
         bowl.cylinder(0.006, Self.bowlRadius + 0.004, Clay.matte(0xD8653F, roughness: 0.4), at: [0, 0.003, 0])
-        bowl.cylinder(Self.bowlHeight - 0.006, Self.bowlRadius, Clay.matte(0xE98A5B, roughness: 0.4),
-                      at: [0, 0.006 + (Self.bowlHeight - 0.006) / 2, 0])
-        bowl.cylinder(0.004, Self.bowlRadius + 0.003, Clay.matte(0xFFF3E2, roughness: 0.35), at: [0, Self.bowlHeight - 0.002, 0])
-        bowl.cylinder(0.001, Self.bowlRadius - 0.006, Clay.matte(0x7A4A2A, roughness: 0.9), at: [0, Self.bowlHeight + 0.0004, 0])
+        if let mesh = BowlMesh.make(outer: Self.bowlRadius, inner: Self.bowlRadius - 0.005, height: Self.bowlHeight,
+                                    floor: Self.floorInside) {
+            bowl.addChild(ModelEntity(mesh: mesh, materials: [Clay.matte(0xE98A5B, roughness: 0.4),
+                                                              Clay.matte(0x7A4A2A, roughness: 0.9)]))
+        }
+        heap = bowl.sphere(1, Self.heapTone, at: [0, Self.floorInside, 0], scale: [Self.heapRadius, 0.0005, Self.heapRadius])
+        heap.isEnabled = false
 
         // The bag stands on the floor by its mouth's pivot, kraft paper with a cream label and a paw.
         bag = root.group(at: bagRest)
@@ -187,6 +200,7 @@ final class FeedStage: GameStage {
         let pouring = served == nil && !capped && (holding ?? 0) > Self.grace
         tip += ((pouring ? 1 : 0) - tip) * min(1, dt * 7)
         drawBag()
+        drawHeap(dt)
         if pouring, tip > 0.85 { pourFlow(dt) }
         fly(dt)
         if let time = served { eat(time + dt, dt: dt) }
@@ -228,6 +242,7 @@ final class FeedStage: GameStage {
         if poured >= cap, !capped {
             capped = true
             debt = 0
+            shake = 1
             deck.thump()
         }
         if sinceTap > 0.08 {
@@ -242,10 +257,31 @@ final class FeedStage: GameStage {
         bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward) * simd_quatf(angle: 1.55 * s, axis: [0, 0, 1])
     }
 
+    /// The mound's size follows the grams that have landed, eased; past the zone it goes the warning tone, and at the
+    /// cap the bowl gives a shudder.
+    private func drawHeap(_ dt: Float) {
+        clock += dt
+        let target = min(Float(pile.count) / Float(max(cap, 1)), 1)
+        shownHeap += (target - shownHeap) * min(1, dt * 10)
+        heap.isEnabled = shownHeap > 0.01
+        heap.scale = [Self.heapRadius * (0.5 + 0.5 * shownHeap), Self.mound(shownHeap), Self.heapRadius * (0.5 + 0.5 * shownHeap)]
+        if heapIsOver != isOver {
+            heapIsOver = isOver
+            heap.model?.materials = [heapIsOver ? Self.heapOver : Self.heapTone]
+        }
+        if shake > 0 {
+            shake = max(0, shake - dt * 3)
+            let calm = UIAccessibility.isReduceMotionEnabled
+            bowl.position = bowlAt + spots.right * (calm ? 0 : sin(clock * 48) * 0.0015 * shake)
+        }
+    }
+
+    private static func mound(_ fill: Float) -> Float { 0.003 + 0.02 * fill.squareRoot() }
+
     private var mouth: SIMD3<Float> { bag.position }
 
     private func drop() {
-        let kibble = root.sphere(0.0052, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),
+        let kibble = root.sphere(0.0062, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),
                                  at: mouth, scale: [1, 0.65, 1])
         let slot = slot(pile.count + flights.count)
         flights.append(Flight(entity: kibble, from: mouth + spots.right * Float.random(in: -0.004...0.004), to: slot, time: 0,
@@ -269,13 +305,16 @@ final class FeedStage: GameStage {
         }
     }
 
-    /// Where the `index`th kibble rests in the bowl, in `root`'s space: a spiral that rises as it fills.
+    /// Where the `index`th kibble rests in the bowl, in `root`'s space: spread over the mound it is piling, at the height
+    /// the mound will have by then.
     private func slot(_ index: Int) -> SIMD3<Float> {
-        let layer = index / 28
-        let k = Float(index % 28)
-        let r = (Self.bowlRadius - 0.012) * (k / 28).squareRoot()
-        let local = SIMD3<Float>(r * cos(k * 2.4), Self.bowlHeight - 0.004 + Float(layer) * 0.0042, r * sin(k * 2.4))
-        return bowlAt + local
+        let fill = min(Float(index + 1) / Float(max(cap, 1)), 1)
+        let reach = Self.heapRadius * (0.5 + 0.5 * fill) * 0.85
+        let r = reach * (Float(index) * 0.618).truncatingRemainder(dividingBy: 1).squareRoot()
+        let across = r / (Self.heapRadius * (0.5 + 0.5 * fill))
+        let height = Self.mound(fill) * (1 - across * across).squareRoot()
+        let angle = Float(index) * 2.4
+        return bowlAt + [r * cos(angle), Self.floorInside + height, r * sin(angle)]
     }
 
     // MARK: - The ring

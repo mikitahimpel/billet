@@ -34,6 +34,10 @@ final class TabletopRoom: CatRoom {
         self.scenery = scenery
         super.init()
         camera.camera.fieldOfViewInDegrees = 22
+        // The corner is a metre across seen from about three: a tight depth range keeps the 1 mm steps of rugs and
+        // worktops from fighting.
+        camera.camera.near = 1.2
+        camera.camera.far = 7
         root.addChild(camera)
         let framing = framing
         camera.look(at: framing.target, from: framing.target + framing.direction * framing.far, relativeTo: nil)
@@ -98,8 +102,8 @@ final class TabletopRoom: CatRoom {
             rugCorner(g)
         case .room:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
-            g.cylinder(0.002, 0.42, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, 0.02])
-            g.cylinder(0.0024, 0.36, Clay.matte(0xE9C9A0, roughness: 1), at: [0, top + 0.0012, 0.02])
+            g.cylinder(0.0014, 0.42, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0007, 0.02])
+            g.cylinder(0.0022, 0.36, Clay.matte(0xE9C9A0, roughness: 1), at: [0, top + 0.0011, 0.02])
             wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
             window(g, at: [0.2, 0.25, wallAt + 0.012])
             Props.bookStack(g, at: [0.14, top, backRow], tones: [0x6F8FB0, 0xE98A5B, 0x93A86A], rotation: .identity)
@@ -117,8 +121,8 @@ final class TabletopRoom: CatRoom {
         let top = floorTop
         let side: Float = -0.27
         g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
-        g.cylinder(0.002, 0.3, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, -0.02], scale: [1.25, 1, 1])
-        g.cylinder(0.0024, 0.25, Clay.matte(0xE9B8A0, roughness: 1), at: [0, top + 0.0012, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0014, 0.3, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0007, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0022, 0.25, Clay.matte(0xE9B8A0, roughness: 1), at: [0, top + 0.0011, -0.02], scale: [1.25, 1, 1])
         g.cylinder(0.0028, 0.17, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0014, -0.02], scale: [1.25, 1, 1])
         wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
         let left = g.group(at: [side, 0, 0], rotation: .y(.pi / 2))
