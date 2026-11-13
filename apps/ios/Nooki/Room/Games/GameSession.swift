@@ -49,7 +49,7 @@ final class GameSession {
 
     func start(viewport: CGSize) {
         guard stage == nil, !ended else { return }
-        lens = viewport
+        if lens == .zero { lens = viewport }
         // The corner is in its view and Mochi in it a moment after the view appears.
         if let corner = room as? TabletopRoom, !corner.isReady {
             Task {
@@ -62,7 +62,7 @@ final class GameSession {
         wasDirected = room.walker?.directed ?? false
         room.walker?.directed = true
         let camera = GameCamera(room: room)
-        camera.viewport = viewport
+        camera.viewport = lens
         self.camera = camera
         let pivot = room.pivot
         deck.project = { [weak self] point in self?.lensNow?.project(pivot.convert(position: point, to: nil)) }
