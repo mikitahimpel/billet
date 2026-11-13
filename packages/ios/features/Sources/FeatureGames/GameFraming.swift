@@ -6,7 +6,9 @@ public enum GameFraming {
   /// How far from the center of `radius`-wide points a camera must stand for them to fill `fill` of the screen's
   /// narrower side. `tanHalf` is that of the vertical field of view, `aspect` the view's width over height, and
   /// `push` 0...1 brings it a little closer.
-  public static func distance(radius: Float, tanHalf: Float, aspect: Float, fill: Float, push: Float) -> Float {
+  public static func distance(
+    radius: Float, tanHalf: Float, aspect: Float, fill: Float, push: Float
+  ) -> Float {
     let narrow = tanHalf * min(aspect, 1)
     return max(radius, 0.05) / (narrow * fill) * (1 - 0.1 * push)
   }
