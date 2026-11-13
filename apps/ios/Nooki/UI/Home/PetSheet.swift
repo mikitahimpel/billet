@@ -127,14 +127,12 @@ private struct PetSheet: View {
                               choosePronouns: { state.choosePronouns($0) }) {
                 PetPortrait(size: 88)
                     .keyframeAnimator(initialValue: 0.0, trigger: declines) { view, turn in
-                        view.rotationEffect(.degrees(turn))
+                        view.rotationEffect(.degrees(reduceMotion ? 0 : turn))
                     } keyframes: { _ in
-                        if !reduceMotion {
-                            LinearKeyframe(-5, duration: 0.08)
-                            LinearKeyframe(5, duration: 0.12)
-                            LinearKeyframe(-3, duration: 0.1)
-                            LinearKeyframe(0, duration: 0.08)
-                        }
+                        LinearKeyframe(-5, duration: 0.08)
+                        LinearKeyframe(5, duration: 0.12)
+                        LinearKeyframe(-3, duration: 0.1)
+                        LinearKeyframe(0, duration: 0.08)
                     }
                     .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
                         view.scaleEffect(scale)
