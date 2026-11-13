@@ -24,6 +24,7 @@ extension RoomController {
                 entities: drawn.count, full: counts.contains(nil) ? nil : counts.compactMap { $0 }.reduce(0, +),
                 keep: SplatDetail.chosen().keep)
         }
+        stats.writeRates = SceneWrites.drainRates()
         return stats
     }
 

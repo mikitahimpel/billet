@@ -41,6 +41,8 @@ struct RoomStats: Equatable, Sendable {
     var splatEntities = 0
     var splats: Int?
     var splatKeep: Double?
+    /// Scene writes per second since the last reading; empty when no room ran.
+    var writeRates: [String] = []
 
     /// Walks `root` and everything under it that is enabled.
     @MainActor
@@ -128,7 +130,7 @@ struct RoomStats: Equatable, Sendable {
             let count = splats.map { "~\($0)" } ?? "?"
             out.append("cat splats \(count) in \(splatEntities) entities, detail \(Int((keep * 100).rounded()))%")
         }
-        return out
+        return out + writeRates
     }
 
     var line: String { "stats " + lines.joined(separator: "; ") }

@@ -45,6 +45,7 @@ class CatRoom {
 
     private(set) var catGroup = Entity()
     private var catBody = Entity()
+    private var squashGate = ChangeGate<SIMD3<Float>>()
     private var catModel = Entity()
     private(set) var walker: CatWalker?
     private var watch = CatWatch()
@@ -241,7 +242,11 @@ class CatRoom {
         // instead, and breathes on her own skeleton.
         let p = t - purrStart
         let bounce: Float = p < 0.7 && walker?.standing.entity == nil ? sin(p / 0.7 * .pi * 3) * (1 - p / 0.7) * 0.12 : 0
-        catBody.scale = [1 + 0.4 * bounce, 1 - bounce, 1 + 0.4 * bounce]
+        let squash: SIMD3<Float> = [1 + 0.4 * bounce, 1 - bounce, 1 + 0.4 * bounce]
+        if squashGate.passes(squash) {
+            catBody.scale = squash
+            SceneWrites.note(.catBodyScale)
+        }
 
         advanceShowcase(dt)
     }

@@ -75,31 +75,36 @@ final class DioramaScene: CatRoom {
         loadFurniture()
     }
 
-    private var flameClock = Throttle(interval: 1.0 / 30)
-    private var bulbClock = Throttle(interval: 0.1)
-    private var flameSteps = 0
+    private var flameClock = Throttle(interval: PulseRates.active.flame)
+    private var candleClock = Throttle(interval: PulseRates.active.candle)
+    private var bulbClock = Throttle(interval: PulseRates.active.bulbs)
 
     override func tick(_ dt: Float) {
         super.tick(dt)
         let t = time
 
         if swaying {
+            let rates = PulseRates.at(active: isActive)
+            flameClock.interval = rates.flame
+            candleClock.interval = rates.candle
+            bulbClock.interval = rates.bulbs
+            let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
             if flameClock.fires(dt) {
-                let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
                 flame.scale = Self.flameRadius * [0.85, 1.45 * flicker, 0.85]
-                // Its light needs half as many steps as its shape.
-                flameSteps += 1
-                if flameSteps.isMultiple(of: 2), var light = candleLight.components[PointLightComponent.self] {
-                    light.intensity = 450 * flicker
-                    candleLight.components.set(light)
-                }
+                SceneWrites.note(.flameScale)
             }
-            // A bulb's pulse takes seconds; ten steps a second read as continuous.
+            if candleClock.fires(dt), var light = candleLight.components[PointLightComponent.self] {
+                light.intensity = 450 * flicker
+                candleLight.components.set(light)
+                SceneWrites.note(.candleLight)
+            }
+            // A bulb's pulse takes seconds; four to ten steps a second read as continuous.
             if bulbClock.fires(dt) {
                 for (i, bulb) in bulbs.enumerated() {
                     let s = 1 + 0.22 * sin(t * 2.1 + Float(i) * 1.3)
                     bulb.scale = .init(repeating: Self.bulbRadius * s)
                 }
+                SceneWrites.note(.bulbScale, bulbs.count)
             }
         }
 
