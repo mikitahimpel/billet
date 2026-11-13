@@ -11,6 +11,8 @@ extension AppSettings {
     /// Labs: shows the cat's brain over the room.
     static let brainCardKey = "labs.brainCard"
     /// Labs: the brain drives the cat; off, she runs on its original timers alone.
+    /// Labs: the room's close-up follows Mochi's head; off, the camera frames the room and stays put.
+    static let followMochiKey = "labs.followMochi"
     static let catBrainKey = "labs.catBrain"
 
     static var catBrain: Bool { UserDefaults.standard.object(forKey: catBrainKey) as? Bool ?? true }

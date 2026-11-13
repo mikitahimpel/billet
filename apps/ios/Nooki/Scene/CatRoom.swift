@@ -58,6 +58,8 @@ class CatRoom {
     var iblReceiver: ImageBasedLightReceiverComponent?
 
     private(set) var time: Float = 0
+    /// Seconds the latest frame took, for what follows the room on screen.
+    private(set) var frameTime: Float = 0
     private(set) var frame = 0
     /// Whether the room turns a little under the sun and its lights pulse; off, they hold where they are.
     var swaying = true
@@ -190,6 +192,7 @@ class CatRoom {
         subscription = surface.updates { [weak self] event in
             guard let self, !paused else { return }
             let dt = Float(event.deltaTime)
+            frameTime = dt
             walker?.watch(catModel.convert(position: viewer.position(relativeTo: nil), from: nil))
             tick(dt)
             beforeProjecting(dt)

@@ -17,6 +17,7 @@ struct LabsSections: View {
 
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
     @AppStorage(AppSettings.catBrainKey) private var catBrain = true
+    @AppStorage(AppSettings.followMochiKey) private var followMochi = false
     @AppStorage(AppSettings.quietRoomKey) private var quietRoom = QuietChrome.dim
     @AppStorage(Hints.showAllKey) private var showAllHints = false
     @AppStorage(BakedShell.labsKey) private var roomShellLabs = ""
@@ -87,6 +88,7 @@ struct LabsSections: View {
                        footer: state.pronouns.say(.brainFooter(name: CatProfile.name()))) {
             ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
             ToggleRow("Cat brain card", symbol: "brain.head.profile", tint: UsTint.lilac.color, isOn: $brainCard)
+            ToggleRow("Follow Mochi", symbol: "camera.viewfinder", tint: UsTint.sky.color, isOn: $followMochi)
         }
 
         if let perfLab {
