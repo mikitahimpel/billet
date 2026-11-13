@@ -2,8 +2,25 @@ import { Schema } from "effect";
 import { type CatEvent, drawGuessGame } from "./cat.ts";
 import { EpochMillis } from "./ids.ts";
 
-/** `earn` is care for the cat, paid by the server from the journal; `spend` is a shop purchase. */
-export const CoinEntryKind = Schema.Literals(["earn", "buy", "spend", "refund", "gift", "bonus"]);
+/**
+ * Where an entry's coins came from or went, whatever its id looks like (the id prefix is only a
+ * uniqueness scheme: a `refund:` id is an Apple refund, not the shop's Undo). `earn` is play, paid
+ * by the server; `purchase` is a coin pack; `refund` takes a pack back and is the only kind that
+ * can drive the balance below 0; `gift`, `bonus` and `admin` are coins given (the daily gift and
+ * welcome coins, a finished collection, support); `spend` is a shop purchase. `buy` is what
+ * `purchase` was called before; it stays so entries stored with it still decode, and is never
+ * written.
+ */
+export const CoinEntryKind = Schema.Literals([
+  "earn",
+  "purchase",
+  "spend",
+  "refund",
+  "gift",
+  "bonus",
+  "admin",
+  "buy",
+]);
 export type CoinEntryKind = typeof CoinEntryKind.Type;
 
 /** `<kind>:<what it came from>`, such as `earn:<cat entry id>` or `spend:<buy id>`. One per id. */

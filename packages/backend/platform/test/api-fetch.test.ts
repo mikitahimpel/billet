@@ -555,7 +555,7 @@ describe("the Api Worker", () => {
     await room.grantInks([Schema.decodeSync(InkId)("ink-rose")]);
     await room.grantItems([Schema.decodeSync(RoomItemId)("lantern")]);
     await room.creditPurchase({
-      kind: "buy",
+      kind: "purchase",
       id: Schema.decodeSync(CoinEntryId)("buy:test-pack"),
       ref: "pack",
       coins: 101,
@@ -2097,7 +2097,7 @@ describe("payments in the Worker", () => {
     expect(wallet.balance).toBe(1110);
     expect(wallet.entries.at(-1)).toMatchObject({
       id: `purchase:${transactionId}`,
-      kind: "buy",
+      kind: "purchase",
       amount: 550,
     });
 

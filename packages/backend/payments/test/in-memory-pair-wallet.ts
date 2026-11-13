@@ -14,7 +14,7 @@ export interface InMemoryPairWallet {
   readonly failNext: (n: number) => void;
 }
 
-/** The room's wallet rules for bought coins: once per id, a refund at most the balance. */
+/** The room's wallet rules for bought coins: once per id, a refund the whole pack, so the balance can go negative. */
 export const makeInMemoryPairWallet = (): InMemoryPairWallet => {
   const pairs = new Map<string, Map<string, number>>();
   let failures = 0;
@@ -41,7 +41,7 @@ export const makeInMemoryPairWallet = (): InMemoryPairWallet => {
         }
         const coins =
           "coins" in credit ? credit.coins : Math.abs(entries.get(credit.reverses) ?? 0);
-        const amount = credit.kind === "buy" ? coins : -Math.min(coins, sum(pairId));
+        const amount = credit.kind === "purchase" ? coins : -coins;
         entries.set(credit.id, amount);
         return Effect.succeed({ balance: sum(pairId), coins: Math.abs(amount) });
       }),

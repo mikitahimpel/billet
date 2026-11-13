@@ -395,8 +395,8 @@ describe("purchases on dev", () => {
         await (await mock({ productId, transactionId, kind: "refund" }, headers)).json(),
       );
       expect({ coins: refunded.coins, balance: refunded.balance }).toEqual({
-        coins: 260,
-        balance: 0,
+        coins: 1200,
+        balance: -940,
       });
       const ledger = await Effect.runPromise(
         app.memory.repository.ledger(owner("pair-paired-wallet")),
@@ -599,13 +599,14 @@ describe("App Store server notifications", () => {
     expect((await ledgerOf("paired-revoke")).balance).toBe(0);
   });
 
-  it("never takes the balance below 0, and flags the purchase", async () => {
+  it("flags a purchase whose refund leaves the pair's wallet in debt", async () => {
     const { signed, transactionId } = await bought("paired-spent", {
       productId: "com.ourio.app.coins.550",
     });
-    await memory.spend(owner("pair-paired-spent"), 500);
+    app.rooms.adjust("pair-paired-spent", -500);
     expect((await notify(await notification("REFUND", signed))).status).toBe(200);
     expect((await ledgerOf("paired-spent")).balance).toBe(0);
+    expect(app.rooms.balance("pair-paired-spent")).toBe(-500);
     const purchase = Option.getOrThrow(
       await Effect.runPromise(memory.repository.findPurchase(transactionId)),
     );
@@ -615,7 +616,7 @@ describe("App Store server notifications", () => {
     });
   });
 
-  it("takes the pack out of the pair's wallet, at most its balance, once", async () => {
+  it("takes the whole pack out of the pair's wallet, once, even below 0", async () => {
     const { signed, transactionId, balance } = await bought("paired-wallet-refund", {
       productId: "com.ourio.app.coins.550",
     });
@@ -628,9 +629,9 @@ describe("App Store server notifications", () => {
     expect(app.rooms.entries("pair-paired-wallet-refund")).toEqual([
       [`purchase:${transactionId}`, 550],
       ["app:1", -500],
-      [`refund:${transactionId}`, -50],
+      [`refund:${transactionId}`, -550],
     ]);
-    expect(app.rooms.balance("pair-paired-wallet-refund")).toBe(0);
+    expect(app.rooms.balance("pair-paired-wallet-refund")).toBe(-500);
   });
 
   it("gives the wallet back what the refund took when Apple reverses it", async () => {
@@ -640,9 +641,9 @@ describe("App Store server notifications", () => {
     await notify(await notification("REFUND_REVERSED", signed));
     await notify(await notification("REFUND", signed));
     expect(app.rooms.entries("pair-paired-wallet-reversed").slice(2)).toEqual([
-      [`refund:${transactionId}`, -30],
-      [`restore:${transactionId}`, 30],
-      [`refund:${transactionId}:2`, -30],
+      [`refund:${transactionId}`, -100],
+      [`restore:${transactionId}`, 100],
+      [`refund:${transactionId}:2`, -100],
     ]);
   });
 

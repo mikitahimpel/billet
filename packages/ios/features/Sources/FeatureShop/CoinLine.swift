@@ -17,7 +17,7 @@ struct CoinLine: Hashable {
     case .earn:
       symbol = "sparkles"
       title = Self.earned(entry.id)
-    case .buy:
+    case .purchase, .buy:
       symbol = "creditcard.fill"
       title = "Coins bought"
     case .spend:
@@ -26,6 +26,12 @@ struct CoinLine: Hashable {
     case .refund:
       symbol = "arrow.uturn.backward"
       title = "Refund"
+    case .admin:
+      symbol = "lifepreserver.fill"
+      title = "Coins from support"
+    case .unknown:
+      symbol = "circle.dashed"
+      title = entry.amount < 0 ? "Coins used" : "Coins added"
     case .gift:
       symbol = "gift.fill"
       if entry.ref == "welcome" {
