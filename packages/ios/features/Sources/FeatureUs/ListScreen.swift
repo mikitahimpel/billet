@@ -108,21 +108,6 @@
         .scrollHeader { addField(for: list) }
         .toolbar {
           ToolbarItemGroup(placement: .topBarLeading) {
-            if list.kind == .watch {
-              Button {
-                store.send(.open(.addingTitle))
-              } label: {
-                Image(systemName: "plus")
-              }
-              .accessibilityLabel("Add")
-            } else if list.kind == .travel {
-              Button {
-                store.send(.open(.addingPlace))
-              } label: {
-                Image(systemName: "plus")
-              }
-              .accessibilityLabel("Add")
-            }
             Menu {
               Button("Rename") { store.send(.open(.rename)) }
               Button("Delete list", role: .destructive) { store.send(.open(.confirmingDelete)) }

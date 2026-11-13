@@ -40,18 +40,6 @@
               .padding(.horizontal, Space.gutter)
           }
         }
-        .toolbar {
-          if mine {
-            ToolbarItem(placement: .topBarLeading) {
-              Button {
-                adding = true
-              } label: {
-                Image(systemName: "plus")
-              }
-              .accessibilityLabel("Add")
-            }
-          }
-        }
       }
       .task { await state.refreshGifts() }
       .sheet(isPresented: $adding) {
