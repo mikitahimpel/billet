@@ -183,7 +183,7 @@ def main():
     for coat in args.coats:
         splats = original.copy()
         if coat != "grey":
-            splats[:, 11:14] = np.frombuffer((RES / f"Coats/Mochi-{coat}.fdc").read_bytes(), "<f4").reshape(-1, 3)
+            splats[:, 11:14] = np.frombuffer((RES / f"Coats/Mochi-{coat}.fdh").read_bytes(), "<f2").astype("<f4").reshape(-1, 3)
         colour = np.clip(0.5 + SH_C0 * splats[:, 11:14], 0, 1)
         rests[coat] = to_bytes(render(splats, colour, skin, rig, width, height))
         for kind, poses in POSES.items():
