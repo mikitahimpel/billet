@@ -39,6 +39,50 @@ nonisolated enum NeedCare: Hashable, Sendable {
         }
     }
 
+    /// Which of the sheet's limits it falls under.
+    var kind: Care {
+        switch self {
+        case .game(.feed): .feed
+        case .game(.water): .water
+        case .game(.laser): .play
+        case .game(.brush): .brush
+        case .pet: .pet
+        }
+    }
+
+    /// Why she turns the care down, short enough for a tile's foot; nil while it is welcome.
+    func declined(_ verdict: CareGate.Verdict, now: Date) -> String? {
+        switch verdict {
+        case .open: return nil
+        case .refused(.met, _):
+            switch self {
+            case .game(.feed): return "Full for now"
+            case .game(.laser): return "Played out"
+            case .pet, .game(.brush): return "Plenty of cuddles"
+            case .game(.water): return "Plenty of water"
+            }
+        case .refused(.tired, let until):
+            let minutes = until.map { max(1, Int((($0.timeIntervalSince(now)) / 60).rounded(.up))) }
+            return minutes.map { $0 == 1 ? "Rest a minute" : "Rest \($0) min" } ?? "A little rest"
+        }
+    }
+
+    /// The same, as a sentence for under the sheet, where the care was asked for.
+    func declinedSentence(_ verdict: CareGate.Verdict, now: Date, name: String) -> String? {
+        guard let foot = declined(verdict, now: now) else { return nil }
+        switch verdict {
+        case .open: return nil
+        case .refused(.met, _):
+            switch self {
+            case .game(.feed): return "\(name) isn't hungry"
+            case .game(.laser): return "\(name) has played enough for now"
+            case .pet, .game(.brush): return "\(name) has had plenty of cuddles"
+            case .game(.water): return "\(name)'s bowl is fine"
+            }
+        case .refused(.tired, _): return "\(name) needs a breather. \(foot)"
+        }
+    }
+
     /// The care that no need's row offers, under the rows.
     static let more: [NeedCare] = [.game(.water), .game(.brush)]
 
