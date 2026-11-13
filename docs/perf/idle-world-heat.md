@@ -498,6 +498,30 @@ the room's static boxes per material would save draw calls, not triangles, and `
 pieces. The bake (`roomShell` Baked) already replaces the shell. Hidden faces: a box's floor face is back-facing to a
 camera above it and culled, so removing it saves vertices only. Textures and transparent parts: nothing left to cut.
 
+### 9.7 The room's own loop is the default
+
+A phone at 5 to 7 % battery read "60 fps, CPU 44 %, room drawing" with the governor at `serious` (30/20 fps, 1.25x): the
+caps reach only `RoomRenderLoop`, and that was a Labs switch, off, so every phone drew on a `RealityView` at the
+screen's rate whatever the tier said.
+
+- The loop is on unless Labs puts the room back on a `RealityView` (`ownLoop`, read at launch). The full tier now asks
+  30 fps while something moves and 20 at rest (2x, 4x MSAA, bloom, shadow as before); fair is 30/20 at 1.5x, serious
+  30/20 at 1.25x, critical 20/15 at 1x.
+- A display link's frame-rate range is a hint a screen may overshoot, so the loop also drops a frame that arrives
+  sooner than 0.9 of the asked interval. Drawn frames a second, counted from the renderer's own update events over 4 s
+  with the screen delivering 60 (`RoomLoopCapTests`, Simulator): full 19.5, fair 19.8, serious 20.0, critical 15.0
+  against 20, 20, 20, 15 asked. A `RealityView` draws 60.
+- Taps, Decorate and picking use the loop's camera. The projection of known points of the room (tree foot, basket, sill,
+  bed) falls on the same points in the picture the renderer draws (`RoomArtifactTests`, the crosses in
+  `art-projected.png`), so `unproject` and `project` agree with what is on screen.
+- The pinch zoom wrote to the `RealityView`'s rig, which the loop does not use: it now writes to the loop's.
+- UI tests on the loop (Simulator): `RearrangeRoomTests` (4), `RoomSwipeTests`, `RoomReturnTests`, `GameCloseTests` pass.
+  One run of the tree-selection test failed once under a load average above 300 and passed on the next two.
+
+Not verified: the splat cat on `RealityRenderer` on an iOS 27 phone (the Simulator draws the mesh stand-in); fps and heat
+on a phone. If the cat does not draw on the loop, Labs "Room on its own capped frame loop" off puts the room back on
+`RealityView` from the next launch.
+
 ## Sources
 
 - [RealityRenderer](https://developer.apple.com/documentation/realitykit/realityrenderer),
@@ -540,7 +564,7 @@ state) and every two seconds (idle time, busy), and `HomeView.roomInput` carries
 - Degrades at once, recovers one tier per 90 quiet seconds. Idleness is outside that hysteresis (it only grows until a
   touch) and stops at `fair`, which looks like `full`, so a room being watched never changes and never jumps back.
 - A drag, a game's first 10 seconds or Decorate hold a degradation until they stop, unless the system says `serious`.
-- Frame rate and scale reach only the room's own loop (Labs "Room on its own 30 fps loop", read at launch). A
+- Frame rate and scale reach only the room's own loop (on by default since 9.7; Labs "Room on its own capped frame loop", read at launch). A
   `RealityView` has no pause, cap or scale (section 2). The loop is not the default because touch, picking, Decorate and
   games on it are checked only by the code's own tests, not on a phone, and `RealityRenderer`'s support for the splat cat
   is unverified on iOS 27 (section 3.1). Everything else in the plan works on both paths: lights, shadow and bloom through

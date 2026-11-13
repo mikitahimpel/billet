@@ -175,7 +175,7 @@ typealias Heat = RoomConditions.Heat
     #expect(!plan.widestLightOnly && !plan.still)
     #expect(plan.splatRate == 0 && plan.splatDetail == .full)
     #expect(
-      plan.activeRate == 60 && plan.idleRate == 30 && plan.scale == 2 && plan.pulseSlowdown == 1)
+      plan.activeRate == 30 && plan.idleRate == 20 && plan.scale == 2 && plan.pulseSlowdown == 1)
   }
 
   @Test func eachTierDrawsNoMoreThanTheOneBefore() {

@@ -37,7 +37,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     /// The room drawn in the wide colour range; off, the standard one.
     case hdr
     /// The room drawn by our own renderer and frame loop, at 30 frames a second when nothing moves and none when it
-    /// is not on screen, in place of RealityView. A spike; read at launch.
+    /// is not on screen, in place of RealityView. On; off puts the room back on RealityView. Read at launch.
     case ownLoop
     /// Metal's performance overlay (fps, GPU ms) over the app; read at launch, off unless switched on.
     case metalHud
@@ -71,7 +71,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .sway: "Room sway and light pulse"
         case .msaa: "Antialiasing (4 samples)"
         case .hdr: "HDR rendering"
-        case .ownLoop: "Room on its own 30 fps loop (spike; next launch)"
+        case .ownLoop: "Room on its own capped frame loop (off: RealityView; next launch)"
         case .metalHud: "Metal HUD overlay (fps, GPU; next launch)"
         case .mergeFurniture: "Furniture merged per material (outside Decorate)"
         case .bakedBlobs: "One baked contact-shadow layer (outside Decorate)"
@@ -113,8 +113,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     /// others start on.
     var shippedOn: Bool {
         switch self {
-        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .drift, .sway, .hdr: true
-        case .flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs,
+        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .drift, .sway, .hdr, .ownLoop: true
+        case .flatten, .motes, .msaa, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs,
             .noSunShadow, .fewerLights, .noBloom, .fullMeshes: false
         }
     }

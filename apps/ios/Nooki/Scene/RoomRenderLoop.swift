@@ -20,11 +20,15 @@ final class RoomRenderLoop: RoomSurface {
     private var link: CADisplayLink?
     private var target = DisplayLinkTarget()
     private var scene: CatRoom?
-    private var last: CFTimeInterval?
     private var fast = false
     private var running = false
-    private var idleRate = RoomRenderLoop.range(30)
-    private var activeRate = RoomRenderLoop.range(60)
+    private var idleRate = RoomRenderLoop.range(20)
+    private var activeRate = RoomRenderLoop.range(30)
+    /// The same rates in frames a second. The display link's range is a hint a screen may overshoot, so a frame that
+    /// comes sooner than the rate asks is not drawn.
+    private var idleHertz = 20.0
+    private var activeHertz = 30.0
+    private var lastDrawn: CFTimeInterval?
 
     /// Nil where RealityKit cannot make a renderer; the room then stays on `RealityView`.
     init?() {
@@ -51,6 +55,8 @@ final class RoomRenderLoop: RoomSurface {
     func setQuality(_ rendering: RoomRendering) {
         idleRate = Self.range(rendering.idleRate)
         activeRate = Self.range(min(rendering.activeRate, 120))
+        idleHertz = Double(max(rendering.idleRate, 10))
+        activeHertz = Double(max(min(rendering.activeRate, 120), 10))
         view.scaleCap = CGFloat(rendering.scale)
         if let link { link.preferredFrameRateRange = fast ? activeRate : idleRate }
     }
@@ -67,7 +73,7 @@ final class RoomRenderLoop: RoomSurface {
     func setRunning(_ on: Bool) {
         guard on != running else { return }
         running = on
-        last = nil
+        lastDrawn = nil
         if on { startLink() } else { link?.isPaused = true }
     }
 
@@ -100,13 +106,14 @@ final class RoomRenderLoop: RoomSurface {
 
     private func frame(_ link: CADisplayLink) {
         let now = link.timestamp
-        defer { last = now }
         let wantsFast = scene?.isActive ?? false
         if wantsFast != fast {
             fast = wantsFast
             link.preferredFrameRateRange = wantsFast ? activeRate : idleRate
         }
-        guard let last, let drawable = view.metalLayer.nextDrawable() else { return }
+        if let lastDrawn, now - lastDrawn < 0.9 / (wantsFast ? activeHertz : idleHertz) { return }
+        defer { lastDrawn = now }
+        guard let last = lastDrawn, let drawable = view.metalLayer.nextDrawable() else { return }
         let dt = min(now - last, 0.1)
         do {
             let output = try RealityRenderer.CameraOutput(.singleProjection(colorTexture: drawable.texture))
