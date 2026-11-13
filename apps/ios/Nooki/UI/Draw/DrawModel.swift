@@ -87,6 +87,12 @@ final class DrawModel {
         room?.disconnect()
     }
 
+    #if DEBUG
+    func loadLandingDemo() {
+        strokes = LandingDemo.drawing()
+    }
+    #endif
+
     // MARK: Drawing
 
     /// The finger at `point` (unit-square coordinates) while it is down.
