@@ -235,6 +235,9 @@ importers:
       '@billet/backend-onboarding':
         specifier: workspace:*
         version: link:../onboarding
+      '@billet/backend-pair-room':
+        specifier: workspace:*
+        version: link:../pair-room
       '@billet/backend-review':
         specifier: workspace:*
         version: link:../review

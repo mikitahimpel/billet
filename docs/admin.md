@@ -25,6 +25,7 @@ hover.
 | Maintenance | one card: the current state with a switch, the maintenance message and "back around" time, the minimum build, the notice, the product analytics switch ([analytics.md](analytics.md#switching-it-off)), a preview of the app's maintenance screen or notice, and every change with who made it ([maintenance.md](maintenance.md)) | all of it, turning maintenance on or analytics off after a confirmation; works while D1 is down |
 | Shop | every shop item, active or not, in shelf order: kind, shelf, rarity, price (and sale price while a sale holds), deals draw, state, who changed it last and when; an item's page has its form and its history ([below](#shop-catalog)) | create an item, edit it, make it active or inactive (inactive after a confirmation), move it up or down, set its price, a sale window and its place in the daily deals, upload its picture |
 | Purchases | coin-pack purchases (owner pair or demo room, pack, coins, environment, status, flagged, dates), the coin ledger and the App Store notifications with what was done with each, newest first ([payments.md](payments.md#backend)). A flagged purchase is one whose refund left the pair's wallet below 0 | nothing |
+| Economy | API only, no page yet: coins minted and spent per UTC day and per source, the median and p90 pair balance, how many pairs are in debt after a refund, the share of pairs holding more than N typical days of earnings, and the daily-cap hit rate per source, from the `economy_days` and `economy_pair_days` tables ([economy.md](economy.md#metrics)). Pair-level aggregates only; a figure over fewer than 5 pairs is left out | nothing |
 | Audit log | every flag change, pair override and status change in one table, newest first, filterable by area | nothing |
 
 "Installed" shows "—": installs are counted by App Store Connect, and the app reports nothing
@@ -361,6 +362,7 @@ a Cloudflare Access **service token**. They can't change anything.
 | `status` | Maintenance: the current service status, version, who set it |
 | `status-history[?limit=<1-200>]` | Maintenance: the changes, newest first (default 50) |
 | `purchases[?limit=<1-1000>]` | Purchases: purchases, coin ledger and App Store notifications, newest first (default 200) |
+| `economy[?range=<1-90>&hold=<1-365>]` | Economy: coins by day and source, balance spread, hoarding and cap hit rate over `range` days (30 by default; `hold` is N days of earnings, 14 by default) |
 
 - The answers carry the same fields as the panel's, so the Overview's `range` and `stats` and an
   experiment's `results.verdict` are there too. Routes and access are as before.
