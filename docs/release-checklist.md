@@ -53,7 +53,7 @@ or a user will probably hit it. NICE can follow the release. "Owner" is the repo
   `com.ourio.app`, `.widget`, `.notification-service`, `.share`.
 - **Icon and launch:** one 1024 px `AppIcon.png`, no alpha; launch screen is the
   `LaunchBackground` color.
-- **Labs and Debug:** Settings Labs and Testing are behind `#if DEBUG || LABS_YES`;
+- **Labs and Debug:** Settings Labs (with its test tools) is behind `#if DEBUG || LABS_YES`;
   `BILLET_LABS_MODE` defaults to `NO`; the TestFlight workflow sets `BILLET_LABS` only when its
   `labs` input is true. Shot fixtures are `#if DEBUG`. The host comes only from `BilletAPIHost`.
 - **Backend (read):** admin routes sit behind the Access check and answer nothing while its
