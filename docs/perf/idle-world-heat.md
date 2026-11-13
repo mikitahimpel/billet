@@ -475,8 +475,8 @@ same shapes with `make_items.facets`; donut bed 145,442 to 25,384).
 Why behind a switch: it is not pixel-identical. The room is drawn off-screen with a `RealityRenderer` at 780 x 1688
 from the default camera, ten frames so the lights settle, without antialiasing as in the app (`OffscreenRoom`). Two
 renders of one room differ by 0 (Living room) and 0.01 % of pixels over 2 (Bedroom), so that is the noise.
-Lean against full: Bedroom 0.18 % of pixels more than 8 of 255 off, mean 0.21, 0.10 % over 32; Living room 0.40 %, mean
-0.36, 0.18 % over 32; the gallery's own match is 0.5 % over 8. The maximum is 250 to 252 at single pixels. The difference
+Lean against full: Bedroom 0.18 % of pixels more than 8 of 255 off, mean 0.14 a channel, 0.10 % over 32; Living room 0.40 %, mean
+0.22, 0.18 % over 32; the gallery's own match is 0.5 % over 8. The maximum is 250 to 252 at single pixels. The difference
 image is a one-pixel outline on silhouettes (a silhouette a fraction of a pixel off flips an edge pixel with no
 antialiasing), with no change inside any surface. The test holds the share at 0.5 % over 8.
 
