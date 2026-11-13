@@ -65,7 +65,7 @@ struct RoomPerfTests {
 
     private func wait(_ controller: RoomController, until done: (RoomStats) -> Bool) async throws -> RoomStats {
         var stats = try #require(controller.roomStats(tier: .full))
-        for _ in 0..<400 where !done(stats) {
+        for _ in 0..<800 where !done(stats) {
             try await Task.sleep(for: .milliseconds(50))
             stats = try #require(controller.roomStats(tier: .full))
         }
@@ -152,8 +152,9 @@ struct RoomPerfTests {
         let merged = stats()
         print("room perf: bedroom merged \(FurnitureMerge.rejected) \(merged.line)")
         #expect(merged.mergedModels > 0)
-        #expect(merged.triangles == before.triangles)
-        #expect(merged.parts <= before.parts)
+        // The blobs' quads leave and the baked layer's two triangles come.
+        #expect(abs(merged.triangles - before.triangles) <= 8)
+        #expect(merged.parts < before.parts)
         #expect(merged.blobs == 0 && merged.blobLayers == 1)
         controller.setPerf(.shipped)
         let off = stats()

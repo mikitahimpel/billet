@@ -137,7 +137,9 @@ final class RoomPerfCoordinator {
             for attempt in 0..<30 {
                 try? await Task.sleep(for: .milliseconds(attempt == 0 ? 400 : 1000))
                 guard !Task.isCancelled else { return }
-                guard let light = receiver(), Self.isStanding(stage, decor.layout.allPlacements(in: room).count) else { continue }
+                let light = receiver()
+                // Without ambient light after a few seconds the room has none to wait for (it can't be made on every machine).
+                guard light != nil || attempt >= 4, Self.isStanding(stage, decor.layout.allPlacements(in: room).count) else { continue }
                 if wantMerged, FurnitureMerge.layout(in: stage) == nil {
                     FurnitureMerge.merge(stage, layout: decor.layout, receiver: light)
                 }
