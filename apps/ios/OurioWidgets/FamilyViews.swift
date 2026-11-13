@@ -125,7 +125,7 @@ private struct HugButton: View {
                 .font(.ourioHeadline)
                 .foregroundStyle(sent ? Color.blushPink : Ink.text)
                 .frame(width: Size.control, height: Size.control)
-                .background(Ink.well, in: .circle)
+                .background(Ink.surfaceRaised, in: .circle)
         }
         .buttonStyle(PressScaleStyle())
         .widgetAccentable(sent)
@@ -204,21 +204,21 @@ private struct Bowl: View {
     }
 }
 
-/// Mochi in her well: a bust that sits behind a ledge, so the picture's own cut edge is hidden and she is never
-/// cropped by the well. Her state shows as a mark and a prop, not as a different cat.
+/// Mochi in her well. Her portrait is a bust whose lower edge is a straight cut, so it fades out into the well instead
+/// of ending on a line, and it sits clear of the controls. Her state shows as a prop and a word, not as a different cat.
 private struct MochiStage: View {
     enum Layout {
         /// The speech on its own line above her: for a well that is about as tall as it is wide.
         case stacked
-        /// The speech and the mark on either side of her: for a well that is much wider than tall.
+        /// The speech in the corner beside her: for a well that is much wider than tall.
         case wide
     }
 
     enum Actions {
         case none
-        /// The care button on the ledge's corner, for the small widget.
+        /// The care button on the well's corner, for the small widget.
         case corner
-        /// The care button and the hug on a shelf along the ledge.
+        /// The care button and the hug in a row along the well's foot, below her.
         case shelf
     }
 
@@ -227,25 +227,23 @@ private struct MochiStage: View {
     var showsSpeech = true
     var speechFont: Font = .ourioMicro
     var actions = Actions.none
-    @Environment(\.widgetRenderingMode) private var mode
 
     private var s: OurioSnapshot { entry.snapshot }
     private var pose: MochiPose { entry.pose }
-    private var mood: PartnerMood? { PartnerNews.latest(s, drawing: entry.facts.drawing).flatMap(\.mood) }
     private var speech: String { pose.speech(s, drawing: entry.facts.drawing) }
 
-    /// How far up the well the ledge reaches; the shelf is a ledge tall enough for its buttons.
-    private var ledge: CGFloat {
-        switch actions {
-        case .shelf: Size.control + Space.s * 2
-        case .none, .corner: Space.l
-        }
-    }
+    /// What the controls take along the well's foot.
+    private var foot: CGFloat { actions == .shelf ? Size.control + Space.s * 2 : Space.xs }
 
     var body: some View {
         content
+            .padding(.bottom, foot)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .overlay(alignment: .bottom) { ledgeBand }
+            .overlay(alignment: .bottom) {
+                if actions == .shelf {
+                    CareRow(pose: pose, snapshot: s).padding(Space.s)
+                }
+            }
             .overlay(alignment: .bottomLeading) { prop }
             .overlay(alignment: .bottomTrailing) { corner }
             .well()
@@ -269,46 +267,23 @@ private struct MochiStage: View {
                 .overlay(alignment: .topLeading) {
                     if showsSpeech { SpeechBubble(text: speech, font: speechFont, lines: 2).frame(maxWidth: Size.row + Space.m, alignment: .leading) }
                 }
-                .overlay(alignment: .topTrailing) { mark }
                 .padding([.top, .horizontal], Space.s)
         }
     }
 
-    /// The speech, and the mark beside it when the well is wide enough for both.
+    /// The speech on one line, or two when the well is narrow.
     private var speechRow: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: Space.s) {
-                SpeechBubble(text: speech, font: speechFont).fixedSize()
-                Spacer(minLength: 0)
-                mark
-            }
             SpeechBubble(text: speech, font: speechFont).fixedSize().frame(maxWidth: .infinity, alignment: .leading)
             SpeechBubble(text: speech, font: speechFont, lines: 2).frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
-    private var ledgeBand: some View {
-        Group {
-            if mode == .fullColor {
-                WidgetScene.floor(night: s.isNight)
-            } else {
-                Ink.text.opacity(0.14)
-            }
-        }
-        .frame(height: ledge)
-        .overlay(alignment: .center) {
-            if actions == .shelf {
-                CareRow(pose: pose, snapshot: s).padding(.horizontal, Space.s)
-            }
-        }
-        .accessibilityElement(children: .contain)
-    }
-
-    /// Her bowl stands on the ledge at one fixed corner.
+    /// Her bowl stands at one fixed corner.
     @ViewBuilder
     private var prop: some View {
         if pose == .hungry {
-            Bowl().padding(.leading, Space.s).padding(.bottom, ledge - Space.xs)
+            Bowl().padding(.leading, Space.s).padding(.bottom, foot)
         }
     }
 
@@ -325,33 +300,38 @@ private struct MochiStage: View {
             if let image = UIImage(named: s.catAvatar) ?? UIImage(named: "MochiPortrait") {
                 Image(uiImage: image)
                     .resizable()
+                    .interpolation(.high)
                     .widgetAccentedRenderingMode(.accented)
                     .scaledToFit()
+                    .mask(alignment: .bottom) {
+                        LinearGradient(stops: [.init(color: .black, location: 0.72), .init(color: .clear, location: 1)],
+                                       startPoint: .top, endPoint: .bottom)
+                    }
             } else {
                 Image(systemName: "cat.fill").resizable().scaledToFit().foregroundStyle(Ink.textSecondary)
             }
         }
         .opacity(pose == .asleep ? 0.8 : 1)
     }
+}
 
-    @ViewBuilder
-    private var mark: some View {
-        switch pose {
-        case .purring: RowIcon(symbol: "heart.fill", tint: .blushPink, size: Size.tileMark, style: .clay).widgetAccentable()
-        case .asleep: RowIcon(symbol: "moon.zzz.fill", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
-        case .hungry: EmptyView()
-        case .drowsy, .napping: RowIcon(symbol: "zzz", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
-        case .cuddly: RowIcon(symbol: "hand.raised.fill", tint: .blushPink, size: Size.tileMark, style: .clay).widgetAccentable()
-        case .playful: RowIcon(symbol: "tennisball.fill", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
-        case .waiting:
-            if let mood {
-                MoodArt(mood: mood, size: Size.tileMark)
-            } else {
-                RowIcon(symbol: "envelope.fill", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
+/// A bar with its fill drawn at a measured width: the kit's bar scales its fill, which a widget's snapshot can leave empty.
+private struct FilledBar: View {
+    let fraction: Double
+
+    var body: some View {
+        Capsule()
+            .fill(Ink.well)
+            .frame(height: Space.s)
+            .overlay(alignment: .leading) {
+                GeometryReader { geo in
+                    Capsule()
+                        .fill(Ink.accentText)
+                        .frame(width: max(Space.s, geo.size.width * min(max(fraction, 0), 1)))
+                }
             }
-        case .chirpy: RowIcon(symbol: "music.note", tint: .honey, size: Size.tileMark, style: .clay).widgetAccentable()
-        case .quiet, .idle: EmptyView()
-        }
+            .accessibilityElement(children: .ignore)
+            .accessibilityValue(Text(fraction, format: .percent.precision(.fractionLength(0))))
     }
 }
 
@@ -376,7 +356,7 @@ private struct InfoTile: View {
                     }
                     titleText.frame(maxWidth: .infinity, alignment: .leading)
                 }
-                ProgressBar(value: progress).widgetAccentable()
+                FilledBar(fraction: progress).widgetAccentable()
             }
         }
         .padding(Space.m)
@@ -463,7 +443,7 @@ struct MochiFamilyView: View {
     }
 
     /// The least the well may be for the cat to show above the shelf; a screen too short for it loses the streak.
-    private static let stageHeight: CGFloat = 150
+    private static let stageHeight: CGFloat = 170
 
     private var stage: some View {
         MochiStage(entry: entry, layout: .wide, speechFont: .ourioMicro, actions: .shelf)
@@ -494,12 +474,6 @@ struct MochiFamilyView: View {
             }
             .padding(Edge.margin(.systemLarge))
         }
-    }
-}
-
-private extension PartnerNews {
-    var mood: PartnerMood? {
-        if case .mood(let check) = self { check.mood } else { nil }
     }
 }
 
@@ -607,7 +581,7 @@ struct UsFamilyView: View {
             Spacer(minLength: 0)
             Text(next.title).font(.ourioHeadline).foregroundStyle(Ink.text).lineLimit(2)
             Text(caption(next)).font(.ourioCaption).foregroundStyle(Ink.textSecondary).lineLimit(1)
-            ProgressBar(value: countdown(next)).widgetAccentable()
+            FilledBar(fraction: countdown(next)).widgetAccentable()
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
     }
@@ -739,7 +713,7 @@ struct CoinsFamilyView: View {
         VStack(alignment: .leading, spacing: Space.s) {
             Text("Care level").font(.ourioMicro).foregroundStyle(Ink.textSecondary)
             Text("Lv \(glance.level)").font(.ourioTitle).monospacedDigit().foregroundStyle(Ink.accentText).widgetAccentable()
-            ProgressBar(value: glance.progress).widgetAccentable()
+            FilledBar(fraction: glance.progress).widgetAccentable()
             Text("\(Int((glance.progress * 100).rounded()))% to Lv \(glance.level + 1)")
                 .font(.ourioMicro)
                 .foregroundStyle(Ink.textSecondary)

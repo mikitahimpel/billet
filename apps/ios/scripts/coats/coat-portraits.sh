@@ -10,7 +10,7 @@ for coat in ${@:-ginger cream tuxedo black calico}; do
   cp $IOS/Tools/make_portrait.py $work/Tools/
   python3 $IOS/scripts/coats/coat-usdz.py $IOS/Nooki/Resources/Cat.usdz \
     $IOS/Nooki/Resources/Coats/CatColor-$coat.jpg $work/Nooki/Resources/Cat.usdz
-  $BLENDER -b --python $work/Tools/make_portrait.py -- $IOS/Shared/Resources/MochiPortrait-$coat.png 512 >/dev/null
+  $BLENDER -b --python $work/Tools/make_portrait.py -- $IOS/Shared/Resources/MochiPortrait-$coat.png ${SIZE:-768} >/dev/null
   rm -rf $work
   echo "MochiPortrait-$coat.png"
 done
