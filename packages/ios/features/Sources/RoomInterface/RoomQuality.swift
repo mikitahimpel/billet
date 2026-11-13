@@ -133,10 +133,17 @@ public struct RoomConditions: Equatable, Sendable {
   /// A finger is dragging, a game is just starting or the pieces are being arranged: a change of look now would be seen
   /// as a hitch.
   public var busy: Bool
+  /// Seconds the system has rated the heat at `serious` or worse without a break, and at `critical`, as the policy
+  /// counts them; a phone is `serious` on a charger within minutes and stays there.
+  public var seriousFor: TimeInterval
+  public var criticalFor: TimeInterval
 
   public init(
-    heat: Heat, lowPower: Bool, battery: Battery? = nil, idle: TimeInterval = 0, busy: Bool = false
+    heat: Heat, lowPower: Bool, battery: Battery? = nil, idle: TimeInterval = 0, busy: Bool = false,
+    seriousFor: TimeInterval = 0, criticalFor: TimeInterval = 0
   ) {
+    self.seriousFor = seriousFor
+    self.criticalFor = criticalFor
     self.heat = heat
     self.lowPower = lowPower
     self.battery = battery
@@ -151,6 +158,11 @@ public struct RoomConditions: Equatable, Sendable {
   /// the eye (no glow, shadow or light goes), so a room someone is watching does not change as it sits, nor jump back
   /// when they touch it.
   public static let idleFair: TimeInterval = 60
+
+  /// Seconds of `serious` heat the full look is kept through, and of `critical` heat before the last tier. `fair` heat
+  /// asks for nothing: the system calls an ordinary warm phone `fair`.
+  public static let seriousGrace: TimeInterval = 300
+  public static let criticalGrace: TimeInterval = 120
 
   /// The input that asks for the tier, for the readout.
   public enum Reason: Equatable, Sendable {
@@ -169,10 +181,9 @@ public struct RoomConditions: Equatable, Sendable {
       if tier > best.tier { best = (tier, reason) }
     }
     switch heat {
-    case .critical: ask(.critical, .heat(heat))
-    case .serious: ask(.serious, .heat(heat))
-    case .fair: ask(.fair, .heat(heat))
-    case .nominal: break
+    case .critical: ask(criticalFor >= Self.criticalGrace ? .critical : .serious, .heat(heat))
+    case .serious: if seriousFor >= Self.seriousGrace { ask(.fair, .heat(heat)) }
+    case .fair, .nominal: break
     }
     if lowPower { ask(.fair, .lowPower) }
     if let battery, !battery.charging {
@@ -197,9 +208,12 @@ public struct RoomConditions: Equatable, Sendable {
 /// Degrades at once and recovers one step at a time, only after the conditions have asked for something better for
 /// `recoverAfter` seconds, so a phone hovering at a threshold does not flip the room between looks.
 ///
+/// The system's heat rating is read through a grace: `fair` asks for nothing, `serious` for nothing until it has held
+/// ``RoomConditions/seriousGrace`` seconds, `critical` for `serious` until it has held ``RoomConditions/criticalGrace``.
+///
 /// Heat, power and battery go through that hysteresis. Idleness does not: it only grows until a touch, so it cannot
 /// flap, and the room must be at its best the moment the player is back. A degradation the player would see as a hitch
-/// (`busy`) waits until they stop, unless the system itself says `serious` or worse.
+/// (`busy`) waits until they stop, unless the system itself says `critical`.
 public struct RoomQualityPolicy: Equatable, Sendable {
   public static let recoverAfter: TimeInterval = 90
 
@@ -209,6 +223,8 @@ public struct RoomQualityPolicy: Equatable, Sendable {
   /// The tier heat, power and battery hold, apart from idleness.
   private var base: RoomQualityTier
   private var betterSince: TimeInterval?
+  private var seriousSince: TimeInterval?
+  private var criticalSince: TimeInterval?
 
   /// The conditions have asked for better than the room draws at, and the wait for it has begun.
   public var isRecovering: Bool { betterSince != nil }
@@ -222,9 +238,14 @@ public struct RoomQualityPolicy: Equatable, Sendable {
   @discardableResult
   public mutating func update(_ conditions: RoomConditions, at now: TimeInterval) -> RoomQualityTier
   {
+    var conditions = conditions
+    seriousSince = conditions.heat >= .serious ? (seriousSince ?? now) : nil
+    criticalSince = conditions.heat >= .critical ? (criticalSince ?? now) : nil
+    conditions.seriousFor = seriousSince.map { now - $0 } ?? 0
+    conditions.criticalFor = criticalSince.map { now - $0 } ?? 0
     let asked = conditions.asked
     var wanted = asked.tier
-    if conditions.busy, wanted > base, conditions.heat < .serious { wanted = base }
+    if conditions.busy, wanted > base, conditions.heat < .critical { wanted = base }
     if wanted >= base {
       if wanted > base { reason = asked.reason }
       base = wanted
