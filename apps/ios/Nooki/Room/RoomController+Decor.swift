@@ -97,9 +97,9 @@ extension RoomController {
             case .floor:
                 return base * Self.translation([0, DecorStage.floorY + lifted, 0])
             case .back:
-                return base * Self.translation([0, 0, -0.49]) * simd_float4x4(simd_quatf.x(.pi / 2))
+                return base * Self.translation([0, 0, -0.5]) * simd_float4x4(simd_quatf.x(.pi / 2))
             case .left:
-                return base * Self.translation([-0.49, 0, 0]) * simd_float4x4(simd_quatf.z(-.pi / 2))
+                return base * Self.translation([-0.5, 0, 0]) * simd_float4x4(simd_quatf.z(-.pi / 2))
             }
         }
 

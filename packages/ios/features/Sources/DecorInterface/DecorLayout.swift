@@ -382,6 +382,77 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     return here.connects(from: spawn(in: room), to: [spot])
   }
 
+  /// How far the scene slides a piece to lie flush, in metres: `along` is x on the back wall and z on the left
+  /// wall, `dx` and `dz` on the floor. The grid is 5 cm and a piece is not, so a piece left within a cell of a wall
+  /// (or, on a wall, of the window or the fittings) stands that far off it; it is drawn touching instead. Only
+  /// toward what is there to touch, never into another piece, and never for the room's own furniture at home,
+  /// which is modelled where it stands. The cells it is judged by do not change.
+  public func flushShift(of placement: Placement, in room: DecorRoom = .home) -> (
+    dx: Double, dz: Double
+  ) {
+    guard let item = DecorItem.item(shopID: placement.item), placement.space == room.space,
+      let span = Self.span(of: placement, item: item)
+    else { return (0, 0) }
+    if let base = item.base, placement.surface == .floor, placement.u == base.u,
+      placement.v == base.v,
+      placement.eighthTurns == 0
+    {
+      return (0, 0)
+    }
+    let step = DecorGrid.step
+    let wall = -0.5
+    switch placement.surface {
+    case .floor:
+      guard !item.isFlat else { return (0, 0) }
+      let others = allPlacements(in: room).compactMap { other -> Span? in
+        guard other.item != placement.item, other.surface == .floor,
+          let otherItem = DecorItem.item(shopID: other.item), !otherItem.isFlat
+        else { return nil }
+        return Self.span(of: other, item: otherItem)
+      }
+      func gap(toward vertical: Bool) -> Double {
+        let edge = vertical ? span.z - span.halfZ : span.x - span.halfX
+        var open = edge - wall
+        for other in others {
+          let across =
+            vertical
+            ? abs(other.x - span.x) < other.halfX + span.halfX
+            : abs(other.z - span.z) < other.halfZ + span.halfZ
+          let near = vertical ? other.z + other.halfZ : other.x + other.halfX
+          if across, near <= edge + 0.001 { open = min(open, edge - near) }
+        }
+        return open
+      }
+      let dx = gap(toward: false)
+      let dz = gap(toward: true)
+      return (dx > 0 && dx < step ? -dx : 0, dz > 0 && dz < step ? -dz : 0)
+    case .backWall, .leftWall:
+      var edges = room.blockedWall(placement.surface).map { ($0.x - $0.halfX, $0.x + $0.halfX) }
+      edges += allPlacements(in: room).compactMap { other -> (Double, Double)? in
+        guard other.item != placement.item, other.surface == placement.surface,
+          let otherItem = DecorItem.item(shopID: other.item),
+          let otherSpan = Self.span(of: other, item: otherItem)
+        else { return nil }
+        return (otherSpan.x - otherSpan.halfX, otherSpan.x + otherSpan.halfX)
+      }
+      var shift = 0.0
+      var best = step
+      for (low, high) in edges {
+        let below = (span.x - span.halfX) - high
+        let above = low - (span.x + span.halfX)
+        if below >= -0.001, below < best {
+          best = max(below, 0)
+          shift = -best
+        }
+        if above >= -0.001, above < best {
+          best = max(above, 0)
+          shift = best
+        }
+      }
+      return placement.surface == .backWall ? (shift, 0) : (0, shift)
+    }
+  }
+
   /// The closest spot to `placement`, on the same surface, where it fits; nil when none does.
   public func nearestFit(to placement: Placement, in room: DecorRoom = .home) -> Placement? {
     let reach = Occupancy.reach

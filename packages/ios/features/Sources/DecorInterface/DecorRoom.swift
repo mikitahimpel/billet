@@ -63,7 +63,7 @@ public struct DecorRoom: Equatable, Sendable {
       Span(x: -0.28, z: 0, halfX: 0.2, halfZ: 0.01),
     ],
     leftWallBlocked: [
-      Span(x: 0.02, z: 0, halfX: 0.2, halfZ: 0.01),
+      Span(x: 0.02, z: 0, halfX: 0.22, halfZ: 0.01),
       Span(x: 0.36, z: 0, halfX: 0.08, halfZ: 0.01),
     ],
     floorSpots: [(0, 7), (-3, 7), (4, 5), (-5, -2), (7, 0)],

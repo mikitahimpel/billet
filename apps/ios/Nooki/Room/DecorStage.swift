@@ -19,6 +19,8 @@ final class DecorStage {
         let blob: ModelEntity?
         var model: Entity?
         var placement: Placement?
+        /// How far the piece is drawn off its cell to lie flush, in metres.
+        var shift = SIMD2<Float>.zero
         var lit = false
 
         init(item: DecorItem, blob: ModelEntity?) {
@@ -48,7 +50,8 @@ final class DecorStage {
     private var baseReadyTold = false
 
     static let floorY: Float = 0.014
-    private static let wallInset: Float = 0.49
+    /// The wall's inside face: a piece hung on it lies against it.
+    private static let wallInset: Float = 0.5
 
     private static let unitBox = MeshResource.generateBox(size: 1, cornerRadius: 0.1)
     private static let unitPlane = MeshResource.generatePlane(width: 1, depth: 1)
@@ -114,7 +117,12 @@ final class DecorStage {
         for placement in drawn {
             guard let item = DecorItem.item(shopID: placement.item) else { continue }
             let node = nodes[placement.item] ?? makeNode(for: item)
-            if node.placement != placement || lightChanged || node.model == nil { place(node, at: placement) }
+            let flush = decor.layout.flushShift(of: placement, in: room)
+            let shift = SIMD2(Float(flush.dx), Float(flush.dz))
+            if node.placement != placement || node.shift != shift || lightChanged || node.model == nil {
+                node.shift = shift
+                place(node, at: placement)
+            }
             showPlate(on: node)
         }
         showGhost()
@@ -168,13 +176,16 @@ final class DecorStage {
         let orientation: simd_quatf
         switch placement.surface {
         case .floor:
-            position = [Float(DecorGrid.metres(placement.u)), Self.floorY, Float(DecorGrid.metres(placement.v))]
+            position = [
+                Float(DecorGrid.metres(placement.u)) + node.shift.x, Self.floorY,
+                Float(DecorGrid.metres(placement.v)) + node.shift.y,
+            ]
             orientation = .y(turns)
         case .backWall:
-            position = [Float(DecorGrid.metres(placement.u)), Float(DecorGrid.wallHeight), -Self.wallInset]
+            position = [Float(DecorGrid.metres(placement.u)) + node.shift.x, Float(DecorGrid.wallHeight), -Self.wallInset]
             orientation = .identity
         case .leftWall:
-            position = [-Self.wallInset, Float(DecorGrid.wallHeight), Float(DecorGrid.metres(placement.u))]
+            position = [-Self.wallInset, Float(DecorGrid.wallHeight), Float(DecorGrid.metres(placement.u)) + node.shift.y]
             orientation = .y(.pi / 2)
         }
         // A turn or a jump of several cells (a slide, a swap, a piece nudged aside) glides; a drag follows the finger.
