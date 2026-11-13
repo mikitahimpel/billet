@@ -348,3 +348,46 @@ struct GameClarityTests {
     #expect(!BrushStrokes.goesWithFur(fit: -0.9))
   }
 }
+
+struct FeedMessTests {
+  @Test func everySecondPieceAfterTheZoneBouncesOut() {
+    #expect(!FeedMess.spills(poured: 30, zoneEnd: 30))
+    #expect(!FeedMess.spills(poured: 31, zoneEnd: 30))
+    #expect(FeedMess.spills(poured: 32, zoneEnd: 30))
+    #expect(!FeedMess.spills(poured: 33, zoneEnd: 30))
+    #expect(FeedMess.spills(poured: 34, zoneEnd: 30))
+    #expect(!FeedMess.spills(poured: 10, zoneEnd: 30))
+  }
+
+  @Test func crumbsAreSweptUpToSpotless() {
+    var mess = FeedMess()
+    #expect(mess.phase == .tidy && !mess.isSpotless)
+    mess.sweep()
+    #expect(mess.pieces == 0 && !mess.spilled)
+    for _ in 0..<5 { mess.spill() }
+    #expect(mess.phase == .messy && mess.pieces == 5 && !mess.isSpotless)
+    mess.sweep(2)
+    #expect(mess.pieces == 3)
+    mess.sweep(99)
+    #expect(mess.phase == .tidy && mess.isSpotless)
+    mess.sweep(-4)
+    #expect(mess.pieces == 0)
+  }
+
+  @Test func crumbsLeftCostALittleAndSweepingThemCostsNothing() {
+    let clean = GameResult.feed(target: 40, food: 40)
+    #expect(clean.score == 100 && !clean.messy)
+    let left = GameResult.feed(target: 40, food: 40, crumbs: 4)
+    #expect(left.score == 100 - GameResult.messCost && left.messy)
+    let swept = GameResult.feed(target: 40, food: 40, spotless: true)
+    #expect(swept.score == 100 && swept.spotless && !swept.messy)
+    let over = GameResult.feed(target: 40, food: 50)
+    let overLeft = GameResult.feed(target: 40, food: 50, crumbs: 3)
+    #expect(overLeft.score == max(0, over.score - GameResult.messCost))
+    #expect(over.tooMuch && overLeft.tooMuch)
+    #expect(overLeft.line(pronouns: .she).hasSuffix(", and a little messy"))
+    let sweptOver = GameResult.feed(target: 40, food: 50, spotless: true)
+    #expect(sweptOver.score == over.score)
+    #expect(sweptOver.line(pronouns: .she).hasSuffix(", but the mat is spotless"))
+  }
+}
