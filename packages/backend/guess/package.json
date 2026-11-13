@@ -6,7 +6,8 @@
   "sideEffects": false,
   "exports": {
     "./guess-catalog-routes": "./src/guess-catalog-routes.ts",
-    "./question-catalog": "./src/question-catalog.ts"
+    "./question-catalog": "./src/question-catalog.ts",
+    "./question-catalog.json": "./src/question-catalog.json"
   },
   "scripts": {
     "lint": "oxlint .",

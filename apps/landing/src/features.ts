@@ -882,6 +882,7 @@ export const featureList: Feature[] = [
       },
     ],
     related: [
+      "questions-to-ask-your-partner",
       "love-streak",
       "room-and-mochi",
       "long-distance-relationship-app",
@@ -1134,6 +1135,7 @@ export const longDistance: Feature = {
     "lock-screen-drawings",
     "room-and-mochi",
     "games",
+    "questions-to-ask-your-partner",
     "date-night",
     "calendar-and-countdown",
   ],

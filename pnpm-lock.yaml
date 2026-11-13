@@ -158,6 +158,9 @@ importers:
 
   apps/landing:
     dependencies:
+      '@billet/backend-guess':
+        specifier: workspace:*
+        version: link:../../packages/backend/guess
       astro:
         specifier: 'catalog:'
         version: 7.4.5(@types/node@24.19.2)(esbuild@0.28.1)(jiti@2.7.0)(yaml@2.9.1)

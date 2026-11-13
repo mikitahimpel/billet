@@ -40,7 +40,7 @@ const [mochiSmall, mochi] = await Promise.all(
       <p class="lead">{page.lead}</p>
       <p class="pg-small">
         We make Ourio. {page.app}'s prices and features are from its own App Store page and website, checked <time
-          datetime={checked.iso}>{checked.label}</time
+          datetime={(other.checked ?? checked).iso}>{(other.checked ?? checked).label}</time
         >.
       </p>
       <div class="pg-cta"><StoreButton /></div>

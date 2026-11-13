@@ -130,10 +130,17 @@ export const pages: SitePage[] = [
     group: "product",
   },
   {
+    path: "/questions-to-ask-your-partner/",
+    label: "Questions for couples",
+    summary:
+      "150 questions to ask your partner in 8 topics, from fun ones to questions to ask before marriage.",
+    group: "product",
+  },
+  {
     path: "/compare/",
     label: "Compare apps",
     summary:
-      "Ourio, Paired, Between, Locket Widget, Widgetable, Agapé, Lovewick, Cupla and SumOne: prices and features.",
+      "Ourio, Paired, Between, Couple Joy, Candle, Locket Widget, Widgetable, SumOne and more: prices and features.",
     group: "compare",
   },
   ...alternatives.map((page): SitePage => ({
