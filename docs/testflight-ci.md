@@ -40,7 +40,7 @@ fails with "No profiles for 'com.ourio.app…'" on a fresh app is missing an App
 3. Picks the build number: one above the highest build App Store Connect has for the app, and at
    least 16, since the local archives went up to 15. A number given with `-f build=N` is used
    instead, and the run stops if App Store Connect already has that build or a later one. The version
-   stays 0.1.0 (`MARKETING_VERSION` in `apps/ios/project.yml`).
+   stays 1.0.0 (`MARKETING_VERSION` in `apps/ios/project.yml`).
 4. Generates the project with XcodeGen and archives Release with automatic signing:
    `xcodebuild archive -allowProvisioningUpdates -authenticationKeyPath … -authenticationKeyID … -authenticationKeyIssuerID …`.
    The bundle IDs, team 2666YPBJTB and signing setup are the project's own, unchanged.
