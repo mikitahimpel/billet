@@ -10,6 +10,8 @@ final class WaterStage: GameStage {
     private static let bowlRadius: Float = 0.042
     private static let bowlHeight: Float = 0.026
     private static let floorInside: Float = 0.005
+    /// The water's thickness: a skin on the surface, lifted by the level.
+    private static let skin: Float = 0.0008
     /// The tip of the jug's spout, in the jug's own space.
     private static let spoutTip: SIMD3<Float> = [0.046, 0.062, 0]
 
@@ -19,6 +21,11 @@ final class WaterStage: GameStage {
     private let root: Entity
     private let bowlAt: SIMD3<Float>
     private let water: ModelEntity
+    /// The ring where the stream lands, widening while it pours.
+    private let splash: ModelEntity
+    /// The level as drawn, eased toward the bowl's.
+    private var shown: Float = 0
+    private var clock: Float = 0
     private let jug: Entity
     private let stream: ModelEntity
     private var bowl = WaterBowl()
@@ -37,10 +44,12 @@ final class WaterStage: GameStage {
         bowlAt = spots.at(0, 0.02)
 
         let bowlGroup = root.group(at: bowlAt)
-        bowlGroup.cylinder(Self.bowlHeight, Self.bowlRadius, Clay.matte(0x6F8FB0, roughness: 0.4),
-                           at: [0, Self.bowlHeight / 2, 0])
-        bowlGroup.cylinder(0.001, Self.bowlRadius - 0.004, Clay.matte(0xFFF3E2, roughness: 0.35),
-                           at: [0, Self.bowlHeight + 0.0006, 0])
+        if let mesh = BowlMesh.make(outer: Self.bowlRadius, inner: Self.bowlRadius - 0.0045, height: Self.bowlHeight,
+                                    floor: Self.floorInside) {
+            let body = ModelEntity(mesh: mesh, materials: [Clay.matte(0x6F8FB0, roughness: 0.4),
+                                                           Clay.matte(0xFFF3E2, roughness: 0.35)])
+            bowlGroup.addChild(body)
+        }
         // The fill line: a ring of small blue beads inside the rim.
         let lineY = Self.floorInside + Float(WaterBowl.line) * (Self.bowlHeight - Self.floorInside)
         let lineMaterial = Clay.glow(0x3F7FC0, intensity: 0.6)
@@ -53,8 +62,10 @@ final class WaterStage: GameStage {
         waterMaterial.baseColor = .init(tint: UIColor(red: 0.56, green: 0.82, blue: 1, alpha: 1))
         waterMaterial.roughness = 0.05
         waterMaterial.blending = .transparent(opacity: .init(floatLiteral: 0.75))
-        water = bowlGroup.cylinder(1, Self.bowlRadius - 0.0045, waterMaterial, at: [0, Self.floorInside, 0])
+        water = bowlGroup.cylinder(Self.skin, Self.bowlRadius - 0.0055, waterMaterial, at: [0, Self.floorInside, 0])
         water.isEnabled = false
+        splash = bowlGroup.cylinder(Self.skin, 0.006, Clay.glow(0xE6F4FF, intensity: 0.5), at: [0, Self.floorInside, 0])
+        splash.isEnabled = false
 
         // The jug waits up to the left; holding tips it over the bowl (see `draw`).
         jug = root.group(at: bowlAt - spots.right * 0.06 + [0, 0.11, 0])
@@ -113,16 +124,20 @@ final class WaterStage: GameStage {
             sinceTap = 0
             deck.tap(CGFloat(0.25 + 0.4 * flow))
         }
-        draw()
+        draw(dt)
         if !served { say(hint) }
     }
 
-    private func draw() {
-        let level = Float(bowl.level)
+    private func draw(_ dt: Float) {
+        shown += (Float(bowl.level) - shown) * min(1, dt * 9)
+        clock += dt
+        let level = shown
+        let calm = UIAccessibility.isReduceMotionEnabled
+        // The surface rides on the level; while it pours it trembles a hair.
+        let tremble = calm ? 0 : sin(clock * 22) * 0.00035 * flow
         let surface = Self.floorInside + level * (Self.bowlHeight - Self.floorInside)
         water.isEnabled = level > 0.01
-        water.scale = [Self.bowlRadius - 0.0045, max(surface - Self.floorInside, 0.0005), Self.bowlRadius - 0.0045]
-        water.position = [0, (surface + Self.floorInside) / 2, 0]
+        water.position = [0, surface + tremble, 0]
         // The jug glides over the bowl and tips as you hold, its spout kept over the water; the stream falls from that
         // spout to the surface.
         let eased = flow * flow * (3 - 2 * flow)
@@ -139,6 +154,12 @@ final class WaterStage: GameStage {
         stream.position = (spout + bottom) / 2
         stream.scale = [width, drop, width]
         stream.orientation = .identity
+        splash.isEnabled = flow > 0.05 && water.isEnabled
+        if splash.isEnabled {
+            let spread = calm ? 1 : 1 + 0.8 * (clock * 3).truncatingRemainder(dividingBy: 1)
+            splash.scale = [0.006 * spread, Self.skin, 0.006 * spread]
+            splash.position = [spout.x - bowlAt.x, surface + Self.skin, spout.z - bowlAt.z]
+        }
     }
 
     private var hint: String {
