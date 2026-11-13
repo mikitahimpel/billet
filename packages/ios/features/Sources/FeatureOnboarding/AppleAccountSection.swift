@@ -2,7 +2,7 @@ import AuthenticationServices
 import Design
 import SwiftUI
 
-/// The Profile's "Account" section: Sign in with Apple to save the account for a new phone, in
+/// The calm card under Settings' Account row: Sign in with Apple to save the account for a new phone, in
 /// each state of ``AppleLinkMachine``. Linking is optional; nothing else in the app asks for it.
 public struct AppleAccountSection: View {
   private let model: AppleLinkModel
@@ -11,7 +11,7 @@ public struct AppleAccountSection: View {
   public init(model: AppleLinkModel) { self.model = model }
 
   public var body: some View {
-    GroupedSection(header: "Account", footer: footer) {
+    GroupedSection(footer: footer) {
       content
     }
     .task { model.appeared() }
@@ -88,6 +88,7 @@ public struct AppleAccountSection: View {
     )
     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
     .frame(height: Size.button)
+    .corners(.control)
     .accessibilityIdentifier("signInWithApple")
   }
 

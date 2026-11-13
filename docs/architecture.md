@@ -159,7 +159,7 @@ group.
    they are. An Apple ID already linked to another account is refused (409 `AppleIdInUse`).
 4. A phone with neither the key nor a session signs in with Apple instead (`POST /v1/auth/apple`),
    which lands in the linked account. The Apple `sub` is stored; email, name and Apple's tokens are
-   not. The app links from Profile > Account (`AppleLinkMachine`) and asks for no scopes.
+   not. The app links from Settings > Account (`AppleLinkMachine`) and asks for no scopes.
 5. Every sign-in returns a new session on a new device. The server keeps only the token's SHA-256,
    and sessions last 90 days from the last use (`GET /v1/account` says whether Apple is linked).
 6. The device registers one push token per kind (`PUT /v1/devices/current/push-token`), which replaces
