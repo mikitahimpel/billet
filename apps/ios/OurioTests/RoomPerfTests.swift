@@ -137,4 +137,26 @@ struct RoomPerfTests {
         let off = try #require(controller.roomStats(tier: .full))
         #expect(off.blobs == before.blobs && off.blobLayers == 0 && off.models == before.models)
     }
+
+    @Test func theBedroomsPiecesMergeToo() async throws {
+        let controller = try await loadedHome()
+        controller.prepare(.city)
+        controller.showDecor(controller.decor)
+        let city = try #require(controller.city)
+        func stats() -> RoomStats { RoomStats(walking: city.root, room: "bedroom") }
+        for _ in 0..<400 where stats().blobs == 0 { try await Task.sleep(for: .milliseconds(50)) }
+        let before = stats()
+        print("room perf: bedroom before \(before.line)")
+        controller.setPerf(PerfLabMachine.State(changed: [.mergeFurniture, .bakedBlobs]))
+        for _ in 0..<400 where stats().mergedModels == 0 { try await Task.sleep(for: .milliseconds(50)) }
+        let merged = stats()
+        print("room perf: bedroom merged \(FurnitureMerge.rejected) \(merged.line)")
+        #expect(merged.mergedModels > 0)
+        #expect(merged.triangles == before.triangles)
+        #expect(merged.parts <= before.parts)
+        #expect(merged.blobs == 0 && merged.blobLayers == 1)
+        controller.setPerf(.shipped)
+        let off = stats()
+        #expect(off.parts == before.parts && off.triangles == before.triangles && off.blobs == before.blobs)
+    }
 }

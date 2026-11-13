@@ -15,17 +15,16 @@ struct GameView: View {
     var scenes: GameSceneSwitch
     var close: () -> Void
     @State private var touching = false
-    private static let swipeBand: CGFloat = 140
-    private static let swipeLength: CGFloat = 90
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { proxy in
-            let insets = proxy.safeAreaInsets
-            let full = CGSize(width: proxy.size.width, height: proxy.size.height + insets.top + insets.bottom)
+            let full = proxy.size
             ZStack {
                 Color.clear
                     .ignoresSafeArea()
+                    // The touch layer's own size is the screen's: a touch and a ray into the room share its space.
+                    .onGeometryChange(for: CGSize.self, of: \.size) { session.resize($0) }
                     .contentShape(.rect)
                     .gesture(
                         DragGesture(minimumDistance: 0, coordinateSpace: .local)
@@ -36,11 +35,7 @@ struct GameView: View {
                             .onEnded { value in
                                 touching = false
                                 session.touch(.ended, at: value.location)
-                                // A swipe down from the top edge leaves, where the stages' own drags never start.
-                                let drag = value.translation
-                                if value.startLocation.y < Self.swipeBand, drag.height > Self.swipeLength, abs(drag.width) < drag.height {
-                                    end()
-                                }
+                                if GameExit.isSwipe(from: value.startLocation, translation: value.translation) { end() }
                             }
                     )
                     .accessibilityHidden(true)
@@ -54,7 +49,6 @@ struct GameView: View {
                 controls
             }
             .onAppear { session.start(viewport: full) }
-            .onChange(of: full) { _, size in session.resize(size) }
         }
     }
 

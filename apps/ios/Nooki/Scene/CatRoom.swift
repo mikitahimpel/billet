@@ -280,6 +280,10 @@ class CatRoom {
             Self.rooms.add(self)
             walker.avoid = avoid
             self.walker = walker
+            // `-uitestNoCat YES`: her skinned meshes update a GPU buffer every frame, which CI's virtual GPU does not
+            // survive for long (GPU execution error 4, then "Connection to SimMetalHost was lost"); the tests that
+            // pass it drive Decorate, which needs the furniture drawn and touchable, not her.
+            if UserDefaults.standard.bool(forKey: "uitestNoCat") { catGroup.isEnabled = false }
             defer { catBuilt() }
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })

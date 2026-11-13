@@ -186,6 +186,7 @@ final class WaterStage: GameStage {
         if messy, !messSeen {
             messSeen = true
             deck.thump()
+            room.react(toMess: true, seat: spots.at(0, -0.13), back: spots.at(0, -0.19), facing: spots.facingPlayer, id: "water-watch")
         }
         var target: SIMD3<Float>? = finger
         if let t = assisted {
@@ -220,6 +221,7 @@ final class WaterStage: GameStage {
             messSeen = false
             deck.say("Spotless!", for: 1.4)
             deck.cheer()
+            room.react(toMess: false, seat: spots.at(0, -0.13), back: spots.at(0, -0.19), facing: spots.facingPlayer, id: "water-watch")
         }
         shownPuddle += (Float(bowl.puddle) - shownPuddle) * min(1, dt * (calm ? 30 : 7))
         puddle.isEnabled = shownPuddle > Float(WaterBowl.dry) / 2
@@ -231,7 +233,9 @@ final class WaterStage: GameStage {
     }
 
     private func draw(_ dt: Float) {
-        shown += (Float(bowl.level) - shown) * min(1, dt * 9)
+        // She drinks the level down a little while she is served.
+        let drunk = served ? 1 - 0.4 * min(drinking / 5, 1) : 1
+        shown += (Float(bowl.level) * drunk - shown) * min(1, dt * 9)
         clock += dt
         let level = shown
         let calm = UIAccessibility.isReduceMotionEnabled

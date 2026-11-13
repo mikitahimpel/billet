@@ -42,7 +42,7 @@ struct StashedBloom: Component {
 @MainActor
 final class RoomPerfCoordinator {
     private(set) var switches = RoomPerfSwitches()
-    private var pending: Task<Void, Never>?
+    private var pending: [ObjectIdentifier: Task<Void, Never>] = [:]
 
     /// Returns whether `next` differs from what was set.
     func set(_ next: RoomPerfSwitches) -> Bool {
@@ -120,8 +120,12 @@ final class RoomPerfCoordinator {
 
     /// Brings the merged furniture and the baked contact shadow to the switches and the layout: put back at once when
     /// the player arranges or the layout changes, built again once the models are in and the layout has held still.
-    func furniture(stage: Entity, decor: RoomDecor, receiver: @escaping @MainActor () -> ImageBasedLightReceiverComponent?) {
-        pending?.cancel()
+    func furniture(
+        stage: Entity, room: DecorRoom, decor: RoomDecor,
+        receiver: @escaping @MainActor () -> ImageBasedLightReceiverComponent?
+    ) {
+        let id = ObjectIdentifier(stage)
+        pending[id]?.cancel()
         let wantMerged = switches.mergeFurniture && !decor.isArranging
         let wantBlobs = switches.bakedBlobs && !decor.isArranging
         if !wantMerged || FurnitureMerge.layout(in: stage) != decor.layout { FurnitureMerge.split(stage) }
@@ -129,11 +133,11 @@ final class RoomPerfCoordinator {
         guard (wantMerged && FurnitureMerge.layout(in: stage) == nil)
             || (wantBlobs && ContactLayer.layout(in: stage) == nil)
         else { return }
-        pending = Task {
+        pending[id] = Task {
             for attempt in 0..<30 {
                 try? await Task.sleep(for: .milliseconds(attempt == 0 ? 400 : 1000))
                 guard !Task.isCancelled else { return }
-                guard let light = receiver(), Self.isStanding(stage, decor.layout) else { continue }
+                guard let light = receiver(), Self.isStanding(stage, decor.layout.allPlacements(in: room).count) else { continue }
                 if wantMerged, FurnitureMerge.layout(in: stage) == nil {
                     FurnitureMerge.merge(stage, layout: decor.layout, receiver: light)
                 }
@@ -144,13 +148,13 @@ final class RoomPerfCoordinator {
     }
 
     /// Every piece of the layout has a holder with its model in.
-    private static func isStanding(_ stage: Entity, _ layout: DecorLayout) -> Bool {
+    private static func isStanding(_ stage: Entity, _ count: Int) -> Bool {
         let holders = stage.children.filter { $0.name.hasPrefix("decor.") }
-        guard holders.count == layout.allPlacements.count else { return false }
+        guard holders.count == count else { return false }
         return holders.allSatisfy { holder in
-            holder.children.contains { child in
-                guard !(child is ModelEntity) else { return false }
-                return FurnitureMerge.models(under: child).isEmpty == false
+            FurnitureMerge.models(under: holder).contains {
+                $0.components[ModelComponent.self]?.materials.contains { !($0 is UnlitMaterial) } == true
+                    || $0.components.has(MergedSource.self)
             }
         }
     }

@@ -1,8 +1,7 @@
 import XCTest
 
-/// Every list kind adds from where it opens: a typed list from its own field and Add, Groceries also from a quick
-/// pick, To watch, Places to go and the wishlist from a button in the list itself, not only from the toolbar.
-/// Names are made unique per run, as the lists stay on the Simulator between runs.
+/// A list adds from its own field and Add, Groceries also from a quick pick. What each kind of list holds after an add
+/// is `ListAddingTests`. Names are made unique per run, as the lists stay on the Simulator between runs.
 final class ListAddTests: XCTestCase {
     private var app: XCUIApplication!
     private let run = String(Int(Date().timeIntervalSince1970) % 100_000)
@@ -44,80 +43,6 @@ final class ListAddTests: XCTestCase {
         }
         app.swipeDown()
         shot("groceries-filled")
-    }
-
-    @MainActor
-    func testAWatchListAddsFromTheList() throws {
-        open("To watch")
-        shot("watch-open")
-        let add = app.buttons["Add a movie or show"]
-        XCTAssertTrue(add.waitForExistence(timeout: 5), "an empty or filled watch list offers Add in the list")
-        add.tap()
-        let search = app.textFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        let name = "Home movie \(run)"
-        search.typeText(name)
-        let asText = app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Add “'")).firstMatch
-        XCTAssertTrue(asText.waitForExistence(timeout: 5), "a title search can't find is added as text")
-        asText.tap()
-        XCTAssertTrue(element(name).waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Add a movie or show"].exists, "the add tile stays in a filled list")
-        shot("watch-filled")
-    }
-
-    @MainActor
-    func testPlacesAddFromTheList() throws {
-        open("Places to go")
-        shot("places-open")
-        let add = app.buttons["Add a country or place"]
-        XCTAssertTrue(add.waitForExistence(timeout: 5))
-        add.tap()
-        let search = app.textFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.typeText("Portugal")
-        let country = app.buttons["Portugal"]
-        XCTAssertTrue(country.waitForExistence(timeout: 5))
-        country.tap()
-        XCTAssertTrue(element("Portugal").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Add a country or place"].exists)
-        shot("places-filled")
-    }
-
-    @MainActor
-    func testANewListStartsFromItsField() throws {
-        scrollTo(app.buttons["New list"]).tap()
-        let name = app.textFields["List name"]
-        XCTAssertTrue(name.waitForExistence(timeout: 5))
-        name.tap()
-        name.typeText("Packing \(run)")
-        app.buttons.matching(NSPredicate(format: "label IN {'Confirm', 'Done'}")).firstMatch.tap()
-
-        let field = app.textFields["Add an item"]
-        XCTAssertTrue(field.waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Start the list"].exists, "an empty list says how to start")
-        shot("custom-empty")
-        field.tap()
-        field.typeText("Passport\n")
-        XCTAssertTrue(element("Passport").waitForExistence(timeout: 5), "Return adds too")
-        XCTAssertFalse(app.staticTexts["Start the list"].exists)
-        shot("custom-filled")
-    }
-
-    @MainActor
-    func testTheWishlistAddsFromTheList() throws {
-        open("Wishlists")
-        shot("wishlist-open")
-        let add = app.buttons["Add a wish"]
-        XCTAssertTrue(add.waitForExistence(timeout: 5))
-        add.tap()
-        let title = app.textFields["What would you love?"]
-        XCTAssertTrue(title.waitForExistence(timeout: 5))
-        title.tap()
-        title.typeText("Linen scarf \(run)")
-        app.buttons.matching(NSPredicate(format: "label IN {'Confirm', 'Done'}")).firstMatch.tap()
-        XCTAssertTrue(element("Linen scarf \(run)").waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["Add a wish"].exists, "a filled wishlist still offers Add")
-        shot("wishlist-filled")
     }
 
     // MARK: Helpers

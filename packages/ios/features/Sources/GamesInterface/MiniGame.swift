@@ -30,11 +30,15 @@ public struct GameResult: Equatable, Sendable {
   public let tooMuch: Bool
   /// Water spilled and was wiped up again.
   public let spotless: Bool
+  /// Something was left on the mat: the reward is cut a little.
+  public let messy: Bool
 
   public init(
-    game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false, spotless: Bool = false
+    game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false, spotless: Bool = false,
+    messy: Bool = false
   ) {
     self.spotless = spotless
+    self.messy = messy
     self.game = game
     self.score = min(max(score, 0), 100)
     self.grams = grams
@@ -43,13 +47,21 @@ public struct GameResult: Equatable, Sendable {
 
   /// A feed that hit `target` with `food` in the bowl: 100 on the gram, less for each gram off,
   /// and past the portion's zone the table in ``FeedPenalty`` decides.
-  public static func feed(target: Int, food: Double) -> GameResult {
+  public static func feed(
+    target: Int, food: Double, crumbs: Int = 0, spotless: Bool = false
+  ) -> GameResult {
     let target = FeedPenalty.portion(target)
     let grams = Int(max(food.isFinite ? food : 0, 0).rounded())
     let penalty = FeedPenalty.over(target: target, food: food)
-    let score = penalty?.score ?? max(0, 100 - 10 * abs(grams - target))
-    return GameResult(game: .feed, score: score, grams: grams, tooMuch: penalty != nil)
+    let base = penalty?.score ?? max(0, 100 - 10 * abs(grams - target))
+    let messy = crumbs > 0
+    return GameResult(
+      game: .feed, score: messy ? max(0, base - messCost) : base, grams: grams,
+      tooMuch: penalty != nil, spotless: spotless && !messy, messy: messy)
   }
+
+  /// Points off a feed that leaves crumbs on the mat.
+  public static let messCost = 15
 
   /// The care itself where a need calls for it, and the game, which pays the coins (the server
   /// caps them by day).
@@ -67,7 +79,11 @@ public struct GameResult: Equatable, Sendable {
   public func line(pronouns: CatPronouns) -> String {
     switch game {
     case .feed:
-      if tooMuch { return pronouns.say(.tooMuchResult) }
+      if tooMuch {
+        let stuffed = pronouns.say(.tooMuchResult)
+        if messy { return "\(stuffed), and a little messy" }
+        return spotless ? "\(stuffed), but the mat is spotless" : stuffed
+      }
       return score == 100 ? "Exactly right. Dinner's served" : "Close enough. Dinner's served"
     case .water:
       if tooMuch { return "A little messy. Fresh water, though" }

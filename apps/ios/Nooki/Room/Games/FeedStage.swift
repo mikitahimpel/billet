@@ -20,6 +20,8 @@ final class FeedStage: GameStage {
         let to: SIMD3<Float>
         var time: Float
         let length: Float
+        /// Bounced out of the bowl onto the mat instead of into it.
+        var spills = false
     }
 
     private static let kibbleTones: [UInt32] = [0x8A5528, 0x9E6530, 0x7A4622, 0xB07A3E]
@@ -83,6 +85,13 @@ final class FeedStage: GameStage {
     private var aftermath: FeedAftermath?
     private var loafed = false
     private var shownHint = ""
+    private var mess = FeedMess()
+    private var crumbs: [ModelEntity] = []
+    /// Seconds into the Clean up button's sweep, while it runs.
+    private var assisted: Float?
+    private var assistedFrom = 0
+    private var messSeen = false
+    private var sinceSweep: Float = 0
 
     /// The most the bowl takes.
     private var cap: Double { Double(task.hardCap) }
@@ -153,6 +162,9 @@ final class FeedStage: GameStage {
     var action: String? { served == nil && canServe ? "Feed" : nil }
 
     var cue: GameCue? {
+        if served == nil, mess.phase == .messy, let crumb = crumbs.first {
+            return GameCue(step: 2, gesture: .drag(to: crumb.position + spots.right * 0.07), at: crumb.position - spots.right * 0.04)
+        }
         guard served == nil, !canServe, food == 0 else { return nil }
         return GameCue(step: 0, gesture: .hold, at: bagRest + [0, -0.06, 0])
     }
@@ -180,10 +192,67 @@ final class FeedStage: GameStage {
 
     func began(_ touch: GameTouch) {
         guard served == nil else { return }
-        holding = 0
+        if mess.phase == .messy {
+            sweep(at: touch)
+        } else {
+            holding = 0
+        }
     }
 
-    func moved(_ touch: GameTouch) {}
+    func moved(_ touch: GameTouch) {
+        if mess.phase == .messy, served == nil { sweep(at: touch) }
+    }
+
+    var assist: String? { mess.phase == .messy && served == nil && assisted == nil && holding == nil ? "Clean up" : nil }
+
+    func assistAct() {
+        guard mess.phase == .messy, assisted == nil else { return }
+        if UIAccessibility.isReduceMotionEnabled {
+            sweepAll()
+        } else {
+            assisted = 0
+            assistedFrom = crumbs.count
+        }
+    }
+
+    /// Kibble under the finger is swept off the mat.
+    private func sweep(at touch: GameTouch) {
+        var taken = 0
+        for index in crumbs.indices.reversed() where touch.distance(to: crumbs[index].position) < 0.03 {
+            crumbs.remove(at: index).removeFromParent()
+            mess.sweep()
+            taken += 1
+        }
+        if taken > 0, sinceSweep > 0.08 {
+            sinceSweep = 0
+            deck.stroke()
+        }
+    }
+
+    private func sweepAll() {
+        for crumb in crumbs { crumb.removeFromParent() }
+        mess.sweep(crumbs.count)
+        crumbs.removeAll()
+    }
+
+    private func tidy(_ dt: Float) {
+        sinceSweep += dt
+        if let t = assisted {
+            assisted = t + dt
+            let left = Int((Float(assistedFrom) * max(0, 1 - (t + dt) / 0.9)).rounded(.up))
+            while crumbs.count > left { crumbs.removeLast().removeFromParent(); mess.sweep() }
+            if left == 0 { assisted = nil }
+        }
+        if mess.phase == .messy, !messSeen {
+            messSeen = true
+            room.react(toMess: true, seat: spots.at(0, -0.13), back: spots.at(0, -0.19), facing: spots.facingPlayer, id: "feed-watch")
+        } else if mess.isSpotless, messSeen, served == nil {
+            messSeen = false
+            deck.say("Spotless!", for: 1.4)
+            deck.cheer()
+            room.react(toMess: false, seat: spots.at(0, -0.13), back: spots.at(0, -0.19), facing: spots.facingPlayer, id: "feed-watch")
+        }
+    }
 
     func ended(_ touch: GameTouch?) { holding = nil }
 
@@ -203,6 +272,7 @@ final class FeedStage: GameStage {
         drawHeap(dt)
         if pouring, tip > 0.85 { pourFlow(dt) }
         fly(dt)
+        tidy(dt)
         if let time = served { eat(time + dt, dt: dt) }
         drawRing()
         drawReadout()
@@ -211,6 +281,7 @@ final class FeedStage: GameStage {
     }
 
     private var hint: String {
+        if mess.phase == .messy { return "Sweep up the crumbs, or feed \(name) as it is" }
         if capped { return pronouns.say(.bowlCapped) }
         switch task.check(food: food) {
         case .ready: return "Right there. Let go, tap Feed"
@@ -283,9 +354,12 @@ final class FeedStage: GameStage {
     private func drop() {
         let kibble = root.sphere(0.0062, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),
                                  at: mouth, scale: [1, 0.65, 1])
-        let slot = slot(pile.count + flights.count)
-        flights.append(Flight(entity: kibble, from: mouth + spots.right * Float.random(in: -0.004...0.004), to: slot, time: 0,
-                              length: Float.random(in: 0.22...0.32)))
+        let poured = Int(food) + flights.count + 1
+        let spills = FeedMess.spills(poured: poured, zoneEnd: task.target + task.tolerance)
+        let inBowl = pile.count + flights.filter { !$0.spills }.count
+        flights.append(Flight(entity: kibble, from: mouth + spots.right * Float.random(in: -0.004...0.004),
+                              to: spills ? scatter() : slot(inBowl), time: 0, length: Float.random(in: 0.22...0.32),
+                              spills: spills))
     }
 
     private func fly(_ dt: Float) {
@@ -296,13 +370,29 @@ final class FeedStage: GameStage {
             flight.entity.position = simd_mix(flight.from, flight.to, SIMD3(repeating: u * u))
             guard u >= 1 else { continue }
             flights.remove(at: index)
+            food += Self.piece
+            if flight.spills {
+                crumbs.append(flight.entity)
+                mess.spill()
+                continue
+            }
             let local = bowl.convert(position: flight.to, from: root)
             flight.entity.removeFromParent()
             bowl.addChild(flight.entity)
             flight.entity.position = local
             pile.append(flight.entity)
-            food += Self.piece
         }
+    }
+
+    /// Where a kibble that bounced out lands: round the bowl's foot, on the scale or the mat beyond it.
+    private func scatter() -> SIMD3<Float> {
+        // Behind and to the sides of the bowl: toward the player the mat lies under the game's own buttons.
+        let angle = Float.random(in: 0.85 * .pi...2.15 * .pi)
+        let r = Float.random(in: Self.bowlRadius + 0.012...Self.bowlRadius + 0.05)
+        let across = r * cos(angle), along = r * sin(angle)
+        let onScale = abs(across) < Self.scaleSize.x / 2 - 0.01 && abs(along) < Self.scaleSize.z / 2 - 0.01
+        let y = onScale ? bowlAt.y : bowlAt.y - Self.scaleSize.y + 0.0075
+        return [bowlAt.x, y, bowlAt.z] + spots.right * across + spots.toward * along
     }
 
     /// Where the `index`th kibble rests in the bowl, in `root`'s space: spread over the mound it is piling, at the height
@@ -400,9 +490,10 @@ final class FeedStage: GameStage {
     private func serve() {
         served = 0
         servedPile = pile.count
-        let result = GameResult.feed(target: task.target, food: food)
+        assisted = nil
+        let result = GameResult.feed(target: task.target, food: food, crumbs: mess.pieces, spotless: mess.isSpotless)
         if result.tooMuch {
-            deck.say("Too much! \(name) is stuffed", for: 1.8)
+            deck.say(result.messy ? "Too much, and crumbs everywhere" : "Too much! \(name) is stuffed", for: 1.8)
             deck.thump()
         } else {
             deck.say(task.check(food: food) == .ready(perfect: true) ? "Exactly \(task.target) g!" : "\(Int(food.rounded())) g: just right", for: 1.5)
