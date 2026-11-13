@@ -61,7 +61,7 @@
                   draft: draft, list: list, history: state.us.groceries,
                   showsOften: focused || list.open.isEmpty
                 ) {
-                  add($0, to: list)
+                  add($0)
                 }
               }
               if list.kind == .watch {
@@ -105,20 +105,7 @@
             }
           }
         }
-        .scrollHeader {
-          VStack(spacing: 0) {
-            if !usesSheetToAdd(list) {
-              AddItemField(
-                placeholder: placeholder(for: list.kind), text: $draft, focused: $focused
-              ) {
-                add(draft, to: list)
-              }
-              .onAppear { if focusesField { focused = true } }
-              .padding(.horizontal, Space.gutter)
-              .padding(.top, Space.l)
-            }
-          }
-        }
+        .scrollHeader { addField(for: list) }
         .toolbar {
           ToolbarItemGroup(placement: .topBarLeading) {
             if list.kind == .watch {
@@ -191,6 +178,20 @@
       let id: UUID
     }
 
+    private func addField(for list: UsList) -> some View {
+      VStack(spacing: 0) {
+        if !usesSheetToAdd(list) {
+          AddItemField(
+            placeholder: placeholder(for: list.kind), text: $draft, focused: $focused,
+            onAdd: { add(draft) }
+          )
+          .onAppear { if focusesField { focused = true } }
+          .padding(.horizontal, Space.gutter)
+          .padding(.top, Space.l)
+        }
+      }
+    }
+
     private static let top = "top"
 
     private func showing(_ sheet: ListScreenMachine.Sheet) -> Binding<Bool> {
@@ -247,15 +248,11 @@
       }
     }
 
-    /// A grocery the pair moved to another aisle before goes there again.
-    private func add(_ text: String, to list: UsList) {
-      let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
-      guard !text.isEmpty else { return }
-      var details = ListItemDetails()
-      if list.kind.isChecklist { details.aisle = state.us.groceries.entry(for: text)?.aisle }
-      withAnimation(Motion.spring(0.25)) {
-        state.us.addItem(text, to: listID, author: state.viewer, details: details)
+    private func add(_ text: String) {
+      let added = withAnimation(Motion.spring(0.25)) {
+        state.us.addTyped(text, to: listID, author: state.viewer)
       }
+      guard added else { return }
       draft = ""
       focused = true
     }

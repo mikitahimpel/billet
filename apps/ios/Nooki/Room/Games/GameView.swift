@@ -15,8 +15,6 @@ struct GameView: View {
     var scenes: GameSceneSwitch
     var close: () -> Void
     @State private var touching = false
-    private static let swipeBand: CGFloat = 140
-    private static let swipeLength: CGFloat = 90
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -36,11 +34,7 @@ struct GameView: View {
                             .onEnded { value in
                                 touching = false
                                 session.touch(.ended, at: value.location)
-                                // A swipe down from the top edge leaves, where the stages' own drags never start.
-                                let drag = value.translation
-                                if value.startLocation.y < Self.swipeBand, drag.height > Self.swipeLength, abs(drag.width) < drag.height {
-                                    end()
-                                }
+                                if GameExit.isSwipe(from: value.startLocation, translation: value.translation) { end() }
                             }
                     )
                     .accessibilityHidden(true)

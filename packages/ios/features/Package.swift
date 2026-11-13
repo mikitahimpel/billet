@@ -76,6 +76,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureMoodTests", ["FeatureMood", "MoodInterface", "Transport", "Wire"]),
   ("ProfileInterfaceTests", ["ProfileInterface", "Pet"]),
   ("DecorInterfaceTests", ["DecorInterface"]),
+  ("UsInterfaceTests", ["UsInterface", "Persistence", "Wire"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Wire"]),
 ]
 
