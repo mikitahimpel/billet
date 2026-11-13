@@ -196,6 +196,14 @@ extension CatRoom {
     }
 }
 
+extension CatRoom {
+    /// She backs off from a mess with a shake, and comes back with a slow blink once it is gone.
+    func react(toMess messy: Bool, seat: SIMD3<Float>, back: SIMD3<Float>, facing: Float, id: String) {
+        send(to: messy ? back : seat, facing: facing, id: id)
+        walker?.behavior.perform(messy ? .shake : .slowBlink)
+    }
+}
+
 extension Entity {
     private static let blobTexture: TextureResource? = {
         let size = CGSize(width: 128, height: 128)

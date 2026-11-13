@@ -19,11 +19,12 @@ struct GameView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let insets = proxy.safeAreaInsets
-            let full = CGSize(width: proxy.size.width, height: proxy.size.height + insets.top + insets.bottom)
+            let full = proxy.size
             ZStack {
                 Color.clear
                     .ignoresSafeArea()
+                    // The touch layer's own size is the screen's: a touch and a ray into the room share its space.
+                    .onGeometryChange(for: CGSize.self, of: \.size) { session.resize($0) }
                     .contentShape(.rect)
                     .gesture(
                         DragGesture(minimumDistance: 0, coordinateSpace: .local)
@@ -48,7 +49,6 @@ struct GameView: View {
                 controls
             }
             .onAppear { session.start(viewport: full) }
-            .onChange(of: full) { _, size in session.resize(size) }
         }
     }
 
