@@ -1,13 +1,15 @@
 import XCTest
 
-/// The cat sheet opens from her button and shows her four needs as gauges with every care. The tiles at each level are
-/// `NeedGridTests`.
+/// The cat sheet shows her four needs as gauges, met, in the middle and low, with a screenshot of each. Each state needs its
+/// own launch, as `-uitestNeeds` is read at launch.
 final class NeedBarsTests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
+    @MainActor func testNeedBarsFull() throws { try shoot("full", needs: "1") }
     @MainActor func testNeedBarsMiddle() throws { try shoot("middle", needs: "0.5") }
+    @MainActor func testNeedBarsLow() throws { try shoot("low", needs: "0.15") }
 
     @MainActor
     private func shoot(_ name: String, needs value: String) throws {
