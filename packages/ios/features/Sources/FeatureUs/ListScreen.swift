@@ -61,7 +61,7 @@
                   draft: draft, list: list, history: state.us.groceries,
                   showsOften: focused || list.open.isEmpty
                 ) {
-                  add($0, to: list)
+                  add($0)
                 }
               }
               if list.kind == .watch {
@@ -105,20 +105,7 @@
             }
           }
         }
-        .scrollHeader {
-          VStack(spacing: 0) {
-            if !usesSheetToAdd(list) {
-              AddItemField(
-                placeholder: placeholder(for: list.kind), text: $draft, focused: $focused
-              ) {
-                add(draft)
-              }
-              .onAppear { if focusesField { focused = true } }
-              .padding(.horizontal, Space.gutter)
-              .padding(.top, Space.l)
-            }
-          }
-        }
+        .scrollHeader { addField(for: list) }
         .toolbar {
           ToolbarItemGroup(placement: .topBarLeading) {
             if list.kind == .watch {
@@ -189,6 +176,20 @@
 
     private struct OpenedTitle: Identifiable {
       let id: UUID
+    }
+
+    private func addField(for list: UsList) -> some View {
+      VStack(spacing: 0) {
+        if !usesSheetToAdd(list) {
+          AddItemField(
+            placeholder: placeholder(for: list.kind), text: $draft, focused: $focused,
+            onAdd: { add(draft) }
+          )
+          .onAppear { if focusesField { focused = true } }
+          .padding(.horizontal, Space.gutter)
+          .padding(.top, Space.l)
+        }
+      }
     }
 
     private static let top = "top"
