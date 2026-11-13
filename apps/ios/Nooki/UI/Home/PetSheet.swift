@@ -111,15 +111,31 @@ private struct PetSheet: View {
     var needs: () -> PetNeedsSource?
     var onPlay: (MiniGame) -> Void
     @State private var short = false
+    /// What she said to the care she turned down, for a few seconds.
+    @State private var turnedDown: String?
+    @State private var declines = 0
+    @State private var now = Date()
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let source = FixedNeeds.fromLaunch ?? needs()
         BilletSheet(state.petName, size: .fit) {
             MochiSheetContent(name: state.petName, pronouns: state.pronouns, status: source?.status ?? CatStatus(), level: state.care.level,
                               progress: state.care.progress, days: state.daysTogether, care: give,
+                              declined: { declined($0, source: source) },
                               choosePronouns: { state.choosePronouns($0) }) {
                 PetPortrait(size: 88)
+                    .keyframeAnimator(initialValue: 0.0, trigger: declines) { view, turn in
+                        view.rotationEffect(.degrees(turn))
+                    } keyframes: { _ in
+                        if !reduceMotion {
+                            LinearKeyframe(-5, duration: 0.08)
+                            LinearKeyframe(5, duration: 0.12)
+                            LinearKeyframe(-3, duration: 0.1)
+                            LinearKeyframe(0, duration: 0.08)
+                        }
+                    }
                     .keyframeAnimator(initialValue: 1.0, trigger: state.care.petPulse) { view, scale in
                         view.scaleEffect(scale)
                     } keyframes: { _ in
@@ -131,11 +147,34 @@ private struct PetSheet: View {
             }
         }
         .haptic(.impact(weight: .light), trigger: state.care.petPulse)
+        .haptic(.rejected, trigger: declines)
+        .onReceive(Timer.publish(every: 15, on: .main, in: .common).autoconnect()) { now = $0 }
         // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
         .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { dismiss() } }
     }
 
+    private func declined(_ care: NeedCare, source: PetNeedsSource?) -> String? {
+        care.declined(state.care.gate.verdict(care.kind, needs: source?.status.needs, now: now), now: now)
+    }
+
+    /// She turns it down: said where it was asked for, with a shake and a soft buzz, and nothing is given or counted.
+    private func decline(_ words: String) {
+        declines += 1
+        withAnimation(Motion.spring()) { turnedDown = words }
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            withAnimation(Motion.spring()) { if turnedDown == words { turnedDown = nil } }
+        }
+    }
+
     private func give(_ care: NeedCare) {
+        let source = FixedNeeds.fromLaunch ?? needs()
+        let at = Date()
+        let verdict = state.care.attempt(care.kind, needs: source?.status.needs, now: at)
+        if let words = care.declinedSentence(verdict, now: at, name: state.petName) {
+            decline(words)
+            return
+        }
         switch care {
         case .game(let game): onPlay(game)
         case .pet: withAnimation(Motion.spring()) { state.care.pet() }
@@ -143,17 +182,30 @@ private struct PetSheet: View {
     }
 
     private func treat() {
+        let source = FixedNeeds.fromLaunch ?? needs()
+        let at = Date()
+        let verdict = state.care.gate.verdict(.treat, needs: source?.status.needs, now: at)
+        if !verdict.isOpen {
+            let words = verdict == .refused(.met, until: nil) ? "\(state.petName) is too full for a treat" : "\(state.petName) has had a lot of treats. A little rest"
+            decline(words)
+            return
+        }
         withAnimation(Motion.spring()) { short = !state.shop.treat() }
-        if !short { needs()?.feed() }
+        if !short {
+            state.care.attempt(.treat, needs: source?.status.needs, now: at)
+            needs()?.feed()
+        }
     }
 
     /// Smaller than a need's tile, so the tiles stay what the eye reads first.
     private func moreCare(needsKnown: Bool) -> some View {
-        VStack(alignment: .leading, spacing: Space.s) {
+        let source = FixedNeeds.fromLaunch ?? needs()
+        return VStack(alignment: .leading, spacing: Space.s) {
             FlowRow {
                 ForEach(NeedCare.extra(needsKnown: needsKnown), id: \.self) { care in
                     PillButton(care.title, symbol: care.symbol) { give(care) }
-                        .accessibilityHint(care.hint(name: state.petName))
+                        .opacity(declined(care, source: source) == nil ? 1 : 0.55)
+                        .accessibilityHint(declined(care, source: source) ?? care.hint(name: state.petName))
                 }
                 Button(action: treat) {
                     HStack(spacing: Space.xs) {
@@ -167,6 +219,13 @@ private struct PetSheet: View {
                 .buttonStyle(PillButtonStyle())
                 .accessibilityLabel("Treat, \(ShopModel.treatPrice) coins")
                 .accessibilityHint("Fills \(state.petName) up more than a pet")
+            }
+            if let turnedDown {
+                Text(turnedDown)
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.accentText)
+                    .transition(.opacity)
+                    .accessibilityAddTraits(.isStaticText)
             }
             if short {
                 Text("Not enough coins for a treat")
