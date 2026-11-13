@@ -42,7 +42,7 @@ enum LandingDemo {
         guard isOn else { return }
         profile.update(names: ["L": "Alex", "M": "Sam"], togetherSince: day(-126))
         profile.adopt(pairID: "demo-pair", me: "demo-alex", partner: "demo-sam")
-        wallet.update { $0.coins = 840 }
+        wallet.update { $0.coins = 64 }
         if moments.moments.isEmpty { seedMoments(moments) }
         if us.events.isEmpty { seedCalendar(us) }
         if let watch = us.lists.first(where: { $0.kind == .watch }), watch.items.isEmpty { seedFilms(us, watch.id) }
