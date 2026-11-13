@@ -17,7 +17,7 @@ struct SwayEnvelope: Equatable {
 
 /// Answers true once every `interval` seconds of frames, for motion that need not be redone every frame.
 struct Throttle: Equatable {
-    let interval: Float
+    var interval: Float
     private var waited: Float
 
     /// Fires on the first call, so a new room starts in its pose.
@@ -32,4 +32,32 @@ struct Throttle: Equatable {
         waited = 0
         return true
     }
+}
+
+/// Passes a value only when it differs from the last one that passed, for scene writes: setting a component or a
+/// transform, even to what it already holds, makes RealityKit treat the entity (and its subtree) as changed.
+struct ChangeGate<Value: Equatable>: Equatable {
+    private var last: Value?
+
+    mutating func passes(_ value: Value) -> Bool {
+        guard value != last else { return false }
+        last = value
+        return true
+    }
+
+    /// The next value passes, whatever it is.
+    mutating func reopen() { last = nil }
+}
+
+/// How often the Living room's lights pulse: the full rate while she walks or a finger is down, a slow one while the
+/// room is idle, so a room left alone keeps its life without dirtying its light data thirty times a second.
+struct PulseRates: Equatable {
+    var flame: Float
+    var candle: Float
+    var bulbs: Float
+
+    static let active = PulseRates(flame: 1.0 / 30, candle: 1.0 / 15, bulbs: 0.1)
+    static let idle = PulseRates(flame: 0.1, candle: 0.5, bulbs: 0.25)
+
+    static func at(active: Bool) -> PulseRates { active ? .active : .idle }
 }

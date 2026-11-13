@@ -63,6 +63,24 @@ final class CityRoomScene: CatRoom {
     private var hour = Daylight.localHour()
     private var light = Daylight.sample(Daylight.localHour())
     private var lightHour: Float = -1
+    /// The live hour is read once a second; the clock, the sample and the shell's tint follow only a new hour.
+    private var hourClock = Throttle(interval: 1)
+    private var hourGate = ChangeGate<Float>()
+    private var exponentGate = ChangeGate<Float>()
+    private var windowGate = ChangeGate<WindowKey>()
+    private var tintGate = ChangeGate<TintKey>()
+    private var viewer: Entity?
+
+    private struct TintKey: Equatable {
+        var hour: Float
+        var baked: Bool
+    }
+
+    private struct WindowKey: Equatable {
+        var camera: simd_float4x4
+        var turn: SIMD4<Float>
+        var probe: CGPoint?
+    }
     /// The hour and lamp brightness the room's lights and glowing materials were last set for.
     private var appliedHour: Float = -1
     private var appliedLamps: Float = -1
@@ -206,19 +224,33 @@ final class CityRoomScene: CatRoom {
     override func tick(_ dt: Float) {
         super.tick(dt)
         switch clock {
-        case .live: hour = Self.fixedHour ?? Daylight.localHour()
+        case .live:
+            if hourClock.fires(dt) {
+                hour = Self.fixedHour ?? Daylight.localHour()
+                SceneWrites.note(.hourRead)
+            }
         case .cycle(let seconds): hour = (hour + dt * 24 / seconds).truncatingRemainder(dividingBy: 24)
         }
-        light = Daylight.sample(hour)
+        if hourGate.passes(hour) {
+            light = Daylight.sample(hour)
+            SceneWrites.note(.hourSample)
+            setClock(hour)
+            SceneWrites.note(.clockHands)
+        }
         paintTown(dt)
-        setClock(hour)
         // The room's lights change slowly; they are redone once the hour has moved on a little.
         let moved = abs(hour - appliedHour)
         if min(moved, 24 - moved) > 0.1 { applyLight() }
+        applyAmbient()
+        if tintGate.passes(TintKey(hour: hour, baked: isBaked)), isBaked {
+            tintShell(BakedShell.tint(light))
+            SceneWrites.note(.shellTint)
+        }
     }
 
     private func applyLight() {
         appliedHour = hour
+        SceneWrites.note(.lights)
         let darkness = light.darkness
         // By day the light is as warm as the Living room's; at night it stays the moon's.
         let warm = Daylight.rgb(0xFFE2BC), day = 1 - darkness
@@ -256,16 +288,16 @@ final class CityRoomScene: CatRoom {
                 Task { [weak self] in
                     guard let env = try? await EnvironmentResource(equirectangular: image), let self else { return }
                     environment = env
+                    exponentGate.reopen()
                     applyAmbient()
                 }
             }
         }
-        applyAmbient()
-        if isBaked { tintShell(BakedShell.tint(light)) }
     }
 
     private func applyAmbient() {
-        guard let environment else { return }
+        guard let environment, exponentGate.passes(light.env) else { return }
+        SceneWrites.note(.ambient)
         ibl.components.set(ImageBasedLightComponent(source: .single(environment),
                                                     intensityExponent: log2(max(light.env, 0.05) / 0.85) - 0.4))
     }
@@ -318,6 +350,7 @@ final class CityRoomScene: CatRoom {
 
     override func start(on surface: any RoomSurface, viewer: Entity,
                         beforeProjecting: @escaping (Float) -> Void, onFrame: @escaping (CGPoint?) -> Void) {
+        self.viewer = viewer
         super.start(on: surface, viewer: viewer, beforeProjecting: beforeProjecting) { [weak self] head in
             onFrame(head)
             self?.placeWindow(surface)
@@ -327,8 +360,15 @@ final class CityRoomScene: CatRoom {
     /// Tells the flat view where the window is on screen this frame, after the camera has moved: the glass as it is
     /// and as it would be with the room unturned, which the planes' parallax runs between, and the hole in the wall's
     /// front face, which the view is clipped to. The wall around the hole, drawn over the view, hides its edges.
-    private func placeWindow(_ surface: any RoomSurface) {
+    func placeWindow(_ surface: any RoomSurface) {
         let o = opening
+        // What the projection depends on is the camera, the room's turn and the surface; one probe point stands for
+        // the surface, and nothing is projected again until one of them moves.
+        let key = WindowKey(camera: viewer?.transformMatrix(relativeTo: nil) ?? .init(1),
+                            turn: pivot.orientation.vector,
+                            probe: surface.project(pivot.convert(position: [0, o.top, -0.54], to: nil)))
+        guard windowGate.passes(key) else { return }
+        SceneWrites.note(.windowProject)
         let corners: [SIMD2<Float>] = [[o.left, o.top], [o.right, o.top], [o.right, o.bottom], [o.left, o.bottom]]
         let glass = corners.map { SIMD3<Float>($0.x, $0.y, -0.54) }
         let face = corners.map { SIMD3<Float>($0.x, $0.y, -0.5) }

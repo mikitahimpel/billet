@@ -391,14 +391,26 @@ with the pieces.
 | 3 | Dynamic lights: 4 in the Living room, 6 in the Bedroom. Every light adds to the per-fragment loop and the light constant buffers; the Bedroom rewrites all of them whenever the hour moves 0.1 h | Medium-high | `fewerLights` |
 | 4 | 9 transparent blob quads, each its own blended draw, plus 51 grounding shadows | Medium | `bakedBlobs` (blobs); grounding shadows fall with merging |
 | 5 | Bloom (iOS 27 only, unbounded scope): a full-screen downsample chain | Medium on GPU, if the phone is on iOS 27 | `noBloom` |
-| 6 | Living room pulse runs while `swaying` is true, which is the setting, not idleness: flame scale at 30 Hz, candle light intensity at 15 Hz (a light update), 26 bulb scales at 10 Hz, in an idle room | Medium (keeps the light data dirty) | `sway` (existing) |
-| 7 | Bedroom tick every frame: `Calendar.dateComponents` and `Daylight.sample`, two clock-hand orientation writes (a same-value write still dirties the subtree), 12 projections for the window | Low-medium CPU; keeps the scene dirty. Not changed here: Bedroom code is being reworked | none |
+| 6 | Living room pulse runs while `swaying` is true, which is the setting, not idleness: flame scale at 30 Hz, candle light intensity at 15 Hz (a light update), 26 bulb scales at 10 Hz, in an idle room | Medium (keeps the light data dirty). Slowed while idle in 9.5 | `sway` (existing) |
+| 7 | Bedroom tick every frame: `Calendar.dateComponents` and `Daylight.sample`, two clock-hand orientation writes (a same-value write still dirties the subtree), 12 projections for the window | Low-medium CPU; keeps the scene dirty. Fixed in 9.5 | none |
 | 8 | Sway rewrites `pivot.orientation` each frame while active, so every descendant transforms; scales with entity count (191 / 270) | Low-medium while she walks or a finger is down; idle is already still (`SwayEnvelope`) | merging cuts the entity count |
 | 9 | `showDecor` recomputes occupancy and cat routes per input change (not per frame) | Low | none |
 
 Already fine: the camera pose is guarded against rewrites, the pivot turns only when the yaw changed, motes and AA are
 off by default, a covered or hidden room does not render, and `ownLoop` caps an idle room at 30 fps. A scene-tick cap
 was not added: the tick is cheap next to the render, and `ownLoop` is the cap.
+
+### 9.5 Idle writes
+
+Each scene write below is gated by a pure type in `SwayEnvelope.swift` (`Throttle`, `ChangeGate`, `PulseRates`) and
+counted by `SceneWrites` (Labs → Performance → Refresh room stats prints writes per second since the last refresh).
+
+- Bedroom: the live hour is read once a second; the palette sample, the clock hands, the shell tint and the image light
+  follow only a new hour; the window is projected again only when the camera, the room's turn or the surface moved
+  (one probe point stands for the surface). The lights still redo at 0.1 h.
+- Living room: while the room is idle (`!isActive`) the flame scale steps at 10 Hz (30 Hz active), the candle light at
+  2 Hz (15 Hz) and the 26 bulbs at 4 Hz (10 Hz). Reduce Motion and the `sway` setting still hold them still.
+- `catBody.scale` is written only when the squash changes.
 
 ### 9.3 Labs switches (all off by default, runtime toggles)
 
