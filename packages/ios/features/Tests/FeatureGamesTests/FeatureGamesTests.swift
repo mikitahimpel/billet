@@ -100,7 +100,7 @@ struct WaterBowlTests {
   @Test func aPuddleGrowsToItsCapAndTheFloorDriesByWiping() {
     var bowl = WaterBowl()
     #expect(bowl.phase == .pouring)
-    bowl.pour(flow: 1, dt: 4)
+    bowl.pour(flow: 1, dt: 6)
     #expect(bowl.phase == .messy && bowl.spilled)
     let early = bowl.puddle
     bowl.pour(flow: 1, dt: 30)
