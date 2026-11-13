@@ -142,20 +142,22 @@ struct BakedShellTests {
         #expect(BakedShell.resolved(live) == .live)
         #expect(BakedShell.resolved(baked) == .baked)
 
-        func models(_ room: CatRoom) -> Int {
+        func models(_ root: Entity) -> Int {
             var count = 0
-            room.pivot.forEachDescendant { if $0 is ModelEntity, $0.components.has(ModelComponent.self) { count += 1 } }
+            root.forEachDescendant { if $0 is ModelEntity, $0.components.has(ModelComponent.self) { count += 1 } }
             return count
         }
         UserDefaults.standard.set("baked", forKey: BakedShell.labsKey)
         defer { UserDefaults.standard.removeObject(forKey: BakedShell.labsKey) }
         let city = CityRoomScene()
         #expect(city.isBaked)
-        #expect(models(city) < 70)
+        // The Bedroom's own furniture is the player's to move, so the stage builds it live whatever the shell is; only
+        // what is built outside the stage counts against the baked path.
+        #expect(models(city.pivot) - models(city.decorStage.root) < 70)
         UserDefaults.standard.removeObject(forKey: BakedShell.labsKey)
         let liveCity = CityRoomScene()
         #expect(!liveCity.isBaked)
-        #expect(models(liveCity) > 150)
+        #expect(models(liveCity.pivot) > 150)
     }
 
     @Test func aRemoteBakedFlagTurnsItOnAndLabsTurnsItOff() throws {
