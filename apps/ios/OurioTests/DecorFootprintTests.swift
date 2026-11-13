@@ -11,7 +11,8 @@ import Testing
 struct DecorFootprintTests {
     /// The catalog's footprint was measured on the full-detail model; the lean copy the room draws must match it, or
     /// a piece stands off the wall it is placed against.
-    @Test(arguments: DecorItem.all.filter { !$0.isBase })
+    /// The monstera is the exception: its footprint is its pot (`CORE` in tools/decor-lod/catalog.py), not its leaves.
+    @Test(arguments: DecorItem.all.filter { !$0.isBase && $0.id != "monstera" })
     func theModelTheStageDrawsIsTheSizeTheCatalogSays(item: DecorItem) async throws {
         let model = try await Entity(named: item.assetName, in: .main)
         let bounds = model.visualBounds(relativeTo: nil)
