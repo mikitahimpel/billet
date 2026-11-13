@@ -9,9 +9,11 @@ final class RearrangeRoomTests: XCTestCase {
     private func launchDecorate() {
         app = XCUIApplication()
         app.launchArguments += ["-onboardingDone", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES",
-                                "-decorate", "closet"]
+                                "-uitestNoCat", "YES", "-decorate", "closet"]
         app.launch()
         XCTAssertTrue(app.otherElements["decorPanel"].waitForExistence(timeout: 90), "Decorate mode should open on the closet")
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.otherElements["launch-splash"])
+        wait(for: [gone], timeout: 60)
     }
 
     private func at(_ x: Double, _ y: Double) -> XCUICoordinate {
@@ -25,8 +27,7 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testResetRoomAsksFirstAndDecorateCloses() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testResetRoomAsksFirstAndDecorateCloses() {
         launchDecorate()
         let reset = app.buttons["decorReset"]
         XCTAssertTrue(reset.waitForExistence(timeout: 15))
@@ -41,8 +42,7 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testTheRoomsOwnFurnitureTurnsStoresAndComesBack() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testTheRoomsOwnFurnitureTurnsStoresAndComesBack() {
         launchDecorate()
         look("0-start")
         // The cat tree stands in the right corner of the Living room.
@@ -72,8 +72,7 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testTheLastBedCannotBeStored() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testTheLastBedCannotBeStored() {
         launchDecorate()
         // The cat's bed is in the middle of the rug.
         at(0.55, 0.54).tap()
@@ -85,8 +84,7 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testAFineTurnTurnsFortyFiveDegreesAndCanBeTakenBack() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testAFineTurnTurnsFortyFiveDegreesAndCanBeTakenBack() {
         launchDecorate()
         // The cat tree stands in a corner with room round it, so a turn of 45 degrees fits.
         for _ in 0..<3 where !app.staticTexts["Cat tree"].exists {
