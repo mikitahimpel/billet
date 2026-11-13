@@ -175,25 +175,46 @@ reviewer) and accepts only the `main` branch. Its secrets are the environment's 
 the Proton Pass items above; Proton Pass stays the source of truth. The `dev` stage has no GitHub
 environment and does not run here.
 
-The workflow checks that every secret is present (names only), runs
+The workflow checks that the six required secrets are present (names only) and warns about missing optional ones, runs
 `pnpm turbo run lint typecheck test format:check`, then
 `pnpm exec alchemy deploy --stage prod --yes --no-input`, prints the log with the `workers.dev`
 address masked (public repository logs are public; the account ID is a secret, so GitHub masks it
 too), smoke-tests the Worker URL for HTTP 200 and deletes the raw log in a last step.
 
-Owner steps, once:
+Owner steps, once. The secrets are copied from Proton Pass to GitHub; the Mac's `pp` session is
+the agents' session and cannot read the prod vault, so the main path is by hand.
 
-1. Create the item `cloudflare` in the vault `Billet Release` with the fields `account_id` and
-   `api_token` (the prod token above), plus `Cloudflare Access` (`team_domain`, `aud`, the prod
-   Access application) and `TMDB` (`api_token`) in the same vault.
-2. Back up the Apple `.p8` keys in the item `Apple` (vault `Billet`): Apple shows each one only once.
-3. On your Mac, with `pp` and `gh` logged in: `scripts/sync-prod-secrets.sh --dry-run` (names
-   only), then `scripts/sync-prod-secrets.sh`. It pipes each value from `pp run` into
-   `gh secret set --env prod` without printing it, then lists the names.
+1. Create the prod items in Proton Pass (the vault and field names are in the table above), and
+   back up the Apple `.p8` keys in the item `Apple`: Apple shows each one only once.
+2. **Manual copy (main path).** GitHub, Settings, Environments, `prod`, Environment secrets, Add
+   secret, for each name below, pasting the value from Proton Pass. `APPLE_SIGN_IN_KEY` and
+   `APNS_KEY` are multi-line PEM (`.p8`) values: paste them whole, with the BEGIN and END lines.
+
+   | Secret | Proton item and field | Needed |
+   | --- | --- | --- |
+   | `CLOUDFLARE_ACCOUNT_ID` | prod `cloudflare`, `account_id` | required |
+   | `CLOUDFLARE_API_TOKEN` | prod `cloudflare`, `api_token` | required |
+   | `APNS_KEY` | `Apple`, `APNS_KEY` (PEM) | required |
+   | `APNS_KEY_ID` | `Apple`, `APNS_KEY_ID` | required |
+   | `APPLE_SIGN_IN_KEY` | `Apple`, `APPLE_SIGN_IN_KEY` (PEM) | required |
+   | `APPLE_SIGN_IN_KEY_ID` | `Apple`, `APPLE_SIGN_IN_KEY_ID` | required |
+   | `ACCESS_TEAM_DOMAIN` | prod `Cloudflare Access`, `team_domain` | optional |
+   | `ACCESS_AUD` | prod `Cloudflare Access`, `aud` | optional |
+   | `TMDB_TOKEN` | prod `TMDB`, `api_token` | optional |
+
+   The first prod deploy works without the three optional ones: the Access application needs the
+   deployed host first, so `/admin` stays closed until `ACCESS_*` are set, and without
+   `TMDB_TOKEN` prod serves no titles. The workflow warns by name. Add them later and run Deploy
+   again.
+3. **Script (optional).** `scripts/sync-prod-secrets.sh` does the same copy without printing a
+   value: `--dry-run` lists names; it skips an optional variable whose Proton item does not exist
+   yet and lists what it skipped. It needs a `pp` session that can read the prod vault, that is the
+   owner's own login (`PROTON_PASS_SESSION_DIR` pointing at a directory logged in as the owner),
+   and `gh` logged in.
 4. Actions, Deploy, Run workflow, stage `prod`. Approve the waiting run in the GitHub app or the
    run page. Then check `GET /` and `/v1/flags` on the prod host.
 
-Rotation: change the value in Proton Pass first, run `scripts/sync-prod-secrets.sh` again, then run
+Rotation: change the value in Proton Pass first, update the secret in GitHub (by hand or with the script), then run
 the workflow so the Worker gets the new value. A new variable goes into `.env.pass.release` and
 `deploy.yml` together.
 

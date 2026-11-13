@@ -7,6 +7,8 @@
 #   scripts/sync-prod-secrets.sh --dry-run  list the names only
 #
 # .env.pass.release is the single list; to rotate, change the value in Proton Pass and run this again.
+# The pp session must be able to read the prod vault (the owner's own login, not the agents' session;
+# docs/alchemy.md#deploy-workflow).
 set -euo pipefail
 
 repo=mikitahimpel/billet
@@ -35,14 +37,29 @@ gh auth status >/dev/null 2>&1 || { echo "gh is not logged in: run gh auth login
 
 export PROTON_PASS_AGENT_REASON="${PROTON_PASS_AGENT_REASON:-sync prod secrets to GitHub environment prod}"
 
+# These may not exist in Proton Pass yet (the first deploy runs without them); a missing one is skipped.
+optional=" ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN "
+skipped=""
+tmp=$(mktemp -d)
+trap 'rm -rf "$tmp"' EXIT
+
 for name in $names; do
+  # One reference per run, so an item that does not exist yet fails only its own variable.
+  grep -E "^$name=" "$env_file" > "$tmp/one.env"
   # The variable name is the only text in the command string; the value stays in the environment.
-  pp run --env-file "$env_file" -- sh -c \
-    "test -n \"\$$name\" || { echo 'empty or unresolved: $name' >&2; exit 1; }
-     printf %s \"\$$name\" | gh secret set $name --env $env_name --repo $repo" \
-    && echo "set $name"
+  if pp run --env-file "$tmp/one.env" -- sh -c \
+    "test -n \"\$$name\" || exit 1
+     printf %s \"\$$name\" | gh secret set $name --env $env_name --repo $repo" 2>/dev/null; then
+    echo "set $name"
+  elif [ "${optional#* $name }" != "$optional" ]; then
+    skipped="$skipped $name"
+  else
+    echo "failed: $name is required and did not resolve or could not be set" >&2
+    exit 1
+  fi
 done
 
+if [ -n "$skipped" ]; then echo "Skipped (item not in Proton Pass yet):$skipped"; fi
 echo
 echo "Secrets in the environment '$env_name' (names only):"
 gh secret list --env "$env_name" --repo "$repo"
