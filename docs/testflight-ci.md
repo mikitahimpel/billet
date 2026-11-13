@@ -100,9 +100,9 @@ Values go from Proton Pass straight into `gh` and are never printed. Make an env
 scratchpad that holds only references:
 
 ```sh
-ASC_KEY_ID=pass://Billet/Apple/asc-api/key_id
-ASC_ISSUER_ID=pass://Billet/Apple/asc-api/issuer_id
-ASC_P8=pass://Billet/Apple/asc-api/p8
+ASC_KEY_ID=pass://Ourio/ASC API/key_id
+ASC_ISSUER_ID=pass://Ourio/ASC API/issuer_id
+ASC_P8=pass://Ourio/ASC API/p8
 ```
 
 Then copy each value across:
