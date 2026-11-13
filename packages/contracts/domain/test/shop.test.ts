@@ -10,6 +10,7 @@ import {
   featuredSets,
   fnv1a,
   giftItems,
+  giftCoins,
   giftOn,
   itemPriceOn,
   pieceSetOf,
@@ -133,6 +134,15 @@ describe("the seeded rotations", () => {
     for (let date = 1; date <= 28; date++) {
       const day = localDay(`2026-02-${String(date).padStart(2, "0")}`);
       expect(giftOn("pair-1", day, owned)._tag).toBe("Coins");
+    }
+  });
+
+  it("never pay a gift of 0 coins: a gift is at least a coin or a piece", () => {
+    expect(Math.min(...giftCoins)).toBeGreaterThanOrEqual(1);
+    for (let date = 1; date <= 28; date++) {
+      const day = localDay(`2026-02-${String(date).padStart(2, "0")}`);
+      const gift = giftOn("pair-1", day, new Set());
+      if (gift._tag === "Coins") expect(gift.coins).toBeGreaterThanOrEqual(1);
     }
   });
 });
