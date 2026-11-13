@@ -1,3 +1,4 @@
+import FeatureOnboarding
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -47,6 +48,9 @@ struct ProfileHub: View {
                     }
                 }
                 .buttonStyle(RowButtonStyle())
+                if let session {
+                    AppleAccountSection(model: session.appleLink)
+                }
             }
         }
         .sheet(isPresented: $pairing) {

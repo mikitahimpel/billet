@@ -5,7 +5,7 @@ Last updated: 6 November 2026
 Billet is a private app for two people to send each other drawings and photos. This policy covers the current test version, distributed through TestFlight.
 
 ## What the app handles
-- **Your account:** the app creates an anonymous account with a key kept in your Keychain. There is no password and no sign-in (the app does not offer Sign in with Apple today), and we never see your name or email address.
+- **Your account:** the app creates an anonymous account with a key kept in your iCloud Keychain. There is no password. You can also link your Apple ID to the account (Profile > Account > Sign in with Apple). This is optional and nothing in the app needs it. When you link, Apple gives us a private identifier for you, the same each time you use Ourio, and we keep it with your account so that Sign in with Apple can bring the account back on a phone that has lost its key. We ask Apple for no name and no email address, and we keep none that arrives with it, and we don't keep Apple's tokens. If you never link, we receive nothing from your Apple Account. We never see your name or email address.
 - **Pairing:** an invite code, valid for 24 hours, links your account to your partner's. We keep only a one-way hash of the code, never the code itself. A pair is exactly two accounts.
 - **Devices and sessions:** a random device ID, and a session that keeps you signed in. We keep only a one-way hash of the session token.
 - **Notes:** the drawings and photos you send to your partner, with who sent them and when.
@@ -44,7 +44,7 @@ Some test builds exchange notes through a temporary test room instead. A test ro
 The app keeps your session, device ID and recent notes on your device to show them. Deleting the app removes these from your device, but not from our backend.
 
 ## Questions and deletion
-You can unpair at any time in Settings, which deletes the room you shared, and delete your account there too: that removes your account and the notes and photos you sent from our backend, and your partner is unpaired. To ask about your data, or to have a report deleted, email <SUPPORT_EMAIL>.
+You can unpair at any time in Settings, which deletes the room you shared, and delete your account there too: that removes your account and the notes and photos you sent from our backend, and your partner is unpaired. If you linked your Apple ID, the app asks Apple to confirm once more and sends us a one-time code, and we use it to revoke Ourio's access to your Apple ID at Apple before the link is deleted with the rest of the account. To ask about your data, or to have a report deleted, email <SUPPORT_EMAIL>.
 
 ## App Privacy answers for App Store Connect
 
