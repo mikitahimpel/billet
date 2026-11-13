@@ -1,4 +1,5 @@
 import Foundation
+import GamesInterface
 import RoomInterface
 import Testing
 @testable import Billet
@@ -64,6 +65,41 @@ struct PerfLabTests {
 
     @Test func theCopyLineNamesAForcedTier() {
         #expect(PerfLabMachine.summary(State(forcedTier: .serious), reading: nil) == "Perf lab: tier serious forced")
+    }
+
+    @Test func theCopyLineCarriesTheGovernor() {
+        let line = GovernorReadout.line(tier: .fair, forced: false, reason: "Low Power Mode", changes: 3)
+        #expect(line == "governor fair (Low Power Mode), 3 changes")
+        #expect(PerfLabMachine.summary(.shipped, reading: nil, governor: line)
+            == "Perf lab: as shipped · governor fair (Low Power Mode), 3 changes")
+    }
+
+    @Test func theGovernorReadoutSaysWhyAndWhatItDraws() {
+        #expect(GovernorReadout.why(.heat(.serious), recovering: false, forced: false) == "heat serious")
+        #expect(GovernorReadout.why(.idle, recovering: true, forced: false) == "room left alone, recovering")
+        #expect(GovernorReadout.why(.none, recovering: false, forced: true) == "forced in Labs")
+        let conditions = RoomConditions(
+            heat: .fair, lowPower: true, battery: .init(level: 0.18, charging: false), idle: 75.4, busy: false)
+        #expect(GovernorReadout.inputs(conditions)
+            == "heat fair, low power on, battery 18% unplugged, idle 75 s, busy no")
+        #expect(GovernorReadout.plan(RoomQualityTier.serious.plan)
+            == "30/20 fps, 1.25x, bloom off, sun shadow off, lights widest, hdr off, pulse x3")
+    }
+
+    @Test func aQuietRoomIsIdleAndADragOrAGameStartIsBusy() {
+        let controller = RoomController(usesStandIn: true, defaults: UserDefaults(suiteName: "governor.\(UUID())")!)
+        let start = ProcessInfo.processInfo.systemUptime
+        controller.looked()
+        #expect(controller.quiet(now: start + 100).idle >= 99)
+        #expect(!controller.quiet(now: start + 100).busy)
+        controller.fingerMoved(true)
+        #expect(controller.quiet(now: ProcessInfo.processInfo.systemUptime + 1).busy)
+        controller.fingerMoved(false)
+        #expect(!controller.quiet(now: ProcessInfo.processInfo.systemUptime + 1).busy)
+        #expect(controller.quiet(now: ProcessInfo.processInfo.systemUptime + 1).idle < 2.5)
+        controller.play(.feed)
+        #expect(controller.quiet(now: ProcessInfo.processInfo.systemUptime + 1).busy)
+        #expect(!controller.quiet(now: ProcessInfo.processInfo.systemUptime + RoomController.gameGrace + 1).busy)
     }
 
     @Test func theCopyLineEndsWithTheEnergyReading() {

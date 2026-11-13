@@ -59,5 +59,8 @@ struct PulseRates: Equatable {
     static let active = PulseRates(flame: 1.0 / 30, candle: 1.0 / 15, bulbs: 0.1)
     static let idle = PulseRates(flame: 0.1, candle: 0.5, bulbs: 0.25)
 
-    static func at(active: Bool) -> PulseRates { active ? .active : .idle }
+    static func at(active: Bool, slowedBy slowdown: Float = 1) -> PulseRates {
+        let rates = active ? PulseRates.active : .idle
+        return PulseRates(flame: rates.flame * slowdown, candle: rates.candle * slowdown, bulbs: rates.bulbs * slowdown)
+    }
 }

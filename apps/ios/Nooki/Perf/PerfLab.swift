@@ -174,12 +174,13 @@ nonisolated enum PerfLabMachine: Machine {
 
     /// One line to paste into a message: what is switched and the meter's last reading.
     static func summary(_ state: State, reading: FrameStats?, energy: EnergyStats? = nil,
-                        tabs: TabSwitchTimes? = nil, day: MetricsDigest? = nil, room: String? = nil) -> String {
+                        tabs: TabSwitchTimes? = nil, day: MetricsDigest? = nil, room: String? = nil,
+                        governor: String? = nil) -> String {
         let changed = PerfSuspect.allCases.filter { state.changed.contains($0) }
             .map { "\($0.rawValue) \(state.isOn($0) ? "on" : "off")" }
         let forced = state.forcedTier.map { "tier \($0.title) forced" }
         let switches = changed.isEmpty && forced == nil ? "as shipped" : (changed + [forced].compactMap { $0 }).joined(separator: ", ")
-        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line, day?.line, room].compactMap { $0 })
+        return (["Perf lab: \(switches)"] + [reading?.line, energy?.line, tabs?.line, day?.line, room, governor].compactMap { $0 })
             .joined(separator: " · ")
     }
 }
@@ -440,36 +441,116 @@ private final class TabSwitchLinkTarget: NSObject {
     @objc func frame(_ link: CADisplayLink) { tick(link) }
 }
 
-/// Follows the phone's heat and Low Power Mode and says which ``RoomQualityTier`` the room should draw at, degrading at
-/// once and recovering slowly (``RoomQualityPolicy``).
+/// Follows the phone's heat, Low Power Mode, battery and how long the room has been left alone, and says which
+/// ``RoomQualityTier`` the room should draw at, degrading at once and recovering slowly (``RoomQualityPolicy``). It reads
+/// when the system says something changed and every two seconds besides, for the quiet.
 @MainActor
 @Observable
 final class QualityMonitor {
     private(set) var tier: RoomQualityTier
     private(set) var conditions: RoomConditions
+    private(set) var reason: RoomConditions.Reason = .none
+    private(set) var recovering = false
+
+    /// Seconds since the room was touched or moved, and whether a change of look would show; the room's own reading.
+    @ObservationIgnored var quiet: (@MainActor () -> (idle: TimeInterval, busy: Bool))?
+    /// Called after the tier changed.
+    @ObservationIgnored var onChange: (@MainActor () -> Void)?
 
     @ObservationIgnored private var policy: RoomQualityPolicy
     @ObservationIgnored private let info: ProcessInfo
+    @ObservationIgnored private let device: UIDevice
+    @ObservationIgnored private var observers: [any NSObjectProtocol] = []
+    @ObservationIgnored private var ticker: Task<Void, Never>?
 
-    init(info: ProcessInfo = .processInfo) {
+    init(info: ProcessInfo = .processInfo, device: UIDevice = .current) {
         self.info = info
-        let conditions = RoomConditions(info)
+        self.device = device
+        device.isBatteryMonitoringEnabled = true
+        let conditions = Self.read(info, device, quiet: nil)
         var policy = RoomQualityPolicy()
         tier = policy.update(conditions, at: info.systemUptime)
+        reason = policy.reason
         self.conditions = conditions
         self.policy = policy
-        Task { @MainActor [weak self] in
+        let names: [Notification.Name] = [
+            ProcessInfo.thermalStateDidChangeNotification, .NSProcessInfoPowerStateDidChange,
+            UIDevice.batteryLevelDidChangeNotification, UIDevice.batteryStateDidChangeNotification,
+        ]
+        observers = names.map { name in
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                MainActor.assumeIsolated { self?.sample() }
+            }
+        }
+        ticker = Task { @MainActor [weak self] in
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(5))
+                try? await Task.sleep(for: .seconds(2))
                 self?.sample()
             }
         }
     }
 
     func sample() {
-        conditions = RoomConditions(info)
-        let next = policy.update(conditions, at: info.systemUptime)
-        if next != tier { tier = next }
+        let now = Self.read(info, device, quiet: quiet?())
+        if now != conditions { conditions = now }
+        let next = policy.update(now, at: info.systemUptime)
+        if policy.reason != reason { reason = policy.reason }
+        if policy.isRecovering != recovering { recovering = policy.isRecovering }
+        if next != tier {
+            tier = next
+            onChange?()
+        }
+    }
+
+    private static func read(_ info: ProcessInfo, _ device: UIDevice, quiet: (idle: TimeInterval, busy: Bool)?)
+        -> RoomConditions
+    {
+        var conditions = RoomConditions(info)
+        if device.batteryLevel >= 0, device.batteryState != .unknown {
+            conditions.battery = .init(
+                level: Double(device.batteryLevel),
+                charging: device.batteryState == .charging || device.batteryState == .full)
+        }
+        if let quiet {
+            conditions.idle = quiet.idle
+            conditions.busy = quiet.busy
+        }
+        return conditions
+    }
+}
+
+/// What Labs → Performance and the copy line say about the quality governor, as text.
+nonisolated enum GovernorReadout {
+    static func why(_ reason: RoomConditions.Reason, recovering: Bool, forced: Bool) -> String {
+        if forced { return "forced in Labs" }
+        let asked: String =
+            switch reason {
+            case .none: "nothing asks for less"
+            case .heat(let heat): "heat \(heat)"
+            case .lowPower: "Low Power Mode"
+            case .battery: "low battery"
+            case .idle: "room left alone"
+            }
+        return recovering ? "\(asked), recovering" : asked
+    }
+
+    static func inputs(_ c: RoomConditions) -> String {
+        let battery = c.battery.map { "\(Int(($0.level * 100).rounded()))% \($0.charging ? "charging" : "unplugged")" } ?? "unknown"
+        return "heat \(c.heat), low power \(c.lowPower ? "on" : "off"), battery \(battery), idle \(Int(c.idle)) s, "
+            + "busy \(c.busy ? "yes" : "no")"
+    }
+
+    static func plan(_ p: RoomQualityPlan) -> String {
+        func on(_ flag: Bool) -> String { flag ? "on" : "off" }
+        let scale = String(format: "%g", p.scale)
+        let slow = String(format: "%g", p.pulseSlowdown)
+        return "\(p.activeRate)/\(p.idleRate) fps, \(scale)x, bloom \(on(p.bloom)), sun shadow \(on(p.sunShadow)), "
+            + "lights \(p.widestLightOnly ? "widest" : "all"), hdr \(on(p.hdr)), pulse x\(slow)\(p.still ? ", still" : "")"
+    }
+
+    /// One line for Copy settings.
+    static func line(tier: RoomQualityTier, forced: Bool, reason: String, changes: Int) -> String {
+        "governor \(tier.title)\(forced ? " (forced)" : "") (\(reason)), \(changes) changes"
     }
 }
 
@@ -484,6 +565,9 @@ final class PerfLab {
     var state: PerfLabMachine.State { store.state }
 
     @ObservationIgnored let quality = QualityMonitor()
+    /// How many times the tier the room draws at has changed since launch, by the phone or by Labs.
+    private(set) var tierChanges = 0
+    @ObservationIgnored private var lastTier: RoomQualityTier?
 
     /// The tier the room draws at: the one Labs forces, else the one the phone's heat and power ask for.
     var tier: RoomQualityTier { state.forcedTier ?? quality.tier }
@@ -525,6 +609,8 @@ final class PerfLab {
             }
         }
         #endif
+        lastTier = tier
+        quality.onChange = { [weak self] in self?.noteTier() }
     }
 
     func isOn(_ suspect: PerfSuspect) -> Bool { state.isOn(suspect) }
@@ -546,7 +632,23 @@ final class PerfLab {
         Binding { self.state.meter } set: { self.store.send(.meter($0)) }
     }
 
-    func force(_ tier: RoomQualityTier?) { store.send(.force(tier)) }
+    func force(_ tier: RoomQualityTier?) {
+        store.send(.force(tier))
+        noteTier()
+    }
+
+    private func noteTier() {
+        let now = self.tier
+        if let lastTier, lastTier != now { tierChanges += 1 }
+        lastTier = now
+    }
+
+    var governorLine: String {
+        GovernorReadout.line(
+            tier: tier, forced: state.forcedTier != nil,
+            reason: GovernorReadout.why(quality.reason, recovering: quality.recovering, forced: state.forcedTier != nil),
+            changes: tierChanges)
+    }
 
     func reset() { store.send(.reset) }
 

@@ -64,7 +64,12 @@ struct LockCanvasView: View {
         .animation(Motion.fade(0.25), value: model.isPartnerDrawing)
         .sensoryFeedback(.success, trigger: sent)
         .sensoryFeedback(.selection, trigger: model.ink)
-        .onAppear { model.appeared() }
+        .onAppear {
+            model.appeared()
+            #if DEBUG
+            if LandingDemo.isOn { model.loadLandingDemo() }
+            #endif
+        }
         .onDisappear { model.disappeared() }
         // Over the canvas: an ink bought here plays its moment and Undo where it was tapped.
         .overlay { PurchaseMoment(state: state) }
@@ -124,10 +129,15 @@ struct LockCanvasView: View {
 
     private var clock: some View {
         TimelineView(.everyMinute) { context in
+            #if DEBUG
+            let now = LandingDemo.isOn ? LandingDemo.clock : context.date
+            #else
+            let now = context.date
+            #endif
             VStack(spacing: -6) {
-                Text(context.date, format: .dateTime.weekday(.wide).day().month(.wide))
+                Text(now, format: .dateTime.weekday(.wide).day().month(.wide))
                     .font(.ourioClockDate)
-                Text(context.date, format: .dateTime.hour().minute())
+                Text(now, format: .dateTime.hour().minute())
                     .font(.ourioClock)
                     .monospacedDigit()
                     .minimumScaleFactor(0.6)

@@ -36,7 +36,7 @@ or a user will probably hit it. NICE can follow the release. "Owner" is the repo
 
 | # | What | Where | Who |
 | --- | --- | --- | --- |
-| N1 | Version is `0.1.0` in `project.yml` and hard-coded in `check-archive.sh`; build numbers come from App Store Connect (floor 16, `asc.py next-build`; `project.yml` default 23 is only for local builds). A `1.0.0` first release needs both files changed together. | `apps/ios/project.yml`, `apps/ios/scripts/testflight/check-archive.sh` | owner |
+| N1 | **Done (2026-11-13): the version is `1.0.0`** in `apps/ios/project.yml` and `apps/ios/scripts/testflight/check-archive.sh` (change both together for the next version). Build numbers come from App Store Connect (floor 16, `asc.py next-build`; the `project.yml` default 23 is only for local builds). | `apps/ios/project.yml`, `apps/ios/scripts/testflight/check-archive.sh` | done |
 | N2 | The `aps-environment` entitlement is `development` in source; automatic signing at export switches it to production. Confirm once on the first archive with `codesign -d --entitlements :- Billet.app`. | `apps/ios/Nooki/Ourio.entitlements` | agent, needs an archive |
 | N3 | A few `print(...)` calls on asset load failures in `Scene/`, `Room/` and `UI/ItemSheet.swift`; they print model names and errors, never user data or secrets. Move them to `Logger` if the Console should stay quiet. | `apps/ios/Nooki` | agent |
 | N4 | `fatalError` only in `required init?(coder:)` of code-made views, one `layer as! CAMetalLayer` (`RoomRenderLoop.swift`, the layer class is set in the same type), and `preconditionFailure` on a missing bundled `coin-packs.json` and in `ScenePath` parsing of shipped paths. No `try!` in app or package sources. Nothing found in the launch path that can crash from outside input. | `apps/ios`, `packages/ios` | none |
@@ -53,7 +53,7 @@ or a user will probably hit it. NICE can follow the release. "Owner" is the repo
   `com.ourio.app`, `.widget`, `.notification-service`, `.share`.
 - **Icon and launch:** one 1024 px `AppIcon.png`, no alpha; launch screen is the
   `LaunchBackground` color.
-- **Labs and Debug:** Settings Labs and Testing are behind `#if DEBUG || LABS_YES`;
+- **Labs and Debug:** Settings Labs (with its test tools) is behind `#if DEBUG || LABS_YES`;
   `BILLET_LABS_MODE` defaults to `NO`; the TestFlight workflow sets `BILLET_LABS` only when its
   `labs` input is true. Shot fixtures are `#if DEBUG`. The host comes only from `BilletAPIHost`.
 - **Backend (read):** admin routes sit behind the Access check and answer nothing while its

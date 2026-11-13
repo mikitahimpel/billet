@@ -24,7 +24,7 @@ Swift choices in one PR, so the app never ships a variant it cannot show.
 
 ## App: screens and settings that ship
 
-- **Settings > Labs and Testing** (`SettingsView.swift`) are compiled into Debug, and into a
+- **Settings > Labs** (`SettingsView.swift`, `Settings/LabsSections.swift`; the old Testing section is now Labs · Test tools) is compiled into Debug, and into a
   Release build only with `BILLET_LABS=YES` (`project.yml`). The TestFlight workflow never sets
   it, so the uploaded binary, which App Review and the App Store get, has neither, and
   `check-archive.sh` fails when `BilletLabs` is not `NO`. Labs holds:
@@ -33,10 +33,11 @@ Swift choices in one PR, so the app never ships a variant it cannot show.
   - *Show all hints now* (a testing tool: remove from release or hide behind `#if DEBUG`);
   - *Style* (`StyleGallery`, owner: the style variants);
   - *Rooms* (a per-phone override of the `rooms` experiment, owner with the flag).
+  - *Window view* (the bedroom window's view and weather; a release build always shows Suburbia in clear weather, `WindowChoice.defaultChoice`);
   Recommendation: ship Labs only in debug and TestFlight-internal builds, and have the release
   build use the owner's chosen fixed values. Hidden settings are still shipped code, so removing
   the section is better than hiding it.
-- **Settings > Testing** (`Pair with a demo partner`) only appears when the server answers the
+- **Settings > Labs · Test tools > Pair with a demo partner** only appears when the server answers the
   demo partner route. Only the dev stage mounts those routes, so prod never shows it. Keep, but
   see "App Review" for how the reviewer pairs.
 - **Onboarding > "Try with a demo partner"** is the same dev-server path. Same answer.

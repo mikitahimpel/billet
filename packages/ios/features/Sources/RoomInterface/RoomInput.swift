@@ -27,11 +27,33 @@ public struct RoomRendering: Equatable, Sendable {
 
   /// The splat cat is rewritten and re-sorted at most this many times a second; 0 is every frame.
   public var splatRate: Int
+  /// What the room's own frame loop draws at while something moves and while nothing does, in frames a second, and the
+  /// pixels it draws across each point. A `RealityView` has neither.
+  public var activeRate: Int
+  public var idleRate: Int
+  public var scale: Double
+  /// The glow pass, the sun's shadow map and every point light but the widest.
+  public var bloom: Bool
+  public var sunShadow: Bool
+  public var widestLightOnly: Bool
+  /// How many times longer the flame, candle and bulbs wait between steps.
+  public var pulseSlowdown: Double
 
-  public init(antialiasing: Bool = false, hdr: Bool = true, splatRate: Int = 0) {
+  public init(
+    antialiasing: Bool = false, hdr: Bool = true, splatRate: Int = 0, activeRate: Int = 60,
+    idleRate: Int = 30, scale: Double = 2, bloom: Bool = true, sunShadow: Bool = true,
+    widestLightOnly: Bool = false, pulseSlowdown: Double = 1
+  ) {
     self.antialiasing = antialiasing
     self.hdr = hdr
     self.splatRate = splatRate
+    self.activeRate = activeRate
+    self.idleRate = idleRate
+    self.scale = scale
+    self.bloom = bloom
+    self.sunShadow = sunShadow
+    self.widestLightOnly = widestLightOnly
+    self.pulseSlowdown = pulseSlowdown
   }
 }
 

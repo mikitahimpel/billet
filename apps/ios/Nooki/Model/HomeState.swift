@@ -71,6 +71,9 @@ struct HomeStores {
     let decorSync: DecorSync
 
     static func live() -> HomeStores {
+        #if DEBUG
+        LandingDemo.prepare()
+        #endif
         let profile = CoupleStore()
         let wallet = WalletStore()
         let streak = StreakStore()
@@ -92,6 +95,9 @@ struct HomeStores {
                 },
                 share: { [weak decorSync] in decorSync?.push($0) }))
         decorSync.store = decor
+        #if DEBUG
+        LandingDemo.seed(profile: profile, wallet: wallet, moments: moments, us: us)
+        #endif
         return HomeStores(
             profile: profile, wallet: wallet, us: us, partnerMoods: MoodStore(), streak: streak,
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
@@ -231,6 +237,20 @@ final class HomeState {
         }
         if let owned = defaults.string(forKey: "shopOwned") {
             wallet.update { $0.owned = Set(owned.split(separator: ",").map(String.init)) }
+        }
+        // For the landing's screenshots: `-landingGo us|calendar|list|shop|drawing|profile` opens that screen.
+        switch defaults.string(forKey: "landingGo") {
+        case "us": tab = .us
+        case "calendar":
+            tab = .us
+            usRoute = .calendar
+        case "list":
+            tab = .us
+            if let watch = us.lists.first(where: { $0.kind == .watch }) { usRoute = .list(watch.id) }
+        case "shop": tab = .shop
+        case "drawing": drawing = true
+        case "profile": showsProfile = true
+        default: break
         }
         if defaults.object(forKey: "shotMoment") != nil, moments.moments.indices.contains(defaults.integer(forKey: "shotMoment")) {
             tab = .moments

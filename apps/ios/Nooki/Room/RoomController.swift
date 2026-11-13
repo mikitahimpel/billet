@@ -52,9 +52,15 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var motes = false
     @ObservationIgnored let decorStage = DecorStage()
-    #if DEBUG || LABS_YES
     @ObservationIgnored let perf = RoomPerfCoordinator()
-    #endif
+    /// What Labs switches off, and what the quality tier does; the scene holds back both.
+    @ObservationIgnored var labsSwitches = RoomPerfSwitches()
+    @ObservationIgnored private var governed = RoomRendering()
+    /// Where the player's finger is and was, and when a game began, for the quality governor's idea of a quiet room.
+    @ObservationIgnored private var fingerDown = false
+    @ObservationIgnored private var lastTouch = ProcessInfo.processInfo.systemUptime
+    @ObservationIgnored private var lastMoved = ProcessInfo.processInfo.systemUptime
+    @ObservationIgnored private var gameStarted: TimeInterval?
     @ObservationIgnored var decor = RoomDecor()
     @ObservationIgnored var decorRetries = 0
     @ObservationIgnored private var sway = true
@@ -128,10 +134,65 @@ final class RoomController: RoomControlling, CatStatusProviding {
         room.onShowcase = { [weak self] label in withAnimation(.snappy(duration: 0.25)) { self?.showcase = label } }
         if !motes { Self.show(motes: false, in: room) }
         room.swaying = sway
-        #if DEBUG || LABS_YES
+        room.pulseSlowdown = Float(governed.pulseSlowdown)
         perf.lights(in: room)
+    }
+
+    /// Brings the scene to what the quality tier asks beyond the Labs switches: the pulse rates, the sun's shadow, the
+    /// lights and the bloom.
+    func setRendering(_ rendering: RoomRendering) {
+        governed = rendering
+        for room in [home, city, board].compactMap({ $0 }) { room.pulseSlowdown = Float(rendering.pulseSlowdown) }
+        applySwitches()
+    }
+
+    func applySwitches() {
+        var next = labsSwitches
+        next.noSunShadow = next.noSunShadow || !governed.sunShadow
+        next.fewerLights = next.fewerLights || governed.widestLightOnly
+        next.noBloom = next.noBloom || !governed.bloom
+        let furnitureChanged =
+            next.mergeFurniture != perf.switches.mergeFurniture || next.bakedBlobs != perf.switches.bakedBlobs
+        let meshesChanged = next.fullMeshes != perf.switches.fullMeshes
+        guard perf.set(next) else { return }
+        for room in [home, city, board].compactMap({ $0 }) { perf.lights(in: room) }
+        if meshesChanged {
+            // A merged copy of the furniture holds the old geometry: split it, and it builds again from the new.
+            #if DEBUG || LABS_YES
+            FurnitureMerge.split(decorStage.root)
+            if let city { FurnitureMerge.split(city.decorStage.root) }
+            #endif
+            for room in [home, city, board].compactMap({ $0 }) { perf.meshes(in: room) }
+        }
+        #if DEBUG || LABS_YES
+        if furnitureChanged || meshesChanged { perfDecorChanged() }
         #endif
     }
+
+    // MARK: Quiet
+
+    /// A finger went down on the room or came up.
+    func fingerMoved(_ down: Bool) {
+        fingerDown = down
+        lastTouch = ProcessInfo.processInfo.systemUptime
+    }
+
+    /// The room came on screen or left it: either way the player is here, so it is not a room nobody touches.
+    func looked() { lastTouch = ProcessInfo.processInfo.systemUptime }
+
+    /// What the quality governor reads: seconds since a finger touched the room or anything in it moved, and whether a
+    /// change of look now would be seen as a hitch (a drag, a game's first seconds, the pieces being arranged).
+    func quiet(now: TimeInterval = ProcessInfo.processInfo.systemUptime) -> (idle: TimeInterval, busy: Bool) {
+        if current?.isActive == true { lastMoved = now }
+        let gameBegan = game != nil && gameStarted.map { now - $0 < Self.gameGrace } == true
+        let dragging = fingerDown && now - lastTouch < Self.dragGrace
+        return (now - max(lastTouch, lastMoved), dragging || gameBegan || decor.isArranging)
+    }
+
+    /// Seconds a game's first moments are held at the look it began with.
+    static let gameGrace: TimeInterval = 10
+    /// A finger is taken as lifted after this long even if its gesture never said so (a cancelled one does not).
+    static let dragGrace: TimeInterval = 30
 
     /// Lets every room sway and pulse, or holds it still.
     func setSway(_ on: Bool) {
@@ -305,6 +366,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     func playAll() { current?.playAll() }
 
     func play(_ game: MiniGame) {
+        gameStarted = ProcessInfo.processInfo.systemUptime
         scenery = GameScenery.start(game, last: picked[game])
         if scenery.isCorner, !usesStandIn { corner = TabletopRoom(scenery: scenery) }
         withAnimation(.easeInOut(duration: 0.25)) { self.game = game }

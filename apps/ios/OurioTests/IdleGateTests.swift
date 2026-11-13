@@ -38,6 +38,12 @@ struct IdleGateTests {
         #expect(idle.flame <= 0.25 && idle.candle <= 0.5 && idle.bulbs <= 0.25)
     }
 
+    @Test func aSlowdownStretchesEveryIntervalAndOneChangesNothing() {
+        #expect(PulseRates.at(active: true, slowedBy: 1) == .active)
+        let slowed = PulseRates.at(active: false, slowedBy: 3)
+        #expect(slowed.flame == PulseRates.idle.flame * 3 && slowed.bulbs == PulseRates.idle.bulbs * 3)
+    }
+
     @Test func theClockHandsStandWhereTheHourPutsThem() {
         let parent = Entity()
         let set = Props.wallClock(parent, at: .zero)

@@ -522,3 +522,29 @@ camera above it and culled, so removing it saves vertices only. Textures and tra
   [Enable Metal Performance HUD on iPhone & iPad?](https://developer.apple.com/forums/thread/760649)
 - [Measuring your app's power use with Power Profiler](https://developer.apple.com/documentation/xcode/measuring-your-app-s-power-use-with-power-profiler),
   [WWDC25 session 226](https://developer.apple.com/videos/play/wwdc2025/226)
+
+## 7. The quality governor
+
+The room's look follows the phone: `RoomQualityPolicy` (package `RoomInterface`, Foundation only, tested on the pc) turns
+`RoomConditions` into a `RoomQualityTier`, and each tier's `RoomQualityPlan` says what is spent. `QualityMonitor`
+(`Perf/PerfLab.swift`) reads the inputs on the system's notifications (thermal state, Low Power Mode, battery level and
+state) and every two seconds (idle time, busy), and `HomeView.roomInput` carries the plan to the room as `RoomRendering`.
+
+| Tier | Asked by | Loop active / idle fps | Scale | Bloom, sun shadow, lights, HDR | Pulses | Other |
+| --- | --- | --- | --- | --- | --- | --- |
+| full | nothing | 60 / 30 | 2x | all on | x1 | as before the governor |
+| fair | heat fair, Low Power Mode, battery <= 20% off the charger, room untouched 60 s | 30 / 20 | 1.5x | all on | x1.5 | no motes or AA, splats at 30 Hz |
+| serious | heat serious, battery <= 10% | 30 / 20 | 1.25x | bloom, sun shadow, HDR off; widest light only | x3 | no sway |
+| critical | heat critical | 20 / 15 | 1x | as serious | x3 | room held on its last frame |
+
+- Degrades at once, recovers one tier per 90 quiet seconds. Idleness is outside that hysteresis (it only grows until a
+  touch) and stops at `fair`, which looks like `full`, so a room being watched never changes and never jumps back.
+- A drag, a game's first 10 seconds or Decorate hold a degradation until they stop, unless the system says `serious`.
+- Frame rate and scale reach only the room's own loop (Labs "Room on its own 30 fps loop", read at launch). A
+  `RealityView` has no pause, cap or scale (section 2). The loop is not the default because touch, picking, Decorate and
+  games on it are checked only by the code's own tests, not on a phone, and `RealityRenderer`'s support for the splat cat
+  is unverified on iOS 27 (section 3.1). Everything else in the plan works on both paths: lights, shadow and bloom through
+  `RoomPerfCoordinator`, HDR and antialiasing through the view's rendering effects, pulses and sway in the scene.
+- Reduce Motion is not an input: the room never read it and the governor leaves that as it was.
+- Labs → Performance shows the tier, why, the inputs, what it draws and how many times it changed; Copy settings carries
+  the first and last of those.

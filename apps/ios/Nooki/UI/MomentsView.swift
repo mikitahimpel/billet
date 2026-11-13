@@ -126,10 +126,10 @@ struct MomentsView: View {
         }
     }
 
-    /// The board room shows underneath; adding is the tab bar's +, the history of notes sits at the top, and a hint
-    /// sits over an empty board.
+    /// The board room shows underneath; over it the history of notes at the top and, always, the way to add one at
+    /// the foot, so it is plain where a note comes from.
     private var boardOverlay: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: Space.m) {
             if !notes.isEmpty {
                 BoardActions(state: state)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -137,16 +137,43 @@ struct MomentsView: View {
             }
             Spacer(minLength: 0)
             if notes.isEmpty, store.pinned.isEmpty {
-                Text("Leave a note or doodle with the + below")
-                    .font(.ourioCallout.weight(.semibold))
+                Text("The board is empty. Leave the first note.")
+                    .font(.ourioCallout)
                     .foregroundStyle(Ink.glassGlyph)
+                    .multilineTextAlignment(.center)
                     .padding(.horizontal, Space.l)
-                    .frame(minHeight: Size.control)
-                    .glass(.capsule, role: .bar)
-                    .padding(.bottom, Space.l)
             }
+            HStack(spacing: GlassMetrics.gap) {
+                BoardAddButton(title: "New note", symbol: "note.text", identifier: "boardNewNote") {
+                    state.composingNote = .write
+                }
+                BoardAddButton(title: "Doodle", symbol: "scribble", identifier: "boardNewDoodle") {
+                    state.composingNote = .draw
+                }
+            }
+            .padding(.bottom, Space.l)
         }
         .tabContentInsets()
+    }
+}
+
+private struct BoardAddButton: View {
+    let title: String
+    let symbol: String
+    let identifier: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.ourioCallout.weight(.semibold))
+                .foregroundStyle(Ink.glassGlyph)
+                .padding(.horizontal, Space.l)
+                .frame(minHeight: Size.control)
+                .glass(.capsule, role: .bar)
+        }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityIdentifier(identifier)
     }
 }
 

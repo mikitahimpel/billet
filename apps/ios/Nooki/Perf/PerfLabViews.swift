@@ -242,6 +242,18 @@ private struct QualityTierPicker: View {
             Text("Quality tier: \(lab.tier.title)\(forced == nil ? " (follows heat and Low Power Mode)" : " (forced)")")
                 .font(.ourioMicro)
                 .foregroundStyle(Ink.textSecondary)
+            Text(GovernorReadout.line(
+                tier: lab.tier, forced: forced != nil,
+                reason: GovernorReadout.why(lab.quality.reason, recovering: lab.quality.recovering, forced: forced != nil),
+                changes: lab.tierChanges))
+                .font(.ourioMicro.monospacedDigit())
+                .foregroundStyle(Ink.text)
+            Text("Inputs: \(GovernorReadout.inputs(lab.quality.conditions))")
+                .font(.ourioMicro.monospacedDigit())
+                .foregroundStyle(Ink.textSecondary)
+            Text("Draws: \(GovernorReadout.plan(lab.tier.plan))")
+                .font(.ourioMicro.monospacedDigit())
+                .foregroundStyle(Ink.textSecondary)
             Picker("Quality tier", selection: Binding(get: { forced }, set: { lab.force($0) })) {
                 Text("Auto").tag(RoomQualityTier?.none)
                 ForEach(RoomQualityTier.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
@@ -299,7 +311,7 @@ struct PerfLabSwitches: View {
                         lab.refreshRoomStats()
                         UIPasteboard.general.string = PerfLabMachine.summary(lab.state, reading: reading,
                                                                              energy: energy, tabs: tabs, day: lab.day,
-                                                                             room: lab.roomStats?.line)
+                                                                             room: lab.roomStats?.line, governor: lab.governorLine)
                     }
                     if let json = MetricsReceiver.savedJSON() {
                         SecondaryButton("Copy MetricKit", fullWidth: false) { UIPasteboard.general.string = json }
