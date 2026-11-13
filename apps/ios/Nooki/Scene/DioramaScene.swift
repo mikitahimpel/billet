@@ -325,13 +325,7 @@ final class DioramaScene: CatRoom {
     /// The furniture and the two toys, loaded in the background side by side and lit like the rest of the room.
     private func loadFurniture() {
         let pieces = [("Room_furniture", pivot), ("Room_ball", ball), ("Room_yarn", basket)]
-        let lean = Meshes.smooth
-        let loads = pieces.map { name, _ in
-            Task<Entity, any Error> {
-                if lean, let copy = try? await Entity(named: Meshes.leanAsset(name), in: .main) { return copy }
-                return try await Entity(named: name, in: .main)
-            }
-        }
+        let loads = pieces.map { name, _ in Task { try await Entity(named: name, in: .main) } }
         Task { [weak self] in
             for ((name, parent), load) in zip(pieces, loads) {
                 let model: Entity

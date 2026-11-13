@@ -418,13 +418,13 @@ counted by `SceneWrites` (Labs → Performance → Refresh room stats prints wri
 behaviour while the player is not arranging; opening Decorate or changing the layout puts every piece's own model back
 at once, and the merge is rebuilt after 0.4 s of stillness. `bakedBlobs` replaces the 9 blobs with one 512 px layer.
 `noSunShadow` removes the shadow component from every directional light. `fewerLights` keeps each room's widest point
-light. `noBloom` removes the bloom pass. `leanMeshes` (9.6) gives the boxes and spheres fewer facets. Tests count each switch with the room stats and check that switching back
+light. `noBloom` removes the bloom pass. `fullMeshes` (9.6) draws RealityKit's own boxes and spheres in place of the lean ones. Tests count each switch with the room stats and check that switching back
 restores the scene.
 
 ### 9.4 Phone steps
 
 Labs → Performance: Refresh room stats, Copy settings (baseline). Flip one of `noSunShadow`, `fewerLights`,
-`mergeFurniture`, `bakedBlobs`, `noBloom`, `leanMeshes` (the Living room's furniture models from the next launch) at a time, leave Home alone for 60 s, Copy settings, paste it back, and flip
+`mergeFurniture`, `bakedBlobs`, `noBloom`, `fullMeshes` at a time, leave Home alone for 60 s, Copy settings, paste it back, and flip
 it off again. The line holds the switches, fps, CPU, heat, battery slope and the room stats.
 
 ### 9.6 Scene diet
@@ -459,33 +459,39 @@ slots share.
 hold no mesh included, does nothing: the Living room's casters and receivers go from 51 to 15 with a render of 0 off
 in a channel across all 1,316,640 pixels (`RoomMeshDiffTests`).
 
-**Behind a Labs switch, off: `leanMeshes`.** Boxes and spheres get the facets their radius can show (`SmoothBox`,
-`SmoothSphere`: 108 triangles for a box with a fillet under 1 cm, 300 up to 3 cm, 12 for a square one; a sphere 12 to
-64 segments by size on screen), at once and back again, so the two can be flipped on a phone. The Living room's USDZ
-furniture is loaded as its `_lean` copy, from the next launch (`LEAN=1 blender -b --python Tools/make_room.py`: the
-same shapes with `make_items.facets`; donut bed 145,442 to 25,384).
+**Shipped, on for everyone: lean meshes.** Boxes and spheres get the facets their radius can show (`SmoothBox`,
+`SmoothSphere`: 108 triangles for a box with a fillet under 1 cm, 300 up to 3 cm, 12 for a square one; a sphere 12 to 64
+segments by size on screen), and the Living room's USDZ furniture is the lean model (`blender -b --python
+Tools/make_room.py`: the same shapes with `make_items.facets`; donut bed 145,442 to 25,384). Labs has `fullMeshes`
+(off) to draw RealityKit's own boxes and spheres again, at once and back, for an A/B; the furniture models have no
+full copy any more.
 
-| | Before | `leanMeshes` | Change |
+| | Before | Lean | Change |
 | --- | --- | --- | --- |
 | Bedroom triangles | 2,083,836 | 49,876 | -97.6 % |
 | Living room triangles | 972,356 | 141,140 | -85.5 % |
 | Living room's USDZ furniture | 307,020 | 130,916 | -57 % |
 | Models, parts, entities, materials | same | same | none |
 
-Why behind a switch: it is not pixel-identical. The room is drawn off-screen with a `RealityRenderer` at 780 x 1688
-from the default camera, ten frames so the lights settle, without antialiasing as in the app (`OffscreenRoom`). Two
-renders of one room differ by 0 (Living room) and 0.01 % of pixels over 2 (Bedroom), so that is the noise.
-Lean against full: Bedroom 0.18 % of pixels more than 8 of 255 off, mean 0.14 a channel, 0.10 % over 32; Living room 0.40 %, mean
-0.22, 0.18 % over 32; the gallery's own match is 0.5 % over 8. The maximum is 250 to 252 at single pixels. The difference
-image is a one-pixel outline on silhouettes (a silhouette a fraction of a pixel off flips an edge pixel with no
-antialiasing), with no change inside any surface. The test holds the share at 0.5 % over 8.
+Same picture, to the gallery's bar: the room is drawn off-screen with a `RealityRenderer` at 780 x 1688 from the default
+camera, ten frames so the lights settle, without antialiasing as in the app (`OffscreenRoom`). Two renders of one room
+differ by 0 (Living room) and 0.01 % of pixels over 2 (Bedroom), so that is the noise. Lean against full, boxes,
+spheres and models together: Bedroom 0.18 % of pixels more than 8 of 255 off, mean 0.14 a channel, 0.10 % over 32;
+Living room 0.40 %, mean 0.22, 0.18 % over 32; the gallery's own match is 0.5 % over 8. The maximum is 250 to 252 at
+single pixels. The difference image is a one-pixel outline on silhouettes (a silhouette a fraction of a pixel off flips
+an edge pixel with no antialiasing), with no change inside any surface. `RoomMeshDiffTests` holds the boxes and spheres
+to 0.5 % over 8; the model comparison was run once, before the full copies were removed.
 
-Cost of keeping both: the 13 `_lean` USDZ add 4.5 MB to the bundle. Adopting the switch deletes the full copies and
-saves 9.6 MB (the 13 files are 14.1 MB), except `Room_furniture.usdz`, which `scripts/bake-room` casts shadows with.
+Sizes: every lean furniture model's bounds (RealityKit's `visualBounds`) are within 0.4 mm of the full one's, on every face, so footprints, picking and where the cat can stand do not move; `RoomFurnitureCostTests` holds each
+model to its full-detail size within 1 mm.
 
-Budgets (cannot creep back): `BedroomFurnitureCostTests` holds the Bedroom to 2.1 M triangles as built and 55 k lean;
-`RoomFurnitureCostTests` holds the lean copies to 135 k and under half of the originals' triangles, with the same
-parts and materials.
+Bundle: the 13 full models (14.1 MB) are gone and their lean copies (4.7 MB) stand in: -9.4 MB. `Room_furniture.usdz`
+is now `scripts/bake-room/Room_furniture.usdz`, full detail, outside the bundle, because the bake casts shadows with it
+(`bake.sh` reads it from there; the bake was run with it and works). `FULL=1` makes `make_room.py` write full-detail
+models.
+
+Budgets (cannot creep back): `BedroomFurnitureCostTests` holds the Bedroom to 55 k triangles as built and to 2.1 M
+with the full-detail meshes; `RoomFurnitureCostTests` holds the models to 135 k and their sizes.
 
 **Not done, from the ranking.** Draw units stay at 106 models / 181 parts (Living) and 238 / 238 (Bedroom): merging
 the room's static boxes per material would save draw calls, not triangles, and `mergeFurniture` already does it for the

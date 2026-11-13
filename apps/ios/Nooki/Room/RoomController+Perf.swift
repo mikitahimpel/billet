@@ -7,11 +7,11 @@ extension RoomController {
         let before = perf.switches
         guard perf.set(RoomPerfSwitches(state)) else { return }
         for room in [home, city, board].compactMap({ $0 }) { perf.lights(in: room) }
-        if perf.switches.leanMeshes != before.leanMeshes {
-            Meshes.smooth = perf.switches.leanMeshes
+        if perf.switches.fullMeshes != before.fullMeshes {
+            Meshes.smooth = !perf.switches.fullMeshes
             if let home { perf.meshes(in: home, stage: decorStage.root) }
             if let city { perf.meshes(in: city, stage: city.decorStage.root) }
-            if let board { Meshes.retessellate(board.root, smooth: perf.switches.leanMeshes) }
+            if let board { Meshes.retessellate(board.root, smooth: !perf.switches.fullMeshes) }
         }
         perfDecorChanged()
     }

@@ -58,13 +58,9 @@ enum Meshes {
     private static var boxes: [SIMD4<Float>: MeshResource] = [:]
     private static var smoothBoxes: [SIMD4<Float>: MeshResource] = [:]
 
-    /// Whether boxes made from now on, and those `retessellate` visits, use ``SmoothBox`` and ``SmoothSphere``, and
-    /// the furniture models that load from now on are their lean copies. Off draws RealityKit's own. Starts as Labs
-    /// left it, so the models of a launch are chosen before the lab exists.
-    @MainActor static var smooth = PerfLabMachine.State.saved(in: .standard).isOn(.leanMeshes)
-
-    /// The lean copy's name for a furniture model (`Tools/make_room.py` writes both).
-    static func leanAsset(_ name: String) -> String { name + "_lean" }
+    /// Whether boxes made from now on, and those `retessellate` visits, use ``SmoothBox`` and ``SmoothSphere``; off,
+    /// RealityKit's own. On unless Labs asked for the full-detail meshes, so a room built at launch already has them.
+    @MainActor static var smooth = !PerfLabMachine.State.saved(in: .standard).isOn(.fullMeshes)
 
     @MainActor
     static func box(_ w: Float, _ h: Float, _ d: Float, cornerRadius r: Float) -> MeshResource {

@@ -11,7 +11,7 @@ struct PerfLabTests {
     @Test func everythingShipsOnButTheExtraStepsTheDustAndTheAntialiasing() {
         let state = State.shipped
         for suspect in PerfSuspect.allCases {
-            #expect(state.isOn(suspect) == ![.flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs, .noSunShadow, .fewerLights, .noBloom, .leanMeshes].contains(suspect))
+            #expect(state.isOn(suspect) == ![.flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs, .noSunShadow, .fewerLights, .noBloom, .fullMeshes].contains(suspect))
         }
         #expect(!state.meter)
     }

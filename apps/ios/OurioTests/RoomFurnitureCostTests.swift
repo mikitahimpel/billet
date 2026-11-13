@@ -58,9 +58,10 @@ struct RoomFurnitureCostTests {
         #expect(kept.shadows < shadowedBefore)
     }
 
-    /// The room's own pieces as the app ships them against their lean copies (`Tools/make_room.py` with LEAN=1): the
-    /// same parts and materials with the facets their size on screen can show.
-    @Test func theLeanCopiesCarryAThirdOfTheTriangles() async throws {
+    /// The room's own pieces are the lean models (`Tools/make_room.py`): a third of the full-detail triangles, and the
+    /// size each full-detail piece had, to 1 mm, since its footprint, its picking and where the cat
+    /// can stand follow it.
+    @Test func theFurnitureModelsAreLeanAndKeepTheirSize() async throws {
         func triangles(_ entity: Entity) -> Int {
             var total = 0
             if let model = entity.components[ModelComponent.self] {
@@ -70,19 +71,31 @@ struct RoomFurnitureCostTests {
             }
             return total + entity.children.reduce(0) { $0 + triangles($1) }
         }
-        var full = 0, lean = 0
-        var names = DecorItem.baseItems(in: .living).map(\.assetName)
-        names += ["Room_furniture", "Room_ball", "Room_yarn"]
-        for name in names {
-            let own = Cost(try await Entity(named: name, in: .main))
-            let copy = Cost(try await Entity(named: Meshes.leanAsset(name), in: .main))
-            #expect(copy.parts == own.parts, "\(name) keeps its parts")
-            #expect(copy.names == own.names, "\(name) keeps its materials")
-            full += triangles(try await Entity(named: name, in: .main))
-            lean += triangles(try await Entity(named: Meshes.leanAsset(name), in: .main))
+        // Edge lengths of each full-detail model's box, longest last, as RealityKit measured the full-detail model before it was replaced.
+        let sizes: [String: [Float]] = [
+            "Base_basket": [0.0926, 0.1740, 0.1740],
+            "Base_books": [0.0445, 0.1282, 0.1444],
+            "Base_bowls": [0.0300, 0.0900, 0.2000],
+            "Base_cattree": [0.2000, 0.2026, 0.3868],
+            "Base_donutbed": [0.0977, 0.3495, 0.3522],
+            "Base_lamp": [0.1240, 0.1244, 0.2876],
+            "Base_nightstand": [0.2173, 0.2300, 0.3012],
+            "Base_plant": [0.1420, 0.1420, 0.4072],
+            "Base_rug": [0.0125, 0.6660, 0.6660],
+            "Base_windowseat": [0.1227, 0.1950, 0.4200],
+            "Room_ball": [0.0601, 0.0620, 0.0660],
+            "Room_furniture": [0.5054, 0.9664, 0.9754],
+            "Room_yarn": [0.1692, 0.1729, 0.2023],
+        ]
+        var total = 0
+        for (name, expected) in sizes.sorted(by: { $0.key < $1.key }) {
+            let model = try await Entity(named: name, in: .main)
+            total += triangles(model)
+            let extents = model.visualBounds(relativeTo: nil).extents
+            let got = [extents.x, extents.y, extents.z].sorted()
+            for (a, b) in zip(got, expected) { #expect(abs(a - b) < 0.001, "\(name) keeps its size: \(got) against \(expected)") }
         }
-        print("furniture cost: models \(full) triangles, lean copies \(lean)")
-        #expect(lean <= 135_000)
-        #expect(lean * 2 < full)
+        print("furniture cost: lean models \(total) triangles (307,020 at full detail)")
+        #expect(total <= 135_000)
     }
 }

@@ -2,7 +2,7 @@
 
 Run:
   blender -b --python Tools/make_room.py -- Nooki/Resources/Room [name ...]
-  LEAN=1 blender -b --python Tools/make_room.py -- Nooki/Resources/Room [name ...]   (the _lean copies)
+  FULL=1 blender -b --python Tools/make_room.py -- <dir> [name ...]   (every circle at its full segment count)
 
 Writes Room_<name>.usdz (furniture: what never moves; ball, yarn: toys) and Base_<name>.usdz, one per piece of the
 room's own furniture that the player can move (name `Base_<piece>` selects one). The furniture is modelled in the room's own coordinates (meters, floor top at
@@ -27,11 +27,9 @@ from make_items import mat  # noqa: E402
 
 OUT_DIR = kit.OUT_DIR
 ONLY = kit.ONLY
-# LEAN=1 writes the copies the app loads with Labs' lean meshes (`Base_<piece>_lean.usdz`): the same shapes with the
-# facets their size on screen can show (make_items.facets), a third of the triangles.
-LEAN = os.environ.get("LEAN") == "1"
-SUFFIX = "_lean" if LEAN else ""
-kit.LOD = LEAN
+# The shapes get the facets their size on screen can show (make_items.facets): a third of the triangles. FULL=1 builds
+# them at full detail, as `scripts/bake-room/Room_furniture.usdz` is, which the bake casts shadows with.
+kit.LOD = os.environ.get("FULL") != "1"
 
 # The room's palette (DioramaScene.Tone), so the models sit with the walls and floor drawn in code.
 WOOD, WOOD_DARK, WOOD_LIGHT = 0xB46C3C, 0x8C4F2B, 0xCF8E58
@@ -469,7 +467,7 @@ for name, build in FILES.items():
     kit._materials.clear()
     build()
     join_solid()
-    kit.export_usdz(os.path.join(OUT_DIR, f"Room_{name}{SUFFIX}.usdz"))
+    kit.export_usdz(os.path.join(OUT_DIR, f"Room_{name}.usdz"))
     print("ROOM", name)
 
 for name, (build, (u, v)) in PIECES.items():
@@ -480,5 +478,5 @@ for name, (build, (u, v)) in PIECES.items():
     build()
     join_solid()
     move_origin(u, v)
-    kit.export_usdz(os.path.join(OUT_DIR, f"Base_{name}{SUFFIX}.usdz"))
+    kit.export_usdz(os.path.join(OUT_DIR, f"Base_{name}.usdz"))
     print("BASE", name)

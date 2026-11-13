@@ -51,6 +51,7 @@ struct BedroomFurnitureCostTests {
     @Test func printsTheBedroomsDrawCost() async throws {
         let scene = CityRoomScene()
         try await Task.sleep(for: .milliseconds(300))
+        Meshes.retessellate(scene.root, smooth: true)
         let cost = Cost(scene.pivot)
         print("bedroom cost: entities \(cost.entities) models \(cost.models) drawn \(cost.enabledModels) parts \(cost.parts) colours \(cost.colours.count) shadows \(cost.shadows) lights \(cost.lights) triangles \(cost.triangles)")
         // Before the pieces were movable: entities 267, models 236 (all drawn), parts 236, colours 53, lights 5. The
@@ -61,22 +62,23 @@ struct BedroomFurnitureCostTests {
         #expect(cost.colours.count <= 53)
         #expect(cost.lights <= 5)
         #expect(cost.shadows == 0)
-        // RealityKit's rounded box is 13,068 triangles whatever its radius: 2.08 M for the room, cat included.
-        #expect(cost.triangles <= 2_100_000)
+        // RealityKit's rounded box is 13,068 triangles whatever its radius, its sphere 8,064: 2.08 M for the room. With
+        // the facets their radius can show the room is 50 k.
+        #expect(cost.triangles <= 55_000)
     }
 
-    /// With the lab's lean meshes every box and sphere has the facets its radius can show: 2.1 M triangles become 50 k.
-    @Test func theBedroomWithLeanMeshesCostsAFortiethOfTheTriangles() async throws {
+    /// The full-detail meshes of the Labs switch are RealityKit's, and the lean ones keep the room's entities and parts.
+    @Test func theFullDetailMeshesAreTheOldTwoMillionAndComeBack() async throws {
         let scene = CityRoomScene()
         try await Task.sleep(for: .milliseconds(300))
-        Meshes.retessellate(scene.root, smooth: false)
-        let full = Cost(scene.pivot)
         Meshes.retessellate(scene.root, smooth: true)
         let lean = Cost(scene.pivot)
-        print("bedroom lean cost: models \(lean.models) parts \(lean.parts) triangles \(lean.triangles) (full \(full.triangles))")
-        #expect(lean.models == full.models && lean.parts == full.parts && lean.entities == full.entities)
-        #expect(lean.triangles <= 55_000)
         Meshes.retessellate(scene.root, smooth: false)
-        #expect(Cost(scene.pivot).triangles == full.triangles)
+        let full = Cost(scene.pivot)
+        print("bedroom full cost: models \(full.models) parts \(full.parts) triangles \(full.triangles) (lean \(lean.triangles))")
+        #expect(lean.models == full.models && lean.parts == full.parts && lean.entities == full.entities)
+        #expect(full.triangles <= 2_100_000)
+        Meshes.retessellate(scene.root, smooth: true)
+        #expect(Cost(scene.pivot).triangles == lean.triangles)
     }
 }

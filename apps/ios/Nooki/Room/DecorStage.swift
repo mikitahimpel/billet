@@ -289,19 +289,13 @@ final class DecorStage {
         Task { [weak self] in
             let model: Entity
             do {
-                model = try await Self.load(named: item.assetName, lean: item.isBase)
+                model = try await Entity(named: item.assetName, in: .main)
             } catch {
                 print("\(item.assetName) failed to load: \(error)")
                 return
             }
             self?.loaded(model, for: item)
         }
-    }
-
-    /// The lean copy of a base piece when the lab asks for lean meshes; the piece itself when there is none.
-    private static func load(named name: String, lean: Bool) async throws -> Entity {
-        if lean, Meshes.smooth, let copy = try? await Entity(named: Meshes.leanAsset(name), in: .main) { return copy }
-        return try await Entity(named: name, in: .main)
     }
 
     private func loaded(_ model: Entity, for item: DecorItem) {
