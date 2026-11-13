@@ -50,7 +50,7 @@ public struct AppleAccountSection: View {
     case .linked:
       Row(
         "Signed in with Apple", detail: "Your cat and notes are saved to your Apple ID",
-        symbol: "checkmark.seal.fill", tint: Ink.sage
+        symbol: "checkmark.seal.fill", tint: .sage
       ) {}
       .accessibilityIdentifier("appleLinked")
     case .failed(let failure, _):
