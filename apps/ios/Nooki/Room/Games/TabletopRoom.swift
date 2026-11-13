@@ -48,6 +48,17 @@ final class TabletopRoom: CatRoom {
         buildMotes()
     }
 
+    /// The corner's camera stands still; a game's framing is the only thing that moves it.
+    func placeCamera(_ dt: Float) {
+        let framing = framing
+        var pose = CameraPose(eye: framing.target + framing.direction * framing.far, target: framing.target)
+        if let cameraAdjust { pose = cameraAdjust(dt, pose) }
+        guard pose != placed else { return }
+        placed = pose
+        camera.look(at: pose.target, from: pose.eye, relativeTo: nil)
+    }
+    private var placed: CameraPose?
+
     /// Swaps the floor, wall and props for `next`'s, in place: the game on it carries on.
     func dress(_ next: GameScenery) {
         guard next != scenery, next.isCorner else { return }
@@ -197,6 +208,6 @@ struct CornerStage: View {
         for entity in Array(content.entities) where entity !== room?.root { content.remove(entity) }
         guard let room, !content.entities.contains(where: { $0 === room.root }) else { return }
         content.add(room.root)
-        room.start(on: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
+        room.start(on: content, viewer: room.camera, beforeProjecting: { [weak room] dt in room?.placeCamera(dt) }, onFrame: { _ in })
     }
 }

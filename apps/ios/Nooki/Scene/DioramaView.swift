@@ -39,7 +39,7 @@ struct DioramaView: View {
         let bubble = bubble
         scene.start(on: surface, viewer: rig.camera, beforeProjecting: { dt in
             rig.update(dt: dt, framing: scene.framing, focusDistance: scene.focusDistance,
-                       yaw: scene.settledYaw, focus: scene.catFocus, photo: scene.photoPose)
+                       yaw: scene.settledYaw, focus: scene.catFocus, photo: scene.photoPose, adjust: scene.cameraAdjust)
         }) { projected in
             guard let projected else { return }
             if let old = bubble.point, hypot(old.x - projected.x, old.y - projected.y) < 2 { return }
@@ -227,7 +227,8 @@ final class ZoomRig {
     /// `framing` and `focusDistance` come from the room, `focus` is Mochi's head in pivot space, rotated by yaw so the
     /// close-up follows the room and her. `photo` is a wall photo to fly up to and look at straight on, in world space.
     func update(dt: Float, framing: CatRoom.Framing, focusDistance: Float,
-                yaw: Float, focus: SIMD3<Float>, photo pose: (center: SIMD3<Float>, normal: SIMD3<Float>)?) {
+                yaw: Float, focus: SIMD3<Float>, photo pose: (center: SIMD3<Float>, normal: SIMD3<Float>)?,
+                adjust: ((Float, CameraPose) -> CameraPose)? = nil) {
         self.framing = framing
         self.focusDistance = focusDistance
         zoom += (targetZoom - zoom) * min(1, dt * 10)
@@ -236,10 +237,11 @@ final class ZoomRig {
         let goal: Float = pose == nil ? 0 : 1
         photo += (goal - photo) * min(1, dt * 3.2)
         if abs(goal - photo) < 0.0005 { photo = goal }
-        apply(zoom: zoom, yaw: yaw, focus: focus)
+        apply(zoom: zoom, yaw: yaw, focus: focus, dt: dt, adjust: adjust)
     }
 
-    private func apply(zoom z: Float, yaw: Float, focus: SIMD3<Float>) {
+    private func apply(zoom z: Float, yaw: Float, focus: SIMD3<Float>, dt: Float = 0,
+                       adjust: ((Float, CameraPose) -> CameraPose)? = nil) {
         let distance = framing.far + (framing.near - framing.far) * z
         let rotatedCat = simd_quatf(angle: yaw, axis: [0, 1, 0]).act(focus)
         var target = framing.target + (rotatedCat - framing.target) * z
@@ -248,6 +250,10 @@ final class ZoomRig {
             let s = photo * photo * (3 - 2 * photo)
             target = simd_mix(target, photoPose.center, SIMD3(repeating: s))
             eye = simd_mix(eye, photoPose.center + photoPose.normal * focusDistance, SIMD3(repeating: s))
+        }
+        if let adjust {
+            let pose = adjust(dt, CameraPose(eye: eye, target: target))
+            (eye, target) = (pose.eye, pose.target)
         }
         // A pose written again is a camera that moved, to everything that follows it.
         guard target != placed?.target || eye != placed?.eye else { return }
