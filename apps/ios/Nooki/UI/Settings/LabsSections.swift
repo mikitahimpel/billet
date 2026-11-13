@@ -6,6 +6,7 @@ import ProfileInterface
 import RoomInterface
 import SwiftUI
 import UsInterface
+import WidgetBridge
 import WidgetInterface
 import WidgetUI
 

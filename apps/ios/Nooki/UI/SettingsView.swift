@@ -139,3 +139,85 @@ struct SettingsView: View {
         }
     }
 }
+
+private struct AccountRow: View {
+    let state: AnonymousSignInMachine.State
+    let retry: () -> Void
+
+    var body: some View {
+        Row(title, detail: detail, symbol: symbol, tint: tint.color) {
+            if case .failed = state {
+                RetryButton(compact: true, action: retry)
+                    .fixedSize()
+            } else if case .signingIn = state {
+                ProgressView()
+            }
+        }
+    }
+
+    private var title: String {
+        switch state {
+        case .idle, .signingIn: "Connecting…"
+        case .signedIn: "Connected"
+        case .failed: "Not connected"
+        }
+    }
+
+    private var detail: String? {
+        switch state {
+        case .idle, .signingIn: nil
+        case .signedIn: "Anonymous account, no email needed"
+        case .failed(let failure, _):
+            switch failure {
+            case .storage: "This iPhone couldn't save the account"
+            case .appleRefused, .rejected, .unavailable, .appleIdInUse: "The server couldn't be reached"
+            }
+        }
+    }
+
+    private var symbol: String {
+        switch state {
+        case .idle, .signingIn: "icloud"
+        case .signedIn: "checkmark.icloud.fill"
+        case .failed: "exclamationmark.icloud.fill"
+        }
+    }
+
+    private var tint: UsTint {
+        switch state {
+        case .idle, .signingIn: .lilac
+        case .signedIn: .sage
+        case .failed: .coral
+        }
+    }
+}
+
+/// Where the To watch list's posters, details and streaming services come from, as TMDB's and JustWatch's terms ask,
+/// and the Places to go list's flags (MIT, which asks for its notice) and map.
+private struct DataCreditsView: View {
+    var body: some View {
+        Page {
+            GroupedSection(header: "TMDB",
+                         footer: "This product uses the TMDB API but is not endorsed or certified by TMDB.") {
+                Link(destination: URL(string: "https://www.themoviedb.org")!) {
+                    Row("The Movie Database", symbol: "film.stack.fill", tint: UsTint.sky.color) { RowChevron() }
+                }
+            }
+            GroupedSection(header: "JustWatch",
+                         footer: "Where to watch comes from JustWatch, through TMDB.") {
+                Link(destination: URL(string: "https://www.justwatch.com")!) {
+                    Row("Streaming data by JustWatch", symbol: "play.tv.fill", tint: UsTint.sun.color) {
+                        RowChevron()
+                    }
+                }
+            }
+            GroupedSection(header: "Map", footer: "The world map is Natural Earth's, in the public domain.") {
+                Link(destination: URL(string: "https://www.naturalearthdata.com")!) {
+                    Row("Natural Earth", symbol: "globe.europe.africa.fill", tint: UsTint.sage.color) { RowChevron() }
+                }
+            }
+        }
+        .navigationTitle("Data and credits")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
