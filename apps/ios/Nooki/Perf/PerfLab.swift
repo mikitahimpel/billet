@@ -128,8 +128,11 @@ nonisolated enum PerfLabMachine: Machine {
         /// The suspects set the other way from how they ship.
         var changed: Set<PerfSuspect> = []
         var meter = false
-        /// The quality tier Labs holds the room at, or nil to follow the phone's heat.
+        /// The quality tier Labs holds the room at, or nil to follow the phone's heat. Not saved: a forced `critical`
+        /// holds the room still, and it must not outlive the session that asked for it.
         var forcedTier: RoomQualityTier?
+
+        private enum CodingKeys: String, CodingKey { case changed, meter }
 
         static let shipped = State()
 

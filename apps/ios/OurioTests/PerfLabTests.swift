@@ -63,6 +63,13 @@ struct PerfLabTests {
             == "Perf lab: barGlass off, shine off, flatten on · 60 fps, p95 16.7 ms, 0 dropped")
     }
 
+    @Test func aForcedTierIsNotSavedButTheSwitchesAre() throws {
+        let saved = try JSONEncoder().encode(State(changed: [.shine], meter: true, forcedTier: .critical))
+        let loaded = try JSONDecoder().decode(State.self, from: saved)
+        #expect(loaded == State(changed: [.shine], meter: true))
+        #expect(loaded.forcedTier == nil)
+    }
+
     @Test func theCopyLineNamesAForcedTier() {
         #expect(PerfLabMachine.summary(State(forcedTier: .serious), reading: nil) == "Perf lab: tier serious forced")
     }
