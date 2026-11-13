@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { dailyEarnCaps } from "@billet/contracts-domain/coins";
 import { inks } from "@billet/contracts-domain/inks";
-import { roomItems, welcomeCoins } from "@billet/contracts-domain/shop";
+import { roomItems } from "@billet/contracts-domain/shop";
 import {
   streakDayCoins,
   streakMilestoneCoins,
@@ -35,10 +35,10 @@ describe("streak coins stay small against the shop", () => {
     }
   });
 
-  it("a lit day is a token beside a day of care, and a year doesn't pass the welcome gift twice", () => {
+  it("a lit day is a tenth of a day of play at most, and a year of them stays near the top piece's price", () => {
     const careDay = Object.values(dailyEarnCaps).reduce((sum, cap) => sum + cap, 0);
-    expect(streakDayCoins * 20).toBeLessThanOrEqual(careDay);
+    expect(streakDayCoins * 10).toBeLessThanOrEqual(careDay);
     const year = Array.from({ length: 365 }, (_, index) => streakRewardCoins(index + 1));
-    expect(year.reduce((sum, coins) => sum + coins, 0)).toBeLessThan(welcomeCoins * 2);
+    expect(year.reduce((sum, coins) => sum + coins, 0)).toBeLessThan(500);
   });
 });

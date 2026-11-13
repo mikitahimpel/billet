@@ -41,16 +41,17 @@ export type CoinEntry = typeof CoinEntry.Type;
 
 export type EarnSource = "care" | "notes" | "games" | "lists";
 
-/** Per local day. Placeholders until the owner sets them: a caring day earns about 80 coins, so
- * a 60-coin ink is a day's care. */
+/** Per local day, 10 coins from play and about 13 for a fully active day with the gift and the streak. Rewards are small against the shop's
+ * prices on purpose: the cheapest piece takes days and the top ones weeks (docs/economy.md).
+ * `coin-pacing.test.ts` fails if an edit makes earning faster than that. */
 export const dailyEarnCaps: Readonly<Record<EarnSource, number>> = {
-  care: 10,
-  notes: 30,
-  games: 40,
-  lists: 15,
+  care: 2,
+  notes: 3,
+  games: 4,
+  lists: 1,
 };
 
-/** Before the daily cap. Placeholders like the caps. */
+/** Before the daily cap. */
 export const rewardFor = (event: CatEvent): { source: EarnSource; coins: number } | undefined => {
   switch (event._tag) {
     case "Fed":
@@ -59,12 +60,12 @@ export const rewardFor = (event: CatEvent): { source: EarnSource; coins: number 
     case "Watered":
       return { source: "care", coins: 1 };
     case "NoteShared":
-      return { source: "notes", coins: event.kind === "Photo" ? 10 : 5 };
+      return { source: "notes", coins: event.kind === "Photo" ? 2 : 1 };
     case "GamePlayed":
       // Draw-guess carries its round's coins, which hints lower.
       return {
         source: "games",
-        coins: event.game === drawGuessGame ? event.score : event.won ? 10 : 3,
+        coins: event.game === drawGuessGame ? event.score : event.won ? 3 : 1,
       };
     case "Slept":
     case "Shooed":
@@ -110,7 +111,7 @@ export const EarnEvent = Schema.TaggedUnion({
 export type EarnEvent = typeof EarnEvent.Type;
 
 /** No `source`: once per ref is the only limit. The room's stored-note entries fill the `notes`
- * cap too, so a shared note can't earn past it. Placeholders mirroring the app's amounts. */
+ * cap too, so a shared note can't earn past it. */
 export const rewardForEarn = (
   event: EarnEvent,
 ): {
@@ -127,20 +128,20 @@ export const rewardForEarn = (
   });
   switch (event._tag) {
     case "WishReceived":
-      return of("wish", event.wish, 20);
+      return of("wish", event.wish, 5);
     case "DateMatched":
-      return of("date", event.idea, 10);
+      return of("date", event.idea, 2);
     case "GuessHit":
-      return of("guess", decodeEarnRef(`${event.round}.${event.question}`), 2);
+      return of("guess", decodeEarnRef(`${event.round}.${event.question}`), 1);
     case "RoundPlayed":
-      return of("round", decodeEarnRef(event.round), 10);
+      return of("round", decodeEarnRef(event.round), 2);
     case "DateRated":
-      return of("plan", event.plan, 30);
+      return of("plan", event.plan, 6);
     case "ListTicked":
-      return of("list", event.item, 5, "lists");
+      return of("list", event.item, 1, "lists");
     case "MomentAdded":
-      return of("moment", event.moment, 10, "notes");
+      return of("moment", event.moment, 2, "notes");
     case "NoteAdded":
-      return of("note", event.note, 5, "notes");
+      return of("note", event.note, 1, "notes");
   }
 };

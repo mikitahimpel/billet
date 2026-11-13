@@ -60,7 +60,7 @@ public struct Hairline: View {
           }
         }
         Hairline()
-        Text("Complete it for 60 coins").font(.ourioCallout).foregroundStyle(Ink.textSecondary)
+        Text("Complete it for 25 coins").font(.ourioCallout).foregroundStyle(Ink.textSecondary)
       }
     }
     .padding(Space.gutter)

@@ -64,32 +64,32 @@ describe("recordEconomy", () => {
     await record({
       pairId,
       at,
-      entries: [entry("earn:a", "earn", 4)],
-      before: wallet({ balance: 6, day: "2026-11-13", care: 6 }),
-      after: wallet({ balance: 10, day: "2026-11-13", care: 10 }),
+      entries: [entry("earn:a", "earn", 1)],
+      before: wallet({ balance: 9, day: "2026-11-13", care: 1 }),
+      after: wallet({ balance: 10, day: "2026-11-13", care: 2 }),
     });
     await record({
       pairId,
       at: at + 1000,
       entries: [entry("spend:b", "spend", -60, at + 1000)],
-      before: wallet({ balance: 70, day: "2026-11-13", care: 10 }),
-      after: wallet({ balance: 10, day: "2026-11-13", care: 10 }),
+      before: wallet({ balance: 70, day: "2026-11-13", care: 2 }),
+      after: wallet({ balance: 10, day: "2026-11-13", care: 2 }),
     });
     await record({
       pairId,
       at: at + 2000,
-      entries: [entry("earn:c", "earn", 5, at + 2000)],
-      before: wallet({ balance: 10, day: "2026-11-13", care: 10 }),
-      after: wallet({ balance: 15, day: "2026-11-13", care: 10, notes: 5 }),
+      entries: [entry("earn:c", "earn", 2, at + 2000)],
+      before: wallet({ balance: 10, day: "2026-11-13", care: 2 }),
+      after: wallet({ balance: 12, day: "2026-11-13", care: 2, notes: 2 }),
     });
     expect(await days()).toEqual([
-      { source: "earn.care", credited: 4, debited: 0, entries: 1 },
-      { source: "earn.notes", credited: 5, debited: 0, entries: 1 },
+      { source: "earn.care", credited: 1, debited: 0, entries: 1 },
+      { source: "earn.notes", credited: 2, debited: 0, entries: 1 },
       { source: "spend", credited: 0, debited: 60, entries: 1 },
     ]);
     expect(await pairDay()).toMatchObject({
-      earned: 9,
-      balance: 15,
+      earned: 3,
+      balance: 12,
       last_at: at + 2000,
       capped_care: 1,
       capped_notes: 0,

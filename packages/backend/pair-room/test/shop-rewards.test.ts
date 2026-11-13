@@ -55,6 +55,8 @@ const order = (n: number, offer: ShopOffer, by: UserId = alice, at = noon, utcOf
 const item = (id: string): ShopOffer => ({ _tag: "Item", item: piece(id) });
 const set = (id: string): ShopOffer => ({ _tag: "Set", set: setId(id) });
 
+const bonusOf = (collection: CollectionId) => collectionOf(collection)?.bonus ?? Number.NaN;
+
 const priceOf = (id: string) => roomItemOf(id)?.price ?? Number.NaN;
 
 /** Every piece of the collection the pair does not start with. */
@@ -223,7 +225,13 @@ describe("a collection bonus", () => {
   it("pays once, when every piece is owned, the starters counted", () => {
     const decision = accept({ ...active, items: boughtFor(cozyAutumn) }, claim());
     expect(coinsOf(decision)).toEqual([
-      { id: "bonus:cozy-autumn", kind: "bonus", amount: 150, ref: "cozy-autumn", at: noon },
+      {
+        id: "bonus:cozy-autumn",
+        kind: "bonus",
+        amount: bonusOf(cozyAutumn),
+        ref: "cozy-autumn",
+        at: noon,
+      },
     ]);
     expect(decision.state.bonuses).toEqual([cozyAutumn]);
     expect(decide(decision.state, claim(bob))).toEqual({
@@ -240,14 +248,14 @@ describe("earning in the app", () => {
 
   it("pays each kind its reward under an entry per ref", () => {
     const cases: ReadonlyArray<readonly [EarnEvent, string, number]> = [
-      [{ _tag: "WishReceived", wish: ref("w1") }, "earn:wish:w1", 20],
-      [{ _tag: "DateMatched", idea: ref("i1") }, "earn:date:i1", 10],
-      [{ _tag: "GuessHit", round: today, question: 7 }, "earn:guess:2026-11-05.7", 2],
-      [{ _tag: "RoundPlayed", round: today }, "earn:round:2026-11-05", 10],
-      [{ _tag: "DateRated", plan: ref("p1") }, "earn:plan:p1", 30],
-      [{ _tag: "ListTicked", item: ref("l1") }, "earn:list:l1", 5],
-      [{ _tag: "MomentAdded", moment: ref("m1") }, "earn:moment:m1", 10],
-      [{ _tag: "NoteAdded", note: ref("n1") }, "earn:note:n1", 5],
+      [{ _tag: "WishReceived", wish: ref("w1") }, "earn:wish:w1", 5],
+      [{ _tag: "DateMatched", idea: ref("i1") }, "earn:date:i1", 2],
+      [{ _tag: "GuessHit", round: today, question: 7 }, "earn:guess:2026-11-05.7", 1],
+      [{ _tag: "RoundPlayed", round: today }, "earn:round:2026-11-05", 2],
+      [{ _tag: "DateRated", plan: ref("p1") }, "earn:plan:p1", 6],
+      [{ _tag: "ListTicked", item: ref("l1") }, "earn:list:l1", 1],
+      [{ _tag: "MomentAdded", moment: ref("m1") }, "earn:moment:m1", 2],
+      [{ _tag: "NoteAdded", note: ref("n1") }, "earn:note:n1", 1],
     ];
     for (const [event, id, amount] of cases) {
       expect(coinsOf(accept(active, earn(event)))).toEqual([
@@ -258,24 +266,24 @@ describe("earning in the app", () => {
 
   it("stops ticked items at the day's cap, and starts again at the local midnight", () => {
     const full = [1, 2, 3].reduce((room, n) => accept(room, tick(n)).state, active);
-    expect(full.wallet).toMatchObject({ balance: 15, lists: dailyEarnCaps.lists });
+    expect(full.wallet).toMatchObject({ balance: dailyEarnCaps.lists, lists: dailyEarnCaps.lists });
     expect(coinsOf(accept(full, tick(4)))).toEqual([]);
     // 23:00 UTC is already the 6th two hours east.
     const late = accept(
       full,
       earn({ _tag: "ListTicked", item: ref("item-5") }, noon + 11 * hour, 7_200),
     );
-    expect(coinsOf(late).map((entry) => entry.amount)).toEqual([5]);
-    expect(late.state.wallet).toMatchObject({ day: "2026-11-06", lists: 5 });
+    expect(coinsOf(late).map((entry) => entry.amount)).toEqual([1]);
+    expect(late.state.wallet).toMatchObject({ day: "2026-11-06", lists: 1 });
   });
 
   it("counts moments and notes against the cap the room's own notes fill", () => {
     const nearly: ActiveRoom = {
       ...active,
-      wallet: { ...active.wallet, day: today, notes: dailyEarnCaps.notes - 5 },
+      wallet: { ...active.wallet, day: today, notes: dailyEarnCaps.notes - 1 },
     };
     const moment = accept(nearly, earn({ _tag: "MomentAdded", moment: ref("m1") }));
-    expect(coinsOf(moment).map((entry) => entry.amount)).toEqual([5]);
+    expect(coinsOf(moment).map((entry) => entry.amount)).toEqual([1]);
     expect(coinsOf(accept(moment.state, earn({ _tag: "NoteAdded", note: ref("n1") })))).toEqual([]);
   });
 });
@@ -421,7 +429,7 @@ describe("RoomService: coins", () => {
     );
     expect(first).toMatchObject({ _tag: "Accepted" });
     expect(again).toMatchObject({ outputs: [{ _tag: "CoinsRepeated" }] });
-    expect(balanceOf(store)).toBe(150);
+    expect(balanceOf(store)).toBe(bonusOf(cozyAutumn));
   });
 
   it("pays an app earn once per ref", async () => {
@@ -437,7 +445,7 @@ describe("RoomService: coins", () => {
       ),
     );
     expect(again).toMatchObject({ outputs: [{ _tag: "CoinsRepeated" }] });
-    expect(balanceOf(store)).toBe(20);
+    expect(balanceOf(store)).toBe(5);
   });
 });
 
@@ -481,7 +489,7 @@ describe("the Inbox rows of coins", () => {
         id: "bonus:cozy-autumn",
         at: noon,
         doer: { _tag: "Member", user: alice },
-        event: { _tag: "BonusEarned", collection: "cozy-autumn", coins: 150 },
+        event: { _tag: "BonusEarned", collection: "cozy-autumn", coins: bonusOf(cozyAutumn) },
       },
     ]);
   });

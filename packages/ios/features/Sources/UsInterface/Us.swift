@@ -230,7 +230,7 @@ public struct WishItem: Identifiable, Codable, Hashable, Sendable {
   public var gifted: Date?
   /// Who gave it, filled in when it arrives; until then only the giver knows.
   public var giftedBy: String?
-  /// The 20 coins for receiving it were paid, so taking "Got it" back and again pays nothing.
+  /// The 5 coins for receiving it were paid, so taking "Got it" back and again pays nothing.
   public var rewarded = false
   /// `reservedBy` from builds before gift plans; `UsStore` moves it into a plan on load and it is never written.
   public var legacyGiver: String?

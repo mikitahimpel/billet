@@ -1,7 +1,8 @@
 import { Effect, Exit, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { CatGameId, CatLook, CatName, NatureSeed } from "@billet/contracts-domain/cat";
-import { CoinEntryId } from "@billet/contracts-domain/coins";
+import { CoinEntryId, dailyEarnCaps } from "@billet/contracts-domain/coins";
+import { welcomeCoins } from "@billet/contracts-domain/shop";
 import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import { freeInk, InkId, inks } from "@billet/contracts-domain/inks";
@@ -351,7 +352,8 @@ describe("sendNote", () => {
         );
         const seed = Schema.decodeUnknownSync(NatureSeed)("7");
         yield* pairRooms.saveCat(pairA, ana, { name: catName, look, utcOffsetSeconds: 0 }, seed);
-        // The note before the cat (5), four wins (40) and four notes (20): 65, rose costs 60.
+        // The caps cut the four wins to 3+1 and the five notes to 1+1+1: with the welcome coins
+        // that is 67 in all, and rose costs 60.
         for (let n = 0; n < 4; n++) {
           yield* pairRooms.recordCatEvent(pairA, ben, {
             id: newKey(),
@@ -374,18 +376,18 @@ describe("sendNote", () => {
     expect(Exit.isSuccess(outcome)).toBe(true);
     if (Exit.isSuccess(outcome)) {
       const { earned, bought, retried, twice, after } = outcome.value;
-      // The welcome coins (560) come with the room.
-      expect(earned.balance).toBe(625);
-      expect(earned.entries.map((e) => e.kind)).toEqual(["gift", ...Array(9).fill("earn")]);
+      const earnedCoins = dailyEarnCaps.games + dailyEarnCaps.notes;
+      expect(earned.balance).toBe(welcomeCoins + earnedCoins);
+      expect(earned.entries.map((e) => e.kind)).toEqual(["gift", ...Array(5).fill("earn")]);
       expect(bought).toMatchObject({
         entry: { kind: "spend", amount: -60, ref: rose },
-        balance: 565,
+        balance: welcomeCoins + earnedCoins - 60,
         granted: [rose],
         owned: [freeInk, rose],
       });
       expect(retried).toEqual(bought);
       expect(twice).toEqual(new AlreadyOwned({ itemId: rose }));
-      expect(after).toEqual({ balance: 565, entries: [bought.entry] });
+      expect(after).toEqual({ balance: welcomeCoins + earnedCoins - 60, entries: [bought.entry] });
     }
   });
 
@@ -558,19 +560,19 @@ describe("coins bought with money", () => {
     );
     expect(outcome).toEqual(
       Exit.succeed({
-        // The welcome coins (560) come with the room.
-        first: { balance: 1110, coins: 550 },
-        again: { balance: 1110, coins: 550 },
-        refunded: { balance: 560, coins: 550 },
+        // The welcome coins come with the room.
+        first: { balance: welcomeCoins + 550, coins: 550 },
+        again: { balance: welcomeCoins + 550, coins: 550 },
+        refunded: { balance: welcomeCoins, coins: 550 },
         coins: {
-          balance: 560,
+          balance: welcomeCoins,
           entries: [
             expect.objectContaining({ id: "gift:welcome" }),
             expect.objectContaining({ id: "purchase:2000", kind: "purchase", amount: 550 }),
             expect.objectContaining({ id: "refund:2000", kind: "refund", amount: -550 }),
           ],
         },
-        balance: 560,
+        balance: welcomeCoins,
       }),
     );
   });

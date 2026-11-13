@@ -335,7 +335,7 @@ public final class UsStore {
     onGiftChange?(.plan(id, nil))
   }
 
-  /// Only the owner marks it arrived: it moves to "Gifted", the giver's plan closes, the couple earns 20 coins once.
+  /// Only the owner marks it arrived: it moves to "Gifted", the giver's plan closes, the couple earns 5 coins once.
   public func markReceived(_ id: UUID, by owner: String) {
     guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].owner == owner,
       wishes[i].gifted == nil

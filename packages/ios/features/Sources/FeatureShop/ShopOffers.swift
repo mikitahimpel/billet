@@ -120,7 +120,7 @@ public struct ShopOffers {
   }
 
   /// Gift coins are 20, 30 or 40; one day in four it's a small item instead.
-  static let giftCoins = [20, 30, 40]
+  static let giftCoins = [1, 2]
   static let giftItems = ["mouse", "yarn", "monstera"]
 
   // MARK: Rotations
@@ -167,8 +167,8 @@ public struct ShopOffers {
   func gift(on date: Date, owned: Set<String>) -> GiftReward {
     var rng = SeededRandom(seed: Self.hash("\(pairSeed)|gift|\(dayKey(date))"))
     let roll = rng.next()
-    if roll % 4 == 0 {
-      let id = Self.giftItems[Int((roll / 4) % UInt64(Self.giftItems.count))]
+    if roll % 10 == 0 {
+      let id = Self.giftItems[Int((roll / 10) % UInt64(Self.giftItems.count))]
       if !owned.contains(id) { return .item(id) }
     }
     return .coins(Self.giftCoins[Int(rng.next() % UInt64(Self.giftCoins.count))])

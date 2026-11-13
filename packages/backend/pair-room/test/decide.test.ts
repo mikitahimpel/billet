@@ -148,13 +148,13 @@ describe("decide on an active room", () => {
       entry: {
         id: `earn:${photoFrom(alice).id}`,
         kind: "earn",
-        amount: 10,
+        amount: 2,
         ref: photoFrom(alice).id,
         at: photoFrom(alice).sentAt,
       },
     });
     expect(sent.state._tag === "Active" && sent.state.wallet.balance).toBe(
-      active.wallet.balance + 10,
+      active.wallet.balance + 2,
     );
   });
 
