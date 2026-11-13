@@ -113,8 +113,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     /// others start on.
     var shippedOn: Bool {
         switch self {
-        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .drift, .sway, .hdr, .ownLoop: true
-        case .flatten, .motes, .msaa, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs,
+        case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .drift, .sway, .hdr: true
+        case .flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs,
             .noSunShadow, .fewerLights, .noBloom, .fullMeshes: false
         }
     }
