@@ -10,6 +10,7 @@ struct RoomPerfSwitches: Equatable {
     var noSunShadow = false
     var fewerLights = false
     var noBloom = false
+    var fullMeshes = false
 
     init() {}
 
@@ -19,6 +20,7 @@ struct RoomPerfSwitches: Equatable {
         noSunShadow = state.isOn(.noSunShadow)
         fewerLights = state.isOn(.fewerLights)
         noBloom = state.isOn(.noBloom)
+        fullMeshes = state.isOn(.fullMeshes)
     }
 }
 
@@ -48,6 +50,14 @@ final class RoomPerfCoordinator {
         guard next != switches else { return false }
         switches = next
         return true
+    }
+
+    // MARK: Meshes
+
+    /// Gives the room's boxes and spheres the tessellation the switch names, and every box and sphere built after it.
+    func meshes(in room: CatRoom) {
+        Meshes.smooth = !switches.fullMeshes
+        Meshes.retessellate(room.root, smooth: !switches.fullMeshes)
     }
 
     // MARK: Lights

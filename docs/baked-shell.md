@@ -30,7 +30,7 @@ is unchanged; the baked shell is a second path chosen at runtime.
   multiplied by a tint.
 - The cat, the toys, bought items, bulbs, the candle, the window picture and the garland stay live. Lights: the City
   drops its sky, lamp, fairy and candle point lights (the sun, the fill and the ambient stay); the Room keeps all of
-  its lights, because its furniture (`Room_furniture.usdz`) is still live.
+  its lights, because its furniture (`Room_furniture.usdz`) is still live. The bake casts shadows with the full-detail copy in `scripts/bake-room/Room_furniture.usdz`.
 - City time of day: one lightmap (15:00, lamps off) times a tint from the hour (`BakedShell.tint`).
 
 ## Re-baking

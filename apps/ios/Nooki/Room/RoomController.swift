@@ -153,10 +153,19 @@ final class RoomController: RoomControlling, CatStatusProviding {
         next.noBloom = next.noBloom || !governed.bloom
         let furnitureChanged =
             next.mergeFurniture != perf.switches.mergeFurniture || next.bakedBlobs != perf.switches.bakedBlobs
+        let meshesChanged = next.fullMeshes != perf.switches.fullMeshes
         guard perf.set(next) else { return }
         for room in [home, city, board].compactMap({ $0 }) { perf.lights(in: room) }
+        if meshesChanged {
+            // A merged copy of the furniture holds the old geometry: split it, and it builds again from the new.
+            #if DEBUG || LABS_YES
+            FurnitureMerge.split(decorStage.root)
+            if let city { FurnitureMerge.split(city.decorStage.root) }
+            #endif
+            for room in [home, city, board].compactMap({ $0 }) { perf.meshes(in: room) }
+        }
         #if DEBUG || LABS_YES
-        if furnitureChanged { perfDecorChanged() }
+        if furnitureChanged || meshesChanged { perfDecorChanged() }
         #endif
     }
 

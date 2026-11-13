@@ -213,7 +213,9 @@ final class DecorStage {
     /// The room's own pieces keep the glow and the grounding shadow the furniture model had; a rug lies flat, so it casts none.
     private func dress(_ model: Entity, casting: Bool) {
         model.forEachDescendant { entity in
-            if casting { entity.components.set(GroundingShadowComponent(castsShadow: true)) }
+            if casting, entity.components.has(ModelComponent.self) {
+                entity.components.set(GroundingShadowComponent(castsShadow: true))
+            }
             if !RoomPieces.glows.keys.contains(entity.name), var mesh = entity.components[ModelComponent.self] {
                 mesh.materials = mesh.materials.map { shared($0) }
                 entity.components.set(mesh)

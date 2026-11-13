@@ -338,7 +338,9 @@ final class DioramaScene: CatRoom {
                 guard let self else { return }
                 model.forEachDescendant { entity in
                     if let iblReceiver { entity.components.set(iblReceiver) }
-                    entity.components.set(GroundingShadowComponent(castsShadow: true))
+                    if entity.components.has(ModelComponent.self) {
+                        entity.components.set(GroundingShadowComponent(castsShadow: true))
+                    }
                     if let glow = RoomPieces.glows[entity.name], var mesh = entity.components[ModelComponent.self] {
                         mesh.materials = mesh.materials.map { _ in Clay.glow(glow.tone, intensity: glow.intensity) }
                         entity.components.set(mesh)

@@ -51,6 +51,9 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     case fewerLights
     /// The bloom pass over the glowing bulbs, flame and window left out (iOS 27 only).
     case noBloom
+    /// The rooms' boxes and spheres drawn as RealityKit makes them, 13,068 triangles a box and 8,064 a sphere, in place
+    /// of the facets their size on screen can show. The furniture models are the lean ones either way.
+    case fullMeshes
 
     var title: String {
         switch self {
@@ -75,6 +78,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .noSunShadow: "No sun shadow map"
         case .fewerLights: "Only the widest point light"
         case .noBloom: "No bloom (iOS 27)"
+        case .fullMeshes: "Full-detail boxes and spheres (RealityKit's)"
         }
     }
 
@@ -101,6 +105,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .noSunShadow: "sun.min"
         case .fewerLights: "lightbulb.slash"
         case .noBloom: "light.max"
+        case .fullMeshes: "cube"
         }
     }
 
@@ -110,7 +115,7 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         switch self {
         case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .drift, .sway, .hdr: true
         case .flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs,
-            .noSunShadow, .fewerLights, .noBloom: false
+            .noSunShadow, .fewerLights, .noBloom, .fullMeshes: false
         }
     }
 }

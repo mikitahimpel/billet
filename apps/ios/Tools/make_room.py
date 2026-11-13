@@ -2,6 +2,7 @@
 
 Run:
   blender -b --python Tools/make_room.py -- Nooki/Resources/Room [name ...]
+  FULL=1 blender -b --python Tools/make_room.py -- <dir> [name ...]   (every circle at its full segment count)
 
 Writes Room_<name>.usdz (furniture: what never moves; ball, yarn: toys) and Base_<name>.usdz, one per piece of the
 room's own furniture that the player can move (name `Base_<piece>` selects one). The furniture is modelled in the room's own coordinates (meters, floor top at
@@ -26,6 +27,9 @@ from make_items import mat  # noqa: E402
 
 OUT_DIR = kit.OUT_DIR
 ONLY = kit.ONLY
+# The shapes get the facets their size on screen can show (make_items.facets): a third of the triangles. FULL=1 builds
+# them at full detail, as `scripts/bake-room/Room_furniture.usdz` is, which the bake casts shadows with.
+kit.LOD = os.environ.get("FULL") != "1"
 
 # The room's palette (DioramaScene.Tone), so the models sit with the walls and floor drawn in code.
 WOOD, WOOD_DARK, WOOD_LIGHT = 0xB46C3C, 0x8C4F2B, 0xCF8E58
@@ -69,7 +73,9 @@ def rcone(r_bottom, r_top, height, at, m, bevel=0.002):
 
 
 def rball(radius, at, m, scale=(1, 1, 1), detail=(32, 16)):
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, segments=detail[0], ring_count=detail[1], location=R(*at))
+    around = kit.facets(radius * max(scale), detail[0])
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, segments=around, ring_count=max(4, min(detail[1], around // 2)),
+                                         location=R(*at))
     return kit._finish(kit._scaled(bpy.context.object, S(*scale)), m)
 
 
@@ -78,8 +84,10 @@ AXES = {"y": (0, 0, 0), "x": (0, math.pi / 2, 0), "z": (math.pi / 2, 0, 0)}
 
 
 def rring(major, minor, at, m, axis="y", squash=1.0, detail=(48, 12)):
-    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor, major_segments=detail[0],
-                                     minor_segments=detail[1], location=R(*at), rotation=AXES[axis])
+    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor,
+                                     major_segments=kit.facets(major * squash if squash > 1 else major, detail[0]),
+                                     minor_segments=kit.facets(minor, detail[1], minimum=6), location=R(*at),
+                                     rotation=AXES[axis])
     obj = bpy.context.object
     if squash != 1.0:
         obj.scale = {"y": (1, 1, squash), "x": (squash, 1, 1), "z": (1, squash, 1)}[axis]

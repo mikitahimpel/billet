@@ -51,18 +51,77 @@ extension simd_quatf {
 
 /// Meshes shared by every primitive of the same shape: spheres and cylinders are one unit mesh scaled to size, rounded
 /// boxes one mesh per size, since scaling would stretch their corners.
-private enum Meshes {
-    static let sphere = MeshResource.generateSphere(radius: 1)
+enum Meshes {
+    private static let sphere = MeshResource.generateSphere(radius: 1)
+    private static var smoothSpheres: [Int: MeshResource] = [:]
     static let cylinder = MeshResource.generateCylinder(height: 1, radius: 1)
-    static var boxes: [SIMD4<Float>: MeshResource] = [:]
+    private static var boxes: [SIMD4<Float>: MeshResource] = [:]
+    private static var smoothBoxes: [SIMD4<Float>: MeshResource] = [:]
 
+    /// Whether boxes made from now on, and those `retessellate` visits, use ``SmoothBox`` and ``SmoothSphere``; off,
+    /// RealityKit's own. On unless Labs asked for the full-detail meshes, so a room built at launch already has them.
+    @MainActor static var smooth = !PerfLabMachine.State.saved(in: .standard).isOn(.fullMeshes)
+
+    @MainActor
     static func box(_ w: Float, _ h: Float, _ d: Float, cornerRadius r: Float) -> MeshResource {
+        box(w, h, d, cornerRadius: r, smooth: smooth)
+    }
+
+    @MainActor
+    static func box(_ w: Float, _ h: Float, _ d: Float, cornerRadius r: Float, smooth: Bool) -> MeshResource {
         let key = SIMD4(w, h, d, r)
+        if smooth {
+            if let mesh = smoothBoxes[key] { return mesh }
+            if let mesh = SmoothBox.mesh(width: w, height: h, depth: d, radius: r) {
+                smoothBoxes[key] = mesh
+                return mesh
+            }
+        }
         if let mesh = boxes[key] { return mesh }
         let mesh = MeshResource.generateBox(width: w, height: h, depth: d, cornerRadius: r)
         boxes[key] = mesh
         return mesh
     }
+
+    /// The unit sphere for a sphere whose largest radius is `extent` metres.
+    @MainActor
+    static func unitSphere(extent: Float, smooth: Bool) -> MeshResource {
+        guard smooth else { return sphere }
+        let segments = SmoothSphere.segments(radius: extent)
+        if let mesh = smoothSpheres[segments] { return mesh }
+        guard let mesh = SmoothSphere.mesh(segments: segments) else { return sphere }
+        smoothSpheres[segments] = mesh
+        return mesh
+    }
+
+    /// Gives every box and sphere under `root` the mesh the setting names; the room's look is for the caller to compare.
+    @MainActor
+    static func retessellate(_ root: Entity, smooth: Bool) {
+        func visit(_ entity: Entity) {
+            if var model = entity.components[ModelComponent.self] {
+                if let shape = entity.components[BoxShape.self] {
+                    model.mesh = box(shape.size.x, shape.size.y, shape.size.z, cornerRadius: shape.radius, smooth: smooth)
+                    entity.components.set(model)
+                } else if let shape = entity.components[SphereShape.self] {
+                    model.mesh = unitSphere(extent: shape.extent, smooth: smooth)
+                    entity.components.set(model)
+                }
+            }
+            entity.children.forEach(visit)
+        }
+        visit(root)
+    }
+}
+
+/// The largest radius of a sphere, in metres, kept so its mesh can be made again at another tessellation.
+struct SphereShape: Component {
+    var extent: Float
+}
+
+/// The size and corner radius a box's mesh was made from, kept so the mesh can be made again at another tessellation.
+struct BoxShape: Component {
+    var size: SIMD3<Float>
+    var radius: Float
 }
 
 /// Primitive builders. Every helper adds the new model as a child and returns it.
@@ -93,8 +152,10 @@ extension Entity {
     ) -> ModelEntity {
         if skipsForShell(material) { return ModelEntity() }
         let radius = min(r, min(w, min(h, d)) / 2 - 0.0005)
-        return model(Meshes.box(w, h, d, cornerRadius: max(radius, 0)), material, at: position, rotation: rotation,
-                     shape: .box(size: [w, h, d], radius: max(radius, 0)))
+        let e = model(Meshes.box(w, h, d, cornerRadius: max(radius, 0)), material, at: position, rotation: rotation,
+                      shape: .box(size: [w, h, d], radius: max(radius, 0)))
+        e.components.set(BoxShape(size: [w, h, d], radius: max(radius, 0)))
+        return e
     }
 
     @discardableResult
@@ -102,7 +163,11 @@ extension Entity {
         _ radius: Float, _ material: some Material, at position: SIMD3<Float>,
         scale: SIMD3<Float> = .one, rotation: simd_quatf = .identity
     ) -> ModelEntity {
-        model(Meshes.sphere, material, at: position, scale: scale * radius, rotation: rotation, shape: .sphere)
+        let extent = radius * max(scale.x, max(scale.y, scale.z))
+        let e = model(Meshes.unitSphere(extent: extent, smooth: Meshes.smooth), material, at: position, scale: scale * radius,
+                      rotation: rotation, shape: .sphere)
+        e.components.set(SphereShape(extent: extent))
+        return e
     }
 
     @discardableResult

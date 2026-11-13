@@ -53,7 +53,7 @@ for room in $rooms; do
   name=$names[$room]
   [[ -f $here/shells/$name.shapes ]] || { echo "shells/$name.shapes is missing: run without --skip-export" >&2; exit 1; }
   extra=()
-  [[ $room == room ]] && extra=(--furniture $repo/apps/ios/Nooki/Resources/Room/Room_furniture.usdz)
+  [[ $room == room ]] && extra=(--furniture $here/Room_furniture.usdz)
   take_lock
   perl -e 'alarm 600; exec @ARGV' $blender -b -P $here/bake_shell.py -- $room $here/shells/$name.shapes $work/$name.usdz \
     --size $size --samples $samples ${=BAKE_ARGS:-} $extra
