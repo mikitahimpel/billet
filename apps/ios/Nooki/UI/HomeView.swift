@@ -298,11 +298,7 @@ struct HomeView: View {
                         Task { await followPair() }
                     }) {
                         if state.tab == .world {
-                            HStack(spacing: Space.s) {
-                                RoomSwitch(state: state, select: select)
-                                if state.room.scene == .city { lightsButton }
-                            }
-                            .transition(.opacity)
+                            RoomSwitch(state: state, select: select).transition(.opacity)
                         } else if state.tab == .moments {
                             MomentsSwitch(state: state).transition(.opacity)
                         } else if state.tab == .shop {
@@ -402,11 +398,14 @@ struct HomeView: View {
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
                 let waiting = state.decor.state.closetCount
-                GlassIconButton(
-                    symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
-                ) { state.decor.send(.opened(item: nil)) }
-                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                .accessibilityIdentifier("decorate")
+                VStack(alignment: .trailing, spacing: Space.s) {
+                    if state.room.scene == .city { lightsButton }
+                    GlassIconButton(
+                        symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
+                    ) { state.decor.send(.opened(item: nil)) }
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .accessibilityIdentifier("decorate")
+                }
             }
             .padding(.horizontal, Space.xs)
         }
@@ -564,6 +563,7 @@ struct HomeView: View {
         ) {
             bedroomLights = bedroomLit ? 2 : 1
         }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .accessibilityIdentifier("roomLights")
     }
 
