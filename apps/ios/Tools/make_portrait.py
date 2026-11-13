@@ -14,7 +14,7 @@ from mathutils import Vector
 
 args = sys.argv[sys.argv.index("--") + 1:]
 OUT = args[0]
-SIZE = int(args[1]) if len(args) > 1 else 512
+SIZE = int(args[1]) if len(args) > 1 else 768
 ROOT = __file__.rsplit("/Tools/", 1)[0]
 
 bpy.ops.wm.read_factory_settings(use_empty=True)
