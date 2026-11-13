@@ -545,7 +545,8 @@ nonisolated enum GovernorReadout {
         let scale = String(format: "%g", p.scale)
         let slow = String(format: "%g", p.pulseSlowdown)
         return "\(p.activeRate)/\(p.idleRate) fps, \(scale)x, bloom \(on(p.bloom)), sun shadow \(on(p.sunShadow)), "
-            + "lights \(p.widestLightOnly ? "widest" : "all"), hdr \(on(p.hdr)), pulse x\(slow)\(p.still ? ", still" : "")"
+            + "lights \(p.widestLightOnly ? "widest" : "all"), hdr \(on(p.hdr)), ambient +\(String(format: "%g", p.ambientLift)), "
+            + "pulse x\(slow)\(p.still ? ", still" : "")"
     }
 
     /// One line for Copy settings.

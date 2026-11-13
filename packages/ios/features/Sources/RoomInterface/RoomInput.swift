@@ -36,13 +36,15 @@ public struct RoomRendering: Equatable, Sendable {
   public var bloom: Bool
   public var sunShadow: Bool
   public var widestLightOnly: Bool
+  /// Stops of ambient light added to make up for the glow pass being off.
+  public var ambientLift: Double
   /// How many times longer the flame, candle and bulbs wait between steps.
   public var pulseSlowdown: Double
 
   public init(
     antialiasing: Bool = false, hdr: Bool = true, splatRate: Int = 0, activeRate: Int = 60,
     idleRate: Int = 30, scale: Double = 2, bloom: Bool = true, sunShadow: Bool = true,
-    widestLightOnly: Bool = false, pulseSlowdown: Double = 1
+    widestLightOnly: Bool = false, ambientLift: Double = 0, pulseSlowdown: Double = 1
   ) {
     self.antialiasing = antialiasing
     self.hdr = hdr
@@ -53,6 +55,7 @@ public struct RoomRendering: Equatable, Sendable {
     self.bloom = bloom
     self.sunShadow = sunShadow
     self.widestLightOnly = widestLightOnly
+    self.ambientLift = ambientLift
     self.pulseSlowdown = pulseSlowdown
   }
 }
@@ -101,12 +104,18 @@ public struct RoomInput: Equatable, Sendable {
   public var sway: Bool
   public var decor: RoomDecor
   public var rendering: RoomRendering
+  /// The player's choice for the room's lamps: on, off, or nil to follow the hour. The Bedroom lights its lamps and
+  /// fairy lights by night on its own; this is the way to have them by day or to put them out.
+  public var lights: Bool?
+  /// The lamps ease to their new state; off, they change at once (Reduce Motion).
+  public var lightsFade: Bool
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
     catPronouns: CatPronouns = .unchosen, partnerHere: Bool = false, motes: Bool = false,
     sway: Bool = true,
-    decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering()
+    decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering(), lights: Bool? = nil,
+    lightsFade: Bool = true
   ) {
     self.scene = scene
     self.coat = coat
@@ -118,5 +127,7 @@ public struct RoomInput: Equatable, Sendable {
     self.sway = sway
     self.decor = decor
     self.rendering = rendering
+    self.lights = lights
+    self.lightsFade = lightsFade
   }
 }
