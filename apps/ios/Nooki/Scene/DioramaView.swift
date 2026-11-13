@@ -13,6 +13,8 @@ struct DioramaView: View {
     /// Draws the room with its own renderer and frame loop in place of a `RealityView`, when there is one.
     var loop: RoomRenderLoop?
     var onPet: () -> Void
+    /// A finger came down on the room (true) or lifted from it; the quality governor reads it.
+    var onTouch: (Bool) -> Void = { _ in }
 
     @State private var rig = ZoomRig()
     @State private var dragStartYaw: Float?
@@ -64,6 +66,7 @@ struct DioramaView: View {
             RoomCanvas(loop: loop)
                 .onChange(of: ObjectIdentifier(scene), initial: true) { attach(scene, to: loop) }
                 .onChange(of: rendering.antialiasing, initial: true) { loop.setAntialiasing(rendering.antialiasing) }
+                .onChange(of: rendering, initial: true) { loop.setQuality(rendering) }
                 // A room that stopped while covered or hidden is the same scene when it comes back, so this is where
                 // it starts again.
                 .onChange(of: paused, initial: true) {
@@ -146,10 +149,15 @@ struct DioramaView: View {
             including: loop == nil ? .none : .all
         )
         // Taps on empty space, which the entity-targeted gestures never see, also leave a photo.
-        .simultaneousGesture(SpatialTapGesture().onEnded { _ in scene.unfocusPhoto() })
+        .simultaneousGesture(SpatialTapGesture().onEnded { _ in
+            onTouch(true)
+            onTouch(false)
+            scene.unfocusPhoto()
+        })
         .simultaneousGesture(
             DragGesture(minimumDistance: 6)
                 .onChanged { value in
+                    if dragStartYaw == nil { onTouch(true) }
                     let start = dragStartYaw ?? scene.currentYaw
                     dragStartYaw = start
                     scene.setYaw(start + Float(value.translation.width) * 0.006)
@@ -160,6 +168,7 @@ struct DioramaView: View {
                 }
                 .onEnded { _ in
                     dragStartYaw = nil
+                    onTouch(false)
                     scene.follow(nil)
                 }
         )
@@ -167,12 +176,16 @@ struct DioramaView: View {
             MagnifyGesture()
                 .onChanged { value in
                     guard !photoFocused else { return }
+                    if pinchStartZoom == nil { onTouch(true) }
                     let start = pinchStartZoom ?? rig.targetZoom
                     pinchStartZoom = start
                     let delta = Float(log2(Double(value.magnification))) * 0.6
                     rig.targetZoom = min(max(start + delta, 0), 1)
                 }
-                .onEnded { _ in pinchStartZoom = nil }
+                .onEnded { _ in
+                    pinchStartZoom = nil
+                    onTouch(false)
+                }
         )
     }
 }

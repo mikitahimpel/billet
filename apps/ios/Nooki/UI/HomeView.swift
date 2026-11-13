@@ -233,6 +233,7 @@ struct HomeView: View {
         }
         .environment(\.sheetGround, sheetGround)
         .environment(perfLab)
+        .onAppear { perfLab.quality.quiet = { [room] in room.quiet() } }
         #if DEBUG || LABS_YES
         .onAppear { perfLab.statsSource = { [room] tier in room.roomStats(tier: tier) } }
         .onChange(of: perfLab.state, initial: true) { _, state in room.setPerf(state) }
@@ -544,8 +545,10 @@ struct HomeView: View {
             motes: perfLab.isOn(.motes) && plan.motes,
             sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,
             rendering: RoomRendering(
-                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr),
-                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0))
+                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr) && plan.hdr,
+                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0,
+                activeRate: plan.activeRate, idleRate: plan.idleRate, scale: plan.scale, bloom: plan.bloom,
+                sunShadow: plan.sunShadow, widestLightOnly: plan.widestLightOnly, pulseSlowdown: plan.pulseSlowdown))
     }
 
     private var arranging: Bool { state.decor.state.isArranging }

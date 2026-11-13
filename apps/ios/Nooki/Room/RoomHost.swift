@@ -84,9 +84,8 @@ private struct RoomStage: View {
                 let shrunk = RoomViewSize.isShrunk(wanted: wantsShrunk, inFront: shrunkInFront, phase: scenePhase)
                 DioramaView(scene: visible || loop != nil ? scene : controller.offStage,
                             paused: !visible || controller.corner != nil, petPulse: controller.petPulse,
-                            showsBubble: !input.decor.isArranging, rendering: input.rendering, loop: loop) {
-                    controller.petted()
-                }
+                            showsBubble: !input.decor.isArranging, rendering: input.rendering, loop: loop,
+                            onPet: { controller.petted() }, onTouch: { controller.fingerMoved($0) })
                 .frame(width: shrunk ? 1 : nil, height: shrunk ? 1 : nil)
                 .allowsHitTesting(visible && controller.game == nil)
                 .opacity(visible ? 1 : 0)
@@ -106,7 +105,9 @@ private struct RoomStage: View {
         // The room's view no longer drives a room it doesn't show; the next look starts it again.
         .onChange(of: visible) { _, visible in
             if !visible { controller.stop() }
+            controller.looked()
         }
+        .onChange(of: input.rendering, initial: true) { _, rendering in controller.setRendering(rendering) }
         .onChange(of: input.decor, initial: true) { _, decor in controller.showDecor(decor) }
         .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         .onChange(of: input.rendering.splatRate, initial: true) { _, rate in SplatSkinner.limit(toHertz: rate) }

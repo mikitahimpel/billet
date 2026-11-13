@@ -84,7 +84,7 @@ final class DioramaScene: CatRoom {
         let t = time
 
         if swaying {
-            let rates = PulseRates.at(active: isActive)
+            let rates = PulseRates.at(active: isActive, slowedBy: pulseSlowdown)
             flameClock.interval = rates.flame
             candleClock.interval = rates.candle
             bulbClock.interval = rates.bulbs
