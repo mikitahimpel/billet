@@ -74,15 +74,23 @@
 
     private var canAdd: Bool { !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
     var body: some View {
-      HStack(spacing: Space.s) {
+      let layout =
+        dynamicTypeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+        : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
+      layout {
         Field(placeholder, text: $text)
           .focused(focused)
           .submitLabel(.done)
           .onSubmit(onAdd)
-        PillButton("Add", symbol: "plus", action: onAdd)
-          .disabled(!canAdd)
-          .accessibilityLabel(canAdd ? "Add \(text)" : "Add")
+        PrimaryButton(
+          "Add", symbol: "plus", fullWidth: dynamicTypeSize.isAccessibilitySize, action: onAdd
+        )
+        .disabled(!canAdd)
+        .accessibilityLabel(canAdd ? "Add \(text)" : "Add")
       }
     }
   }
@@ -117,6 +125,8 @@
   struct UsGlyphPicker: View {
     @Binding var selection: UsGlyph
 
+    private static let iconSize: CGFloat = 34
+    private static let ringGap: CGFloat = 3
     private let columns = Array(repeating: GridItem(.flexible(), spacing: Space.m), count: 8)
 
     var body: some View {
@@ -125,14 +135,12 @@
           Button {
             selection = glyph
           } label: {
-            UsIcon(glyph: glyph, size: 34)
+            UsIcon(glyph: glyph, size: Self.iconSize)
               .opacity(selection == glyph ? 1 : 0.55)
               .scaleEffect(selection == glyph ? 1.08 : 1)
-              .overlay(
-                Circle()
-                  .stroke(Ink.text, lineWidth: selection == glyph ? 2 : 0)
-                  .padding(-3)
-              )
+              .overlay {
+                if selection == glyph { RowIcon.ring(size: Self.iconSize, gap: Self.ringGap) }
+              }
           }
           .buttonStyle(PressScaleStyle())
           .animation(Motion.spring(0.2), value: selection)

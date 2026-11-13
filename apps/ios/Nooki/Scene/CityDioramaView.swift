@@ -236,12 +236,12 @@ final class CityDioramaView: UIView {
         opening.isHidden = false
         opening.frame = bounds
         clip.frame = bounds
-        clip.path = Self.path(outline, grownBy: 1.03)
+        clip.path = Self.path(outline, grownBy: Self.holeGrowth)
+        let opening = Self.bounds(outline.map { Self.grown($0, in: outline, by: Self.holeGrowth) })
         for (stack, entry) in zip(stacks, CityDiorama.layers) {
             let stage = home.blended(with: live, follow: entry.follow)
-            var frame = stage.rect(CityDiorama.imageRect)
-            if entry.follow == 0 { frame = Self.covering(frame, opening: Self.bounds(outline)) }
-            stack.holder.frame = frame
+            stack.holder.frame = CityDiorama.covering(
+                stage.rect(CityDiorama.imageRect), opening: opening, growth: entry.follow == 0 ? .infinity : 1.12)
             for layer in stack.times { layer.frame = stack.holder.bounds }
         }
         if hour < 0 { setHour(Daylight.localHour()) }
@@ -284,31 +284,22 @@ final class CityDioramaView: UIView {
         }
     }
 
-    /// The sky doesn't move with the room, so the opening can turn past its edge; it grows, keeping its shape, and
-    /// slides until the whole opening is inside it.
-    private static func covering(_ frame: CGRect, opening: CGRect) -> CGRect {
-        let need = opening.insetBy(dx: -opening.width * 0.04, dy: -opening.height * 0.04)
-        let scale = max(1, need.width / frame.width, need.height / frame.height)
-        var out = frame.insetBy(dx: -frame.width * (scale - 1) / 2, dy: -frame.height * (scale - 1) / 2)
-        out.origin.x = min(out.minX, need.minX)
-        out.origin.x = max(out.minX, need.maxX - out.width)
-        out.origin.y = min(out.minY, need.minY)
-        out.origin.y = max(out.minY, need.maxY - out.height)
-        return out
-    }
-
     private static func bounds(_ points: [CGPoint]) -> CGRect {
         points.dropFirst().reduce(CGRect(origin: points[0], size: .zero)) { $0.union(CGRect(origin: $1, size: .zero)) }
     }
 
-    /// Grown about its middle so its edges hide behind the wall.
-    private static func path(_ points: [CGPoint], grownBy factor: CGFloat) -> CGPath {
+    private static let holeGrowth: CGFloat = 1.03
+
+    private static func grown(_ point: CGPoint, in points: [CGPoint], by factor: CGFloat) -> CGPoint {
         let count = CGFloat(points.count)
         let centre = CGPoint(x: points.map(\.x).reduce(0, +) / count, y: points.map(\.y).reduce(0, +) / count)
+        return CGPoint(x: centre.x + (point.x - centre.x) * factor, y: centre.y + (point.y - centre.y) * factor)
+    }
+
+    /// Grown about its middle so its edges hide behind the wall.
+    private static func path(_ points: [CGPoint], grownBy factor: CGFloat) -> CGPath {
         let path = CGMutablePath()
-        path.addLines(between: points.map {
-            CGPoint(x: centre.x + ($0.x - centre.x) * factor, y: centre.y + ($0.y - centre.y) * factor)
-        })
+        path.addLines(between: points.map { grown($0, in: points, by: factor) })
         path.closeSubpath()
         return path
     }

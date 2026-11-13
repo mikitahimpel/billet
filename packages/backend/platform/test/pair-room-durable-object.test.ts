@@ -198,6 +198,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_layout"),
       expect.stringContaining("_stowed_piece"),
       expect.stringContaining("_streak_marks"),
+      expect.stringContaining("_placement_room"),
     ]);
   });
 

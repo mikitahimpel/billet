@@ -28,8 +28,13 @@ public struct GameResult: Equatable, Sendable {
   public let grams: Int?
   /// The bowl went past the portion (feed) or the brim (water): the reward is cut.
   public let tooMuch: Bool
+  /// Water spilled and was wiped up again.
+  public let spotless: Bool
 
-  public init(game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false) {
+  public init(
+    game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false, spotless: Bool = false
+  ) {
+    self.spotless = spotless
     self.game = game
     self.score = min(max(score, 0), 100)
     self.grams = grams
@@ -65,7 +70,8 @@ public struct GameResult: Equatable, Sendable {
       if tooMuch { return pronouns.say(.tooMuchResult) }
       return score == 100 ? "Exactly right. Dinner's served" : "Close enough. Dinner's served"
     case .water:
-      if tooMuch { return "Too much! A puddle, but fresh water" }
+      if tooMuch { return "A little messy. Fresh water, though" }
+      if spotless { return "Spotless. Fresh water" }
       return score >= 80 ? "Right on the line. Fresh water" : "Fresh water"
     case .laser: return "Played out"
     case .brush: return "Soft and shiny"

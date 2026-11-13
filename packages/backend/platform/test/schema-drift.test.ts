@@ -26,6 +26,7 @@ import {
   StoredPurchase,
   StoredPurchaseEntry,
 } from "@billet/backend-payments/payments-repository";
+import { EconomyDayRow, EconomyPairDayRow } from "@billet/backend-admin/admin-economy";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
 import * as directorySchema from "../src/directory-schema.ts";
@@ -44,6 +45,8 @@ import {
   flagChanges,
   flagConfigs,
   invites,
+  economyDays,
+  economyPairDays,
   eventDetails,
   onboardingAnswers,
   pairEvents,
@@ -169,6 +172,8 @@ const checked = [
   ["flag_configs", flagConfigs, FlagConfigRow],
   ["pair_flag_overrides", pairFlagOverrides, PairOverrideRow],
   ["invites", invites, StoredInvite],
+  ["economy_days", economyDays, EconomyDayRow],
+  ["economy_pair_days", economyPairDays, EconomyPairDayRow],
   ["event_details", eventDetails, StoredDetail],
   ["onboarding_answers", onboardingAnswers, OnboardingAnswerRow],
   ["pair_events", pairEvents, StoredMetric],

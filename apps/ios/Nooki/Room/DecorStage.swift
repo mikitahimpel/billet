@@ -31,6 +31,8 @@ final class DecorStage {
     private struct Template {
         let entity: Entity
         let extents: SIMD3<Float>
+        /// Height of its top above the holder's origin.
+        let top: Float
     }
 
     /// An outline where the dragged piece stood, so the player sees where it came from and where a bad drop returns it.
@@ -94,7 +96,7 @@ final class DecorStage {
         self.decor = decor
         if receiver != nil { self.receiver = receiver }
 
-        let drawn = decor.layout.allPlacements
+        let drawn = decor.layout.allPlacements(in: .home)
         let placed = Set(drawn.map(\.item))
         for (id, node) in nodes where !placed.contains(id) {
             node.holder.removeFromParent()
@@ -265,7 +267,7 @@ final class DecorStage {
         if item.isBase {
             let template = Entity()
             template.addChild(model)
-            let entry = Template(entity: template, extents: bounds.extents)
+            let entry = Template(entity: template, extents: bounds.extents, top: bounds.max.y)
             templates[item.assetName] = entry
             for node in nodes.values where node.item.assetName == item.assetName && node.model == nil {
                 attachModel(to: node, from: entry)
@@ -285,7 +287,7 @@ final class DecorStage {
         case .wall:
             model.position = [-bounds.center.x * scale, -bounds.center.y * scale, -bounds.min.z * scale]
         }
-        let entry = Template(entity: template, extents: bounds.extents * scale)
+        let entry = Template(entity: template, extents: bounds.extents * scale, top: bounds.extents.y * scale)
         templates[item.assetName] = entry
         for node in nodes.values where node.item.assetName == item.assetName && node.model == nil {
             attachModel(to: node, from: entry)
@@ -299,8 +301,9 @@ final class DecorStage {
     /// only by its base.
     func floorPiece(hit: (Float) -> SIMD3<Float>?) -> String? {
         let layout = decor.layout
-        let solid = layout.placements.reversed().filter { $0.surface == .floor && !isFlat($0.item) }
-        let flat = layout.placements.reversed().filter { $0.surface == .floor && isFlat($0.item) }
+        let here = layout.allPlacements(in: .home).reversed().filter { $0.surface == .floor }
+        let solid = here.filter { !isFlat($0.item) }
+        let flat = here.filter { isFlat($0.item) }
         return (solid + flat).first { placement in
             guard let item = DecorItem.item(shopID: placement.item) else { return false }
             let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: placement.eighthTurns)
@@ -318,12 +321,25 @@ final class DecorStage {
     /// The wall piece under `point` on `surface`, in the pivot's space.
     func wallPiece(at point: SIMD3<Float>, on surface: Placement.Surface) -> String? {
         let along = Double(surface == .backWall ? point.x : point.z)
-        return decor.layout.allPlacements.reversed().first { placement in
+        return decor.layout.allPlacements(in: .home).reversed().first { placement in
             guard placement.surface == surface, let item = DecorItem.item(shopID: placement.item) else { return false }
             let height = item.fit == .height ? item.size : item.width
             return abs(along - DecorGrid.metres(placement.u)) <= item.width / 2 + 0.02
                 && abs(Double(point.y) - DecorGrid.wallHeight) <= height / 2 + 0.02
         }?.item
+    }
+
+    /// The flat pieces standing on the floor, where each lies and how high its top is, in the pivot's space.
+    func flatSurfaces() -> [FlatSurface] {
+        nodes.values.compactMap { node in
+            guard node.item.isFlat, let placement = node.placement, placement.surface == .floor,
+                let template = templates[node.item.assetName]
+            else { return nil }
+            return FlatSurface(
+                x: DecorGrid.metres(placement.u), z: DecorGrid.metres(placement.v),
+                halfWidth: Double(template.extents.x) / 2, halfDepth: Double(template.extents.z) / 2,
+                yaw: placement.angle, top: Double(Self.floorY + template.top))
+        }
     }
 
     private func isFlat(_ id: String) -> Bool { DecorItem.item(shopID: id)?.isFlat == true }
