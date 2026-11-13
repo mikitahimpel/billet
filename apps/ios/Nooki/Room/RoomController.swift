@@ -52,6 +52,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var motes = false
     @ObservationIgnored let decorStage = DecorStage()
+    #if DEBUG || LABS_YES
+    @ObservationIgnored let perf = RoomPerfCoordinator()
+    #endif
     @ObservationIgnored var decor = RoomDecor()
     @ObservationIgnored var decorRetries = 0
     @ObservationIgnored private var sway = true
@@ -125,6 +128,9 @@ final class RoomController: RoomControlling, CatStatusProviding {
         room.onShowcase = { [weak self] label in withAnimation(.snappy(duration: 0.25)) { self?.showcase = label } }
         if !motes { Self.show(motes: false, in: room) }
         room.swaying = sway
+        #if DEBUG || LABS_YES
+        perf.lights(in: room)
+        #endif
     }
 
     /// Lets every room sway and pulse, or holds it still.

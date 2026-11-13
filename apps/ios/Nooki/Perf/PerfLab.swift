@@ -41,6 +41,16 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     case ownLoop
     /// Metal's performance overlay (fps, GPU ms) over the app; read at launch, off unless switched on.
     case metalHud
+    /// The room's static furniture drawn as one mesh per material while the player is not arranging it.
+    case mergeFurniture
+    /// The blobs under the pieces drawn as one baked layer while the player is not arranging.
+    case bakedBlobs
+    /// The sun's shadow map left out, so the room is not drawn a second time from the light.
+    case noSunShadow
+    /// Each room's widest point light kept and the others off.
+    case fewerLights
+    /// The bloom pass over the glowing bulbs, flame and window left out (iOS 27 only).
+    case noBloom
 
     var title: String {
         switch self {
@@ -60,6 +70,11 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .hdr: "HDR rendering"
         case .ownLoop: "Room on its own 30 fps loop (spike; next launch)"
         case .metalHud: "Metal HUD overlay (fps, GPU; next launch)"
+        case .mergeFurniture: "Furniture merged per material (outside Decorate)"
+        case .bakedBlobs: "One baked contact-shadow layer (outside Decorate)"
+        case .noSunShadow: "No sun shadow map"
+        case .fewerLights: "Only the widest point light"
+        case .noBloom: "No bloom (iOS 27)"
         }
     }
 
@@ -81,6 +96,11 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
         case .hdr: "sun.max"
         case .ownLoop: "gauge.with.dots.needle.33percent"
         case .metalHud: "chart.xyaxis.line"
+        case .mergeFurniture: "square.on.square.squareshape.controlhandles"
+        case .bakedBlobs: "circle.lefthalf.filled"
+        case .noSunShadow: "sun.min"
+        case .fewerLights: "lightbulb.slash"
+        case .noBloom: "light.max"
         }
     }
 
@@ -89,7 +109,8 @@ nonisolated enum PerfSuspect: String, CaseIterable, Codable, Sendable {
     var shippedOn: Bool {
         switch self {
         case .barGlass, .pageGlass, .scrollEdges, .shadows, .shine, .splatCat, .drift, .sway, .hdr: true
-        case .flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate: false
+        case .flatten, .motes, .msaa, .ownLoop, .metalHud, .splatLean, .splatRate, .mergeFurniture, .bakedBlobs,
+            .noSunShadow, .fewerLights, .noBloom: false
         }
     }
 }

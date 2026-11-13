@@ -30,6 +30,9 @@ extension RoomController {
         }
         home.arrange(next.layout)
         city?.arrange(next)
+        #if DEBUG || LABS_YES
+        perfDecorChanged()
+        #endif
     }
 
     /// Where the cat goes to use each kind of piece the player stood: round whatever is in the way to the floor
