@@ -4,6 +4,8 @@ Ourio's **coins** are billet's one currency (owner decision, 2026-11-05). Stamps
 paid-only currency, are gone. Coins are earned in play (mini-games, feeding, notes) and, once
 payments are on, also sold in packs as consumable in-app purchases through StoreKit 2. The server
 keeps a ledger of the coins each pair has bought.
+How coins are priced, tuned and refunded, and the plan for turning sales on, is in
+[economy.md](economy.md).
 
 **The first release ships without payments:** the app is built with `BILLET_PAYMENTS=none`, App
 Store Connect has no in-app purchases, and the server's `payments` flag is off, so every
