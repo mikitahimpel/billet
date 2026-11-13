@@ -1,23 +1,21 @@
 name: Deploy
 
-# Deploys the Alchemy stack to Cloudflare. It is OFF until the owner switches it on, and it can
-# never run from a pull request or a push:
+# Deploys the Alchemy stack to Cloudflare PRODUCTION. It can never run from a pull request or a
+# push: the only trigger is a manual run (workflow_dispatch), and the job waits in the `prod`
+# environment for the owner's approval (required reviewer, deployment branch `main` only).
 #
-#   - the only trigger is a manual run (workflow_dispatch);
-#   - the job also needs the repository variable DEPLOY_ENABLED=true and a runner label list in
-#     DEPLOY_RUNNER, so a manual run does nothing while they are unset.
-#
-# The runner must have the Proton Pass CLI (`pp`) installed and logged in with access to the vaults
-# "Billet" (dev) and "Billet Release" (prod). Credentials come only from `pp run`; no secret is
-# stored in GitHub. See docs/alchemy.md#deploying for the switch-on steps.
+# The secrets are the `prod` environment's secrets, copied from Proton Pass by
+# scripts/sync-prod-secrets.sh; Proton Pass stays the source of truth. The `dev` stage is not
+# deployed here: it has no GitHub environment and is deployed locally through `pp run`
+# (docs/alchemy.md#deploying). See docs/alchemy.md#deploy-workflow.
 on:
   workflow_dispatch:
     inputs:
       stage:
-        description: Stage to deploy
+        description: Stage to deploy (only prod runs here)
         type: choice
-        options: [dev, prod]
-        default: dev
+        options: [prod]
+        default: prod
 
 concurrency:
   group: deploy-${{ inputs.stage }}
@@ -28,16 +26,15 @@ permissions:
 
 jobs:
   deploy:
-    if: vars.DEPLOY_ENABLED == 'true'
-    # A JSON label list, for example ["self-hosted","billet-deploy"]. Unset, the job cannot start.
-    runs-on: ${{ fromJSON(vars.DEPLOY_RUNNER) }}
-    # Add required reviewers to the `prod` environment in the repository settings.
+    runs-on: ubuntu-latest
     environment: ${{ inputs.stage }}
-    timeout-minutes: 15
+    timeout-minutes: 20
     env:
       STAGE: ${{ inputs.stage }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
@@ -53,21 +50,34 @@ jobs:
         run: pnpm turbo run lint typecheck test format:check
 
       # Alchemy's output goes to a file first and is printed with the workers.dev address masked:
-      # the logs of a public repository are public, and the subdomain names the account. The account
-      # ID only exists inside `pp run`, so the inner shell registers it as a masked value before
-      # the deploy starts. The log file is removed by the cleanup step.
+      # the logs of a public repository are public, and the subdomain names the account. The
+      # account ID is a secret, so GitHub masks it; it is registered again here in case a value
+      # reaches the log in another form. Names of missing secrets are printed, never values.
       - name: Deploy
         env:
-          PROTON_PASS_AGENT_REASON: billet deploy ${{ inputs.stage }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          APNS_KEY: ${{ secrets.APNS_KEY }}
+          APNS_KEY_ID: ${{ secrets.APNS_KEY_ID }}
+          APPLE_SIGN_IN_KEY: ${{ secrets.APPLE_SIGN_IN_KEY }}
+          APPLE_SIGN_IN_KEY_ID: ${{ secrets.APPLE_SIGN_IN_KEY_ID }}
+          ACCESS_TEAM_DOMAIN: ${{ secrets.ACCESS_TEAM_DOMAIN }}
+          ACCESS_AUD: ${{ secrets.ACCESS_AUD }}
+          TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
         run: |
           set -uo pipefail
-          env_file=.env.pass
-          if [ "$STAGE" = "prod" ]; then env_file=.env.pass.release; fi
+          missing=""
+          for name in CLOUDFLARE_ACCOUNT_ID CLOUDFLARE_API_TOKEN APNS_KEY APNS_KEY_ID \
+            APPLE_SIGN_IN_KEY APPLE_SIGN_IN_KEY_ID ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN; do
+            if [ -z "${!name:-}" ]; then missing="$missing $name"; fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Missing secrets in the prod environment:$missing. Run scripts/sync-prod-secrets.sh (docs/alchemy.md#deploy-workflow)."
+            exit 1
+          fi
+          echo "::add-mask::$CLOUDFLARE_ACCOUNT_ID"
           status=0
-          pp run --env-file "$env_file" -- sh -c '
-            if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then echo "::add-mask::$CLOUDFLARE_ACCOUNT_ID"; fi
-            exec pnpm exec alchemy deploy --stage "$STAGE" --yes --no-input > "$RUNNER_TEMP/deploy.log" 2>&1
-          ' || status=$?
+          pnpm exec alchemy deploy --stage "$STAGE" --yes --no-input > "$RUNNER_TEMP/deploy.log" 2>&1 || status=$?
           sed -E 's#https://[A-Za-z0-9.-]*workers\.dev#https://<masked>.workers.dev#g' "$RUNNER_TEMP/deploy.log"
           exit "$status"
 
@@ -81,8 +91,7 @@ jobs:
           echo "Worker answered HTTP $code"
           test "$code" = "200"
 
-      # The raw log is unmasked, and a self-hosted runner keeps its temp files, so remove it even
-      # when the deploy or the smoke test failed.
+      # The raw log is unmasked; remove it even when the deploy or the smoke test failed.
       - name: Remove deploy log
         if: always()
         run: rm -f "$RUNNER_TEMP/deploy.log"

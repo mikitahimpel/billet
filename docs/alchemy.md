@@ -127,18 +127,22 @@ Stop `alchemy dev` with Ctrl-C. Killing only the `pnpm` wrapper leaves Alchemy a
 ## Deploying
 
 Secrets are Proton Pass references, never values. `.env.pass` (dev, vault `Billet`) and
-`.env.pass.release` (prod, vault `Billet Release`) hold them:
+`.env.pass.release` (prod, vault `Billet Release`) hold them. `.env.pass.release` is the single list
+of what prod needs:
 
-| Variable | Vault item (`Apple` is read from `Billet` by both stages) | Field |
+| Variable | Vault, item (prod) | Field |
 | --- | --- | --- |
-| `CLOUDFLARE_ACCOUNT_ID` | `cloudflare` | `account_id` |
-| `CLOUDFLARE_API_TOKEN` | `cloudflare` | `api_token` |
-| `APNS_KEY` | `Apple` | `APNS_KEY` |
-| `APNS_KEY_ID` | `Apple` | `APNS_KEY_ID` |
-| `APPLE_SIGN_IN_KEY` | `Apple` | `APPLE_SIGN_IN_KEY` |
-| `APPLE_SIGN_IN_KEY_ID` | `Apple` | `APPLE_SIGN_IN_KEY_ID` |
+| `CLOUDFLARE_ACCOUNT_ID` | `Billet Release`, `cloudflare` | `account_id` |
+| `CLOUDFLARE_API_TOKEN` | `Billet Release`, `cloudflare` | `api_token` |
+| `APNS_KEY`, `APNS_KEY_ID` | `Billet`, `Apple` | same names |
+| `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID` | `Billet`, `Apple` | same names |
+| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `Billet Release`, `Cloudflare Access` | `team_domain`, `aud` |
+| `TMDB_TOKEN` | `Billet Release`, `TMDB` | `api_token` |
 
-The API token needs Workers Scripts, D1 and R2 edit on the account. Create one item per vault.
+The prod API token is its own token, separate from dev's: Account, Workers Scripts, D1 and R2, all
+Edit, on this account only. The deploy also makes KV namespaces, an Analytics Engine dataset and
+Durable Object migrations; if a deploy fails with an authentication error naming one of them, add
+that permission (Workers KV Storage: Edit) to the token and rerun.
 
 The four `Apple` fields are account-wide Apple keys: the APNs key (push) and the Sign in with
 Apple key (`APPLE_SIGN_IN_KEY`, the `.p8` PEM, which lets the Worker revoke a user's Apple token
@@ -150,6 +154,8 @@ them from the item `Apple` in the vault `Billet`, like `.env.pass`; there is no 
 step. The Sign in with Apple key has `com.ourio.app` as its primary App ID; the Worker still accepts
 tokens and revokes codes for the first app, `com.mikitahimpel.billet`, until the owner retires it.
 
+The `dev` stage is deployed locally, by the manager, through `pp`:
+
 ```sh
 PROTON_PASS_AGENT_REASON="billet deploy dev" pp run --env-file .env.pass -- pnpm exec alchemy deploy --stage dev
 ```
@@ -157,26 +163,47 @@ PROTON_PASS_AGENT_REASON="billet deploy dev" pp run --env-file .env.pass -- pnpm
 Do not pass `--env-file` to `alchemy` itself: the file would then win over the shell, and Alchemy
 would read the literal `pass://` strings.
 
+**Prod is deployed only by the owner, only from GitHub Actions** (below). Agents never deploy prod,
+never run `.env.pass.release` through `pp`, and never run the sync script.
+
 ### Deploy workflow
 
 [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) is manual only
-(`workflow_dispatch`). It never runs from a pull request or a push. It also does nothing until the
-owner:
+(`workflow_dispatch`, stage `prod`). It never runs from a pull request or a push. It runs on a
+GitHub-hosted runner in the GitHub environment `prod`, which needs the owner's approval (required
+reviewer) and accepts only the `main` branch. Its secrets are the environment's secrets, a copy of
+the Proton Pass items above; Proton Pass stays the source of truth. The `dev` stage has no GitHub
+environment and does not run here.
 
-1. creates the vaults `Billet` and `Billet Release`, each with a `cloudflare` item;
-2. installs and logs in `pp` on a runner that can read both vaults;
-3. sets the repository variables `DEPLOY_RUNNER` (a JSON label list for that runner) and
-   `DEPLOY_ENABLED=true`;
-4. adds required reviewers to the `prod` environment.
+The workflow checks that every secret is present (names only), runs
+`pnpm turbo run lint typecheck test format:check`, then
+`pnpm exec alchemy deploy --stage prod --yes --no-input`, prints the log with the `workers.dev`
+address masked (public repository logs are public; the account ID is a secret, so GitHub masks it
+too), smoke-tests the Worker URL for HTTP 200 and deletes the raw log in a last step.
 
-The workflow runs the checks, deploys, prints the log with the `workers.dev` address masked (public
-repository logs are public), and smoke-tests the Worker URL for HTTP 200. The account ID is masked too, and the raw log is deleted
-from the runner in a final step that runs even when the deploy fails. Read the log of the first
-`dev` run for anything private before enabling `prod`. To deploy on push later,
-add a `push` trigger in a separate change, once the above works.
+Owner steps, once:
+
+1. Create the item `cloudflare` in the vault `Billet Release` with the fields `account_id` and
+   `api_token` (the prod token above), plus `Cloudflare Access` (`team_domain`, `aud`, the prod
+   Access application) and `TMDB` (`api_token`) in the same vault.
+2. Back up the Apple `.p8` keys in the item `Apple` (vault `Billet`): Apple shows each one only once.
+3. On your Mac, with `pp` and `gh` logged in: `scripts/sync-prod-secrets.sh --dry-run` (names
+   only), then `scripts/sync-prod-secrets.sh`. It pipes each value from `pp run` into
+   `gh secret set --env prod` without printing it, then lists the names.
+4. Actions, Deploy, Run workflow, stage `prod`. Approve the waiting run in the GitHub app or the
+   run page. Then check `GET /` and `/v1/flags` on the prod host.
+
+Rotation: change the value in Proton Pass first, run `scripts/sync-prod-secrets.sh` again, then run
+the workflow so the Worker gets the new value. A new variable goes into `.env.pass.release` and
+`deploy.yml` together.
+
+State: the deploy keeps its state in the account's D1 database `billet-alchemy-state`
+([Stages and state](#stages-and-state)), not on the runner, so CI and a local deploy agree on what
+exists. The first prod deploy creates that database if the account has none, then the prod
+resources. The raw log of the first run may hold something private; read it once after the run.
 
 ## Verified and not verified
 
 `alchemy deploy`, the D1 state store, D1 migrations and Durable Object migrations have run on the
 `dev` stage. The `prod` stage, the `pass://Billet Release/...` reference (a vault name with a space)
-and the workflow on a runner have not.
+and the workflow have not.
