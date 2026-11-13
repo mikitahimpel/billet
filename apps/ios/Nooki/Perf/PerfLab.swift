@@ -133,10 +133,36 @@ nonisolated enum PerfLabMachine: Machine {
 
         static let shipped = State()
 
+        init() {}
+
         /// What Labs saved on this phone; where a part of the app reads a switch before the lab itself exists.
         static func saved(in defaults: UserDefaults) -> State {
-            defaults.data(forKey: PerfLabMachine.saveKey)
+            #if DEBUG || PERF_HOOKS_YES
+            if let arm = defaults.string(forKey: "perf.lab") { return State(arm: arm) }
+            #endif
+            return defaults.data(forKey: PerfLabMachine.saveKey)
                 .flatMap { try? JSONDecoder().decode(State.self, from: $0) } ?? .shipped
+        }
+
+        /// `-perf.lab "noSunShadow,-hdr,tier=fair,meter"`: a run's switches from the launch arguments, over what Labs
+        /// saved. A name turns that suspect on, a leading `-` off; `tier=` forces a tier.
+        init(arm: String) {
+            for token in arm.split(separator: ",").map({ $0.trimmingCharacters(in: .whitespaces) }) {
+                if token == "meter" {
+                    meter = true
+                } else if token.hasPrefix("tier="), let tier = RoomQualityTier.allCases.first(where: {
+                    String(describing: $0) == token.dropFirst(5)
+                }) {
+                    forcedTier = tier
+                } else {
+                    let on = !token.hasPrefix("-")
+                    if let suspect = PerfSuspect(rawValue: on ? token : String(token.dropFirst())),
+                        on != suspect.shippedOn
+                    {
+                        changed.insert(suspect)
+                    }
+                }
+            }
         }
 
         func isOn(_ suspect: PerfSuspect) -> Bool { changed.contains(suspect) != suspect.shippedOn }
@@ -583,11 +609,11 @@ final class PerfLab {
     private(set) var previousStats: RoomStats?
     @ObservationIgnored private var metrics: MetricsReceiver?
     @ObservationIgnored private var sampling: Task<Void, Never>?
+    @ObservationIgnored private var logging: Task<Void, Never>?
     #endif
 
     init(defaults: UserDefaults) {
-        let saved = defaults.data(forKey: Self.key)
-            .flatMap { try? JSONDecoder().decode(PerfLabMachine.State.self, from: $0) } ?? .shipped
+        let saved = PerfLabMachine.State.saved(in: defaults)
         // On the main actor, so saves land in the order the switches were flipped.
         store = Store(initial: saved) { @MainActor [defaults] output in
             switch output {
@@ -610,11 +636,39 @@ final class PerfLab {
             }
         }
         #endif
+        #if DEBUG || PERF_HOOKS_YES
+        if defaults.bool(forKey: "perf.log") { startLogging() }
+        #endif
         lastTier = tier
         quality.onChange = { [weak self] in self?.noteTier() }
     }
 
     func isOn(_ suspect: PerfSuspect) -> Bool { state.isOn(suspect) }
+
+    #if DEBUG || PERF_HOOKS_YES
+    /// `-perf.log 1`: the Copy settings line on stderr and in the log every 5 s (room stats and scene write rates
+    /// every 30 s), for a run on a phone read by `tools/perf-device/run.sh`. Lines start with `PERFLINE`.
+    private func startLogging() {
+        #if LABS_YES || DEBUG
+        let started = Date()
+        logging = Task { @MainActor [weak self] in
+            var tick = 0
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .seconds(5))
+                guard let self else { return }
+                if tick % 6 == 0 { self.refreshRoomStats() }
+                let line = PerfLabMachine.summary(
+                    self.state, reading: nil, energy: self.energy.reading(room: .visible), day: nil,
+                    room: tick % 6 == 0 ? self.roomStats?.line : nil, governor: self.governorLine)
+                let stamped = String(format: "PERFLINE t=%.0f %@\n", Date().timeIntervalSince(started), line)
+                FileHandle.standardError.write(Data(stamped.utf8))
+                Logger(subsystem: "com.ourio.app", category: "perfdevice").notice("\(stamped, privacy: .public)")
+                tick += 1
+            }
+        }
+        #endif
+    }
+    #endif
 
     #if DEBUG || LABS_YES
     /// Walks the room again; the reading before it is kept to show what changed.
