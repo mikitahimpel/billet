@@ -8,6 +8,8 @@ import Page from "../../layouts/page.astro";
 const picks = [
   { need: "Daily questions and relationship coaching", apps: "Paired, Agapé, Lovewick" },
   { need: "A private chat and shared calendar", apps: "Between" },
+  { need: "Couple widgets, mood, a distance tracker and daily questions", apps: "Couple Joy" },
+  { need: "One-minute daily rituals: questions, photo prompts, local date ideas", apps: "Candle" },
   { need: "Photos from friends on your Home Screen", apps: "Locket Widget" },
   { need: "Widgets and pets with friends and a partner", apps: "Widgetable" },
   { need: "Planning life together: calendar, to-dos, key dates", apps: "Cupla" },
@@ -27,6 +29,13 @@ const schema = [
     })),
   },
 ];
+// Apps read after the rest, dated on their own.
+const later = [
+  ...Map.groupBy(
+    apps.filter((app) => app.checked && app.checked.iso !== checked.iso),
+    (app) => app.checked!.iso,
+  ).values(),
+].map((group) => ({ date: group[0].checked!, names: group.map((app) => app.name).join(" and ") }));
 const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name, url })));
 ---
 
@@ -47,7 +56,13 @@ const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name
       </p>
       <p class="pg-small">
         We make Ourio, so read this as our view. Prices and features come from each app's US App Store page and website,
-        checked <time datetime={checked.iso}>{checked.label}</time>; sources are at the bottom.
+        checked <time datetime={checked.iso}>{checked.label}</time>{
+          later.map((group) => (
+            <>
+              {" "}({group.names} on <time datetime={group.date.iso}>{group.date.label}</time>)
+            </>
+          ))
+        }; sources are at the bottom.
       </p>
     </div>
   </section>
