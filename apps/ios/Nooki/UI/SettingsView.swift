@@ -74,6 +74,7 @@ struct SettingsView: View {
                 GroupedSection(header: "Account") {
                     AccountRow(state: session.signIn.state, linked: session.appleLink.state == .linked, retry: session.signIn.retry)
                 }
+                AppleAccountSection(model: session.appleLink)
                 DeliveryHealthSection()
                 PartnerAndAccountSections(session: session, erase: erase)
             } else {
