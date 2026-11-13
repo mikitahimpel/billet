@@ -175,6 +175,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
                 let built = CityRoomScene()
                 wire(built)
                 city = built
+                built.arrange(decor)
             }
         }
     }

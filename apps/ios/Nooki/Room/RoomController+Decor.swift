@@ -29,6 +29,7 @@ extension RoomController {
             home.placedSpots = places
         }
         home.arrange(next.layout)
+        city?.arrange(next)
     }
 
     /// Where the cat goes to use each kind of piece the player stood: round whatever is in the way to the floor
@@ -65,9 +66,23 @@ extension RoomController {
 
     // MARK: Touch
 
+    /// The room on screen and the stage that draws its pieces: a touch arranges those.
+    private var arranged: (room: CatRoom, stage: DecorStage)? {
+        switch shown {
+        case .city:
+            guard let city else { return nil }
+            return (city, city.decorStage)
+        case .home, .board:
+            guard let home else { return nil }
+            return (home, decorStage)
+        }
+    }
+
     private func world(_ point: CGPoint, onto plane: simd_float4x4) -> SIMD3<Float>? {
-        guard let home, let unproject = home.unprojector, let hit = unproject(point, plane) else { return nil }
-        return home.pivot.convert(position: hit, from: nil)
+        guard let room = arranged?.room, let unproject = room.unprojector, let hit = unproject(point, plane) else {
+            return nil
+        }
+        return room.pivot.convert(position: hit, from: nil)
     }
 
     private enum Plane {
@@ -93,15 +108,16 @@ extension RoomController {
     }
 
     private func hit(_ point: CGPoint, _ plane: Plane, lifted: Float = 0) -> SIMD3<Float>? {
-        guard let home else { return nil }
-        return world(point, onto: plane.matrix(home.pivot, lifted: lifted))
+        guard let room = arranged?.room else { return nil }
+        return world(point, onto: plane.matrix(room.pivot, lifted: lifted))
     }
 
     /// The piece under the screen point, a wall piece first.
     func decorPiece(at point: CGPoint) -> String? {
-        if let back = hit(point, .back), let id = decorStage.wallPiece(at: back, on: .backWall) { return id }
-        if let left = hit(point, .left), let id = decorStage.wallPiece(at: left, on: .leftWall) { return id }
-        return decorStage.floorPiece { hit(point, .floor, lifted: $0) }
+        guard let stage = arranged?.stage else { return nil }
+        if let back = hit(point, .back), let id = stage.wallPiece(at: back, on: .backWall) { return id }
+        if let left = hit(point, .left), let id = stage.wallPiece(at: left, on: .leftWall) { return id }
+        return stage.floorPiece { hit(point, .floor, lifted: $0) }
     }
 
     /// How many cells the piece's middle is from where the finger first touched, so it does not jump.
