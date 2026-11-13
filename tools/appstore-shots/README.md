@@ -43,7 +43,7 @@ and top in percent of the panel, `rotate` is in degrees. `raw` is the file stem 
 `capture.sh` builds the Debug app, takes the build lock (`lockq-wait`), boots the Simulator named by
 `SIM_NAME` (default `ui-fixes2-pm`, an iPhone 17 Pro Max; it must be shut down, never a booted or the golden
 one), sets the status bar to 9:41, dark mode and the Dusk look, and launches the app with `-landingDemo YES`
-(Alex and Sam, 64 coins) per panel: `-landingGo pet|groceries|list|places|us|shop`, `-shotMoments board`.
+(Alex and Sam, 64 coins) per panel: `-landingGo pet|groceries|list|places|us|shop`, `-shotMoments photos`.
 It shuts the Simulator down and releases the lock when done. `SETTLE` (seconds, default 14) is the wait
 before each screenshot; the room needs it. A new screen is a new `-landingGo` case in `HomeState` and demo
 data in `apps/ios/Nooki/Demo/LandingDemo.swift`.

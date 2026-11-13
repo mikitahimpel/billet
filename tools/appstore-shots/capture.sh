@@ -20,7 +20,7 @@ args_for() {
     movies) echo "-landingGo list" ;;
     places) echo "-landingGo places" ;;
     days) echo "-landingGo us" ;;
-    moments) echo "-shotMoments board" ;;
+    moments) echo "-shotMoments photos" ;;
     shop) echo "-landingGo shop" ;;
     *) echo "unknown panel $1" >&2; exit 2 ;;
   esac
@@ -66,6 +66,11 @@ xcrun simctl status_bar "$UDID" override --time 9:41 --batteryState charged --ba
   --cellularMode active --cellularBars 4 --wifiBars 3
 xcrun simctl uninstall "$UDID" com.ourio.app 2>/dev/null || true
 xcrun simctl install "$UDID" "$APP"
+
+# The first launch after an install prepares the room and draws nothing yet: warm it up, then capture.
+xcrun simctl launch "$UDID" com.ourio.app -onboardingDone YES -uitestNoHints YES -design.look dusk \
+  -landingDemo YES >/dev/null
+sleep "${WARMUP:-30}"
 
 for panel in "${PANELS[@]}"; do
   xcrun simctl terminate "$UDID" com.ourio.app 2>/dev/null || true
