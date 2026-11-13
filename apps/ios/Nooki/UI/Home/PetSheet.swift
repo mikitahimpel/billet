@@ -152,7 +152,9 @@ private struct PetSheet: View {
     }
 
     private func declined(_ care: NeedCare, source: PetNeedsSource?) -> String? {
-        care.declined(state.care.gate.verdict(care.kind, needs: source?.status.needs, now: now), now: now)
+        // `now` only makes the sheet look again as a rest runs out; the verdict itself is read at this moment.
+        let at = max(now, Date())
+        return care.declined(state.care.gate.verdict(care.kind, needs: source?.status.needs, now: at), now: at)
     }
 
     /// She turns it down: said where it was asked for, with a shake and a soft buzz, and nothing is given or counted.
