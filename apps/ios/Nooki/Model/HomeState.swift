@@ -238,7 +238,7 @@ final class HomeState {
         if let owned = defaults.string(forKey: "shopOwned") {
             wallet.update { $0.owned = Set(owned.split(separator: ",").map(String.init)) }
         }
-        // For the landing's screenshots: `-landingGo us|calendar|list|shop|drawing|profile` opens that screen.
+        // For the landing's screenshots: `-landingGo us|calendar|list|groceries|places|pet|shop|drawing|profile` opens that screen.
         switch defaults.string(forKey: "landingGo") {
         case "us": tab = .us
         case "calendar":
@@ -248,6 +248,18 @@ final class HomeState {
             tab = .us
             if let watch = us.lists.first(where: { $0.kind == .watch }) { usRoute = .list(watch.id) }
         case "shop": tab = .shop
+        case "pet":
+            // After launch: the pet's view reacts to a change, not to a value it starts with.
+            Task {
+                try? await Task.sleep(for: .seconds(3))
+                showsPetSheet = true
+            }
+        case "groceries":
+            tab = .us
+            if let list = us.lists.first(where: { $0.kind == .groceries }) { usRoute = .list(list.id) }
+        case "places":
+            tab = .us
+            if let list = us.lists.first(where: { $0.kind == .travel }) { usRoute = .list(list.id) }
         case "drawing": drawing = true
         case "profile": showsProfile = true
         default: break

@@ -46,6 +46,41 @@ enum LandingDemo {
         if moments.moments.isEmpty { seedMoments(moments) }
         if us.events.isEmpty { seedCalendar(us) }
         if let watch = us.lists.first(where: { $0.kind == .watch }), watch.items.isEmpty { seedFilms(us, watch.id) }
+        if let groceries = us.lists.first(where: { $0.kind == .groceries }), groceries.items.isEmpty {
+            seedGroceries(us, groceries.id)
+        }
+        if let travel = us.lists.first(where: { $0.kind == .travel }), travel.items.isEmpty { seedPlaces(us, travel.id) }
+    }
+
+    @MainActor
+    private static func seedGroceries(_ us: UsStore, _ list: UUID) {
+        let rows: [(String, String, String?, String, Bool)] = [
+            ("Avocados", "produce", "4", "L", false), ("Strawberries", "produce", nil, "M", false),
+            ("Oat milk", "dairy", "2", "M", false), ("Greek yogurt", "dairy", nil, "L", false),
+            ("Croissants", "bakery", "2", "M", false), ("Sourdough", "bakery", nil, "L", true),
+            ("Salmon", "meat", nil, "L", false), ("Coffee beans", "pantry", nil, "M", false),
+        ]
+        for row in rows {
+            us.addItem(row.0, to: list, author: row.3, details: ListItemDetails(quantity: row.2, aisle: row.1))
+        }
+        for row in rows where row.4 {
+            if let item = us.list(list)?.items.first(where: { $0.text == row.0 }) {
+                us.setItem(item.id, in: list, done: true, by: "M")
+            }
+        }
+    }
+
+    @MainActor
+    private static func seedPlaces(_ us: UsStore, _ list: UUID) {
+        for code in ["JP", "IT", "MX", "IS", "PT", "NZ"] { us.addTravel(country: code, to: list, author: "L") }
+        for (code, place) in [("FR", "Paris"), ("ES", "Barcelona")] {
+            us.addTravel(country: code, place: place, to: list, author: "M")
+        }
+        for code in ["FR", "ES"] {
+            if let item = us.list(list)?.items.first(where: { $0.country == code && !$0.place }) {
+                us.markBeen(item.id, in: list, month: nil, moments: [], by: "L")
+            }
+        }
     }
 
     @MainActor
