@@ -84,6 +84,16 @@ final class CityRoomScene: CatRoom {
     /// The hour and lamp brightness the room's lights and glowing materials were last set for.
     private var appliedHour: Float = -1
     private var appliedLamps: Float = -1
+    /// The player's choice for the lamps: on, off, or nil to follow the hour.
+    var lampChoice: Bool? {
+        didSet { if lampChoice != oldValue { lampsTarget = wantedLamps() } }
+    }
+    /// Whether the lamps ease to a new state or change at once.
+    var lampsFade = true
+    private var lampsTarget: Float = 0
+    private var lampsShown: Float = -1
+    /// The least ambient light a room with its lamps lit keeps, so a night room is never black.
+    static let litAmbientFloor: Float = 0.45
     private var environment: EnvironmentResource?
 
     /// The pieces of the Bedroom's own furniture and what the player stood in it, one entity tree each.
@@ -241,6 +251,11 @@ final class CityRoomScene: CatRoom {
         // The room's lights change slowly; they are redone once the hour has moved on a little.
         let moved = abs(hour - appliedHour)
         if min(moved, 24 - moved) > 0.1 { applyLight() }
+        if lampsShown >= 0, lampsShown != lampsTarget {
+            lampsShown = lampsFade ? lampsShown + (lampsTarget - lampsShown) * min(1, dt * 3) : lampsTarget
+            if abs(lampsTarget - lampsShown) < 0.01 { lampsShown = lampsTarget }
+            applyLamps()
+        }
         applyAmbient()
         if tintGate.passes(TintKey(hour: hour, baked: isBaked)), isBaked {
             tintShell(BakedShell.tint(light))
@@ -264,7 +279,23 @@ final class CityRoomScene: CatRoom {
         fill.components.set(DirectionalLightComponent(color: Daylight.color(fillColor), intensity: 300 * (0.25 + 0.5 * (1 - darkness))))
         setPoint(skyLight, color: light.horizon, lumens: 2500 * (1 - darkness * 0.85), radius: 1.2)
 
-        let lamps = smoothstep(darkness, 0.2, 0.7)
+        lampsTarget = wantedLamps()
+        if lampsShown < 0 || !lampsFade { lampsShown = lampsTarget }
+        applyLamps()
+        applySky()
+    }
+
+    private func wantedLamps() -> Float {
+        switch lampChoice {
+        case true?: 1
+        case false?: 0
+        case nil: smoothstep(light.darkness, 0.2, 0.7)
+        }
+    }
+
+    /// The lamps, the fairy lights, the candle and what glows, at the brightness `lampsShown` has reached.
+    private func applyLamps() {
+        let lamps = lampsShown
         lampsOn = lamps > 0.5
         setPoint(lampLight, color: Daylight.rgb(0xFFC27A), lumens: 2200 * lamps, radius: 1.1)
         setPoint(fairyLight, color: Daylight.rgb(0xFFC27A), lumens: 900 * lamps, radius: 1)
@@ -276,7 +307,9 @@ final class CityRoomScene: CatRoom {
             let bulb = Clay.glow(Tone.bulb, intensity: 0.4 + 4 * lamps)
             for b in bulbs { b.model?.materials = [bulb] }
         }
+    }
 
+    private func applySky() {
         // The ambient light follows the sky. Baking it is heavy, so it is rebaked only as the real hour moves on, never
         // while the day is cycling; its brightness follows every time.
         if case .live = clock, abs(light.hour - lightHour) > 0.1 {
@@ -296,10 +329,12 @@ final class CityRoomScene: CatRoom {
     }
 
     private func applyAmbient() {
-        guard let environment, exponentGate.passes(light.env) else { return }
+        let env = max(light.env, Self.litAmbientFloor * max(lampsShown, 0))
+        guard let environment, exponentGate.passes(env) else { return }
         SceneWrites.note(.ambient)
         ibl.components.set(ImageBasedLightComponent(source: .single(environment),
-                                                    intensityExponent: log2(max(light.env, 0.05) / 0.85) - 0.4))
+                                                    intensityExponent: log2(max(env, 0.05) / 0.85) - 0.4))
+        liftAmbient(reset: true)
     }
 
     /// Keeps the flat view on the chosen look and its life moving. Until it shows, the town is repainted once the hour
