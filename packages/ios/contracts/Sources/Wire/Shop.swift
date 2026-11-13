@@ -86,19 +86,24 @@ public enum ShopOffer: Codable, Hashable, Sendable {
 
 /// Where a piece stands: `surface` is `floor`, `backWall` or `leftWall`; `u` and `v` are grid cells of 5 cm
 /// from the room's middle, `v` being 0 on a wall. `quarterTurns` is 0 to 3, plus 4 for a further 45 degrees.
+/// `room` is `bedroom` for a piece in the Bedroom and absent for the living room, which is never named.
 public struct RoomPlacement: Codable, Hashable, Sendable {
   public let item: RoomItemId
   public let surface: String
   public let u: Int
   public let v: Int
   public let quarterTurns: Int
+  public let room: String?
 
-  public init(item: RoomItemId, surface: String, u: Int, v: Int, quarterTurns: Int) {
+  public init(
+    item: RoomItemId, surface: String, u: Int, v: Int, quarterTurns: Int, room: String? = nil
+  ) {
     self.item = item
     self.surface = surface
     self.u = u
     self.v = v
     self.quarterTurns = quarterTurns
+    self.room = room
   }
 }
 

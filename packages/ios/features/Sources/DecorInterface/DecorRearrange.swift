@@ -38,7 +38,7 @@ extension DecorLayout {
     guard let item = DecorItem.item(shopID: placement.item),
       let span = Self.span(of: placement, item: item)
     else { return [] }
-    return allPlacements.compactMap { other in
+    return allPlacements.filter { $0.space == placement.space }.compactMap { other in
       guard other.item != placement.item, other.surface == placement.surface,
         let otherItem = DecorItem.item(shopID: other.item),
         let otherSpan = Self.span(of: other, item: otherItem)
@@ -78,9 +78,24 @@ extension DecorLayout {
     return .rejected(verdict)
   }
 
-  /// The room as a pair that never arranged it has it: the room's own furniture at home, nothing the player
-  /// bought stood until it is settled again.
+  /// A room as a pair that never arranged it has it: its own furniture at home. The living room also takes
+  /// every bought piece that is not in the bedroom, as it settles; the bedroom's own go to the closet. The
+  /// other room is left as it is.
   public func reset(owned: Set<String>, in room: DecorRoom = .home) -> DecorLayout {
-    DecorLayout().settled(owned: owned, in: room)
+    func isOwn(_ id: String, of space: DecorSpace) -> Bool {
+      DecorItem.item(shopID: id)?.base?.space == space
+    }
+    let others = placements.filter { $0.space != room.space }
+    switch room.space {
+    case .living:
+      let away = stored.filter { isOwn($0, of: .bedroom) }
+      return DecorLayout(placements: others, stored: DecorItem.starters.union(away))
+        .settled(owned: owned, in: room)
+    case .bedroom:
+      let bought = placements.filter { $0.space == .bedroom && !isOwn($0.item, of: .bedroom) }
+        .map(\.item)
+      let kept = stored.filter { !isOwn($0, of: .bedroom) }
+      return DecorLayout(placements: others, stored: kept.union(bought))
+    }
   }
 }

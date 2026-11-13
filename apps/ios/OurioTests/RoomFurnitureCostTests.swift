@@ -33,7 +33,7 @@ struct RoomFurnitureCostTests {
     @Test func standingPiecesDrawNoMoreThanTheyLoadWith() async throws {
         var loaded = Cost(Entity())
         var counts: [Cost] = []
-        for item in DecorItem.baseItems {
+        for item in DecorItem.baseItems(in: .living) {
             counts.append(Cost(try await Entity(named: item.assetName, in: .main)))
         }
         loaded.entities = counts.reduce(0) { $0 + $1.entities }
