@@ -13,14 +13,14 @@ Every type below is **linked to the user** (it is stored per account) and **not 
 | Data type | Purpose | What it is |
 | --- | --- | --- |
 | Contact Info > Name | App Functionality | The name you give in onboarding and the name your partner calls you. Typed by the user, not taken from Apple. |
-| Identifiers > User ID | App Functionality | The account behind the anonymous key, and the session. |
+| Identifiers > User ID | App Functionality | The account behind the anonymous key, the session and, when the user links Sign in with Apple, Apple's private user identifier (its `sub`). |
 | Identifiers > Device ID | App Functionality | A random device ID, never the advertising identifier. |
 | User Content > Photos or Videos | App Functionality | Photos and drawing images sent in notes and Moments. |
 | User Content > Other User Content | App Functionality | Drawing strokes, Pick tonight swipes, Who knows who answers, wishes. |
 | Usage Data > Product Interaction | Analytics | The usage counts and events in `docs/analytics.md`. |
 | Other Data Types | App Functionality | Onboarding answers (age range, goals), push token, app and iOS version. |
 
-**Not collected:** email address, phone number, location, contacts, browsing or search history,
+**Not collected:** email address (Sign in with Apple is asked for no scopes, so Apple sends no name or email; the server keeps a placeholder address, never the user's), phone number, location, contacts, browsing or search history,
 purchases (coins are earned in the app; buying them is off in the first release, so revisit
 **Purchases** when `payments` is turned on), financial info, health, sensitive info, crash data
 (Apple's own reports only; the app adds no diagnostics SDK).
@@ -39,6 +39,8 @@ domains. Check the list when adding an SDK or an API Apple lists as required-rea
 - Name is declared collected because onboarding stores it with the account; `docs/privacy.md` used
   to say contact info is not collected. Say so in the policy (the draft does) or stop storing it.
 - In-app account deletion is in Settings (`PartnerAndAccountSections.swift`, `DELETE /v1/account`).
-  The app sends no Sign in with Apple authorization code with it, because the build has no screen
-  that links Apple (`SaveAccountCard` is not used by the app target); see
-  [release-checklist.md](release-checklist.md).
+  A linked account first runs a fresh Sign in with Apple and sends its `appleAuthorizationCode`, so
+  the server revokes Ourio's Apple token (guideline 5.1.1(v)); an unlinked one deletes as before.
+- Linking Apple adds no data type: Apple's identifier is the **User ID** already declared in the
+  table and in `apps/ios/Nooki/PrivacyInfo.xcprivacy` (`NSPrivacyCollectedDataTypeUserID`, linked,
+  App Functionality, no tracking). The App Store Connect App Privacy answers do not change.

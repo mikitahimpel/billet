@@ -26,3 +26,6 @@ draws them. The questions come from the server (`GET /v1/onboarding`) or the bun
   associated domain, and `DeepLink.invite` also reads `ourio://invite/<code>`.
 - **A closed app** opens again on the page it was on, with the questions and picks it had. A
   pairing that finished while it was closed moves the code page on.
+- **Sign in with Apple** is not part of onboarding: the account is anonymous, and linking an Apple ID is
+  optional, in Profile > Account (`AppleAccountSection`). Recovering an account from the welcome is not built
+  yet ([release-checklist.md](release-checklist.md) S1).

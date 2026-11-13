@@ -85,7 +85,7 @@ struct SettingsView: View {
 
             if let session {
                 GroupedSection(header: "Account") {
-                    AccountRow(state: session.signIn.state, retry: session.signIn.retry)
+                    AccountRow(state: session.signIn.state, linked: session.appleLink.state == .linked, retry: session.signIn.retry)
                 }
                 DeliveryHealthSection()
                 PartnerAndAccountSections(session: session, erase: erase)
@@ -260,6 +260,7 @@ struct SettingsView: View {
 
 private struct AccountRow: View {
     let state: AnonymousSignInMachine.State
+    let linked: Bool
     let retry: () -> Void
 
     var body: some View {
@@ -284,7 +285,7 @@ private struct AccountRow: View {
     private var detail: String? {
         switch state {
         case .idle, .signingIn: nil
-        case .signedIn: "Anonymous account, no email needed"
+        case .signedIn: linked ? "Signed in with Apple" : "Anonymous account, no email needed"
         case .failed(let failure, _):
             switch failure {
             case .storage: "This iPhone couldn't save the account"

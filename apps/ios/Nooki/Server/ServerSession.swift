@@ -24,6 +24,8 @@ import Wire
 @Observable
 final class ServerSession {
     let signIn: AnonymousSignInModel
+    /// Whether this account is linked to an Apple ID, and linking it from the Profile.
+    let appleLink: AppleLinkModel
     /// Replaced after a finished pairing, so the next one starts from the choice again.
     private(set) var pairing: PairingModel
     /// Learned by pairing; the saved record keeps it across launches.
@@ -64,6 +66,7 @@ final class ServerSession {
     init(backend: Backend) {
         self.backend = backend
         signIn = AnonymousSignInModel(api: backend.api, keys: backend.keys, accounts: backend.accounts)
+        appleLink = AppleLinkModel(api: backend.api)
         pairing = PairingModel(api: backend.api)
         let saved = try? backend.accounts.load()
         hadSavedAccount = saved != nil
@@ -282,11 +285,23 @@ final class ServerSession {
         try await backend.api.reportPartner(ReportPartnerRequest(reason: reason, noteId: note, details: details))
     }
 
-    /// Deletes the account on the server, then forgets the session and the account key on this phone, so the next
-    /// launch is a first launch. A retry after a lost answer is refused as unauthorized, which means it is gone.
-    func deleteAccount() async throws(TransportError) {
+    /// Asked at deletion rather than remembered, so a link made on another phone still gets its Apple token revoked.
+    /// An account the server no longer knows has nothing to revoke.
+    func isAppleLinked() async throws(TransportError) -> Bool {
         do {
-            try await backend.api.deleteAccount(DeleteAccountRequest())
+            return try await backend.api.account().linked
+        } catch {
+            if error == .api(.unauthorized) { return false }
+            throw error
+        }
+    }
+
+    /// Deletes the account on the server, then forgets the session and the account key on this phone, so the next
+    /// launch is a first launch. A linked account passes the code of a fresh Sign in with Apple, which the server
+    /// revokes the Apple token with. A retry after a lost answer is refused as unauthorized, which means it is gone.
+    func deleteAccount(appleAuthorizationCode: String? = nil) async throws(TransportError) {
+        do {
+            try await backend.api.deleteAccount(DeleteAccountRequest(appleAuthorizationCode: appleAuthorizationCode))
         } catch {
             guard error == .api(.unauthorized) else { throw error }
         }

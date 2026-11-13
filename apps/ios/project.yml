@@ -141,6 +141,8 @@ targets:
         aps-environment: development
         # Invite links, https://<server>/i/<code> (the Worker's app-links.ts).
         com.apple.developer.associated-domains: [applinks:$(BILLET_API_HOST)]
+        # Link an Apple ID to the account (Profile) and revoke its token on deletion; the App ID needs the capability.
+        com.apple.developer.applesignin: [Default]
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app

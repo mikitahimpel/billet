@@ -35,7 +35,7 @@ const topics = [
         <tr><th scope="col">Question</th><th scope="col">Answer</th></tr>
       </thead>
       <tbody>
-        <tr><td>Do you know my name or email?</td><td>No. Your account is anonymous: the app has no sign-in, so we never receive a name, email address or Apple account from you.</td></tr>
+        <tr><td>Do you know my name or email?</td><td>No. Your account is anonymous. If you choose to link your Apple ID, we keep only Apple's private identifier for you: we ask for no name or email address, and keep none.</td></tr>
         <tr><td>Who sees what I send?</td><td>Only your partner and you.</td></tr>
         <tr><td>Ads or tracking?</td><td>None. No third-party analytics.</td></tr>
         <tr><td>Do you train AI on my content?</td><td>No.</td></tr>
@@ -48,8 +48,12 @@ const topics = [
     <ul>
       <li>
         <strong>Your account.</strong> The app creates an anonymous account with a key kept in your iCloud Keychain. There
-        is no password and no sign-in, and we never see your name or email address. The app does not offer Sign in with
-        Apple or any other login today; if that changes, this policy will say what we then keep.
+        is no password. You can also link your Apple ID to the account (Profile › Account › Sign in with Apple). This is
+        optional and nothing in the app needs it. When you link, Apple gives us a private identifier for you, the same
+        each time you use Ourio, and we keep it with your account so Sign in with Apple can bring the account back on a
+        phone that has lost its key. We ask Apple for no name and no email address, we keep none that arrives with it, and
+        we don't keep Apple's tokens. If you never link, we receive nothing from your Apple Account. We never see your
+        name or email address.
       </li>
       <li>
         <strong>Pairing.</strong> An invite code, valid for 24 hours, links your account to your partner's. We keep only a
@@ -131,7 +135,9 @@ const topics = [
       <li><strong>Block partner</strong>: you are unpaired, and neither of you can pair with the other again.</li>
       <li>
         <strong>Delete account</strong> (Settings › Delete account): your account and what you sent are deleted from the
-        server, your partner is unpaired, and everything on the phone is erased. This can't be undone.
+        server, your partner is unpaired, and everything on the phone is erased. This can't be undone. If you linked your
+        Apple ID, Apple asks you to confirm once more, and we use the one-time code it gives to revoke Ourio's access to
+        your Apple ID before the link is deleted with the rest.
       </li>
       <li>
         <strong>Reports</strong> you or your partner sent us about the other are kept after either account is deleted, so
