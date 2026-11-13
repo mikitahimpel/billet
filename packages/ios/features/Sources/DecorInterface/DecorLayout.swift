@@ -267,6 +267,40 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     point(of: room.spawnFollow) ?? restSpawn(in: room) ?? room.spawn
   }
 
+  /// Where she steps down from her bed, as a floor point no piece stands on.
+  public func spawnSpot(in room: DecorRoom = .home) -> Occupancy.Point {
+    let point = spawn(in: room)
+    return standing(near: point, beside: room.spawnFollow.piece, in: room, slack: 0.3) ?? point
+  }
+
+  /// A floor point she can stand on at `point`: itself while no piece stands on it and no other piece's margin
+  /// holds it, else the nearest such cell. `piece` is the piece the stop belongs to, whose own margin is the point
+  /// of the stop: she stands beside it, never in it. Nil when none is within `slack` metres.
+  public func standing(
+    near point: Occupancy.Point, beside piece: String? = nil, in room: DecorRoom = .home,
+    slack: Double = 0.15
+  ) -> Occupancy.Point? {
+    let full = occupancy(in: room)
+    let others = piece.map { storing($0).occupancy(in: room) } ?? full
+    func fits(_ p: Occupancy.Point) -> Bool { !others.isBlocked(at: p) && !full.isSolid(at: p) }
+    if fits(point) { return point }
+    let reach = Int((slack / DecorGrid.step).rounded(.up)) + 1
+    let u0 = DecorGrid.cell(point.x)
+    let v0 = DecorGrid.cell(point.z)
+    var best: (point: Occupancy.Point, distance: Double)?
+    for v in (v0 - reach)...(v0 + reach) {
+      for u in (u0 - reach)...(u0 + reach) {
+        let candidate = (DecorGrid.metres(u), DecorGrid.metres(v))
+        let distance = hypot(candidate.0 - point.x, candidate.1 - point.z)
+        guard distance <= slack, fits(candidate), distance < (best?.distance ?? .infinity) else {
+          continue
+        }
+        best = (candidate, distance)
+      }
+    }
+    return best?.point
+  }
+
   /// The piece she rests on and where she steps down from it.
   public struct CatHome: Equatable, Sendable {
     public let item: String
@@ -343,6 +377,8 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     // She walks round what is in the way, so the visit is open while a way to the stop is.
     let furniture = DecorLayout(placements: placements.filter(\.isBase), stored: stored)
     let spot = furniture.occupancy(in: room).nearestFree(to: stop) ?? stop
+    // A stop a piece stands on is only as good as the nearest floor beside it.
+    guard hypot(spot.x - stop.x, spot.z - stop.z) <= 0.15 else { return false }
     return here.connects(from: spawn(in: room), to: [spot])
   }
 
