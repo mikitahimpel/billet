@@ -55,12 +55,17 @@ private struct StubScenery: OnboardingScenery {
     func thePrimaryActionSitsAtTheSameHeightOnEveryPage(screen: Screen) throws {
         let phone = screen.phone
         var frames: [String: CGRect] = [:]
-        for page in 0...3 { frames["page \(page)"] = try primary(layout(page: page, phone: phone), "page \(page)") }
+        var safeBottom: CGFloat = 0
+        for page in 0...3 {
+            let hosted = layout(page: page, phone: phone)
+            frames["page \(page)"] = try primary(hosted, "page \(page)")
+            if page == 0 { safeBottom = hosted.safeBottom }
+        }
         frames["coat"] = try primary(layout(page: 1, open: "catCoat", phone: phone), "the coat step")
         let welcome = try #require(frames["page 0"])
         #expect(welcome.maxY <= phone.size.height)
         // Nothing reserved under it: the gap to the window's edge is the safe area and one spacing token.
-        #expect(phone.size.height - welcome.maxY < 60, "the primary sits on the bottom")
+        #expect(phone.size.height - welcome.maxY - safeBottom < 26, "the primary sits on the bottom")
         for (name, frame) in frames {
             #expect(abs(frame.maxY - welcome.maxY) <= 1, "\(name)'s primary is where the welcome's is")
         }

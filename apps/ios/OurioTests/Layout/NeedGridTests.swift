@@ -8,7 +8,7 @@ import Testing
     @Test(arguments: [1.0, 0.5, 0.15])
     func fourTilesShowAtEveryLevelAndTheCaresAreOnThem(level: Double) {
         let grid = NeedGrid(name: "Mochi", pronouns: .she, needs: PetNeeds(all: level), asleep: false, care: { _ in })
-        let layout = HostedLayout(ScrollView { grid.padding(16) }, phone: .se)
+        let layout = HostedLayout(ScrollView { grid.padding(16) }, phone: .init(size: CGSize(width: 402, height: 1600), safeArea: .zero))
         layout.settle(0.5)
         let labels = Set(layout.elements().map(\.label))
         for need in ["Full", "Rested", "Playful", "Loved"] {

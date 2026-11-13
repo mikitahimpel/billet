@@ -56,11 +56,16 @@ final class HostedLayout {
         window.isHidden = false
         RunLoop.main.run(until: .now + 0.2)
         settle()
+        // The first drawing after the accessibility switch comes on can take a moment to get its elements.
+        for _ in 0..<20 where elements().isEmpty { settle(0.25) }
     }
 
     deinit {
         MainActor.assumeIsolated { window.isHidden = true }
     }
+
+    /// The bottom safe area the window really has: the simulator's own plus the phone's.
+    var safeBottom: CGFloat { window.rootViewController?.view.safeAreaInsets.bottom ?? 0 }
 
     var bounds: CGRect { CGRect(origin: .zero, size: phone.size) }
 
