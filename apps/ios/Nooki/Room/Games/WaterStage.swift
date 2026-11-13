@@ -270,8 +270,8 @@ final class WaterStage: GameStage {
         case .settling: return "Nearly dry"
         case .pouring: break
         }
-        if bowl.isOverLine { return "Careful, it's spilling over" }
-        if bowl.canServe { return "Right there. Let go" }
+        if bowl.isOverLine { return holding ? "Careful, it's spilling over" : "Tap Serve" }
+        if bowl.canServe { return holding ? "Right there. Let go" : "Right there. Tap Serve" }
         return bowl.level < 0.05 ? "Hold to pour, stop on the blue line" : "A little more"
     }
 
