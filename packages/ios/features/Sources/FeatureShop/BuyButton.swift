@@ -22,7 +22,7 @@
           label: "Buy \(name), \(quote.price) coins",
           hint: state.shop.coins >= quote.price
             ? "Buys it now; you can undo for a few seconds"
-            : "Needs \(quote.price - state.shop.coins) more coins; opens Coins"
+            : "Needs \(state.shop.shortBy(quote.price)) more coins; opens Coins"
         ) {
           // Short of coins, the buy opens the Coins sheet at what's missing.
           if state.shop.coins < quote.price { shakes += 1 }

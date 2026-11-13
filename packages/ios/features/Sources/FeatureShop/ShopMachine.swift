@@ -114,7 +114,15 @@ public nonisolated enum ShopMachine: Machine {
       self.ask = ask
     }
 
-    public var coins: Int { max(0, mirror.balance - pending.reduce(0) { $0 + $1.cost }) }
+    /// The room's balance less buys not yet sent. Below 0 only after an App Store refund took back coins the
+    /// pair had already spent; earning pays that down.
+    public var balance: Int { mirror.balance - pending.reduce(0) { $0 + $1.cost } }
+    /// What can be spent: never below 0.
+    public var coins: Int { max(0, balance) }
+    /// What new coins must cover before anything can be bought.
+    public var debt: Int { max(0, -balance) }
+    /// Spending needs a balance of at least the price, so a debt blocks every buy, whatever it costs.
+    public func canSpend(_ cost: Int) -> Bool { debt == 0 && balance >= cost }
     public var owned: Set<String> { mirror.owned.union(pending.flatMap(\.added)) }
     public var wishlist: Set<String> { mirror.wishlist.subtracting(pending.flatMap(\.added)) }
     /// Pieces bought as gifts that the server hasn't charged yet.
@@ -264,8 +272,8 @@ public nonisolated enum ShopMachine: Machine {
     case .buyTapped(let order, let id, let at):
       let added = order.itemIDs.filter { !shop.owned.contains($0) }
       guard !added.isEmpty else { return (state, []) }
-      guard shop.coins >= order.cost else {
-        shop.ask = CoinsAsk(missing: order.cost - shop.coins, retry: order)
+      guard shop.canSpend(order.cost) else {
+        shop.ask = CoinsAsk(missing: order.cost - shop.balance, retry: order)
         return (.open(shop), [])
       }
       // Room pieces wait out their Undo window before the order; an ink has no Undo and goes at once.
@@ -277,8 +285,8 @@ public nonisolated enum ShopMachine: Machine {
       return (.open(shop), [next, .catNoticed])
     case .treatTapped(let id, let at):
       let order = ShopOrder.treat(price: treatPrice)
-      guard shop.coins >= treatPrice else {
-        shop.ask = CoinsAsk(missing: treatPrice - shop.coins, retry: order)
+      guard shop.canSpend(treatPrice) else {
+        shop.ask = CoinsAsk(missing: treatPrice - shop.balance, retry: order)
         return (.open(shop), [])
       }
       // Mochi eats it at once and the server is asked at once, as it has no Undo.
