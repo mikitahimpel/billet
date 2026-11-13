@@ -61,6 +61,8 @@ class CatRoom {
     private(set) var frame = 0
     /// Whether the room turns a little under the sun and its lights pulse; off, they hold where they are.
     var swaying = true
+    /// How many times longer the lights wait between pulses; the quality tier sets it.
+    var pulseSlowdown: Float = 1
     private var sway = SwayEnvelope()
     private var turned: simd_quatf?
     private var touchedAt: Float = -10

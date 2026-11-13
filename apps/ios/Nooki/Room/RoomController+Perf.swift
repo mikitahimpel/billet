@@ -2,11 +2,10 @@
 import RealityKit
 
 extension RoomController {
-    /// Labs → Performance's switches for the scene: the lights, the merged furniture and the baked contact shadow.
+    /// Labs → Performance's switches for the scene: the lights, the merged furniture and the baked contact shadow, joined with the quality tier's at `applySwitches`.
     func setPerf(_ state: PerfLabMachine.State) {
-        guard perf.set(RoomPerfSwitches(state)) else { return }
-        for room in [home, city, board].compactMap({ $0 }) { perf.lights(in: room) }
-        perfDecorChanged()
+        labsSwitches = RoomPerfSwitches(state)
+        applySwitches()
     }
 
     func perfDecorChanged() {
