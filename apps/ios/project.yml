@@ -10,7 +10,7 @@ settings:
     CODE_SIGN_STYLE: Automatic
     SWIFT_APPROACHABLE_CONCURRENCY: YES
     TARGETED_DEVICE_FAMILY: "1"
-    MARKETING_VERSION: "0.1.0"
+    MARKETING_VERSION: "1.0.0"
     # Which store sells coin packs: "mock" (the default: fake store, the dev server credits) or "storekit". Set it
     # in the ENVIRONMENT, not as an xcodebuild argument: Package.swift reads the same variable to link only that
     # store (docs/payments.md).
