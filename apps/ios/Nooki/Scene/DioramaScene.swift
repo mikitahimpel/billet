@@ -325,7 +325,13 @@ final class DioramaScene: CatRoom {
     /// The furniture and the two toys, loaded in the background side by side and lit like the rest of the room.
     private func loadFurniture() {
         let pieces = [("Room_furniture", pivot), ("Room_ball", ball), ("Room_yarn", basket)]
-        let loads = pieces.map { name, _ in Task { try await Entity(named: name, in: .main) } }
+        let lean = Meshes.smooth
+        let loads = pieces.map { name, _ in
+            Task<Entity, any Error> {
+                if lean, let copy = try? await Entity(named: Meshes.leanAsset(name), in: .main) { return copy }
+                return try await Entity(named: name, in: .main)
+            }
+        }
         Task { [weak self] in
             for ((name, parent), load) in zip(pieces, loads) {
                 let model: Entity
@@ -338,7 +344,9 @@ final class DioramaScene: CatRoom {
                 guard let self else { return }
                 model.forEachDescendant { entity in
                     if let iblReceiver { entity.components.set(iblReceiver) }
-                    entity.components.set(GroundingShadowComponent(castsShadow: true))
+                    if entity.components.has(ModelComponent.self) {
+                        entity.components.set(GroundingShadowComponent(castsShadow: true))
+                    }
                     if let glow = RoomPieces.glows[entity.name], var mesh = entity.components[ModelComponent.self] {
                         mesh.materials = mesh.materials.map { _ in Clay.glow(glow.tone, intensity: glow.intensity) }
                         entity.components.set(mesh)

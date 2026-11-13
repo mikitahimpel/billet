@@ -57,4 +57,32 @@ struct RoomFurnitureCostTests {
         #expect(kept.parts >= loaded.parts)
         #expect(kept.shadows < shadowedBefore)
     }
+
+    /// The room's own pieces as the app ships them against their lean copies (`Tools/make_room.py` with LEAN=1): the
+    /// same parts and materials with the facets their size on screen can show.
+    @Test func theLeanCopiesCarryAThirdOfTheTriangles() async throws {
+        func triangles(_ entity: Entity) -> Int {
+            var total = 0
+            if let model = entity.components[ModelComponent.self] {
+                for part in model.mesh.contents.models.flatMap({ $0.parts }) {
+                    total += part.triangleIndices.map { $0.count / 3 } ?? part.positions.count / 3
+                }
+            }
+            return total + entity.children.reduce(0) { $0 + triangles($1) }
+        }
+        var full = 0, lean = 0
+        var names = DecorItem.baseItems(in: .living).map(\.assetName)
+        names += ["Room_furniture", "Room_ball", "Room_yarn"]
+        for name in names {
+            let own = Cost(try await Entity(named: name, in: .main))
+            let copy = Cost(try await Entity(named: Meshes.leanAsset(name), in: .main))
+            #expect(copy.parts == own.parts, "\(name) keeps its parts")
+            #expect(copy.names == own.names, "\(name) keeps its materials")
+            full += triangles(try await Entity(named: name, in: .main))
+            lean += triangles(try await Entity(named: Meshes.leanAsset(name), in: .main))
+        }
+        print("furniture cost: models \(full) triangles, lean copies \(lean)")
+        #expect(lean <= 135_000)
+        #expect(lean * 2 < full)
+    }
 }

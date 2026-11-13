@@ -418,14 +418,79 @@ counted by `SceneWrites` (Labs → Performance → Refresh room stats prints wri
 behaviour while the player is not arranging; opening Decorate or changing the layout puts every piece's own model back
 at once, and the merge is rebuilt after 0.4 s of stillness. `bakedBlobs` replaces the 9 blobs with one 512 px layer.
 `noSunShadow` removes the shadow component from every directional light. `fewerLights` keeps each room's widest point
-light. `noBloom` removes the bloom pass. Tests count each switch with the room stats and check that switching back
+light. `noBloom` removes the bloom pass. `leanMeshes` (9.6) gives the boxes and spheres fewer facets. Tests count each switch with the room stats and check that switching back
 restores the scene.
 
 ### 9.4 Phone steps
 
 Labs → Performance: Refresh room stats, Copy settings (baseline). Flip one of `noSunShadow`, `fewerLights`,
-`mergeFurniture`, `bakedBlobs`, `noBloom` at a time, leave Home alone for 60 s, Copy settings, paste it back, and flip
+`mergeFurniture`, `bakedBlobs`, `noBloom`, `leanMeshes` (the Living room's furniture models from the next launch) at a time, leave Home alone for 60 s, Copy settings, paste it back, and flip
 it off again. The line holds the switches, fps, CPU, heat, battery slope and the room stats.
+
+### 9.6 Scene diet
+
+What each room's scene costs, by piece, and what was cut. Simulator, Debug, iPhone 17 Pro, iOS 27.2, the cat out of
+the count. Counted by `RoomCostRankTests` and the room stats.
+
+**Where the triangles are.** RealityKit's `generateBox(cornerRadius:)` makes 13,068 triangles at every radius (a 4 mm
+fillet costs the same as a 3 cm one) and `generateSphere` 8,064. The rooms are built almost only from those.
+
+| | Living room | Bedroom |
+| --- | --- | --- |
+| Triangles | 972,356 | 2,083,836 |
+| Rounded boxes | 51 models, 431,460 | 95 models, 1,228,404 |
+| Spheres (bulbs, snow, leaves, cushions) | 29 models, 233,856 | 105 models, 846,720 |
+| USDZ furniture, 26 models (donut bed 145,442, `Room_furniture` 50,628, yarn 19,920, rug 16,956, tree 14,722 ...) | 307,040 | none (built in code) |
+| Everything else (cylinders 256, cones 128, planes 2) | none | 8,712 |
+
+Ranked by piece, Bedroom: the pivot's own boxes and spheres (walls, floor, trim, 73 models) 767,958; the props on it
+(curtains, shelf, clock, plant, 68 models) 560,488; cat bed 194,050; dresser 190,958; bed 134,858; nightstand 66,108;
+bowls 62,476; slippers 42,264; books 39,204; mouse 24,448; rug 1,024. Living room: the pivot's own boxes and spheres
+(51 models) 508,286; props and `Room_furniture` (35 models) 230,860; donut bed 145,442; rug 16,956; cat tree 14,722;
+nightstand 13,126; plant 10,986; window seat 10,418; basket 8,218; lamp 6,122; bowls 6,018; books 1,202.
+
+What does not cost much: textures are one 1024 x 1024 contact-shadow bake (sRGB, 11 mips) in the Living room and 64 x 64
+blobs (7 mips) in both; there is nothing to cap. Transparent parts: 10 in the Living room (9 blobs and the bake), 3 in
+the Bedroom. No skinned mesh in either room, one particle emitter in the Bedroom, none in the Living room. Materials:
+88 by value in 181 slots (Living), 64 in 238 (Bedroom); `Clay.matte` already hands out one instance per tone, so the
+slots share.
+
+**Shipped, on for everyone.** A grounding shadow set on every entity of a furniture model, the transform nodes that
+hold no mesh included, does nothing: the Living room's casters and receivers go from 51 to 15 with a render of 0 off
+in a channel across all 1,316,640 pixels (`RoomMeshDiffTests`).
+
+**Behind a Labs switch, off: `leanMeshes`.** Boxes and spheres get the facets their radius can show (`SmoothBox`,
+`SmoothSphere`: 108 triangles for a box with a fillet under 1 cm, 300 up to 3 cm, 12 for a square one; a sphere 12 to
+64 segments by size on screen), at once and back again, so the two can be flipped on a phone. The Living room's USDZ
+furniture is loaded as its `_lean` copy, from the next launch (`LEAN=1 blender -b --python Tools/make_room.py`: the
+same shapes with `make_items.facets`; donut bed 145,442 to 25,384).
+
+| | Before | `leanMeshes` | Change |
+| --- | --- | --- | --- |
+| Bedroom triangles | 2,083,836 | 49,876 | -97.6 % |
+| Living room triangles | 972,356 | 141,140 | -85.5 % |
+| Living room's USDZ furniture | 307,020 | 130,916 | -57 % |
+| Models, parts, entities, materials | same | same | none |
+
+Why behind a switch: it is not pixel-identical. The room is drawn off-screen with a `RealityRenderer` at 780 x 1688
+from the default camera, ten frames so the lights settle, without antialiasing as in the app (`OffscreenRoom`). Two
+renders of one room differ by 0 (Living room) and 0.01 % of pixels over 2 (Bedroom), so that is the noise.
+Lean against full: Bedroom 0.18 % of pixels more than 8 of 255 off, mean 0.21, 0.10 % over 32; Living room 0.40 %, mean
+0.36, 0.18 % over 32; the gallery's own match is 0.5 % over 8. The maximum is 250 to 252 at single pixels. The difference
+image is a one-pixel outline on silhouettes (a silhouette a fraction of a pixel off flips an edge pixel with no
+antialiasing), with no change inside any surface. The test holds the share at 0.5 % over 8.
+
+Cost of keeping both: the 13 `_lean` USDZ add 4.5 MB to the bundle. Adopting the switch deletes the full copies and
+saves 9.6 MB (the 13 files are 14.1 MB), except `Room_furniture.usdz`, which `scripts/bake-room` casts shadows with.
+
+Budgets (cannot creep back): `BedroomFurnitureCostTests` holds the Bedroom to 2.1 M triangles as built and 55 k lean;
+`RoomFurnitureCostTests` holds the lean copies to 135 k and under half of the originals' triangles, with the same
+parts and materials.
+
+**Not done, from the ranking.** Draw units stay at 106 models / 181 parts (Living) and 238 / 238 (Bedroom): merging
+the room's static boxes per material would save draw calls, not triangles, and `mergeFurniture` already does it for the
+pieces. The bake (`roomShell` Baked) already replaces the shell. Hidden faces: a box's floor face is back-facing to a
+camera above it and culled, so removing it saves vertices only. Textures and transparent parts: nothing left to cut.
 
 ## Sources
 

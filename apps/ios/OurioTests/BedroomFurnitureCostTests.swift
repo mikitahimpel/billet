@@ -16,6 +16,7 @@ struct BedroomFurnitureCostTests {
         var shadows = 0
         var colours: Set<SIMD4<Float>> = []
         var lights = 0
+        var triangles = 0
 
         init(_ entity: Entity) { visit(entity, enabled: true) }
 
@@ -30,6 +31,11 @@ struct BedroomFurnitureCostTests {
                 models += 1
                 if on { enabledModels += 1 }
                 parts += model.mesh.contents.models.reduce(0) { $0 + $1.parts.count }
+                if on {
+                    for part in model.mesh.contents.models.flatMap({ $0.parts }) {
+                        triangles += part.triangleIndices.map { $0.count / 3 } ?? part.positions.count / 3
+                    }
+                }
                 for material in model.materials {
                     if let pbr = material as? PhysicallyBasedMaterial {
                         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
@@ -46,7 +52,7 @@ struct BedroomFurnitureCostTests {
         let scene = CityRoomScene()
         try await Task.sleep(for: .milliseconds(300))
         let cost = Cost(scene.pivot)
-        print("bedroom cost: entities \(cost.entities) models \(cost.models) drawn \(cost.enabledModels) parts \(cost.parts) colours \(cost.colours.count) shadows \(cost.shadows) lights \(cost.lights)")
+        print("bedroom cost: entities \(cost.entities) models \(cost.models) drawn \(cost.enabledModels) parts \(cost.parts) colours \(cost.colours.count) shadows \(cost.shadows) lights \(cost.lights) triangles \(cost.triangles)")
         // Before the pieces were movable: entities 267, models 236 (all drawn), parts 236, colours 53, lights 5. The
         // holders, a blob under each large piece and the ghost may add a few; nothing else may.
         #expect(cost.entities <= 267 + 30)
@@ -55,5 +61,22 @@ struct BedroomFurnitureCostTests {
         #expect(cost.colours.count <= 53)
         #expect(cost.lights <= 5)
         #expect(cost.shadows == 0)
+        // RealityKit's rounded box is 13,068 triangles whatever its radius: 2.08 M for the room, cat included.
+        #expect(cost.triangles <= 2_100_000)
+    }
+
+    /// With the lab's lean meshes every box and sphere has the facets its radius can show: 2.1 M triangles become 50 k.
+    @Test func theBedroomWithLeanMeshesCostsAFortiethOfTheTriangles() async throws {
+        let scene = CityRoomScene()
+        try await Task.sleep(for: .milliseconds(300))
+        Meshes.retessellate(scene.root, smooth: false)
+        let full = Cost(scene.pivot)
+        Meshes.retessellate(scene.root, smooth: true)
+        let lean = Cost(scene.pivot)
+        print("bedroom lean cost: models \(lean.models) parts \(lean.parts) triangles \(lean.triangles) (full \(full.triangles))")
+        #expect(lean.models == full.models && lean.parts == full.parts && lean.entities == full.entities)
+        #expect(lean.triangles <= 55_000)
+        Meshes.retessellate(scene.root, smooth: false)
+        #expect(Cost(scene.pivot).triangles == full.triangles)
     }
 }

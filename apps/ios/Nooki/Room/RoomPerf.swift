@@ -11,6 +11,7 @@ struct RoomPerfSwitches: Equatable {
     var noSunShadow = false
     var fewerLights = false
     var noBloom = false
+    var leanMeshes = false
 
     init() {}
 
@@ -20,6 +21,7 @@ struct RoomPerfSwitches: Equatable {
         noSunShadow = state.isOn(.noSunShadow)
         fewerLights = state.isOn(.fewerLights)
         noBloom = state.isOn(.noBloom)
+        leanMeshes = state.isOn(.leanMeshes)
     }
 }
 
@@ -49,6 +51,16 @@ final class RoomPerfCoordinator {
         guard next != switches else { return false }
         switches = next
         return true
+    }
+
+    // MARK: Meshes
+
+    /// Gives the room's boxes and spheres the tessellation the switch names, and every box and sphere built after it.
+    /// A merged copy of the furniture holds the old geometry, so it is split first and builds again from the new.
+    func meshes(in room: CatRoom, stage: Entity) {
+        Meshes.smooth = switches.leanMeshes
+        FurnitureMerge.split(stage)
+        Meshes.retessellate(room.root, smooth: switches.leanMeshes)
     }
 
     // MARK: Lights
