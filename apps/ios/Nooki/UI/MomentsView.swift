@@ -321,8 +321,8 @@ struct MomentPrint: View {
     }
 }
 
-/// Pinned moments in wall order, so it's clear what Mochi's room shows: six small prints across the card, the empty
-/// slots as blank paper.
+/// Pinned moments in wall order, so it's clear what Mochi's room shows: six small prints across the card, each
+/// empty slot a well with the honey "+" of the bar's own button, and the same picker as a pill in the header.
 private struct WallStrip: View {
     let store: MomentStore
     @Binding var pick: PhotosPickerItem?
@@ -330,9 +330,17 @@ private struct WallStrip: View {
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.m) {
-                CardHeader("On \(CatProfile.name())'s wall",
-                           detail: "\(store.pinned.count) of \(MomentStore.wallSlots) · tap + to hang a photo",
-                           symbol: "house.fill", opens: false)
+                CardHeader("On \(CatProfile.name())'s wall") {
+                    RowIcon(symbol: "house.fill", size: Size.cardMark, style: .clay)
+                } detail: {
+                    Text(WallCopy.detail(pinned: store.pinned.count, slots: MomentStore.wallSlots))
+                } trailing: {
+                    PhotosPicker(selection: $pick, matching: .images) {
+                        Label("Add photo", systemImage: "plus")
+                    }
+                    .buttonStyle(PillButtonStyle())
+                    .accessibilityIdentifier("wallAddPhoto")
+                }
                 HStack(spacing: Space.s) {
                     ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
                         let moment = slot < store.pinned.count ? store.pinned[slot] : nil
@@ -340,12 +348,7 @@ private struct WallStrip: View {
                             WallSlot(store: store, moment: moment).accessibilityHidden(true)
                         } else {
                             PhotosPicker(selection: $pick, matching: .images) {
-                                WallSlot(store: store, moment: nil)
-                                    .overlay {
-                                        Image(systemName: "plus")
-                                            .font(.ourioCallout.weight(.bold))
-                                            .foregroundStyle(Ink.textSecondary)
-                                    }
+                                EmptyWallSlot()
                             }
                             .buttonStyle(PressScaleStyle())
                             .accessibilityLabel("Add a photo to the wall")
@@ -357,20 +360,39 @@ private struct WallStrip: View {
     }
 }
 
+/// The wall card's line under its title.
+enum WallCopy {
+    static func detail(pinned: Int, slots: Int) -> String {
+        if pinned == 0 { return "Empty · tap + to hang a photo" }
+        if pinned >= slots { return "\(pinned) of \(slots) · full; a new pin swaps the oldest" }
+        return "\(pinned) of \(slots) · tap + to hang one"
+    }
+}
+
 private struct WallSlot: View {
     let store: MomentStore
-    let moment: Moment?
+    let moment: Moment
 
     var body: some View {
         PolaroidPaper.blank
             .aspectRatio(1, contentMode: .fit)
-            .overlay {
-                if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
-            }
+            .overlay { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
             .clipped()
             .padding(Space.xs)
-            .background { PaperSheet(lift: moment == nil ? nil : PaperSheet.Lift(radius: 2, y: 1)) }
-            .rotationEffect(moment.map { $0.id.polaroidTilt } ?? .zero)
+            .background { PaperSheet(lift: PaperSheet.Lift(radius: 2, y: 1)) }
+            .rotationEffect(moment.id.polaroidTilt)
+    }
+}
+
+/// A print's size, recessed where a print would lie, with the "+" on a honey disc: the same accent as the bar's
+/// button, so it reads as the place to add one in either appearance.
+private struct EmptyWallSlot: View {
+    var body: some View {
+        Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .padding(Space.xs)
+            .overlay { SymbolBadge(symbol: "plus") }
+            .wellSurface()
     }
 }
 

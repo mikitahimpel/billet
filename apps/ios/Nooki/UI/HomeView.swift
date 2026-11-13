@@ -26,6 +26,9 @@ struct HomeView: View {
     @State private var launching = true
     /// The tab bar's top edge, global, which a purchase's card keeps clear of.
     @State private var tabBarTop: CGFloat?
+    /// The finger on the tab bar, and the bar's capsule in `space`, where `TabScrubLayer` takes its touches.
+    @State private var scrub = TabScrub()
+    @State private var tabCapsule = CGRect.zero
     /// The splash is still drawn while it fades out after `launching` ends, though it takes no touches by then.
     @State private var splashDrawn = true
     /// The screen as the World last showed it, held up on the way back until the room draws again.
@@ -311,7 +314,7 @@ struct HomeView: View {
                 }
             } bottom: {
                 if hud != .hidden {
-                    TabBar(state: state)
+                    TabBar(state: state, scrub: scrub, capsule: $tabCapsule)
                         .opacity(arranging ? 0 : 1)
                         .allowsHitTesting(!arranging)
                         .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
@@ -330,7 +333,15 @@ struct HomeView: View {
                 PurchaseMoment(state: state, floor: hud == .hidden ? nil : tabBarTop)
             }
         }
+        .coordinateSpace(.named(Self.space))
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
+        // The tab bar's touches, over it and outside its glass, so a switch under the bar never cuts a slide short.
+        .overlay(alignment: .topLeading) {
+            if hud != .hidden, room.game == nil, !arranging {
+                TabScrubLayer(state: state, scrub: $scrub, capsule: tabCapsule)
+                    .modifier(QuietFade(store: quiet, chrome: quietChrome))
+            }
+        }
         // Above the tab bar, so both stay clear of the "+" in the right corner.
         .overlay(alignment: .bottom) {
             ZStack {
@@ -490,8 +501,11 @@ struct HomeView: View {
             room.perfShown(.home)
         }
         #if DEBUG
-        // `-tab shop` opens the Shop, for screenshots.
-        if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
+        // `-tab shop` (or moments, us) opens that tab, for screenshots.
+        if let name = UserDefaults.standard.string(forKey: "tab"),
+           let tab = HomeTab.allCases.first(where: { $0.title.lowercased() == name }) {
+            state.tab = tab
+        }
         #endif
         reportOpened(state.room)
         await ShopView.prewarm(state.shop.offers)
@@ -531,6 +545,9 @@ struct HomeView: View {
             for kind in state.rooms.variant.kinds { room.prepare(kind.scene) }
         }
     }
+
+    /// The shell's coordinate space, for what lies over the bars from outside them.
+    static let space = "home"
 
     private static var keyWindow: UIWindow? {
         UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }

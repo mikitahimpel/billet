@@ -313,9 +313,12 @@ One scale, in `Tokens/Motion.swift`: two durations and one spring. Screens never
 - **A tab switch fades the page and nothing else.** The new page fades in over the old one on
   `Motion.fade()`; the header and the tab bar stay put and never animate as a whole (no `withAnimation`
   around `state.tab`).
+- **The switch lands with the finger.** The tab under the finger is shown the moment it lands on the bar or
+  slides onto another slot (`TabScrub`); lifting the finger changes nothing. A tap lasts about a tenth of a
+  second, so a switch that waited for its end would come that late after the pill.
 - **The selection pill follows the finger.** One pill for the bar, moved by an offset: it slides on
-  `Motion.spring(Motion.quick)` while the finger is on the bar and is already in place when the switch
-  lands, so the switch's frames redraw no glass. A switch from elsewhere (a link, VoiceOver) moves it at once.
+  `Motion.spring(Motion.quick)` while the finger is on the bar. A switch from elsewhere (a link, VoiceOver)
+  moves it at once.
 - **Opacity and drawn offsets only**, never a frame, a padding or a safe area: those lay the page out again
   on every frame of the animation. Nothing is inserted or removed inside glass to animate it.
 - **Keep the switch's frame light.** It already builds the new page; state written in
