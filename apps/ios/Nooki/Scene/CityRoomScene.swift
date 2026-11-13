@@ -200,7 +200,11 @@ final class CityRoomScene: CatRoom {
         let away: Float = .pi + 0.75, atSill: Float = .pi + 0.55
         let bed = frame("base-bedroom-bed"), cat = frame("base-bedroom-catbed")
         let bedTop = bed.map { map($0, [0.09, 0.19, 0]) }
-        let bedFront = bed.map { map($0, [0.1, 0, 0.24]) }
+        /// Where she stands on the floor: the free floor beside what stands there, never inside it.
+        func onFloor(_ point: SIMD3<Float>) -> SIMD3<Float>? {
+            layout.standing(near: (Double(point.x), Double(point.z)), beside: "base-bedroom-bed", in: .bedroom).map { [Float($0.x), point.y, Float($0.z)] }
+        }
+        let bedFront = bed.map { map($0, [0.1, 0, 0.24]) }.flatMap(onFloor)
         let catSeat = cat.map { map($0, [0, 0.072 * 0.6, 0]) }
         let spawn = layout.spawn(in: .bedroom)
         let down: SIMD3<Float> = [Float(spawn.x), floor, Float(spawn.z)]
