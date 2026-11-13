@@ -23,7 +23,7 @@ export const StoredPurchase = Schema.Struct({
   status: PurchaseStatus,
   /** How many times it has been refunded; the next ledger entry ids count on it. */
   refunds: Schema.Int,
-  /** 1 when a refund took back fewer coins than the pack, because the pair had fewer left. */
+  /** 1 when a refund of it left the pair's balance below 0. */
   flagged: Schema.Int,
   purchasedAt: EpochMillis,
   createdAt: EpochMillis,
@@ -33,7 +33,7 @@ export type StoredPurchase = typeof StoredPurchase.Type;
 
 export const PurchaseEntryKind = Schema.Literals(["purchase", "refund"]);
 
-/** One change to an owner's coins. The balance is the sum of `amount`, never below 0. */
+/** One change to an owner's coins. The balance is the sum of `amount`; a refund can take it below 0. */
 export const StoredPurchaseEntry = Schema.Struct({
   id: Schema.String,
   ownerId: CoinOwner,
@@ -100,13 +100,14 @@ export class PaymentsRepository extends Context.Service<
     readonly findPurchase: (
       originalTransactionId: string,
     ) => Effect.Effect<Option.Option<StoredPurchase>, PaymentsUnavailable>;
-    /** Takes back at most the owner's balance, flagging the purchase when short; records
-     * `notification` in the same batch. A purchase not `credited` with `refunds` as given is left
-     * alone (`duplicate`). */
+    /** Takes back the whole pack, flagging the purchase when `owed`; records `notification` in
+     * the same batch. A purchase not `credited` with `refunds` as given is left alone
+     * (`duplicate`). */
     readonly refund: (
       purchase: StoredPurchase,
       at: number,
       notification?: StoredNotification,
+      owed?: boolean,
     ) => Effect.Effect<Reversal, PaymentsUnavailable>;
     /** Gives back what the last refund took (Apple reversed it) as a `purchase` entry, and marks
      * it credited again. */

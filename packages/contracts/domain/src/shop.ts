@@ -169,7 +169,8 @@ export type Placement = typeof Placement.Type;
 /** `inks` and `items` start with the free ink and starter pieces, then purchase order.
  * `giftDay`: the local day the daily gift was last opened, absent before the first. */
 export const PairShop = Schema.Struct({
-  balance: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  /** Signed: negative after an Apple refund of spent coins, until earning pays it down. */
+  balance: Schema.Int,
   inks: Schema.Array(InkId),
   items: Schema.Array(RoomItemId),
   wishlist: Schema.Array(RoomItemId),

@@ -543,7 +543,7 @@ describe("coins bought with money", () => {
   it("opens the room and pays the pack into the wallet the pair reads, once", async () => {
     const outcome = await run(world().layer, (notes) =>
       Effect.gen(function* () {
-        const credit = { kind: "buy" as const, id: purchase, ref: pack, coins: 550 };
+        const credit = { kind: "purchase" as const, id: purchase, ref: pack, coins: 550 };
         const first = yield* notes.creditPurchase(pairA, credit);
         const again = yield* notes.creditPurchase(pairA, credit);
         const refunded = yield* notes.creditPurchase(pairA, {
@@ -566,7 +566,7 @@ describe("coins bought with money", () => {
           balance: 560,
           entries: [
             expect.objectContaining({ id: "gift:welcome" }),
-            expect.objectContaining({ id: "purchase:2000", kind: "buy", amount: 550 }),
+            expect.objectContaining({ id: "purchase:2000", kind: "purchase", amount: 550 }),
             expect.objectContaining({ id: "refund:2000", kind: "refund", amount: -550 }),
           ],
         },
