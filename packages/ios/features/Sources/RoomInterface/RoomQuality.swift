@@ -75,7 +75,8 @@ extension RoomQualityTier {
     switch self {
     case .full:
       RoomQualityPlan(
-        motes: true, antialiasing: true, sway: true, splatRate: 0, splatDetail: .full, still: false)
+        motes: true, antialiasing: true, sway: true, splatRate: 0, splatDetail: .full, still: false,
+        activeRate: 30, idleRate: 20)
     case .fair:
       RoomQualityPlan(
         motes: false, antialiasing: false, sway: true, splatRate: 30, splatDetail: .balanced,
