@@ -49,11 +49,11 @@ describe("economyChange", () => {
 
   it("starts the counts again on a new local day", () => {
     const result = change(
-      [entry("earn:a", "earn", 5)],
-      wallet({ day: "2023-11-13" as never, notes: 30 }),
-      wallet({ balance: 5, day: "2023-11-14" as never, notes: 5 }),
+      [entry("earn:a", "earn", 2)],
+      wallet({ day: "2023-11-13" as never, notes: 3 }),
+      wallet({ balance: 2, day: "2023-11-14" as never, notes: 2 }),
     );
-    expect(result.totals).toEqual([{ source: "earn.notes", credited: 5, debited: 0, entries: 1 }]);
+    expect(result.totals).toEqual([{ source: "earn.notes", credited: 2, debited: 0, entries: 1 }]);
     expect(result.capped).toEqual([]);
   });
 
@@ -132,6 +132,6 @@ describe("RoomService tells the EconomyTap", () => {
     const bought = seen.find(({ entries }) => entries.some((e) => e.id === "purchase:7"));
     expect(bought?.pairId).toBe(pairId);
     expect(bought?.before.balance).toBe(560);
-    expect(bought?.after.balance).toBe(660);
+    expect(bought?.after.balance).toBe(160);
   });
 });
