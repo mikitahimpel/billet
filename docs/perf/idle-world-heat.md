@@ -455,9 +455,9 @@ the Bedroom. No skinned mesh in either room, one particle emitter in the Bedroom
 88 by value in 181 slots (Living), 64 in 238 (Bedroom); `Clay.matte` already hands out one instance per tone, so the
 slots share.
 
-**Shipped, on for everyone.** A grounding shadow set on every entity of a furniture model, the transform nodes that
-hold no mesh included, does nothing: the Living room's casters and receivers go from 51 to 15 with a render of 0 off
-in a channel across all 1,316,640 pixels (`RoomMeshDiffTests`).
+**Tried and taken back.** A grounding shadow only on the entities that hold a mesh (51 casters to 15) rendered the same
+in the Simulator, and on a phone a moved piece left a black quad at its old place. The shadow is on every entity of the
+model again.
 
 **Shipped, on for everyone: lean meshes.** Boxes and spheres get the facets their radius can show (`SmoothBox`,
 `SmoothSphere`: 108 triangles for a box with a fillet under 1 cm, 300 up to 3 cm, 12 for a square one; a sphere 12 to 64
