@@ -134,8 +134,8 @@ of what prod needs:
 | --- | --- | --- |
 | `CLOUDFLARE_ACCOUNT_ID` | `Ourio Release`, `Cloudflare` | `account_id` |
 | `CLOUDFLARE_API_TOKEN` | `Ourio Release`, `Cloudflare` | `api_token` |
-| `APNS_KEY`, `APNS_KEY_ID` | `Ourio`, `Apple` | same names |
-| `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID` | `Ourio`, `Apple` | same names |
+| `APNS_KEY`, `APNS_KEY_ID` | `Ourio Release`, `Apple` | same names |
+| `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID` | `Ourio Release`, `Apple` | same names |
 | `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access` | `team_domain`, `aud` |
 | `TMDB_TOKEN` | `Ourio Release`, `TMDB` | `api_token` |
 
@@ -194,10 +194,10 @@ the agents' session and cannot read the prod vault, so the main path is by hand.
    | --- | --- | --- |
    | `CLOUDFLARE_ACCOUNT_ID` | `Ourio Release`, `Cloudflare`, `account_id` | required |
    | `CLOUDFLARE_API_TOKEN` | `Ourio Release`, `Cloudflare`, `api_token` | required |
-   | `APNS_KEY` | `Ourio`, `Apple`, `APNS_KEY` (PEM) | required |
-   | `APNS_KEY_ID` | `Ourio`, `Apple`, `APNS_KEY_ID` | required |
-   | `APPLE_SIGN_IN_KEY` | `Ourio`, `Apple`, `APPLE_SIGN_IN_KEY` (PEM) | required |
-   | `APPLE_SIGN_IN_KEY_ID` | `Ourio`, `Apple`, `APPLE_SIGN_IN_KEY_ID` | required |
+   | `APNS_KEY` | `Ourio Release`, `Apple`, `APNS_KEY` (PEM) | required |
+   | `APNS_KEY_ID` | `Ourio Release`, `Apple`, `APNS_KEY_ID` | required |
+   | `APPLE_SIGN_IN_KEY` | `Ourio Release`, `Apple`, `APPLE_SIGN_IN_KEY` (PEM) | required |
+   | `APPLE_SIGN_IN_KEY_ID` | `Ourio Release`, `Apple`, `APPLE_SIGN_IN_KEY_ID` | required |
    | `ACCESS_TEAM_DOMAIN` | `Ourio Release`, `Cloudflare Access`, `team_domain` | optional |
    | `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access`, `aud` | optional |
    | `TMDB_TOKEN` | `Ourio Release`, `TMDB`, `api_token` | optional |
