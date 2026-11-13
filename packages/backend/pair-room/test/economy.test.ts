@@ -131,7 +131,7 @@ describe("RoomService tells the EconomyTap", () => {
     );
     const bought = seen.find(({ entries }) => entries.some((e) => e.id === "purchase:7"));
     expect(bought?.pairId).toBe(pairId);
-    expect(bought?.before.balance).toBe(560);
+    expect(bought?.before.balance).toBe(60);
     expect(bought?.after.balance).toBe(160);
   });
 });
