@@ -169,7 +169,7 @@
           CoinPrice(price: cost, was: isDeal ? item.price : nil)
         } else {
           Image(systemName: "plus.circle.fill")
-          Text("Need \(cost - state.shop.coins) more")
+          Text("Need \(state.shop.shortBy(cost)) more")
             .monospacedDigit()
         }
       }
