@@ -12,6 +12,8 @@
     "ios:build": "turbo run ios:build",
     "format:check:root": "oxfmt --check . '!apps/**' '!packages/**'",
     "alchemy": "alchemy",
+    "appstore:shots": "node tools/appstore-shots/src/cli.ts",
+    "appstore:test": "node --test tools/appstore-shots/test/*.test.ts",
     "typecheck:root": "tsc --noEmit -p tsconfig.json",
     "lint:root": "oxlint --ignore-pattern 'apps/**' --ignore-pattern 'packages/**' --ignore-pattern 'tools/cat-gen/**' .",
     "metrics:report": "pnpm --filter @billet/backend-metrics metrics:report",

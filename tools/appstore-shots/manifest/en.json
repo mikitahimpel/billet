@@ -1,0 +1,93 @@
+{
+  "locale": "en",
+  "panels": [
+    {
+      "id": "room",
+      "raw": "room",
+      "bg": "dark",
+      "tag": "For the two of you",
+      "headline": "A tiny home just for {us two}",
+      "chips": [
+        { "text": "One shared room", "emoji": "🏠", "x": 3, "y": 73, "rotate": -3 },
+        { "text": "Always in sync", "emoji": "💛", "x": 40, "y": 84, "rotate": 2 }
+      ]
+    },
+    {
+      "id": "mochi",
+      "raw": "mochi",
+      "bg": "light",
+      "tag": "Your cat, Mochi",
+      "headline": "Raise a kitty {together}",
+      "chips": [
+        { "text": "Feed, play, cuddle", "emoji": "🐾", "x": 4, "y": 36, "rotate": -3 },
+        { "text": "Earn coins as a team", "emoji": "🪙", "x": 42, "y": 84, "rotate": 2 }
+      ]
+    },
+    {
+      "id": "groceries",
+      "raw": "groceries",
+      "bg": "light",
+      "tag": "Shared lists",
+      "headline": "One list, {both} phones",
+      "chips": [
+        { "text": "Sorted by aisle", "emoji": "🛒", "x": 46, "y": 33, "rotate": 3 },
+        { "text": "See who added what", "emoji": "👀", "x": 4, "y": 84, "rotate": -3 }
+      ]
+    },
+    {
+      "id": "movies",
+      "raw": "movies",
+      "bg": "light",
+      "tag": "To watch",
+      "headline": "Movie night, {sorted}",
+      "chips": [
+        { "text": "See what you both want", "emoji": "💞", "x": 3, "y": 40, "rotate": -3 },
+        { "text": "Movies and shows", "emoji": "🎬", "x": 42, "y": 84, "rotate": 2 }
+      ]
+    },
+    {
+      "id": "places",
+      "raw": "places",
+      "bg": "light",
+      "tag": "Places to go",
+      "headline": "Every trip, on {one map}",
+      "chips": [
+        { "text": "Where you've been", "emoji": "🗺️", "x": 42, "y": 38, "rotate": 3 },
+        { "text": "Where to go next", "emoji": "✈️", "x": 4, "y": 84, "rotate": -3 }
+      ]
+    },
+    {
+      "id": "days",
+      "raw": "days",
+      "bg": "dark",
+      "tag": "Days together",
+      "headline": "Keep the {spark} going",
+      "chips": [
+        { "text": "A daily love streak", "emoji": "🔥", "x": 38, "y": 47, "rotate": -2 },
+        { "text": "Date ideas, wishlists, games", "emoji": "🎲", "x": 8, "y": 84, "rotate": 2 }
+      ]
+    },
+    {
+      "id": "moments",
+      "raw": "moments",
+      "bg": "dark",
+      "tag": "Moments",
+      "headline": "Little moments, {kept}",
+      "chips": [
+        { "text": "Hang it on Mochi's wall", "emoji": "🖼️", "x": 3, "y": 34, "rotate": -3 },
+        { "text": "Send a photo", "emoji": "📸", "x": 50, "y": 78, "rotate": 3 }
+      ]
+    },
+    {
+      "id": "shop",
+      "raw": "shop",
+      "bg": "light",
+      "tag": "Shop",
+      "headline": "Make the room {yours}",
+      "chips": [
+        { "text": "New decor every day", "emoji": "✨", "x": 40, "y": 34, "rotate": 3 },
+        { "text": "Spend coins you earn", "emoji": "🪙", "x": 4, "y": 84, "rotate": -3 }
+      ]
+    }
+  ]
+}
