@@ -58,13 +58,20 @@ struct RoomMeshDiffTests {
         withExtendedLifetime(controller) {}
     }
 
-    @Test func noEntityWithoutAModelCarriesAGroundingShadow() async throws {
+    /// A piece's grounding shadow sits on every entity of its model, the nodes with no mesh too, as it did when the pieces
+    /// were first made movable: on a phone, a piece moved away left a black quad at its old place when only the mesh
+    /// entities carried it.
+    @Test func everyEntityOfACastingPieceCarriesItsGroundingShadow() async throws {
         let (controller, room) = try await living()
-        var bare = 0
-        room.root.forEachDescendant { entity in
-            if entity.components.has(GroundingShadowComponent.self), !entity.components.has(ModelComponent.self) { bare += 1 }
+        let holder = try #require(controller.decorStage.root.children.first { $0.name == "decor.base-nightstand" })
+        let piece = try #require(holder.children.first { !$0.components.has(ModelComponent.self) })
+        var bare = 0, total = 0
+        piece.forEachDescendant { entity in
+            total += 1
+            if !entity.components.has(GroundingShadowComponent.self) { bare += 1 }
         }
-        #expect(bare == 0)
+        print("GROUNDING nightstand entities \(total) without a shadow \(bare)")
+        #expect(total > 0 && bare == 0)
         withExtendedLifetime(controller) {}
     }
 
