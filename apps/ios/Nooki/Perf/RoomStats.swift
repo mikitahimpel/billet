@@ -47,7 +47,6 @@ struct RoomStats: Equatable, Sendable {
     init(walking root: Entity, room: String = "", tier: String = "") {
         self.room = room
         self.tier = tier
-        var meshes: [ObjectIdentifier: (parts: Int, triangles: Int)] = [:]
         var materials: Set<String> = []
         func visit(_ entity: Entity, active: Bool) {
             guard active else {
@@ -60,8 +59,7 @@ struct RoomStats: Equatable, Sendable {
                 models += 1
                 materialSlots += model.materials.count
                 for material in model.materials { materials.insert(MaterialKey.of(material)) }
-                let size = meshes[ObjectIdentifier(model.mesh)] ?? Self.size(of: model.mesh)
-                meshes[ObjectIdentifier(model.mesh)] = size
+                let size = Self.size(of: model.mesh)
                 parts += size.parts
                 triangles += size.triangles
                 if entity.parent?.name == Self.mergedName { mergedModels += 1 }
@@ -94,10 +92,19 @@ struct RoomStats: Equatable, Sendable {
             return (low.parts.count, low.parts.reduce(0) { $0 + $1.indexCount / 3 })
         }
         var parts = 0, triangles = 0
-        for model in mesh.contents.models {
+        let contents = mesh.contents
+        func count(_ model: MeshResource.Model) {
             for part in model.parts {
                 parts += 1
                 triangles += part.triangleIndices.map { $0.count / 3 } ?? part.positions.count / 3
+            }
+        }
+        // Each instance of a model is drawn on its own.
+        if contents.instances.isEmpty {
+            contents.models.forEach(count)
+        } else {
+            for instance in contents.instances {
+                if let model = contents.models[instance.model] { count(model) }
             }
         }
         return (parts, triangles)

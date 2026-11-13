@@ -231,6 +231,7 @@ struct HomeView: View {
         .environment(perfLab)
         #if DEBUG || LABS_YES
         .onAppear { perfLab.statsSource = { [room] tier in room.roomStats(tier: tier) } }
+        .onChange(of: perfLab.state, initial: true) { _, state in room.setPerf(state) }
         #endif
     }
 
