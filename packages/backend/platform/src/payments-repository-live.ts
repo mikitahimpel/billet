@@ -31,7 +31,7 @@ const decodeAmounts = Schema.decodeUnknownEffect(
 );
 
 const balanceOf = (rows: unknown) =>
-  decodeBalance(rows).pipe(Effect.map(([row]) => Math.max(0, row?.balance ?? 0)));
+  decodeBalance(rows).pipe(Effect.map(([row]) => row?.balance ?? 0));
 
 const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Service"] => {
   const balanceQuery = (owner: CoinOwner) =>
@@ -118,9 +118,9 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
             .pipe(Effect.flatMap(decodePurchases)),
         ).pipe(Effect.map(([row]) => Option.fromNullishOr(row))),
 
-      // At most the owner's balance comes back, so it never goes below 0. Taking less than the
-      // pack flags the purchase.
-      refund: (purchase, at, notification) => {
+      // The whole pack comes back, however little is left, so the balance can go below 0. `owed`
+      // flags a purchase whose refund left the pair's wallet in debt.
+      refund: (purchase, at, notification, owed = false) => {
         const id = entryIds.refund(purchase.originalTransactionId, purchase.refunds + 1);
         return guarded(
           atomically(db, [
@@ -132,10 +132,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
                     id: sql<string>`${id}`.as("id"),
                     ownerId: purchases.ownerId,
                     kind: sql<string>`'refund'`.as("kind"),
-                    amount:
-                      sql<number>`-min(${purchases.coins}, max(0, (select coalesce(sum(${coinLedger.amount}), 0) from ${coinLedger} where ${coinLedger.ownerId} = ${purchases.ownerId})))`.as(
-                        "amount",
-                      ),
+                    amount: sql<number>`-${purchases.coins}`.as("amount"),
                     productId: purchases.productId,
                     originalTransactionId: purchases.originalTransactionId,
                     at: sql<number>`${at}`.as("at"),
@@ -149,7 +146,7 @@ const makePaymentsRepository = (db: DirectoryDatabase): PaymentsRepository["Serv
               .set({
                 status: "refunded",
                 refunds: purchase.refunds + 1,
-                flagged: sql`case when (select -${coinLedger.amount} from ${coinLedger} where ${coinLedger.id} = ${id}) < ${purchases.coins} then 1 else ${purchases.flagged} end`,
+                flagged: owed ? 1 : purchases.flagged,
                 updatedAt: at,
               })
               .where(asRead(purchase, "credited")),

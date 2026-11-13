@@ -133,7 +133,7 @@ export const RoomCommand = Schema.TaggedUnion({
   /** Coins bought with money; `id` is the payments ledger's entry id, written once. */
   CreditPurchase: {
     id: CoinEntryId,
-    kind: Schema.Literals(["buy", "refund"]),
+    kind: Schema.Literals(["purchase", "refund"]),
     coins: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
     ref: Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(100)),
     at: EpochMillis,
