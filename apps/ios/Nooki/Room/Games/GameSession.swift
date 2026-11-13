@@ -251,6 +251,10 @@ final class GameSession {
 
     func act() { stage?.act() }
 
+    var assist: String? { finished == nil ? stage?.assist : nil }
+
+    func assistAct() { stage?.assistAct() }
+
     private var lensNow: RoomLens? { RoomLens(camera: camera?.camera, size: lens) }
 
     private func ray(at point: CGPoint) -> GameTouch? {

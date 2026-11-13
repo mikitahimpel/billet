@@ -97,6 +97,11 @@ struct GameView: View {
                         Button(action: session.act) { Text(action).frame(maxWidth: .infinity) }
                             .buttonStyle(PrimaryButtonStyle())
                     }
+                    if let assist = session.assist {
+                        Button(action: session.assistAct) { Text(assist).frame(maxWidth: .infinity) }
+                            .buttonStyle(SecondaryButtonStyle())
+                            .accessibilityHint("Wipes up the puddle for you")
+                    }
                 }
                 .padding(.horizontal, Space.gutter)
             }

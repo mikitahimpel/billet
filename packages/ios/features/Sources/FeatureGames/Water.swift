@@ -17,25 +17,50 @@ public struct WaterBowl: Equatable, Sendable {
   public static let fillTime = 3.6
   /// A puddle smaller than this is a few drops, nothing to wipe.
   public static let dry = 0.02
+  /// The most a puddle grows: the jug stops pouring there.
+  public static let puddleCap = 0.5
+  /// Where the bowl is left once the floor is dry again after a spill.
+  public static let settled = line + band / 2
+
+  /// Where the game is: pouring, a puddle to wipe, or the bowl dropping back to a level she can drink from.
+  public enum Phase: Equatable, Sendable {
+    case pouring, messy, settling
+  }
 
   /// 0 empty, 1 at the brim.
   public private(set) var level: Double = 0
   /// What went over the brim and is still on the floor, in bowls' depths.
   public private(set) var puddle: Double = 0
+  /// Whether anything ever went over the brim.
+  public private(set) var spilled = false
 
   public init() {}
 
   public var isOverLine: Bool { level > Self.line + Self.band }
   public var isSpilling: Bool { level >= 1 }
   public var canServe: Bool { level >= Self.line - Self.band }
+  public var isFlooded: Bool { puddle >= Self.puddleCap }
+  public var isSpotless: Bool { spilled && puddle <= Self.dry }
+
+  public var phase: Phase {
+    if puddle > Self.dry { return .messy }
+    return spilled && level > Self.settled ? .settling : .pouring
+  }
 
   /// Pours for `dt` seconds at `flow` (0...1 of the jug's full stream).
   public mutating func pour(flow: Double, dt: Double) {
     level += min(max(flow, 0), 1) / Self.fillTime * Self.line * dt
     if level > 1 {
-      puddle += level - 1
+      puddle = min(puddle + level - 1, Self.puddleCap)
+      spilled = true
       level = 1
     }
+  }
+
+  /// With the floor dry again the extra is dabbed out of the bowl, for `dt` seconds.
+  public mutating func settle(dt: Double) {
+    guard phase == .settling else { return }
+    level = max(Self.settled, level - 0.3 * dt)
   }
 
   /// Tips the bowl out for `dt` seconds, at a quarter of the jug's stream.

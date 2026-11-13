@@ -54,6 +54,8 @@ protocol GameStage: AnyObject {
     func update(_ dt: Float)
     /// The overlay's button (Feed, Serve), if the game has one now.
     var action: String? { get }
+    /// A second, quieter button beside it (Clean up) for a touch action done without the finger, if there is one now.
+    var assist: String? { get }
     /// What to show the player now, or nil when the game needs no gesture.
     var cue: GameCue? { get }
     /// Where she glances from her head, in points on screen, instead of at the player; nil for the usual gaze.
@@ -63,12 +65,15 @@ protocol GameStage: AnyObject {
     /// Where she sits for this game, in the pivot's space, so she can be put back if she is ever off screen.
     var seat: SIMD3<Float>? { get }
     func act()
+    func assistAct()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
 }
 
 extension GameStage {
     var action: String? { nil }
+    var assist: String? { nil }
+    func assistAct() {}
     var cue: GameCue? { nil }
     var glance: CGSize? { nil }
     var push: Float { 0 }
