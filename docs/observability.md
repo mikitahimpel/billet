@@ -185,7 +185,7 @@ need to:
 1. Create an account API token with only the Workers Observability read permission (Account →
    Workers Observability → Read), for the billet account.
 2. Store it in Proton Pass ("Billet/Cloudflare Observability", field `token`) and add
-   `OBSERVABILITY_API_TOKEN=pass://Billet/Cloudflare Observability/token` to `.env.pass`.
+   `OBSERVABILITY_API_TOKEN=pass://Ourio/Cloudflare Observability/token` to `.env.pass`.
 
 Then the panel can add a Recent errors view: the Worker binds the token as a `Config.Redacted`
 secret and calls the Workers Observability telemetry query API

@@ -126,18 +126,18 @@ Stop `alchemy dev` with Ctrl-C. Killing only the `pnpm` wrapper leaves Alchemy a
 
 ## Deploying
 
-Secrets are Proton Pass references, never values. `.env.pass` (dev, vault `Billet`) and
-`.env.pass.release` (prod, vault `Billet Release`) hold them. `.env.pass.release` is the single list
+Secrets are Proton Pass references, never values. `.env.pass` (dev, vaults `Agents` and `Ourio`) and
+`.env.pass.release` (prod, vault `Ourio Release`) hold them. `.env.pass.release` is the single list
 of what prod needs:
 
 | Variable | Vault, item (prod) | Field |
 | --- | --- | --- |
-| `CLOUDFLARE_ACCOUNT_ID` | `Billet Release`, `cloudflare` | `account_id` |
-| `CLOUDFLARE_API_TOKEN` | `Billet Release`, `cloudflare` | `api_token` |
-| `APNS_KEY`, `APNS_KEY_ID` | `Billet`, `Apple` | same names |
-| `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID` | `Billet`, `Apple` | same names |
-| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `Billet Release`, `Cloudflare Access` | `team_domain`, `aud` |
-| `TMDB_TOKEN` | `Billet Release`, `TMDB` | `api_token` |
+| `CLOUDFLARE_ACCOUNT_ID` | `Ourio Release`, `Cloudflare` | `account_id` |
+| `CLOUDFLARE_API_TOKEN` | `Ourio Release`, `Cloudflare` | `api_token` |
+| `APNS_KEY`, `APNS_KEY_ID` | `Ourio`, `Apple` | same names |
+| `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID` | `Ourio`, `Apple` | same names |
+| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access` | `team_domain`, `aud` |
+| `TMDB_TOKEN` | `Ourio Release`, `TMDB` | `api_token` |
 
 The prod API token is its own token, separate from dev's: Account, Workers Scripts, D1 and R2, all
 Edit, on this account only. The deploy also makes KV namespaces, an Analytics Engine dataset and
@@ -150,7 +150,7 @@ when they delete their account, App Store guideline 5.1.1(v)). The same `.p8` fi
 stage, so every stage binds them (`alchemy.run.ts`); only `DEMO_ROOM` stays dev-only. A `dev` or `prod`
 deploy stops before planning, naming the missing variables, if one is absent (local `alchemy dev`
 needs none). Because the keys are the same, `.env.pass.release` reads
-them from the item `Apple` in the vault `Billet`, like `.env.pass`; there is no second copy to keep in
+them from the item `Apple` in the vault `Ourio`, like `.env.pass`; there is no second copy to keep in
 step. The Sign in with Apple key has `com.ourio.app` as its primary App ID; the Worker still accepts
 tokens and revokes codes for the first app, `com.mikitahimpel.billet`, until the owner retires it.
 
@@ -192,15 +192,15 @@ the agents' session and cannot read the prod vault, so the main path is by hand.
 
    | Secret | Proton item and field | Needed |
    | --- | --- | --- |
-   | `CLOUDFLARE_ACCOUNT_ID` | prod `cloudflare`, `account_id` | required |
-   | `CLOUDFLARE_API_TOKEN` | prod `cloudflare`, `api_token` | required |
-   | `APNS_KEY` | `Apple`, `APNS_KEY` (PEM) | required |
-   | `APNS_KEY_ID` | `Apple`, `APNS_KEY_ID` | required |
-   | `APPLE_SIGN_IN_KEY` | `Apple`, `APPLE_SIGN_IN_KEY` (PEM) | required |
-   | `APPLE_SIGN_IN_KEY_ID` | `Apple`, `APPLE_SIGN_IN_KEY_ID` | required |
-   | `ACCESS_TEAM_DOMAIN` | prod `Cloudflare Access`, `team_domain` | optional |
-   | `ACCESS_AUD` | prod `Cloudflare Access`, `aud` | optional |
-   | `TMDB_TOKEN` | prod `TMDB`, `api_token` | optional |
+   | `CLOUDFLARE_ACCOUNT_ID` | `Ourio Release`, `Cloudflare`, `account_id` | required |
+   | `CLOUDFLARE_API_TOKEN` | `Ourio Release`, `Cloudflare`, `api_token` | required |
+   | `APNS_KEY` | `Ourio`, `Apple`, `APNS_KEY` (PEM) | required |
+   | `APNS_KEY_ID` | `Ourio`, `Apple`, `APNS_KEY_ID` | required |
+   | `APPLE_SIGN_IN_KEY` | `Ourio`, `Apple`, `APPLE_SIGN_IN_KEY` (PEM) | required |
+   | `APPLE_SIGN_IN_KEY_ID` | `Ourio`, `Apple`, `APPLE_SIGN_IN_KEY_ID` | required |
+   | `ACCESS_TEAM_DOMAIN` | `Ourio Release`, `Cloudflare Access`, `team_domain` | optional |
+   | `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access`, `aud` | optional |
+   | `TMDB_TOKEN` | `Ourio Release`, `TMDB`, `api_token` | optional |
 
    The first prod deploy works without the three optional ones: the Access application needs the
    deployed host first, so `/admin` stays closed until `ACCESS_*` are set, and without
@@ -226,5 +226,5 @@ resources. The raw log of the first run may hold something private; read it once
 ## Verified and not verified
 
 `alchemy deploy`, the D1 state store, D1 migrations and Durable Object migrations have run on the
-`dev` stage. The `prod` stage, the `pass://Billet Release/...` reference (a vault name with a space)
+`dev` stage. The `prod` stage, the `pass://Ourio Release/...` reference (a vault name with a space)
 and the workflow have not.
