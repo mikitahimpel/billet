@@ -103,13 +103,13 @@ const decodeEarnRef = Schema.decodeSync(EarnRef);
  */
 export type PurchaseCredit =
   | {
-      readonly kind: "buy";
+      readonly kind: "purchase";
       readonly id: CoinEntryId;
       readonly ref: string;
       readonly coins: number;
     }
   | {
-      readonly kind: "buy" | "refund";
+      readonly kind: "purchase" | "refund";
       readonly id: CoinEntryId;
       readonly ref: string;
       readonly reverses: CoinEntryId;

@@ -452,7 +452,7 @@ describe("tagged unions", () => {
     }),
     CreditPurchase: RoomCommand.cases.CreditPurchase.make({
       id: Schema.decodeSync(CoinEntryId)("purchase:2000"),
-      kind: "buy",
+      kind: "purchase",
       coins: 550,
       ref: "com.ourio.app.coins.550",
       at: 1_700_000_000_000,
