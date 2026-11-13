@@ -22,6 +22,17 @@ struct RoomHost: View, Equatable {
     }
 }
 
+/// The part of the input the Bedroom's lamps read.
+private struct LampsInput: Equatable {
+    let choice: Bool?
+    let fades: Bool
+
+    init(_ input: RoomInput) {
+        choice = input.lights
+        fades = input.lightsFade
+    }
+}
+
 /// The part of the input the cat's notice of the partner reads.
 private struct PartnerSight: Equatable {
     let here: Bool
@@ -108,6 +119,7 @@ private struct RoomStage: View {
             controller.looked()
         }
         .onChange(of: input.rendering, initial: true) { _, rendering in controller.setRendering(rendering) }
+        .onChange(of: LampsInput(input), initial: true) { _, lamps in controller.setLights(lamps.choice, fades: lamps.fades) }
         .onChange(of: input.decor, initial: true) { _, decor in controller.showDecor(decor) }
         .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         .onChange(of: input.rendering.splatRate, initial: true) { _, rate in SplatSkinner.limit(toHertz: rate) }

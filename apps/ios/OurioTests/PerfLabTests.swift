@@ -83,7 +83,7 @@ struct PerfLabTests {
         #expect(GovernorReadout.inputs(conditions)
             == "heat fair, low power on, battery 18% unplugged, idle 75 s, busy no")
         #expect(GovernorReadout.plan(RoomQualityTier.serious.plan)
-            == "30/20 fps, 1.25x, bloom off, sun shadow off, lights widest, hdr off, pulse x3")
+            == "30/20 fps, 1.25x, bloom off, sun shadow off, lights all, hdr on, ambient +0.15, pulse x3")
     }
 
     @Test func aQuietRoomIsIdleAndADragOrAGameStartIsBusy() {

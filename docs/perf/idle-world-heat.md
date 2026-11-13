@@ -534,8 +534,12 @@ state) and every two seconds (idle time, busy), and `HomeView.roomInput` carries
 | --- | --- | --- | --- | --- | --- | --- |
 | full | nothing | 60 / 30 | 2x | all on | x1 | as before the governor |
 | fair | heat fair, Low Power Mode, battery <= 20% off the charger, room untouched 60 s | 30 / 20 | 1.5x | all on | x1.5 | no motes or AA, splats at 30 Hz |
-| serious | heat serious, battery <= 10% | 30 / 20 | 1.25x | bloom, sun shadow, HDR off; widest light only | x3 | no sway |
+| serious | heat serious, battery <= 10% | 30 / 20 | 1.25x | bloom and sun shadow off, ambient +0.15 stop; every lamp and HDR stay | x3 | no sway |
 | critical | heat critical | 20 / 15 | 1x | as serious | x3 | room held on its last frame |
+
+A tier never puts a lamp out or narrows the colour range: the first plan did (widest light only, HDR off), and in the Bedroom at night the widest light is the sky's, so a phone at 5% battery showed a dark room. Tiers give up shadows, bloom, frames, pixels and pulses, and `RoomPerfTests` checks that every tier keeps the Bedroom's lamps, their light and its ambient light.
+
+The Bedroom's lamps follow the hour (lit from dusk, with an ambient floor so a night room is never black). The light button beside the room switch (Bedroom only) turns them on or off, easing over about a second, and the choice is kept on this phone (`room.lights.bedroom`). The Living room has no hour and no switch.
 
 - Degrades at once, recovers one tier per 90 quiet seconds. Idleness is outside that hysteresis (it only grows until a
   touch) and stops at `fair`, which looks like `full`, so a room being watched never changes and never jumps back.

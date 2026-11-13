@@ -36,6 +36,73 @@ struct RoomPerfTests {
         }
     }
 
+    /// A rough measure of how lit a room is: the point lights that are on and their summed intensity, the ambient light's
+    /// strength in stops, and whether the glow pass is on.
+    private struct Brightness {
+        var lamps = 0
+        var lumens: Float = 0
+        var ambientStops: Float = 0
+
+        init(_ room: CatRoom) {
+            func visit(_ entity: Entity) {
+                if entity.isEnabled, let point = entity.components[PointLightComponent.self], point.intensity > 0 {
+                    lamps += 1
+                    lumens += point.intensity
+                }
+                if let ibl = entity.components[ImageBasedLightComponent.self] { ambientStops = ibl.intensityExponent }
+                entity.children.forEach(visit)
+            }
+            visit(room.root)
+        }
+    }
+
+    @Test func noTierLeavesTheBedroomDarkerThanFullByNight() {
+        let room = CityRoomScene()
+        room.lampsFade = false
+        room.lampChoice = true
+        for _ in 0..<5 { room.tick(1.0 / 60) }
+        let perf = RoomPerfCoordinator()
+        func look(_ tier: RoomQualityTier) -> Brightness {
+            let plan = tier.plan
+            _ = perf.set(switches {
+                $0.noSunShadow = !plan.sunShadow
+                $0.fewerLights = plan.widestLightOnly
+                $0.noBloom = !plan.bloom
+            })
+            room.ambientLift = Float(plan.ambientLift)
+            perf.lights(in: room)
+            return Brightness(room)
+        }
+        let full = look(.full)
+        #expect(full.lamps >= 3)
+        for tier in RoomQualityTier.allCases {
+            let now = look(tier)
+            #expect(now.lamps == full.lamps, "\(tier) keeps every lamp")
+            #expect(now.lumens >= full.lumens, "\(tier) keeps the lamps' light")
+            #expect(now.ambientStops >= full.ambientStops, "\(tier) keeps the ambient light")
+        }
+    }
+
+    @Test func theLampsFadeAndAChoiceOverridesTheHour() {
+        let room = CityRoomScene()
+        room.lampsFade = false
+        room.lampChoice = false
+        for _ in 0..<5 { room.tick(1.0 / 60) }
+        let off = Brightness(room)
+        room.lampChoice = true
+        for _ in 0..<5 { room.tick(1.0 / 60) }
+        let on = Brightness(room)
+        #expect(on.lumens > off.lumens)
+        #expect(on.ambientStops >= off.ambientStops)
+        room.lampsFade = true
+        room.lampChoice = false
+        room.tick(1.0 / 60)
+        let midway = Brightness(room)
+        #expect(midway.lumens < on.lumens && midway.lumens > off.lumens)
+        for _ in 0..<600 { room.tick(1.0 / 60) }
+        #expect(Brightness(room).lumens <= off.lumens + 1)
+    }
+
     @Test func noSunShadowTakesTheShadowMapOutAndBack() {
         for (name, room) in [("living", DioramaScene() as CatRoom), ("bedroom", CityRoomScene())] {
             let perf = RoomPerfCoordinator()
