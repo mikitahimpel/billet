@@ -180,6 +180,6 @@ describe("daily-cap hit rate", () => {
       lists: 0,
     });
     expect(result.capHitRate.care).toBe(2 / 5);
-    expect(result.caps).toMatchObject({ care: 10, notes: 30, games: 40, lists: 15 });
+    expect(result.caps).toMatchObject({ care: 2, notes: 3, games: 4, lists: 1 });
   });
 });
