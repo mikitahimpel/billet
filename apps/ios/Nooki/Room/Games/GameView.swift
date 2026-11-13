@@ -366,21 +366,27 @@ private struct ResultToast: View {
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                 HStack(spacing: Space.s) {
-                    Chip(result.game.careLabel(grams: result.grams), symbol: result.game.symbol, style: .honey)
-                    HStack(spacing: Space.xs) {
-                        CoinIcon(size: Space.l)
-                        Text("Coins")
-                            .font(.ourioMicro)
-                            .foregroundStyle(Ink.text)
-                    }
+                    Chip(result.game.careLabel(grams: result.grams), symbol: result.game.symbol, style: .quiet)
+                    Chip("Coins", coinStyle: .quiet)
                 }
-                ActionRow {
-                    SecondaryButton("Play again", action: again)
-                    PrimaryButton("Back to the room", action: done)
-                }
+                buttons
             }
         }
         .padding(.horizontal, Space.gutter)
+    }
+
+    /// Side by side at one width and height while both fit, else stacked full width, the main one last as in `Screen`.
+    private var buttons: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Space.s) {
+                SecondaryButton("Play again", action: again).lineLimit(1)
+                PrimaryButton("Back to the room", action: done).lineLimit(1)
+            }
+            VStack(spacing: Space.s) {
+                SecondaryButton("Play again", action: again)
+                PrimaryButton("Back to the room", action: done)
+            }
+        }
     }
 }
 
