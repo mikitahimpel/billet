@@ -5,6 +5,7 @@ import FeatureDecor
 import FeatureGames
 import FeatureInbox
 import MomentsInterface
+import ServerSync
 import WidgetInterface
 import WidgetUI
 import ProfileInterface

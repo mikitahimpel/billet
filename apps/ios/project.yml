@@ -116,6 +116,7 @@ targets:
             FeaturePairing,
             FeatureShop,
             FeatureUs,
+            ServerSync,
             DecorInterface,
             DrawInterface,
             GamesInterface,

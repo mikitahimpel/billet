@@ -5,6 +5,7 @@ import Observation
 import Pet
 import RealityKit
 import RoomInterface
+import ServerSync
 import SwiftUI
 import WidgetInterface
 import WidgetKit

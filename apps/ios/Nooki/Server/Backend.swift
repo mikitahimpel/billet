@@ -4,6 +4,7 @@ import MomentsInterface
 import WidgetInterface
 import WidgetUI
 import Persistence
+import ServerSync
 import Transport
 import UsInterface
 

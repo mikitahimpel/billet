@@ -2,6 +2,7 @@ import FeatureGames
 import FeatureMood
 import FeatureShop
 import MomentsInterface
+import ServerSync
 import ShopInterface
 import WidgetInterface
 import WidgetUI
