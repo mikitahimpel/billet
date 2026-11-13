@@ -318,10 +318,10 @@ struct DrawGuessTests {
         let open = Riddle(id: .make(), drawer: partner, shape: [3], tiles: catTiles, compact: CompactStrokes(strokes: []),
                           image: MediaKey("media-1"), at: 1)
         #expect(DrawGuessModel.coinsLine(open) == nil)
-        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, state: .solved(at: 2))) == "+10 coins")
-        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, hints: 2, state: .solved(at: 2))) == "+6 coins")
-        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, hints: 5, state: .solved(at: 2))) == "+4 coins")
-        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, hints: 2, state: .givenUp(at: 2))) == "+3 coins")
+        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, state: .solved(at: 2))) == "+3 coins")
+        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, hints: 1, state: .solved(at: 2))) == "+2 coins")
+        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, hints: 5, state: .solved(at: 2))) == "+1 coin")
+        #expect(DrawGuessModel.coinsLine(FakeRiddleRoom.with(open, hints: 2, state: .givenUp(at: 2))) == "+1 coin")
     }
 
     @Test func wordsTheCard() {

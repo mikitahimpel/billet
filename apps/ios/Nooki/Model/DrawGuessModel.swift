@@ -199,7 +199,7 @@ final class DrawGuessModel {
     }
 
     nonisolated static func coinsLine(_ riddle: Riddle) -> String? {
-        coins(riddle).map { "+\($0) coins" }
+        coins(riddle).map { "+\($0) \($0 == 1 ? "coin" : "coins")" }
     }
 
     nonisolated static func endedTitle(_ riddle: Riddle) -> String {
