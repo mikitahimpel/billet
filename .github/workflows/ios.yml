@@ -116,7 +116,7 @@ jobs:
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
       # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
-      - uses: mikitahimpel/warmbuild-action@6f7ba1e68e0f603ac2bae602e2ce0d7e7b0e025a # v1.8.0
+      - uses: mikitahimpel/warmbuild-action@06ddfbfabe30554de4a1e4fa9a3b39da57f10dfc # v1.12.3
         id: warmbuild
         with:
           select-tests: true
@@ -196,7 +196,7 @@ jobs:
       # Leaves out the test targets whose built products already passed (on main, or earlier in this pull request),
       # and adds test selection's arguments; WARMBUILD_ONLY_TESTING holds the result. `full-tests` or
       # "[warmbuild full tests]" in a commit message or the pull request runs every target.
-      - uses: mikitahimpel/warmbuild-action/test-cache@6f7ba1e68e0f603ac2bae602e2ce0d7e7b0e025a # v1.8.0
+      - uses: mikitahimpel/warmbuild-action/test-cache@06ddfbfabe30554de4a1e4fa9a3b39da57f10dfc # v1.12.3
         id: tests
         if: steps.warmbuild.outputs.tests != 'none'
         with:
