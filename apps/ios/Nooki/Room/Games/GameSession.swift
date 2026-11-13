@@ -45,7 +45,10 @@ final class GameSession {
         spots = GameSpots(room: room)
     }
 
-    var action: String? { finished == nil ? stage?.action : nil }
+    /// The stage's buttons, copied each frame: the stage is not observed, so a button that came or went with a
+    /// finger lifting would otherwise wait for an unrelated change to show.
+    private(set) var action: String?
+    private(set) var assist: String?
 
     func start(viewport: CGSize) {
         guard stage == nil, !ended else { return }
@@ -116,6 +119,14 @@ final class GameSession {
         coach = GameCoach.transition(coach, .step(cue?.step)).0
         show(coach.shown == nil ? nil : cue)
         if finished == nil, let result = deck.result { finish(result) }
+        refreshButtons()
+    }
+
+    private func refreshButtons() {
+        let action = finished == nil ? stage?.action : nil
+        if action != self.action { self.action = action }
+        let assist = finished == nil ? stage?.assist : nil
+        if assist != self.assist { self.assist = assist }
     }
 
     // MARK: - Her
@@ -250,8 +261,6 @@ final class GameSession {
     }
 
     func act() { stage?.act() }
-
-    var assist: String? { finished == nil ? stage?.assist : nil }
 
     func assistAct() { stage?.assistAct() }
 
