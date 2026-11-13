@@ -129,7 +129,7 @@ public struct Chip: View {
   }
 
   /// A chip for coins: the coin mark where a symbol would be.
-  public init(_ title: String, coinStyle style: Style = .quiet) {
+  public init(_ title: String, coinStyle style: Style) {
     self.title = title
     self.symbol = nil
     self.showsCoin = true
