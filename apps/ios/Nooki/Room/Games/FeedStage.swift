@@ -386,7 +386,8 @@ final class FeedStage: GameStage {
 
     /// Where a kibble that bounced out lands: round the bowl's foot, on the scale or the mat beyond it.
     private func scatter() -> SIMD3<Float> {
-        let angle = Float.random(in: 0..<2 * .pi)
+        // Behind and to the sides of the bowl: toward the player the mat lies under the game's own buttons.
+        let angle = Float.random(in: 0.85 * .pi...2.15 * .pi)
         let r = Float.random(in: Self.bowlRadius + 0.012...Self.bowlRadius + 0.05)
         let across = r * cos(angle), along = r * sin(angle)
         let onScale = abs(across) < Self.scaleSize.x / 2 - 0.01 && abs(along) < Self.scaleSize.z / 2 - 0.01
