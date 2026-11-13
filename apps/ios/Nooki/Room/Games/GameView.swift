@@ -17,6 +17,9 @@ struct GameView: View {
     @State private var touching = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The hint and the bar sit over the game: past this they would cover the thing to touch.
+    static let overlayType = DynamicTypeSize.xxxLarge
+
     var body: some View {
         GeometryReader { proxy in
             let full = proxy.size
@@ -81,11 +84,13 @@ struct GameView: View {
                 VStack(spacing: Space.m) {
                     if let hint = session.shownHint {
                         GoalHint(text: hint)
+                            .dynamicTypeSize(...Self.overlayType)
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .id(hint)
                     }
                     if let bar = session.deck.bar {
                         GameBar(meter: bar, symbol: session.game.symbol)
+                            .dynamicTypeSize(...Self.overlayType)
                     }
                     if let action = session.action {
                         Button(action: session.act) { Text(action).frame(maxWidth: .infinity) }
@@ -248,7 +253,7 @@ private struct GameTitle: View {
 
     var body: some View {
         HStack(spacing: Space.s) {
-            Image(systemName: game.symbol)
+            Image(systemName: game.symbol).dynamicTypeSize(...GameView.overlayType)
             if !type.isAccessibilitySize { Text(game.shortTitle) }
         }
         .font(.ourioHeadline)
@@ -372,7 +377,7 @@ private struct ResultToast: View {
     /// Side by side at one width and height while both fit, else stacked full width, the main one last as in `Screen`.
     private var buttons: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: Space.s) {
+            EqualRow(spacing: Space.s) {
                 SecondaryButton("Play again", action: again).lineLimit(1)
                 PrimaryButton("Back to the room", action: done).lineLimit(1)
             }
@@ -380,6 +385,29 @@ private struct ResultToast: View {
                 SecondaryButton("Play again", action: again)
                 PrimaryButton("Back to the room", action: done)
             }
+        }
+    }
+}
+
+/// A row whose items share the width of the widest one, so it reports a width that holds every label in full:
+/// an `HStack` of full-width buttons reports the sum of their own widths, and the equal split then cuts the longer.
+private struct EqualRow: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let widest = sizes.map(\.width).max() ?? 0
+        let width = widest * CGFloat(subviews.count) + spacing * CGFloat(max(subviews.count - 1, 0))
+        let offered = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? 0
+        return CGSize(width: max(width, offered), height: sizes.map(\.height).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard !subviews.isEmpty else { return }
+        let each = (bounds.width - spacing * CGFloat(subviews.count - 1)) / CGFloat(subviews.count)
+        for (index, subview) in subviews.enumerated() {
+            let x = bounds.minX + (each + spacing) * CGFloat(index)
+            subview.place(at: CGPoint(x: x, y: bounds.minY), proposal: ProposedViewSize(width: each, height: bounds.height))
         }
     }
 }
