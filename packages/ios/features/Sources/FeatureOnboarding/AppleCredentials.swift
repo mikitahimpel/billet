@@ -1,5 +1,6 @@
 import AuthenticationServices
 import Foundation
+import SwiftUI
 
 /// What Apple's sheet ended with, for the two places that ask it: linking (an identity token for
 /// the nonce) and deleting an account (the authorization code the server revokes the token with).
