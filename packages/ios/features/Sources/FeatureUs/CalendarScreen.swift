@@ -35,7 +35,15 @@
                   icon: .init(symbol: "calendar", tint: .sky), title: "Nothing coming up",
                   text: "Add a birthday, a trip or anything you're both waiting for.")
               } else {
-                section(soon)
+                if let next = soon.first(where: { $0.daysLeft >= 0 }) {
+                  Button {
+                    open(next)
+                  } label: {
+                    NextUp(item: next)
+                  }
+                  .buttonStyle(PressScaleStyle())
+                }
+                section(soon.filter { $0.id != nextID(in: soon) })
               }
             }
           }
@@ -67,6 +75,16 @@
       }
     }
 
+    private func open(_ item: Upcoming) {
+      if case .event(let id) = item.source, let event = us.events.first(where: { $0.id == id }) {
+        editing = event
+      }
+    }
+
+    private func nextID(in items: [Upcoming]) -> String? {
+      items.first(where: { $0.daysLeft >= 0 })?.id
+    }
+
     private func section(_ items: [Upcoming]) -> some View {
       GroupedSection {
         ForEach(items) { row($0) }
@@ -75,28 +93,72 @@
 
     private func row(_ item: Upcoming) -> some View {
       Button {
-        if case .event(let id) = item.source, let event = us.events.first(where: { $0.id == id }) {
-          editing = event
-        }
+        open(item)
       } label: {
         Row(
           item.title,
           detail: item.date.formatted(.dateTime.weekday(.abbreviated).day().month(.wide)),
           symbol: item.icon.symbol, tint: item.icon.tint.color
         ) {
-          VStack(alignment: .trailing, spacing: 0) {
-            Text(item.daysLeft == 0 ? "today" : "\(abs(item.daysLeft))")
-              .font((item.daysLeft == 0 ? Font.ourioCaption : Font.ourioTitle).monospacedDigit())
-              .foregroundStyle((0...7).contains(item.daysLeft) ? Ink.accentText : Ink.text)
-            if item.daysLeft != 0 {
-              Text((abs(item.daysLeft) == 1 ? "day" : "days") + (item.daysLeft < 0 ? " ago" : ""))
-                .font(.ourioMicro)
-                .foregroundStyle(Ink.textSecondary)
-            }
-          }
+          Chip(
+            Countdown.words(item.daysLeft),
+            style: item.daysLeft < 0
+              ? .quiet : (0...7).contains(item.daysLeft) ? .honey : .tinted(item.icon.tint.color))
         }
       }
       .buttonStyle(RowButtonStyle())
+      .accessibilityElement(children: .combine)
+    }
+  }
+
+  enum Countdown {
+    static func words(_ days: Int) -> String {
+      switch days {
+      case 0: String(localized: "Today")
+      case 1: String(localized: "Tomorrow")
+      case -1: String(localized: "Yesterday")
+      case ..<0: String(localized: "\((-days).formatted()) days ago")
+      default: String(localized: "in \(days.formatted()) days")
+      }
+    }
+  }
+
+  /// The nearest date as a card of its own: the number of days large, the date's name and day beside it.
+  private struct NextUp: View {
+    let item: Upcoming
+
+    var body: some View {
+      Card(warm: true) {
+        HStack(spacing: Space.l) {
+          VStack(spacing: 0) {
+            if item.daysLeft == 0 {
+              Image(systemName: item.icon.symbol)
+                .font(.ourioTitle)
+                .foregroundStyle(item.icon.tint.color)
+            } else {
+              Text(item.daysLeft.formatted())
+                .font(.ourioNumber.monospacedDigit())
+                .minimumScaleFactor(0.6)
+                .lineLimit(1)
+                .foregroundStyle(Ink.accentText)
+              Text(item.daysLeft == 1 ? "day" : "days")
+                .font(.ourioCallout)
+                .foregroundStyle(Ink.textSecondary)
+            }
+          }
+          .frame(minWidth: 88)
+          VStack(alignment: .leading, spacing: Space.xxs) {
+            Chip(Countdown.words(item.daysLeft), symbol: item.icon.symbol, style: .honey)
+            Text(item.title)
+              .font(.ourioHeadline)
+              .foregroundStyle(Ink.text)
+            Text(item.date.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+              .font(.ourioCaption)
+              .foregroundStyle(Ink.textSecondary)
+          }
+          .frame(maxWidth: .infinity, alignment: .leading)
+        }
+      }
       .accessibilityElement(children: .combine)
     }
   }
