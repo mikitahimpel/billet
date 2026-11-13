@@ -49,25 +49,26 @@ struct CityDioramaTests {
         #expect(simd_length(a.top - b.top) < 0.45 && simd_length(a.horizon - b.horizon) < 0.45)
     }
 
-    @Test(arguments: [CGFloat(1.12), .infinity])
-    func aLayerSlidesOverAnOpeningThatTurnedPastItsEdge(growth: CGFloat) {
-        let frame = CGRect(x: 0, y: 0, width: 112, height: 70)
-        for shift in stride(from: CGFloat(-12), through: 12, by: 4) {
-            let opening = CGRect(x: 6 + shift, y: 4, width: 100, height: 58)
-            let covered = CityDiorama.covering(frame, opening: opening, growth: growth)
-            #expect(covered.contains(opening), "shift \(shift)")
-        }
-    }
-
-    @Test func aLayerAlreadyCoveringTheOpeningStaysWhereItIs() {
+    @Test(arguments: [true, false])
+    func aLayerAlreadyCoveringTheOpeningStaysWhereItIs(isSky: Bool) {
         let frame = CGRect(x: -6, y: -4, width: 112, height: 70)
-        #expect(CityDiorama.covering(frame, opening: CGRect(x: 0, y: 0, width: 100, height: 58), growth: 1.12) == frame)
+        #expect(CityDiorama.covering(frame, opening: CGRect(x: 0, y: 0, width: 100, height: 58), isSky: isSky) == frame)
     }
 
-    @Test func onlyTheSkyGrowsPastItsLimit() {
+    @Test func aPictureLayerNeverMovesUpOrDownAndSlidesSidewaysOnlyAsFarAsItMust() {
+        let frame = CGRect(x: 0, y: 0, width: 112, height: 70)
+        let low = CGRect(x: 6, y: 20, width: 100, height: 58)
+        #expect(CityDiorama.covering(frame, opening: low, isSky: false) == frame)
+        let turned = CGRect(x: 30, y: 4, width: 100, height: 58)
+        #expect(CityDiorama.covering(frame, opening: turned, isSky: false) == CGRect(x: 18, y: 0, width: 112, height: 70))
+        let left = CGRect(x: -20, y: 4, width: 100, height: 58)
+        #expect(CityDiorama.covering(frame, opening: left, isSky: false) == CGRect(x: -20, y: 0, width: 112, height: 70))
+    }
+
+    @Test func theSkyGrowsAndSlidesOverAnOpeningThatTurnedPastIt() {
         let frame = CGRect(x: 0, y: 0, width: 100, height: 60)
-        let opening = CGRect(x: 0, y: 0, width: 160, height: 90)
-        #expect(CityDiorama.covering(frame, opening: opening, growth: .infinity).contains(opening))
-        #expect(CityDiorama.covering(frame, opening: opening, growth: 1.12).width <= 112.001)
+        for opening in [CGRect(x: 40, y: 0, width: 160, height: 90), CGRect(x: -50, y: -20, width: 100, height: 58)] {
+            #expect(CityDiorama.covering(frame, opening: opening, isSky: true).contains(opening))
+        }
     }
 }

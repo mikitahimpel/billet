@@ -237,11 +237,11 @@ final class CityDioramaView: UIView {
         opening.frame = bounds
         clip.frame = bounds
         clip.path = Self.path(outline, grownBy: Self.holeGrowth)
-        let opening = Self.bounds(outline.map { Self.grown($0, in: outline, by: Self.holeGrowth) })
+        let opening = Self.bounds(outline)
         for (stack, entry) in zip(stacks, CityDiorama.layers) {
             let stage = home.blended(with: live, follow: entry.follow)
             stack.holder.frame = CityDiorama.covering(
-                stage.rect(CityDiorama.imageRect), opening: opening, growth: entry.follow == 0 ? .infinity : 1.12)
+                stage.rect(CityDiorama.imageRect), opening: opening, isSky: entry.follow == 0)
             for layer in stack.times { layer.frame = stack.holder.bounds }
         }
         if hour < 0 { setHour(Daylight.localHour()) }

@@ -55,18 +55,24 @@ enum CityDiorama {
         return CGRect(x: x, y: y, width: size.width * scale, height: size.height * scale)
     }()
 
-    /// A layer's frame moved, and grown up to `growth` times, until it covers `opening` and a margin of the camera's
-    /// own wobble. The opening turns away from a layer that follows the room only in part, so without this its
-    /// edge would show inside the window as a hard line; sliding a layer keeps its picture undistorted and only
-    /// the sky, which has nothing to distort, grows without limit.
-    static func covering(_ frame: CGRect, opening: CGRect, growth: CGFloat, pad: CGFloat = 0.02) -> CGRect {
-        let need = opening.insetBy(dx: -opening.width * pad, dy: -opening.height * pad)
-        let scale = min(growth, max(1, need.width / frame.width, need.height / frame.height))
-        var out = frame.insetBy(dx: -frame.width * (scale - 1) / 2, dy: -frame.height * (scale - 1) / 2)
-        out.origin.x = min(out.minX, need.minX)
-        out.origin.x = max(out.minX, need.maxX - out.width)
-        out.origin.y = min(out.minY, need.minY)
-        out.origin.y = max(out.minY, need.maxY - out.height)
+    /// The frame of a layer that must cover `opening`, which turns away from layers that follow the room only in
+    /// part. The sky has nothing to distort: it grows, keeping its shape, and slides until the opening is inside
+    /// it. A picture layer is drawn where its art puts it and only slides sideways, by as little as it takes, so
+    /// the horizon stays where it is however the room is framed.
+    static func covering(_ frame: CGRect, opening: CGRect, isSky: Bool) -> CGRect {
+        var out = frame
+        if isSky {
+            let need = opening.insetBy(dx: -opening.width * 0.04, dy: -opening.height * 0.04)
+            let scale = max(1, need.width / frame.width, need.height / frame.height)
+            out = frame.insetBy(dx: -frame.width * (scale - 1) / 2, dy: -frame.height * (scale - 1) / 2)
+            out.origin.y = min(out.minY, need.minY)
+            out.origin.y = max(out.minY, need.maxY - out.height)
+            out.origin.x = min(out.minX, need.minX)
+            out.origin.x = max(out.minX, need.maxX - out.width)
+        } else {
+            out.origin.x = min(out.minX, opening.minX)
+            out.origin.x = max(out.minX, opening.maxX - out.width)
+        }
         return out
     }
 
