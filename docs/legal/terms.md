@@ -14,7 +14,7 @@ small games. A pair is exactly two accounts. By using the app you accept these t
 
 ## Your account
 - The app creates an anonymous account for you. Keep your iCloud Keychain on if you want a new
-  phone to find your account, or link your Apple ID in Profile > Account (optional) to sign in to
+  phone to find your account, or link your Apple ID in Settings > Account (optional) to sign in to
   it with Apple.
 - You must be at least 13. If you are under the age of majority where you live, you need a
   parent's or guardian's permission.

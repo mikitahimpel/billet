@@ -9,6 +9,8 @@ import UIKit
 enum OffscreenRoom {
     static let width = 780
     static let height = 1688
+    /// The camera of the last frame drawn, over a 390 x 844 point screen, as the room's own loop reads it for taps.
+    nonisolated(unsafe) static var camera: RoomCamera?
 
     struct Difference {
         var maxError = 0
@@ -31,6 +33,9 @@ enum OffscreenRoom {
         let rig = ZoomRig()
         rig.aspect = Float(width) / Float(height)
         rig.update(dt: 1, framing: room.framing, focusDistance: 0.8, yaw: 0, focus: [0.06, 0.12, -0.04], photo: nil)
+        camera = RoomCamera(
+            transform: rig.camera.transformMatrix(relativeTo: nil), fovDegrees: rig.camera.camera.fieldOfViewInDegrees,
+            size: CGSize(width: width / 2, height: height / 2))
         renderer.entities.append(rig.camera)
         renderer.activeCamera = rig.camera
         renderer.entities.append(room.root)

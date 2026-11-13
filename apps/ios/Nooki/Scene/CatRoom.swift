@@ -483,8 +483,25 @@ class CatRoom {
 
     // MARK: - Lighting
 
+    private var ambientSource: Entity?
+    private var liftApplied: Float = 0
+    /// Stops of ambient light added on top of what the room sets, to make up for the glow pass being off.
+    var ambientLift: Float = 0 {
+        didSet { if ambientLift != oldValue { liftAmbient() } }
+    }
+
+    /// Brings the ambient light's exponent to the lift; `reset` when the room has just written an exponent of its own.
+    func liftAmbient(reset: Bool = false) {
+        guard let source = ambientSource, var light = source.components[ImageBasedLightComponent.self] else { return }
+        if reset { liftApplied = 0 }
+        light.intensityExponent += ambientLift - liftApplied
+        liftApplied = ambientLift
+        source.components.set(light)
+    }
+
     /// Lights everything built so far with `ibl`; parts added later set `iblReceiver` on themselves.
     func receiveAmbient(from ibl: Entity) {
+        ambientSource = ibl
         root.addChild(ibl)
         let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ibl)
         iblReceiver = receiver

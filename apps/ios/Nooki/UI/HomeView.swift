@@ -53,6 +53,9 @@ struct HomeView: View {
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    /// The Bedroom's lamps on this phone: 0 follows the hour, 1 on, 2 off.
+    @AppStorage("room.lights.bedroom") private var bedroomLights = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(AppSettings.quietRoomKey) private var quietChrome = QuietChrome.dim
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var quiet = QuietRoom.store()
@@ -395,11 +398,14 @@ struct HomeView: View {
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
                 let waiting = state.decor.state.closetCount
-                GlassIconButton(
-                    symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
-                ) { state.decor.send(.opened(item: nil)) }
-                .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                .accessibilityIdentifier("decorate")
+                VStack(alignment: .trailing, spacing: Space.s) {
+                    if state.room.scene == .city { lightsButton }
+                    GlassIconButton(
+                        symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
+                    ) { state.decor.send(.opened(item: nil)) }
+                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+                    .accessibilityIdentifier("decorate")
+                }
             }
             .padding(.horizontal, Space.xs)
         }
@@ -534,6 +540,33 @@ struct HomeView: View {
     /// The header's and the tab bar's glass: a perf run's arm, flat while Labs → Performance has it off.
     private var barGlass: GlassRendering { perfLab.isOn(.barGlass) ? hud.glass : .flat }
 
+    /// What the Bedroom's lamps do now: the player's choice, else lit from dusk to dawn as the room does itself.
+    private var bedroomChoice: Bool? {
+        switch bedroomLights {
+        case 1: true
+        case 2: false
+        default: nil
+        }
+    }
+
+    private var bedroomLit: Bool {
+        switch bedroomLights {
+        case 1: true
+        case 2: false
+        default: Daylight.sample(Daylight.localHour()).darkness > 0.5
+        }
+    }
+
+    private var lightsButton: some View {
+        GlassIconButton(
+            symbol: bedroomLit ? "lightbulb.fill" : "lightbulb", label: bedroomLit ? "Turn the lights off" : "Turn the lights on"
+        ) {
+            bedroomLights = bedroomLit ? 2 : 1
+        }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .accessibilityIdentifier("roomLights")
+    }
+
     private var roomInput: RoomInput {
         let plan = perfLab.tier.plan
         let visibility: RoomVisibility =
@@ -548,7 +581,9 @@ struct HomeView: View {
                 antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr) && plan.hdr,
                 splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0,
                 activeRate: plan.activeRate, idleRate: plan.idleRate, scale: plan.scale, bloom: plan.bloom,
-                sunShadow: plan.sunShadow, widestLightOnly: plan.widestLightOnly, pulseSlowdown: plan.pulseSlowdown))
+                sunShadow: plan.sunShadow, widestLightOnly: plan.widestLightOnly, ambientLift: plan.ambientLift,
+                pulseSlowdown: plan.pulseSlowdown),
+            lights: bedroomChoice, lightsFade: !reduceMotion)
     }
 
     private var arranging: Bool { state.decor.state.isArranging }

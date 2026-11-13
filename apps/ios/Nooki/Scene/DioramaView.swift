@@ -181,14 +181,15 @@ struct DioramaView: View {
                 .onChanged { value in
                     guard !photoFocused else { return }
                     if pinchStartZoom == nil { onTouch(true) }
-                    for each in [rig, loop?.rig] as [ZoomRig?] { each?.isZooming = true }
-                    let start = pinchStartZoom ?? rig.targetZoom
+                    let zoomRig = loop?.rig ?? rig
+                    zoomRig.isZooming = true
+                    let start = pinchStartZoom ?? zoomRig.targetZoom
                     pinchStartZoom = start
                     let delta = Float(log2(Double(value.magnification))) * 0.6
-                    rig.targetZoom = min(max(start + delta, 0), 1)
+                    zoomRig.targetZoom = min(max(start + delta, 0), 1)
                 }
                 .onEnded { _ in
-                    for each in [rig, loop?.rig] as [ZoomRig?] { each?.isZooming = false }
+                    (loop?.rig ?? rig).isZooming = false
                     pinchStartZoom = nil
                     onTouch(false)
                 }

@@ -175,7 +175,24 @@ typealias Heat = RoomConditions.Heat
     #expect(!plan.widestLightOnly && !plan.still)
     #expect(plan.splatRate == 0 && plan.splatDetail == .full)
     #expect(
-      plan.activeRate == 60 && plan.idleRate == 30 && plan.scale == 2 && plan.pulseSlowdown == 1)
+      plan.activeRate == 30 && plan.idleRate == 20 && plan.scale == 2 && plan.pulseSlowdown == 1)
+  }
+
+  @Test func noTierPutsALampOutOrNarrowsTheColourRange() {
+    for tier in RoomQualityTier.allCases {
+      let plan = tier.plan
+      #expect(!plan.widestLightOnly, "\(tier)")
+      #expect(plan.hdr, "\(tier)")
+    }
+  }
+
+  @Test func ambientLightMakesUpForTheGlowPassBeingOff() {
+    for tier in RoomQualityTier.allCases {
+      let plan = tier.plan
+      #expect(plan.bloom || plan.ambientLift > 0, "\(tier)")
+      #expect(plan.ambientLift >= 0 && plan.ambientLift <= 0.3)
+    }
+    #expect(RoomQualityTier.full.plan.ambientLift == 0)
   }
 
   @Test func eachTierDrawsNoMoreThanTheOneBefore() {
@@ -186,6 +203,7 @@ typealias Heat = RoomConditions.Heat
       #expect(b.scale <= a.scale)
       #expect(!(b.hdr && !a.hdr) && !(b.bloom && !a.bloom) && !(b.sunShadow && !a.sunShadow))
       #expect(!(a.widestLightOnly && !b.widestLightOnly))
+      #expect(b.ambientLift >= a.ambientLift)
       #expect(b.pulseSlowdown >= a.pulseSlowdown)
       #expect(b.splatRate == 0 || a.splatRate == 0 || b.splatRate <= a.splatRate)
     }

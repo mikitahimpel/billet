@@ -43,7 +43,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     @ObservationIgnored private let usesStandIn: Bool
     @ObservationIgnored private let ownLoop: Bool
-    /// The renderer and frame loop the room draws with when Labs asks for them, kept for the app's life: the room's
+    /// The renderer and frame loop the room draws with, kept for the app's life: the room's
     /// entities live in it, and a renderer freed and made again would draw them blank.
     @ObservationIgnored private(set) lazy var loop: RoomRenderLoop? = ownLoop ? RoomRenderLoop() : nil
     @ObservationIgnored private lazy var standIn = CatRoom()
@@ -56,6 +56,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     /// What Labs switches off, and what the quality tier does; the scene holds back both.
     @ObservationIgnored var labsSwitches = RoomPerfSwitches()
     @ObservationIgnored private var governed = RoomRendering()
+    @ObservationIgnored private var lampChoice: Bool?
+    @ObservationIgnored private var lampsFade = true
     /// Where the player's finger is and was, and when a game began, for the quality governor's idea of a quiet room.
     @ObservationIgnored private var fingerDown = false
     @ObservationIgnored private var lastTouch = ProcessInfo.processInfo.systemUptime
@@ -80,11 +82,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife,
          defaults: UserDefaults = .standard) {
         self.usesStandIn = usesStandIn
-        #if DEBUG || LABS_YES
+        // On unless Labs puts the room back on a `RealityView`, which draws every frame the screen offers.
         ownLoop = PerfLabMachine.State.saved(in: defaults).isOn(.ownLoop)
-        #else
-        ownLoop = false
-        #endif
         self.catLife = catLife
         self.defaults = defaults
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
@@ -135,6 +134,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
         if !motes { Self.show(motes: false, in: room) }
         room.swaying = sway
         room.pulseSlowdown = Float(governed.pulseSlowdown)
+        room.ambientLift = Float(governed.ambientLift)
+        if let city = room as? CityRoomScene { city.lampChoice = lampChoice; city.lampsFade = lampsFade }
         perf.lights(in: room)
     }
 
@@ -142,8 +143,19 @@ final class RoomController: RoomControlling, CatStatusProviding {
     /// lights and the bloom.
     func setRendering(_ rendering: RoomRendering) {
         governed = rendering
-        for room in [home, city, board].compactMap({ $0 }) { room.pulseSlowdown = Float(rendering.pulseSlowdown) }
+        for room in [home, city, board].compactMap({ $0 }) {
+            room.pulseSlowdown = Float(rendering.pulseSlowdown)
+            room.ambientLift = Float(rendering.ambientLift)
+        }
         applySwitches()
+    }
+
+    /// The player's choice for the Bedroom's lamps, and whether they ease to it.
+    func setLights(_ choice: Bool?, fades: Bool) {
+        lampChoice = choice
+        lampsFade = fades
+        city?.lampChoice = choice
+        city?.lampsFade = fades
     }
 
     func applySwitches() {

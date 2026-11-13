@@ -3,7 +3,7 @@ import Observation
 import Transport
 import Wire
 
-/// The Profile's Account card: whether this account is linked to an Apple ID, and linking it.
+/// The Settings' Account card: whether this account is linked to an Apple ID, and linking it.
 /// `request` counts the backend calls so a late answer changes nothing.
 public nonisolated enum AppleLinkMachine: Machine {
   public enum State: Equatable, Sendable {

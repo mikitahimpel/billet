@@ -152,8 +152,8 @@ public struct GaugeTile: View {
   let perform: (() -> Void)?
   @Environment(\.dynamicTypeSize) private var dynamicTypeSize
   @Environment(\.colorScheme) private var colorScheme
-  @ScaledMetric(relativeTo: .title3) private var side: CGFloat = 56
-  @ScaledMetric(relativeTo: .title3) private var line: CGFloat = 7
+  @ScaledMetric(relativeTo: .title3) private var side: CGFloat = 46
+  @ScaledMetric(relativeTo: .title3) private var line: CGFloat = 6
 
   /// - Parameters:
   ///   - spoken: Read by VoiceOver after the state, in place of `hint`.
@@ -211,7 +211,7 @@ public struct GaugeTile: View {
 
   /// At accessibility sizes the ring sits beside the words and the tile takes the full width.
   private var tile: some View {
-    VStack(alignment: .leading, spacing: Space.m) {
+    VStack(alignment: .leading, spacing: Space.s) {
       if dynamicTypeSize.isAccessibilitySize {
         ring
         words

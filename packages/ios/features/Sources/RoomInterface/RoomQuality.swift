@@ -38,8 +38,11 @@ public struct RoomQualityPlan: Equatable, Sendable {
   public var bloom: Bool
   /// The sun's shadow map.
   public var sunShadow: Bool
-  /// Only the widest point light of each room stays on.
+  /// Only the widest point light of each room stays on. No tier asks for it: a room's lamps are what it is lit by, and
+  /// at night the widest light is only the sky's. Labs can still switch it.
   public var widestLightOnly: Bool
+  /// Stops of ambient light added to make up for the glow pass being off.
+  public var ambientLift: Double
   /// How many times longer the flame, candle and bulbs wait between steps.
   public var pulseSlowdown: Double
 
@@ -47,7 +50,7 @@ public struct RoomQualityPlan: Equatable, Sendable {
     motes: Bool, antialiasing: Bool, sway: Bool, splatRate: Int, splatDetail: SplatDetail,
     still: Bool, activeRate: Int = 60, idleRate: Int = 30, scale: Double = 2, hdr: Bool = true,
     bloom: Bool = true, sunShadow: Bool = true, widestLightOnly: Bool = false,
-    pulseSlowdown: Double = 1
+    ambientLift: Double = 0, pulseSlowdown: Double = 1
   ) {
     self.motes = motes
     self.antialiasing = antialiasing
@@ -62,6 +65,7 @@ public struct RoomQualityPlan: Equatable, Sendable {
     self.bloom = bloom
     self.sunShadow = sunShadow
     self.widestLightOnly = widestLightOnly
+    self.ambientLift = ambientLift
     self.pulseSlowdown = pulseSlowdown
   }
 }
@@ -71,7 +75,8 @@ extension RoomQualityTier {
     switch self {
     case .full:
       RoomQualityPlan(
-        motes: true, antialiasing: true, sway: true, splatRate: 0, splatDetail: .full, still: false)
+        motes: true, antialiasing: true, sway: true, splatRate: 0, splatDetail: .full, still: false,
+        activeRate: 30, idleRate: 20)
     case .fair:
       RoomQualityPlan(
         motes: false, antialiasing: false, sway: true, splatRate: 30, splatDetail: .balanced,
@@ -79,13 +84,13 @@ extension RoomQualityTier {
     case .serious:
       RoomQualityPlan(
         motes: false, antialiasing: false, sway: false, splatRate: 20, splatDetail: .light,
-        still: false, activeRate: 30, idleRate: 20, scale: 1.25, hdr: false, bloom: false,
-        sunShadow: false, widestLightOnly: true, pulseSlowdown: 3)
+        still: false, activeRate: 30, idleRate: 20, scale: 1.25, bloom: false, sunShadow: false,
+        ambientLift: 0.15, pulseSlowdown: 3)
     case .critical:
       RoomQualityPlan(
         motes: false, antialiasing: false, sway: false, splatRate: 15, splatDetail: .light,
-        still: true, activeRate: 20, idleRate: 15, scale: 1, hdr: false, bloom: false,
-        sunShadow: false, widestLightOnly: true, pulseSlowdown: 3)
+        still: true, activeRate: 20, idleRate: 15, scale: 1, bloom: false, sunShadow: false,
+        ambientLift: 0.15, pulseSlowdown: 3)
     }
   }
 
