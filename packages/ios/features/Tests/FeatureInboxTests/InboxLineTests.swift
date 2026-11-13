@@ -19,6 +19,15 @@ private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner) -> 
 @Suite struct InboxLineTests {
   @Test func linesNameWhoDidIt() {
     #expect(InboxLine(item(.catFed(grams: 40)), names: names).text == "Anya fed Mochi 40 g")
+    #expect(
+      InboxLine(item(.giftClaimed(coins: 2)), names: names).text
+        == "Anya opened the daily gift: 2 coins")
+    #expect(
+      InboxLine(item(.giftClaimed(coins: 1)), names: names).text
+        == "Anya opened the daily gift: 1 coin")
+    #expect(
+      InboxLine(item(.giftClaimed(coins: 0)), names: names).text
+        == "Anya opened the daily gift: a piece")
     #expect(InboxLine(item(.catFed(grams: 40), .me), names: names).text == "You fed Mochi 40 g")
     #expect(InboxLine(item(.catSlept, .cat), names: names).text == "Mochi had a nap")
     #expect(
