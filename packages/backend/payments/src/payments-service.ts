@@ -150,7 +150,7 @@ export class PaymentsService extends Context.Service<
             stored.value.status === "credited");
         const balance = ours
           ? (yield* wallet.enter(pairId, {
-              kind: "buy",
+              kind: "purchase",
               id: decodeEntryId(entryIds.purchase(id)),
               ref: purchase.productId,
               coins: purchase.coins,
@@ -178,7 +178,7 @@ export class PaymentsService extends Context.Service<
                 reverses: n === 0 ? entryIds.purchase(id) : entryIds.restore(id, n),
               }
             : {
-                kind: "buy" as const,
+                kind: "purchase" as const,
                 id: entryIds.restore(id, n),
                 reverses: entryIds.refund(id, n),
               };
@@ -273,7 +273,12 @@ export class PaymentsService extends Context.Service<
           return yield* new PaymentsNotFound();
         }
         const inWallet = yield* reverseInWallet(stored.value, "refund");
-        const reversal = yield* repository.refund(stored.value, at);
+        const reversal = yield* repository.refund(
+          stored.value,
+          at,
+          undefined,
+          inWallet !== undefined && inWallet.balance < 0,
+        );
         const pairId = pairOf(owner);
         const balance =
           inWallet?.balance ??
@@ -349,14 +354,15 @@ export class PaymentsService extends Context.Service<
           return yield* repository.recordNotification(record("unknown-transaction", otid));
         }
         // A pair that has ended has no wallet left to change; the ledger still records the step.
-        yield* reverseInWallet(stored.value, reverses ? "refund" : "restore").pipe(
-          Effect.catchTag("PaymentsNotFound", () => Effect.void),
+        const inWallet = yield* reverseInWallet(stored.value, reverses ? "refund" : "restore").pipe(
+          Effect.catchTag("PaymentsNotFound", () => Effect.succeed(undefined)),
         );
         if (reverses) {
           const { duplicate } = yield* repository.refund(
             stored.value,
             receivedAt,
             record(stored.value.status === "credited" ? "refunded" : "duplicate", otid),
+            inWallet !== undefined && inWallet.balance < 0,
           );
           if (!duplicate) yield* Effect.logInfo("purchase refunded");
           return;

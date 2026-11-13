@@ -7,7 +7,8 @@ import { InkId } from "@billet/contracts-domain/inks";
 /** Prices above this are refused with `PriceChanged`, lower ones charged. Absent: any price. */
 export const ExpectedPrice = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
 
-const Balance = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
+/** Signed: below 0 after a refund of coins already spent, until earning pays it down. */
+const Balance = Schema.Int;
 
 /** `GET /v1/coins?after=<entry id>&limit=<1-100>`: entries after `after`, oldest first. */
 export const CoinsResponse = Schema.Struct({

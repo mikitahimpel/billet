@@ -125,7 +125,7 @@
                 CoinPrice(price: quote.price, was: quote.sum)
               } else {
                 Image(systemName: "plus.circle.fill")
-                Text("Need \(quote.price - state.shop.coins) more coins").monospacedDigit()
+                Text("Need \(state.shop.shortBy(quote.price)) more coins").monospacedDigit()
               }
             }
             .lineLimit(1)

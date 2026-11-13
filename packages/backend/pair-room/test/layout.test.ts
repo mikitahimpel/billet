@@ -1,6 +1,12 @@
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import type { LayoutChange } from "@billet/contracts-domain/decor";
+import {
+  canPutAway,
+  effectiveLayout,
+  homeRoomOf,
+  roomOf,
+  type LayoutChange,
+} from "@billet/contracts-domain/decor";
 import { Placement, RoomItemId } from "@billet/contracts-domain/shop";
 import { decide } from "../src/decide.ts";
 import { shopOf } from "../src/shop-view.ts";
@@ -32,7 +38,8 @@ const place = (n: number, placement: Placement, by = alice) =>
 
 const accepted = (room: ActiveRoom, command: RoomCommand): RoomDecision & { _tag: "Accepted" } => {
   const decision = decide(room, command);
-  if (decision._tag !== "Accepted") throw new Error(`rejected: ${decision.rejection._tag}`);
+  if (decision._tag !== "Accepted")
+    throw new Error(`rejected: ${JSON.stringify(decision.rejection)}`);
   return decision;
 };
 
@@ -173,5 +180,74 @@ describe("the room's own furniture", () => {
     expect(bedGone.stowed).toEqual(["base-donutbed"]);
     expect(reason(bedGone, away(4, "armchair"))).toBe("last-rest");
     expect(accepted(bedGone, away(5, "base-plant")).state.stowed).toHaveLength(2);
+  });
+});
+
+describe("arranging the bedroom", () => {
+  const bedroom = (item: string, u: number, v = 0): Placement => ({
+    ...spot(item, u, v),
+    room: "bedroom",
+  });
+  const away = (n: number, item: string) => change(n, { _tag: "Unplace", item: piece(item) });
+
+  it("keeps the two rooms apart: a spot taken in one is free in the other", () => {
+    const one = accepted(owning, place(1, spot("armchair", -2, 6))).state;
+    const both = accepted(one, place(2, bedroom("yarn", -5, 4))).state;
+    expect(both.layout).toEqual([spot("armchair", -2, 6), bedroom("yarn", -5, 4)]);
+    expect(reason(both, place(3, spot("yarn", -2, 6)))).toBe("occupied");
+    expect(reason(both, place(4, spot("yarn", -4, -4)))).toBeUndefined();
+    expect(reason(both, place(5, bedroom("armchair", -2, 6)))).toBe("occupied");
+  });
+
+  it("moves a piece from one room to the other by placing it again", () => {
+    const one = accepted(owning, place(1, spot("yarn", -4, -4))).state;
+    const moved = accepted(one, place(2, bedroom("yarn", -5, 5))).state;
+    expect(moved.layout).toEqual([bedroom("yarn", -5, 5)]);
+  });
+
+  it("never names the living room, so a layout in it reads as before", () => {
+    const named = { ...spot("armchair", -2, 6), room: "living" as const };
+    expect(accepted(owning, place(1, named)).state.layout).toEqual([spot("armchair", -2, 6)]);
+  });
+
+  it("knows the room a piece belongs to and refuses an unknown room", () => {
+    expect(() =>
+      Schema.decodeUnknownSync(Placement)({ ...spot("armchair", 0, 0), room: "attic" }),
+    ).toThrow();
+    expect(homeRoomOf("base-bedroom-bed")).toBe("bedroom");
+    expect(homeRoomOf("base-plant")).toBe("living");
+    expect(homeRoomOf("armchair")).toBeUndefined();
+    expect(roomOf(spot("armchair", 0, 0))).toBe("living");
+    expect(roomOf(bedroom("armchair", 0, 0))).toBe("bedroom");
+  });
+
+  it("keeps a bed or sofa in each room", () => {
+    const layout = [spot("armchair", -4, 0), bedroom("donutbed", 4, 0)];
+    expect(canPutAway(layout, "donutbed")).toBe(false);
+    expect(canPutAway([...layout, bedroom("armchair-round", 0, 5)], "donutbed")).toBe(true);
+  });
+
+  it("stands the bedroom's own furniture at home in the bedroom, not the living room", () => {
+    const standing = effectiveLayout([], []);
+    expect(standing.find((placed) => placed.item === "base-bedroom-bed")).toMatchObject({
+      u: 1,
+      v: -3,
+      room: "bedroom",
+    });
+    expect(standing.find((placed) => placed.item === "base-plant")?.room).toBeUndefined();
+    expect(standing.filter((placed) => roomOf(placed) === "bedroom")).toHaveLength(9);
+  });
+
+  it("moves the bed in the bedroom and refuses it in the living room", () => {
+    const moved = accepted(owning, place(1, bedroom("base-bedroom-bed", 2, -3))).state;
+    expect(moved.layout).toEqual([bedroom("base-bedroom-bed", 2, -3)]);
+    expect(reason(owning, place(2, spot("base-bedroom-bed", 1, -3)))).toBe("wrong-room");
+  });
+
+  it("refuses a piece on the bed and keeps a bed in the bedroom", () => {
+    expect(reason(owning, place(1, bedroom("base-bedroom-nightstand", 1, -3)))).toBe("occupied");
+    const one = accepted(owning, away(1, "base-bedroom-catbed")).state;
+    expect(reason(one, away(2, "base-bedroom-bed"))).toBe("last-rest");
+    expect(reason(one, away(3, "base-donutbed"))).toBe("last-rest");
   });
 });

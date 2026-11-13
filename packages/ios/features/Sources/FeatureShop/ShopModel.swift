@@ -127,6 +127,12 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
   public var isSynced: Bool { open != nil }
   /// Offline, the wallet file's last mirror of the room.
   public var coins: Int { open?.coins ?? max(0, wallet.wallet.coins) }
+  /// Signed: below 0 after an App Store refund took back coins already spent.
+  public var balance: Int { open?.balance ?? wallet.wallet.coins }
+  /// What earning must cover before anything can be bought again; 0 unless a refund left the pair short.
+  public var debt: Int { max(0, -balance) }
+  /// Coins still missing for `price`, counting a debt.
+  public func shortBy(_ price: Int) -> Int { max(0, price - balance) }
   public var owned: Set<String> { open?.owned ?? wallet.wallet.owned }
   var wishlist: Set<String> { open?.wishlist ?? wallet.wallet.wishlist }
   var gifted: Set<String> { wallet.wallet.gifted.union(open?.giftedPending ?? []) }

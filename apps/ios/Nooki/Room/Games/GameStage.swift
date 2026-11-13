@@ -54,6 +54,8 @@ protocol GameStage: AnyObject {
     func update(_ dt: Float)
     /// The overlay's button (Feed, Serve), if the game has one now.
     var action: String? { get }
+    /// A second, quieter button beside it (Clean up) for a touch action done without the finger, if there is one now.
+    var assist: String? { get }
     /// What to show the player now, or nil when the game needs no gesture.
     var cue: GameCue? { get }
     /// Where she glances from her head, in points on screen, instead of at the player; nil for the usual gaze.
@@ -63,12 +65,15 @@ protocol GameStage: AnyObject {
     /// Where she sits for this game, in the pivot's space, so she can be put back if she is ever off screen.
     var seat: SIMD3<Float>? { get }
     func act()
+    func assistAct()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
 }
 
 extension GameStage {
     var action: String? { nil }
+    var assist: String? { nil }
+    func assistAct() {}
     var cue: GameCue? { nil }
     var glance: CGSize? { nil }
     var push: Float { 0 }
@@ -164,7 +169,7 @@ struct GameSpots {
         } else {
             floor = 0.023
             center = [0.3, floor, 0.12]
-            area = FloorArea(x: 0.18...0.47, z: -0.08...0.3)
+            area = FloorArea(x: 0.05...0.55, z: -0.2...0.36)
             length = 0.22
         }
     }
@@ -206,13 +211,13 @@ extension Entity {
     }()
 
     /// A soft contact shadow on the floor under a prop: a baked blob, no light and no shadow map.
-    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float) {
+    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float, lift: Float = 0.0015) {
         guard let texture = Self.blobTexture else { return }
         var material = UnlitMaterial(applyPostProcessToneMap: false)
         material.color = .init(tint: .white, texture: .init(texture))
         material.blending = .transparent(opacity: .init(floatLiteral: 1))
         let blob = ModelEntity(mesh: .generatePlane(width: width, depth: depth), materials: [material])
-        blob.position = position + [0, 0.0015, 0]
+        blob.position = position + [0, lift, 0]
         addChild(blob)
     }
 }

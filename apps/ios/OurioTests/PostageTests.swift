@@ -2,6 +2,7 @@ import CoreGraphics
 import Design
 import Foundation
 import MomentsInterface
+import ServerSync
 import WidgetInterface
 import WidgetUI
 import Persistence
@@ -73,7 +74,7 @@ import Wire
                 note: .text(id: NoteId(key.rawValue), author: UserId("me"), sentAt: 0, text: text, paper: paper,
                             stamp: stamp, seal: seal, ink: ink))
         }
-        let sync = TextNoteSync(api: api, accounts: Self.accounts, notes: notes, partner: "L")
+        let sync = TextNoteSync(api: api, accounts: Self.accounts, notes: notes, partner: "L", defaults: .standard)
         #expect(await sync.sendUnsent() == false)
 
         let ours = sent.withLock { $0 }.first {

@@ -156,6 +156,7 @@ export const RoomRejection = Schema.TaggedUnion({
       "not-owned",
       "unknown-piece",
       "wrong-surface",
+      "wrong-room",
       "outside-room",
       "occupied",
       "last-rest",

@@ -348,12 +348,13 @@ const roomFrom = (
           inks,
           items,
           wishlist,
-          layout: layout.map(({ itemId, surface, u, v, quarterTurns }) => ({
+          layout: layout.map(({ itemId, surface, u, v, quarterTurns, room }) => ({
             item: itemId,
             surface,
             u,
             v,
             quarterTurns,
+            ...(room === "living" ? {} : { room }),
           })),
           layoutLog: layoutIds,
           stowed,
@@ -495,6 +496,7 @@ export const SqliteRoomStore = Layer.effect(
                   u: spot.u,
                   v: spot.v,
                   quarterTurns: spot.quarterTurns,
+                  room: spot.room ?? "living",
                   position,
                 });
               }

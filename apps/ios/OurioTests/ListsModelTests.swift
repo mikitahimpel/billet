@@ -1,5 +1,6 @@
 import Foundation
 import MomentsInterface
+import ServerSync
 import WidgetInterface
 import WidgetUI
 import Persistence

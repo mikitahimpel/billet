@@ -23,7 +23,8 @@ public enum DecorSyncPlan {
   public static func wire(_ placement: Placement) -> RoomPlacement {
     RoomPlacement(
       item: RoomItemId(placement.item), surface: placement.surface.rawValue, u: placement.u,
-      v: placement.v, quarterTurns: placement.wireTurns)
+      v: placement.v, quarterTurns: placement.wireTurns,
+      room: placement.space == .living ? nil : placement.space.rawValue)
   }
 
   /// Nil for a placement this build does not know, such as a surface a newer app added.
@@ -31,9 +32,14 @@ public enum DecorSyncPlan {
     guard let surface = Placement.Surface(rawValue: wire.surface),
       DecorItem.item(shopID: wire.item.rawValue) != nil
     else { return nil }
+    var space = DecorSpace.living
+    if let room = wire.room {
+      guard let known = DecorSpace(rawValue: room) else { return nil }
+      space = known
+    }
     return Placement(
       item: wire.item.rawValue, surface: surface, u: wire.u, v: wire.v,
-      wireTurns: wire.quarterTurns)
+      wireTurns: wire.quarterTurns, space: space)
   }
 
   /// The room's own furniture the server says is put away.

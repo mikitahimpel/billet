@@ -1,3 +1,4 @@
+import ServerSync
 import SwiftUI
 
 /// Sends what the couple made here and the server doesn't have yet: photos, text notes and the cat's events. Each

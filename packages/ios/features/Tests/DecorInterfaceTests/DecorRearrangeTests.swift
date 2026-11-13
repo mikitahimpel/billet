@@ -12,16 +12,16 @@ import Testing
   // MARK: The room's own furniture
 
   @Test func aFreshRoomHasEveryPieceAtHomeAndNoneInTheCloset() {
-    let ids = DecorItem.baseItems.map(\.id)
+    let ids = DecorItem.baseItems(in: .living).map(\.id)
     #expect(ids.count == 10)
     for id in ids { #expect(fresh.isPlaced(id), "\(id)") }
     #expect(fresh.placements.isEmpty)
     #expect(fresh.closet(owned: []).isEmpty)
-    #expect(fresh.allPlacements.count == ids.count)
+    #expect(fresh.allPlacements(in: .home).count == ids.count)
   }
 
   @Test func theBaseIdsAreTheServersSlugs() {
-    for item in DecorItem.baseItems {
+    for item in DecorItem.baseItems(in: .living) {
       #expect(item.id.hasPrefix("base-") && !item.id.contains("."), "\(item.id)")
       #expect(item.width > 0 && item.depth > 0 && item.height > 0)
       #expect(item.mount == .floor)
@@ -107,7 +107,7 @@ import Testing
     let settled = DecorLayout(stored: []).settled(owned: owned)
     let shop = settled.placements.filter { DecorItem.item(shopID: $0.item)?.isBase == false }
     #expect(shop.count <= DecorLayout.maxPlaced)
-    #expect(DecorItem.baseItems.allSatisfy { settled.isPlaced($0.id) })
+    #expect(DecorItem.baseItems(in: .living).allSatisfy { settled.isPlaced($0.id) })
   }
 
   @Test func aServersWordReplacesTheStowedFurnitureAndNilLeavesIt() {
@@ -219,7 +219,7 @@ import Testing
       let layout = fresh.putting(at("armchair", -2, 6))
       switch layout.dropping(at("base-plant", u, v)) {
       case .fits(let next), .swapped(let next, _), .nudged(let next, _, _):
-        for piece in next.allPlacements {
+        for piece in next.allPlacements(in: .home) {
           #expect(next.accepts(piece), Comment(rawValue: "\(piece.item) after \(u),\(v)"))
         }
       case .rejected:

@@ -19,17 +19,27 @@ public struct Placement: Codable, Equatable, Hashable, Sendable {
   public var v: Int
   /// Turns of 45 degrees, 0 to 7. A wall piece faces out of its wall and has none.
   public var eighthTurns: Int
+  /// The room it stands in.
+  public var space: DecorSpace
 
-  public init(item: String, surface: Surface, u: Int, v: Int = 0, eighthTurns: Int) {
+  public init(
+    item: String, surface: Surface, u: Int, v: Int = 0, eighthTurns: Int,
+    space: DecorSpace = .living
+  ) {
     self.item = item
     self.surface = surface
     self.u = u
     self.v = v
     self.eighthTurns = ((eighthTurns % 8) + 8) % 8
+    self.space = space
   }
 
-  public init(item: String, surface: Surface, u: Int, v: Int = 0, quarterTurns: Int = 0) {
-    self.init(item: item, surface: surface, u: u, v: v, eighthTurns: quarterTurns * 2)
+  public init(
+    item: String, surface: Surface, u: Int, v: Int = 0, quarterTurns: Int = 0,
+    space: DecorSpace = .living
+  ) {
+    self.init(
+      item: item, surface: surface, u: u, v: v, eighthTurns: quarterTurns * 2, space: space)
   }
 
   /// Whole quarter turns, the 45 degrees of a half step left out.
@@ -45,10 +55,12 @@ public struct Placement: Codable, Equatable, Hashable, Sendable {
   /// so a layout kept before fine turns reads the same.
   public var wireTurns: Int { eighthTurns / 2 + (isDiagonal ? 4 : 0) }
 
-  public init(item: String, surface: Surface, u: Int, v: Int = 0, wireTurns: Int) {
+  public init(
+    item: String, surface: Surface, u: Int, v: Int = 0, wireTurns: Int, space: DecorSpace = .living
+  ) {
     self.init(
       item: item, surface: surface, u: u, v: v,
-      eighthTurns: (wireTurns % 4) * 2 + (wireTurns >= 4 ? 1 : 0))
+      eighthTurns: (wireTurns % 4) * 2 + (wireTurns >= 4 ? 1 : 0), space: space)
   }
 
   /// The same piece a quarter turn on, or itself on a wall.
@@ -61,7 +73,7 @@ public struct Placement: Codable, Equatable, Hashable, Sendable {
     return next
   }
 
-  private enum CodingKeys: String, CodingKey { case item, surface, u, v, quarterTurns }
+  private enum CodingKeys: String, CodingKey { case item, surface, u, v, quarterTurns, room }
 
   public init(from decoder: any Decoder) throws {
     let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -69,7 +81,8 @@ public struct Placement: Codable, Equatable, Hashable, Sendable {
       item: try values.decode(String.self, forKey: .item),
       surface: try values.decode(Surface.self, forKey: .surface),
       u: try values.decode(Int.self, forKey: .u), v: try values.decode(Int.self, forKey: .v),
-      wireTurns: try values.decode(Int.self, forKey: .quarterTurns))
+      wireTurns: try values.decode(Int.self, forKey: .quarterTurns),
+      space: try values.decodeIfPresent(DecorSpace.self, forKey: .room) ?? .living)
   }
 
   public func encode(to encoder: any Encoder) throws {
@@ -79,6 +92,7 @@ public struct Placement: Codable, Equatable, Hashable, Sendable {
     try values.encode(u, forKey: .u)
     try values.encode(v, forKey: .v)
     try values.encode(wireTurns, forKey: .quarterTurns)
+    if space != .living { try values.encode(space, forKey: .room) }
   }
 
   public func moved(to surface: Surface, u: Int, v: Int) -> Placement {
@@ -141,12 +155,17 @@ public struct DecorLayout: Codable, Equatable, Sendable {
       guard let base = item.base, !stored.contains(item.id),
         !placements.contains(where: { $0.item == item.id })
       else { return nil }
-      return Placement(item: item.id, surface: .floor, u: base.u, v: base.v)
+      return Placement(item: item.id, surface: .floor, u: base.u, v: base.v, space: base.space)
     }
   }
 
-  /// Every piece in the room.
+  /// Every piece in every room.
   public var allPlacements: [Placement] { standing + placements }
+
+  /// The pieces standing in `room`.
+  public func allPlacements(in room: DecorRoom) -> [Placement] {
+    allPlacements.filter { $0.space == room.space }
+  }
 
   public func placement(of item: String) -> Placement? {
     allPlacements.first { $0.item == item }
@@ -175,6 +194,7 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   /// stands on it share their floor.
   public func verdict(_ placement: Placement, in room: DecorRoom = .home) -> Verdict {
     guard let item = DecorItem.item(shopID: placement.item),
+      placement.space == room.space, item.base.map({ $0.space == room.space }) ?? true,
       (item.mount == .wall) == (placement.surface != .floor),
       let span = Self.span(of: placement, item: item)
     else { return .wrongSurface }
@@ -190,7 +210,7 @@ public struct DecorLayout: Codable, Equatable, Sendable {
         return .occupied
       }
     }
-    for other in allPlacements
+    for other in allPlacements(in: room)
     where other.item != placement.item && other.surface == placement.surface {
       guard let otherItem = DecorItem.item(shopID: other.item),
         let otherSpan = Self.span(of: other, item: otherItem)
@@ -212,7 +232,7 @@ public struct DecorLayout: Codable, Equatable, Sendable {
 
   /// The floor she cannot walk through with this layout.
   public func occupancy(in room: DecorRoom = .home) -> Occupancy {
-    let solid = allPlacements.compactMap { placement -> Span? in
+    let solid = allPlacements(in: room).compactMap { placement -> Span? in
       guard placement.surface == .floor, let item = DecorItem.item(shopID: placement.item),
         !item.isFlat
       else { return nil }
@@ -264,7 +284,7 @@ public struct DecorLayout: Codable, Equatable, Sendable {
 
   /// The bed or sofa she rests on: the room's own bed while it stands, else the first other by name.
   public func catHome(in room: DecorRoom = .home) -> CatHome? {
-    let rests = allPlacements.filter { DecorItem.item(shopID: $0.item)?.isRest == true }
+    let rests = allPlacements(in: room).filter { DecorItem.item(shopID: $0.item)?.isRest == true }
       .sorted { $0.item < $1.item }
     guard
       let placement = rests.first(where: { $0.item == room.spawnFollow.piece }) ?? rests.first,
@@ -278,7 +298,7 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   }
 
   private func restSpawn(in room: DecorRoom) -> Occupancy.Point? {
-    let rests = allPlacements.filter { DecorItem.item(shopID: $0.item)?.isRest == true }
+    let rests = allPlacements(in: room).filter { DecorItem.item(shopID: $0.item)?.isRest == true }
       .sorted { $0.item < $1.item }
     guard let placement = rests.first, let item = DecorItem.item(shopID: placement.item),
       let span = Self.span(of: placement, item: item)
@@ -376,22 +396,24 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   public func defaultPlacement(for itemID: String, in room: DecorRoom = .home) -> Placement? {
     guard let item = DecorItem.item(shopID: itemID) else { return nil }
     if let base = item.base {
-      let home = Placement(item: itemID, surface: .floor, u: base.u, v: base.v)
+      let home = Placement(item: itemID, surface: .floor, u: base.u, v: base.v, space: room.space)
       return accepts(home, in: room) ? home : nearestFit(to: home, in: room)
     }
     let candidates: [Placement]
     switch item.mount {
     case .floor:
       let preferred = room.floorSpots.map {
-        Placement(item: itemID, surface: .floor, u: $0.u, v: $0.v)
+        Placement(item: itemID, surface: .floor, u: $0.u, v: $0.v, space: room.space)
       }
       let sweep = (-9...9).flatMap { v in
-        (-9...9).map { u in Placement(item: itemID, surface: .floor, u: u, v: v) }
+        (-9...9).map { u in
+          Placement(item: itemID, surface: .floor, u: u, v: v, space: room.space)
+        }
       }
       candidates = preferred + sweep
     case .wall:
       candidates = [Placement.Surface.backWall, .leftWall].flatMap { surface in
-        (-9...9).map { Placement(item: itemID, surface: surface, u: $0) }
+        (-9...9).map { Placement(item: itemID, surface: surface, u: $0, space: room.space) }
       }
     }
     return candidates.first { accepts($0, in: room) }
@@ -400,7 +422,9 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   /// Puts every owned piece the layout has never met into the room, where it fits, else in the closet.
   public func settled(owned: Set<String>, in room: DecorRoom = .home) -> DecorLayout {
     var next = self
-    for item in DecorItem.placeable(among: owned)
+    // A new piece goes into the living room; the bedroom's closet is filled by hand.
+    guard room.space == .living else { return self }
+    for item in DecorItem.placeable(among: owned, in: room.space)
     where !item.isBase && !next.isPlaced(item.id) && !next.stored.contains(item.id) {
       if next.placements.filter({ !(DecorItem.item(shopID: $0.item)?.isBase ?? false) }).count
         < Self.maxPlaced,
@@ -446,8 +470,9 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   /// Whether `item` can be put away: a room keeps at least one bed or sofa for her.
   public func canStore(_ item: String) -> Bool {
     guard DecorItem.item(shopID: item)?.isRest == true else { return true }
+    let space = placement(of: item)?.space ?? DecorItem.item(shopID: item)?.base?.space ?? .living
     return allPlacements.contains {
-      $0.item != item && DecorItem.item(shopID: $0.item)?.isRest == true
+      $0.item != item && $0.space == space && DecorItem.item(shopID: $0.item)?.isRest == true
     }
   }
 
@@ -459,12 +484,14 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   }
 
   /// Owned pieces not standing in the room, the ones put away first, then the shop's order.
-  public func closet(owned: Set<String>) -> [DecorItem] {
-    let waiting = DecorItem.placeable(among: owned).filter { !isPlaced($0.id) }
+  public func closet(owned: Set<String>, in room: DecorRoom = .home) -> [DecorItem] {
+    let waiting = DecorItem.placeable(among: owned, in: room.space).filter { !isPlaced($0.id) }
     return waiting.filter { stored.contains($0.id) } + waiting.filter { !stored.contains($0.id) }
   }
 
-  public func closetCount(owned: Set<String>) -> Int { closet(owned: owned).count }
+  public func closetCount(owned: Set<String>, in room: DecorRoom = .home) -> Int {
+    closet(owned: owned, in: room).count
+  }
 
   /// Owned pieces standing in the room.
   public func placedCount(owned: Set<String>) -> Int {

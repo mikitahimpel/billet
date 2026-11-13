@@ -5,6 +5,7 @@ import Observation
 import Pet
 import RealityKit
 import RoomInterface
+import ServerSync
 import SwiftUI
 import WidgetInterface
 import WidgetKit
@@ -89,6 +90,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
         home = room
         room.pivot.addChild(decorStage.root)
         decorStage.onBaseReady = { [weak room] in room?.baseFurnished = true }
+        room.flatSurfaces = { [decorStage] in decorStage.flatSurfaces() }
         wire(room)
         showDecor(decor)
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }

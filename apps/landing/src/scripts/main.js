@@ -53,6 +53,8 @@
         // Periods that share no beat, so the string never pulses together.
         bulb.style.setProperty("--d", `${(2.6 + Math.random() * 4.8).toFixed(2)}s`);
         bulb.style.setProperty("--delay", `${(Math.random() * 3).toFixed(2)}s`);
+        // Order along the string, left to right, for the lights-on run.
+        bulb.style.setProperty("--k", String(layer.children.length));
         layer.append(bulb);
       }
     }
@@ -73,30 +75,40 @@
 
   /* ---------- the animated Mochi, swapped in only once she has decoded ---------- */
 
-  // The lamp comes on a beat after the room has decoded; the title keeps its own schedule.
+  // The lights-on (style.css, "The lights coming on"): a short dark beat after the unlit room
+  // decodes, capped so a slow network never holds the title back for long.
   run("lights", () => {
-    const room = document.getElementById("story-room");
-    if (!room) return;
-    const on = () => room.classList.add("lit");
-    if (still) return on();
-    const img = room.querySelector(".room-pic.clean img");
-    const later = () => setTimeout(on, 600);
-    if (img?.decode) img.decode().then(later, later);
-    else later();
+    const story = document.getElementById("story");
+    const img = story?.querySelector(".room-pic.none img");
+    if (!story) return;
+    if (still) return story.classList.add("lamp-on", "lamp-settled");
+    let started = false;
+    const on = () => {
+      if (started) return;
+      started = true;
+      story.classList.add("lamp-on");
+      setTimeout(() => story.classList.add("lamp-settled"), 2000);
+    };
+    const afterDark = () => setTimeout(on, 900);
+    if (img?.decode) img.decode().then(afterDark, afterDark);
+    else afterDark();
+    setTimeout(on, 2000);
   });
 
+  // Mochi is the loop over the cat-less renders; if it can't play, the lit room with her in it
+  // comes back once the lights are on (.no-loop).
   run("mochi loop", () => {
     const room = document.getElementById("story-room");
-    const empty = room.querySelector(".room-pic.empty");
     const loop = room.querySelector(".mochi-loop");
-    if (!empty || !loop) return;
+    if (!loop) return;
     const drop = () => {
       room.classList.remove("has-loop");
-      empty.remove();
+      room.classList.add("no-loop");
       loop.parentElement.remove();
     };
     if (still) return drop();
-    Promise.all([empty.querySelector("img").decode(), loop.decode()])
+    loop
+      .decode()
       .then(() => room.classList.add("has-loop"))
       .catch(drop);
   });

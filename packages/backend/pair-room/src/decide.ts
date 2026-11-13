@@ -17,6 +17,7 @@ import {
   effectiveLayout,
   isBasePiece,
   canPutAway,
+  normalizedPlacement,
   placementProblem,
 } from "@billet/contracts-domain/decor";
 import { freeInk, inkOf, type InkId } from "@billet/contracts-domain/inks";
@@ -663,7 +664,8 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         return rejected(RoomRejection.cases.LayoutRefused.make({ reason: "last-rest" }));
       }
       const explicit = room.layout.filter((placement) => placement.item !== target);
-      const layout = change._tag === "Place" ? [...explicit, change.placement] : explicit;
+      const layout =
+        change._tag === "Place" ? [...explicit, normalizedPlacement(change.placement)] : explicit;
       const stowed = room.stowed.filter((item) => item !== target);
       return accepted(
         {
@@ -779,9 +781,10 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
     }
     case "CreditPurchase": {
       const { id, kind, coins, ref, at } = command;
-      // Apple refunds a pack after its coins may be spent, so a refund takes at most the balance
-      // and its entry records what it took.
-      const amount = kind === "buy" ? coins : -Math.min(coins, room.wallet.balance);
+      // Apple refunds a pack after its coins may be spent: the refund takes all of them back and
+      // the balance goes negative by what was spent. Spending needs a balance of at least the
+      // price, so the debt blocks spending until earning has paid it down.
+      const amount = kind === "purchase" ? coins : -coins;
       const entry = coinEntry(id, kind, amount === 0 ? 0 : amount, ref, at);
       return accepted(withCoins(room, amount), [RoomOutput.cases.CoinsEntered.make({ entry })]);
     }
