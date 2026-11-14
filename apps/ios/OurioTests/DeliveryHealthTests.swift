@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UsInterface
 @testable import Billet
 
 @Suite struct DeliveryHealthTests {
@@ -35,6 +36,22 @@ import Testing
         var withPush = value
         withPush.lastPush = .now
         #expect(withPush.lastPushDetail != "None yet")
+    }
+
+    @Test func the_delivery_rows_are_the_same_three_before_and_after_the_check() {
+        let checking = DeliveryHealth.checking.all
+        let checked = health(allowed: false).lines.all
+        #expect(checking.count == 3)
+        #expect(checking.map(\.title) == checked.map(\.title))
+        #expect(checking.allSatisfy { $0.detail == "Checking…" })
+        #expect(checked.map(\.detail) == [health(allowed: false).pushDetail, "None yet", "None on your Home Screen"])
+    }
+
+    @Test func the_notifications_row_is_calm_when_pushes_work_and_warns_when_they_do_not() {
+        #expect(health().lines.notifications.tint == .sage)
+        #expect(health().lines.notifications.symbol == "bell.badge.fill")
+        #expect(health(allowed: false).lines.notifications.tint == .coral)
+        #expect(health(token: false).lines.notifications.symbol == "bell.slash.fill")
     }
 
     @Test func names_the_partner_only_while_alerts_are_off() {

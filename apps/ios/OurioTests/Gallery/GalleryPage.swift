@@ -71,6 +71,16 @@ enum GalleryPage: String, CaseIterable, Sendable {
             SecondaryButton("Later", fullWidth: false) {}
             PrimaryButton("Answer now", fullWidth: false) {}
         }
+        // The foot of a shop tile in each of its faces; every one is the same height, so a shelf's row stays level.
+        HStack(spacing: Space.m) {
+            TileButton(.price(90, was: 120), name: "Lamp") {}
+            TileButton(.short(missing: 40), name: "Lamp") {}
+        }
+        HStack(spacing: Space.m) {
+            TileButton(.place, name: "Lamp") {}
+            TileButton(.inRoom, name: "Lamp") {}
+            TileButton(.owned, name: "Lamp") {}
+        }
     }
 
     @MainActor @ViewBuilder private static var labelsPage: some View {

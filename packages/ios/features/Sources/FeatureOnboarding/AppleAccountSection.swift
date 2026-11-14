@@ -20,7 +20,8 @@ public struct AppleAccountSection: View {
 
   @ViewBuilder private var content: some View {
     switch model.state {
-    case .idle, .checking:
+    // The steps before the answer share one row, so nothing in the section moves until it is known.
+    case .idle, .checking, .preparing:
       Row("Sign in with Apple", detail: "Checking…", symbol: "person.crop.circle.badge.checkmark") {
         ProgressView()
       }
@@ -29,12 +30,6 @@ public struct AppleAccountSection: View {
         "Sign in with Apple", detail: "Couldn't check your account", symbol: "wifi.exclamationmark"
       ) {
         RetryButton(compact: true) { model.retry() }.fixedSize()
-      }
-    case .preparing:
-      Row(
-        "Sign in with Apple", detail: "Getting ready…", symbol: "person.crop.circle.badge.checkmark"
-      ) {
-        ProgressView()
       }
     case .ready(let nonce, _):
       VStack(alignment: .leading, spacing: Space.m) {
