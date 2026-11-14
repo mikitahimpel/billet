@@ -34,6 +34,7 @@
     "./placeholder-fetch": "./src/placeholder-fetch.ts",
     "./room-database": "./src/room-database.ts",
     "./room-schema": "./src/room-schema.ts",
+    "./service-names": "./src/service-names.ts",
     "./worker-env": "./src/worker-env.ts"
   },
   "scripts": {

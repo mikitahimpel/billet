@@ -45,21 +45,21 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
   binding types in `worker-env.ts` and `env` in `alchemy.run.ts` must stay in step.
 - The `PairRoom` rules live in `packages/backend/pair-room`. `/v1/` serves the auth, pairing, notes and
   media routes, and anything else answers the placeholder that the deploy smoke test reads.
-- Physical names derive from the stack, the stage and the logical id (`<stack>-api-<stage>-<hash>`).
-  Nothing personal is committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and
-  `CLOUDFLARE_API_TOKEN`, read only by a real deploy.
+- Physical names derive from the stack, the stage and the logical id, with a random tail
+  (`<stack>-Database-<stage>-<hash>`); only the Worker's is set by hand, so its address reads well
+  ([Worker name](#worker-name)). Nothing personal is committed. The Cloudflare account comes from
+  `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, read only by a real deploy.
 
 ### Stack name
 
 The stack name is `ALCHEMY_STACK`, default `ourio`. It prefixes every physical name, names the
 state database `<stack>-alchemy-state` and the dataset `<stack>_<stage>_events`, and is bound to
 the Worker as `STACK`, which answers `/` with `{"service":"<stack>-api","status":"ok"}` and tells
-the admin's trends which dataset to read. Every stage is `ourio`: dev is Worker
-`ourio-api-dev-<hash>` and dataset `ourio_dev_events`, prod is `ourio-api-prod-<hash>` and
-`ourio_prod_events`, both keep their state in the D1 `ourio-alchemy-state`, and `/` answers
-`ourio-api` on each. The deploy workflow sets `ALCHEMY_STACK=ourio` explicitly, so its smoke test
-and the deploy can never disagree. Lowercase letters and digits only; the stack file refuses
-anything else before planning.
+the admin's trends which dataset to read. Every stage is `ourio`: dev is Worker `ourio-api-dev`
+and dataset `ourio_dev_events`, prod is `ourio-api` and `ourio_prod_events`, both keep their state
+in the D1 `ourio-alchemy-state`, and `/` answers `ourio-api` on each. The deploy workflow sets
+`ALCHEMY_STACK=ourio` explicitly, so its smoke test and the deploy can never disagree. Lowercase
+letters and digits only; the stack file refuses anything else before planning.
 
 A different stack name is a different stack with its own state: nothing of the other one is
 touched or recreated. `dev` was first deployed as `billet`, so the switch to `ourio` orphaned those
@@ -71,6 +71,30 @@ already installed keep talking to the old `billet-api-dev` host until the `testf
 environment's `DEMO_HOST` secret names the new Worker and a new build ships
 ([testflight-ci.md](testflight-ci.md)); the agents' `~/.config/billet/admin.env` and the Access
 applications in front of `/admin` ([admin.md](admin.md)) name the host too.
+
+### Worker name
+
+Alchemy names a resource `<stack>-<id>-<stage>-<hash>`, the hash from a random instance id kept in
+the state, so the generated Worker name was `ourio-api-dev-<hash>` and its `workers.dev` address
+unreadable. `Cloudflare.Worker` takes a `name` prop instead (`WorkerProps.name`, "Worker name
+override"), and the stack sets it from `apiWorkerName(stack, stage)` in
+`packages/backend/platform/src/service-names.ts`: `<stack>-api` on prod, `<stack>-api-<stage>`
+on every other stage. So prod answers on `https://ourio-api.<account-subdomain>.workers.dev` and
+dev on `https://ourio-api-dev.<account-subdomain>.workers.dev`, and prod's address is the service
+name `/` answers. The other resources keep their generated names: nothing reads them by name.
+
+An explicit name that differs from the deployed one **replaces** the Worker: Alchemy uploads a
+new script, moves the `workers.dev` subdomain, the custom domain and the routes to it, and deletes
+the old script. A replaced Worker would lose its Durable Object namespaces, with every room in
+them, so `PairRoom` and `DemoRoom` declare `transferredFrom: "Api"`: on the deploy that renames the
+script, Alchemy finds the former host by the Worker's logical id (the old script's ownership
+tags), ships Cloudflare's `transferred_classes` migration, and the rooms move with their data. On a
+stage with nothing to move (a fresh stage, or once the transfer has happened) the declaration is
+inert and stays in place. So the first `dev` deploy after this change turns `ourio-api-dev-<hash>`
+into `ourio-api-dev`, keeping the rooms: afterwards the `testflight` environment's `DEMO_HOST`
+secret, the agents' `~/.config/billet/admin.env` and the Access applications in front of `/admin`
+must name the new host, like after the `billet` to `ourio` switch above. Prod has not been deployed
+with the generated name, so its first deploy creates `ourio-api` outright.
 
 ## Drizzle
 
@@ -269,5 +293,6 @@ resources. The raw log of the first run may hold something private; read it once
 ## Verified and not verified
 
 `alchemy deploy`, the D1 state store, D1 migrations and Durable Object migrations have run on the
-`dev` stage, as the `billet` stack. The `ourio` stack (dev and prod), the
+`dev` stage, as the `billet` stack. The `ourio` stack (dev and prod), the explicit Worker name and
+the Durable Object transfer it needs on dev ([Worker name](#worker-name)), the
 `pass://Ourio Release/...` reference (a vault name with a space) and the workflow have not.
