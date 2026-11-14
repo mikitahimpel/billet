@@ -38,12 +38,11 @@ struct CornerFloorTests {
             // Feed's mound waits disabled in the bowl, a unit sphere squashed by its scale.
             guard entity.isEnabled, let model = entity.components[ModelComponent.self] else { return }
             let bounds = entity.visualBounds(relativeTo: room.pivot)
-            guard bounds.max.y < top + 0.01 else { return }
-            if model.materials.contains(where: { $0 is UnlitMaterial }), bounds.extents.y < 0.001 {
+            if model.materials.contains(where: { $0 is UnlitMaterial }), bounds.extents.y < 0.001, bounds.max.y < top + 0.01 {
                 blobs += 1
                 lowestBlob = min(lowestBlob, bounds.min.y)
-            } else if bounds.extents.x > 1, bounds.extents.z > 1 {
-                // A floor layer is wide and flat; walls and furniture are not.
+            } else if bounds.extents.x > 2, bounds.extents.z > 2, bounds.extents.y < 0.05 {
+                // A floor layer spans the corner and is flat, wherever it lies; walls are tall, furniture is small.
                 layers += 1
                 highest = max(highest, bounds.max.y)
             }
