@@ -51,15 +51,26 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 
 ### Stack name
 
-The stack name is `ALCHEMY_STACK`, default `billet`. It prefixes every physical name, names the
+The stack name is `ALCHEMY_STACK`, default `ourio`. It prefixes every physical name, names the
 state database `<stack>-alchemy-state` and the dataset `<stack>_<stage>_events`, and is bound to
 the Worker as `STACK`, which answers `/` with `{"service":"<stack>-api","status":"ok"}` and tells
-the admin's trends which dataset to read. `dev` was deployed as `billet` and keeps the name: a
-different stack name is a different stack with its own state, so renaming would recreate every
-resource and lose the data. Prod has never been deployed under `billet`, so the deploy workflow sets
-`ALCHEMY_STACK=ourio` and prod is the `ourio` stack: Worker `ourio-api-prod-<hash>`, state D1
-`ourio-alchemy-state`, dataset `ourio_prod_events`, service `ourio-api`. Lowercase letters and
-digits only; the stack file refuses anything else before planning.
+the admin's trends which dataset to read. Every stage is `ourio`: dev is Worker
+`ourio-api-dev-<hash>` and dataset `ourio_dev_events`, prod is `ourio-api-prod-<hash>` and
+`ourio_prod_events`, both keep their state in the D1 `ourio-alchemy-state`, and `/` answers
+`ourio-api` on each. The deploy workflow sets `ALCHEMY_STACK=ourio` explicitly, so its smoke test
+and the deploy can never disagree. Lowercase letters and digits only; the stack file refuses
+anything else before planning.
+
+A different stack name is a different stack with its own state: nothing of the other one is
+touched or recreated. `dev` was first deployed as `billet`, so the switch to `ourio` orphaned those
+resources: the Worker `billet-api-dev-<hash>`, its D1, R2, KV and Durable Objects, the dataset
+`billet_dev_events` and the state D1 `billet-alchemy-state` stay in the account, unmanaged, until
+someone deletes them in the dashboard (or runs `ALCHEMY_STACK=billet pnpm exec alchemy destroy
+--stage dev`, which the state D1 still describes). Their data does not move. TestFlight builds
+already installed keep talking to the old `billet-api-dev` host until the `testflight`
+environment's `DEMO_HOST` secret names the new Worker and a new build ships
+([testflight-ci.md](testflight-ci.md)); the agents' `~/.config/billet/admin.env` and the Access
+applications in front of `/admin` ([admin.md](admin.md)) name the host too.
 
 ## Drizzle
 
@@ -121,8 +132,8 @@ but that room is down until a fixed migration ships.
 - **Local** (`alchemy dev`): every resource runs on a local simulator, with no Cloudflare calls and no
   credentials. State is in the gitignored `.alchemy/` folder.
 - **`dev` and `prod`** (`alchemy deploy --stage <stage>`): real Cloudflare resources. State is kept in
-  a D1 database named `<stack>-alchemy-state` (`billet-alchemy-state` for dev, `ourio-alchemy-state`
-  for prod, [Stack name](#stack-name)), in the same account, through
+  a D1 database named `<stack>-alchemy-state` (`ourio-alchemy-state` for both,
+  [Stack name](#stack-name)), in the same account, through
   [`alchemy-d1-state.ts`](../alchemy-d1-state.ts). It is created on first use, is not part of the
   stack (so `destroy` keeps it) and holds Worker secrets in plaintext, like the local store.
 - `Cloudflare.state()` is not used: it keeps its token in the account's Secrets Store, which the
@@ -132,8 +143,8 @@ but that room is down until a fixed migration ships.
 
 ```sh
 pnpm alchemy dev                              # local, no credentials
-curl -si http://localhost:8787/               # 200 {"service":"billet-api","status":"ok"}
-ALCHEMY_STACK=ourio pnpm alchemy dev          # prod's names, still local: {"service":"ourio-api",...}
+curl -si http://localhost:8787/               # 200 {"service":"ourio-api","status":"ok"}
+ALCHEMY_STACK=billet pnpm alchemy dev         # another stack's names, still local: {"service":"billet-api",...}
 ```
 
 Stop `alchemy dev` with Ctrl-C. Killing only the `pnpm` wrapper leaves Alchemy and workerd running.
@@ -208,8 +219,8 @@ The workflow checks that the six required secrets are present (names only) and w
 address masked (public repository logs are public; the account ID is a secret, so GitHub masks it
 too), smoke-tests the Worker (`https://<API_DOMAIN>` when it is set, else the `workers.dev` URL from
 the log) for HTTP 200 and `"service":"ourio-api"`, and deletes the raw log in a last step. The job
-sets `ALCHEMY_STACK=ourio` ([Stack name](#stack-name)); a deploy without it would make a second,
-`billet` prod stack.
+sets `ALCHEMY_STACK=ourio` ([Stack name](#stack-name)), the same as the default, so the smoke test
+checks the name the deploy used.
 
 Owner steps, once. The secrets are copied from Proton Pass to GitHub; the Mac's `pp` session is
 the agents' session and cannot read the prod vault, so the main path is by hand.
@@ -258,5 +269,5 @@ resources. The raw log of the first run may hold something private; read it once
 ## Verified and not verified
 
 `alchemy deploy`, the D1 state store, D1 migrations and Durable Object migrations have run on the
-`dev` stage. The `prod` stage, the `pass://Ourio Release/...` reference (a vault name with a space)
-and the workflow have not.
+`dev` stage, as the `billet` stack. The `ourio` stack (dev and prod), the
+`pass://Ourio Release/...` reference (a vault name with a space) and the workflow have not.

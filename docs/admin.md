@@ -408,7 +408,7 @@ With the token from step 5, never typed:
 PROTON_PASS_AGENT_REASON="billet analytics query" pp run --env-file .env.pass.analytics -- \
   sh -c 'curl -s "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/analytics_engine/sql" \
     -H "Authorization: Bearer $CLOUDFLARE_ANALYTICS_TOKEN" \
-    --data "SELECT blob4 AS app_version, SUM(_sample_interval * double1) AS events FROM billet_dev_events WHERE timestamp > NOW() - INTERVAL '"'"'7'"'"' DAY GROUP BY app_version"'
+    --data "SELECT blob4 AS app_version, SUM(_sample_interval * double1) AS events FROM ourio_dev_events WHERE timestamp > NOW() - INTERVAL '"'"'7'"'"' DAY GROUP BY app_version"'
 ```
 
 The columns are in [experiments.md](experiments.md#analytics-engine).

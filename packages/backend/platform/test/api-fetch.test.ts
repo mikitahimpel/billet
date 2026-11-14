@@ -270,7 +270,7 @@ describe("the Api Worker", () => {
   it("still answers the deploy smoke test outside /v1/", async () => {
     const response = await exports.default.fetch("https://billet.test/");
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ service: "billet-api", status: "ok" });
+    expect(await response.json()).toEqual({ service: "ourio-api", status: "ok" });
   });
 
   it("answers 404 for an unknown /v1/ route", async () => {

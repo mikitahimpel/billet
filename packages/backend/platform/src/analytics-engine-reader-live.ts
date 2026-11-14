@@ -35,7 +35,7 @@ export const AnalyticsEngineReaderLive = (
   fetcher: typeof fetch = fetch,
 ): Layer.Layer<AnalyticsEngineReader> => {
   const { accountId, token, stage } = config;
-  const stack = config.stack || "billet";
+  const stack = config.stack || "ourio";
   if (
     !accountId ||
     !token ||
