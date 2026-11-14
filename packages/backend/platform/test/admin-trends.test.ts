@@ -179,7 +179,7 @@ describe("AnalyticsEngineReaderLive", () => {
     const sql = String(sent[0]?.init?.body);
     expect(sql).toMatch(/^SELECT /);
     expect(sql.match(/SELECT/g)).toHaveLength(1);
-    expect(sql).toContain("FROM billet_dev_events");
+    expect(sql).toContain("FROM ourio_dev_events");
     expect(sql).toContain("blob1 = 'AppOpened'");
     expect(sql).toContain("toDateTime('2026-11-05 00:00:00')");
   });

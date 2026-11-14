@@ -16,10 +16,10 @@ import * as Path from "effect/Path";
 import * as D1State from "./alchemy-d1-state.ts";
 
 // The stack name: the prefix of every physical name (`<stack>-api-<stage>-<hash>`), of the state
-// database and of the events dataset, and the `<stack>-api` the Worker answers on `/`. `dev` was
-// deployed as `billet` and keeps it; the prod deploy sets ALCHEMY_STACK=ourio (deploy.yml). A
-// different name is a different stack: nothing of the other one is touched or recreated.
-const stack = process.env["ALCHEMY_STACK"] || "billet";
+// database and of the events dataset, and the `<stack>-api` the Worker answers on `/`. Every
+// stage is `ourio`; ALCHEMY_STACK overrides it. A different name is a different stack: nothing of
+// the other one is touched or recreated, so the `billet` resources dev once used are orphaned.
+const stack = process.env["ALCHEMY_STACK"] || "ourio";
 if (!/^[a-z][a-z0-9]*$/.test(stack)) {
   throw new Error(`ALCHEMY_STACK must be lowercase letters and digits, got "${stack}"`);
 }

@@ -6,7 +6,7 @@ import { randomBytes } from "node:crypto";
 const host = (process.env.BILLET_HOST ?? "").replace(/^https?:\/\//, "").replace(/\/$/, "");
 if (!host) throw new Error("set BILLET_HOST to the API host");
 const args = process.argv.slice(2);
-if (!host.includes("billet-api-dev") && !args.includes("--host-ok"))
+if (!host.includes("-api-dev-") && !args.includes("--host-ok"))
   throw new Error("BILLET_HOST is not the dev Worker; pass --host-ok only if that host is agreed");
 const [framesArg = "150", intervalArg = "40"] = args.filter((arg) => arg !== "--host-ok");
 const frames = Number(framesArg);

@@ -130,23 +130,23 @@ describe("buildTrends", () => {
 
 describe("engineSql", () => {
   it("is one SELECT over the stage's dataset, by day and the split column", () => {
-    const sql = engineSql("billet_dev_events", { ...base, split: "os" }, "2026-08-07", today);
+    const sql = engineSql("ourio_dev_events", { ...base, split: "os" }, "2026-08-07", today);
     expect(sql).toMatch(
       /^SELECT toStartOfInterval\(timestamp, INTERVAL '1' DAY\) AS day, blob5 AS grp/,
     );
-    expect(sql).toContain("FROM billet_dev_events WHERE blob1 = 'AppOpened'");
+    expect(sql).toContain("FROM ourio_dev_events WHERE blob1 = 'AppOpened'");
     expect(sql).toContain("GROUP BY day, grp");
   });
 
   it("refuses anything that did not come from the closed lists", () => {
-    expect(() => engineSql("billet_dev_events; DROP", base, "2026-08-07", today)).toThrow();
+    expect(() => engineSql("ourio_dev_events; DROP", base, "2026-08-07", today)).toThrow();
     expect(() => engineSql("Ourio_prod_events", base, "2026-08-07", today)).toThrow();
     expect(engineSql("ourio_prod_events", base, "2026-08-07", today)).toContain(
       "FROM ourio_prod_events",
     );
     expect(() =>
-      engineSql("billet_dev_events", { ...base, event: "x' OR '1'='1" }, "2026-08-07", today),
+      engineSql("ourio_dev_events", { ...base, event: "x' OR '1'='1" }, "2026-08-07", today),
     ).toThrow();
-    expect(() => engineSql("billet_dev_events", base, "2026-08-07'", today)).toThrow();
+    expect(() => engineSql("ourio_dev_events", base, "2026-08-07'", today)).toThrow();
   });
 });
