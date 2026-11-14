@@ -7,6 +7,10 @@ import UIKit
 /// a floor and a wall dressed as the picked scenery, its own warm light and camera, and Mochi in her coat, borrowed
 /// from the room for as long as the game lasts. The camera sits low, near her eye line, so she can look up at the
 /// player.
+///
+/// The corner's lights cast no shadow map: a map fitted to the scene is refitted every frame something in it moves,
+/// and in a game something always does (she breathes, the bag tips, kibble flies), so every shadow edge on the floor
+/// this low camera makes large would swim or sparkle. What stands on the floor stands on a baked blob instead.
 final class TabletopRoom: CatRoom {
     static let floorTop: Float = 0.02
     static let catScale: Float = 0.68
@@ -60,7 +64,6 @@ final class TabletopRoom: CatRoom {
 
     private func buildLighting() {
         receiveAmbient(from: ibl)
-        Self.castShadow(sun)
         sun.look(at: .zero, from: [-0.6, 1.5, 0.8], relativeTo: nil)
         root.addChild(sun)
         fill.look(at: .zero, from: [1.5, 1.2, 1.6], relativeTo: nil)
