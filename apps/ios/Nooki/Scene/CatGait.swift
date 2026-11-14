@@ -28,8 +28,8 @@ private func wrap(_ a: Float) -> Float { atan2(sin(a), cos(a)) }
 ///
 /// A paw in stance holds its spot in the room whatever the body does, and a swing carries it to where its stance spot
 /// will be halfway through its next stance. Walking, that spot is halfway from the rest paw to under the hip, so the
-/// stride stays within the leg's reach. The cycle runs slower at a slow walk and stops once every paw has stepped back
-/// to its rest spot.
+/// stride stays within the leg's reach. The cycle runs slower at a slow walk, a little quicker past the walk it was
+/// built for, and stops once every paw has stepped back to its rest spot.
 final class Gait {
     // A walk: each paw on the ground for 60% of the cycle, set down in the order left hind, left fore, right hind,
     // right fore, a quarter cycle apart.
@@ -120,7 +120,7 @@ final class Gait {
         }
         let active = legs.contains { !$0.done }
         amount += ((moving ? 1 : 0) - amount) * (1 - exp(-dt * 6))
-        period = basePeriod * min(max(sqrt(speed / max(pace, 1e-3)), 1), 1.6)
+        period = basePeriod * min(max(sqrt(speed / max(pace, 1e-3)), 0.8), 1.6)
         if active { phase = (phase + dt / period).truncatingRemainder(dividingBy: 1) }
         self.frame = frame
         self.moving = moving

@@ -21,6 +21,10 @@ final class LaserStage: GameStage {
     private var chases = 0
     private var pouncing = false
     private var time: Float = 0
+    /// The halo's flare as she lands on the dot, 1 down to 0.
+    private var pop: Float = 0
+    /// Seconds to the second beat of a streak's haptic, while one is due.
+    private var secondBeat: Float?
     /// Where the dot has been, newest first, drawn as a fading trail so the path reads.
     private var trail: [SIMD3<Float>] = []
     private let trailDots: [ModelEntity]
@@ -90,6 +94,11 @@ final class LaserStage: GameStage {
 
     func update(_ dt: Float) {
         time += dt
+        pop = max(0, pop - dt * 4)
+        if let beat = secondBeat {
+            secondBeat = beat > dt ? beat - dt : nil
+            if beat <= dt { deck.tap(1) }
+        }
         laser.aim(aim.map { SIMD2(Double($0.x), Double($0.z)) }, dt: Double(dt))
         untouched = aim == nil ? untouched + dt : 0
         // With no finger down the dot waits where the hand takes it, so there is always something to drag.
@@ -98,7 +107,7 @@ final class LaserStage: GameStage {
             dot.isEnabled = true
             dot.position = [Float(at.x), surface(at.x, at.y) + 0.002, Float(at.y)]
             let pulse = sin(time * 30)
-            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse) * [0.027, 0.001, 0.027]
+            halo.scale = SIMD3(repeating: 1 + 0.25 * pulse * pulse + 1.4 * pop) * [0.027, 0.001, 0.027]
             sinceTrail += dt
             if laser.dot != nil, sinceTrail > 0.035 {
                 sinceTrail = 0
@@ -125,7 +134,10 @@ final class LaserStage: GameStage {
             if pouncing {
                 pouncing = false
                 laser.pounced()
+                walker.behavior.perform(.shake)
+                pop = 1
                 deck.thump()
+                if laser.streak >= 2 { secondBeat = 0.12 }
                 deck.cheer()
                 deck.say(laser.cheer, for: 0.9)
             }

@@ -47,6 +47,8 @@ final class WaterStage: GameStage {
     /// Seconds into the Clean up button's wipe, while it runs.
     private var assisted: Float?
     private var messSeen = false
+    /// Whether the water has reached the band once: she hops for it the first time.
+    private var readySeen = false
 
     init(room: CatRoom, deck: GameDeck) {
         self.room = room
@@ -168,6 +170,11 @@ final class WaterStage: GameStage {
         flow += ((holding && !served && !bowl.isFlooded ? 1 : 0) - flow) * min(1, dt * 6)
         if flow < 0.01 { flow = 0 }
         bowl.pour(flow: Double(flow), dt: Double(dt))
+        if bowl.canServe, !served, !readySeen {
+            readySeen = true
+            room.walker?.hop()
+            deck.tap(1)
+        }
         if flow > 0.1, sinceTap > 0.09 {
             sinceTap = 0
             deck.tap(CGFloat(0.25 + 0.4 * flow))
