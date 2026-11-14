@@ -48,6 +48,25 @@
       .forEach((a) => a.addEventListener("click", () => (menu.open = false)));
   });
 
+  // A fast scroll (more than 1.5 screens in the last 250 ms) sets html.fast until 500 ms after the
+  // last scroll event; global.css drops the reveal fades meanwhile.
+  run("fast", () => {
+    const samples = [];
+    let calm = 0;
+    addEventListener(
+      "scroll",
+      () => {
+        const now = performance.now();
+        samples.push([now, scrollY]);
+        while (samples.length > 1 && now - samples[0][0] > 250) samples.shift();
+        if (Math.abs(scrollY - samples[0][1]) > 1.5 * innerHeight) html.classList.add("fast");
+        clearTimeout(calm);
+        calm = setTimeout(() => html.classList.remove("fast"), 500);
+      },
+      { passive: true },
+    );
+  });
+
   run("reveal", () => {
     for (const group of document.querySelectorAll(".pg-steps, .ideas, .hub-list")) {
       [...group.children].forEach((child, n) => child.style.setProperty("--n", n % 4));
@@ -66,7 +85,7 @@
           }
         }
       },
-      { rootMargin: "0px 0px 20% 0px" },
+      { rootMargin: "0px 0px 35% 0px" },
     );
     reveals.forEach((el) => seen.observe(el));
   });

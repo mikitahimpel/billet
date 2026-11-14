@@ -1,12 +1,12 @@
 ---
-import gaveUp from "../assets/art/drawguess-giveup.webp";
 import Art from "../components/art.astro";
+import EndCard from "../components/end-card.astro";
 import Page from "../layouts/page.astro";
 ---
 
 <Page title="Page not found · Ourio" description="This page isn't in Ourio's room." noindex bodyClass="site-lost">
   <section class="wrap lost">
-    <Art picture={{ src: gaveUp, alt: "Mochi looking at a crumpled sheet of paper", kind: "cutout" }} eager />
+    <Art picture={{ kind: "crop", crop: "mochi", alt: "Mochi in her donut bed" }} class="lost-art" fitHeight="16rem" eager />
     <h1>Mochi can't find that page.</h1>
     <p class="lead">It may have moved. Try the home page or the list of features.</p>
     <div class="lost-btns">
@@ -14,4 +14,5 @@ import Page from "../layouts/page.astro";
       <a class="btn btn-ghost" href="/features/">All features</a>
     </div>
   </section>
+  <EndCard />
 </Page>

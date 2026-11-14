@@ -2,7 +2,7 @@
 import Art from "../../components/art.astro";
 import EndCard from "../../components/end-card.astro";
 import StoreButton from "../../components/store-button.astro";
-import { featureList, hubArt } from "../../features";
+import { featureList, hub } from "../../features";
 import Page from "../../layouts/page.astro";
 
 const schema = [
@@ -46,13 +46,13 @@ const schema = [
               <div class="hub-copy">
                 <p class="eyebrow">{feature.eyebrow}</p>
                 <h2>{feature.h1}</h2>
-                <p>{feature.description}</p>
+                <p>{hub[feature.slug]!.text}</p>
                 <span class="hub-more">
                   Read more <span aria-hidden="true">→</span>
                 </span>
               </div>
               <div class="hub-art">
-                <Art picture={hubArt[feature.slug]!} eager={i === 0} fitHeight={i === 0 ? "26rem" : "18rem"} />
+                <Art picture={hub[feature.slug]!.picture} eager={i === 0} fitHeight={i === 0 ? "26rem" : "18rem"} />
               </div>
             </a>
           </li>

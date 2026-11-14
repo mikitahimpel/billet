@@ -14,8 +14,9 @@ const { title = "Move in together." } = Astro.props;
     <div class="room room-late">
       <div class="room-img">
         <RoomPicture sizes="(max-width: 900px) 165vw, min(1340px, 100vw)" />
+        {/* The lamp render over the lit room, with a soft hole where Mochi sits (global.css .room-late). */}
+        <RoomPicture room="lamp" class="room-pic lamp" sizes="(max-width: 900px) 165vw, min(1340px, 100vw)" />
       </div>
-      <div class="night"></div>
       <div class="bloom bloom-lamp"></div>
       <div class="bloom bloom-flicker"></div>
       <div class="bloom bloom-moon"></div>

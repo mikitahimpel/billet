@@ -1,9 +1,5 @@
 import type { ImageMetadata } from "astro";
 import datePlans from "./assets/art/datescene-plans.webp";
-import drawGuessCard from "./assets/art/drawguess-card.webp";
-import drawGuessDraw from "./assets/art/drawguess-draw.webp";
-import drawGuessHint from "./assets/art/drawguess-hint.webp";
-import drawGuessSolved from "./assets/art/drawguess-solved.webp";
 import room from "./assets/art/shared-room.webp";
 import shotLoves from "./assets/art/shot-after-loves.webp";
 import shotMineAdded from "./assets/art/shot-after-mine-added.webp";
@@ -19,26 +15,25 @@ import shotUsTop from "./assets/art/shot-us-now-top.webp";
 import streakDay from "./assets/art/streak-day-lit.webp";
 import streakTiers from "./assets/art/streak-flames-tiers.webp";
 import streakTasks from "./assets/art/streak-task-icons.webp";
-import streakBack from "./assets/art/streak-won-back.webp";
-import whoKnowsCard from "./assets/art/whoknows-card.webp";
-import whoKnowsHit from "./assets/art/whoknows-hit.webp";
-import whoKnowsHost from "./assets/art/whoknows-host.webp";
-import whoKnowsMiss from "./assets/art/whoknows-miss.webp";
-import whoKnowsTrophy from "./assets/art/whoknows-trophy.webp";
-import whoKnowsWaiting from "./assets/art/whoknows-waiting.webp";
-import mochi from "./assets/mochi-portrait.webp";
+import type { CropName } from "./lib/crops";
 
 // Every claim here is checked against the app (apps/ios, packages/ios/features, packages/backend, docs/). Things
 // behind a release flag or not built (coin packs, a subscription, the drawing Live Activity, a streak freeze, the
 // City room) stay out. Titles and H1s carry the words people search with.
 
 // "scene": a full picture in a frame; "cutout": Mochi on a transparent ground; "shot": an app screenshot in a phone;
-// "portrait": the small cutout of Mochi's head.
-export type Picture = {
-  src: ImageMetadata;
-  alt: string;
-  kind: "scene" | "cutout" | "shot" | "portrait";
-};
+// "portrait": the small cutout of Mochi's head; "ui": a piece of the app's art, unframed.
+// "crop": a close-up of the room render, never cropped; "slot": a phone whose screen waits for the app screenshot
+// named `shot`, showing a close-up (or `src`) on the room's night meanwhile; "lock": their lock screen with one
+// notification; "pair": your phone and their lock screen; "set": the shop window.
+export type Picture =
+  | { kind: "scene" | "cutout" | "shot" | "portrait" | "ui"; src: ImageMetadata; alt: string }
+  | { kind: "crop"; crop: CropName; alt: string; fitHeight?: string; sizes?: string }
+  | { kind: "slot"; shot: string; crop: CropName; alt: string }
+  | { kind: "slot"; shot: string; src: ImageMetadata; alt: string }
+  | { kind: "lock"; line: string }
+  | { kind: "pair"; yours: "invite" | "room" }
+  | { kind: "set" };
 
 export type FeatureSection = {
   id: string;
@@ -113,9 +108,11 @@ export const featureList: Feature[] = [
           "Treat: a little extra, bought with coins.",
         ],
         picture: {
-          src: mochi,
-          alt: "Mochi, a grey tabby kitten with a red collar and a gold bell",
-          kind: "portrait",
+          kind: "crop",
+          crop: "mochi",
+          alt: "Mochi, a grey tabby kitten, in her donut bed",
+          fitHeight: "8.75rem",
+          sizes: "220px",
         },
       },
       {
@@ -138,11 +135,7 @@ export const featureList: Feature[] = [
         body: [
           "Coins you earn together buy furniture, decor and toys: a Cloud Armchair, a Mushroom Lamp, a Donut Bed, a Cat Tower. Place a piece and it appears on both phones; preview it in 3D first, and keep extras in your closet.",
         ],
-        picture: {
-          src: whoKnowsWaiting,
-          alt: "Mochi sitting beside a phone propped on a gingham cushion",
-          kind: "cutout",
-        },
+        picture: { kind: "set" },
       },
     ],
     questions: [
@@ -178,9 +171,10 @@ export const featureList: Feature[] = [
     h1: "Draw on your partner's Lock Screen.",
     lead: "Ourio is a lock screen drawing app for couples. You draw on a canvas that shows your partner's Lock Screen, clock and wallpaper included. When you send it, they get a notification and the drawing appears in Ourio's Drawing widget on their Lock Screen or Home Screen. Seven ink colors, one free.",
     hero: {
-      src: drawGuessDraw,
-      alt: "Mochi holding a red crayon over a sheet of paper",
-      kind: "cutout",
+      kind: "slot",
+      shot: "lock-screen-drawings-1",
+      crop: "paw",
+      alt: "The paw picture on the wall of Mochi's room",
     },
     steps: [
       {
@@ -211,11 +205,7 @@ export const featureList: Feature[] = [
         body: [
           "iOS doesn't let any app change your wallpaper, so drawings arrive through a widget. Your partner adds Ourio's Drawing widget once: to the Lock Screen, or to the Home Screen in small, medium or large. Each new drawing updates it before the notification even shows, with “Tap to draw one back”.",
         ],
-        picture: {
-          src: drawGuessCard,
-          alt: "Mochi holding up a crayon drawing of a little house",
-          kind: "scene",
-        },
+        picture: { kind: "lock", line: "A new drawing on your lock screen" },
       },
       {
         id: "inks",
@@ -272,9 +262,10 @@ export const featureList: Feature[] = [
     h1: "Your photos, as polaroids on a shared wall.",
     lead: "Moments is Ourio's shared photo wall for couples. Add a photo of the two of you with a short caption and it goes up on Mochi's wall as a little polaroid on both phones. Your partner can react with a heart, and each Moment earns 10 coins.",
     hero: {
-      src: drawGuessSolved,
-      alt: "Mochi cheering with a little framed heart held over her head",
-      kind: "cutout",
+      kind: "slot",
+      shot: "moments-1",
+      crop: "shelf",
+      alt: "The little bookshelf on the wall of Mochi's room",
     },
     steps: [
       { title: "Tap + and choose Moment", text: "Pick a photo of the two of you." },
@@ -291,11 +282,7 @@ export const featureList: Feature[] = [
         body: [
           "The Moments tab switches between Photos, your polaroids, and Board, the notes and doodles you've pinned. Open a photo to react with a heart, pin it to the wall, edit the caption, share it as a polaroid or as the plain photo, or delete it.",
         ],
-        picture: {
-          src: datePlans,
-          alt: "Mochi in a study with a corkboard full of photos and a world map",
-          kind: "scene",
-        },
+        picture: { kind: "crop", crop: "paw", alt: "The paw picture on the wall of Mochi's room" },
       },
       {
         id: "inbox",
@@ -411,9 +398,10 @@ export const featureList: Feature[] = [
     h1: "Date night ideas you swipe together.",
     lead: "Date night in Ourio is a deck of 150 date ideas that you and your partner swipe on your own iPhones. When you both love an idea, it lands in “You both loved these”. Plan it for a day, get a reminder a day and an hour before, and rate it afterwards. 74 of the ideas are free.",
     hero: {
+      kind: "slot",
+      shot: "date-night-1",
       src: datePlans,
       alt: "Mochi on a suitcase in front of a board of trip photos and a map",
-      kind: "scene",
     },
     steps: [
       {
@@ -652,9 +640,10 @@ export const featureList: Feature[] = [
     h1: "Pick a movie together, without the debate.",
     lead: "Pick tonight is Ourio's movie picker for couples. You each swipe through movies and shows on your own iPhone, Not tonight, Seen it or Want to, and when you both want the same title, it's a match and your partner gets a notification. A shared To watch list keeps the rest for later.",
     hero: {
-      src: whoKnowsCard,
-      alt: "Mochi holding a card next to a brass bell, like a game show",
-      kind: "scene",
+      kind: "slot",
+      shot: "movie-night-1",
+      crop: "bed",
+      alt: "Mochi in her donut bed at night, the lamp on",
     },
     steps: [
       { title: "Open Pick tonight", text: "From the To watch list in the Us tab." },
@@ -729,9 +718,10 @@ export const featureList: Feature[] = [
           "The Us widget for the Lock Screen (inline, circular or rectangular) shows your days together or the next date. The Block widget on the Home Screen can show a countdown.",
         ],
         picture: {
-          src: whoKnowsWaiting,
-          alt: "Mochi sitting beside a phone propped on a cushion",
-          kind: "cutout",
+          kind: "slot",
+          shot: "calendar-1",
+          crop: "window",
+          alt: "The round window of Mochi's room at night, with the lamp on",
         },
       },
     ],
@@ -762,9 +752,10 @@ export const featureList: Feature[] = [
     h1: "A streak the two of you keep lit.",
     lead: "The love streak in Ourio counts the days in a row that either of you does something together: pet Mochi, send a note or a photo, swipe a date idea or share your mood. It has milestones at 3, 7, 14, 30, 50, 100, 200 and 365 days, and a broken streak can be restored once a month.",
     hero: {
+      kind: "slot",
+      shot: "love-streak-1",
       src: streakDay,
       alt: "Mochi on a knitted cushion next to a glowing coral flame",
-      kind: "scene",
     },
     sections: [
       {
@@ -774,9 +765,9 @@ export const featureList: Feature[] = [
           "One of you is enough for the day: caring for Mochi, a note, a Moment, a date night swipe or a mood. The card in the Us tab says “Do something together today to light the flame” until one of you does.",
         ],
         picture: {
+          kind: "ui",
           src: streakTasks,
           alt: "Four small icons: a paw, a speech bubble, a photo and a heart",
-          kind: "scene",
         },
       },
       {
@@ -785,7 +776,7 @@ export const featureList: Feature[] = [
         body: [
           "Badges mark the streak at 3, 7, 14, 30, 50, 100, 200 and 365 days. Your best streak stays on the card.",
         ],
-        picture: { src: streakTiers, alt: "A row of flames in six colors", kind: "scene" },
+        picture: { kind: "ui", src: streakTiers, alt: "A row of flames in six colors" },
       },
       {
         id: "restore",
@@ -794,9 +785,9 @@ export const featureList: Feature[] = [
           "If a streak of 3 days or more broke yesterday, the card offers “Restore N-day streak”. You can do it once every 30 days. Nothing else happens when you miss a day: Mochi doesn't suffer, and no one is told off.",
         ],
         picture: {
-          src: streakBack,
-          alt: "A hand relighting a flame while Mochi watches",
-          kind: "scene",
+          kind: "crop",
+          crop: "candle",
+          alt: "A candle on the dresser in Mochi's room, the lamp the only other light",
         },
       },
     ],
@@ -820,7 +811,12 @@ export const featureList: Feature[] = [
     eyebrow: "Games for two",
     h1: "Couples games and daily questions, across two phones.",
     lead: "Ourio has two free games for couples. Who knows who is a daily round of five questions about one of you, from 150 questions; the other guesses, and the answers open together. Draw & guess has one of you draw a word and the other spell it from 12 letter tiles. Both are turn-based and earn coins.",
-    hero: { src: whoKnowsHost, alt: "Mochi holding a microphone like a quiz host", kind: "cutout" },
+    hero: {
+      kind: "slot",
+      shot: "games-1",
+      crop: "post",
+      alt: "Mochi's scratching post with a toy on a string, beside her bowls",
+    },
     sections: [
       {
         id: "who-knows-who",
@@ -829,11 +825,7 @@ export const featureList: Feature[] = [
           "One round a day, five multiple-choice questions, all about one of you; the subject switches every day. The subject answers about themselves, the other guesses. Nobody sees anything until you have both finished, then the answers open one by one: Right! or Not quite.",
           "The 150 questions cover eight topics: dreams, food, habits, the past, quirks, music, money and the two of you. The weekly score resets on Monday. A right guess earns 2 coins and a finished round 10.",
         ],
-        picture: {
-          src: whoKnowsHit,
-          alt: "Mochi jumping for joy in a shower of gold confetti",
-          kind: "cutout",
-        },
+        picture: { kind: "slot", shot: "games-2", crop: "mochi", alt: "Mochi in her donut bed" },
       },
       {
         id: "draw-and-guess",
@@ -843,9 +835,10 @@ export const featureList: Feature[] = [
           "Solve in a row to build a series; your best stays on the card. Words are in English.",
         ],
         picture: {
-          src: drawGuessHint,
-          alt: "Mochi pressing a letter tile with her paw",
-          kind: "cutout",
+          kind: "slot",
+          shot: "games-3",
+          crop: "paw",
+          alt: "The paw picture on the wall of Mochi's room",
         },
       },
       {
@@ -854,11 +847,7 @@ export const featureList: Feature[] = [
         body: [
           "Neither game needs you both online at once. Play your part when you have a minute; a notification tells your partner it's their turn: “Your partner drew you a riddle. 6 letters.”",
         ],
-        picture: {
-          src: whoKnowsMiss,
-          alt: "Mochi lying on her back, laughing, after a wrong guess",
-          kind: "cutout",
-        },
+        picture: { kind: "lock", line: "Your partner drew you a riddle. 6 letters." },
       },
     ],
     questions: [
@@ -897,11 +886,7 @@ export const featureList: Feature[] = [
     eyebrow: "Shop and coins",
     h1: "Every coin is earned together. Nothing is for sale.",
     lead: "Coins in Ourio belong to the couple and only come from what you do together: caring for Mochi, notes, photos, lists, dates and games. A new pair starts with 560 coins. Spend them on furniture, decor, inks and toys for your shared room. Ourio has no in-app purchases and no subscription.",
-    hero: {
-      src: whoKnowsTrophy,
-      alt: "Mochi holding a golden trophy above her head",
-      kind: "cutout",
-    },
+    hero: { kind: "set" },
     sections: [
       {
         id: "earn",
@@ -924,11 +909,7 @@ export const featureList: Feature[] = [
             ["Draw & guess: a solve", "4 to 10"],
           ],
         },
-        picture: {
-          src: whoKnowsHit,
-          alt: "Mochi jumping for joy in a shower of gold confetti",
-          kind: "cutout",
-        },
+        picture: { kind: "slot", shot: "shop-1", crop: "mochi", alt: "Mochi in her donut bed" },
       },
       {
         id: "shop",
@@ -967,11 +948,7 @@ export const featureList: Feature[] = [
     eyebrow: "Couple widgets",
     h1: "Couple widgets for your iPhone Home Screen and Lock Screen.",
     lead: "Ourio has six couple widgets for iPhone: the room with Mochi, the cat with a smart block, a single block, an Us widget for the Lock Screen, your partner's latest note and their latest drawing. Some are interactive: set your mood or tick a list item without opening the app.",
-    hero: {
-      src: whoKnowsWaiting,
-      alt: "Mochi sitting beside a phone propped on a gingham cushion",
-      kind: "cutout",
-    },
+    hero: { kind: "lock", line: "They petted Mochi. She purred." },
     sections: [
       {
         id: "widgets",
@@ -1061,7 +1038,11 @@ export const longDistance: Feature = {
   eyebrow: "Long distance",
   h1: "A long distance relationship app for the days in between.",
   lead: "Ourio is a free iPhone app for long-distance couples. Instead of another chat, it gives you small things to do for each other across any distance: a drawing that lands on their Lock Screen, a shared cat to look after, a daily quiz, 15 long-distance date ideas and a countdown to your next visit.",
-  hero: { src: drawGuessCard, alt: "Mochi holding up a crayon drawing of a house", kind: "scene" },
+  hero: {
+    kind: "crop",
+    crop: "window-lamp",
+    alt: "The round window of Mochi's room at night, the lamp on beside it",
+  },
   steps: [
     { title: "Both install Ourio", text: "Free on iPhone, iOS 18 or later. No sign-up form." },
     {
@@ -1080,7 +1061,7 @@ export const longDistance: Feature = {
       body: [
         "Long distance runs on texts and calls, and both can start to feel like obligations. Ourio adds a quieter layer: you pet the cat, they see it; you draw a heart, it's on their Lock Screen when they wake up; they set their mood to “missing you”, and it's on your widget.",
       ],
-      picture: { src: drawGuessDraw, alt: "Mochi drawing with a red crayon", kind: "cutout" },
+      picture: { kind: "pair", yours: "room" },
     },
     {
       id: "what",
@@ -1150,11 +1131,7 @@ export const freeApp: Feature = {
   eyebrow: "Free, no subscription",
   h1: "A couples app that's free. All of it.",
   lead: "Ourio is a free couples app for iPhone: no subscription, no in-app purchases, no ads and no premium tier. Both partners get every feature, from the shared cat and Lock Screen drawings to daily questions, 150 date ideas and six widgets. Coins for the shop are earned together and can't be bought.",
-  hero: {
-    src: whoKnowsTrophy,
-    alt: "Mochi holding a golden trophy above her head",
-    kind: "cutout",
-  },
+  hero: { kind: "pair", yours: "invite" },
   sections: [
     {
       id: "whats-free",
@@ -1219,19 +1196,58 @@ export const freeApp: Feature = {
   related: ["shop-and-coins", "room-and-mochi", "games", "date-night", "widgets-and-notifications"],
 };
 
-// Pictures the hub shows beside each feature; the feature pages use their own hero.
-export const hubArt: Record<string, Picture> = {
-  "room-and-mochi": { src: room, alt: "", kind: "scene" },
-  "lock-screen-drawings": { src: drawGuessCard, alt: "", kind: "scene" },
-  moments: { src: drawGuessSolved, alt: "", kind: "cutout" },
-  us: { src: shotUsCards, alt: "", kind: "shot" },
-  "date-night": { src: datePlans, alt: "", kind: "scene" },
-  wishlists: { src: shotMineAdded, alt: "", kind: "shot" },
-  "shared-lists": { src: shotGroceries, alt: "", kind: "shot" },
-  "movie-night": { src: whoKnowsCard, alt: "", kind: "scene" },
-  "calendar-and-countdown": { src: shotUsTop, alt: "", kind: "shot" },
-  "love-streak": { src: streakDay, alt: "", kind: "scene" },
-  games: { src: whoKnowsHost, alt: "", kind: "cutout" },
-  "shop-and-coins": { src: whoKnowsTrophy, alt: "", kind: "cutout" },
-  "widgets-and-notifications": { src: whoKnowsWaiting, alt: "", kind: "cutout" },
+// The hub's card for each feature: its picture and a longer line than the page's description.
+export const hub: Record<string, { picture: Picture; text: string }> = {
+  "room-and-mochi": {
+    picture: { src: room, alt: "", kind: "scene" },
+    text: "Ourio is a couples app with a shared virtual pet. You and your partner raise one cat, Mochi, in one cozy room on two iPhones: feed, water, play, brush and pet her, and the other sees it.",
+  },
+  "lock-screen-drawings": {
+    picture: { kind: "slot", shot: "lock-screen-drawings-1", crop: "paw", alt: "" },
+    text: "Draw on a canvas that looks like your partner's Lock Screen. Ourio sends it to their iPhone with a notification and shows it in the Drawing widget on their Lock Screen or Home Screen.",
+  },
+  moments: {
+    picture: { kind: "slot", shot: "moments-1", crop: "shelf", alt: "" },
+    text: "Send your partner a photo in Ourio and it lands on Mochi's wall as an instant-film polaroid with your caption. React with a heart, pin it, and share it as a polaroid.",
+  },
+  us: {
+    picture: { src: shotUsCards, alt: "", kind: "shot" },
+    text: "The Us tab in Ourio is a shared planner for two: days together and countdowns, a shared calendar, date night ideas you swipe together, wishlists with secret gifting, shared lists, movie night and a love streak.",
+  },
+  "date-night": {
+    picture: { kind: "slot", shot: "date-night-1", src: datePlans, alt: "" },
+    text: "Ourio's date night has 150 date ideas you each swipe on your own iPhone. When you both love one, it's a match; plan it, get reminders, and rate it. Ideas for home, out, outdoors and long distance.",
+  },
+  wishlists: {
+    picture: { src: shotMineAdded, alt: "", kind: "shot" },
+    text: "Ourio wishlists let partners keep gift ideas for each other: paste a link, mark what's most wanted, and keep sizes, coffee order and allergies. Claim a gift secretly with “I'll get this”. Add from Safari's share sheet.",
+  },
+  "shared-lists": {
+    picture: { src: shotGroceries, alt: "", kind: "shot" },
+    text: "Ourio's shared lists sync between two iPhones: Groceries sorted by aisle with suggestions, To watch, Places to go, Places to eat, To read, a Bucket list and lists of your own. Tick items off as done together.",
+  },
+  "movie-night": {
+    picture: { kind: "slot", shot: "movie-night-1", crop: "bed", alt: "" },
+    text: "Can't decide what to watch? In Ourio's Pick tonight you and your partner each swipe movies and shows: Not tonight, Seen it or Want to. When you both want the same title, it's a match. Plus a shared To watch list.",
+  },
+  "calendar-and-countdown": {
+    picture: { src: shotUsTop, alt: "", kind: "shot" },
+    text: "Ourio counts your days together, keeps a shared calendar of birthdays, trips and anniversaries that repeat every year, and counts down to them on both iPhones and in the Lock Screen widget.",
+  },
+  "love-streak": {
+    picture: { kind: "slot", shot: "love-streak-1", src: streakDay, alt: "" },
+    text: "Ourio's love streak grows each day either partner does something together. Milestones at 3, 7, 14, 30, 50, 100, 200 and 365 days, and a broken streak can be restored once a month.",
+  },
+  games: {
+    picture: { kind: "slot", shot: "games-1", crop: "post", alt: "" },
+    text: "Two free couples games in Ourio: Who knows who, a daily 5-question quiz about how well you know your partner, and Draw & guess, where one draws a word and the other spells it from letter tiles.",
+  },
+  "shop-and-coins": {
+    picture: { kind: "set" },
+    text: "In Ourio every coin is earned by doing things together: caring for Mochi, notes, photos, lists, dates and games. Spend them on furniture, decor, inks and toys. Nothing is for sale and there's no subscription.",
+  },
+  "widgets-and-notifications": {
+    picture: { kind: "lock", line: "They petted Mochi. She purred." },
+    text: "Ourio's couple widgets put your shared cat, your partner's latest drawing and note, days together, mood and countdowns on your iPhone Home Screen and Lock Screen, plus Control Center buttons.",
+  },
 };

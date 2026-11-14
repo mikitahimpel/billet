@@ -1,0 +1,15 @@
+---
+import appIcon from "../assets/app-icon-192b.webp?url";
+
+interface Props {
+  line: string;
+}
+---
+
+<div class="notif-ios">
+  <img class="ni-icon" src={appIcon} alt="" width="56" height="56" loading="lazy" decoding="async" />
+  <div class="ni-text">
+    <p class="ni-head"><b>Ourio</b><span>now</span></p>
+    <p class="ni-line">{Astro.props.line}</p>
+  </div>
+</div>

@@ -1,27 +1,28 @@
 ---
 import { getImage } from "astro:assets";
 import type { ImageMetadata } from "astro";
+import AppRoomScreen from "../components/app-room-screen.astro";
 import EndCard from "../components/end-card.astro";
+import LockScreen from "../components/lock-screen.astro";
 import RoomPicture from "../components/room-picture.astro";
 import SiteHeader from "../components/site-header.astro";
+import ShopSet from "../components/shop-set.astro";
 import StoreButton from "../components/store-button.astro";
 import { appStoreId, appStoreLive, appStoreUrl, siteDescription, siteTitle } from "../config";
 import { faq } from "../faq";
-import { featureList, hubArt } from "../features";
+import { featureList } from "../features";
 import Page from "../layouts/page.astro";
 import { roomAsset } from "../lib/room-assets";
+import { shopItems } from "../lib/shop";
 
-import appIconSrc from "../assets/app-icon.png";
+import appIcon from "../assets/app-icon-192b.webp?url";
+import datePlans from "../assets/art/datescene-plans.webp";
 import sharedRoomSrc from "../assets/art/shared-room.webp";
+import streakDay from "../assets/art/streak-day-lit.webp";
+import streakBackSrc from "../assets/art/streak-won-back.webp";
+import whoKnowsHost from "../assets/art/whoknows-host.webp";
+import whoKnowsWaiting from "../assets/art/whoknows-waiting.webp";
 import mochiSrc from "../assets/mochi-portrait.webp";
-import armchair from "../assets/Item_armchair.png";
-import lamp from "../assets/Item_lamp.png";
-import donutbed from "../assets/Item_donutbed.png";
-import bookcase from "../assets/Item_bookcase.png";
-import monstera from "../assets/Item_monstera.png";
-import yarn from "../assets/Item_yarn.png";
-import teatable from "../assets/Item_teatable.png";
-import lantern from "../assets/Item_lantern.png";
 
 // WebP steps under the original, which stays the largest candidate; a step within 100 px of it adds nothing.
 async function variants(src: ImageMetadata, steps: number[]) {
@@ -37,38 +38,13 @@ async function variants(src: ImageMetadata, steps: number[]) {
   };
 }
 
-const appIcon = (await getImage({ src: appIconSrc, width: 192, format: "webp" })).src;
 const sharedRoom = await variants(sharedRoomSrc, [400, 800, 1200]);
 const mochi = await variants(mochiSrc, [96, 192, 320]);
-// The window and bed close-ups of the room render (2560×1440), pre-sized in src/assets/room.
-const room = (name: "window" | "mochi") =>
-  [1000, 1600].map((width) => `${roomAsset(`${name}-${width}.webp`)} ${width}w`).join(", ");
+const streakBack = await variants(streakBackSrc, [400, 800]);
 const reducedMotionPixel = "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 // The preload and the unlit room's AVIF source share this srcset and sizes, so the browser fetches one file.
 const heroSizes = "(max-width: 900px) 100vw, 60vw";
 const heroAvif = [1000, 1600, 2560].map((width) => `${roomAsset(`room-none-${width}.avif`)} ${width}w`).join(", ");
-
-// Names, prices and blurbs are the shop's own (packages/ios/features/Sources/FeatureShop/Shop.swift). The box is the piece's
-// measured outline in its 1024 px image (x, y, width, height), which its glow and floor light centre on.
-const items = [
-  { key: "armchair", src: armchair, name: "Cloud Armchair", price: 320, blurb: "Big enough for two and a cat who insists.", box: [186, 208, 754, 668] },
-  { key: "lamp", src: lamp, name: "Mushroom Lamp", price: 140, blurb: "Warm glow for late-night talks.", box: [284, 222, 598, 602] },
-  { key: "teatable", src: teatable, name: "Tea Table", price: 210, blurb: "Two cups, always.", box: [258, 296, 614, 534] },
-  { key: "donutbed", src: donutbed, name: "Donut Bed", price: 380, blurb: "Sprinkles included, calories not.", box: [222, 354, 612, 376] },
-  { key: "bookcase", src: bookcase, name: "Little Bookcase", price: 260, blurb: "Room for both your favourite stories.", box: [266, 204, 624, 692] },
-  { key: "monstera", src: monstera, name: "Monstera", price: 90, blurb: "Grows a new leaf every week you visit.", box: [286, 168, 588, 664] },
-  { key: "yarn", src: yarn, name: "Yarn Ball", price: 60, blurb: "Mochi's favourite thing to unravel.", box: [268, 220, 458, 634] },
-  { key: "lantern", src: lantern, name: "Paper Lantern", price: 150, blurb: "Hangs by the window and hums with light.", box: [354, 180, 402, 660] },
-];
-const shop = await Promise.all(
-  items.map(async (item) => {
-    const [small, large] = await Promise.all(
-      [300, 600].map(async (width) => (await getImage({ src: item.src, width, format: "webp" })).src),
-    );
-    const [bx, by, bw, bh] = item.box;
-    return { ...item, small, large, style: `--bx: ${bx}; --by: ${by}; --bw: ${bw}; --bh: ${bh}` };
-  }),
-);
 
 const steps = [
   { title: "Get Ourio", body: "Free on iPhone. Mochi is already curled up in her bed." },
@@ -104,11 +80,16 @@ const promises = [
   { title: "Only the two of you.", body: "One code pairs your phones. Nobody else gets into your room." },
 ];
 
-// The home page tells the room's story; these link to the rest of the app.
+// The home page tells the room's story; these link to the rest of the app, each with its own poster art.
+const posterArt = [
+  { slug: "date-night", src: datePlans, kind: "scene" },
+  { slug: "games", src: whoKnowsHost, kind: "cutout" },
+  { slug: "love-streak", src: streakDay, kind: "scene" },
+  { slug: "widgets-and-notifications", src: whoKnowsWaiting, kind: "cutout" },
+] as const;
 const posters = await Promise.all(
-  ["date-night", "games", "love-streak", "widgets-and-notifications"].map(async (slug) => {
-    const feature = featureList.find((candidate) => candidate.slug === slug)!;
-    const picture = hubArt[slug]!;
+  posterArt.map(async (picture) => {
+    const feature = featureList.find((candidate) => candidate.slug === picture.slug)!;
     const art = await variants(picture.src, [400, 800, 1200]);
     return { feature, picture, srcset: art.srcset, src: art.at(800) };
   }),
@@ -169,10 +150,11 @@ const schema = [
     imagesizes={heroSizes}
   />
 
+  <SiteHeader home slot="header" />
+
   <!-- 01 · The story: one room, held in place while the copy changes beside it. -->
   <section id="story" class="story" data-beat="0">
     <div class="pin">
-      <SiteHeader home />
       <div class="beats">
         <div class="beat beat-0" data-for="0">
           <h1>
@@ -192,39 +174,31 @@ const schema = [
         <div class="beat beat-1" data-for="1">
           <p class="eyebrow">Late. Miles apart.</p>
           <h2 class="beat-title">Leave a light on for each other.</h2>
+          <p class="beat-note">The same room on both phones, at 2 a.m. or 2 p.m.</p>
+          <p class="hours" aria-hidden="true">
+            <span class="hour you"><i></i><b>11:41 PM</b><span>Your side</span></span>
+            <span class="hour them"><i></i><b>5:41 PM</b><span>Their side</span></span>
+          </p>
         </div>
 
         <div class="beat beat-2" data-for="2">
           <p class="eyebrow">One room, two phones</p>
           <h2 class="beat-title">She lives in yours and in theirs.</h2>
           <div class="twin" aria-hidden="true">
-            <img
-              src={sharedRoom.at(sharedRoomSrc.width)}
-              srcset={sharedRoom.srcset}
-              sizes="(max-width: 900px) 92vw, 560px"
-              alt=""
-              width={sharedRoomSrc.width}
-              height={sharedRoomSrc.height}
-              loading="lazy"
-              decoding="async"
-            />
-            <span class="twin-thread"></span>
-            <img
-              src={sharedRoom.at(sharedRoomSrc.width)}
-              srcset={sharedRoom.srcset}
-              sizes="(max-width: 900px) 92vw, 560px"
-              alt=""
-              width={sharedRoomSrc.width}
-              height={sharedRoomSrc.height}
-              loading="lazy"
-              decoding="async"
-            />
+            <div class="tw">
+              <AppRoomScreen sizes="(max-width: 900px) 40vw, 200px" home />
+              <p class="tw-cap">Your phone</p>
+            </div>
+            <div class="tw">
+              <LockScreen line="They petted Mochi. She purred." />
+              <p class="tw-cap">Their lock screen</p>
+            </div>
           </div>
         </div>
 
         <div class="beat beat-3" data-for="3">
-          <h2 class="beat-title">Pet her.<br />They'll feel it.</h2>
-          <p class="beat-note">Tap Mochi. Drag to turn the room.</p>
+          <h2 class="beat-title">Pet her here.<br />They'll feel it there.</h2>
+          <p class="beat-note">Every pat, snack and note shows up on both phones.</p>
           <StoreButton />
         </div>
       </div>
@@ -258,7 +232,6 @@ const schema = [
                 />
               </picture>
             </div>
-            <div class="night"></div>
             <div class="bloom bloom-lamp"></div>
             <div class="bloom bloom-flicker"></div>
             <div class="bloom bloom-window"></div>
@@ -338,18 +311,7 @@ const schema = [
         <figure class="phone-fig phone-theirs">
           <div class="phone">
             <div class="screen lock" id="lock">
-              <img
-                class="wall"
-                src={roomAsset("window-1000.webp")}
-                srcset={room("window")}
-                sizes="(max-width: 640px) 62vw, 300px"
-                alt=""
-                width="2560"
-                height="1440"
-                loading="lazy"
-                decoding="async"
-              />
-              <div class="statusbar" aria-hidden="true">
+<div class="statusbar" aria-hidden="true">
                 <span class="sb-time"></span><span class="sb-icons"
                   ><i class="sb-signal"></i><i class="sb-wifi"></i><i class="sb-battery"></i></span
                 >
@@ -402,39 +364,14 @@ const schema = [
         <p class="lead">Look after Mochi and you both earn coins. Every piece you buy appears on both phones.</p>
       </div>
 
-      <div class="set reveal" id="set" aria-hidden="true">
-        <div class="set-floor"></div>
-        <span class="set-cord"></span>
-        <div class="set-props">
-          {
-            shop.map((item) => (
-              <div class={`prop prop-${item.key}`} data-prop={item.key}>
-                <div class="art" style={item.style}>
-                  <img
-                    src={item.small}
-                    srcset={`${item.small} 300w, ${item.large} 600w`}
-                    sizes="(max-width: 600px) 45vw, 300px"
-                    alt=""
-                    width="600"
-                    height="600"
-                    loading="lazy"
-                    decoding="async"
-                  />
-                </div>
-              </div>
-            ))
-          }
-        </div>
-      </div>
+      <ShopSet id="set" class="reveal" />
 
       <div class="credits-roll reveal">
         <ul class="roll" aria-label="Things you can buy for Mochi's room">
           {
-            shop.map((item) => (
+            shopItems.map((item) => (
               <li data-prop={item.key}>
                 <span class="c-name">{item.name}</span>
-                <span class="c-lead" aria-hidden="true" />
-                <span class="c-price">● {item.price}</span>
                 <span class="c-blurb">{item.blurb}</span>
               </li>
             ))
@@ -692,14 +629,14 @@ const schema = [
         <h2 class="wide-title">Nothing here makes you feel guilty.</h2>
       </div>
       <div class="promise-grid">
-        <figure class="still reveal">
+        <figure class="still still-square reveal">
           <img
-            src={roomAsset("mochi-1000.webp")}
-            srcset={room("mochi")}
-            sizes="(max-width: 900px) 92vw, 560px"
-            alt="Mochi sitting in her donut bed, the lamp on behind her"
-            width="2560"
-            height="1440"
+            src={streakBack.at(800)}
+            srcset={streakBack.srcset}
+            sizes="(max-width: 900px) 92vw, 520px"
+            alt="Mochi helping a hand light a clay flame: the love streak, brought back"
+            width={streakBackSrc.width}
+            height={streakBackSrc.height}
             loading="lazy"
             decoding="async"
           />
@@ -726,32 +663,9 @@ const schema = [
           <p class="eyebrow"><span class="no">08</span>Questions</p>
           <h2 id="faq-title">Before you move in.</h2>
         </div>
-        <figure class="still still-sm reveal">
-          <picture>
-            <source
-              media="(max-width: 900px)"
-              type="image/avif"
-              srcset={`${roomAsset("room-clean-1000.avif")} 1000w, ${roomAsset("room-clean-1600.avif")} 1600w`}
-              sizes="92vw"
-            />
-            <source
-              media="(max-width: 900px)"
-              type="image/webp"
-              srcset={`${roomAsset("room-clean-1000.webp")} 1000w, ${roomAsset("room-clean-1600.webp")} 1600w`}
-              sizes="92vw"
-            />
-            <img
-              src={roomAsset("window-1000.webp")}
-              srcset={room("window")}
-              sizes="(max-width: 900px) 92vw, 560px"
-              alt=""
-              width="2560"
-              height="1440"
-              loading="lazy"
-              decoding="async"
-            />
-          </picture>
-        </figure>
+        <div class="faq-aside reveal">
+          <p class="pg-note">More answers in the <a href="/faq/">FAQ</a> and the <a href="/help/">help pages</a>.</p>
+        </div>
       </div>
       <div class="qs reveal">
         {

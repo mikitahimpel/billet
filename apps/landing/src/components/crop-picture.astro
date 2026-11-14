@@ -1,0 +1,31 @@
+---
+import { crop, type CropName } from "../lib/crops";
+
+interface Props {
+  name: CropName;
+  alt: string;
+  sizes: string;
+  eager?: boolean;
+  // In a phone slot the close-up stands in for an app screenshot of that name (data-shot).
+  shot?: string;
+}
+
+const { name, alt, sizes, eager = false, shot } = Astro.props;
+const picture = crop(name);
+---
+
+<picture>
+  <source type="image/avif" srcset={picture.avif} sizes={sizes} />
+  <source type="image/webp" srcset={picture.webp} sizes={sizes} />
+  <img
+    class={shot ? "shot-img stand-in" : undefined}
+    src={picture.src}
+    alt={alt}
+    width={picture.width}
+    height={picture.height}
+    data-shot={shot}
+    loading={eager ? "eager" : "lazy"}
+    decoding="async"
+    fetchpriority={eager ? "high" : undefined}
+  />
+</picture>
