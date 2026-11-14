@@ -31,6 +31,9 @@ jobs:
     timeout-minutes: 20
     env:
       STAGE: ${{ inputs.stage }}
+      # Prod is the `ourio` stack: Worker `ourio-api-prod-<hash>`, state D1 `ourio-alchemy-state`,
+      # dataset `ourio_prod_events`, service `ourio-api`. `dev` stays `billet` (docs/alchemy.md).
+      ALCHEMY_STACK: ourio
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -102,9 +105,12 @@ jobs:
             if [ -z "$url" ]; then echo "No Worker URL in the deploy output"; exit 1; fi
             echo "::add-mask::$url"
           fi
-          code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 "$url" || true)
+          body=$(curl --silent --write-out '\n%{http_code}' --max-time 30 "$url" || true)
+          code=${body##*$'\n'}
           echo "Worker answered HTTP $code"
           test "$code" = "200"
+          # The service names the stack, so a prod deploy that answered as `billet-api` is wrong.
+          printf '%s' "$body" | grep -q "\"service\":\"$ALCHEMY_STACK-api\""
 
       # The raw log is unmasked; remove it even when the deploy or the smoke test failed.
       - name: Remove deploy log

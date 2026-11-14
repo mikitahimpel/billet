@@ -140,6 +140,10 @@ describe("engineSql", () => {
 
   it("refuses anything that did not come from the closed lists", () => {
     expect(() => engineSql("billet_dev_events; DROP", base, "2026-08-07", today)).toThrow();
+    expect(() => engineSql("Ourio_prod_events", base, "2026-08-07", today)).toThrow();
+    expect(engineSql("ourio_prod_events", base, "2026-08-07", today)).toContain(
+      "FROM ourio_prod_events",
+    );
     expect(() =>
       engineSql("billet_dev_events", { ...base, event: "x' OR '1'='1" }, "2026-08-07", today),
     ).toThrow();

@@ -206,7 +206,8 @@ to `docs/privacy.md`, because it is a privacy decision.
 ### Analytics Engine
 
 Each event the app reports to `POST /v1/events` and the server accepts is also written to Workers
-Analytics Engine (binding `EVENTS`, dataset `billet_<stage>_events`), for slicing by build and
+Analytics Engine (binding `EVENTS`, dataset `<stack>_<stage>_events`: `billet_dev_events`,
+`ourio_prod_events`), for slicing by build and
 system with the SQL API. A refused request writes nothing. The row is fixed by
 `packages/backend/platform/src/event-sink-live.ts`; never reorder it, only add at the end:
 

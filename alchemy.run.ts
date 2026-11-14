@@ -15,6 +15,15 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as D1State from "./alchemy-d1-state.ts";
 
+// The stack name: the prefix of every physical name (`<stack>-api-<stage>-<hash>`), of the state
+// database and of the events dataset, and the `<stack>-api` the Worker answers on `/`. `dev` was
+// deployed as `billet` and keeps it; the prod deploy sets ALCHEMY_STACK=ourio (deploy.yml). A
+// different name is a different stack: nothing of the other one is touched or recreated.
+const stack = process.env["ALCHEMY_STACK"] || "billet";
+if (!/^[a-z][a-z0-9]*$/.test(stack)) {
+  throw new Error(`ALCHEMY_STACK must be lowercase letters and digits, got "${stack}"`);
+}
+
 // A deploy applies the committed migrations; a test fails if a schema change has none. Import the
 // subpaths above, not the package root: that pulls `@effect/sql-d1`, which needs effect 4.1, into
 // this effect 4.0 process.
@@ -48,7 +57,7 @@ const state = Layer.unwrap(
     const local = yield* Alchemy.ALCHEMY_DEV;
     return local
       ? State.localState()
-      : (D1State.d1State({ databaseName: "billet-alchemy-state" }) as Layer.Layer<
+      : (D1State.d1State({ databaseName: `${stack}-alchemy-state` }) as Layer.Layer<
           State.State,
           never,
           HttpClient.HttpClient | FileSystem.FileSystem | Path.Path
@@ -57,7 +66,7 @@ const state = Layer.unwrap(
 );
 
 export default Alchemy.Stack(
-  "billet",
+  stack,
   {
     providers: Layer.mergeAll(Cloudflare.providers(), drizzleProviders()),
     state,
@@ -77,7 +86,7 @@ export default Alchemy.Stack(
     // Accepted app events, written by the Worker (docs/experiments.md). Analytics Engine makes a
     // dataset on its first write, so a deploy creates nothing else. One dataset per stage.
     const events = yield* Cloudflare.AnalyticsEngine.Dataset("Events", {
-      dataset: `billet_${stage}_events`,
+      dataset: `${stack}_${stage}_events`,
     });
 
     // Workers Logs and traces (docs/observability.md). Head sampling keeps or drops a whole
@@ -144,6 +153,8 @@ export default Alchemy.Stack(
         // Shown in the admin panel's top bar, so the owner always sees which stage they change.
         // Payments read it too: only `dev` takes Xcode and mock purchases (docs/payments.md).
         STAGE: stage,
+        // Names the service on `/` and the events dataset the admin's trends read.
+        STACK: stack,
         // The Access application in front of /admin (docs/admin.md): not secret, but kept out of
         // the public repo. Empty keeps the panel closed to everyone.
         ACCESS_TEAM_DOMAIN: Config.String("ACCESS_TEAM_DOMAIN").pipe(Config.withDefault("")),

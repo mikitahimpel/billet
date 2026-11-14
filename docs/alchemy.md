@@ -27,7 +27,7 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 | `Media` | `Cloudflare.R2.Bucket`, private: no public access, no custom domain | `MEDIA` |
 | `Titles` | `Cloudflare.KV.Namespace`, TMDB's answers for the To watch list, keyed by hash | `TITLES` |
 | `PairRoom` | `Cloudflare.DurableObject`, SQLite-backed, one object per couple | `PAIR_ROOM` |
-| `Events` | `Cloudflare.AnalyticsEngine.Dataset`, dataset `billet_<stage>_events` | `EVENTS` |
+| `Events` | `Cloudflare.AnalyticsEngine.Dataset`, dataset `<stack>_<stage>_events` | `EVENTS` |
 | `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts`, static assets from `./apps/api/public`, custom domain `API_DOMAIN` when set | `ASSETS` |
 
 - `Events` is only a binding: Analytics Engine creates the dataset on the first write, so there is
@@ -45,9 +45,21 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
   binding types in `worker-env.ts` and `env` in `alchemy.run.ts` must stay in step.
 - The `PairRoom` rules live in `packages/backend/pair-room`. `/v1/` serves the auth, pairing, notes and
   media routes, and anything else answers the placeholder that the deploy smoke test reads.
-- Physical names derive from the stack (`billet`), the stage and the logical id. Nothing personal is
-  committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`,
-  read only by a real deploy.
+- Physical names derive from the stack, the stage and the logical id (`<stack>-api-<stage>-<hash>`).
+  Nothing personal is committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and
+  `CLOUDFLARE_API_TOKEN`, read only by a real deploy.
+
+### Stack name
+
+The stack name is `ALCHEMY_STACK`, default `billet`. It prefixes every physical name, names the
+state database `<stack>-alchemy-state` and the dataset `<stack>_<stage>_events`, and is bound to
+the Worker as `STACK`, which answers `/` with `{"service":"<stack>-api","status":"ok"}` and tells
+the admin's trends which dataset to read. `dev` was deployed as `billet` and keeps the name: a
+different stack name is a different stack with its own state, so renaming would recreate every
+resource and lose the data. Prod has never been deployed under `billet`, so the deploy workflow sets
+`ALCHEMY_STACK=ourio` and prod is the `ourio` stack: Worker `ourio-api-prod-<hash>`, state D1
+`ourio-alchemy-state`, dataset `ourio_prod_events`, service `ourio-api`. Lowercase letters and
+digits only; the stack file refuses anything else before planning.
 
 ## Drizzle
 
@@ -109,7 +121,8 @@ but that room is down until a fixed migration ships.
 - **Local** (`alchemy dev`): every resource runs on a local simulator, with no Cloudflare calls and no
   credentials. State is in the gitignored `.alchemy/` folder.
 - **`dev` and `prod`** (`alchemy deploy --stage <stage>`): real Cloudflare resources. State is kept in
-  a D1 database named `billet-alchemy-state`, in the same account, through
+  a D1 database named `<stack>-alchemy-state` (`billet-alchemy-state` for dev, `ourio-alchemy-state`
+  for prod, [Stack name](#stack-name)), in the same account, through
   [`alchemy-d1-state.ts`](../alchemy-d1-state.ts). It is created on first use, is not part of the
   stack (so `destroy` keeps it) and holds Worker secrets in plaintext, like the local store.
 - `Cloudflare.state()` is not used: it keeps its token in the account's Secrets Store, which the
@@ -120,6 +133,7 @@ but that room is down until a fixed migration ships.
 ```sh
 pnpm alchemy dev                              # local, no credentials
 curl -si http://localhost:8787/               # 200 {"service":"billet-api","status":"ok"}
+ALCHEMY_STACK=ourio pnpm alchemy dev          # prod's names, still local: {"service":"ourio-api",...}
 ```
 
 Stop `alchemy dev` with Ctrl-C. Killing only the `pnpm` wrapper leaves Alchemy and workerd running.
@@ -192,8 +206,10 @@ The workflow checks that the six required secrets are present (names only) and w
 `pnpm turbo run lint typecheck test format:check`, then
 `pnpm exec alchemy deploy --stage prod --yes --no-input`, prints the log with the `workers.dev`
 address masked (public repository logs are public; the account ID is a secret, so GitHub masks it
-too), smoke-tests the Worker for HTTP 200 (`https://<API_DOMAIN>` when it is set, else the
-`workers.dev` URL from the log) and deletes the raw log in a last step.
+too), smoke-tests the Worker (`https://<API_DOMAIN>` when it is set, else the `workers.dev` URL from
+the log) for HTTP 200 and `"service":"ourio-api"`, and deletes the raw log in a last step. The job
+sets `ALCHEMY_STACK=ourio` ([Stack name](#stack-name)); a deploy without it would make a second,
+`billet` prod stack.
 
 Owner steps, once. The secrets are copied from Proton Pass to GitHub; the Mac's `pp` session is
 the agents' session and cannot read the prod vault, so the main path is by hand.
@@ -234,7 +250,7 @@ Rotation: change the value in Proton Pass first, update the secret in GitHub (by
 the workflow so the Worker gets the new value. A new variable goes into `.env.pass.release` and
 `deploy.yml` together.
 
-State: the deploy keeps its state in the account's D1 database `billet-alchemy-state`
+State: the deploy keeps its state in the account's D1 database `ourio-alchemy-state`
 ([Stages and state](#stages-and-state)), not on the runner, so CI and a local deploy agree on what
 exists. The first prod deploy creates that database if the account has none, then the prod
 resources. The raw log of the first run may hold something private; read it once after the run.
