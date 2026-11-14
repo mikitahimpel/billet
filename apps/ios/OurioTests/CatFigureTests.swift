@@ -24,9 +24,12 @@ struct CatFigureTests {
     }
 
     @Test func anUnknownCoatFallsBackToTheGreyTabby() throws {
+        let tiger = HeroFigure.name(forAvatar: "MochiPortrait-tiger")
+        #expect(Bundle.main.url(forResource: tiger, withExtension: "webp") == nil)
         let unknown = try #require(HeroFigure.image(for: "MochiPortrait-tiger"))
         let grey = try #require(HeroFigure.image(for: "MochiPortrait"))
-        #expect(unknown === grey)
+        #expect(unknown.size == grey.size)
+        #expect(unknown.pngData() == grey.pngData())
     }
 
     /// The extension bundles her hero in every coat (project.yml), so a widget never falls back to the symbol, and

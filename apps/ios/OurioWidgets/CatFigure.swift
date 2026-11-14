@@ -47,13 +47,12 @@ struct CatFigure: View {
     }
 }
 
-/// The hero at rest, read from the bundle once per coat and downsampled: an extension has little memory, and a
-/// widget shows at most a few hundred points of her.
+/// The hero at rest, read from the bundle and downsampled as it is decoded: an extension has little memory, and a
+/// widget shows at most a few hundred points of her. A widget's body runs a few times per timeline, so there is no
+/// cache to share.
 enum HeroFigure {
     /// The longer side after downsampling: the largest widget's stage at 3x.
     static let maxPixels = 720
-
-    private static let cache = Cache()
 
     /// The coat an avatar name carries: `MochiPortrait` is the grey tabby, `MochiPortrait-<coat>` the others.
     static func coat(forAvatar avatar: String) -> String {
@@ -70,8 +69,6 @@ enum HeroFigure {
     }
 
     private static func read(_ name: String, in bundle: Bundle) -> UIImage? {
-        let key = "\(bundle.bundleURL.path)/\(name)" as NSString
-        if let hit = cache.store.object(forKey: key) { return hit }
         guard let url = bundle.url(forResource: name, withExtension: "webp"),
               let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
         let options: [CFString: Any] = [
@@ -80,14 +77,6 @@ enum HeroFigure {
             kCGImageSourceShouldCacheImmediately: true,
             kCGImageSourceThumbnailMaxPixelSize: maxPixels,
         ]
-        guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
-        let image = UIImage(cgImage: cgImage)
-        cache.store.setObject(image, forKey: key)
-        return image
-    }
-
-    /// NSCache is thread-safe; the class only lets it be a static.
-    private final class Cache: @unchecked Sendable {
-        let store = NSCache<NSString, UIImage>()
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary).map { UIImage(cgImage: $0) }
     }
 }
