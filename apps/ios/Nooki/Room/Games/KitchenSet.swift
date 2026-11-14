@@ -10,6 +10,10 @@ import UIKit
 /// frame is turned by `yaw` about the play area so the left wall shows to the camera.
 enum KitchenSet {
     static let yaw: Float = -0.45
+    /// The planks and their seams lie on the slab, this tall at the seams; the set is sunk by it so the floor's top is
+    /// `floorTop`, where the games stand their props and lay their blobs. A blob inside a plank is hidden on one GPU
+    /// and flickers through on another.
+    static let plankTop: Float = 0.0018
     private static let backZ: Float = -0.40
     private static let leftX: Float = -0.40
     private static let counterDepth: Float = 0.14
@@ -24,8 +28,8 @@ enum KitchenSet {
     @discardableResult
     static func build(in pivot: Entity, floorTop: Float) -> Entity {
         let root = pivot.group()
-        root.box(3, 0.04, 3, r: 0.002, Clay.matte(0xD9AE78, roughness: 0.8), at: [0, 0, 0])
-        let k = root.group(at: [0, floorTop, 0], rotation: .y(yaw))
+        root.box(3, 0.04, 3, r: 0.002, Clay.matte(0xD9AE78, roughness: 0.8), at: [0, -plankTop, 0])
+        let k = root.group(at: [0, floorTop - plankTop, 0], rotation: .y(yaw))
         var b = MeshBatch()
         floor(&b)
         rug(&b)
@@ -59,10 +63,10 @@ enum KitchenSet {
         var row = 0
         while z < 1.2 {
             b.box([2.2, 0.0016, width - 0.003], at: [0.5, 0.0008, z + width / 2], tones[row % 3], roughness: 0.75)
-            b.box([2.2, 0.0018, 0.003], at: [0.5, 0.0009, z + width], seam, roughness: 0.9)
+            b.box([2.2, plankTop, 0.003], at: [0.5, plankTop / 2, z + width], seam, roughness: 0.9)
             var x = leftX + Float(row % 4) * 0.13
             while x < 1.5 {
-                b.box([0.003, 0.0018, width], at: [x, 0.0009, z + width / 2], seam, roughness: 0.9)
+                b.box([0.003, plankTop, width], at: [x, plankTop / 2, z + width / 2], seam, roughness: 0.9)
                 x += 0.52
             }
             z += width
