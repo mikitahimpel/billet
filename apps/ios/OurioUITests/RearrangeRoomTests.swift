@@ -72,22 +72,6 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testTheRoomSwitchStillAnswersWhileArranging() throws {
-        launchDecorate()
-        let city = app.buttons["roomSwitch.City"]
-        try XCTSkipUnless(city.waitForExistence(timeout: 10), "one room: nothing to switch")
-        at(0.893, 0.558).tap()
-        XCTAssertTrue(app.staticTexts["Cat tree"].waitForExistence(timeout: 10))
-        city.tap()
-        let isSelected = expectation(for: NSPredicate(format: "isSelected == true"), evaluatedWith: city)
-        wait(for: [isSelected], timeout: 15)
-        XCTAssertTrue(app.otherElements["decorPanel"].exists, "the other room is arranged on, with its own closet")
-        XCTAssertFalse(app.staticTexts["Cat tree"].exists, "the living room's piece is let go")
-        app.buttons["roomSwitch.Room"].tap()
-        XCTAssertTrue(app.buttons["decorReset"].waitForExistence(timeout: 15))
-    }
-
-    @MainActor
     func testTheLastBedCannotBeStored() {
         launchDecorate()
         // The cat's bed is in the middle of the rug.

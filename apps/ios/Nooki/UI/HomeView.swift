@@ -269,9 +269,6 @@ struct HomeView: View {
                 .allowsHitTesting(false)
             }
 
-            // Over the room and under the bars, so the header's room switch still answers while the pieces are arranged.
-            if arranging, room.game == nil, state.tab == .world { DecorTouchLayer(controller: room) }
-
             Group {
                 switch state.tab {
                 case .shop:
@@ -341,6 +338,9 @@ struct HomeView: View {
             }
             .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
+        }
+        .overlay {
+            if arranging, room.game == nil, state.tab == .world { DecorTouchLayer(controller: room) }
         }
         .overlay(alignment: .bottom) {
             if arranging, room.game == nil {
