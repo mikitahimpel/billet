@@ -15,6 +15,8 @@ export interface WorkerEnv {
    * `dev` or `prod`. Picks credited App Store environments; only `dev` serves the payment extras.
    */
   readonly STAGE?: string;
+  /** The stack name (`billet`, `ourio`): the service on `/` and the events dataset's prefix. */
+  readonly STACK?: string;
   readonly PAIR_ROOM: DurableObjectNamespace<PairRoom>;
   /**
    * The Access app on `/admin`: `<team>.cloudflareaccess.com` and AUD tag. Missing: all refused.

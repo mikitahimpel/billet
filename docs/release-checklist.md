@@ -69,8 +69,10 @@ or a user will probably hit it. NICE can follow the release. "Owner" is the repo
   optional `ANALYTICS_READ_TOKEN`, `LIVE_ACTIVITY_PUSH=on` when the Live Activity lane is wanted,
   `API_DOMAIN` (`api.ourio.app`) once the zone is in the account and the token has Workers Routes
   and DNS Edit on it (`docs/alchemy.md` "Custom domain").
-  Resources made by the deploy: D1 `Database`, R2 `Media`, KV `Status` and `Titles`, Analytics
-  Engine dataset `billet_prod_events`, Durable Object `PairRoom`.
+  Resources made by the deploy, all named `ourio-…` (the workflow sets `ALCHEMY_STACK=ourio`;
+  dev stays `billet`, `docs/alchemy.md` "Stack name"): Worker `ourio-api-prod-<hash>`, D1
+  `Database`, R2 `Media`, KV `Status` and `Titles`, Analytics Engine dataset `ourio_prod_events`,
+  Durable Object `PairRoom`, state D1 `ourio-alchemy-state`. `GET /` answers `ourio-api`.
 
 ## Why `App tests (Simulator)` timed out on main
 

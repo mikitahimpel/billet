@@ -10,6 +10,8 @@ export interface EngineReadConfig {
   readonly accountId: string;
   readonly token: string;
   readonly stage: string;
+  /** The stack name in front of `_<stage>_events`; absent, `billet`. */
+  readonly stack: string;
 }
 
 // The SQL API sends 64-bit numbers as strings.
@@ -33,11 +35,13 @@ export const AnalyticsEngineReaderLive = (
   fetcher: typeof fetch = fetch,
 ): Layer.Layer<AnalyticsEngineReader> => {
   const { accountId, token, stage } = config;
+  const stack = config.stack || "billet";
   if (
     !accountId ||
     !token ||
     !stage ||
     !/^[a-z0-9]+$/.test(stage) ||
+    !/^[a-z][a-z0-9]*$/.test(stack) ||
     !/^[0-9a-f]{32}$/.test(accountId)
   )
     return AnalyticsEngineReader.none;
@@ -45,7 +49,7 @@ export const AnalyticsEngineReaderLive = (
     trend: (query, from, today) =>
       Effect.gen(function* () {
         const sql = yield* Effect.try({
-          try: () => engineSql(`billet_${stage}_events`, query, from, today),
+          try: () => engineSql(`${stack}_${stage}_events`, query, from, today),
           catch: (cause) => new EngineUnavailable({ reason: "bad-query", cause }),
         });
         const response = yield* Effect.tryPromise({
