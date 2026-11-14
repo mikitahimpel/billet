@@ -54,6 +54,14 @@ enum RoomViewSize {
     }
 }
 
+/// The City's window is a SwiftUI layer under the Bedroom's RealityKit view, seen through the hole in its wall. It is
+/// drawn only while that view is: a covered room is transparent, and the window alone would float over the backdrop.
+enum RoomWindowLayer {
+    static func isShown(scene: RoomScene, visibility: RoomVisibility) -> Bool {
+        scene == .city && visibility == .visible
+    }
+}
+
 /// What is drawn for one input: the City's window under the room and the room itself while it can be seen.
 private struct RoomStage: View {
     let input: RoomInput
@@ -68,7 +76,7 @@ private struct RoomStage: View {
         let _ = controller.probe.stageBody()
         ZStack {
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
-            if !controller.isStandIn, input.scene == .city, input.visibility != .hidden,
+            if !controller.isStandIn, RoomWindowLayer.isShown(scene: input.scene, visibility: input.visibility),
                 let window = controller.cityWindowView
             {
                 CityWindowLayer(view: window)
