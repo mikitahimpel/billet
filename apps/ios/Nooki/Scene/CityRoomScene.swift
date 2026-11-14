@@ -307,7 +307,7 @@ final class CityRoomScene: CatRoom {
         // New materials are costly, so the glowing bits are only redone as the lamps brighten or dim.
         if abs(lamps - appliedLamps) > 0.02 {
             appliedLamps = lamps
-            lampShade?.model?.materials = [Clay.glow(BedroomFurniture.shadeTone, intensity: 0.2 + 2.6 * lamps)]
+            lampShade?.model?.materials = [BedroomFurniture.shade(lamps: lamps)]
             let bulb = Clay.glow(Tone.bulb, intensity: 0.4 + 4 * lamps)
             for b in bulbs { b.model?.materials = [bulb] }
         }

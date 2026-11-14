@@ -14,6 +14,7 @@ struct DecorPanel: View {
     private var machine: DecorMachine.State { state.decor.state }
     private var selected: String? { machine.selection }
     @State private var confirmingReset = false
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
         Card {
@@ -33,22 +34,43 @@ struct DecorPanel: View {
         .accessibilityIdentifier("decorPanel")
     }
 
+    /// Done sits level with the title and the hint runs under both at the card's full width; at accessibility sizes
+    /// Done takes the whole width under the words, so neither it nor the title is broken to fit beside the other.
     private var header: some View {
-        HStack(alignment: .center, spacing: Space.m) {
-            VStack(alignment: .leading, spacing: Space.xs) {
-                Text("Decorate")
-                    .font(.ourioHeadline)
-                    .foregroundStyle(Ink.text)
-                Text(hint)
-                    .font(.ourioCaption)
-                    .foregroundStyle(machine.verdict == .fits ? Ink.textSecondary : Ink.destructive)
-                    .lineLimit(2)
+        VStack(alignment: .leading, spacing: Space.xs) {
+            if dynamicTypeSize.isAccessibilitySize {
+                title
+                hintLine
+                doneButton(fullWidth: true)
+            } else {
+                HStack(spacing: Space.m) {
+                    title
+                    Spacer(minLength: 0)
+                    doneButton(fullWidth: false).fixedSize()
+                }
+                hintLine
             }
-            Spacer(minLength: 0)
-            Button("Done") { done() }
-                .buttonStyle(PrimaryButtonStyle(fullWidth: false))
-                .accessibilityIdentifier("decorDone")
         }
+    }
+
+    private var title: some View {
+        Text("Decorate")
+            .font(.ourioHeadline)
+            .foregroundStyle(Ink.text)
+    }
+
+    private var hintLine: some View {
+        Text(hint)
+            .font(.ourioCaption)
+            .foregroundStyle(machine.verdict == .fits ? Ink.textSecondary : Ink.destructive)
+            .lineLimit(2)
+            .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private func doneButton(fullWidth: Bool) -> some View {
+        Button("Done") { done() }
+            .buttonStyle(PrimaryButtonStyle(fullWidth: fullWidth))
+            .accessibilityIdentifier("decorDone")
     }
 
     private var hint: String {
@@ -71,26 +93,25 @@ struct DecorPanel: View {
         }
     }
 
+    /// The chosen piece's controls in two columns of the same width, the turns over Store and Undo, so the pills
+    /// line up whatever their words measure; one under another at accessibility sizes.
     private func controls(for id: String) -> some View {
         VStack(alignment: .leading, spacing: Space.s) {
             Text(Catalog.item(id, cat: state.petName)?.name ?? DecorItem.item(shopID: id)?.base?.title ?? id)
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
-            // One row while the four pills fit, two rows on a narrower phone, one under another at accessibility sizes.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Space.s) {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: Space.s) {
                     turnButtons
                     keepButtons
                 }
-                .fixedSize()
-                VStack(alignment: .leading, spacing: Space.s) {
-                    HStack(spacing: Space.s) { turnButtons }.fixedSize()
-                    HStack(spacing: Space.s) { keepButtons }.fixedSize()
-                }
-                VStack(alignment: .leading, spacing: Space.s) {
-                    turnButtons
-                    keepButtons
+            } else {
+                Grid(horizontalSpacing: Space.s, verticalSpacing: Space.s) {
+                    if machine.canTurn {
+                        GridRow { turnButtons }
+                    }
+                    GridRow { keepButtons }
                 }
             }
         }
@@ -98,17 +119,17 @@ struct DecorPanel: View {
 
     @ViewBuilder private var turnButtons: some View {
         if machine.canTurn {
-            PillButton("Rotate", symbol: "rotate.right") { state.decor.send(.turned) }
+            PillButton("Rotate", symbol: "rotate.right", fullWidth: true) { state.decor.send(.turned) }
                 .accessibilityIdentifier("decorRotate")
-            PillButton("45°", symbol: "rotate.right") { state.decor.send(.turnedFine) }
+            PillButton("45°", symbol: "rotate.right", fullWidth: true) { state.decor.send(.turnedFine) }
                 .accessibilityIdentifier("decorRotateFine")
         }
     }
 
     @ViewBuilder private var keepButtons: some View {
-        PillButton("Store", symbol: "tray.and.arrow.down") { state.decor.send(.stored) }
+        PillButton("Store", symbol: "tray.and.arrow.down", fullWidth: true) { state.decor.send(.stored) }
             .accessibilityIdentifier("decorStore")
-        undoButton
+        undoButton(fullWidth: true)
     }
 
     @ViewBuilder private var closet: some View {
@@ -151,9 +172,9 @@ struct DecorPanel: View {
         }
     }
 
-    @ViewBuilder private var undoButton: some View {
+    @ViewBuilder private func undoButton(fullWidth: Bool) -> some View {
         if machine.book.undo != nil {
-            PillButton("Undo", symbol: "arrow.uturn.backward") { state.decor.send(.undone) }
+            PillButton("Undo", symbol: "arrow.uturn.backward", fullWidth: fullWidth) { state.decor.send(.undone) }
                 .accessibilityIdentifier("decorUndo")
         }
     }
@@ -163,7 +184,7 @@ struct DecorPanel: View {
             PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
                 .accessibilityIdentifier("decorReset")
             Spacer(minLength: 0)
-            undoButton
+            undoButton(fullWidth: false)
         }
         .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }

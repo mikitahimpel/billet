@@ -8,6 +8,12 @@ enum BedroomFurniture {
     static let lampLight = "bedroomLampLight"
     static let shadeTone: UInt32 = 0xF7ECD8
 
+    /// The shade at the lamps' brightness, 0 off to 1 on: lit no harder than the Living room's lamp, so the tone
+    /// mapping and the bloom never flatten it to a white blank.
+    static func shade(lamps: Float) -> PhysicallyBasedMaterial {
+        Clay.glow(shadeTone, intensity: 0.2 + 1.0 * lamps)
+    }
+
     static func build(_ item: DecorItem) -> Entity? {
         let piece = Entity()
         piece.name = item.id
@@ -46,7 +52,7 @@ enum BedroomFurniture {
         for y: Float in [0.04, 0.09, 0.135] { n.box(0.134, 0.012, 0.134, r: 0.004, slat, at: [0, y, 0]) }
         n.cylinder(0.01, 0.03, Clay.matte(0x6D4C3A), at: [0, 0.155, 0])
         n.cylinder(0.08, 0.005, Clay.matte(0x6D4C3A), at: [0, 0.2, 0])
-        n.cylinder(0.065, 0.0475, Clay.glow(shadeTone, intensity: 0.2), at: [0, 0.255, 0]).name = lampShade
+        n.cylinder(0.065, 0.0475, shade(lamps: 0), at: [0, 0.255, 0]).name = lampShade
         n.group(at: [0.02, 0.26, 0.03]).name = lampLight
         n.box(0.05, 0.03, 0.07, r: 0.004, Clay.matte(0x7C9A7E), at: [0.035, 0.165, 0.03], rotation: .y(0.2))
     }
