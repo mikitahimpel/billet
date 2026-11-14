@@ -1,9 +1,11 @@
 // Alchemy v2 (beta), docs/alchemy.md. Physical names derive from the stack, the stage and the
-// logical ids. CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are read only by a real deploy;
-// `alchemy dev` emulates every resource locally and needs no credentials.
+// logical ids; the Worker's is set by hand so its address reads well. CLOUDFLARE_ACCOUNT_ID and
+// CLOUDFLARE_API_TOKEN are read only by a real deploy; `alchemy dev` emulates every resource
+// locally and needs no credentials.
 import * as Cloudflare from "@alchemy.run/cloudflare";
 import { providers as drizzleProviders } from "@alchemy.run/drizzle/Providers";
 import { Schema } from "@alchemy.run/drizzle/Schema";
+import { apiWorkerName } from "@billet/backend-platform/service-names";
 import * as Alchemy from "alchemy";
 import * as State from "alchemy/State";
 import * as Config from "effect/Config";
@@ -15,10 +17,12 @@ import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as D1State from "./alchemy-d1-state.ts";
 
-// The stack name: the prefix of every physical name (`<stack>-api-<stage>-<hash>`), of the state
-// database and of the events dataset, and the `<stack>-api` the Worker answers on `/`. Every
-// stage is `ourio`; ALCHEMY_STACK overrides it. A different name is a different stack: nothing of
-// the other one is touched or recreated, so the `billet` resources dev once used are orphaned.
+// The stack name: the prefix of every physical name (the Worker `<stack>-api` on prod and
+// `<stack>-api-<stage>` elsewhere, `<stack>-Database-<stage>-<hash>` and the like for the rest),
+// of the state database and of the events dataset, and the `<stack>-api` the Worker answers on
+// `/`. Every stage is `ourio`; ALCHEMY_STACK overrides it. A different name is a different stack:
+// nothing of the other one is touched or recreated, so the `billet` resources dev once used are
+// orphaned.
 const stack = process.env["ALCHEMY_STACK"] || "ourio";
 if (!/^[a-z][a-z0-9]*$/.test(stack)) {
   throw new Error(`ALCHEMY_STACK must be lowercase letters and digits, got "${stack}"`);
@@ -137,7 +141,16 @@ export default Alchemy.Stack(
 
     // Bindings must match packages/backend/platform/src/worker-env.ts. `PairRoom` is the class
     // exported by apps/api/src/worker.ts, one object per couple, SQLite-backed by default.
+    //
+    // The Durable Object classes name this Worker as their former host: a Worker whose name
+    // changes is replaced by a new script, and without the declaration the namespaces, with every
+    // room in them, would be created afresh on the new one. Alchemy then moves each namespace from
+    // the old script instead. On a stage that has nothing to move the declaration is inert.
     const api = yield* Cloudflare.Worker("Api", {
+      // Short and without Alchemy's random tail: prod answers on
+      // `https://ourio-api.<account>.workers.dev`, dev on `ourio-api-dev`. A change of this name
+      // replaces the Worker (see the Durable Objects above).
+      name: apiWorkerName(stack, stage),
       main: "./apps/api/src/worker.ts",
       // Static files, such as the date cards' pictures under /art/. A path that matches a file is
       // served from the CDN without running the Worker; any other path reaches the Worker. Keep an
@@ -168,7 +181,7 @@ export default Alchemy.Stack(
               ANALYTICS_ACCOUNT_ID: Config.String("CLOUDFLARE_ACCOUNT_ID"),
             }
           : {}),
-        PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
+        PAIR_ROOM: Cloudflare.DurableObject("PairRoom", { transferredFrom: "Api" }),
         LIVE_ACTIVITY_PUSH: liveActivityPush,
         // The Sign in with Apple key revokes a deleted account's Apple token.
         ...(Option.isSome(apple.APNS_KEY) ? { APNS_KEY: apple.APNS_KEY.value } : {}),
@@ -180,7 +193,9 @@ export default Alchemy.Stack(
           ? { APPLE_SIGN_IN_KEY_ID: apple.APPLE_SIGN_IN_KEY_ID.value }
           : {}),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
-        ...(stage === "dev" ? { DEMO_ROOM: Cloudflare.DurableObject("DemoRoom") } : {}),
+        ...(stage === "dev"
+          ? { DEMO_ROOM: Cloudflare.DurableObject("DemoRoom", { transferredFrom: "Api" }) }
+          : {}),
       },
       observability,
       ...(apiDomain === "" ? {} : { domain: apiDomain }),

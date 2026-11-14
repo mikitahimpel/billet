@@ -21,6 +21,7 @@
   "devDependencies": {
     "@alchemy.run/cloudflare": "catalog:",
     "@alchemy.run/drizzle": "catalog:",
+    "@billet/backend-platform": "workspace:*",
     "@effect/platform-node": "catalog:infra",
     "@types/node": "catalog:",
     "alchemy": "catalog:",
