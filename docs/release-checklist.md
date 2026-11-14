@@ -66,7 +66,9 @@ or a user will probably hit it. NICE can follow the release. "Owner" is the repo
 - **Stage and secrets list for prod:** Cloudflare account id and API token (Workers Scripts, D1,
   R2 edit), `APNS_KEY`, `APNS_KEY_ID`, `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID`,
   `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `TMDB_TOKEN` (without it prod serves no titles),
-  optional `ANALYTICS_READ_TOKEN`, `LIVE_ACTIVITY_PUSH=on` when the Live Activity lane is wanted.
+  optional `ANALYTICS_READ_TOKEN`, `LIVE_ACTIVITY_PUSH=on` when the Live Activity lane is wanted,
+  `API_DOMAIN` (`api.ourio.app`) once the zone is in the account and the token has Workers Routes
+  and DNS Edit on it (`docs/alchemy.md` "Custom domain").
   Resources made by the deploy: D1 `Database`, R2 `Media`, KV `Status` and `Titles`, Analytics
   Engine dataset `billet_prod_events`, Durable Object `PairRoom`.
 

@@ -38,7 +38,7 @@ gh auth status >/dev/null 2>&1 || { echo "gh is not logged in: run gh auth login
 export PROTON_PASS_AGENT_REASON="${PROTON_PASS_AGENT_REASON:-sync prod secrets to GitHub environment prod}"
 
 # These may not exist in Proton Pass yet (the first deploy runs without them); a missing one is skipped.
-optional=" ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN "
+optional=" ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN API_DOMAIN "
 skipped=""
 tmp=$(mktemp -d)
 trap 'rm -rf "$tmp"' EXIT

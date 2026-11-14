@@ -64,6 +64,7 @@ jobs:
           ACCESS_TEAM_DOMAIN: ${{ secrets.ACCESS_TEAM_DOMAIN }}
           ACCESS_AUD: ${{ secrets.ACCESS_AUD }}
           TMDB_TOKEN: ${{ secrets.TMDB_TOKEN }}
+          API_DOMAIN: ${{ secrets.API_DOMAIN }}
         run: |
           set -uo pipefail
           missing=""
@@ -76,8 +77,9 @@ jobs:
             exit 1
           fi
           # Optional: the first deploy runs before the Access application and the TMDB key exist.
-          # Empty ACCESS_* keep /admin closed; without TMDB_TOKEN prod serves no titles.
-          for name in ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN; do
+          # Empty ACCESS_* keep /admin closed; without TMDB_TOKEN prod serves no titles; without
+          # API_DOMAIN the Worker stays on its workers.dev address.
+          for name in ACCESS_TEAM_DOMAIN ACCESS_AUD TMDB_TOKEN API_DOMAIN; do
             if [ -z "${!name:-}" ]; then echo "::warning::Optional secret $name is not set; deploying without it."; fi
           done
           echo "::add-mask::$CLOUDFLARE_ACCOUNT_ID"
@@ -86,12 +88,20 @@ jobs:
           sed -E 's#https://[A-Za-z0-9.-]*workers\.dev#https://<masked>.workers.dev#g' "$RUNNER_TEMP/deploy.log"
           exit "$status"
 
+      # With a custom domain the Worker's primary URL is that domain, so the test calls it; the
+      # domain is public, the workers.dev address is not.
       - name: Smoke test
+        env:
+          API_DOMAIN: ${{ secrets.API_DOMAIN }}
         run: |
           set -uo pipefail
-          url=$(grep -oE 'https://[A-Za-z0-9.-]*workers\.dev' "$RUNNER_TEMP/deploy.log" | head -n 1)
-          if [ -z "$url" ]; then echo "No Worker URL in the deploy output"; exit 1; fi
-          echo "::add-mask::$url"
+          if [ -n "${API_DOMAIN:-}" ]; then
+            url="https://$API_DOMAIN"
+          else
+            url=$(grep -oE 'https://[A-Za-z0-9.-]*workers\.dev' "$RUNNER_TEMP/deploy.log" | head -n 1)
+            if [ -z "$url" ]; then echo "No Worker URL in the deploy output"; exit 1; fi
+            echo "::add-mask::$url"
+          fi
           code=$(curl --silent --output /dev/null --write-out '%{http_code}' --max-time 30 "$url" || true)
           echo "Worker answered HTTP $code"
           test "$code" = "200"
