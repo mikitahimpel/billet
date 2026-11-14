@@ -204,8 +204,8 @@ private struct Bowl: View {
     }
 }
 
-/// Mochi in her well. Her portrait is a bust whose lower edge is a straight cut, so it fades out into the well instead
-/// of ending on a line, and it sits clear of the controls. Her state shows as a prop and a word, not as a different cat.
+/// Mochi in her well: the app's seated hero (`CatFigure`) standing on the well's floor, clear of the controls. Her
+/// state shows as a prop and a word, not as a different cat.
 private struct MochiStage: View {
     enum Layout {
         /// The speech on its own line above her: for a well that is about as tall as it is wide.
@@ -258,12 +258,15 @@ private struct MochiStage: View {
         case .stacked:
             VStack(spacing: Space.xs) {
                 if showsSpeech { speechRow }
-                portrait.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
+                // With the care button on the well's corner she stands left of centre, out from under it.
+                figure
+                    .padding(.trailing, actions == .corner ? Space.l : 0)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
             }
             .padding([.top, .horizontal], Space.s)
         case .wide:
-            portrait
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            figure
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
                 .overlay(alignment: .topLeading) {
                     if showsSpeech { SpeechBubble(text: speech, font: speechFont, lines: 2).frame(maxWidth: Size.row + Space.m, alignment: .leading) }
                 }
@@ -294,24 +297,8 @@ private struct MochiStage: View {
         }
     }
 
-    @ViewBuilder
-    private var portrait: some View {
-        Group {
-            if let image = UIImage(named: s.catAvatar) ?? UIImage(named: "MochiPortrait") {
-                Image(uiImage: image)
-                    .resizable()
-                    .interpolation(.high)
-                    .widgetAccentedRenderingMode(.accented)
-                    .scaledToFit()
-                    .mask(alignment: .bottom) {
-                        LinearGradient(stops: [.init(color: .black, location: 0.72), .init(color: .clear, location: 1)],
-                                       startPoint: .top, endPoint: .bottom)
-                    }
-            } else {
-                Image(systemName: "cat.fill").resizable().scaledToFit().foregroundStyle(Ink.textSecondary)
-            }
-        }
-        .opacity(pose == .asleep ? 0.8 : 1)
+    private var figure: some View {
+        CatFigure(avatar: s.catAvatar, asleep: pose == .asleep)
     }
 }
 
