@@ -67,8 +67,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored var decorRetries = 0
     @ObservationIgnored private var sway = true
     @ObservationIgnored private var pins: [BoardPin] = []
-    /// The scenery last picked for each game, for the next time it is played.
-    @ObservationIgnored private var picked: [MiniGame: GameScenery] = [:]
     @ObservationIgnored private var partnerNotice = PartnerNoticeMachine.State.away
     @ObservationIgnored private let defaults: UserDefaults
     /// A homecoming not told yet: since when this phone was away, and until when the partner's care still counts as
@@ -379,7 +377,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     func play(_ game: MiniGame) {
         gameStarted = ProcessInfo.processInfo.systemUptime
-        scenery = GameScenery.start(game, last: picked[game])
+        scenery = GameScenery.start(game)
         if scenery.isCorner, !usesStandIn { corner = TabletopRoom(scenery: scenery) }
         withAnimation(.easeInOut(duration: 0.25)) { self.game = game }
     }
@@ -388,24 +386,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
         if let corner, let room = current { corner.leave(to: room) }
         withAnimation(.easeInOut(duration: 0.25)) { game = nil }
         corner = nil
-    }
-
-    /// Moves the game being played to `next`: one corner is dressed as another with the game carrying on; between the
-    /// room and a corner the game starts over there, once the game layer has closed it here.
-    func showScenery(_ next: GameScenery) {
-        guard let game, next != scenery, GameScenery.options(for: game).contains(next) else { return }
-        picked[game] = next
-        let was = scenery
-        withAnimation(.easeInOut(duration: 0.25)) { scenery = next }
-        guard !usesStandIn else { return }
-        switch (was.isCorner, next.isCorner) {
-        case (true, true): corner?.dress(next)
-        case (false, true): corner = TabletopRoom(scenery: next)
-        case (true, false):
-            if let corner, let room = current { corner.leave(to: room) }
-            corner = nil
-        case (false, false): break
-        }
     }
 
     /// True while the game is played in a corner of its own, not in the room.

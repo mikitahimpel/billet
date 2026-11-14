@@ -16,11 +16,10 @@ final class TabletopRoom: CatRoom {
     private static let backRow: Float = wallAt + 0.06
 
     let camera = PerspectiveCamera()
-    private(set) var scenery: GameScenery
+    let scenery: GameScenery
     private let ibl = Entity()
     private let sun = Entity()
     private let fill = Entity()
-    private var dressing: Entity?
 
     override var framing: Framing {
         Framing(target: [0, 0.07, 0.02], direction: simd_normalize([0.1, 0.24, 1]), far: 3.2, near: 3.2)
@@ -42,7 +41,7 @@ final class TabletopRoom: CatRoom {
         let framing = framing
         camera.look(at: framing.target, from: framing.target + framing.direction * framing.far, relativeTo: nil)
 
-        dressing = Self.dress(pivot, as: scenery)
+        Self.dress(pivot, as: scenery)
         buildCat(at: [0, Self.floorTop + 0.003, -0.1], rests: [.pi], scale: Self.catScale, wandering: false)
         buildLighting()
         buildMotes()
@@ -58,17 +57,6 @@ final class TabletopRoom: CatRoom {
         camera.look(at: pose.target, from: pose.eye, relativeTo: nil)
     }
     private var placed: CameraPose?
-
-    /// Swaps the floor, wall and props for `next`'s, in place: the game on it carries on.
-    func dress(_ next: GameScenery) {
-        guard next != scenery, next.isCorner else { return }
-        scenery = next
-        dressing?.removeFromParent()
-        let built = Self.dress(pivot, as: next)
-        if let iblReceiver { built.forEachDescendant { $0.components.set(iblReceiver) } }
-        dressing = built
-        light(for: next)
-    }
 
     private func buildLighting() {
         receiveAmbient(from: ibl)
@@ -104,6 +92,7 @@ final class TabletopRoom: CatRoom {
     }
 
     /// The floor, the wall behind her and a few props, all clear of the play area in front of her.
+    @discardableResult
     private static func dress(_ pivot: Entity, as scenery: GameScenery) -> Entity {
         if scenery == .kitchen { return KitchenSet.build(in: pivot, floorTop: floorTop) }
         let g = pivot.group()

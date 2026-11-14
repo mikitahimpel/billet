@@ -120,20 +120,25 @@ public struct Chip: View {
   let symbol: String?
   let showsCoin: Bool
   let style: Style
+  let fills: Bool
 
-  public init(_ title: String, symbol: String? = nil, style: Style = .quiet) {
+  /// `fills` stretches the capsule to the width it is given, for chips laid side by side on a card so they
+  /// line up with its edges; otherwise it hugs its words.
+  public init(_ title: String, symbol: String? = nil, style: Style = .quiet, fills: Bool = false) {
     self.title = title
     self.symbol = symbol
     self.showsCoin = false
     self.style = style
+    self.fills = fills
   }
 
   /// A chip for coins: the coin mark where a symbol would be.
-  public init(_ title: String, coinStyle style: Style) {
+  public init(_ title: String, coinStyle style: Style, fills: Bool = false) {
     self.title = title
     self.symbol = nil
     self.showsCoin = true
     self.style = style
+    self.fills = fills
   }
 
   public var body: some View {
@@ -146,8 +151,9 @@ public struct Chip: View {
     .foregroundStyle(style.isHoney ? Ink.heroInk : Ink.text)
     .padding(.horizontal, Space.s)
     .frame(minHeight: 22)
+    .frame(maxWidth: fills ? .infinity : nil)
     .background(fill, in: .capsule)
-    .fixedSize()
+    .fixedSize(horizontal: !fills, vertical: true)
     // A tag stays a tag: past this it would crowd out the words it labels. VoiceOver reads it whole.
     .dynamicTypeSize(...Chip.largestType)
   }
@@ -221,6 +227,10 @@ public struct FilterChip: View {
       Chip("Owned", symbol: "checkmark")
       FilterChip("Today", isSelected: true) {}
       FilterChip("Cats", isSelected: false) {}
+    }
+    HStack(spacing: Space.s) {
+      Chip("Brushed", symbol: "paintbrush.fill", fills: true)
+      Chip("Coins", coinStyle: .quiet, fills: true)
     }
   }
   .padding(Space.gutter)

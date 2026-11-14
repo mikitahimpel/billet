@@ -177,31 +177,21 @@ struct RoomGameLayer: View {
 
     @ViewBuilder private var game: some View {
         if let game = controller.game, let room = controller.gameRoom {
-            let switcher = GameSceneSwitch(
-                options: GameScenery.options(for: game), selected: controller.scenery,
-                select: { controller.showScenery($0) })
             if controller.playsInCorner {
                 if let corner = controller.corner {
-                    GameView(
-                        session: GameSession(game: game, room: corner, catLife: controller.catLife),
-                        scenes: switcher
-                    ) { controller.endGame() }
-                    .id(GameKey(game: game, inCorner: true))
+                    GameView(session: GameSession(game: game, room: corner, catLife: controller.catLife)) {
+                        controller.endGame()
+                    }
+                    .id(game)
                     .transition(.opacity)
                 }
             } else {
-                GameView(session: GameSession(game: game, room: room, catLife: controller.catLife), scenes: switcher) {
+                GameView(session: GameSession(game: game, room: room, catLife: controller.catLife)) {
                     controller.endGame()
                 }
-                .id(GameKey(game: game, inCorner: false))
+                .id(game)
                 .transition(.opacity)
             }
         }
-    }
-
-    /// A game keeps its session while it moves from one corner to another, and starts over between the room and one.
-    private struct GameKey: Hashable {
-        let game: MiniGame
-        let inCorner: Bool
     }
 }
