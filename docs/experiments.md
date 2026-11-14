@@ -206,8 +206,9 @@ to `docs/privacy.md`, because it is a privacy decision.
 ### Analytics Engine
 
 Each event the app reports to `POST /v1/events` and the server accepts is also written to Workers
-Analytics Engine (binding `EVENTS`, dataset `<stack>_<stage>_events`: `billet_dev_events`,
-`ourio_prod_events`), for slicing by build and
+Analytics Engine (binding `EVENTS`, dataset `<stack>_<stage>_events`: `ourio_dev_events`,
+`ourio_prod_events`; dev's rows from before the `ourio` stack are in `billet_dev_events`,
+[alchemy.md](alchemy.md#stack-name)), for slicing by build and
 system with the SQL API. A refused request writes nothing. The row is fixed by
 `packages/backend/platform/src/event-sink-live.ts`; never reorder it, only add at the end:
 
@@ -238,7 +239,7 @@ an Analytics read token (see `docs/admin.md`):
 
 ```sql
 SELECT blob4 AS app_version, SUM(_sample_interval * double1) AS opens
-FROM billet_dev_events
+FROM ourio_dev_events
 WHERE blob1 = 'AppOpened' AND timestamp > NOW() - INTERVAL '7' DAY
 GROUP BY app_version ORDER BY opens DESC
 ```

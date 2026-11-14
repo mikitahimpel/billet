@@ -31,8 +31,9 @@ jobs:
     timeout-minutes: 20
     env:
       STAGE: ${{ inputs.stage }}
-      # Prod is the `ourio` stack: Worker `ourio-api-prod-<hash>`, state D1 `ourio-alchemy-state`,
-      # dataset `ourio_prod_events`, service `ourio-api`. `dev` stays `billet` (docs/alchemy.md).
+      # The stack every stage deploys to (docs/alchemy.md#stack-name): Worker `ourio-api-prod-<hash>`,
+      # state D1 `ourio-alchemy-state`, dataset `ourio_prod_events`, service `ourio-api`. It is
+      # alchemy.run.ts's default too; set here so the smoke test and the deploy can never disagree.
       ALCHEMY_STACK: ourio
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
