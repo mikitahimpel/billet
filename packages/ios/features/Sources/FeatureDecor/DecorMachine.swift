@@ -276,7 +276,7 @@ public enum DecorMachine: Machine {
 
     case (.moving(let book, let item, let from, _), .dragged(let to)):
       guard to.item == item else { return (state, []) }
-      return (.moving(book, item: item, from: from, to: to), [])
+      return (.moving(book, item: item, from: from, to: DecorLayout.insideRoom(to)), [])
 
     case (.off, .dragged), (.closet, .dragged), (.selected, .dragged):
       return (state, [])
@@ -289,6 +289,9 @@ public enum DecorMachine: Machine {
       case .fits(let layout):
         next.layout = layout
         return (.selected(next, item: item), [.save(layout)])
+      case .slid(let layout, _):
+        next.layout = layout
+        return (.selected(next, item: item), [.save(layout), .feedback(.slid)])
       case .swapped(let layout, _), .nudged(let layout, _, _):
         next.layout = layout
         return (.selected(next, item: item), [.save(layout), .feedback(.swapped)])
@@ -354,6 +357,8 @@ public enum DecorMachine: Machine {
     case (.closet(var book), .roomChanged(let space)),
       (.selected(var book, _), .roomChanged(let space)),
       (.moving(var book, _, _, _), .roomChanged(let space)):
+      // The shell says the room on screen again whenever its view settles; only another room lets go.
+      guard book.space != space else { return (state, []) }
       book.space = space
       return (.closet(book), [])
     }

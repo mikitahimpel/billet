@@ -150,6 +150,8 @@ final class HomeState {
     func decorate(_ item: String? = nil) {
         tab = .world
         room = .home
+        // The view tells the machine about the room a pass later; said first, the piece goes where the player will look.
+        decor.send(.roomChanged(.living))
         decor.send(.opened(item: item))
     }
 

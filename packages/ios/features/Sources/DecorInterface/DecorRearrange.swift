@@ -30,6 +30,8 @@ extension DecorLayout {
     case swapped(DecorLayout, with: String)
     /// The piece stands there and the one that was in the way moved aside.
     case nudged(DecorLayout, other: String, to: Placement)
+    /// It did not fit where it was let go, so it stands at the nearest spot that does, within `slideReach`.
+    case slid(DecorLayout, to: Placement)
     case rejected(Verdict)
   }
 
@@ -49,14 +51,26 @@ extension DecorLayout {
   }
 
   /// Puts a piece on `placement`: where it fits it stands; on one other piece it swaps with it when both fit
-  /// in each other's place, else moves it aside to the nearest spot that fits, else is rejected.
+  /// in each other's place, else moves it aside to the nearest spot that fits; otherwise it slides to the
+  /// nearest spot that fits within `slideReach` cells, else is rejected.
   public func dropping(_ placement: Placement, in room: DecorRoom = .home) -> Drop {
     let verdict = verdict(placement, in: room)
     if verdict == .fits { return .fits(putting(placement)) }
+    if let exchanged = exchanging(placement, verdict: verdict, in: room) { return exchanged }
+    if let spot = nearestFit(to: placement, in: room),
+      Self.cells(from: placement, to: spot) <= Self.slideReach
+    {
+      return .slid(putting(spot), to: spot)
+    }
+    return .rejected(verdict)
+  }
+
+  /// A swap with the one piece in the way, or that piece moved aside; nil when neither works.
+  private func exchanging(_ placement: Placement, verdict: Verdict, in room: DecorRoom) -> Drop? {
     let blocking = blockers(of: placement)
     guard verdict == .occupied, blocking.count == 1, let other = self.placement(of: blocking[0]),
       let mine = self.placement(of: placement.item)
-    else { return .rejected(verdict) }
+    else { return nil }
 
     if mine.surface == other.surface {
       let lifted = storing(placement.item)
@@ -75,7 +89,7 @@ extension DecorLayout {
     {
       return .nudged(aside.putting(spot), other: other.item, to: spot)
     }
-    return .rejected(verdict)
+    return nil
   }
 
   /// A room as a pair that never arranged it has it: its own furniture at home. The living room also takes

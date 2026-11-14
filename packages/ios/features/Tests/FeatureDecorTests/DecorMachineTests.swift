@@ -120,6 +120,66 @@ private func book(
     #expect(outputs == [.feedback(.rejected)])
   }
 
+  @Test func aDragPastTheWallStopsAtTheWall() {
+    var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
+    (state, _) = M.transition(
+      state, .dragged(Placement(item: "yarn", surface: .floor, u: 20, v: -5)))
+    guard case .moving(_, "yarn", armchair, let to) = state else {
+      Issue.record("not moving: \(state)")
+      return
+    }
+    #expect(to.v == -5)
+    #expect(to.u < 20 && state.verdict != .outsideRoom)
+    // On it goes along the wall: the finger further out moves it no further.
+    let (further, _) = M.transition(
+      state, .dragged(Placement(item: "yarn", surface: .floor, u: 25, v: -4)))
+    #expect(
+      further.layout.placement(of: "yarn")
+        == Placement(item: "yarn", surface: .floor, u: to.u, v: -4))
+  }
+
+  @Test func lettingGoJustPastTheWallStandsThePieceAtTheWall() {
+    let empty = M.Book(
+      layout: DecorLayout(stored: Set(DecorItem.baseItems.map(\.id))), owned: ["bookcase"])
+    let from = Placement(item: "bookcase", surface: .floor, u: 0, v: 0)
+    let past = Placement(item: "bookcase", surface: .floor, u: 0, v: 9)
+    var book = empty
+    book.layout = empty.layout.putting(from)
+    let (dropped, outputs) = M.transition(
+      .moving(book, item: "bookcase", from: from, to: past), .dropped)
+    guard case .selected(let next, "bookcase") = dropped,
+      let spot = next.layout.placement(of: "bookcase")
+    else {
+      Issue.record("not selected: \(dropped)")
+      return
+    }
+    #expect(spot.u == 0 && spot.v < 9 && spot.v > 5)
+    #expect(next.layout.accepts(spot))
+    #expect(next.notice == .slid)
+    #expect(next.undo == book.layout)
+    #expect(outputs == [.save(next.layout), .feedback(.slid)])
+  }
+
+  @Test func theSameRoomSaidAgainKeepsTheChosenPiece() {
+    let chosen = M.State.selected(book(), item: "yarn")
+    #expect(M.transition(chosen, .roomChanged(.living)) == (chosen, []))
+    let (moving, _) = M.transition(chosen, .dragBegan("yarn"))
+    #expect(M.transition(moving, .roomChanged(.living)) == (moving, []))
+    #expect(M.transition(.closet(book()), .roomChanged(.living)) == (.closet(book()), []))
+  }
+
+  @Test func placingFromTheShopGoesIntoTheRoomTheShellShows() {
+    // The shell shows the living room for a Place, and says so before it opens; the piece lands there and stays
+    // chosen when the view repeats the room a pass later.
+    var bedroom = book([], stored: ["monstera", "bookcase", "print", "mouse", "yarn"])
+    bedroom.space = .bedroom
+    var (state, _) = M.transition(.off(bedroom), .roomChanged(.living))
+    (state, _) = M.transition(state, .opened(item: "bookcase"))
+    #expect(state.selection == "bookcase")
+    #expect(state.book.layout.placement(of: "bookcase")?.space == .living)
+    #expect(M.transition(state, .roomChanged(.living)) == (state, []))
+  }
+
   @Test func aCancelledDragChangesNothing() {
     var (state, _) = M.transition(.selected(book(), item: "yarn"), .dragBegan("yarn"))
     (state, _) = M.transition(
@@ -248,6 +308,9 @@ private func book(
     (.selected(book(), item: "yarn"), .dragged(armchair)),
     (.selected(book(), item: "yarn"), .dropped),
     (.selected(book(), item: "yarn"), .dragCancelled),
+    (.selected(book(), item: "yarn"), .roomChanged(.living)),
+    (.closet(book()), .roomChanged(.living)),
+    (.off(book()), .roomChanged(.living)),
   ])
   func rejectedEventsChangeNothing(state: M.State, event: M.Event) {
     let (next, outputs) = M.transition(state, event)
