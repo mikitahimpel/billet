@@ -32,15 +32,25 @@ struct BedroomPlacementTests {
         #expect(abs(bed.orientation.angle - .pi / 2) < 0.001)
     }
 
-    @Test func aMovePlateIsMadeOnlyForTheChosenPieceAndHiddenAgain() {
+    /// The green plate stands under a piece only while a drag carries it: a piece merely chosen shows nothing under
+    /// it, and once the drag ends the plate goes.
+    @Test func aMovePlateIsMadeOnlyForTheDraggedPieceAndHiddenAgain() {
         let bedroom = stage()
         bedroom.apply(RoomDecor(), receiver: nil)
         let before = Self.count(bedroom.root)
+        let rest = Self.enabledModels(bedroom.root)
+        bedroom.apply(RoomDecor(mode: .arranging(selected: "base-bedroom-bed", fits: true)), receiver: nil)
+        #expect(Self.count(bedroom.root) == before)
+        #expect(Self.enabledModels(bedroom.root) == rest)
+        let from = Placement(item: "base-bedroom-bed", surface: .floor, u: 0, v: 0, space: .bedroom)
+        bedroom.apply(RoomDecor(mode: .arranging(selected: "base-bedroom-bed", fits: true, ghost: from)), receiver: nil)
+        #expect(Self.count(bedroom.root) == before + 1)
+        #expect(Self.enabledModels(bedroom.root) == rest + 2, "the plate and the ghost")
         bedroom.apply(RoomDecor(mode: .arranging(selected: "base-bedroom-bed", fits: true)), receiver: nil)
         #expect(Self.count(bedroom.root) == before + 1)
+        #expect(Self.enabledModels(bedroom.root) == rest)
         bedroom.apply(RoomDecor(), receiver: nil)
-        #expect(Self.count(bedroom.root) == before + 1)
-        #expect(Self.enabledModels(bedroom.root) == Self.enabledModels(Self.fresh()) )
+        #expect(Self.enabledModels(bedroom.root) == Self.enabledModels(Self.fresh()))
     }
 
     private static func fresh() -> Entity {

@@ -6,7 +6,7 @@ import UIKit
 /// The pieces the player has stood in the room, drawn from the shop's models. Each piece is one holder
 /// entity around a clone of a shared model, so the meshes and materials exist once however many stand.
 /// No piece has a light, a shadow or an animation of its own: a flat blob under each one stands for its
-/// shadow, and a plate under the chosen one shows where it fits.
+/// shadow, and a plate under the dragged one shows where it fits.
 @MainActor
 final class DecorStage {
     let root = Entity()
@@ -245,8 +245,10 @@ final class DecorStage {
         return material
     }
 
+    /// The plate shows where a dragged piece would land and whether it fits; a chosen piece at rest has none, so no
+    /// green quad stands under it between drags.
     private func showPlate(on node: Node) {
-        guard case .arranging(let selected, let fits, _) = decor.mode, selected == node.item.id,
+        guard case .arranging(_, let fits, _) = decor.mode, decor.dragged == node.item.id,
             let placement = node.placement
         else {
             node.plate?.isEnabled = false

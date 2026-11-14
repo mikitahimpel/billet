@@ -83,6 +83,14 @@ public struct RoomDecor: Equatable, Sendable {
     case .arranging: true
     }
   }
+
+  /// The piece under the finger, while a drag carries it; a chosen piece at rest is none.
+  public var dragged: String? {
+    switch mode {
+    case .arranging(let selected?, _, .some): selected
+    case .showing, .arranging: nil
+    }
+  }
 }
 
 /// Everything the room is told to show. The host takes one of these and nothing else, and
