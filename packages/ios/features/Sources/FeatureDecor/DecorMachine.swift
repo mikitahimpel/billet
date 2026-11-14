@@ -184,6 +184,8 @@ public enum DecorMachine: Machine {
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     let (next, outputs) = step(state, event)
+    // An event that changes nothing leaves the last notice standing too.
+    if next == state, outputs.isEmpty { return (state, []) }
     var book = next.book
     book.notice = nil
     for output in outputs {

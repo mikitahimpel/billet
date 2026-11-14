@@ -166,6 +166,12 @@ private func book(
     let (moving, _) = M.transition(chosen, .dragBegan("yarn"))
     #expect(M.transition(moving, .roomChanged(.living)) == (moving, []))
     #expect(M.transition(.closet(book()), .roomChanged(.living)) == (.closet(book()), []))
+    // What the last change said stays on screen through it.
+    var told = book()
+    told.notice = .slid
+    let noticed = M.State.selected(told, item: "yarn")
+    #expect(M.transition(noticed, .roomChanged(.living)) == (noticed, []))
+    #expect(M.transition(noticed, .dragged(armchair)) == (noticed, []))
   }
 
   @Test func placingFromTheShopGoesIntoTheRoomTheShellShows() {

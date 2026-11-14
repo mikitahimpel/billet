@@ -366,9 +366,10 @@ final class DecorStage {
                     && abs(Double(point.z) - DecorGrid.metres(placement.v)) <= halfZ
             }
         }
-        // A touch on a piece's own body wins; then a fingertip's box round a small piece counts too.
-        let pieces = solid + flat
-        return (pieces.first { under($0, loosely: false) } ?? pieces.first { under($0, loosely: true) })?.item
+        // A touch on a piece's own body wins, then a fingertip's box round a small piece, and only then the rug
+        // under it.
+        return (solid.first { under($0, loosely: false) } ?? solid.first { under($0, loosely: true) }
+            ?? flat.first { under($0, loosely: false) })?.item
     }
 
     /// The wall piece under `point` on `surface`, in the pivot's space.

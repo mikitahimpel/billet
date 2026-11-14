@@ -72,10 +72,10 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testTheRoomSwitchStillAnswersWhileArranging() {
+    func testTheRoomSwitchStillAnswersWhileArranging() throws {
         launchDecorate()
         let city = app.buttons["roomSwitch.City"]
-        guard city.waitForExistence(timeout: 10) else { return }  // one room: nothing to switch
+        try XCTSkipUnless(city.waitForExistence(timeout: 10), "one room: nothing to switch")
         at(0.893, 0.558).tap()
         XCTAssertTrue(app.staticTexts["Cat tree"].waitForExistence(timeout: 10))
         city.tap()
