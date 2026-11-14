@@ -32,7 +32,8 @@ review code in a log, a PR, a chat or a commit. The code is shown once, in the a
       `ACCESS_AGENT_AUD` empty.
 - [ ] Prod is deployed by the owner ([alchemy.md](alchemy.md), "Deploy workflow") and
       `GET https://<prod host>/` and `/v1/flags` answer (B4).
-- [ ] The prod host is the one in the submitted build (`DEMO_HOST`, B3).
+- [ ] The prod host `ourio-api.gimpelllll.workers.dev` is the one the submitted build's TestFlight run
+      summary names (`API_HOST`, B3).
 - [ ] The build for review is installed from TestFlight on a real device, `payments` flag still off.
 
 ## 1. Open the prod admin

@@ -36,23 +36,34 @@ jobs:
       ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
     steps:
+      # API_HOST is the server the build talks to, a bare host like ourio-api-dev.gimpelllll.workers.dev:
+      # the app ignores a value with a scheme or a path and would ship without a server.
       - name: Check the secrets are set
         env:
           ASC_P8: ${{ secrets.ASC_P8 }}
-          DEMO_HOST: ${{ secrets.DEMO_HOST }}
+          API_HOST: ${{ secrets.API_HOST }}
         run: |
           missing=""
-          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_P8 DEMO_HOST; do
+          for name in ASC_KEY_ID ASC_ISSUER_ID ASC_P8; do
             [ -n "${!name}" ] || missing="$missing $name"
           done
           if [ -n "$missing" ]; then
             echo "::error::Missing secrets in the testflight environment:$missing. See docs/testflight-ci.md."
             exit 1
           fi
-          echo "::add-mask::$DEMO_HOST"
+          if [ -z "$API_HOST" ]; then
+            echo "::error::API_HOST is not set in the testflight environment, so the build would have no server. Set it to the host the build must talk to: ourio-api-dev.gimpelllll.workers.dev for test builds, ourio-api.gimpelllll.workers.dev for the App Store candidate (docs/testflight-ci.md, Secrets)."
+            exit 1
+          fi
+          case $API_HOST in
+            *://* | */* | *[[:space:]]*)
+              echo "::error::API_HOST must be a bare host such as ourio-api-dev.gimpelllll.workers.dev, with no scheme, path or spaces (docs/testflight-ci.md, Secrets)."
+              exit 1
+              ;;
+          esac
           echo "ARCHIVE=$RUNNER_TEMP/Billet.xcarchive" >> "$GITHUB_ENV"
 
-      # Full history, so the checks can tell the demo host was never committed.
+      # Full history, so a hotfix commit can be checked to be on main.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
@@ -159,7 +170,7 @@ jobs:
       - name: Archive
         env:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
-          BILLET_API_HOST: ${{ secrets.DEMO_HOST }}
+          BILLET_API_HOST: ${{ secrets.API_HOST }}
           BILLET_PAYMENTS: storekit
           BILLET_LABS: ${{ inputs.labs && 'YES' || '' }}
         run: |
@@ -179,11 +190,15 @@ jobs:
             "$RUNNER_TEMP/archive.log" | sort -u | cut -c1-300 | head -40
           exit $status
 
+      # The summary names the host once the check has confirmed it is the one in the app. The log shows
+      # it as *** like every secret.
       - name: Check the archive
         env:
-          DEMO_HOST: ${{ secrets.DEMO_HOST }}
+          API_HOST: ${{ secrets.API_HOST }}
           EXPECT_LABS: ${{ inputs.labs && 'YES' || 'NO' }}
-        run: apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
+        run: |
+          apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
+          echo "API host: \`$API_HOST\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload to TestFlight
         run: |

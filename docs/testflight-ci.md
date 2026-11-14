@@ -33,7 +33,9 @@ fails with "No profiles for 'com.ourio.app…'" on a fresh app is missing an App
 
 ## What it does
 
-1. Fails straight away, naming them, if any of the four secrets is missing.
+1. Fails straight away, naming them, if any of the four secrets is missing; a missing `API_HOST`
+   gets its own message with the two hosts to choose from, and a value with a scheme or a path
+   fails too (the app would ignore it and ship without a server).
 2. Writes the App Store Connect key to a file only the runner user can read (mode 0600). The last
    step deletes it, along with the run's keychain, even when an earlier step failed. Just before
    that, the run revokes its own development certificate (see below).
@@ -50,7 +52,7 @@ fails with "No profiles for 'com.ourio.app…'" on a fresh app is missing an App
    - that the app was built with the StoreKit store (`BilletPayments` is `storekit` and the
      binary has no `MockPaymentsBuild`) and with Labs as asked (`BilletLabs` equals `EXPECT_LABS`,
      `NO` unless the run has `-f labs=true`), since a normal build goes on to App Review;
-   - that the demo host is the app's `BilletAPIHost` and appears nowhere in git history.
+   - that the app's `BilletAPIHost` is the `API_HOST` secret. The run summary then names that host.
 6. Exports with `apps/ios/ExportOptions-external.plist` (`method` app-store-connect,
    `destination` upload, `uploadSymbols` on), which signs with a cloud-managed Apple Distribution
    certificate and uploads the build to TestFlight.
@@ -79,12 +81,31 @@ repository secrets.
 | `ASC_KEY_ID`    | The App Store Connect API key's ID               | Proton Pass, vault Billet, `Apple/asc-api` → `key_id`    |
 | `ASC_ISSUER_ID` | The team's issuer ID (Users and Access → Integrations) | `Apple/asc-api` → `issuer_id`            |
 | `ASC_P8`        | The key's `.p8` file, as text or base64          | `Apple/asc-api` → `p8`                         |
-| `DEMO_HOST`     | The demo server's host, built into `BilletDemoHost` | `~/.billet-manager/pet-concept/demo-host.txt` |
-
-The workflow masks `DEMO_HOST` in the log and never prints it. The host must never be committed;
-the archive check fails the run if it appears anywhere in git history.
+| `API_HOST`      | The server the build talks to, built into `BilletAPIHost` | see "The API host" below            |
 
 The environment has the repository owner as its required reviewer and only accepts runs from `main`.
+
+### The API host
+
+`API_HOST` becomes the build's `BILLET_API_HOST`: Info.plist's `BilletAPIHost`
+(`apps/ios/Nooki/Server/Backend.swift`), the Associated Domains entitlement
+`applinks:$(BILLET_API_HOST)` and so the invite links `https://<host>/i/<code>`. It is a bare host,
+no `https://` and no path: the app ignores anything else and runs without a server, so the workflow
+refuses such a value.
+
+| Build                           | `API_HOST`                             |
+| ------------------------------- | -------------------------------------- |
+| Test builds (dev server)        | `ourio-api-dev.gimpelllll.workers.dev` |
+| The App Store release candidate | `ourio-api.gimpelllll.workers.dev`     |
+
+The host is compiled in, so changing it means setting the secret and shipping a new build; an
+installed build keeps talking to the host it was built with. Before the submission build, set
+`API_HOST` to the prod host ([release-checklist.md](release-checklist.md) B3), and check the host the
+run summary names before submitting. The log shows the value as `***`, like every secret.
+
+```sh
+printf %s ourio-api-dev.gimpelllll.workers.dev | gh secret set API_HOST --env testflight
+```
 
 ### The key's role
 
@@ -112,7 +133,7 @@ export PROTON_PASS_AGENT_REASON="billet: copy ASC key into GitHub env secret"
 for name in ASC_KEY_ID ASC_ISSUER_ID ASC_P8; do
   pp run --env-file asc.env -- sh -c "printf %s \"\$$name\" | gh secret set $name --env testflight"
 done
-gh secret set DEMO_HOST --env testflight < ~/.billet-manager/pet-concept/demo-host.txt
+printf %s ourio-api-dev.gimpelllll.workers.dev | gh secret set API_HOST --env testflight
 ```
 
 ## Rotating the key
