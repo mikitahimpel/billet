@@ -37,11 +37,12 @@ jobs:
       ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
     steps:
       # API_HOST is the server the build talks to, a bare host like ourio-api-dev.gimpelllll.workers.dev:
-      # the app ignores a value with a scheme or a path and would ship without a server.
+      # the app ignores a value with a scheme or a path and would ship without a server. It is a variable
+      # of the environment, so the run summary can name it; a secret of that name works too, masked.
       - name: Check the secrets are set
         env:
           ASC_P8: ${{ secrets.ASC_P8 }}
-          API_HOST: ${{ secrets.API_HOST }}
+          API_HOST: ${{ vars.API_HOST || secrets.API_HOST }}
         run: |
           missing=""
           for name in ASC_KEY_ID ASC_ISSUER_ID ASC_P8; do
@@ -62,6 +63,7 @@ jobs:
               ;;
           esac
           echo "ARCHIVE=$RUNNER_TEMP/Billet.xcarchive" >> "$GITHUB_ENV"
+          echo "TESTFLIGHT_SCRIPTS=$GITHUB_WORKSPACE/apps/ios/scripts/testflight" >> "$GITHUB_ENV"
 
       # Full history, so a hotfix commit can be checked to be on main.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -69,7 +71,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      # A hotfix can be built from an earlier commit on main, never from anything off it.
+      # A hotfix can be built from an earlier commit on main, never from anything off it. The scripts
+      # (check-archive.sh, asc.py) stay the dispatched ref's: the commit's own may expect other variables.
       - name: Check out the commit asked for
         if: inputs.commit != ''
         env:
@@ -83,6 +86,8 @@ jobs:
             echo "::error::$COMMIT is not on main"
             exit 1
           fi
+          cp -R apps/ios/scripts/testflight "$RUNNER_TEMP/testflight-scripts"
+          echo "TESTFLIGHT_SCRIPTS=$RUNNER_TEMP/testflight-scripts" >> "$GITHUB_ENV"
           git checkout -q --detach "$COMMIT"
           git log --oneline -1
 
@@ -156,7 +161,7 @@ jobs:
             fi
             floor="$ASKED"
           fi
-          number="$(python3 -I apps/ios/scripts/testflight/asc.py next-build --floor "$floor")"
+          number="$(python3 -I "$TESTFLIGHT_SCRIPTS/asc.py" next-build --floor "$floor")"
           if [ -n "$ASKED" ] && [ "$number" != "$ASKED" ]; then
             echo "::error::Build $ASKED is not above every build App Store Connect has; the next free one is $number"
             exit 1
@@ -170,7 +175,7 @@ jobs:
       - name: Archive
         env:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
-          BILLET_API_HOST: ${{ secrets.API_HOST }}
+          BILLET_API_HOST: ${{ vars.API_HOST || secrets.API_HOST }}
           BILLET_PAYMENTS: storekit
           BILLET_LABS: ${{ inputs.labs && 'YES' || '' }}
         run: |
@@ -190,14 +195,14 @@ jobs:
             "$RUNNER_TEMP/archive.log" | sort -u | cut -c1-300 | head -40
           exit $status
 
-      # The summary names the host once the check has confirmed it is the one in the app. The log shows
-      # it as *** like every secret.
+      # The summary names the host once the check has confirmed it is the one in the app (as *** when
+      # API_HOST is a secret: summaries mask secrets).
       - name: Check the archive
         env:
-          API_HOST: ${{ secrets.API_HOST }}
+          API_HOST: ${{ vars.API_HOST || secrets.API_HOST }}
           EXPECT_LABS: ${{ inputs.labs && 'YES' || 'NO' }}
         run: |
-          apps/ios/scripts/testflight/check-archive.sh "$ARCHIVE" "${{ steps.build.outputs.number }}"
+          "$TESTFLIGHT_SCRIPTS/check-archive.sh" "$ARCHIVE" "${{ steps.build.outputs.number }}"
           echo "API host: \`$API_HOST\`" >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload to TestFlight
@@ -218,7 +223,7 @@ jobs:
 
       - name: Processing state
         run: |
-          line="$(python3 -I apps/ios/scripts/testflight/asc.py state \
+          line="$(python3 -I "$TESTFLIGHT_SCRIPTS/asc.py" state \
             --build "${{ steps.build.outputs.number }}" --wait 900)"
           echo "$line"
           echo "$line" >> "$GITHUB_STEP_SUMMARY"
@@ -226,7 +231,7 @@ jobs:
       - name: Mark the Labs build in TestFlight
         if: inputs.labs
         run: |
-          python3 -I apps/ios/scripts/testflight/asc.py what-to-test \
+          python3 -I "$TESTFLIGHT_SCRIPTS/asc.py" what-to-test \
             --build "${{ steps.build.outputs.number }}" --text "Labs build: do not submit for review"
 
       # Xcode makes a new Apple Development certificate through the key on every run, in this run's
@@ -234,7 +239,7 @@ jobs:
       # earlier step failed; Distribution certificates are never touched.
       - name: Revoke this run's development certificate
         if: always() && env.KEYCHAIN != '' && env.ASC_KEY_PATH != ''
-        run: python3 -I apps/ios/scripts/testflight/asc.py revoke-run-certificates --keychain "$KEYCHAIN"
+        run: python3 -I "$TESTFLIGHT_SCRIPTS/asc.py" revoke-run-certificates --keychain "$KEYCHAIN"
 
       - name: Remove the key and the keychain
         if: always()

@@ -68,7 +68,7 @@ resources: the Worker `billet-api-dev-<hash>`, its D1, R2, KV and Durable Object
 someone deletes them in the dashboard (or runs `ALCHEMY_STACK=billet pnpm exec alchemy destroy
 --stage dev`, which the state D1 still describes). Their data does not move. TestFlight builds
 already installed keep talking to the old `billet-api-dev` host until the `testflight`
-environment's `API_HOST` secret names the new Worker and a new build ships
+environment's `API_HOST` variable names the new Worker and a new build ships
 ([testflight-ci.md](testflight-ci.md)); the agents' `~/.config/billet/admin.env` and the Access
 applications in front of `/admin` ([admin.md](admin.md)) name the host too.
 
@@ -92,7 +92,7 @@ tags), ships Cloudflare's `transferred_classes` migration, and the rooms move wi
 stage with nothing to move (a fresh stage, or once the transfer has happened) the declaration is
 inert and stays in place. So the first `dev` deploy after this change turns `ourio-api-dev-<hash>`
 into `ourio-api-dev`, keeping the rooms: afterwards the `testflight` environment's `API_HOST`
-secret, the agents' `~/.config/billet/admin.env` and the Access applications in front of `/admin`
+variable, the agents' `~/.config/billet/admin.env` and the Access applications in front of `/admin`
 must name the new host, like after the `billet` to `ourio` switch above. Prod has not been deployed
 with the generated name, so its first deploy creates `ourio-api` outright.
 
