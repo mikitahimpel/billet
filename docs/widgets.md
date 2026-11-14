@@ -6,7 +6,7 @@ honey spent once; text is the `.ourio*` styles, never smaller than `.ourioMicro`
 
 | Kind | Families | Shows |
 | --- | --- | --- |
-| `com.ourio.app.cat` | small, medium, large | Mochi and how she is (`MochiPose`), Lv chip, Pet and Hug buttons |
+| `com.ourio.app.cat` | small, medium, large | Mochi on her floor and how she is (`MochiPose`), Lv chip, Pet and Hug buttons |
 | `com.ourio.app.us` | small, medium, large | days together, the next date, the streak (`StreakGlance`) |
 | `com.ourio.app.partner` | small, medium | the partner's newest drawing or check-in on a stamped card (`PartnerNews`) |
 | `com.ourio.app.coins` | small, medium | the balance and Mochi's care level (`CoinsGlance`) |
@@ -25,6 +25,11 @@ latest drawing from the App Group) and, for the Memory widget only, the pinned p
 mapping from state to words is pure and tested in `FamilyLogicTests`; the views only lay it out. Mochi's pose comes
 from facts the extension has: a purr, the night, a fresh drawing or check-in. Her needs (hungry, tired) live in the
 app and are not in the App Group, so no widget shows them yet.
+
+Her figure is `CatFigure`: the seated hero the app bakes for its splash (`Nooki/Resources/Hero/Hero-<coat>.webp`,
+`Tools/bake_hero.py`), in the coat the snapshot's `catAvatar` names, read once per coat and downsampled to 720 px,
+standing on a honey glow with a contact shadow under her paws. The extension bundles the six rest images and none of
+the blink or ear patches (`project.yml`); `CatFigureTests` checks every coat is there.
 
 ## Timelines
 

@@ -62,6 +62,7 @@ targets:
       - path: OurioWidgets/WidgetFacts.swift
       - path: OurioWidgets/FamilyViews.swift
       - path: OurioWidgets/LockViews.swift
+      - path: OurioWidgets/CatFigure.swift
       - path: OurioWidgets/Theme.swift
       # The date ideas the build ships with: the server's own catalog file (packages/ios/features/Sources/UsInterface/DateCatalog.swift).
       - path: ../../packages/backend/dates/src/date-catalog.json
@@ -176,6 +177,10 @@ targets:
       - path: Shared
         # Places' map is for the app's world map only.
         excludes: [Places/WorldMap.txt]
+      # The hero Mochi at rest in every coat, the figure of the cat widgets (CatFigure.swift); her blink and ear
+      # patches are the app's alone.
+      - path: Nooki/Resources/Hero
+        includes: ["Hero-*.webp"]
       - path: PerTarget
       - path: ../../packages/backend/dates/src/date-catalog.json
         buildPhase: resources
