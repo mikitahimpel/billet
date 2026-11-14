@@ -97,9 +97,6 @@ final class FeedStage: GameStage {
     private var cap: Double { Double(task.hardCap) }
     private var zoneEnd: Double { Double(task.target + task.tolerance) }
 
-    /// How far the camera leans toward the bowl while the bag pours.
-    var push: Float { tip * 0.6 }
-
     var seat: SIMD3<Float>? { spots.at(0, -0.13) }
 
     init(room: CatRoom, deck: GameDeck) {
