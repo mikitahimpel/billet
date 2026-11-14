@@ -77,26 +77,32 @@ class WhatToTestTests(unittest.TestCase):
         self.assertEqual(body["data"]["relationships"]["build"]["data"], {"type": "builds", "id": "b1"})
 
 
+CHECK_ARCHIVE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check-archive.sh")
+
+
+def check_archive_errors(info: dict[str, str], env: dict[str, str], about: str) -> list[str]:
+    """check-archive.sh's errors mentioning `about`, against a fake archive whose app has only `info` in its
+    Info.plist; the other checks fail there and are ignored."""
+    with tempfile.TemporaryDirectory() as tmp:
+        app = os.path.join(tmp, "a.xcarchive", "Products", "Applications", "Billet.app")
+        os.makedirs(app)
+        plist = os.path.join(app, "Info.plist")
+        subprocess.run(["plutil", "-create", "xml1", plist], check=True)
+        for key, value in info.items():
+            subprocess.run(["plutil", "-insert", key, "-string", value, plist], check=True)
+        run_env = {k: v for k, v in os.environ.items() if k not in ("EXPECT_LABS", "API_HOST")}
+        run_env.update(env)
+        out = subprocess.run(
+            [CHECK_ARCHIVE, os.path.join(tmp, "a.xcarchive"), "1"], env=run_env, capture_output=True, text=True
+        ).stdout
+    return [line for line in out.splitlines() if about in line and line.startswith("::error::")]
+
+
 @unittest.skipUnless(sys.platform == "darwin", "PlistBuddy and codesign are macOS tools")
 class CheckArchiveLabsTests(unittest.TestCase):
-    """check-archive.sh's Labs line against a fake archive; the other checks fail there and are ignored."""
-
-    script = os.path.join(os.path.dirname(os.path.abspath(__file__)), "check-archive.sh")
-
     def labs_errors(self, in_app: str, expect: str | None) -> list[str]:
-        with tempfile.TemporaryDirectory() as tmp:
-            app = os.path.join(tmp, "a.xcarchive", "Products", "Applications", "Billet.app")
-            os.makedirs(app)
-            plist = os.path.join(app, "Info.plist")
-            subprocess.run(["plutil", "-create", "xml1", plist], check=True)
-            subprocess.run(["plutil", "-insert", "BilletLabs", "-string", in_app, plist], check=True)
-            env = {k: v for k, v in os.environ.items() if k not in ("EXPECT_LABS", "DEMO_HOST")}
-            if expect is not None:
-                env["EXPECT_LABS"] = expect
-            out = subprocess.run(
-                [self.script, os.path.join(tmp, "a.xcarchive"), "1"], env=env, capture_output=True, text=True
-            ).stdout
-        return [line for line in out.splitlines() if "Labs" in line and line.startswith("::error::")]
+        env = {} if expect is None else {"EXPECT_LABS": expect}
+        return check_archive_errors({"BilletLabs": in_app}, env, "Labs")
 
     def test_review_builds_must_have_no_labs(self):
         self.assertEqual(self.labs_errors("NO", None), [])
@@ -108,6 +114,26 @@ class CheckArchiveLabsTests(unittest.TestCase):
 
     def test_an_unknown_expectation_fails(self):
         self.assertEqual(len(self.labs_errors("NO", "maybe")), 1)
+
+
+@unittest.skipUnless(sys.platform == "darwin", "PlistBuddy and codesign are macOS tools")
+class CheckArchiveHostTests(unittest.TestCase):
+    host = "ourio-api-dev.example.workers.dev"
+
+    def host_errors(self, in_app: str | None, expected: str | None) -> list[str]:
+        info = {} if in_app is None else {"BilletAPIHost": in_app}
+        env = {} if expected is None else {"API_HOST": expected}
+        return check_archive_errors(info, env, "API_HOST")
+
+    def test_the_app_must_carry_the_expected_host(self):
+        self.assertEqual(self.host_errors(self.host, self.host), [])
+
+    def test_a_missing_expectation_fails(self):
+        self.assertEqual(self.host_errors(self.host, None), ["::error::API_HOST is not set"])
+
+    def test_another_host_in_the_app_fails(self):
+        self.assertEqual(len(self.host_errors("ourio-api.example.workers.dev", self.host)), 1)
+        self.assertEqual(len(self.host_errors(None, self.host)), 1)
 
 
 if __name__ == "__main__":
