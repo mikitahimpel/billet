@@ -563,7 +563,7 @@ state) and every two seconds (idle time, busy), and `HomeView.roomInput` carries
 
 A tier never puts a lamp out or narrows the colour range: the first plan did (widest light only, HDR off), and in the Bedroom at night the widest light is the sky's, so a phone at 5% battery showed a dark room. Tiers give up shadows, bloom, frames, pixels and pulses, and `RoomPerfTests` checks that every tier keeps the Bedroom's lamps, their light and its ambient light.
 
-The Bedroom's lamps follow the hour (lit from dusk, with an ambient floor so a night room is never black). The light button beside the room switch (Bedroom only) turns them on or off, easing over about a second, and the choice is kept on this phone (`room.lights.bedroom`). The Living room has no hour and no switch.
+The Bedroom's lamps follow the hour (lit from dusk, with an ambient floor so a night room is never black). There is no light switch: the room is lit by day and lights its own lamps by night. The Living room has no hour.
 
 - Degrades at once, recovers one tier per 90 quiet seconds. Idleness is outside that hysteresis (it only grows until a
   touch) and stops at `fair`, which looks like `full`, so a room being watched never changes and never jumps back.

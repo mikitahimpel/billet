@@ -79,28 +79,9 @@ struct GameView: View {
                 ResultToast(result: result, again: session.playAgain, done: end)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
-                VStack(spacing: Space.m) {
-                    if let hint = session.shownHint {
-                        GoalHint(text: hint)
-                            .dynamicTypeSize(...Self.overlayType)
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                            .id(hint)
-                    }
-                    if let bar = session.deck.bar {
-                        GameBar(meter: bar, symbol: session.game.symbol)
-                            .dynamicTypeSize(...Self.overlayType)
-                    }
-                    if let action = session.action {
-                        Button(action: session.act) { Text(action).frame(maxWidth: .infinity) }
-                            .buttonStyle(PrimaryButtonStyle())
-                    }
-                    if let assist = session.assist {
-                        Button(action: session.assistAct) { Text(assist).frame(maxWidth: .infinity) }
-                            .buttonStyle(SecondaryButtonStyle())
-                            .accessibilityHint("Wipes up the puddle for you")
-                    }
-                }
-                .padding(.horizontal, Space.gutter)
+                GameTray(
+                    hint: session.shownHint, bar: session.deck.bar, symbol: session.game.symbol,
+                    action: session.action, assist: session.assist, act: session.act, assistAct: session.assistAct)
             }
         }
         .padding(.top, Space.s)
@@ -210,7 +191,47 @@ private struct HandMotion {
     var rub: CGFloat = 0
 }
 
+/// The game's bottom: the hint, the bar and the buttons, every one of them the full width between the gutters, so
+/// they stand as one column with one pair of side margins (`GameTrayTests`).
+struct GameTray: View {
+    var hint: String?
+    var bar: GameMeter?
+    var symbol: String
+    var action: String?
+    var assist: String?
+    var act: () -> Void
+    var assistAct: () -> Void
+
+    var body: some View {
+        VStack(spacing: Space.m) {
+            if let hint {
+                GoalHint(text: hint)
+                    .dynamicTypeSize(...GameView.overlayType)
+                    .transition(.opacity.combined(with: .move(edge: .bottom)))
+                    .id(hint)
+            }
+            if let bar {
+                GameBar(meter: bar, symbol: symbol)
+                    .dynamicTypeSize(...GameView.overlayType)
+            }
+            if let action {
+                Button(action: act) { Text(action).frame(maxWidth: .infinity) }
+                    .buttonStyle(PrimaryButtonStyle())
+                    .accessibilityIdentifier("game.action")
+            }
+            if let assist {
+                Button(action: assistAct) { Text(assist).frame(maxWidth: .infinity) }
+                    .buttonStyle(SecondaryButtonStyle())
+                    .accessibilityHint("Wipes up the puddle for you")
+                    .accessibilityIdentifier("game.assist")
+            }
+        }
+        .padding(.horizontal, Space.gutter)
+    }
+}
+
 /// The game's one goal, in words: a line of glass over the scene, gone at the first touch and back only to correct.
+/// It takes the whole width it is given, as the bar and the buttons under it do.
 private struct GoalHint: View {
     let text: String
 
@@ -219,11 +240,13 @@ private struct GoalHint: View {
             .font(.ourioHeadline)
             .foregroundStyle(Ink.glassGlyph)
             .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
             .padding(.horizontal, Space.l)
             .padding(.vertical, Space.m)
             .glass(.capsule, role: .bar)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityIdentifier("game.hint")
     }
 }
 
@@ -277,6 +300,7 @@ private struct GameBar: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(meter.label)
         .accessibilityValue(meter.detail ?? "\(percent) percent")
+        .accessibilityIdentifier("game.bar")
     }
 
     private var value: some View {
@@ -301,8 +325,9 @@ private struct GameBar: View {
     }
 }
 
-/// The finished game: what she got, and either another round or back to the room.
-private struct ResultToast: View {
+/// The finished game: what she got, and either another round or back to the room, between the same gutters as the
+/// tray it replaces.
+struct ResultToast: View {
     let result: GameResult
     var again: () -> Void
     var done: () -> Void
