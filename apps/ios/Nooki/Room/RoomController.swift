@@ -56,8 +56,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
     /// What Labs switches off, and what the quality tier does; the scene holds back both.
     @ObservationIgnored var labsSwitches = RoomPerfSwitches()
     @ObservationIgnored private var governed = RoomRendering()
-    @ObservationIgnored private var lampChoice: Bool?
-    @ObservationIgnored private var lampsFade = true
     /// Where the player's finger is and was, and when a game began, for the quality governor's idea of a quiet room.
     @ObservationIgnored private var fingerDown = false
     @ObservationIgnored private var lastTouch = ProcessInfo.processInfo.systemUptime
@@ -133,7 +131,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
         room.swaying = sway
         room.pulseSlowdown = Float(governed.pulseSlowdown)
         room.ambientLift = Float(governed.ambientLift)
-        if let city = room as? CityRoomScene { city.lampChoice = lampChoice; city.lampsFade = lampsFade }
         perf.lights(in: room)
     }
 
@@ -146,14 +143,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
             room.ambientLift = Float(rendering.ambientLift)
         }
         applySwitches()
-    }
-
-    /// The player's choice for the Bedroom's lamps, and whether they ease to it.
-    func setLights(_ choice: Bool?, fades: Bool) {
-        lampChoice = choice
-        lampsFade = fades
-        city?.lampChoice = choice
-        city?.lampsFade = fades
     }
 
     func applySwitches() {

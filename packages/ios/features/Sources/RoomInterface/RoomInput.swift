@@ -112,18 +112,12 @@ public struct RoomInput: Equatable, Sendable {
   public var sway: Bool
   public var decor: RoomDecor
   public var rendering: RoomRendering
-  /// The player's choice for the room's lamps: on, off, or nil to follow the hour. The Bedroom lights its lamps and
-  /// fairy lights by night on its own; this is the way to have them by day or to put them out.
-  public var lights: Bool?
-  /// The lamps ease to their new state; off, they change at once (Reduce Motion).
-  public var lightsFade: Bool
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
     catPronouns: CatPronouns = .unchosen, partnerHere: Bool = false, motes: Bool = false,
     sway: Bool = true,
-    decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering(), lights: Bool? = nil,
-    lightsFade: Bool = true
+    decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering()
   ) {
     self.scene = scene
     self.coat = coat
@@ -135,7 +129,5 @@ public struct RoomInput: Equatable, Sendable {
     self.sway = sway
     self.decor = decor
     self.rendering = rendering
-    self.lights = lights
-    self.lightsFade = lightsFade
   }
 }
