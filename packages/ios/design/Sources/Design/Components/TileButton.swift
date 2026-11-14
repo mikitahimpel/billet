@@ -11,6 +11,27 @@ public struct TileButton: View {
     case place
     /// A piece standing in the room: a button that opens the room with it chosen.
     case inRoom
+
+    /// How a face is drawn. Every chrome is `Size.button` tall, so the tiles of a row stay level.
+    public enum Chrome: Equatable {
+      /// The honey button on its lip.
+      case honey
+      /// A honey ring on the raised surface.
+      case ring
+      /// The accent's outline on the raised surface.
+      case outline
+      /// Words alone, for a state nothing can be done about.
+      case label
+    }
+
+    public var chrome: Chrome {
+      switch self {
+      case .price: .honey
+      case .short: .ring
+      case .owned: .label
+      case .place, .inRoom: .outline
+      }
+    }
   }
 
   let face: Face
@@ -82,26 +103,29 @@ public struct TileButton: View {
         .accessibilityLabel("\(name), owned")
     case .place:
       Button(action: action) {
-        Label("Place", systemImage: "mappin")
-          .font(.ourioHeadline)
-          .foregroundStyle(Ink.accentText)
-          .frame(maxWidth: .infinity, minHeight: Size.button)
-          .background(Ink.surfaceRaised, in: .capsule)
-          .overlay { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
-          .contentShape(.capsule)
+        outline("Place", symbol: "mappin")
       }
       .buttonStyle(PressScaleStyle())
       .accessibilityLabel("Place \(name)")
       .accessibilityHint("Opens the room")
     case .inRoom:
       Button(action: action) {
-        label("In room", symbol: "mappin", style: Ink.accentText)
-          .contentShape(.capsule)
+        outline("In room", symbol: "mappin")
       }
       .buttonStyle(PressScaleStyle())
       .accessibilityLabel("\(name), in your room")
       .accessibilityHint("Opens the room to move it")
     }
+  }
+
+  private func outline(_ title: String, symbol: String) -> some View {
+    Label(title, systemImage: symbol)
+      .font(.ourioHeadline)
+      .foregroundStyle(Ink.accentText)
+      .frame(maxWidth: .infinity, minHeight: Size.button)
+      .background(Ink.surfaceRaised, in: .capsule)
+      .overlay { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
+      .contentShape(.capsule)
   }
 
   private func label(_ title: String, symbol: String, style: Color) -> some View {

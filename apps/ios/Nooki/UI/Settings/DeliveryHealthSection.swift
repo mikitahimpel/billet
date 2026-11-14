@@ -8,35 +8,63 @@ import UsInterface
 
 struct DeliveryHealthSection: View {
     @Environment(\.scenePhase) private var scenePhase
-    @State private var health: DeliveryHealth?
+    @State private var report = Report.checking
+
+    private enum Report: Equatable {
+        case checking
+        case checked(DeliveryHealth)
+    }
+
+    private var lines: DeliveryHealth.Lines {
+        switch report {
+        case .checking: DeliveryHealth.checking
+        case .checked(let health): health.lines
+        }
+    }
+
+    /// Only the system's Settings turns alerts back on, so the row opens it once they are known to be off.
+    private var opensSettings: Bool {
+        switch report {
+        case .checking: false
+        case .checked(let health): !health.notificationsAllowed
+        }
+    }
+
+    private var footer: String {
+        switch report {
+        case .checked(let health) where !health.pushesWork:
+            "Turn notifications on so you hear when your partner sends something."
+        case .checking, .checked:
+            "Checked each time you open Settings."
+        }
+    }
 
     var body: some View {
-        GroupedSection(header: "Delivery",
-                       footer: health?.pushesWork == false
-                           ? "Turn notifications on so you hear when your partner sends something."
-                           : "Checked each time you open Settings.") {
-            if let health {
-                Button(action: openSystemSettings) {
-                    Row("Notifications", detail: health.pushDetail,
-                        symbol: health.pushesWork ? "bell.badge.fill" : "bell.slash.fill",
-                        tint: (health.pushesWork ? UsTint.sage : UsTint.coral).color) {
-                        if !health.notificationsAllowed { RowChevron() }
+        GroupedSection(header: "Delivery", footer: footer) {
+            Button(action: openSystemSettings) {
+                row(lines.notifications) {
+                    if opensSettings {
+                        RowChevron()
+                    } else if report == .checking {
+                        ProgressView()
                     }
                 }
-                .buttonStyle(PressScaleStyle())
-                .disabled(health.notificationsAllowed)
-                Row("Last push", detail: health.lastPushDetail, symbol: "paperplane.fill",
-                    tint: UsTint.sky.color)
-                Row("Widgets", detail: health.widgetDetail, symbol: "rectangle.on.rectangle.fill",
-                    tint: UsTint.lilac.color)
-            } else {
-                Row("Checking…", symbol: "stethoscope", tint: UsTint.sky.color) { ProgressView() }
             }
+            .buttonStyle(PressScaleStyle())
+            .disabled(!opensSettings)
+            row(lines.lastPush) {}
+            row(lines.widgets) {}
         }
         .task(id: scenePhase) {
             guard scenePhase == .active else { return }
-            health = await DeliveryHealth.check()
+            report = .checked(await DeliveryHealth.check())
         }
+    }
+
+    private func row<Trailing: View>(
+        _ line: DeliveryHealth.Line, @ViewBuilder trailing: () -> Trailing
+    ) -> some View {
+        Row(line.title, detail: line.detail, symbol: line.symbol, tint: line.tint.color, trailing: trailing)
     }
 
     private func openSystemSettings() {
