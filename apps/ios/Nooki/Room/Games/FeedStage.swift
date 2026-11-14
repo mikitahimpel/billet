@@ -92,6 +92,8 @@ final class FeedStage: GameStage {
     private var assistedFrom = 0
     private var messSeen = false
     private var sinceSweep: Float = 0
+    /// Whether the bowl has reached the zone once: she hops for it the first time.
+    private var readySeen = false
 
     /// The most the bowl takes.
     private var cap: Double { Double(task.hardCap) }
@@ -270,6 +272,11 @@ final class FeedStage: GameStage {
         if pouring, tip > 0.85 { pourFlow(dt) }
         fly(dt)
         tidy(dt)
+        if isReady, served == nil, !readySeen {
+            readySeen = true
+            room.walker?.hop()
+            deck.tap(1)
+        }
         if let time = served { eat(time + dt, dt: dt) }
         drawRing()
         drawReadout()

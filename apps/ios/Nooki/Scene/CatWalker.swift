@@ -100,10 +100,8 @@ final class CatWalker {
         var time: Float = 0
     }
 
-    // Room units per second.
-    private let walkSpeed: Float = 0.14
-    // Seconds she takes to reach that speed from standing, and to stop from it: about one stride.
-    private let rampTime: Float = 0.6
+    /// How quickly she gets about; a game sets her eager pace and gives her usual one back after.
+    var pace = CatPace.usual
     // Seconds the head takes to follow the body's bob, pitch and roll while walking.
     private let headLag: Float = 0.3
 
@@ -147,6 +145,9 @@ final class CatWalker {
     private var resting: Float = 1
     private var lookPitch: Float = 0
     private var gaze: Float = 0
+    /// How far the head turns ahead of the body round a turn, and how far it has got.
+    private var lead: Float = 0
+    private var lookYaw: Float = 0
     private var stepping = false
     private var free = false
     private var wiggle: Float = 0
@@ -177,7 +178,7 @@ final class CatWalker {
         self.scale = scale
         self.wandering = wandering
         behavior = CatBehavior(tailJoints: seated.pose.tail.count)
-        gait = Gait(standing.legs, speed: walkSpeed / scale)
+        gait = Gait(standing.legs, speed: CatPace.usual.walkSpeed / scale)
         tailSpring = TailSpring(standing.tailDirections)
         yaw = rests[rests.count - 1]
         homeYaw = yaw
@@ -465,6 +466,7 @@ final class CatWalker {
         stepping = false
         free = false
         gaze = 0
+        lead = 0
         if !steps.isEmpty {
             steps[0].time += dt
             let step = steps[0]
@@ -530,8 +532,10 @@ final class CatWalker {
         p.headSeat = s.seat
         // Walking she watches the floor ahead.
         lookPitch += (gaze - lookPitch) * (1 - exp(-dt * 4))
+        // Turning, the head goes first and the body comes round after it.
+        lookYaw += (lead - lookYaw) * (1 - exp(-dt * 12))
         p.headPitch = s.headPitch + lerp(lookPitch, b.pitch, r)
-        p.headYaw = lerp(0.12 * noise(time * 0.5, 8), b.yaw, r)
+        p.headYaw = lerp(0.12 * noise(time * 0.5, 8) + lookYaw, b.yaw, r)
         p.headRoll = b.roll * r
         steadyHead(&p, dt, g)
         settle(&p, dt, r)
@@ -701,7 +705,7 @@ final class CatWalker {
             return
         }
         add(0.05) { [unowned self] u in fade(1 - u) }
-        add(0.7) { [unowned self] u in posture = .blend(.sit, .stand, ease(u)) }
+        add(pace.standUp) { [unowned self] u in posture = .blend(.sit, .stand, ease(u)) }
     }
 
     /// A front stretch before setting off: fore paws reach forward, chest goes down and rump up with the tail raised,
@@ -737,21 +741,23 @@ final class CatWalker {
     }
 
     private func sitDown() {
-        add(0.8) { [unowned self] u in posture = .blend(.stand, .sit, ease(u)) }
+        add(pace.sitDown) { [unowned self] u in posture = .blend(.stand, .sit, ease(u)) }
         add(0.05) { [unowned self] u in fade(u) }
     }
 
-    /// Turns on the spot with small steps, about 2.5 rad a second.
+    /// Turns on the spot with small steps at her pace's rate, the head ahead of the body.
     private func turn(_ target: Float) {
         let end = shortest(planYaw, target)
         let angle = abs(end - planYaw)
         planYaw = end
         guard angle >= 0.05 else { return }
         var start: Float?
-        add(0.15 + angle / 2.5) { [unowned self] u in
+        add(0.15 + angle / pace.turnRate) { [unowned self] u in
             let from = start ?? yaw
             start = from
-            yaw = lerp(from, shortest(from, target), ease(u))
+            let to = shortest(from, target)
+            yaw = lerp(from, to, ease(u))
+            lead = min(max(0.8 * (to - yaw), -0.45), 0.45)
             stepping = true
         }
     }
@@ -760,9 +766,9 @@ final class CatWalker {
     private func walk(_ from: SIMD3<Float>, _ to: SIMD3<Float>) {
         let distance = simd_distance(from, to)
         guard distance > 0 else { return }
-        let speed = min(walkSpeed, distance / rampTime)
+        let rampTime = pace.rampTime
+        let speed = min(pace.walkSpeed, distance / rampTime)
         let duration = distance / speed + rampTime
-        let rampTime = rampTime
         // Distance covered `t` seconds into a ramp from standing to full speed.
         func ramp(_ t: Float) -> Float { speed * rampTime * (pow(t / rampTime, 3) - pow(t / rampTime, 4) / 2) }
         add(duration) { [unowned self] u in
@@ -790,7 +796,7 @@ final class CatWalker {
         let rise = (to.y - from.y) / scale
         let up: Float = rise > 0 ? 1 : 0
         let reach = simd_distance(from, to) / scale
-        let air = 0.28 + 0.6 * sqrt(reach)
+        let air = (0.28 + 0.6 * sqrt(reach)) * pace.flight
         // Room units above the straight line from takeoff to landing.
         let arc = 0.03 + 0.4 * max(0, to.y - from.y)
         let aim = min(max(atan2(rise, hypot(to.x - from.x, to.z - from.z) / scale), -0.6), 0.6)
@@ -800,7 +806,7 @@ final class CatWalker {
             return p
         }
 
-        let wiggleTime = Float.random(in: 0.4..<0.8)
+        let wiggleTime = Float.random(in: pace.wiggle)
         let gather = key {
             $0.lift = -0.022; $0.back = 0.008; $0.pitch = lerp(-0.1, 0.08, up); $0.bend = 0.05; $0.headPitch = aim * 0.9
             $0.tail = [-0.3, -0.1, 0.1]
@@ -808,14 +814,16 @@ final class CatWalker {
         var coil = gather
         coil.lift = -0.032
         coil.back = 0.012
-        let prepare = 0.35 + wiggleTime + 0.12
+        let gatherTime = pace.gather
+        let wiggleRate = pace.wiggleRate
+        let prepare = gatherTime + wiggleTime + pace.poise
         add(prepare) { [unowned self] u in
             let t = u * prepare
             group.position = from
-            keyframes([(0, .stand), (0.35, gather), (0.35 + wiggleTime, coil)], t)
+            keyframes([(0, .stand), (gatherTime, gather), (gatherTime + wiggleTime, coil)], t)
             // The rump sways side to side, the hind paws treading in turn, then she goes still.
-            let w = min(max((t - 0.35) / wiggleTime, 0), 1)
-            let sway = sin(w * .pi) * sin((t - 0.35) * .pi * 2 * 4.5)
+            let w = min(max((t - gatherTime) / wiggleTime, 0), 1)
+            let sway = sin(w * .pi) * sin((t - gatherTime) * .pi * 2 * wiggleRate)
             wiggle = 0.12 * sway
             tread = [0.005 * max(0, sway), 0.005 * max(0, -sway)]
             posture.tail[2] += 0.3 * sway
@@ -857,7 +865,7 @@ final class CatWalker {
             $0.fore = [0, -0.01]; $0.hind = [0.03, 0]; $0.tail = [0.1, 0.05, 0]
         }
         let settle = key { $0.lift = -0.028; $0.back = -0.004; $0.pitch = -0.03; $0.bend = 0.04; $0.headPitch = 0.02 }
-        add(0.55) { [unowned self] u in
+        add(0.55 * pace.flight) { [unowned self] u in
             group.position = to
             free = true
             keyframes([(0, contact), (0.1, forward), (0.24, settle), (0.55, .stand)], u * 0.55)

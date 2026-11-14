@@ -16,8 +16,16 @@ public struct LaserPlay: Equatable, Sendable {
   public private(set) var dot: SIMD2<Double>?
   public private(set) var play: Double = 0
   public private(set) var pounces = 0
+  /// Pounces that came one soon after another; the first of a run is 1.
+  public private(set) var streak = 0
   /// Seconds the dot has been still.
   public private(set) var still: Double = 0
+  private var sincePounce: Double = .infinity
+
+  /// Seconds a dot stops before she pounces on it.
+  public static let pounceAfter: Double = 0.25
+  /// Seconds after a pounce in which the next one extends the streak.
+  public static let streakWindow: Double = 7
 
   public init(length: Double, floor: FloorArea) {
     self.length = length
@@ -28,6 +36,7 @@ public struct LaserPlay: Equatable, Sendable {
 
   /// Moves the dot to `point` (kept on the floor), or takes it away with nil.
   public mutating func aim(_ point: SIMD2<Double>?, dt: Double) {
+    sincePounce += dt
     guard let point else {
       dot = nil
       still = 0
@@ -44,7 +53,7 @@ public struct LaserPlay: Equatable, Sendable {
     guard let dot, !isDone else { return nil }
     let away = distance(cat, dot)
     if away > 0.62 * length { return .chase(dot) }
-    if still > 0.35 { return .pounce(dot) }
+    if still > Self.pounceAfter { return .pounce(dot) }
     return nil
   }
 
@@ -56,6 +65,8 @@ public struct LaserPlay: Equatable, Sendable {
   /// She landed a pounce.
   public mutating func pounced() {
     pounces += 1
+    streak = sincePounce < Self.streakWindow ? streak + 1 : 1
+    sincePounce = 0
     play = min(1, play + 0.2)
   }
 
@@ -73,7 +84,9 @@ public struct LaserPlay: Equatable, Sendable {
   }
 
   public static let cheers = ["Got it!", "Pounce!", "Again!"]
-  public var cheer: String { Self.cheers[pounces % Self.cheers.count] }
+  public var cheer: String {
+    streak >= 2 ? "\(streak) in a row!" : Self.cheers[pounces % Self.cheers.count]
+  }
 }
 
 /// A rectangle on the room's floor: `x` and `z` ranges, in meters.

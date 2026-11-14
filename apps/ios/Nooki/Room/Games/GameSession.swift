@@ -64,6 +64,7 @@ final class GameSession {
         room.isPlayingGame = true
         wasDirected = room.walker?.directed ?? false
         room.walker?.directed = true
+        room.walker?.pace = .eager
         let camera = GameCamera(room: room)
         camera.viewport = lens
         self.camera = camera
@@ -223,6 +224,7 @@ final class GameSession {
         let room = room
         let directed = wasDirected
         room.walker?.directed = directed
+        room.walker?.pace = .usual
         room.isPlayingGame = false
         if room is TabletopRoom || now {
             camera?.cancel()

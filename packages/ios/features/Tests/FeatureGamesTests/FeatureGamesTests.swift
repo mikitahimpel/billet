@@ -201,6 +201,30 @@ struct LaserPlayTests {
     laser.aim(SIMD2(0.3, 0), dt: 0.1)
     #expect(laser.cue(cat: .zero) == nil)
   }
+
+  @Test func pouncesSoonAfterOneAnotherMakeAStreak() {
+    var laser = LaserPlay(length: 0.2, floor: floor)
+    laser.pounced()
+    #expect(laser.streak == 1 && laser.cheer == "Pounce!")
+    laser.aim(SIMD2(0.1, 0), dt: 3)
+    laser.pounced()
+    #expect(laser.streak == 2 && laser.cheer == "2 in a row!")
+    // The finger lifts for a long while: the next pounce starts over.
+    laser.aim(nil, dt: LaserPlay.streakWindow + 1)
+    laser.pounced()
+    #expect(laser.streak == 1 && laser.pounces == 3)
+    // A streak pays no more than its pounces.
+    #expect(abs(laser.play - 0.6) < 1e-9)
+  }
+
+  @Test func sheReadsAStoppedDotQuickly() {
+    var laser = LaserPlay(length: 0.2, floor: floor)
+    laser.aim(SIMD2(0.05, 0), dt: 1 / 60)
+    laser.aim(SIMD2(0.05, 0), dt: 0.2)
+    #expect(laser.cue(cat: .zero) == nil)
+    laser.aim(SIMD2(0.05, 0), dt: 0.1)
+    #expect(laser.cue(cat: .zero) == .pounce(SIMD2(0.05, 0)))
+  }
 }
 
 struct BrushStrokesTests {
