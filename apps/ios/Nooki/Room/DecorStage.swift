@@ -349,18 +349,25 @@ final class DecorStage {
         let here = layout.allPlacements(in: room).reversed().filter { $0.surface == .floor }
         let solid = here.filter { !isFlat($0.item) }
         let flat = here.filter { isFlat($0.item) }
-        return (solid + flat).first { placement in
+        func under(_ placement: Placement, loosely: Bool) -> Bool {
             guard let item = DecorItem.item(shopID: placement.item) else { return false }
             let (width, depth) = DecorLayout.footprint(of: item, eighthTurns: placement.eighthTurns)
-            let halfX = width / 2 + 0.02
-            let halfZ = depth / 2 + 0.02
+            let box: (halfX: Double, halfZ: Double) =
+                loosely
+                ? DecorLayout.touchHalfExtents(width: width, depth: depth)
+                : (halfX: width / 2 + DecorLayout.touchMargin, halfZ: depth / 2 + DecorLayout.touchMargin)
+            let (halfX, halfZ) = box
             let height = item.isFlat ? 0 : templates[key(item)]?.extents.y ?? 0
             return [0, 0.25, 0.5, 0.75, 1].contains { fraction in
                 guard let point = hit(height * Float(fraction)) else { return false }
                 return abs(Double(point.x) - DecorGrid.metres(placement.u)) <= halfX
                     && abs(Double(point.z) - DecorGrid.metres(placement.v)) <= halfZ
             }
-        }?.item
+        }
+        // A touch on a piece's own body wins, then a fingertip's box round a small piece, and only then the rug
+        // under it.
+        return (solid.first { under($0, loosely: false) } ?? solid.first { under($0, loosely: true) }
+            ?? flat.first { under($0, loosely: false) })?.item
     }
 
     /// The wall piece under `point` on `surface`, in the pivot's space.

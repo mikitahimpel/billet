@@ -213,15 +213,23 @@ import Testing
     #expect(next.placement(of: "yarn")?.u == 0 && next.placement(of: "yarn")?.v == 6)
   }
 
+  private func atHome(_ placement: Placement) -> Bool {
+    guard let base = DecorItem.item(shopID: placement.item)?.base else { return false }
+    return placement.u == base.u && placement.v == base.v && placement.eighthTurns == 0
+  }
+
   @Test func whateverIsDroppedWhereTheRoomIsEveryPieceStillFits() {
     let cells = [(-2, 6), (-1, 6), (0, 5), (7, -3), (-3, 5), (2, 5)]
     for (u, v) in cells {
       let layout = fresh.putting(at("armchair", -2, 6))
       switch layout.dropping(at("base-plant", u, v)) {
-      case .fits(let next), .swapped(let next, _), .nudged(let next, _, _):
-        for piece in next.allPlacements(in: .home) {
+      case .fits(let next), .swapped(let next, _), .nudged(let next, _, _), .slid(let next, _):
+        // The room's own furniture at home is modelled where it stands, a hair outside the grid's bounds,
+        // so only what has been moved is judged.
+        for piece in next.allPlacements(in: .home) where !atHome(piece) {
           #expect(next.accepts(piece), Comment(rawValue: "\(piece.item) after \(u),\(v)"))
         }
+        #expect(next.placement(of: "base-plant") != fresh.placement(of: "base-plant"))
       case .rejected:
         break
       }
@@ -231,6 +239,82 @@ import Testing
   @Test func droppingWhereNothingMakesRoomIsRejectedAndChangesNothing() {
     let drop = fresh.dropping(at("base-rug", 20, 20))
     if case .rejected = drop {} else { Issue.record("not rejected") }
+  }
+
+  /// The room with nothing of its own standing, so only the piece under test is in it.
+  private let empty = DecorLayout(stored: Set(DecorItem.baseItems.map(\.id)))
+
+  @Test func aDropJustPastTheWallSlidesToTheWall() throws {
+    // The bookcase is 0.134 deep: at v 9 its back is 0.517 into the wall, at v 8 it fits.
+    guard case .slid(let layout, let spot) = empty.dropping(at("bookcase", 0, 9)) else {
+      Issue.record("not slid")
+      return
+    }
+    #expect(spot.u == 0)
+    #expect(spot.v < 9 && spot.v >= 9 - DecorLayout.slideReach)
+    #expect(layout.accepts(spot))
+    #expect(layout.placement(of: "bookcase") == spot)
+    #expect(empty.verdict(at("bookcase", 0, spot.v + 1)) == .outsideRoom)
+  }
+
+  @Test func aDropNearTwoPiecesInTheWaySlidesBesideThem() {
+    let crowded = empty.putting(at("yarn", -2, -8)).putting(at("mouse", 1, -8))
+    // The bookcase over both: no swap, no nudge, so it slides to the nearest free cells.
+    switch crowded.dropping(at("bookcase", 0, -8)) {
+    case .slid(let layout, let spot):
+      #expect(layout.accepts(spot))
+      #expect(DecorLayout.cells(from: at("bookcase", 0, -8), to: spot) <= DecorLayout.slideReach)
+      #expect(layout.placement(of: "yarn") == at("yarn", -2, -8))
+      #expect(layout.placement(of: "mouse") == at("mouse", 1, -8))
+    case .fits, .swapped, .nudged, .rejected:
+      Issue.record("not slid: \(crowded.dropping(at("bookcase", 0, -8)))")
+    }
+  }
+
+  @Test func aDropFarFromAnySpotThatFitsIsStillRejected() {
+    if case .rejected(let why) = empty.dropping(at("bookcase", 0, 20)) {
+      #expect(why == .outsideRoom)
+    } else {
+      Issue.record("not rejected")
+    }
+  }
+
+  // MARK: Inside the room
+
+  @Test func aPiecePushedPastAWallStopsAtTheWall() {
+    for (u, v) in [(0, 20), (0, -20), (20, 0), (-20, 0), (20, 20), (-20, -20)] {
+      let inside = DecorLayout.insideRoom(at("bookcase", u, v))
+      #expect(empty.verdict(inside) != .outsideRoom, "\(u),\(v)")
+      // Pulled back no further than it must be: one cell on is out again.
+      let on = at("bookcase", inside.u + u.signum(), inside.v + v.signum())
+      #expect(empty.verdict(on) == .outsideRoom, "\(u),\(v)")
+      #expect(inside.item == "bookcase" && inside.eighthTurns == 0 && inside.space == .living)
+    }
+  }
+
+  @Test func aPieceInsideTheRoomIsLeftWhereItIs() {
+    for placement in [at("bookcase", 0, 0), at("yarn", -7, 7), at("bookcase", 3, -5, 1)] {
+      #expect(DecorLayout.insideRoom(placement) == placement)
+    }
+    let turned = Placement(item: "bookcase", surface: .floor, u: 0, v: 20, eighthTurns: 1)
+    #expect(DecorLayout.insideRoom(turned).eighthTurns == 1)
+  }
+
+  @Test func aWallPiecePushedPastTheCornerStopsAtIt() {
+    let print = Placement(item: "print", surface: .backWall, u: 20)
+    let inside = DecorLayout.insideRoom(print)
+    #expect(inside.surface == .backWall && inside.v == 0)
+    #expect(empty.verdict(inside) != .outsideRoom)
+    #expect(
+      empty.verdict(Placement(item: "print", surface: .backWall, u: inside.u + 1)) == .outsideRoom)
+  }
+
+  @Test func aTouchBoxIsNeverSmallerThanAFingertip() {
+    // The toy mouse, 5 by 10 cm: a fingertip across, its own length and a margin along.
+    let mouse = DecorLayout.touchHalfExtents(width: 0.05, depth: 0.1)
+    #expect(abs(mouse.halfX - 0.06) < 1e-9 && abs(mouse.halfZ - 0.07) < 1e-9)
+    let bed = DecorLayout.touchHalfExtents(width: 0.76, depth: 0.36)
+    #expect(abs(bed.halfX - 0.4) < 1e-9 && abs(bed.halfZ - 0.2) < 1e-9)
   }
 
   // MARK: Reset

@@ -77,19 +77,38 @@ struct DecorPanel: View {
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.text)
                 .lineLimit(1)
-            HStack(spacing: Space.s) {
-                if machine.canTurn {
-                    PillButton("Rotate", symbol: "rotate.right") { state.decor.send(.turned) }
-                        .accessibilityIdentifier("decorRotate")
-                    PillButton("45°", symbol: "rotate.right") { state.decor.send(.turnedFine) }
-                        .accessibilityIdentifier("decorRotateFine")
+            // One row while the four pills fit, two rows on a narrower phone, one under another at accessibility sizes.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Space.s) {
+                    turnButtons
+                    keepButtons
                 }
-                PillButton("Store", symbol: "tray.and.arrow.down") { state.decor.send(.stored) }
-                    .accessibilityIdentifier("decorStore")
-                undoButton
+                .fixedSize()
+                VStack(alignment: .leading, spacing: Space.s) {
+                    HStack(spacing: Space.s) { turnButtons }.fixedSize()
+                    HStack(spacing: Space.s) { keepButtons }.fixedSize()
+                }
+                VStack(alignment: .leading, spacing: Space.s) {
+                    turnButtons
+                    keepButtons
+                }
             }
-            .fixedSize()
         }
+    }
+
+    @ViewBuilder private var turnButtons: some View {
+        if machine.canTurn {
+            PillButton("Rotate", symbol: "rotate.right") { state.decor.send(.turned) }
+                .accessibilityIdentifier("decorRotate")
+            PillButton("45°", symbol: "rotate.right") { state.decor.send(.turnedFine) }
+                .accessibilityIdentifier("decorRotateFine")
+        }
+    }
+
+    @ViewBuilder private var keepButtons: some View {
+        PillButton("Store", symbol: "tray.and.arrow.down") { state.decor.send(.stored) }
+            .accessibilityIdentifier("decorStore")
+        undoButton
     }
 
     @ViewBuilder private var closet: some View {

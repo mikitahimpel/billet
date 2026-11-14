@@ -474,6 +474,45 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     (a.u - b.u) * (a.u - b.u) + (a.v - b.v) * (a.v - b.v)
   }
 
+  /// How far a drop may slide to the nearest spot that fits, in cells: near enough that the piece lands about
+  /// where the finger let go.
+  public static let slideReach = 3
+
+  /// Cells between two spots, the larger of the two axes.
+  static func cells(from a: Placement, to b: Placement) -> Int {
+    max(abs(a.u - b.u), abs(a.v - b.v))
+  }
+
+  /// `placement` pulled back into the room on whichever axis takes it out, so a piece pushed against a wall
+  /// stops at the wall instead of leaving the room. A piece too wide for the room is left as it is.
+  public static func insideRoom(_ placement: Placement) -> Placement {
+    guard let item = DecorItem.item(shopID: placement.item),
+      let span = span(of: placement, item: item)
+    else { return placement }
+    func clamped(_ cell: Int, half: Double) -> Int? {
+      let room = DecorGrid.reach + 0.001
+      let limit = Int(((room - half) / DecorGrid.step + 1e-6).rounded(.down))
+      guard limit >= 0 else { return nil }
+      return min(max(cell, -limit), limit)
+    }
+    var next = placement
+    guard let u = clamped(placement.u, half: span.halfX) else { return placement }
+    next.u = u
+    if placement.surface == .floor, let v = clamped(placement.v, half: span.halfZ) { next.v = v }
+    return next
+  }
+
+  /// Room a touch may miss a piece by and still take it, in metres.
+  public static let touchMargin = 0.02
+  /// Half the box a touch is matched against: the footprint with `touchMargin` round it, and never under a
+  /// fingertip's worth (about 44 points of the room on a phone), so the toy mouse is as easy to pick up as the bed.
+  public static func touchHalfExtents(width: Double, depth: Double) -> (
+    halfX: Double, halfZ: Double
+  ) {
+    let fingertip = 0.06
+    return (max(width / 2 + touchMargin, fingertip), max(depth / 2 + touchMargin, fingertip))
+  }
+
   /// The box a piece of `item` fills on the floor turned by `eighthTurns`: the sides swap on a quarter turn,
   /// and at 45 degrees it is the box round the turned footprint, so a fit is never overstated.
   public static func footprint(of item: DecorItem, eighthTurns: Int) -> (
