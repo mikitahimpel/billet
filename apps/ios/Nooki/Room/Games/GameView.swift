@@ -12,7 +12,6 @@ import UsInterface
 /// shows meanwhile.
 struct GameView: View {
     @State var session: GameSession
-    var scenes: GameSceneSwitch
     var close: () -> Void
     @State private var touching = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -21,37 +20,37 @@ struct GameView: View {
     static let overlayType = DynamicTypeSize.xxxLarge
 
     var body: some View {
-        GeometryReader { proxy in
-            let full = proxy.size
-            ZStack {
-                Color.clear
-                    .ignoresSafeArea()
-                    // The touch layer's own size is the screen's: a touch and a ray into the room share its space.
-                    .onGeometryChange(for: CGSize.self, of: \.size) { session.resize($0) }
-                    .contentShape(.rect)
-                    .gesture(
-                        DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                            .onChanged { value in
-                                session.touch(touching ? .moved : .began, at: value.location)
-                                touching = true
-                            }
-                            .onEnded { value in
-                                touching = false
-                                session.touch(.ended, at: value.location)
-                                if GameExit.isSwipe(from: value.startLocation, translation: value.translation) { end() }
-                            }
-                    )
-                    .accessibilityHidden(true)
+        ZStack {
+            // The touches, the hand and the camera's lens share one space, the whole screen, which is what the room's
+            // view fills. Inside a `GeometryReader` a child cannot reach into the safe area, so the reader itself does.
+            GeometryReader { proxy in
+                ZStack {
+                    Color.clear
+                        .contentShape(.rect)
+                        .gesture(
+                            DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                                .onChanged { value in
+                                    session.touch(touching ? .moved : .began, at: value.location)
+                                    touching = true
+                                }
+                                .onEnded { value in
+                                    touching = false
+                                    session.touch(.ended, at: value.location)
+                                    if GameExit.isSwipe(from: value.startLocation, translation: value.translation) { end() }
+                                }
+                        )
+                        .accessibilityHidden(true)
 
-                if let pointer = session.pointer {
-                    CueHand(pointer: pointer)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
+                    if let pointer = session.pointer {
+                        CueHand(pointer: pointer).transition(.opacity)
+                    }
                 }
-
-                controls
+                .onGeometryChange(for: CGSize.self, of: \.size) { session.resize($0) }
+                .onAppear { session.start(viewport: proxy.size) }
             }
-            .onAppear { session.start(viewport: full) }
+            .ignoresSafeArea()
+
+            controls
         }
     }
 
@@ -59,7 +58,6 @@ struct GameView: View {
         VStack(spacing: Space.m) {
             HStack(spacing: Space.s) {
                 GameTitle(game: session.game)
-                if scenes.options.count > 1 { SceneMenu(scenes: scenes, select: move) }
                 Spacer(minLength: 0)
                 // The glass sits behind the label and takes no touch itself: over the RealityKit room a glass view
                 // on the Button swallows the tap.
@@ -112,26 +110,9 @@ struct GameView: View {
         .animation(.easeInOut(duration: 0.2), value: session.pointer == nil)
     }
 
-    /// Between two corners the game carries on; to or from the room it is closed here and starts over there.
-    private func move(to next: GameScenery) {
-        guard next != scenes.selected else { return }
-        if next.isCorner == scenes.selected.isCorner {
-            scenes.select(next)
-        } else {
-            session.close(now: true) { scenes.select(next) }
-        }
-    }
-
     private func end() {
         session.close(close)
     }
-}
-
-/// The scenes a game can be played in, and the one it is in: a single control, the game's own Room | City.
-struct GameSceneSwitch {
-    let options: [GameScenery]
-    let selected: GameScenery
-    var select: (GameScenery) -> Void
 }
 
 /// The hint hand over the thing to touch: a honey ring on it, and a hand that taps it, presses and holds it, rubs it
@@ -267,38 +248,6 @@ private struct GameTitle: View {
     }
 }
 
-/// Where it is played, always visible, and the other places one tap away.
-private struct SceneMenu: View {
-    let scenes: GameSceneSwitch
-    var select: (GameScenery) -> Void
-
-    var body: some View {
-        Menu {
-            ForEach(scenes.options, id: \.self) { scene in
-                Button { select(scene) } label: {
-                    Label(scene.title, systemImage: scene == scenes.selected ? "checkmark" : scene.symbol)
-                }
-            }
-        } label: {
-            HStack(spacing: Space.xs) {
-                Image(systemName: scenes.selected.symbol)
-                Text(scenes.selected.title)
-                Image(systemName: "chevron.down").font(.ourioMicro)
-            }
-            .font(.ourioHeadline)
-            .foregroundStyle(Ink.glassGlyph)
-            .padding(.horizontal, Space.m)
-            .frame(minHeight: Size.control)
-            .background { Color.clear.glass(.capsule, role: .bar).allowsHitTesting(false) }
-            .contentShape(.capsule)
-        }
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .accessibilityIdentifier("gameScene")
-        .accessibilityLabel("Scene")
-        .accessibilityValue(scenes.selected.title)
-    }
-}
-
 /// How far along: an icon, what is filling, the count, and a thick honey meter on a dark glass track.
 private struct GameBar: View {
     let meter: GameMeter
@@ -364,9 +313,9 @@ private struct ResultToast: View {
                 Text(result.line(pronouns: CatProfile.pronouns()))
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
-                HStack(spacing: Space.s) {
-                    Chip(result.game.careLabel(grams: result.grams), symbol: result.game.symbol, style: .quiet)
-                    Chip("Coins", coinStyle: .quiet)
+                EqualRow(spacing: Space.s) {
+                    Chip(result.game.careLabel(grams: result.grams), symbol: result.game.symbol, style: .quiet, fills: true)
+                    Chip("Coins", coinStyle: .quiet, fills: true)
                 }
                 buttons
             }
@@ -437,16 +386,6 @@ extension MiniGame {
         case .water: "Fresh water"
         case .laser: "Played"
         case .brush: "Brushed"
-        }
-    }
-}
-
-extension GameScenery {
-    fileprivate var symbol: String {
-        switch self {
-        case .room: "house.fill"
-        case .rug: "square.grid.2x2.fill"
-        case .kitchen: "fork.knife"
         }
     }
 }
