@@ -28,7 +28,7 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 | `Titles` | `Cloudflare.KV.Namespace`, TMDB's answers for the To watch list, keyed by hash | `TITLES` |
 | `PairRoom` | `Cloudflare.DurableObject`, SQLite-backed, one object per couple | `PAIR_ROOM` |
 | `Events` | `Cloudflare.AnalyticsEngine.Dataset`, dataset `billet_<stage>_events` | `EVENTS` |
-| `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts`, static assets from `./apps/api/public` | `ASSETS` |
+| `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts`, static assets from `./apps/api/public`, custom domain `API_DOMAIN` when set | `ASSETS` |
 
 - `Events` is only a binding: Analytics Engine creates the dataset on the first write, so there is
   nothing to provision and nothing to destroy. The row layout is in
@@ -138,11 +138,24 @@ of what prod needs:
 | `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID` | `Ourio Release`, `Apple` | same names |
 | `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access` | `team_domain`, `aud` |
 | `TMDB_TOKEN` | `Ourio Release`, `TMDB` | `api_token` |
+| `API_DOMAIN` | `Ourio Release`, `Cloudflare` | `api_domain` |
 
 The prod API token is its own token, separate from dev's: Account, Workers Scripts, D1 and R2, all
 Edit, on this account only. The deploy also makes KV namespaces, an Analytics Engine dataset and
 Durable Object migrations; if a deploy fails with an authentication error naming one of them, add
 that permission (Workers KV Storage: Edit) to the token and rerun.
+
+### Custom domain
+
+`API_DOMAIN` is optional. Set to a hostname such as `api.ourio.app`, it attaches that hostname to
+the Worker as a Cloudflare custom domain: Alchemy looks the zone up from the hostname's parent
+labels (`api.ourio.app`, then `ourio.app`; `GET /zones?name=`), creates the DNS record and the
+edge certificate, and the deploy output's `url` becomes `https://<API_DOMAIN>`. The zone must
+already be in the **same Cloudflare account** as the Worker, and the token needs two more zone
+permissions on it: Workers Routes: Edit and DNS: Edit. Empty (the default) changes nothing: the
+Worker keeps its `workers.dev` address, and a domain attached by hand in the dashboard is left as it
+is. `dev` is deployed without it; a stage can set it in the shell for one deploy
+(`API_DOMAIN=api-dev.ourio.app pp run ...`) once that zone is in the account.
 
 The four `Apple` fields are account-wide Apple keys: the APNs key (push) and the Sign in with
 Apple key (`APPLE_SIGN_IN_KEY`, the `.p8` PEM, which lets the Worker revoke a user's Apple token
@@ -179,7 +192,8 @@ The workflow checks that the six required secrets are present (names only) and w
 `pnpm turbo run lint typecheck test format:check`, then
 `pnpm exec alchemy deploy --stage prod --yes --no-input`, prints the log with the `workers.dev`
 address masked (public repository logs are public; the account ID is a secret, so GitHub masks it
-too), smoke-tests the Worker URL for HTTP 200 and deletes the raw log in a last step.
+too), smoke-tests the Worker for HTTP 200 (`https://<API_DOMAIN>` when it is set, else the
+`workers.dev` URL from the log) and deletes the raw log in a last step.
 
 Owner steps, once. The secrets are copied from Proton Pass to GitHub; the Mac's `pp` session is
 the agents' session and cannot read the prod vault, so the main path is by hand.
@@ -201,10 +215,12 @@ the agents' session and cannot read the prod vault, so the main path is by hand.
    | `ACCESS_TEAM_DOMAIN` | `Ourio Release`, `Cloudflare Access`, `team_domain` | optional |
    | `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access`, `aud` | optional |
    | `TMDB_TOKEN` | `Ourio Release`, `TMDB`, `api_token` | optional |
+   | `API_DOMAIN` | `Ourio Release`, `Cloudflare`, `api_domain` | optional |
 
-   The first prod deploy works without the three optional ones: the Access application needs the
-   deployed host first, so `/admin` stays closed until `ACCESS_*` are set, and without
-   `TMDB_TOKEN` prod serves no titles. The workflow warns by name. Add them later and run Deploy
+   The first prod deploy works without the four optional ones: the Access application needs the
+   deployed host first, so `/admin` stays closed until `ACCESS_*` are set, without `TMDB_TOKEN`
+   prod serves no titles, and without `API_DOMAIN` the Worker answers on `workers.dev` only
+   ([Custom domain](#custom-domain)). The workflow warns by name. Add them later and run Deploy
    again.
 3. **Script (optional).** `scripts/sync-prod-secrets.sh` does the same copy without printing a
    value: `--dry-run` lists names; it skips an optional variable whose Proton item does not exist

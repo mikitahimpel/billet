@@ -90,6 +90,11 @@ export default Alchemy.Stack(
     const liveActivityPush = yield* Config.String("LIVE_ACTIVITY_PUSH").pipe(
       Config.withDefault(""),
     );
+    // The Worker's custom domain (`api.ourio.app`), a hostname in a zone of the same Cloudflare
+    // account. Alchemy finds the zone from the hostname's parent labels and manages the DNS record
+    // and the certificate; the token needs Workers Routes and DNS Edit on that zone. Empty leaves
+    // the Worker on its workers.dev address and any domain attached by hand untouched.
+    const apiDomain = yield* Config.String("API_DOMAIN").pipe(Config.withDefault(""));
     // Apple's push and Sign in with Apple keys are account-wide: `dev` and `prod` bind the same
     // four values, each from its own vault (.env.pass, .env.pass.release). Without them a deployed
     // Worker would send no pushes and could not revoke Apple tokens, so those two stages stop here
@@ -167,6 +172,7 @@ export default Alchemy.Stack(
         ...(stage === "dev" ? { DEMO_ROOM: Cloudflare.DurableObject("DemoRoom") } : {}),
       },
       observability,
+      ...(apiDomain === "" ? {} : { domain: apiDomain }),
       dev: { host: "0.0.0.0", port: 8787 },
     });
 
