@@ -266,7 +266,7 @@ private struct EmptyMoments: View {
     }
 
     private var reward: some View {
-        Text("+10")
+        Text("+\(EarnAmount.moment)")
             .font(.ourioCaption.weight(.semibold).monospacedDigit())
             .padding(.horizontal, Space.s)
             .padding(.vertical, Space.xs / 2)
@@ -360,7 +360,7 @@ struct MomentPrint: View {
 
 /// Pinned moments in wall order, so it's clear what Mochi's room shows: six small prints across the card, each
 /// empty slot a well with the honey "+" of the bar's own button, and the same picker as a pill in the header.
-private struct WallStrip: View {
+struct WallStrip: View {
     let store: MomentStore
     @Binding var pick: PhotosPickerItem?
 
@@ -374,6 +374,8 @@ private struct WallStrip: View {
                 } trailing: {
                     PhotosPicker(selection: $pick, matching: .images) {
                         Label("Add photo", systemImage: "plus")
+                            .lineLimit(1)
+                            .fixedSize()
                     }
                     .buttonStyle(PillButtonStyle())
                     .accessibilityIdentifier("wallAddPhoto")

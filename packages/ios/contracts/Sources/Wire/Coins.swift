@@ -192,3 +192,11 @@ public struct EarnResponse: Codable, Hashable, Sendable {
     entry = try container.decodeOptionalKey(CoinEntry.self, forKey: .entry)
   }
 }
+
+/// What one thing done together pays, as `packages/contracts/domain/src/coins.ts` (`rewardForEarn`) pays
+/// it; the daily caps can pay less.
+public enum EarnAmount {
+  public static let moment = 2
+  public static let note = 1
+  public static let dateMatched = 2
+}

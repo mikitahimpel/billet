@@ -466,13 +466,17 @@ private struct RiddleTiles: View {
     }
 }
 
-private struct WordOption: View {
+struct WordOption: View {
     let tier: String
     let word: String
 
     var body: some View {
         HStack(spacing: Space.m) {
-            Chip(tier)
+            // Every tier's chip takes the widest one's room, so the three words start at one edge.
+            ZStack(alignment: .leading) {
+                Chip("Medium").hidden()
+                Chip(tier)
+            }
             Text(word)
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)

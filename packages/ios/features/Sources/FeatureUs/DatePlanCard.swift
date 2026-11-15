@@ -4,6 +4,7 @@
   import WidgetUI
   import PhotosUI
   import ProfileInterface
+  import enum Wire.EarnAmount
   import SwiftUI
   import Design
   import UsInterface
@@ -28,7 +29,7 @@
               .font(.ourioTitle)
               .foregroundStyle(Ink.text)
               .multilineTextAlignment(.center)
-            Label("+10", systemImage: "star.fill")
+            Label("+\(EarnAmount.dateMatched)", systemImage: "star.fill")
               .font(.ourioHeadline)
               .foregroundStyle(Ink.accentText)
 
