@@ -410,22 +410,27 @@ public struct DecorLayout: Codable, Equatable, Sendable {
         else { return nil }
         return Self.span(of: other, item: otherItem)
       }
-      func gap(toward vertical: Bool) -> Double {
+      // No piece's edge may pass `DecorGrid.reach`, so the cell nearest a wall can leave a piece up to a cell and
+      // that margin off it.
+      let wallReach = step + (-wall - DecorGrid.reach)
+      func shift(toward vertical: Bool) -> Double {
         let edge = vertical ? span.z - span.halfZ : span.x - span.halfX
         var open = edge - wall
+        var reach = wallReach
         for other in others {
           let across =
             vertical
             ? abs(other.x - span.x) < other.halfX + span.halfX
             : abs(other.z - span.z) < other.halfZ + span.halfZ
           let near = vertical ? other.z + other.halfZ : other.x + other.halfX
-          if across, near <= edge + 0.001 { open = min(open, edge - near) }
+          if across, near <= edge + 0.001, edge - near < open {
+            open = edge - near
+            reach = step
+          }
         }
-        return open
+        return open > 0 && open < reach ? -open : 0
       }
-      let dx = gap(toward: false)
-      let dz = gap(toward: true)
-      return (dx > 0 && dx < step ? -dx : 0, dz > 0 && dz < step ? -dz : 0)
+      return (shift(toward: false), shift(toward: true))
     case .backWall, .leftWall:
       var edges = room.blockedWall(placement.surface).map { ($0.x - $0.halfX, $0.x + $0.halfX) }
       edges += allPlacements(in: room).compactMap { other -> (Double, Double)? in
