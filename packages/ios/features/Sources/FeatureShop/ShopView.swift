@@ -119,6 +119,7 @@
           }
           .accessibilityLabel("New deals at midnight")
         }
+        .padding(.horizontal, Space.l)
         dealsRow(
           state.shop.offers.deals(on: now).compactMap {
             Catalog.item($0.itemID, cat: state.petName)

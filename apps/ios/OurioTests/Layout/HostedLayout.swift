@@ -48,6 +48,8 @@ final class HostedLayout {
         Self.accessibilityOn
         let controller = UIHostingController(rootView: view.environment(\.dynamicTypeSize, phone.dynamicType))
         controller.overrideUserInterfaceStyle = .light
+        // UIKit views inside (Apple's sign-in button, a menu picker) read the trait, not SwiftUI's environment.
+        controller.traitOverrides.preferredContentSizeCategory = Self.category(phone.dynamicType)
         controller.additionalSafeAreaInsets = phone.safeArea
         let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
         window = scene.map { UIWindow(windowScene: $0) } ?? UIWindow()
@@ -58,6 +60,24 @@ final class HostedLayout {
         settle()
         // The first drawing after the accessibility switch comes on can take a moment to get its elements.
         for _ in 0..<20 where elements().isEmpty { settle(0.25) }
+    }
+
+    private static func category(_ size: DynamicTypeSize) -> UIContentSizeCategory {
+        switch size {
+        case .xSmall: .extraSmall
+        case .small: .small
+        case .medium: .medium
+        case .large: .large
+        case .xLarge: .extraLarge
+        case .xxLarge: .extraExtraLarge
+        case .xxxLarge: .extraExtraExtraLarge
+        case .accessibility1: .accessibilityMedium
+        case .accessibility2: .accessibilityLarge
+        case .accessibility3: .accessibilityExtraLarge
+        case .accessibility4: .accessibilityExtraExtraLarge
+        case .accessibility5: .accessibilityExtraExtraExtraLarge
+        @unknown default: .large
+        }
     }
 
     deinit {

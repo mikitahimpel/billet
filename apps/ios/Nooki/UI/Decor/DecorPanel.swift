@@ -156,8 +156,11 @@ struct DecorPanel: View {
                                     .foregroundStyle(Ink.text)
                                     .lineLimit(2)
                                     .multilineTextAlignment(.center)
+                                    // A tile is a third or a half of the tray: larger text breaks the names mid-word.
+                                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
                             }
-                            .containerRelativeFrame(.horizontal, count: 3, spacing: Space.s)
+                            .containerRelativeFrame(
+                                .horizontal, count: Self.closetColumns(at: dynamicTypeSize), spacing: Space.s)
                             .contentShape(.rect)
                         }
                         .buttonStyle(PressScaleStyle())
@@ -171,6 +174,9 @@ struct DecorPanel: View {
             resetButton
         }
     }
+
+    /// Three tiles across the tray, two at the accessibility sizes so a name still has room on two lines.
+    static func closetColumns(at size: DynamicTypeSize) -> Int { size.isAccessibilitySize ? 2 : 3 }
 
     @ViewBuilder private func undoButton(fullWidth: Bool) -> some View {
         if machine.book.undo != nil {
