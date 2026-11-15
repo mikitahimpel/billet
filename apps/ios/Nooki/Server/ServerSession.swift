@@ -30,6 +30,9 @@ final class ServerSession {
     private(set) var pairing: PairingModel
     /// Learned by pairing or from the server (`watchPair()`); the saved record keeps it across launches.
     private(set) var isPaired: Bool
+    /// Why the last pair ended when the partner ended it, as the server says; nil until it is asked, or when it
+    /// says nothing.
+    private(set) var partnerLeft: PartnerLeft?
     /// Dev server only; nil without dev tools and until `checkDemoPartner()` has asked.
     private(set) var demoPartner: Bool?
     let inbox: InboxModel
@@ -218,9 +221,9 @@ final class ServerSession {
                          receiving: photoReceiving, defaults: .standard) { PhotoUpload(fileAt: $0) }
     }
 
-    /// While the app is in front and this account has no partner: asks the server now, since the partner may have
-    /// entered the code while the app was closed, then every `PairingModel.checkEvery` while an invite is out, on
-    /// any screen. Returns once paired or cancelled.
+    /// While the app is in front. Paired, it checks once that the server still has the pair. Unpaired, it asks now,
+    /// since the partner may have entered the code while the app was closed, then every `PairingModel.checkEvery`
+    /// on any screen. Returns once paired or cancelled.
     func watchPair() async {
         guard isSignedIn else { return }
         guard !isPaired else { return await confirmPair() }
@@ -245,8 +248,16 @@ final class ServerSession {
         do {
             _ = try await backend.api.pair()
         } catch {
-            if error == .api(.notFound), isPaired { pairEnded() }
+            guard error == .api(.notFound), isPaired else { return }
+            pairEnded()
+            await readPartnerLeft()
         }
+    }
+
+    /// Asked once the server has no pair for this account; offline, what was known stays.
+    func readPartnerLeft() async {
+        guard let account = try? await backend.api.account() else { return }
+        partnerLeft = account.partnerLeft
     }
 
     /// The pair as the server has it, this account first. `.api(.notFound)` once the server has no pair for it.
@@ -412,6 +423,7 @@ final class ServerSession {
         let kept = (try? backend.accounts.load())?.record.pairID
         try? backend.accounts.setPaired(true, pairID ?? kept)
         isPaired = true
+        partnerLeft = nil
         reactions = Self.reactionsModel(backend)
         whoKnows = Self.whoKnowsModel(backend, paired: true)
         drawGuess = Self.drawGuessModel(backend, paired: true)
