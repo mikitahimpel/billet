@@ -83,8 +83,9 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
   }
 
   /// The notice spans the list's width, on the gutter the cards stand on.
-  private static let noticeInsets = EdgeInsets(
-    top: Space.s, leading: Space.gutter, bottom: 0, trailing: Space.gutter)
+  private static var noticeInsets: EdgeInsets {
+    EdgeInsets(top: Space.s, leading: Space.gutter, bottom: 0, trailing: Space.gutter)
+  }
 
   private func list(_ page: InboxMachine.Page) -> some View {
     frame {
