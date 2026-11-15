@@ -66,7 +66,14 @@ extension WebSocketConnection {
           throw .network(error.localizedDescription)
         }
       },
-      close: { task.cancel(with: .goingAway, reason: nil) }
+      close: { task.cancel(with: .goingAway, reason: nil) },
+      ping: { () async throws(TransportError) in
+        do {
+          try await task.ping()
+        } catch {
+          throw .network(error.localizedDescription)
+        }
+      }
     )
   }
 }

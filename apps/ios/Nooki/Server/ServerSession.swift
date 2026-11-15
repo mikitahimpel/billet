@@ -30,6 +30,9 @@ final class ServerSession {
     private(set) var pairing: PairingModel
     /// Learned by pairing; the saved record keeps it across launches.
     private(set) var isPaired: Bool
+    /// Why the last pair ended when the partner ended it, as the server says; nil until it is asked, or when it
+    /// says nothing.
+    private(set) var partnerLeft: PartnerLeft?
     /// Dev server only; nil without dev tools and until `checkDemoPartner()` has asked.
     private(set) var demoPartner: Bool?
     let inbox: InboxModel
@@ -57,6 +60,8 @@ final class ServerSession {
     /// Set each time the socket is followed; holds the last entry.
     @ObservationIgnored private var catEntry: (@MainActor (CatEntry) -> Void)?
     @ObservationIgnored private var lastCatSeq: (@MainActor () -> Int?)?
+    /// Set each time the socket is followed.
+    @ObservationIgnored private var socketOpened: (@MainActor () -> Void)?
     /// Set by the open Pick tonight screen; nil while it is closed.
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
@@ -141,9 +146,11 @@ final class ServerSession {
     func followInbox(
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
         lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil, streak: StreakStore? = nil,
-        cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil
+        cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil,
+        opened: (@MainActor () -> Void)? = nil
     ) {
         if follows, isPaired {
+            socketOpened = opened
             catEntry = cat
             self.lastCatSeq = lastCatSeq
             self.photos = photos
@@ -162,6 +169,7 @@ final class ServerSession {
                         unread: { inbox.unreadChanged($0) },
                         photo: { [weak self] in Task { await self?.photos?.receive() } },
                         text: { [weak self] in Task { await self?.texts?.receive() } },
+                        drawing: { [weak self] in self?.drawingSync?.received($1, seq: $0) },
                         reaction: { [weak self] in self?.reactions?.received($0) },
                         lastReactionRev: { [weak self] in self?.reactions?.lastRev },
                         shop: { [weak self] in self?.shop?.received($0) },
@@ -176,13 +184,19 @@ final class ServerSession {
                         },
                         catEntry: { [weak self] in self?.catEntry?($0) },
                         lastCatSeq: { [weak self] in self?.lastCatSeq?() },
-                        presence: { [weak self] in self?.partnerPresence = $0 }))
+                        presence: { [weak self] in self?.partnerPresence = $0 },
+                        opened: { [weak self] in self?.socketOpened?() }))
             }
             inboxLink?.connect()
         } else {
             inboxLink?.disconnect()
             partnerPresence = .away
         }
+    }
+
+    /// The room's socket was heard from within `quietLimit`, or answers a ping; false while it is down or unfollowed.
+    func roomSocketIsHealthy(quietLimit: Duration) async -> Bool {
+        await inboxLink?.isHealthy(quietLimit: quietLimit) ?? false
     }
 
     /// Nil until this account has a partner.
@@ -195,6 +209,12 @@ final class ServerSession {
         guard isPaired else { return nil }
         return PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner,
                          receiving: photoReceiving, defaults: .standard) { PhotoUpload(fileAt: $0) }
+    }
+
+    /// Asked once the server has no pair for this account; offline, what was known stays.
+    func readPartnerLeft() async {
+        guard let account = try? await backend.api.account() else { return }
+        partnerLeft = account.partnerLeft
     }
 
     /// The pair as the server has it, this account first. `.api(.notFound)` once the server has no pair for it.

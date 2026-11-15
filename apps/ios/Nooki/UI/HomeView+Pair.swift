@@ -30,6 +30,49 @@ extension HomeView {
         Task { try? await api.reportEvents([ClientEvent(.roomOpened, detail: room.eventDetail)]) }
     }
 
+    /// The partner's notes, games, coins and Inbox reach this phone while it is in front and paired: over the room's
+    /// socket, with a pull each time it opens and, as `PartnerSyncMachine` paces it, while it is quiet or down.
+    static func partnerSync(session: ServerSession, state: HomeState, room: RoomController) -> PartnerSync {
+        let relay = SocketOpenedRelay()
+        let sync = PartnerSync(.init(
+            follow: { followRoomSocket(session: session, state: state, room: room, opened: relay.opened) },
+            unfollow: { session.followInbox(false) },
+            isHealthy: { await session.roomSocketIsHealthy(quietLimit: $0) },
+            pull: { await pullPartner($0, session: session, state: state) }))
+        relay.sync = sync
+        return sync
+    }
+
+    private static func followRoomSocket(
+        session: ServerSession, state: HomeState, room: RoomController, opened: @escaping @MainActor () -> Void
+    ) {
+        session.followInbox(
+            true, photos: session.photoSync(moments: state.moments, partner: state.otherPartner),
+            texts: session.textSync(notes: state.notes, partner: state.otherPartner), shop: state.shop,
+            lists: state.lists, moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
+            cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq },
+            opened: opened)
+    }
+
+    /// The games first: they are small, and a photo downloading below can take a while. The summary is three reads:
+    /// the Inbox count (a new note or drawing shows there), the riddles and the shop with the wallet.
+    private static func pullPartner(_ kind: PartnerSyncMachine.Kind, session: ServerSession, state: HomeState) async {
+        await session.inbox.refreshCount()
+        await session.drawGuess.load()
+        await state.shop.refresh()
+        switch kind {
+        case .summary: return
+        case .everything: break
+        }
+        await session.whoKnows.load()
+        await state.streak.refresh()
+        session.reactions?.refresh()
+        await session.drawingSync?.fetchLatest()
+        await session.textSync(notes: state.notes, partner: state.otherPartner)?.receive()
+        await session.photoSync(moments: state.moments, partner: state.otherPartner)?.receive()
+        await state.lists.refresh()
+    }
+
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     var boardKey: [String] { BoardFaces.key(state: state) }
 
@@ -105,4 +148,12 @@ extension HomeView {
     var textSync: TextNoteSync? {
         session?.textSync(notes: state.notes, partner: state.otherPartner)
     }
+}
+
+/// Tells the sync its socket opened without the sync's own closures holding it.
+@MainActor
+private final class SocketOpenedRelay {
+    weak var sync: PartnerSync?
+
+    func opened() { sync?.send(.socketOpened) }
 }

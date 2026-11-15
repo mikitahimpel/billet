@@ -50,6 +50,14 @@ public final class WebSocketClient {
     runner.enqueue(message, attempt: state.attempt)
   }
 
+  /// False unless connected and the server answers within `timeout`; a socket that doesn't is
+  /// dropped and opened again.
+  public func ping(timeout: Duration = .seconds(5)) async -> Bool {
+    let state = store.state
+    guard case .connected = state.phase else { return false }
+    return await runner.ping(attempt: state.attempt, timeout: timeout)
+  }
+
   public func settled() async {
     await store.settled()
   }

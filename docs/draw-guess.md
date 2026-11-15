@@ -36,8 +36,9 @@ server and the contracts do.
   longest run.
 - The room journals `GamePlayed{game: "draw-guess", score, won}` for the guesser when a round ends,
   in the same transaction as the riddle, its try and the series. A solve pays
-  max(4, 10 − 2 × hints) coins; a give-up pays 3. For draw-guess, `rewardFor` pays the event's
-  `score`; other games keep 10 for a win and 3 otherwise. The games cap of 40 a day applies.
+  max(1, 3 − hints) coins; a give-up pays 1 (`riddle-rules.ts`). For draw-guess, `rewardFor` pays
+  the event's `score`; other games keep 3 for a win and 1 otherwise. The games cap of 4 a day
+  (`earn.games`) applies ([economy.md](economy.md)).
 - A client `GamePlayed` for draw-guess is refused (`RoomJournalsGame`, 400), so the coins cannot
   be paid twice.
 
