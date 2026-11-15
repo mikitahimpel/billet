@@ -7,9 +7,9 @@ import SwiftUI
 import Design
 import UsInterface
 
-/// A mini-game over the room: the whole screen takes the touches for the game, with a glass hint pill and a close
-/// button on top, the game's bar and button at the bottom, and its toast once it is done. Nothing else of Home
-/// shows meanwhile.
+/// A mini-game over the room: the whole screen takes the touches for the game, with its title and a close button on
+/// top and one tray at the bottom: the hint, the bar and the buttons while it is played, the result once it is done.
+/// Nothing else of Home shows meanwhile.
 struct GameView: View {
     @State var session: GameSession
     var close: () -> Void
@@ -82,6 +82,7 @@ struct GameView: View {
                 GameTray(
                     hint: session.shownHint, bar: session.deck.bar, symbol: session.game.symbol,
                     action: session.action, assist: session.assist, act: session.act, assistAct: session.assistAct)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .padding(.top, Space.s)
@@ -191,8 +192,8 @@ private struct HandMotion {
     var rub: CGFloat = 0
 }
 
-/// The game's bottom: the hint, the bar and the buttons, every one of them the full width between the gutters, so
-/// they stand as one column with one pair of side margins (`GameTrayTests`).
+/// The game's bottom: one tray with, top to bottom, what to do, how far along, the main action and the quieter one,
+/// each the tray's full inner width (`GameTrayTests`). Nothing to show, no tray.
 struct GameTray: View {
     var hint: String?
     var bar: GameMeter?
@@ -203,47 +204,59 @@ struct GameTray: View {
     var assistAct: () -> Void
 
     var body: some View {
-        VStack(spacing: Space.m) {
-            if let hint {
-                GoalHint(text: hint)
-                    .dynamicTypeSize(...GameView.overlayType)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    .id(hint)
-            }
-            if let bar {
-                GameBar(meter: bar, symbol: symbol)
-                    .dynamicTypeSize(...GameView.overlayType)
-            }
-            if let action {
-                Button(action: act) { Text(action).frame(maxWidth: .infinity) }
-                    .buttonStyle(PrimaryButtonStyle())
-                    .accessibilityIdentifier("game.action")
-            }
-            if let assist {
-                Button(action: assistAct) { Text(assist).frame(maxWidth: .infinity) }
-                    .buttonStyle(SecondaryButtonStyle())
-                    .accessibilityHint("Wipes up the puddle for you")
-                    .accessibilityIdentifier("game.assist")
+        if hint != nil || bar != nil || action != nil || assist != nil {
+            TraySurface {
+                if let hint {
+                    GoalHint(text: hint)
+                        .dynamicTypeSize(...GameView.overlayType)
+                        .transition(.opacity)
+                        .id(hint)
+                }
+                if let bar {
+                    GameBar(meter: bar, symbol: symbol)
+                        .dynamicTypeSize(...GameView.overlayType)
+                }
+                if let action {
+                    Button(action: act) { Text(action).frame(maxWidth: .infinity) }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .accessibilityIdentifier("game.action")
+                }
+                if let assist {
+                    Button(assist, action: assistAct)
+                        .buttonStyle(QuietButtonStyle())
+                        .accessibilityHint("Wipes up the puddle for you")
+                        .accessibilityIdentifier("game.assist")
+                }
             }
         }
-        .padding(.horizontal, Space.gutter)
     }
 }
 
-/// The game's one goal, in words: a line of glass over the scene, gone at the first touch and back only to correct.
-/// It takes the whole width it is given, as the bar and the buttons under it do.
+/// The glass every game's tray and its result stand on: the card's corners and padding, between the gutters.
+private struct TraySurface<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: Space.m) { content }
+            .padding(CardMetrics.padding)
+            .frame(maxWidth: .infinity)
+            // Behind the content and taking no touch: over the RealityKit room a glass view on a Button swallows the tap.
+            .background { Color.clear.glass(CardShape(), role: .bar).allowsHitTesting(false) }
+            .padding(.horizontal, Space.gutter)
+    }
+}
+
+/// The game's one goal, in words, at the top of the tray: gone at the first touch and back only to correct.
 private struct GoalHint: View {
     let text: String
 
     var body: some View {
         Text(text)
-            .font(.ourioHeadline)
+            .font(.ourioCallout.weight(.medium))
             .foregroundStyle(Ink.glassGlyph)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, Space.l)
-            .padding(.vertical, Space.m)
-            .glass(.capsule, role: .bar)
+            .fixedSize(horizontal: false, vertical: true)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.updatesFrequently)
             .accessibilityIdentifier("game.hint")
@@ -271,7 +284,7 @@ private struct GameTitle: View {
     }
 }
 
-/// How far along: an icon, what is filling, the count, and a thick honey meter on a dark glass track.
+/// How far along, in the tray: an icon, what is filling, the count, and a thick honey meter on a dark track.
 private struct GameBar: View {
     let meter: GameMeter
     let symbol: String
@@ -294,9 +307,7 @@ private struct GameBar: View {
         }
         .font(.ourioHeadline)
         .foregroundStyle(Ink.glassGlyph)
-        .padding(.horizontal, Space.l)
-        .padding(.vertical, Space.m)
-        .glass(.capsule, role: .bar)
+        .frame(minHeight: Size.control)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(meter.label)
         .accessibilityValue(meter.detail ?? "\(percent) percent")
@@ -325,41 +336,64 @@ private struct GameBar: View {
     }
 }
 
-/// The finished game: what she got, and either another round or back to the room, between the same gutters as the
-/// tray it replaces.
+/// The finished game, on the tray it was played from: what it came to, what it earned, then back to the room, the
+/// main action, and another round under it.
 struct ResultToast: View {
     let result: GameResult
     var again: () -> Void
     var done: () -> Void
 
     var body: some View {
-        Toast {
-            VStack(alignment: .leading, spacing: Space.m) {
-                Text(result.line(pronouns: CatProfile.pronouns()))
-                    .font(.ourioTitle)
-                    .foregroundStyle(Ink.text)
-                EqualRow(spacing: Space.s) {
-                    Chip(result.game.careLabel(grams: result.grams), symbol: result.game.symbol, style: .quiet, fills: true)
-                    Chip("Coins", coinStyle: .quiet, fills: true)
-                }
-                buttons
+        TraySurface {
+            Text(result.line(pronouns: CatProfile.pronouns()))
+                .font(.ourioTitle)
+                .foregroundStyle(Ink.glassGlyph)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
+                // The card stands over the game: past this the title and the earnings would push the buttons off an SE.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+            // Side by side at one width while both fit, else stacked, each the tray's inner width as the buttons are.
+            ViewThatFits(in: .horizontal) {
+                EqualRow(spacing: Space.s) { earned }
+                VStack(spacing: Space.s) { earned }
             }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+            PrimaryButton("Back to the room", action: done)
+            Button("Play again", action: again)
+                .buttonStyle(QuietButtonStyle())
         }
-        .padding(.horizontal, Space.gutter)
     }
 
-    /// Side by side at one width and height while both fit, else stacked full width, the main one last as in `Screen`.
-    private var buttons: some View {
-        ViewThatFits(in: .horizontal) {
-            EqualRow(spacing: Space.s) {
-                SecondaryButton("Play again", action: again).lineLimit(1)
-                PrimaryButton("Back to the room", action: done).lineLimit(1)
-            }
-            VStack(spacing: Space.s) {
-                SecondaryButton("Play again", action: again)
-                PrimaryButton("Back to the room", action: done)
-            }
+    @ViewBuilder private var earned: some View {
+        ResultStat(title: result.game.careLabel(grams: result.grams), id: "game.care") {
+            Image(systemName: result.game.symbol)
         }
+        ResultStat(title: "Coins", id: "game.coins") { CoinIcon(size: Space.l, relativeTo: .subheadline) }
+    }
+}
+
+/// One thing the round earned, in a recess of the tray: its mark and a word, centred in its share of the row.
+private struct ResultStat<Mark: View>: View {
+    let title: String
+    let id: String
+    @ViewBuilder let mark: Mark
+
+    var body: some View {
+        HStack(spacing: Space.xs) {
+            mark
+                .foregroundStyle(Ink.glassGlyphSecondary)
+                .accessibilityHidden(true)
+            Text(title).lineLimit(1)
+        }
+        .font(.ourioCallout.weight(.semibold))
+        .foregroundStyle(Ink.glassGlyph)
+        .padding(.horizontal, Space.m)
+        .padding(.vertical, Space.xs)
+        .frame(maxWidth: .infinity, minHeight: Size.control)
+        .wellSurface(.control)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(id)
     }
 }
 
