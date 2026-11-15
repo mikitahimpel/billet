@@ -33,6 +33,8 @@ export interface KeptPurchases {
   readonly coins: number;
   readonly inks: ReadonlyArray<string>;
   readonly items: ReadonlyArray<string>;
+  /** Stamps and seals. */
+  readonly postage: ReadonlyArray<string>;
 }
 
 export const StoredKeptWallet = Schema.Struct({

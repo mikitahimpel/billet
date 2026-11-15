@@ -53,6 +53,11 @@ export const StoredOwnedInk = Schema.Struct({
   position: Schema.Int,
 });
 
+export const StoredOwnedPostage = Schema.Struct({
+  postageId: Schema.String,
+  position: Schema.Int,
+});
+
 export const StoredOwnedItem = Schema.Struct({
   itemId: Schema.String,
   position: Schema.Int,

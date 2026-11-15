@@ -37,6 +37,7 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
   streak: { days: 0, best: 0 },
   inks: [],
   items: [],
+  postage: [],
   wishlist: [],
   layout: [],
   stowed: [],

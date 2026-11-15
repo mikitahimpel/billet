@@ -27,6 +27,8 @@
               today
             case .inks:
               InkShelf(state: state, highlighted: highlightedInk)
+            case .notes:
+              PostageShelf(state: state)
             case .furniture, .decor, .mochi, .room:
               grid(Catalog.items(in: state.shopCategory, cat: state.petName))
                 .padding(.horizontal, Space.l)

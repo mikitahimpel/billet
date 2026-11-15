@@ -151,6 +151,7 @@ describe("PairRoom storage", () => {
       streak: { days: 4, best: 0 },
       inks: [],
       items: [],
+      postage: [],
       wishlist: [],
       layout: [],
       stowed: [],
@@ -207,6 +208,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_stowed_piece"),
       expect.stringContaining("_streak_marks"),
       expect.stringContaining("_placement_room"),
+      expect.stringContaining("_owned_postage"),
     ]);
   });
 
@@ -269,7 +271,7 @@ describe("PairRoom storage", () => {
     });
   });
 
-  it("keeps the pair's pieces and wishlist across eviction", async () => {
+  it("keeps the pair's pieces, stamps and seals, and wishlist across eviction", async () => {
     const room = await openRoom();
     await runInDurableObject(room, (_, state) => {
       state.storage.sql.exec(
@@ -281,11 +283,15 @@ describe("PairRoom storage", () => {
     expect(await room.order(bob, newKey(), { _tag: "Item", item: tower })).toMatchObject({
       _tag: "Accepted",
     });
+    expect(
+      await room.order(alice, newKey(), { _tag: "Postage", postage: "seal-honey" }),
+    ).toMatchObject({ _tag: "Accepted" });
     await evictDurableObject(room);
     expect(await room.shop()).toEqual({
-      balance: 460,
+      balance: 415,
       inks: [freeInk],
       items: ["lamp", "rug", tower],
+      postage: ["seal-honey"],
       wishlist: [yarn],
       bonuses: [],
       layout: [],

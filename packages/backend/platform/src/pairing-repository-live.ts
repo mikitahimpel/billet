@@ -207,7 +207,7 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
           ]),
         ).pipe(Effect.asVoid),
 
-      keep: (userId, { coins, inks, items }) =>
+      keep: (userId, { coins, inks, items, postage }) =>
         guarded(
           atomically(db, [
             db
@@ -217,7 +217,7 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
                 target: keptWallets.userId,
                 set: { coins: sql`${keptWallets.coins} + ${coins}` },
               }),
-            ...(inks.length + items.length === 0
+            ...(inks.length + items.length + postage.length === 0
               ? []
               : [
                   db
@@ -225,6 +225,7 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
                     .values([
                       ...inks.map((itemId) => ({ userId, kind: "ink", itemId })),
                       ...items.map((itemId) => ({ userId, kind: "item", itemId })),
+                      ...postage.map((itemId) => ({ userId, kind: "postage", itemId })),
                     ])
                     .onConflictDoNothing(),
                 ]),
@@ -248,6 +249,7 @@ const makePairingRepository = (db: DirectoryDatabase): PairingRepository["Servic
             coins: wallet?.coins ?? 0,
             inks: rows.filter(({ kind }) => kind === "ink").map(({ itemId }) => itemId),
             items: rows.filter(({ kind }) => kind === "item").map(({ itemId }) => itemId),
+            postage: rows.filter(({ kind }) => kind === "postage").map(({ itemId }) => itemId),
           })),
         ),
 

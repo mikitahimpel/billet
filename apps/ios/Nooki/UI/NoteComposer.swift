@@ -69,7 +69,7 @@ struct NoteComposer: View {
             HStack(spacing: Space.s) {
                 toolToggle
                 paperColours
-                PostagePicker(stamp: $model.stamp, seal: $model.seal)
+                PostagePicker(stamp: $model.stamp, seal: $model.seal, state: state) { dismiss() }
                 Spacer(minLength: 0)
                 if style != .sticky { kindPicker }
                 if model.hasInk {
@@ -125,7 +125,7 @@ struct NoteComposer: View {
     }
 
     private func send() {
-        guard !sending, model.save(into: state.journal, size: paperSize) else { return }
+        guard !sending, model.save(into: state.journal, size: paperSize, owned: state.shop.owned) else { return }
         focused = false
         sending = true
         guard !reduceMotion else { return dismiss() }

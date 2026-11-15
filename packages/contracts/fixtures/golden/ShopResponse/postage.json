@@ -1,0 +1,16 @@
+{
+  "balance": 25,
+  "bonuses": [],
+  "inks": [
+    "ink-graphite"
+  ],
+  "items": [
+    "lamp",
+    "rug"
+  ],
+  "postage": [
+    "stamp-moon",
+    "seal-rose"
+  ],
+  "wishlist": []
+}

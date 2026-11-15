@@ -53,7 +53,7 @@ extension StreakRemote {
     case .network, .status, .maintenance, .api(.unavailable), .api(.unauthorized): .offline
     case .decoding, .encoding, .api(.streakNotRestorable), .api(.notFound), .api(.invalidRequest),
       .api(.invalidInvite), .api(.alreadyPaired), .api(.appleIdInUse), .api(.invalidPurchase),
-      .api(.inkNotOwned),
+      .api(.inkNotOwned), .api(.postageNotOwned),
       .api(.notEnoughCoins), .api(.alreadyOwned), .api(.collectionIncomplete), .api(.giftTaken),
       .api(.bonusTaken), .api(.catNotAdopted), .api(.priceChanged), .api(.layoutRefused):
       .refused

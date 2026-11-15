@@ -192,6 +192,17 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
         kind: .ink))
   }
 
+  /// A stamp or seal for notes, for the pair and for good.
+  @discardableResult
+  public func buy(_ postage: NotePostage) -> Bool {
+    guard !postage.isOwned(owned) else { return false }
+    return place(
+      ShopOrder(
+        offer: .postage(postage.wireID), itemIDs: [postage.id], cost: postage.price,
+        title: postage.name,
+        kind: .postage))
+  }
+
   /// Takes a buy back within its Undo window, before the server hears of it.
   @discardableResult
   func undo(_ purchase: Purchase, at now: Date = .now) -> Bool {

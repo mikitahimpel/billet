@@ -33,9 +33,11 @@ final class ShopFixture {
 
     private var shop: ShopResponse {
         let inks = owned.filter { id in PaletteInk.bundled.contains { $0.id == id } }
+        let postage = owned.filter { id in NotePostage.all.contains { $0.id == id } }
         return ShopResponse(
             balance: balance, inks: [.free] + inks.sorted().map(InkId.init),
-            items: owned.subtracting(inks).sorted().map(RoomItemId.init), wishlist: wishlist.map(RoomItemId.init))
+            items: owned.subtracting(inks).subtracting(postage).sorted().map(RoomItemId.init),
+            postage: postage.sorted().map(PostageId.init), wishlist: wishlist.map(RoomItemId.init))
     }
 
     private func order(_ request: OrderRequest) throws(TransportError) -> OrderResponse {
@@ -63,6 +65,10 @@ final class ShopFixture {
             guard let ink = PaletteInk.bundled.first(where: { $0.wireID == id }) else { throw .api(.invalidRequest) }
             guard !ink.isOwned(owned) else { throw .api(.alreadyOwned(itemId: ink.id)) }
             return (ink.price, [ink.id])
+        case .postage(let id):
+            guard let postage = NotePostage.all.first(where: { $0.wireID == id }) else { throw .api(.invalidRequest) }
+            guard !postage.isOwned(owned) else { throw .api(.alreadyOwned(itemId: postage.id)) }
+            return (postage.price, [postage.id])
         case .set(let id):
             let sets: [any PieceSet] = [offers.featured(on: .now)] + offers.bundles
             guard let set = sets.first(where: { $0.id == id.rawValue }) else { throw .api(.invalidRequest) }

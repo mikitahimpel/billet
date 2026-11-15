@@ -66,6 +66,7 @@ export class ReactionService extends Context.Service<
               case "CatNotAdopted":
               case "CatEntryIdTaken":
               case "InkNotOwned":
+              case "PostageNotOwned":
               case "NotEnoughCoins":
               case "PriceChanged":
               case "AlreadyOwned":

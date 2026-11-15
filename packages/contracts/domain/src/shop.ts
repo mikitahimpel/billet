@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { LocalDay } from "./coins.ts";
 import type { EpochMillis } from "./ids.ts";
 import { InkId } from "./inks.ts";
+import { PostageId } from "./postage.ts";
 import type { PriceBook } from "./shop-catalog.ts";
 
 const slug = Schema.String.check(
@@ -131,6 +132,8 @@ export const setPrice = (
 export const ShopOffer = Schema.TaggedUnion({
   Ink: { ink: InkId },
   Item: { item: RoomItemId },
+  /** A note's stamp or seal, unlocked for good. */
+  Postage: { postage: PostageId },
   Set: { set: KnownPieceSetId },
   Treat: {},
 });
@@ -173,6 +176,9 @@ export const PairShop = Schema.Struct({
   balance: Schema.Int,
   inks: Schema.Array(InkId),
   items: Schema.Array(RoomItemId),
+  /** The stamps and seals the pair unlocked, in purchase order. Absent from a server before they
+   * were sold, which let every one be sent. */
+  postage: Schema.optionalKey(Schema.Array(PostageId)),
   wishlist: Schema.Array(RoomItemId),
   giftDay: Schema.optionalKey(LocalDay),
   bonuses: Schema.Array(CollectionId),

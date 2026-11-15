@@ -58,6 +58,7 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "CatEntryRepeated":
       case "InksGranted":
       case "ItemsGranted":
+      case "PostageGranted":
       case "WishlistChanged":
       case "LayoutChanged":
       case "LayoutRepeated":

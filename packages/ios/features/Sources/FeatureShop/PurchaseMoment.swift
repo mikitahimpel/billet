@@ -102,6 +102,7 @@
           ? "\(state.petName) is already sniffing it. It's in your closet."
           : "\(state.petName) is already sniffing it. It's in your room."
       case .ink: "It's in your pens for notes and drawings, for both of you."
+      case .postage: "It's in your notes' stamps and seals, for both of you."
       case .treat: "\(state.petName) loved it."
       }
     }

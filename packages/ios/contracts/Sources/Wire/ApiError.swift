@@ -9,6 +9,8 @@ public enum ApiError: Codable, Hashable, Sendable {
   /// Its signature, bundle, environment or product was refused.
   case invalidPurchase
   case inkNotOwned(ink: InkId)
+  /// A note with a stamp or seal the pair has not unlocked.
+  case postageNotOwned(postage: PostageId)
   case notEnoughCoins(needed: Int, have: Int)
   case alreadyOwned(itemId: String)
   case collectionIncomplete(collection: String)
@@ -27,6 +29,7 @@ public enum ApiError: Codable, Hashable, Sendable {
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
     case ink
+    case postage
     case needed
     case have
     case itemId
@@ -49,6 +52,8 @@ public enum ApiError: Codable, Hashable, Sendable {
     case "AppleIdInUse": self = .appleIdInUse
     case "InvalidPurchase": self = .invalidPurchase
     case "InkNotOwned": self = .inkNotOwned(ink: try container.decode(InkId.self, forKey: .ink))
+    case "PostageNotOwned":
+      self = .postageNotOwned(postage: try container.decode(PostageId.self, forKey: .postage))
     case "NotEnoughCoins":
       self = .notEnoughCoins(
         needed: try container.decode(Int.self, forKey: .needed),
@@ -86,6 +91,9 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .inkNotOwned(let ink):
       try container.encode("InkNotOwned", forKey: .tag)
       try container.encode(ink, forKey: .ink)
+    case .postageNotOwned(let postage):
+      try container.encode("PostageNotOwned", forKey: .tag)
+      try container.encode(postage, forKey: .postage)
     case .notEnoughCoins(let needed, let have):
       try container.encode("NotEnoughCoins", forKey: .tag)
       try container.encode(needed, forKey: .needed)

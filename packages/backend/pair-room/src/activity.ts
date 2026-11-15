@@ -252,6 +252,7 @@ export const activityOf = (
       case "CatEntryRepeated":
       case "InksGranted":
       case "ItemsGranted":
+      case "PostageGranted":
       case "WishlistChanged":
       case "LayoutChanged":
       case "LayoutRepeated":

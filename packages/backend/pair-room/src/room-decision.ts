@@ -11,6 +11,7 @@ import {
   SharedList,
 } from "@billet/contracts-domain/list";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { PostageId } from "@billet/contracts-domain/postage";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import { NoteReaction } from "@billet/contracts-domain/reaction";
 import { LoveStreak } from "@billet/contracts-domain/streak";
@@ -46,6 +47,8 @@ export const RoomOutput = Schema.TaggedUnion({
   InksGranted: { inks: Schema.Array(InkId) },
   /** Room pieces the pair did not have before, now its own. */
   ItemsGranted: { items: Schema.Array(RoomItemId) },
+  /** Stamps and seals the pair did not have before, now its own. */
+  PostageGranted: { postage: Schema.Array(PostageId) },
   /** The pair's wishlist after a wish, or after a buy took pieces off it. */
   WishlistChanged: { wishlist: Schema.Array(RoomItemId) },
   /** The pair's layout after a change, whole. */
@@ -121,13 +124,15 @@ export const RoomRejection = Schema.TaggedUnion({
   CatEntryIdTaken: {},
   /** A text note in an ink colour the pair has not bought. */
   InkNotOwned: { ink: InkId },
+  /** A note with a stamp or seal the pair has not unlocked. */
+  PostageNotOwned: { postage: PostageId },
   NotEnoughCoins: { needed: Schema.Int, have: Schema.Int },
   /** A buy of an ink the pair already owns. */
   AlreadyOwned: { ink: InkId },
   /** A buy of an ink the catalog does not sell. */
   NotSold: { ink: InkId },
-  /** An order of a piece or a set the pair owns all of already. */
-  OfferOwned: { offer: Schema.Union([RoomItemId, PieceSetId]) },
+  /** An order of a piece, a stamp or seal, or a set the pair owns all of already. */
+  OfferOwned: { offer: Schema.Union([RoomItemId, PieceSetId, PostageId]) },
   /** A buy or an order whose price is now above the one the buyer saw. Nothing was charged. */
   PriceChanged: { price: Schema.Int },
   /** An order the catalog does not sell now: an unknown piece, or a featured set out of its week. */

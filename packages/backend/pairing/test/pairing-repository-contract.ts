@@ -295,19 +295,30 @@ export const describePairingRepositoryContract = (
       const result = await Effect.runPromise(
         Effect.gen(function* () {
           const empty = yield* repository.kept(ana);
-          yield* repository.keep(ana, { coins: 5, inks: ["ink-rose"], items: ["lamp-x"] });
-          yield* repository.keep(ana, { coins: 3, inks: ["ink-rose", "ink-sky"], items: [] });
+          yield* repository.keep(ana, {
+            coins: 5,
+            inks: ["ink-rose"],
+            items: ["lamp-x"],
+            postage: ["stamp-moon"],
+          });
+          yield* repository.keep(ana, {
+            coins: 3,
+            inks: ["ink-rose", "ink-sky"],
+            items: [],
+            postage: ["stamp-moon", "seal-rose"],
+          });
           const before = yield* repository.kept(ana);
           const other = yield* repository.kept(ben);
           yield* repository.clearKept(ana);
           return { empty, before, other, after: yield* repository.kept(ana) };
         }),
       );
-      const nothing = { coins: 0, inks: [], items: [] };
+      const nothing = { coins: 0, inks: [], items: [], postage: [] };
       expect(result.empty).toEqual(nothing);
       expect(result.before.coins).toBe(8);
       expect(result.before.inks.toSorted()).toEqual(["ink-rose", "ink-sky"]);
       expect(result.before.items).toEqual(["lamp-x"]);
+      expect(result.before.postage.toSorted()).toEqual(["seal-rose", "stamp-moon"]);
       expect(result.other).toEqual(nothing);
       expect(result.after).toEqual(nothing);
     });

@@ -5,6 +5,7 @@ import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { type CoinEntryId, type EarnEvent, LocalDay } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { PostageId } from "@billet/contracts-domain/postage";
 import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { LayoutChange } from "@billet/contracts-domain/decor";
@@ -155,6 +156,7 @@ const shopOutputs: ReadonlySet<string> = new Set([
   "CoinsEntered",
   "InksGranted",
   "ItemsGranted",
+  "PostageGranted",
   "WishlistChanged",
   "LayoutChanged",
   "GiftOpened",
@@ -930,6 +932,15 @@ export class PairRoom extends DurableObject {
     const decision = await this.run(
       (room) => room.dispatch({ _tag: "GrantItems", items }),
       "PairRoom.grantItems",
+    );
+    await this.pushShop(decision);
+    return decision;
+  }
+
+  async grantPostage(postage: ReadonlyArray<PostageId>): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.dispatch({ _tag: "GrantPostage", postage }),
+      "PairRoom.grantPostage",
     );
     await this.pushShop(decision);
     return decision;

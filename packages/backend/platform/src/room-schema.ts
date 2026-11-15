@@ -142,6 +142,12 @@ export const ownedInk = sqliteTable("owned_ink", {
   position: integer("position").notNull(),
 });
 
+// The stamps and seals the pair unlocked; only ever added, like the inks.
+export const ownedPostage = sqliteTable("owned_postage", {
+  postageId: text("postage_id").primaryKey(),
+  position: integer("position").notNull(),
+});
+
 // The starter pieces are every pair's and have no row.
 export const ownedItem = sqliteTable("owned_item", {
   itemId: text("item_id").primaryKey(),

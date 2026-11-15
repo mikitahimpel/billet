@@ -74,6 +74,7 @@ struct CoinLine: Hashable {
     }
     if let set = ShopOffers.featuredSets.first(where: { $0.id == ref }) { return set.name }
     if let ink = PaletteInk.bundled.first(where: { $0.id == ref }) { return "\(ink.name) ink" }
+    if let postage = NotePostage.all.first(where: { $0.id == ref }) { return postage.name }
     return ref
   }
 }
