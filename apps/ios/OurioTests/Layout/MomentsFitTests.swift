@@ -34,7 +34,7 @@ import Testing
         let layout = HostedLayout(MomentsView(state: state), phone: screen.phone)
         layout.settle(1)
         // The first layout of the suite can take a moment longer to get its elements.
-        for _ in 0..<8 where layout.element(label: "Your first moment") == nil { layout.settle(0.5) }
+        for _ in 0..<24 where layout.element(label: "Your first moment") == nil { layout.settle(0.5) }
         let window = layout.bounds
         let title = try #require(layout.element(label: "Your first moment"), "no title").frame
         let add = try #require(layout.element(id: "moments.add"), "no add button").frame
