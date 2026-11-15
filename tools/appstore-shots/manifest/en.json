@@ -18,8 +18,8 @@
         {
           "text": "On both phones",
           "emoji": "💛",
-          "x": 44,
-          "y": 84,
+          "x": 50,
+          "y": 40,
           "rotate": 2
         }
       ]
@@ -41,8 +41,8 @@
         {
           "text": "Mochi naps wherever",
           "emoji": "😴",
-          "x": 42,
-          "y": 84,
+          "x": 50,
+          "y": 40,
           "rotate": 2
         }
       ]
@@ -58,14 +58,14 @@
           "text": "Feed, brush, play",
           "emoji": "🐾",
           "x": 4,
-          "y": 36,
+          "y": 37,
           "rotate": -3
         },
         {
           "text": "Earn coins as a team",
           "emoji": "🪙",
-          "x": 42,
-          "y": 84,
+          "x": 50,
+          "y": 61,
           "rotate": 2
         }
       ]
@@ -81,14 +81,14 @@
           "text": "Hang it on Mochi's wall",
           "emoji": "🖼️",
           "x": 3,
-          "y": 34,
+          "y": 53,
           "rotate": -3
         },
         {
           "text": "Send a photo",
           "emoji": "📸",
-          "x": 50,
-          "y": 78,
+          "x": 52,
+          "y": 67,
           "rotate": 3
         }
       ]
@@ -103,15 +103,15 @@
         {
           "text": "Spend coins you earn",
           "emoji": "🪙",
-          "x": 4,
-          "y": 84,
+          "x": 3,
+          "y": 66,
           "rotate": -3
         },
         {
           "text": "Every piece on both phones",
           "emoji": "✨",
-          "x": 36,
-          "y": 34,
+          "x": 50,
+          "y": 46,
           "rotate": 3
         }
       ]
@@ -126,7 +126,7 @@
         {
           "text": "A daily love streak",
           "emoji": "🔥",
-          "x": 38,
+          "x": 55,
           "y": 47,
           "rotate": -2
         },
@@ -134,7 +134,7 @@
           "text": "Lists, wishes, games",
           "emoji": "🎲",
           "x": 8,
-          "y": 84,
+          "y": 63,
           "rotate": 2
         }
       ]
