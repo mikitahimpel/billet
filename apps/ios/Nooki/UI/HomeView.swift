@@ -446,14 +446,15 @@ struct HomeView: View {
         }
     }
 
-    /// Made on first use, for this launch's session; nil in a build without a server.
+    /// Made on first use for the session in the environment, and again for a new one; nil without a server.
     private var partnerSync: PartnerSync? {
-        if let sync = partner.sync { return sync }
         guard let session else { return nil }
-        let sync = Self.partnerSync(session: session, state: state, room: room)
-        sync.send(session.isPaired ? .paired : .unpaired)
-        partner.sync = sync
-        return sync
+        return partner.sync(for: session) {
+            let sync = Self.partnerSync(session: session, state: state, room: room)
+            sync.send(session.isPaired ? .paired : .unpaired)
+            if scenePhase == .active { sync.send(.cameToFront) }
+            return sync
+        }
     }
 
     /// Its own method: inline in `body`, the closure tips the type-checker over its time limit.
@@ -692,8 +693,18 @@ private struct LeavingSnapshot: View {
     }
 }
 
-/// Holds the launch's `PartnerSync` across passes of `HomeView`, made the first time it is needed.
+/// Holds a session's `PartnerSync` across passes of `HomeView`. Another session gets its own; the one before stops
+/// following.
 @MainActor
 final class PartnerFollow {
-    var sync: PartnerSync?
+    private var current: (session: ObjectIdentifier, sync: PartnerSync)?
+
+    func sync(for session: ServerSession, make: () -> PartnerSync) -> PartnerSync {
+        let id = ObjectIdentifier(session)
+        if let current, current.session == id { return current.sync }
+        current?.sync.send(.wentAway)
+        let sync = make()
+        current = (id, sync)
+        return sync
+    }
 }
