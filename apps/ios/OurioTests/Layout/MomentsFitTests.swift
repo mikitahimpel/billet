@@ -1,4 +1,5 @@
 import Design
+import MomentsInterface
 import SwiftUI
 import Testing
 @testable import Billet
@@ -57,5 +58,16 @@ import Testing
         let end = try #require(layout.element(id: "moments.add"), "no add button at the end").frame
         #expect(end.maxY <= window.maxY - insets.bottom + 1, "the button is on screen at the end")
         #expect(end.height >= Size.button - 1, "the button keeps its height")
+    }
+
+    /// The wall card's "Add photo" pill keeps its words on one line beside the header, on the smallest phone too.
+    @Test(arguments: [Screen.se, Screen.iPhone])
+    func theWallPillIsOneLine(screen: Screen) throws {
+        let strip = WallStrip(store: MomentStore(), pick: .constant(nil)).padding(Space.l)
+        let layout = HostedLayout(strip, phone: screen.phone)
+        layout.settle(0.5)
+        let pill = try #require(layout.element(id: "wallAddPhoto"), "no Add photo pill").frame
+        #expect(pill.height <= Size.control + 1, "the pill is \(pill.height) tall")
+        #expect(pill.maxX <= layout.bounds.maxX + 1, "the pill is inside the window")
     }
 }
