@@ -6,7 +6,9 @@ import Wire
 
 /// From launch to a saved session with no question asked: read (or make) the iCloud Keychain
 /// account key and trade it for a session. Only the network stops it: `failed` waits for a retry.
-/// `request` counts the backend calls so a late answer changes nothing.
+/// A retry while a sign-in hangs starts another with the same key, so it reaches the same account.
+/// `request` counts the backend calls: a late failure changes nothing, and a late success is still
+/// the session, since it was saved before it was reported.
 public nonisolated enum AnonymousSignInMachine: Machine {
   public enum State: Equatable, Sendable {
     case idle
@@ -35,11 +37,11 @@ public nonisolated enum AnonymousSignInMachine: Machine {
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     switch (state, event) {
-    case (.idle, .appeared), (.failed, .retried):
+    case (.idle, .appeared), (.failed, .retried), (.signingIn, .retried):
       let request = state.request + 1
       return (.signingIn(request: request), [.signIn(request: request)])
 
-    case (.signingIn(let current), .sessionSaved(let request)) where request == current:
+    case (.signingIn(let current), .sessionSaved(let request)) where request <= current:
       return (.signedIn, [])
 
     case (.signingIn(let current), .failed(let failure, let request)) where request == current:

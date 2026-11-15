@@ -24,12 +24,14 @@ import Wire
     var paired: () -> Void
     /// Dev server only: pairs with a bot partner instead of waiting for a real one; nil elsewhere.
     var demoPartner: (() -> Void)?
+    /// Starts the account's sign-in again, with the same account key, when it seems stuck.
+    var retrySignIn: (() -> Void)?
 
     public init(
       flow: OnboardingFlow, pairing: (any OnboardingPairing)?, scenery: any OnboardingScenery,
       signedIn: Bool = false,
       inviteBase: URL? = nil, alreadyPaired: Bool = false, paired: @escaping () -> Void = {},
-      demoPartner: (() -> Void)? = nil
+      demoPartner: (() -> Void)? = nil, retrySignIn: (() -> Void)? = nil
     ) {
       self.flow = flow
       self.pairing = pairing
@@ -39,6 +41,7 @@ import Wire
       self.alreadyPaired = alreadyPaired
       self.paired = paired
       self.demoPartner = demoPartner
+      self.retrySignIn = retrySignIn
     }
 
     let language = Locale.current.language.languageCode?.identifier
@@ -298,7 +301,7 @@ import Wire
           case .waiting(let code, let expiresAt, _):
             inviteCard(pairing, code: code, expiresAt: expiresAt)
           case .choosing(nil, _) where !signedIn:
-            GroupedSection { progressRow("Connecting…") }
+            ConnectingRow(retry: retrySignIn)
           case .creating, .claiming:
             GroupedSection { progressRow("Getting your code…") }
           case .choosing:

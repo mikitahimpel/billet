@@ -63,7 +63,7 @@ import Wire
       .accessibilityAddTraits(picked ? .isSelected : [])
     }
 
-    func progressRow(_ title: LocalizedStringKey) -> some View {
+    static func progressRow(_ title: LocalizedStringKey) -> some View {
       HStack {
         Text(title)
           .font(.ourioBody)
@@ -73,6 +73,8 @@ import Wire
       }
       .rowCell()
     }
+
+    func progressRow(_ title: LocalizedStringKey) -> some View { Self.progressRow(title) }
 
     /// Pinned under every page, the primary always last, `Space.s` above the safe area, so it sits in the same place
     /// on every page; a page's quiet secondary stacks above it and pushes nothing below.
@@ -211,6 +213,45 @@ import Wire
         }
       } else {
         content
+      }
+    }
+  }
+
+  /// The invite waits for the account. An answer usually comes in a few seconds; past
+  /// `patience` a calm line and a retry show, and a retry waits that long again before showing
+  /// them. The retry signs in with the same account key, so it never makes a second account.
+  struct ConnectingRow: View {
+    let retry: (() -> Void)?
+    @State private var attempt = 0
+    @State private var waitedLong = false
+
+    static let patience: Duration = .seconds(8)
+
+    var body: some View {
+      VStack(alignment: .leading, spacing: Space.m) {
+        GroupedSection { OnboardingView.progressRow("Connecting…") }
+        if waitedLong, let retry {
+          VStack(alignment: .leading, spacing: Space.s) {
+            Text("This is taking longer than usual. Check your connection, or try again.")
+              .font(.ourioCallout)
+              .foregroundStyle(Ink.textSecondary)
+              .fixedSize(horizontal: false, vertical: true)
+            RetryButton {
+              attempt += 1
+              retry()
+            }
+            .accessibilityIdentifier("onboarding.retryConnecting")
+          }
+          .transition(.opacity)
+        }
+      }
+      .animation(Motion.fade(), value: waitedLong)
+      .task(id: attempt) {
+        waitedLong = false
+        do {
+          try await Task.sleep(for: Self.patience)
+          waitedLong = true
+        } catch {}
       }
     }
   }
