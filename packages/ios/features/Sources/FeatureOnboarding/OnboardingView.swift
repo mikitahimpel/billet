@@ -431,7 +431,6 @@ import Wire
               Task { @MainActor in pasted(texts.first ?? "") }
             }
             .labelStyle(.titleAndIcon)
-            .buttonBorderShape(.capsule)
             .tint(.honey)
             if InviteScanner.isAvailable {
               Button {

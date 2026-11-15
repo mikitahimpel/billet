@@ -26,13 +26,12 @@ public struct Monogram: View {
     Group {
       if let letter = profile.initial(of: partner) {
         Text(letter)
-          .font(.system(size: size * 0.41, weight: .semibold, design: .rounded))
       } else {
         Image(systemName: "person.fill")
-          .font(.system(size: size * 0.41, weight: .semibold))
           .accessibilityLabel(profile.name(of: partner))
       }
     }
+    .font(.system(size: size * 0.41, weight: .semibold, design: .rounded))
     .foregroundStyle(.white)
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .background(
