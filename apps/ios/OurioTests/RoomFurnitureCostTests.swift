@@ -82,8 +82,7 @@ struct RoomFurnitureCostTests {
             "Base_nightstand": [0.2173, 0.2300, 0.3012],
             "Base_plant": [0.1420, 0.1420, 0.4072],
             "Base_rug": [0.0125, 0.6660, 0.6660],
-            // The sill stands on two legs to the boards, so it is taller than the full-detail sill was.
-            "Base_windowseat": [0.1950, 0.3100, 0.4200],
+            "Base_windowseat": [0.1227, 0.1950, 0.4200],
             "Room_ball": [0.0601, 0.0620, 0.0660],
             "Room_furniture": [0.5054, 0.9664, 0.9754],
             "Room_yarn": [0.1692, 0.1729, 0.2023],

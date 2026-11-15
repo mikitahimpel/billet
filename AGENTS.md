@@ -31,6 +31,7 @@ pnpm ios:build                     # Swift packages (Mac)
 scripts/verify-ios.sh              # what the PR's iOS run checks, on this Mac (--packages, --app)
 pnpm turbo run ios:format:check    # swift-format, packages only
 pnpm turbo run ios:generate        # apps/ios/Billet.xcodeproj
+pnpm appstore:shots                # App Store panels from raw Simulator shots (tools/appstore-shots)
 xcodebuild test -project apps/ios/Billet.xcodeproj -scheme Billet \
   -destination 'platform=iOS Simulator,name=<iPhone>' CODE_SIGNING_ALLOWED=NO
 ```

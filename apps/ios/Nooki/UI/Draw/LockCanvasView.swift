@@ -28,6 +28,8 @@ struct LockCanvasView: View {
     @State private var canvasSize = CGSize.zero
     @State private var sent = 0
     @State private var coinsShown: CoinsAsk?
+    /// The top of the ink palette and the toolbar, global, which a purchase's card keeps clear of.
+    @State private var toolsTop: CGFloat?
     var coinPacks: CoinPacksModel?
 
     var body: some View {
@@ -50,8 +52,11 @@ struct LockCanvasView: View {
 
                 VStack(spacing: Space.m) {
                     Spacer(minLength: 0)
-                    if choosingInk { inkPalette.transition(.move(edge: .bottom).combined(with: .opacity)) }
-                    toolbar
+                    VStack(spacing: Space.m) {
+                        if choosingInk { inkPalette.transition(.move(edge: .bottom).combined(with: .opacity)) }
+                        toolbar
+                    }
+                    .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { toolsTop = $0 }
                     homeIndicator
                 }
                 .padding(.horizontal, Space.l)
@@ -72,7 +77,7 @@ struct LockCanvasView: View {
         }
         .onDisappear { model.disappeared() }
         // Over the canvas: an ink bought here plays its moment and Undo where it was tapped.
-        .overlay { PurchaseMoment(state: state) }
+        .overlay { PurchaseMoment(state: state, floor: toolsTop) }
         // The Store opens over the canvas: Home's own sheet would wait under this cover.
         .onChange(of: state.shop.coinsAsk) { _, ask in coinsShown = ask }
         .sheet(item: $coinsShown, onDismiss: { state.shop.coinsAsk = nil }) { ask in

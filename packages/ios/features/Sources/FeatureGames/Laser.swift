@@ -99,6 +99,10 @@ public struct FloorArea: Equatable, Sendable {
     self.z = z
   }
 
+  /// A room's whole floor, which spans -0.5...0.5 on both axes, less a margin that keeps the dot clear of the walls
+  /// and the open edges: the dot follows the finger wherever the floor shows.
+  public static let room = FloorArea(x: -0.45...0.45, z: -0.45...0.45)
+
   public func clamp(_ point: SIMD2<Double>) -> SIMD2<Double> {
     SIMD2(
       Swift.min(Swift.max(point.x, x.lowerBound), x.upperBound),

@@ -144,8 +144,10 @@ final class GameDeck {
 struct GameSpots {
     let center: SIMD3<Float>
     let floor: Float
-    /// Open floor for the laser dot.
+    /// Open floor in front of the camera, where the laser's lesson is shown.
     let area: FloorArea
+    /// Where the laser dot may go: the whole floor of a room, the mat of a corner.
+    let reach: FloorArea
     /// Meters.
     let length: Float
     /// Across the screen from left to right, and toward the camera, along the floor at the room's home view.
@@ -160,16 +162,19 @@ struct GameSpots {
             floor = TabletopRoom.floorTop
             center = [0, floor, 0.02]
             area = FloorArea(x: -0.25...0.25, z: -0.15...0.3)
+            reach = area
             length = 0.22
         } else if room is CityRoomScene {
             floor = 0.014
             center = [0.02, floor, 0.16]
             area = FloorArea(x: -0.3...0.25, z: -0.05...0.38)
+            reach = .room
             length = 0.2
         } else {
             floor = 0.023
             center = [0.3, floor, 0.12]
             area = FloorArea(x: 0.05...0.55, z: -0.2...0.36)
+            reach = .room
             length = 0.22
         }
     }

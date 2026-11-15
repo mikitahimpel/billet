@@ -27,19 +27,39 @@ struct DecorFootprintTests {
     }
 
     @Test func aWallPieceLiesAgainstTheWallItIsHungOn() async throws {
-        let stage = DecorStage()
         let layout = DecorLayout(stored: DecorLayout().stored).putting(
             Placement(item: "print", surface: .backWall, u: 3))
+        let bounds = try await drawnBounds(of: "print", in: layout)
+        #expect(abs(bounds.min.z + 0.5) < 0.002, "its back is on the wall: \(bounds.min.z)")
+    }
+
+    /// The seat hangs on the window wall on corbels, with nothing under it to the floor. At home, and wherever it is
+    /// put back after a move, its back reaches the wall under the window.
+    @Test(arguments: [false, true])
+    func theWindowSeatsBackIsOnTheWallAndNothingStandsUnderIt(moved: Bool) async throws {
+        var layout = DecorLayout()
+        if moved {
+            let home = try #require(layout.placement(of: "base-windowseat"))
+            layout = layout.putting(home.moved(to: .floor, u: -2, v: 0))
+            let back = try #require(layout.nearestFit(to: home))
+            layout = layout.putting(back)
+        }
+        let bounds = try await drawnBounds(of: "base-windowseat", in: layout)
+        #expect(bounds.min.x <= -0.5 + 0.002, "its back is on the wall: \(bounds.min.x)")
+        #expect(bounds.min.y > 0.15, "nothing reaches down to the floor: \(bounds.min.y)")
+    }
+
+    /// The bounds of the piece's model alone: the contact blob under it is a plane on the floor.
+    private func drawnBounds(of id: String, in layout: DecorLayout) async throws -> BoundingBox {
+        let stage = DecorStage()
         stage.apply(RoomDecor(layout: layout), receiver: nil)
-        var holder: Entity?
-        for _ in 0..<200 where holder?.children.contains(where: { $0.name != "" }) != true {
+        var model: Entity?
+        for _ in 0..<200 where model == nil {
             try await Task.sleep(for: .milliseconds(50))
             stage.apply(RoomDecor(layout: layout), receiver: nil)
-            holder = stage.root.children.first { $0.name == "decor.print" }
-            if holder?.children.isEmpty == false { break }
+            let holder = stage.root.children.first { $0.name == "decor.\(id)" }
+            model = holder?.children.first { !($0 is ModelEntity) }
         }
-        let piece = try #require(holder)
-        let bounds = piece.visualBounds(relativeTo: stage.root)
-        #expect(abs(bounds.min.z + 0.5) < 0.002, "its back is on the wall: \(bounds.min.z)")
+        return try #require(model).visualBounds(relativeTo: stage.root)
     }
 }
