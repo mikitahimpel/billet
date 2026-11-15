@@ -18,15 +18,18 @@ nonisolated struct WelcomeScript: Equatable, Sendable {
 
   let cues: [Cue]
 
+  /// The cat rises first; the headline and the three rows follow her 80 ms apart, then the terms and the actions.
   static let standard = WelcomeScript(cues: [
-    Cue(beat: .cat, start: 0, length: 0.5),
-    Cue(beat: .title, start: 0.35, length: 0.5),
-    Cue(beat: .subtitle, start: 0.7, length: 0.5),
-    Cue(beat: .vignette(0), start: 1.1, length: 0.45),
-    Cue(beat: .vignette(1), start: 1.45, length: 0.45),
-    Cue(beat: .vignette(2), start: 1.8, length: 0.45),
-    Cue(beat: .actions, start: 2.3, length: 0.4),
+    Cue(beat: .cat, start: 0, length: 0.7),
+    Cue(beat: .title, start: 0.3, length: 0.5),
+    Cue(beat: .vignette(0), start: 0.38, length: 0.45),
+    Cue(beat: .vignette(1), start: 0.46, length: 0.45),
+    Cue(beat: .vignette(2), start: 0.54, length: 0.45),
+    Cue(beat: .subtitle, start: 0.75, length: 0.45),
+    Cue(beat: .actions, start: 0.95, length: 0.4),
   ])
+
+  static let stagger: TimeInterval = 0.08
 
   var duration: TimeInterval { cues.map { $0.start + $0.length }.max() ?? 0 }
 

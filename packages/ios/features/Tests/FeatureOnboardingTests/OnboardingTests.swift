@@ -464,6 +464,18 @@ struct AnswerQueueTests {
     #expect(script.duration < 3.5)
   }
 
+  @Test func theHeadlineAndItsRowsComeIn80MillisecondsApartAfterTheCat() throws {
+    let script = WelcomeScript.standard
+    let starts = try [WelcomeScript.Beat.title, .vignette(0), .vignette(1), .vignette(2)].map {
+      beat in
+      try #require(script.cues.first { $0.beat == beat }).start
+    }
+    for (a, b) in zip(starts, starts.dropFirst()) {
+      #expect(abs(b - a - WelcomeScript.stagger) < 0.001)
+    }
+    #expect(script.started(at: starts[0] - 0.01) == [.cat])
+  }
+
   @Test func theTitleSpringRisesWithoutOvershootAndSettlesByItsCue() throws {
     let script = WelcomeScript.standard
     let cue = try #require(script.cues.first { $0.beat == .title })
