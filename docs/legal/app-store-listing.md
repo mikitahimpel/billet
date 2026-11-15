@@ -14,7 +14,7 @@ primary language either way.
 
 | Field | Value |
 | --- | --- |
-| Name [30] | `Ourio` |
+| Name [30] | `Ourio: Couple Cat & Widgets` (27; see [../aso.md](../aso.md)) |
 | Bundle ID | `com.ourio.app` |
 | SKU | TODO-OWNER (any private string, e.g. `ourio-ios-1`) |
 | Apple ID | `6832707480` (from the owner's brief; confirm in App Information > General > Apple ID) |
@@ -40,7 +40,7 @@ and Ourio has exactly one partner and no feed, so it would misdescribe the app.
 
 ## Version 1.0.0: English (U.S.)
 
-**Subtitle** [30]: `Raise a cat with your partner` (29)
+**Subtitle** [30]: `Raise a pet, draw love notes` (28)
 
 **Promotional text** [170]:
 
@@ -76,7 +76,7 @@ WIDGETS
 Home Screen and Lock Screen widgets for the room, Mochi, your partner's latest note and drawing, your days together and more, plus Control Center buttons to pet or feed Mochi.
 
 PRIVATE BY DESIGN
-There is no sign-up form and no password: the app makes an anonymous account and keeps its key in your iCloud Keychain. A pair is exactly two people. There is no public feed, no ads and no third-party tracking, and we never use your drawings or photos to train AI. You can report or block your partner, unpair, or delete your account in Settings at any time.
+There is no sign-up form and no password: the app makes an anonymous account and keeps its key in your iCloud Keychain, and you can link Sign in with Apple in Settings to keep your account. A pair is exactly two people. There is no public feed, no ads and no third-party tracking, and we never use your drawings or photos to train AI. You can report or block your partner, unpair, or delete your account in Settings at any time.
 
 Ourio needs two iPhones on iOS 18 or later, one for each of you. You pair with a one-time invite code. For ages 13 and up.
 
@@ -98,7 +98,7 @@ finished drawing), any number of widgets (the count changes), any purchase.
 **Keywords** [100]:
 
 ```
-couples,relationship,boyfriend,girlfriend,long distance,widget,virtual pet,cat,love,notes,date,pair
+long,distance,relationship,games,calendar,questions,together,shared,drawing,lock,screen,doodle,cozy
 ```
 
 (99). No spaces after commas (they count), no word from the name or the subtitle repeated where it
