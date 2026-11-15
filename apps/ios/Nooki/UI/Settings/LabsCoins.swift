@@ -143,10 +143,10 @@ struct LabsCoinsRows: View {
             if case .adding = store.state { ProgressView() }
         }
         VStack(alignment: .leading, spacing: Space.s) {
-            HStack(spacing: Space.s) {
-                ForEach(LabsCoinsMachine.amounts, id: \.self) { amount in
-                    PriceButton(amount, label: "Add \(amount) coins") { store.send(.tapped(amount)) }
-                }
+            // Side by side, or one under the other once the large text sizes make the row wider than the page.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Space.s) { amountButtons }
+                VStack(alignment: .leading, spacing: Space.s) { amountButtons }
             }
             .disabled(isAdding)
             if case .failed(let failure) = store.state {
@@ -159,6 +159,12 @@ struct LabsCoinsRows: View {
         .haptic(.confirmed, trigger: confirmations)
         .onChange(of: store.state) { _, state in
             if case .added = state { confirmations += 1 }
+        }
+    }
+
+    private var amountButtons: some View {
+        ForEach(LabsCoinsMachine.amounts, id: \.self) { amount in
+            PriceButton(amount, label: "Add \(amount) coins") { store.send(.tapped(amount)) }
         }
     }
 

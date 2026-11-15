@@ -22,6 +22,8 @@ struct MomentsView: View {
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
+    /// The room the empty state has between the header and the tab bar.
+    @State private var emptyHeight: CGFloat = 0
 
     private let columnGap: CGFloat = Space.m
 
@@ -33,13 +35,22 @@ struct MomentsView: View {
             if state.momentsMode == .board {
                 boardOverlay
             } else if store.moments.isEmpty {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    EmptyMoments(pick: $pick)
-                        .padding(.horizontal, Space.xl)
-                    Spacer(minLength: 0)
+                // Centred while it fits between the header and the tab bar; at the largest text it is taller than
+                // that and scrolls from its top.
+                ScrollView {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        EmptyMoments(pick: $pick)
+                            .padding(.horizontal, Space.xl)
+                            .tabContentInsets()
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: emptyHeight)
                 }
-                .tabContentInsets()
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+                .ourioScrollEdges()
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { emptyHeight = $0 }
             } else {
                 TabPage {
                     WallStrip(store: store, pick: $pick)
@@ -199,6 +210,7 @@ private struct Draft: Identifiable {
 
 private struct EmptyMoments: View {
     @Binding var pick: PhotosPickerItem?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(spacing: Space.section) {
@@ -213,27 +225,52 @@ private struct EmptyMoments: View {
                 Text("Your first moment")
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.primary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Add a photo of the two of you. It goes up on \(CatProfile.name())'s wall as a little polaroid.")
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             PhotosPicker(selection: $pick, matching: .images) {
-                HStack(spacing: Space.s) {
-                    Image(systemName: "photo.badge.plus")
-                    Text("Add a photo")
-                    Text("+10")
-                        .font(.ourioCaption.weight(.semibold).monospacedDigit())
-                        .padding(.horizontal, Space.s)
-                        .padding(.vertical, Space.xs / 2)
-                        .background(Ink.heroInk.opacity(0.12), in: .capsule)
+                Group {
+                    if typeSize.isAccessibilitySize {
+                        // The words take the line; the reward goes whole under them.
+                        VStack(spacing: Space.s) {
+                            words
+                            reward
+                        }
+                    } else {
+                        HStack(spacing: Space.s) {
+                            words
+                            reward
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryButtonStyle())
+            .accessibilityIdentifier("moments.add")
             .padding(.top, Space.xs)
         }
+    }
+
+    private var words: some View {
+        HStack(spacing: Space.s) {
+            Image(systemName: "photo.badge.plus")
+            Text("Add a photo")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var reward: some View {
+        Text("+10")
+            .font(.ourioCaption.weight(.semibold).monospacedDigit())
+            .padding(.horizontal, Space.s)
+            .padding(.vertical, Space.xs / 2)
+            .background(Ink.heroInk.opacity(0.12), in: .capsule)
     }
 }
 

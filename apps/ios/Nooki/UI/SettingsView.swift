@@ -58,7 +58,7 @@ struct SettingsView: View {
             }
 
             GroupedSection(header: "Widgets",
-                           footer: "Mochi, your days together, your partner and more, for the Home Screen and the Lock Screen.") {
+                           footer: "\(CatProfile.name()), your days together, your partner and more, for the Home Screen and the Lock Screen.") {
                 NavigationLink { WidgetsGalleryView() } label: {
                     Row("Widget gallery", symbol: "rectangle.on.rectangle", tint: UsTint.honey.color) { RowChevron() }
                 }

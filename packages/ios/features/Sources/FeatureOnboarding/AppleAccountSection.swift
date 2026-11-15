@@ -82,6 +82,10 @@ public struct AppleAccountSection: View {
       onCompletion: { result in Self.handle(result, on: model) }
     )
     .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+    // Apple's button asks for a width that grows with the text size, past the screen at the
+    // accessibility sizes, while its own label stays small: it keeps the largest regular size.
+    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+    .frame(maxWidth: .infinity)
     .frame(height: Size.button)
     .corners(.control)
     .accessibilityIdentifier("signInWithApple")
