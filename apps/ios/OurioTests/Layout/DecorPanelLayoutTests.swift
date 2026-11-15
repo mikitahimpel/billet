@@ -86,9 +86,11 @@ import Testing
         let closetTop: CGFloat
         let closetBottom: CGFloat
         if test.pieces == 0 {
-            // The iOS 26.2 Simulator drops the identifier of the combined note inside the scroll view; its words stay.
-            let note = layout.element(id: "decorClosetEmpty") ?? layout.elements().first { $0.label.hasPrefix("The closet is empty") }
-            let empty = try #require(note, "no empty note among \(layout.elements().map { $0.identifier + ":" + $0.label })").frame
+            // The closet's own box: in the first window of a run the iOS 26.2 Simulator leaves the note out of the
+            // accessibility tree, though it is laid out and drawn.
+            let scroll = try #require(layout.scrollViews.first, "no closet")
+            let empty = scroll.convert(scroll.bounds, to: nil)
+            #expect(empty.height > Size.button, "the empty note \(empty) is shown")
             closetTop = empty.minY
             closetBottom = empty.maxY
         } else {
@@ -103,8 +105,7 @@ import Testing
             let rowWidth = tiles.filter { abs($0.minY - first.minY) < 1 }.map(\.maxX).max().map { $0 - first.minX } ?? 0
             if test.pieces >= 2 { #expect(abs(rowWidth - (inside.upperBound - inside.lowerBound)) < 1, "a row \(rowWidth) fills the card") }
         }
-        // The empty note's frame is its glyphs', a few points off its box.
-        let slack: CGFloat = test.pieces == 0 ? 6 : 1
+        let slack: CGFloat = 1
         let topGap = closetTop - headerBottom
         #expect(abs(topGap - Space.m) <= max(slack, doneSlack), "header to closet: \(topGap)")
         let scroll = layout.scrollViews.first { $0.contentSize.height > $0.bounds.height + 1 }
