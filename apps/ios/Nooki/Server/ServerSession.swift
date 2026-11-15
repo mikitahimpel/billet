@@ -58,6 +58,8 @@ final class ServerSession {
     @ObservationIgnored private var catEntry: (@MainActor (CatEntry) -> Void)?
     @ObservationIgnored private var lastCatSeq: (@MainActor () -> Int?)?
     /// Set each time the socket is followed.
+    @ObservationIgnored private var socketOpened: (@MainActor () -> Void)?
+    /// Set each time the socket is followed.
     @ObservationIgnored private var catSaved: (@MainActor () -> Void)?
     /// Set by the open Pick tonight screen; nil while it is closed.
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
@@ -148,11 +150,13 @@ final class ServerSession {
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
         lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil, streak: StreakStore? = nil,
         cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil,
-        catSaved: (@MainActor () -> Void)? = nil
+        opened: (@MainActor () -> Void)? = nil, catSaved: (@MainActor () -> Void)? = nil
     ) {
         if follows, isPaired {
+            // A follow without them keeps the ones the first follow gave.
+            if let opened { socketOpened = opened }
+            if let catSaved { self.catSaved = catSaved }
             catEntry = cat
-            self.catSaved = catSaved
             self.lastCatSeq = lastCatSeq
             self.photos = photos
             self.texts = texts
@@ -170,6 +174,7 @@ final class ServerSession {
                         unread: { inbox.unreadChanged($0) },
                         photo: { [weak self] in Task { await self?.photos?.receive() } },
                         text: { [weak self] in Task { await self?.texts?.receive() } },
+                        drawing: { [weak self] in self?.drawingSync?.received($1, seq: $0) },
                         reaction: { [weak self] in self?.reactions?.received($0) },
                         lastReactionRev: { [weak self] in self?.reactions?.lastRev },
                         shop: { [weak self] in self?.shop?.received($0) },
@@ -185,13 +190,19 @@ final class ServerSession {
                         catEntry: { [weak self] in self?.catEntry?($0) },
                         lastCatSeq: { [weak self] in self?.lastCatSeq?() },
                         catSaved: { [weak self] in self?.catSaved?() },
-                        presence: { [weak self] in self?.partnerPresence = $0 }))
+                        presence: { [weak self] in self?.partnerPresence = $0 },
+                        opened: { [weak self] in self?.socketOpened?() }))
             }
             inboxLink?.connect()
         } else {
             inboxLink?.disconnect()
             partnerPresence = .away
         }
+    }
+
+    /// The room's socket was heard from within `quietLimit`, or answers a ping; false while it is down or unfollowed.
+    func roomSocketIsHealthy(quietLimit: Duration) async -> Bool {
+        await inboxLink?.isHealthy(quietLimit: quietLimit) ?? false
     }
 
     /// Nil until this account has a partner.

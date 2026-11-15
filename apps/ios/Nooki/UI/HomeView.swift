@@ -54,6 +54,7 @@ struct HomeView: View {
     /// Labs → Performance: suspects switched off while the app runs, and its frame meter.
     @State private var perfLab = PerfLab(defaults: .standard)
     @State private var tabClock = TabSwitchClock()
+    @State private var partner = PartnerFollow()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
@@ -229,10 +230,9 @@ struct HomeView: View {
         }
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
-        .task(id: session?.isPaired) {
-            await followPair()
-            // A pair found while the app is in front opens the room's socket now, not at the next return.
-            if session?.isPaired == true, scenePhase == .active { followRoomSocket() }
+        .task(id: session?.isPaired) { await followPair() }
+        .onChange(of: session?.isPaired, initial: true) { _, paired in
+            partnerSync?.send(paired == true ? .paired : .unpaired)
         }
         .modifier(ResendsUnsent(
             paired: session?.isPaired == true, photos: state.moments.unsent.map(\.id), notes: state.notes.unsent.map(\.id),
@@ -446,18 +446,14 @@ struct HomeView: View {
         }
     }
 
-    /// The pair's room socket; nothing while unpaired.
-    private func followRoomSocket() {
-        session?.followInbox(
-            true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
-            moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
-            cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq },
-            catSaved: { [room, state] in
-                Task {
-                    await room.syncCat()
-                    state.refreshPronouns()
-                }
-            })
+    /// Made on first use, for this launch's session; nil in a build without a server.
+    private var partnerSync: PartnerSync? {
+        if let sync = partner.sync { return sync }
+        guard let session else { return nil }
+        let sync = Self.partnerSync(session: session, state: state, room: room)
+        sync.send(session.isPaired ? .paired : .unpaired)
+        partner.sync = sync
+        return sync
     }
 
     /// Its own method: inline in `body`, the closure tips the type-checker over its time limit.
@@ -473,13 +469,7 @@ struct HomeView: View {
             visitHints()
             Task {
                 await DrawingSync.requestPushes(asking: false)
-                await session?.drawingSync?.fetchLatest()
                 await session?.drawingSync?.registerPushTokens()
-                await session?.inbox.refreshCount()
-                await photoSync?.receive()
-                await textSync?.receive()
-                await state.shop.refresh()
-                await state.lists.refresh()
             }
             // The pair's cat and streak catch up, and what this phone did offline goes. Their own task, so a slow
             // download above doesn't hold them up.
@@ -488,16 +478,12 @@ struct HomeView: View {
                 state.refreshPronouns()
                 await state.streak.refresh()
             }
-            // The room socket sends no game frames it missed while the app was away. Its own task, so missed
-            // photos downloading above don't hold it up.
-            Task { await session?.whoKnows.load() }
-            session?.reactions?.refresh()
-            followRoomSocket()
+            partnerSync?.send(.cameToFront)
             refreshRooms()
             if !launching { reportOpened(state.room) }
         case .background:
             state.didEnterBackground()
-            session?.followInbox(false)
+            partnerSync?.send(.wentAway)
             reportedRooms = []
         default: break
         }
@@ -704,4 +690,10 @@ private struct LeavingSnapshot: View {
             .onAppear { withAnimation(Motion.fade()) { shown = false } completion: { gone() } }
             .id(ObjectIdentifier(view))
     }
+}
+
+/// Holds the launch's `PartnerSync` across passes of `HomeView`, made the first time it is needed.
+@MainActor
+final class PartnerFollow {
+    var sync: PartnerSync?
 }
