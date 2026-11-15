@@ -15,6 +15,8 @@ BUILD=1
 args_for() {
   case "$1" in
     room) echo "" ;;
+    bedroom) echo "-room city" ;;
+    game) echo "-perf.game laser" ;;
     mochi) echo "-landingGo pet" ;;
     groceries) echo "-landingGo groceries" ;;
     movies) echo "-landingGo list" ;;
@@ -26,7 +28,7 @@ args_for() {
   esac
 }
 PANELS=("$@")
-[ ${#PANELS[@]} -eq 0 ] && PANELS=(room mochi groceries movies places days moments shop)
+[ ${#PANELS[@]} -eq 0 ] && PANELS=(room bedroom game moments shop days)
 
 UDID=$(xcrun simctl list devices -j | python3 -c "
 import json,sys

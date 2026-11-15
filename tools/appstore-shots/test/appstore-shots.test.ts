@@ -22,7 +22,7 @@ for (const locale of ["en", "ru"]) {
       manifestProblems(manifest(locale), () => true),
       [],
     );
-    assert.equal(manifest(locale).panels.length, 8);
+    assert.equal(manifest(locale).panels.length, 6);
   });
 }
 

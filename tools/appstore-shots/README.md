@@ -5,7 +5,7 @@ Turns raw Simulator screens of the current app into the framed App Store panels:
 chips. Copy and chip positions live in `manifest/<locale>.json`.
 
 ```sh
-tools/appstore-shots/capture.sh                 # Mac: build, boot a shut-down Simulator, 8 raw PNGs
+tools/appstore-shots/capture.sh                 # Mac: build, boot a shut-down Simulator, 6 raw PNGs
 pnpm appstore:shots                             # panels + contact sheet, en, both default sizes
 pnpm appstore:shots --locale ru                 # ru manifest (a draft; the raw screens are English UI)
 pnpm appstore:shots --sizes 6.9-1320x2868       # one size; --panel room to re-render one panel
@@ -43,7 +43,11 @@ and top in percent of the panel, `rotate` is in degrees. `raw` is the file stem 
 `capture.sh` builds the Debug app, takes the build lock (`lockq-wait`), boots the Simulator named by
 `SIM_NAME` (default `ui-fixes2-pm`, an iPhone 17 Pro Max; it must be shut down, never a booted or the golden
 one), sets the status bar to 9:41, dark mode and the Dusk look, and launches the app with `-landingDemo YES`
-(Alex and Sam, 64 coins) per panel: `-landingGo pet|groceries|list|places|us|shop`, `-shotMoments photos`.
+(Alex and Sam, 64 coins) per panel: the Living room with no argument, the Bedroom with `-room city`, the laser
+game with `-perf.game laser`, `-shotMoments photos`, `-landingGo shop` and `-landingGo us`. The manifests hold these
+six panels in that order (App Store order); `capture.sh <panel>` also knows `mochi`, `groceries`, `movies` and
+`places` (`-landingGo pet|groceries|list|places`) for a panel added to a manifest. Set `SIM_NAME` to a Simulator of
+your own and `DERIVED_DATA` under `~/Library/Caches`.
 It shuts the Simulator down and releases the lock when done. `SETTLE` (seconds, default 14) is the wait
 before each screenshot; the room needs it. A new screen is a new `-landingGo` case in `HomeState` and demo
 data in `apps/ios/Nooki/Demo/LandingDemo.swift`.
