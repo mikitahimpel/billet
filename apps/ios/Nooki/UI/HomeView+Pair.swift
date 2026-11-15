@@ -30,6 +30,37 @@ extension HomeView {
         Task { try? await api.reportEvents([ClientEvent(.roomOpened, detail: room.eventDetail)]) }
     }
 
+    /// The partner's notes, games, coins and Inbox reach this phone while it is in front and paired: over the room's
+    /// socket, and by a pull at once and every `PartnerSyncMachine.every`, since the socket can be down or silently dead.
+    static func partnerSync(session: ServerSession, state: HomeState, room: RoomController) -> PartnerSync {
+        PartnerSync(.init(
+            follow: { followRoomSocket(session: session, state: state, room: room) },
+            unfollow: { session.followInbox(false) },
+            pull: { await pullPartner(session: session, state: state) }))
+    }
+
+    static func followRoomSocket(session: ServerSession, state: HomeState, room: RoomController) {
+        session.followInbox(
+            true, photos: session.photoSync(moments: state.moments, partner: state.otherPartner),
+            texts: session.textSync(notes: state.notes, partner: state.otherPartner), shop: state.shop,
+            lists: state.lists, moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
+            cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq })
+    }
+
+    /// The games first: they are small, and a photo downloading below can take a while.
+    private static func pullPartner(session: ServerSession, state: HomeState) async {
+        await session.inbox.refreshCount()
+        await session.drawGuess.load()
+        await session.whoKnows.load()
+        await state.shop.refresh()
+        await state.streak.refresh()
+        session.reactions?.refresh()
+        await session.drawingSync?.fetchLatest()
+        await session.textSync(notes: state.notes, partner: state.otherPartner)?.receive()
+        await session.photoSync(moments: state.moments, partner: state.otherPartner)?.receive()
+        await state.lists.refresh()
+    }
+
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
     var boardKey: [String] { BoardFaces.key(state: state) }
 

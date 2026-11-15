@@ -109,14 +109,14 @@ let fromTheApp: [SwiftSetting] = [.enableUpcomingFeature("NonisolatedNonsendingB
 let serverSync: Target = .target(
   name: "ServerSync",
   dependencies: dependencies([
-    "DrawInterface", "MomentsInterface", "Payments", "Persistence", "ShopInterface", "Transport",
-    "UsInterface", "Wire",
+    "BilletKit", "DrawInterface", "MomentsInterface", "Payments", "Persistence", "ShopInterface",
+    "Transport", "UsInterface", "Wire",
   ]),
   swiftSettings: fromTheApp + [.defaultIsolation(MainActor.self)])
 
 let serverSyncTests: Target = .testTarget(
   name: "ServerSyncTests",
-  dependencies: dependencies(["ServerSync", "Payments", "Transport", "Wire"]),
+  dependencies: dependencies(["BilletKit", "ServerSync", "Payments", "Transport", "Wire"]),
   swiftSettings: [.defaultIsolation(MainActor.self)])
 
 let games: Target = .target(

@@ -162,6 +162,7 @@ final class ServerSession {
                         unread: { inbox.unreadChanged($0) },
                         photo: { [weak self] in Task { await self?.photos?.receive() } },
                         text: { [weak self] in Task { await self?.texts?.receive() } },
+                        drawing: { [weak self] in self?.drawingSync?.received($1, seq: $0) },
                         reaction: { [weak self] in self?.reactions?.received($0) },
                         lastReactionRev: { [weak self] in self?.reactions?.lastRev },
                         shop: { [weak self] in self?.shop?.received($0) },
