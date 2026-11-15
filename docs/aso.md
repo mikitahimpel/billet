@@ -22,14 +22,16 @@ description does not carry search weight.
 | Field | Value | Length |
 | --- | --- | --- |
 | Name | `Ourio: Couple Cat & Widgets` | 27 / 30 |
-| Subtitle | `Notes, drawing & long distance` | 30 / 30 |
-| Keywords | `relationship,love,pet,virtual,shared,together,partner,girlfriend,boyfriend,lock,screen,kitten,cozy` | 98 / 100 |
+| Subtitle | `Raise a pet, draw love notes` | 28 / 30 |
+| Keywords | `long,distance,relationship,games,calendar,questions,together,shared,drawing,lock,screen,doodle,cozy` | 99 / 100 |
 | Promotional text | Share one cozy room and a cat with the person you love. Pet her, draw a note, and it appears on their widget. Made for couples, near or far. | 140 / 170 |
 | Primary / secondary category | Lifestyle / Entertainment | |
 
 The name replaces the plain `Ourio` of the first draft: it adds *couple*, *cat* and *widgets*. The
-subtitle covers *notes*, *drawing*, *long* and *distance*. None of those words is repeated in the keyword
-field. The promotional text can be changed at any time without a new build; the name, subtitle, keywords
+subtitle adds *raise*, *pet*, *love* and *notes* (decided from [aso-research.md](aso-research.md): *love
+notes* and *drawing widget* are the winnable terms, *long distance* is crowded). *long* and *distance*
+moved to the keyword field; `girlfriend` and `boyfriend` were dropped because their results are AI-companion
+apps. No word is repeated across the three fields. The promotional text can be changed at any time without a new build; the name, subtitle, keywords
 and screenshots change with a version.
 
 ## Screenshots
