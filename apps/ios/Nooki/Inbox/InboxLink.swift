@@ -1,3 +1,4 @@
+import Synchronization
 import Foundation
 import Transport
 import Wire
@@ -39,14 +40,18 @@ final class InboxLink {
         var presence: @MainActor @Sendable (PartnerPresence) -> Void
         /// The socket opened, the first time or after a drop; it resumes, but a pull catches what it can't.
         var opened: @MainActor @Sendable () -> Void
+        /// About to open again after a drop: the room closes the sockets of a pair that ended.
+        var reopening: @MainActor @Sendable () -> Void
     }
 
     /// When a frame last came; any frame says the socket is alive.
     private var lastHeard: ContinuousClock.Instant?
 
     init(baseURL: URL, token: @escaping @Sendable () async -> String?, lastSeq: Int?, handlers: Handlers) {
+        let opens = OpenCount()
         let dependencies = WebSocketDependencies(
             open: { () async throws(TransportError) -> WebSocketConnection in
+                if opens.count.add(1, ordering: .relaxed).oldValue > 0 { await handlers.reopening() }
                 guard let token = await token() else { throw .api(.unauthorized) }
                 guard let request = URLRequest.socket(baseURL: baseURL, token: token) else {
                     throw .network("invalid socket URL")
@@ -116,4 +121,9 @@ final class InboxLink {
     }
 
     func disconnect() { client?.disconnect() }
+}
+
+/// How many times this link's socket was opened.
+private final class OpenCount: Sendable {
+    let count = Atomic<Int>(0)
 }

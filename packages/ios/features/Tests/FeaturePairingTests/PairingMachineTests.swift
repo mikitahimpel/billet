@@ -15,7 +15,7 @@ import Wire
 
     (state, outputs) = M.transition(state, .created(code: "ABC", expiresAt: 9, request: 1))
     #expect(state == .waiting(code: "ABC", expiresAt: 9, request: 1))
-    #expect(outputs.isEmpty)
+    #expect(outputs == [.keepInvite(KeptInvite(code: "ABC", expiresAt: 9))])
 
     (state, outputs) = M.transition(state, .ticked)
     #expect(outputs == [.checkPaired(request: 2)])
@@ -24,15 +24,25 @@ import Wire
     #expect(state == .waiting(code: "ABC", expiresAt: 9, request: 2))
 
     (state, _) = M.transition(state, .ticked)
-    (state, _) = M.transition(state, .checked(paired: true, request: 3))
-    #expect(state == .paired(pairID: nil))
+    (state, outputs) = M.transition(state, .checked(paired: true, request: 3))
+    #expect(state == .paired(.inviter))
+    #expect(outputs == [.forgetInvite])
+  }
+
+  @Test func aShownInviteIsForgottenOnlyWhenItEnds() {
+    let waiting = M.State.waiting(code: "ABC", expiresAt: 9, request: 2)
+    #expect(M.transition(waiting, .cancelled).1 == [.forgetInvite])
+    #expect(M.transition(waiting, .failed(.signedOut, request: 2)).1 == [.forgetInvite])
+    #expect(M.transition(waiting, .failed(.unavailable, request: 2)).1.isEmpty)
+    #expect(M.transition(waiting, .checked(paired: false, request: 2)).1.isEmpty)
+    #expect(M.transition(.creating(request: 1), .cancelled).1.isEmpty)
   }
 
   @Test func enteringACodeClaimsItTidied() {
     var (state, outputs) = M.transition(.initial, .codeSubmitted(" ab c "))
     #expect(outputs == [.claimInvite(code: "ABC", request: 1)])
     (state, _) = M.transition(state, .claimed(pairID: "p1", request: 1))
-    #expect(state == .paired(pairID: "p1"))
+    #expect(state == .paired(.joiner(pairID: "p1")))
   }
 
   @Test func anEmptyCodeIsInvalidWithoutACall() {
@@ -51,8 +61,17 @@ import Wire
   ])
   func failuresAreDistinct(error: TransportError, failure: PairingFailure) {
     #expect(PairingFailure(error) == failure)
-    let (state, _) = M.transition(.claiming(request: 1), .failed(failure, request: 1))
+    let (state, _) = M.transition(.creating(request: 1), .failed(failure, request: 1))
     #expect(state == .choosing(failure: failure, request: 1))
+  }
+
+  @Test func aClaimTheServerCallsAlreadyPairedIsTheJoinersPair() {
+    let (state, outputs) = M.transition(.claiming(request: 1), .failed(.alreadyPaired, request: 1))
+    #expect(state == .paired(.joiner(pairID: nil)))
+    #expect(outputs.isEmpty)
+    #expect(
+      M.transition(.claiming(request: 1), .failed(.invalidCode, request: 1)).0
+        == .choosing(failure: .invalidCode, request: 1))
   }
 
   @Test func invalidAndAlreadyPairedReadDifferently() {
@@ -101,7 +120,7 @@ import Wire
     let model = PairingModel(api: api)
     model.submit(code: "good")
     await model.settled()
-    #expect(model.state == .paired(pairID: "p1"))
+    #expect(model.state == .paired(.joiner(pairID: "p1")))
   }
 
   @Test func theCreatorSeesThePartnerArrive() async {
@@ -122,7 +141,37 @@ import Wire
     #expect(model.state == .waiting(code: "ABC", expiresAt: 9, request: 2))
     model.tick()
     await model.settled()
-    #expect(model.state == .paired(pairID: nil))
+    #expect(model.state == .paired(.inviter))
+  }
+
+  @Test func aRelaunchShowsTheKeptInviteUntilItRunsOut() async {
+    let kept = Kept(KeptInvite(code: "ABC", expiresAt: 10_000))
+    var api = APIClient.offline
+    api.createInvite = { () async throws(TransportError) in
+      Issue.record("a kept invite is not made again")
+      return CreateInviteResponse(code: InviteCode("NEW"), expiresAt: 99_000)
+    }
+    let model = PairingModel(api: api, invites: kept.keeper, now: Date(timeIntervalSince1970: 9))
+    #expect(model.state == .waiting(code: "ABC", expiresAt: 10_000, request: 0))
+    model.cancel()
+    await model.settled()
+    #expect(kept.invite == nil)
+
+    let expired = Kept(KeptInvite(code: "ABC", expiresAt: 10_000))
+    let late = PairingModel(api: api, invites: expired.keeper, now: Date(timeIntervalSince1970: 10))
+    #expect(late.state == .initial)
+  }
+
+  @Test func aCreatedInviteIsKept() async {
+    let kept = Kept(nil)
+    var api = APIClient.offline
+    api.createInvite = { () async throws(TransportError) in
+      CreateInviteResponse(code: InviteCode("ABC"), expiresAt: 9)
+    }
+    let model = PairingModel(api: api, invites: kept.keeper)
+    model.createInvite()
+    await model.settled()
+    #expect(kept.invite == KeptInvite(code: "ABC", expiresAt: 9))
   }
 
   @Test func anAlreadyPairedAccountIsToldSo() async {
@@ -132,6 +181,16 @@ import Wire
     model.createInvite()
     await model.settled()
     #expect(model.state == .choosing(failure: .alreadyPaired, request: 1))
+  }
+}
+
+@MainActor
+final class Kept {
+  var invite: KeptInvite?
+  init(_ invite: KeptInvite?) { self.invite = invite }
+
+  var keeper: InviteKeeper {
+    InviteKeeper(load: { self.invite }, keep: { self.invite = $0 })
   }
 }
 

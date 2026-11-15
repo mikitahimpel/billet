@@ -129,14 +129,14 @@ private let profile = Wire.CatProfile(
         }
     }
 
-    private func life(chosen: Chosen = Chosen(nil), look: Look = Look(), now: Date = .now) -> CatLife {
+    private func life(chosen: Chosen = Chosen(nil), look: Look = Look()) -> CatLife {
         CatLife(defaults: defaults, formerOutbox: formerOutbox, catName: { look.name }, catCoat: { look.coat },
                 chosenPronouns: { chosen.pronouns }, adoptPronouns: { chosen.pronouns = $0 },
                 takeLook: { name, coat in
                     look.name = name
                     look.coat = coat
                     look.taken += 1
-                }, clock: { now })
+                })
     }
 
     @Test func thePhoneThatJoinedTakesTheInvitersNameAndCoat() async {
@@ -151,16 +151,18 @@ private let profile = Wire.CatProfile(
         #expect(room.state.withLock { $0.adoptions }.isEmpty)
     }
 
-    @Test func thePhoneThatJoinedWaitsForTheInvitersCatThenAdoptsItsOwn() async {
-        let joined = Date(timeIntervalSince1970: 1_800_000_000)
-        CatLife.markJoined(in: defaults, at: joined)
-        CatLife.markJoined(in: defaults, at: joined.addingTimeInterval(60))
+    @Test func thePhoneThatJoinedNeverAdoptsAndTakesTheInvitersCatOnceSheIsThere() async {
+        CatLife.markJoined(in: defaults)
         let room = FakeCatRoom()
-        await life(now: joined.addingTimeInterval(CatLife.joinerWaits - 1)).connect(room.client, pair: pair)
+        let look = Look("Tofu", "grey")
+        let life = life(look: look)
+        await life.connect(room.client, pair: pair)
         #expect(room.state.withLock { $0.adoptions }.isEmpty)
-
-        await life(now: joined.addingTimeInterval(CatLife.joinerWaits)).connect(room.client, pair: pair)
-        #expect(room.state.withLock { $0.adoptions }.map(\.name) == ["Pancake"])
+        room.state.withLock { $0.profile = profile }
+        await life.sync()
+        #expect(look.name == "Pancake")
+        #expect(look.coat == "ginger")
+        #expect(room.state.withLock { $0.adoptions }.isEmpty)
 
         CatLife.forgetJoin(in: defaults)
         #expect(defaults.object(forKey: CatLife.joinedKey) == nil)

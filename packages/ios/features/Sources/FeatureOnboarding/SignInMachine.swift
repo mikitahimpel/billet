@@ -172,7 +172,7 @@ nonisolated extension SignInMachine {
   }
 }
 
-extension SignInFailure {
+nonisolated extension SignInFailure {
   /// What the invite page says while the account it needs could not be signed in.
   public var connectingMessage: String {
     switch self {

@@ -1,4 +1,5 @@
 import BilletKit
+import Foundation
 import Observation
 import Transport
 
@@ -13,9 +14,16 @@ public final class PairingModel {
 
   public var state: PairingMachine.State { store.state }
 
-  public init(api: APIClient) {
-    store = Store<PairingMachine>(initial: .initial) { output in
-      await PairingMachine.run(output, api: api)
+  /// Starts on the invite `invites` kept while it has not run out, so a relaunch shows the same code.
+  public init(api: APIClient, invites: InviteKeeper = .none, now: Date = .now) {
+    let kept = invites.load().flatMap {
+      $0.expiresAt > Int(now.timeIntervalSince1970 * 1000) ? $0 : nil
+    }
+    let initial =
+      kept.map { PairingMachine.State.waiting(code: $0.code, expiresAt: $0.expiresAt, request: 0) }
+      ?? .initial
+    store = Store<PairingMachine>(initial: initial) { output in
+      await PairingMachine.run(output, api: api, invites: invites)
     }
   }
 

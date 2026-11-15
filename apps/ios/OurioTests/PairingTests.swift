@@ -42,7 +42,11 @@ struct PairingCopyTests {
 struct ServerSessionPairingTests {
     /// An account store in memory, signed in and unpaired.
     final class Saved: Sendable {
-        let record = Mutex(AccountRecord(userID: "u1", deviceID: "d1", expiresAt: .max))
+        let record: Mutex<AccountRecord>
+
+        init(paired: Bool = false, pairID: String? = nil) {
+            record = Mutex(AccountRecord(userID: "u1", deviceID: "d1", expiresAt: .max, isPaired: paired, pairID: pairID))
+        }
 
         var store: AccountStore {
             AccountStore(
@@ -67,14 +71,14 @@ struct ServerSessionPairingTests {
 
         session.pairing.submit(code: "abcd efgh")
         await session.pairing.settled()
-        #expect(session.pairing.state == .paired(pairID: "p1"))
+        #expect(session.pairing.state == .paired(.joiner(pairID: "p1")))
 
         session.pairingFinished()
         #expect(session.isPaired)
         #expect(saved.record.withLock { $0.isPaired && $0.pairID == "p1" })
         // The next pairing starts from the choice again.
         #expect(session.pairing.state == .initial)
-        #expect(defaults.object(forKey: CatLife.joinedKey) is Date)
+        #expect(defaults.bool(forKey: CatLife.joinedKey))
     }
 
     private let defaults = UserDefaults(suiteName: "ServerSessionPairingTests-\(UUID().uuidString)")!
@@ -139,5 +143,67 @@ struct ServerSessionPairingTests {
         #expect(session.isPaired)
         #expect(session.pairing === model)
         #expect(calls.withLock { $0 } == 2)
+    }
+
+    @Test func aRelaunchEndsAPairTheServerNoLongerHasWithItsCursors() async {
+        // A launch builds the session from the saved record, which still says paired.
+        let saved = Saved(paired: true, pairID: "p1")
+        for key in ServerSession.pairCursorKeys { defaults.set(41, forKey: key) }
+        CatLife.markJoined(in: defaults)
+        var api = APIClient.offline
+        api.pair = { () async throws(TransportError) in throw .network("offline") }
+        let offline = session(saved, api: api)
+        await offline.watchPair()
+        #expect(offline.isPaired)
+
+        api.pair = { () async throws(TransportError) in throw .api(.notFound) }
+        let session = session(saved, api: api)
+        #expect(session.isPaired)
+        await session.watchPair()
+        #expect(!session.isPaired)
+        #expect(saved.record.withLock { !$0.isPaired })
+        #expect(ServerSession.pairCursorKeys.allSatisfy { defaults.object(forKey: $0) == nil })
+        #expect(!defaults.bool(forKey: CatLife.joinedKey))
+    }
+
+    @Test func aClaimTheServerCallsAlreadyPairedMakesThisPhoneTheJoiner() async {
+        let saved = Saved(pairID: "p0")
+        var api = APIClient.offline
+        api.claimInvite = { (_) async throws(TransportError) in throw .api(.alreadyPaired) }
+        api.pair = { () async throws(TransportError) in
+            PairResponse(pairId: PairId("p1"), members: [UserId("u1"), UserId("u2")])
+        }
+        let session = session(saved, api: api)
+        session.pairing.submit(code: "ABCD")
+        await session.pairing.settled()
+        #expect(session.pairing.state == .paired(.joiner(pairID: nil)))
+        session.pairingFinished()
+        #expect(session.isPaired)
+        #expect(defaults.bool(forKey: CatLife.joinedKey))
+        #expect(saved.record.withLock { $0.pairID } == "p0")
+        for _ in 0..<50 where saved.record.withLock({ $0.pairID }) != "p1" { await Task.yield() }
+        #expect(saved.record.withLock { $0.pairID } == "p1")
+    }
+
+    @Test func anInviterTheServerCallsAlreadyPairedKeepsThePairIDItHad() async {
+        let saved = Saved(pairID: "p0")
+        var api = APIClient.offline
+        api.createInvite = { () async throws(TransportError) in throw .api(.alreadyPaired) }
+        let session = session(saved, api: api)
+        session.pairing.createInvite()
+        await session.pairing.settled()
+        session.pairingFinished()
+        #expect(session.isPaired)
+        #expect(saved.record.withLock { $0.isPaired && $0.pairID == "p0" })
+        #expect(!defaults.bool(forKey: CatLife.joinedKey))
+    }
+
+    @Test func deletingTheAccountEndsThePair() async throws {
+        let saved = Saved(paired: true, pairID: "p1")
+        var api = APIClient.offline
+        api.deleteAccount = { (_) async throws(TransportError) in }
+        let session = session(saved, api: api)
+        try await session.deleteAccount()
+        #expect(!session.isPaired)
     }
 }

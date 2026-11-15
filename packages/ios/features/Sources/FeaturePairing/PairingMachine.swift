@@ -32,6 +32,42 @@ public enum PairingFailure: Equatable, Sendable {
   }
 }
 
+/// An invite this phone showed, until it is claimed, cancelled or runs out. `expiresAt` is epoch milliseconds.
+public struct KeptInvite: Codable, Equatable, Sendable {
+  public let code: String
+  public let expiresAt: Int
+
+  public init(code: String, expiresAt: Int) {
+    self.code = code
+    self.expiresAt = expiresAt
+  }
+}
+
+/// Where the shown invite is kept across launches; `none` keeps nothing.
+public struct InviteKeeper: Sendable {
+  public var load: @MainActor @Sendable () -> KeptInvite?
+  public var keep: @MainActor @Sendable (KeptInvite?) -> Void
+
+  public init(
+    load: @escaping @MainActor @Sendable () -> KeptInvite?,
+    keep: @escaping @MainActor @Sendable (KeptInvite?) -> Void
+  ) {
+    self.load = load
+    self.keep = keep
+  }
+
+  public static let none = InviteKeeper(load: { nil }, keep: { _ in })
+}
+
+/// Which side of the invite this phone was on.
+public enum PairRole: Equatable, Sendable {
+  /// Showed the code; the pair's cat is this phone's to adopt.
+  case inviter
+  /// Entered the code. `pairID` is nil when the server answered that the account already has a partner, as
+  /// for a retry whose first claim went through.
+  case joiner(pairID: String?)
+}
+
 /// Create an invite and wait for the partner, or enter the partner's code.
 ///
 /// `request` counts the calls made, so a result for an earlier call changes nothing.
@@ -42,8 +78,7 @@ public enum PairingMachine: Machine {
     /// The invite exists. A tick asks whether the partner has claimed it.
     case waiting(code: String, expiresAt: Int, request: Int)
     case claiming(request: Int)
-    /// `pairID` is known only to the partner who entered the code.
-    case paired(pairID: String?)
+    case paired(PairRole)
 
     public static let initial = State.choosing(failure: nil, request: 0)
 
@@ -83,6 +118,9 @@ public enum PairingMachine: Machine {
     case createInvite(request: Int)
     case claimInvite(code: String, request: Int)
     case checkPaired(request: Int)
+    /// The shown invite outlives a relaunch, since creating another deletes it on the server.
+    case keepInvite(KeptInvite)
+    case forgetInvite
   }
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
@@ -102,7 +140,10 @@ public enum PairingMachine: Machine {
       return (.claiming(request: request), [.claimInvite(code: code, request: request)])
 
     case (.creating, .created(let code, let expiresAt, _)):
-      return (.waiting(code: code, expiresAt: expiresAt, request: state.request), [])
+      return (
+        .waiting(code: code, expiresAt: expiresAt, request: state.request),
+        [.keepInvite(KeptInvite(code: code, expiresAt: expiresAt))]
+      )
 
     case (.waiting(let code, let expiresAt, _), .ticked):
       // A tick that finds the previous check still out starts another; the old answer is stale.
@@ -112,21 +153,29 @@ public enum PairingMachine: Machine {
       )
 
     case (.waiting, .checked(let paired, _)):
-      if paired { return (.paired(pairID: nil), []) }
+      if paired { return (.paired(.inviter), [.forgetInvite]) }
       return (state, [])
 
     case (.claiming, .claimed(let pairID, _)):
-      return (.paired(pairID: pairID), [])
+      return (.paired(.joiner(pairID: pairID)), [])
+
+    case (.claiming, .failed(.alreadyPaired, _)):
+      return (.paired(.joiner(pairID: nil)), [])
 
     case (.creating, .failed(let failure, _)), (.claiming, .failed(let failure, _)):
       return (.choosing(failure: failure, request: state.request), [])
 
     case (.waiting, .failed(let failure, _)):
       // A check that cannot be answered leaves the invite showing; only a lost session ends it.
-      if failure == .signedOut { return (.choosing(failure: failure, request: state.request), []) }
+      if failure == .signedOut {
+        return (.choosing(failure: failure, request: state.request), [.forgetInvite])
+      }
       return (state, [])
 
-    case (.waiting, .cancelled), (.claiming, .cancelled), (.creating, .cancelled):
+    case (.waiting, .cancelled):
+      return (.choosing(failure: nil, request: request), [.forgetInvite])
+
+    case (.claiming, .cancelled), (.creating, .cancelled):
       return (.choosing(failure: nil, request: request), [])
 
     case (.choosing, .cancelled):
@@ -148,8 +197,14 @@ public enum PairingMachine: Machine {
 
 extension PairingMachine {
   /// The calls the outputs make, on `api`. A partner's claim shows as `GET /v1/pair` answering.
-  public static func run(_ output: Output, api: APIClient) async -> Event? {
+  public static func run(_ output: Output, api: APIClient, invites: InviteKeeper) async -> Event? {
     switch output {
+    case .keepInvite(let invite):
+      await invites.keep(invite)
+      return nil
+    case .forgetInvite:
+      await invites.keep(nil)
+      return nil
     case .createInvite(let request):
       do {
         let invite = try await api.createInvite()

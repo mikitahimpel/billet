@@ -59,18 +59,14 @@ final class CatLife: CatEventSource {
         URL.applicationSupportDirectory.appending(path: "Outbox/cat-events.json")
     }
 
-    /// When this phone entered the partner's code, in the app's defaults; gone once unpaired.
-    static let joinedKey = "cat.joinedPairAt"
-    /// How long a phone that entered the code waits for the inviter's phone to adopt the cat before it adopts its
-    /// own: the inviter may be on a build that never learns of the pair.
-    static let joinerWaits: TimeInterval = 120
+    /// Set in the app's defaults while this phone is paired through the partner's code; gone once unpaired.
+    static let joinedKey = "cat.joinedPair"
 
     private let defaults: UserDefaults
     private let catName: () -> String
     private let catCoat: () -> String
     /// Makes the room's name and coat this phone's.
     private let takeLook: (_ name: String, _ coat: String) -> Void
-    private let now: () -> Date
     private let chosenPronouns: () -> CatPronouns?
     private let adoptPronouns: (CatPronouns) -> Void
     private var saved: Saved
@@ -105,11 +101,9 @@ final class CatLife: CatEventSource {
          catCoat: @escaping () -> String = { CatCoat.current().rawValue },
          chosenPronouns: @escaping () -> CatPronouns? = { CatProfile.chosenPronouns() },
          adoptPronouns: @escaping (CatPronouns) -> Void = { CatProfile.setPronouns($0) },
-         takeLook: @escaping (_ name: String, _ coat: String) -> Void = CatLife.wear(name:coat:),
-         clock: @escaping () -> Date = Date.init) {
+         takeLook: @escaping (_ name: String, _ coat: String) -> Void = CatLife.wear(name:coat:)) {
         self.defaults = defaults
         self.takeLook = takeLook
-        self.now = clock
         self.catName = catName
         self.catCoat = catCoat
         self.chosenPronouns = chosenPronouns
@@ -254,16 +248,12 @@ final class CatLife: CatEventSource {
         Task { await sync() }
     }
 
-    /// The pair has one cat, the inviter's: the phone that entered the code adopts only once it has waited.
-    private var mayAdopt: Bool {
-        guard let joined = defaults.object(forKey: Self.joinedKey) as? Date else { return true }
-        return now().timeIntervalSince(joined) >= Self.joinerWaits
-    }
+    /// The pair has one cat, the inviter's: the phone that entered the code never adopts one, so it can't replace
+    /// hers. It waits for her, and `CatSaved` from the room starts the sync that brings her.
+    private var mayAdopt: Bool { !defaults.bool(forKey: Self.joinedKey) }
 
-    /// Keeps the first mark, so a second report of the same pairing doesn't restart the wait.
-    static func markJoined(in defaults: UserDefaults = .standard, at now: Date = .now) {
-        guard defaults.object(forKey: joinedKey) == nil else { return }
-        defaults.set(now, forKey: joinedKey)
+    static func markJoined(in defaults: UserDefaults = .standard) {
+        defaults.set(true, forKey: joinedKey)
     }
 
     static func forgetJoin(in defaults: UserDefaults = .standard) {
