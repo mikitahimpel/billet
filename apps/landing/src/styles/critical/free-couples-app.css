@@ -240,8 +240,8 @@ h1 {
   color: #fff;
   justify-content: space-between;
   align-items: center;
-  height: 3.15em;
-  padding: 0.15em 1.75em 0 2.05em;
+  height: 2.5em;
+  padding: 0.25em 1.1em 0 1.6em;
   display: flex;
   position: absolute;
   top: 0;
@@ -250,12 +250,12 @@ h1 {
 }
 .sb-time {
   letter-spacing: -0.01em;
-  font-size: 0.92em;
+  font-size: 0.68em;
   font-weight: 600;
 }
 .sb-icons {
   align-items: center;
-  gap: 0.32em;
+  gap: 0.22em;
   display: flex;
 }
 .sb-icons i {
@@ -266,27 +266,27 @@ h1 {
 }
 .sb-signal {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 11' fill='white'><rect x='0' y='7' width='3' height='4' rx='1'/><rect x='4.6' y='5' width='3' height='6' rx='1'/><rect x='9.2' y='2.5' width='3' height='8.5' rx='1'/><rect x='13.8' y='0' width='3' height='11' rx='1'/></svg>");
-  width: 1.06em;
-  height: 0.68em;
+  width: 0.74em;
+  height: 0.48em;
 }
 .sb-wifi {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 11.5' fill='white'><path d='M8 2.2c2.4 0 4.6.9 6.2 2.5l1.2-1.2A10.5 10.5 0 0 0 8 .5 10.5 10.5 0 0 0 .6 3.5l1.2 1.2A8.8 8.8 0 0 1 8 2.2Zm0 3.4c1.5 0 2.8.6 3.8 1.5L13 5.9A7.1 7.1 0 0 0 8 3.9 7.1 7.1 0 0 0 3 5.9l1.2 1.2c1-.9 2.3-1.5 3.8-1.5Zm0 3.4c.6 0 1.1.2 1.5.6L8 11.1 6.5 9.6c.4-.4.9-.6 1.5-.6Z'/></svg>");
-  width: 0.98em;
-  height: 0.7em;
+  width: 0.68em;
+  height: 0.49em;
 }
 .sb-battery {
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 25 12'><rect x='.5' y='.5' width='21' height='11' rx='3.4' fill='none' stroke='white' stroke-opacity='.45'/><rect x='2' y='2' width='18' height='8' rx='2.1' fill='white'/><path d='M23 4v4c.8-.3 1.3-1 1.3-2s-.5-1.7-1.3-2Z' fill='white' fill-opacity='.45'/></svg>");
-  width: 1.55em;
-  height: 0.74em;
+  width: 1.08em;
+  height: 0.52em;
 }
 .island {
   z-index: 6;
   background: #000;
   border-radius: 999px;
-  width: 5.6em;
-  height: 1.62em;
+  width: 5em;
+  height: 1.45em;
   position: absolute;
-  top: 0.68em;
+  top: 0.55em;
   left: 50%;
   translate: -50%;
 }
@@ -766,4 +766,14 @@ h1 {
   to {
     background-position: 0 0;
   }
+}
+.endcard {
+  --EH: min(56svh, (100vw - 32px) / var(--room-aspect), 620px);
+  overflow: hidden;
+}
+.end-stage {
+  position: relative;
+  width: calc(var(--EH) * var(--room-aspect));
+  height: var(--EH);
+  margin-inline: auto;
 }

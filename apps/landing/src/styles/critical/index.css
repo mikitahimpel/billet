@@ -166,7 +166,7 @@ html:has(.home-chrome) {
     0 0 18px #ffb46b33;
 }
 .story {
-  height: 400svh;
+  height: 280svh;
   position: relative;
 }
 .pin {
@@ -235,24 +235,17 @@ html:not(.js) .scroll-hint {
   display: none;
 }
 .js .beat {
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 0.18s ease,
-    transform 0.4s var(--ease-out),
-    visibility 0s linear 0.18s;
+  opacity: var(--v, 0);
+  transform: translateY(calc(var(--y, 16) * 1px));
   position: absolute;
   inset: 0;
-  transform: translateY(10px);
 }
-.js .story[data-beat="0"] .beat-0 {
-  opacity: 1;
-  visibility: visible;
-  transition:
-    opacity 0.28s ease,
-    transform 0.4s var(--ease-out),
-    visibility 0s;
-  transform: none;
+.js .beat-0 {
+  opacity: var(--v, 1);
+  transform: translateY(calc(var(--y, 0) * 1px));
+}
+.js .beat[aria-hidden="true"] {
+  visibility: hidden;
 }
 h1 {
   font-size: clamp(44px, min(var(--colW) / 2.95, (var(--H) - 200px) / 2.85), 150px);
@@ -319,17 +312,11 @@ h1 .w {
   grid-area: 2/2;
   position: relative;
 }
-.stage.dragging {
-  cursor: grabbing;
-}
 .turn {
   transform: perspective(1600px) rotateY(var(--ry, 0deg)) rotateX(var(--rx, 0deg));
   transition: transform 0.9s var(--ease-out);
   position: absolute;
   inset: 0;
-}
-.stage.dragging .turn {
-  transition: none;
 }
 .room {
   position: absolute;
@@ -396,6 +383,7 @@ h1 .w {
   mask-image:
     linear-gradient(#0000 0, #000 3.2% 84%, #0000 100%),
     linear-gradient(90deg, #0000 0, #000 12% 88%, #0000 100%);
+  -webkit-mask-composite: source-in;
   mask-composite: intersect;
 }
 .mochi-loop {
@@ -581,54 +569,74 @@ h1 .w {
   .home-chrome {
     padding-inline: var(--pad);
   }
-  .pin {
-    --below: 390px;
-    --roomW: clamp(200px, (100vh - var(--below)) * var(--room-aspect), 100vw);
-    --roomH: calc(var(--roomW) / var(--room-aspect));
-    padding: var(--top) var(--pad) 24px;
-    flex-direction: column;
-    align-items: stretch;
-    display: flex;
+  .story {
+    --roomH: min((100vw - 2 * var(--pad)) * 1187 / 1587, 88svh - var(--top));
+    height: auto;
   }
-  @supports (height: 100svh) {
-    .pin {
-      --roomW: clamp(200px, (100svh - var(--below)) * var(--room-aspect), 100vw);
-    }
+  .pin {
+    height: auto;
+    padding: var(--top) 0 0;
+    background: radial-gradient(48% 22% at 50% 14%, #78341642, #0000);
+    flex-direction: column;
+    display: flex;
+    position: static;
+    overflow: visible;
+  }
+  .pin:after {
+    display: none;
   }
   .stage {
-    width: var(--roomW);
-    height: auto;
-    aspect-ratio: var(--room-w) / var(--room-h);
+    width: calc(var(--roomH) * var(--room-aspect));
+    height: var(--roomH);
     flex: none;
     order: -1;
     align-self: center;
   }
+  .story .room-img {
+    width: 111.212%;
+    left: -5.60617%;
+    -webkit-mask-image:
+      linear-gradient(#0000 0, #000 3.2% 84%, #0000 100%),
+      linear-gradient(90deg, #0000 0, #000 5% 95%, #0000 100%);
+    mask-image:
+      linear-gradient(#0000 0, #000 3.2% 84%, #0000 100%),
+      linear-gradient(90deg, #0000 0, #000 5% 95%, #0000 100%);
+  }
+  .story .room-pic img {
+    object-fit: cover;
+    object-position: 47.28% 0;
+  }
+  .story .mochi-loop {
+    width: 8.82168%;
+    left: 49.1493%;
+  }
+  .story .spill {
+    width: 110%;
+  }
   .beats {
-    flex: 1;
     height: auto;
-    margin-top: 20px;
+    padding-inline: var(--pad);
+  }
+  .js .beat,
+  .js .beat-0 {
+    opacity: 1;
+    visibility: visible;
+    position: static;
+    transform: none;
   }
   .beat {
-    justify-content: flex-end;
+    justify-content: flex-start;
+    padding-block: 40px;
   }
-  html:not(.js) .stage {
-    position: relative;
-    top: auto;
+  .beat-0 {
+    min-height: calc(100svh - var(--top) - var(--roomH));
+    padding-top: 12px;
   }
   h1 {
     font-size: clamp(40px, 12.5vw, 64px);
   }
   .beat-0 h1 {
-    font-size: clamp(40px, min((100vw - 32px) / 2.95, (100vh - var(--roomH) - 270px) / 2.76), 96px);
-  }
-  @supports (height: 100svh) {
-    .beat-0 h1 {
-      font-size: clamp(
-        40px,
-        min((100vw - 32px) / 2.95, (100svh - var(--roomH) - 270px) / 2.76),
-        96px
-      );
-    }
+    font-size: clamp(36px, min(33.8983vw - 10.8475px, 19.5652svh - 68.8406px), 72px);
   }
   .credits {
     gap: 18px;
@@ -644,21 +652,11 @@ h1 .w {
     :root {
       --top: 60px;
     }
-    .pin {
-      --below: 310px;
-    }
-    .beats {
-      margin-top: 14px;
-    }
     h1 {
       font-size: clamp(32px, min(12.5vw, 6.6svh), 64px);
     }
     .beat-0 h1 {
-      font-size: clamp(
-        32px,
-        min((100vw - 32px) / 2.95, (100svh - var(--roomH) - 230px) / 2.76),
-        96px
-      );
+      font-size: clamp(32px, min(33.8983vw - 10.8475px, 19.5652svh - 57.971px), 64px);
     }
     .credits {
       gap: 12px;
@@ -666,9 +664,6 @@ h1 .w {
     }
     .credits .lead {
       font-size: 15px;
-    }
-    .pin {
-      padding-bottom: 16px;
     }
   }
 }
@@ -915,5 +910,63 @@ a.nav-soon:after {
   }
   to {
     opacity: 0.55;
+  }
+}
+.endcard {
+  --EH: min(56svh, (100vw - 32px) / var(--room-aspect), 620px);
+  overflow: hidden;
+}
+.end-stage {
+  position: relative;
+  width: calc(var(--EH) * var(--room-aspect));
+  height: var(--EH);
+  margin-inline: auto;
+}
+.story .stage,
+.story .scroll-hint {
+  opacity: calc(1 - var(--exit, 0));
+}
+@media (min-width: 901px) {
+  .story .beat {
+    will-change: opacity, transform;
+  }
+  .story .room-pic.full,
+  .story .room-pic.lamp,
+  .story .bulbs,
+  .story .bloom-window,
+  .story .bloom-lamp {
+    will-change: opacity;
+  }
+  .pin:after {
+    will-change: transform;
+  }
+}
+@media (min-width: 901px) {
+  html.js:has(.story) {
+    scroll-snap-type: y mandatory;
+  }
+  .snap {
+    position: absolute;
+    top: calc(var(--k) * (280svh - 100svh) / 3);
+    left: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    scroll-margin-top: -64px;
+  }
+  body {
+    position: relative;
+  }
+  .free {
+    position: absolute;
+    top: 280svh;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    pointer-events: none;
+    scroll-snap-align: start;
+    scroll-margin-top: -64px;
   }
 }

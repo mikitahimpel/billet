@@ -427,3 +427,13 @@ h1 {
     background-position: 0 0;
   }
 }
+.endcard {
+  --EH: min(56svh, (100vw - 32px) / var(--room-aspect), 620px);
+  overflow: hidden;
+}
+.end-stage {
+  position: relative;
+  width: calc(var(--EH) * var(--room-aspect));
+  height: var(--EH);
+  margin-inline: auto;
+}

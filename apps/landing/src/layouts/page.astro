@@ -176,6 +176,8 @@ const structuredData = {
       <slot />
     </main>
     <SiteFooter />
+    {/* Everything after the story is one snap area, so the page scrolls free there (global.css, scroll-snap). */}
+    {home && <i class="free" aria-hidden="true" />}
     <div class="grain" aria-hidden="true"></div>
     <svg width="0" height="0" style="position: absolute" aria-hidden="true">
       <symbol id="apple" viewBox="0 0 17 20">

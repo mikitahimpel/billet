@@ -286,10 +286,11 @@ html:has(.home-chrome) {
 
 /* ---------- story: one pinned room ---------- */
 
+/* The pin holds for 1.8 screens of scroll: about 0.45 of a screen per beat. */
 .story {
   position: relative;
-  height: 400vh;
-  height: 400svh;
+  height: 280vh;
+  height: 280svh;
 }
 
 .pin {
@@ -369,30 +370,25 @@ html:not(.js) .scroll-hint {
   display: none;
 }
 
-/* Quick enough for a flick: a beat leaves in 0.18s and the next is readable within 0.28s. */
+/*
+ * Each beat's presence (--v, 0 to 1) and offset (--y, px: +16 coming in, -16 going out) follow
+ * the story's progress (main.js), with no easing of their own, so half a scroll shows half a
+ * handover. A beat at 0 is aria-hidden and out of the way.
+ */
 .js .beat {
   position: absolute;
   inset: 0;
-  opacity: 0;
-  visibility: hidden;
-  transform: translateY(10px);
-  transition:
-    opacity 0.18s ease,
-    transform 0.4s var(--ease-out),
-    visibility 0s linear 0.18s;
+  opacity: var(--v, 0);
+  transform: translateY(calc(var(--y, 16) * 1px));
 }
 
-.js .story[data-beat="0"] .beat-0,
-.js .story[data-beat="1"] .beat-1,
-.js .story[data-beat="2"] .beat-2,
-.js .story[data-beat="3"] .beat-3 {
-  opacity: 1;
-  visibility: visible;
-  transform: none;
-  transition:
-    opacity 0.28s ease,
-    transform 0.4s var(--ease-out),
-    visibility 0s;
+.js .beat-0 {
+  opacity: var(--v, 1);
+  transform: translateY(calc(var(--y, 0) * 1px));
+}
+
+.js .beat[aria-hidden="true"] {
+  visibility: hidden;
 }
 
 h1 {
@@ -479,88 +475,20 @@ h1 .w {
 .beat-note {
   margin: 18px 0 28px;
   color: var(--ink-soft);
+  /* No word alone on the last line; balance where pretty isn't supported (Safari before 26). */
+  text-wrap: balance;
+  text-wrap: pretty;
 }
 
-/* Beat 1: your lamp and theirs, hours apart; theirs comes on as the room dims (--dim). */
+/* The page's step after 17px; the two times in the accent. */
 .beat-1 .beat-note {
-  margin-bottom: 22px;
-}
-
-.hours {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-}
-
-.hour {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--r-sm);
-  background: rgba(247, 231, 212, 0.06);
-  box-shadow: inset 0 0 0 1px rgba(247, 231, 212, 0.1);
-}
-
-.hour i {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--amber);
-  box-shadow: 0 0 12px var(--amber);
-}
-
-.hour.them i {
-  opacity: calc(0.25 + 0.75 * var(--dim, 0));
-  transition: opacity 0.15s linear;
-}
-
-html:not(.js) .hour.them i {
-  opacity: 1;
-}
-
-.hour b {
-  font-family: var(--display);
   font-size: 20px;
-  font-weight: 700;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
 }
 
-.hour span {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--ink-faint);
-}
-
-/* The note and the lamps follow the title in, 60 and 120 ms behind it. */
-.js .beat-1 :is(.beat-note, .hours) {
-  opacity: 0;
-  transform: translateY(10px);
-  transition:
-    opacity 0.18s ease,
-    transform 0.4s var(--ease-out);
-}
-
-.js .story[data-beat="1"] .beat-1 :is(.beat-note, .hours) {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity 0.28s ease 0.06s,
-    transform 0.4s var(--ease-out) 0.06s;
-}
-
-.js .story[data-beat="1"] .beat-1 .hours {
-  transition-delay: 0.12s;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hour.them i {
-    opacity: 1;
-  }
+.beat-note em {
+  font-style: normal;
+  color: var(--amber);
 }
 
 /*
@@ -662,6 +590,22 @@ html:not(.js) .hour.them i {
 
 .js .story[data-beat="2"] .tw .notif-ios {
   animation: notif-in 0.55s var(--ease-out) 0.7s both;
+}
+
+/*
+ * In the pin, beat 2's phones ride up into place and their notification drops in with the
+ * scroll (--ride, 0 to 1 over beat 2's arrival, from main.js), not on a timer.
+ */
+@media (min-width: 901px) {
+  .js .twin {
+    translate: 0 calc((1 - var(--ride, 1)) * 40px);
+  }
+
+  .js .story .tw .notif-ios {
+    animation: none;
+    opacity: clamp(0, var(--ride, 1) * 2 - 1, 1);
+    translate: 0 calc((1 - var(--ride, 1)) * -14px);
+  }
 }
 
 @keyframes tw-pat {
@@ -1219,16 +1163,16 @@ html:not(.js) .hour.them i {
   top: 0;
   left: 0;
   right: 0;
-  height: 3.15em;
+  height: 2.5em;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.15em 1.75em 0 2.05em;
+  padding: 0.25em 1.1em 0 1.6em;
   color: #fff;
 }
 
 .sb-time {
-  font-size: 0.92em;
+  font-size: 0.68em;
   font-weight: 600;
   letter-spacing: -0.01em;
 }
@@ -1236,7 +1180,7 @@ html:not(.js) .hour.them i {
 .sb-icons {
   display: flex;
   align-items: center;
-  gap: 0.32em;
+  gap: 0.22em;
 }
 
 .sb-icons i {
@@ -1247,30 +1191,30 @@ html:not(.js) .hour.them i {
 }
 
 .sb-signal {
-  width: 1.06em;
-  height: 0.68em;
+  width: 0.74em;
+  height: 0.48em;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 17 11' fill='white'><rect x='0' y='7' width='3' height='4' rx='1'/><rect x='4.6' y='5' width='3' height='6' rx='1'/><rect x='9.2' y='2.5' width='3' height='8.5' rx='1'/><rect x='13.8' y='0' width='3' height='11' rx='1'/></svg>");
 }
 
 .sb-wifi {
-  width: 0.98em;
-  height: 0.7em;
+  width: 0.68em;
+  height: 0.49em;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 11.5' fill='white'><path d='M8 2.2c2.4 0 4.6.9 6.2 2.5l1.2-1.2A10.5 10.5 0 0 0 8 .5 10.5 10.5 0 0 0 .6 3.5l1.2 1.2A8.8 8.8 0 0 1 8 2.2Zm0 3.4c1.5 0 2.8.6 3.8 1.5L13 5.9A7.1 7.1 0 0 0 8 3.9 7.1 7.1 0 0 0 3 5.9l1.2 1.2c1-.9 2.3-1.5 3.8-1.5Zm0 3.4c.6 0 1.1.2 1.5.6L8 11.1 6.5 9.6c.4-.4.9-.6 1.5-.6Z'/></svg>");
 }
 
 .sb-battery {
-  width: 1.55em;
-  height: 0.74em;
+  width: 1.08em;
+  height: 0.52em;
   background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 25 12'><rect x='.5' y='.5' width='21' height='11' rx='3.4' fill='none' stroke='white' stroke-opacity='.45'/><rect x='2' y='2' width='18' height='8' rx='2.1' fill='white'/><path d='M23 4v4c.8-.3 1.3-1 1.3-2s-.5-1.7-1.3-2Z' fill='white' fill-opacity='.45'/></svg>");
 }
 
 .island {
   position: absolute;
   z-index: 6;
-  top: 0.68em;
+  top: 0.55em;
   left: 50%;
-  width: 5.6em;
-  height: 1.62em;
+  width: 5em;
+  height: 1.45em;
   translate: -50% 0;
   border-radius: 999px;
   background: #000;
@@ -3356,81 +3300,95 @@ html:not(.js) .hour.them i {
   }
 
   /*
-   * The room takes the whole width when the height allows it (edge to edge: its box is the
-   * walls, and the render around the box fades out), never more, so it is never cropped.
-   * --below is the least the opening copy needs under it; the copy then grows into the rest.
+   * No pin: a plain document, the room in flow at the top (.pin is just the column), the beats
+   * under it. The room's box is the walls; the render is cut to the walls plus 80 px of its 2560
+   * (the shadow around them), so the picture is never wider than the screen less its gutters,
+   * and it fades out inside its own box. The first screen (header, room, beat 0) is at least the
+   * screen's height; --roomH is the walls' height, or on a landscape phone what the height leaves.
    */
+  .story {
+    --roomH: min((100vw - 2 * var(--pad)) * 1187 / 1587, 88svh - var(--top));
+    height: auto;
+  }
+
   .pin {
-    --below: 390px;
-    --roomW: clamp(200px, (100vh - var(--below)) * var(--room-aspect), 100vw);
-    --roomH: calc(var(--roomW) / var(--room-aspect));
+    position: static;
+    height: auto;
+    overflow: visible;
     display: flex;
     flex-direction: column;
-    align-items: stretch;
-    padding: var(--top) var(--pad) 24px;
+    padding: var(--top) 0 0;
+    background: radial-gradient(48% 22% at 50% 14%, rgba(120, 52, 22, 0.26), transparent);
   }
 
-  @supports (height: 100svh) {
-    .pin {
-      --roomW: clamp(200px, (100svh - var(--below)) * var(--room-aspect), 100vw);
-    }
+  .pin::after {
+    display: none;
   }
 
-  /*
-   * The room takes the height the opening copy leaves (--below: header, gaps, the title's three
-   * lines, the lead and the button, about 380px at 390 wide). Safari's Smart App Banner takes
-   * about 84px off an iPhone's first screen, so the room shrinks rather than the button going
-   * under the fold.
-   */
   .stage {
     order: -1;
     flex: none;
     align-self: center;
-    width: var(--roomW);
-    height: auto;
-    aspect-ratio: var(--room-w) / var(--room-h);
+    width: calc(var(--roomH) * var(--room-aspect));
+    height: var(--roomH);
+  }
+
+  /* Render x 460 to 2047, the full 1440 height; the pictures cover it from x 460 (47.28% of the rest). */
+  .story .room-img {
+    left: calc(-80 / 1427 * 100%);
+    width: calc(1587 / 1427 * 100%);
+    mask-image:
+      linear-gradient(to bottom, transparent 0, #000 3.2%, #000 84%, transparent 100%),
+      linear-gradient(to right, transparent 0, #000 5%, #000 95%, transparent 100%);
+  }
+
+  .story .room-pic img {
+    object-fit: cover;
+    object-position: 47.28% 0;
+  }
+
+  .story .mochi-loop {
+    left: calc(780 / 1587 * 100%);
+    width: calc(140 / 1587 * 100%);
+  }
+
+  .story .spill {
+    width: 110%;
   }
 
   .beats {
-    flex: 1;
     height: auto;
-    margin-top: 20px;
+    padding-inline: var(--pad);
   }
 
-  /* The copy sits low, the button near the bottom; the line alone (beat 1) holds the middle. */
+  .js .beat,
+  .js .beat-0 {
+    position: static;
+    opacity: 1;
+    transform: none;
+    visibility: visible;
+  }
+
   .beat {
-    justify-content: flex-end;
+    justify-content: flex-start;
+    padding-block: 40px;
   }
 
-  .beat-1 {
-    justify-content: center;
-  }
-
-  html:not(.js) .stage {
-    position: relative;
-    top: auto;
+  .beat-0 {
+    min-height: calc(100svh - var(--top) - var(--roomH));
+    padding-top: 12px;
   }
 
   /*
-   * The title fills what the room leaves: 100svh less the room, the header and the lead,
-   * button and gaps (about 270px), over its three lines (2.76em); "has a cat" (2.95em) fits the width.
+   * The title fills its beat: 54svh less the lead, button and gaps (about 190px), over its three
+   * lines (2.76em); "has a cat" (2.95em) fits the width.
    */
   h1 {
     font-size: clamp(40px, 12.5vw, 64px);
   }
 
   .beat-0 h1 {
-    font-size: clamp(40px, min((100vw - 32px) / 2.95, (100vh - var(--roomH) - 270px) / 2.76), 96px);
-  }
-
-  @supports (height: 100svh) {
-    .beat-0 h1 {
-      font-size: clamp(
-        40px,
-        min((100vw - 32px) / 2.95, (100svh - var(--roomH) - 270px) / 2.76),
-        96px
-      );
-    }
+    font-size: clamp(36px, min((100vw - 32px) / 2.95, (54svh - 190px) / 2.76), 72px);
   }
 
   .beat-title {
@@ -3439,47 +3397,13 @@ html:not(.js) .hour.them i {
     max-width: none;
   }
 
-  /*
-   * Beat 1's title over four lines (3.84em) in what the room, the header, the label and the lamps
-   * leave (about 216px); on a tall phone the width still decides it.
-   */
+  /* Beat 1's title over four lines (3.84em) in its beat less the label and the line (about 120px). */
   .beat-1 .beat-title {
-    font-size: clamp(36px, min(18vw, 9svh, (100svh - var(--roomH) - 216px) / 3.84), 88px);
+    font-size: clamp(32px, min(18vw, (54svh - 120px) / 3.84), 72px);
   }
 
   .beat-1 .beat-note {
-    margin: 12px 0 0;
-  }
-
-  .beat-1 .hours {
-    margin-top: 16px;
-    flex-wrap: nowrap;
-  }
-
-  /* A phone has no room for the line under the title; the lamps say it. */
-  @media (max-width: 640px) {
-    .beat-1 .beat-note {
-      display: none;
-    }
-  }
-
-  .hour {
-    display: inline-grid;
-    grid-template-columns: auto auto;
-    column-gap: 8px;
-    padding: 8px 12px;
-  }
-
-  .hour i {
-    grid-row: span 2;
-  }
-
-  .hour b {
-    font-size: 17px;
-  }
-
-  .hour span {
-    font-size: 11px;
+    margin: 12px 0 16px;
   }
 
   .beat-3 .beat-title {
@@ -3500,22 +3424,16 @@ html:not(.js) .hour.them i {
   }
 
   /*
-   * The phones take the height under the beat's title (100svh less the room and about 280px of
-   * header, title, captions and gaps). On short screens they keep a readable size and fade out
-   * at the bottom edge instead, the clock, heart and notification still in view.
+   * The phones take the height under the beat's title (54svh less about 150px of label, title,
+   * captions and gaps). On short screens they keep a readable size and fade out at the bottom
+   * edge instead, the clock, heart and notification still in view.
    */
   .twin {
-    --avail: calc(100vh - var(--roomH) - 280px);
+    --avail: calc(54svh - 150px);
     --tw: clamp(100px, min((100vw - 52px) / 2, var(--avail) / 2.06), 180px);
     gap: 20px;
     margin-top: 18px;
     align-self: center;
-  }
-
-  @supports (height: 100svh) {
-    .twin {
-      --avail: calc(100svh - var(--roomH) - 280px);
-    }
   }
 
   @media (max-height: 800px) {
@@ -3542,24 +3460,12 @@ html:not(.js) .hour.them i {
       --top: 60px;
     }
 
-    .pin {
-      --below: 310px;
-    }
-
-    .beats {
-      margin-top: 14px;
-    }
-
     h1 {
       font-size: clamp(32px, min(12.5vw, 6.6svh), 64px);
     }
 
     .beat-0 h1 {
-      font-size: clamp(
-        32px,
-        min((100vw - 32px) / 2.95, (100svh - var(--roomH) - 230px) / 2.76),
-        96px
-      );
+      font-size: clamp(32px, min((100vw - 32px) / 2.95, (54svh - 160px) / 2.76), 64px);
     }
 
     .credits {
@@ -3569,10 +3475,6 @@ html:not(.js) .hour.them i {
 
     .credits .lead {
       font-size: 15px;
-    }
-
-    .pin {
-      padding-bottom: 16px;
     }
   }
 
@@ -5221,5 +5123,60 @@ a.nav-soon:focus-visible {
 
   .pair2 .tw + .tw {
     margin-top: 28px;
+  }
+}
+
+.story .stage,
+.story .scroll-hint {
+  opacity: calc(1 - var(--exit, 0));
+}
+/* The pinned story's moving parts keep their own compositor layers: the beat text with its glow,
+   the room's crossfading layers and the vignette repainted every frame of a step otherwise. */
+@media (min-width: 901px) {
+  .story .beat {
+    will-change: opacity, transform;
+  }
+  .story .room-pic.full,
+  .story .room-pic.lamp,
+  .story .bulbs,
+  .story .bloom-window,
+  .story .bloom-lamp {
+    will-change: opacity;
+  }
+  .pin:after {
+    will-change: transform;
+  }
+}
+/* Wide screens: the pin has four stops (p = 0, 1/3, 2/3, 1) and a gesture can't pass one, so a
+   flick never skips a beat. Everything after the story, footer included, is under one snap area
+   taller than the screen (.free), so it scrolls free. The -64px undoes the anchors'
+   scroll-padding so the stops land on the pin's own positions. */
+@media (min-width: 901px) {
+  html.js:has(.story) {
+    scroll-snap-type: y mandatory;
+  }
+  .snap {
+    position: absolute;
+    top: calc(var(--k) * (280svh - 100svh) / 3);
+    left: 0;
+    width: 1px;
+    height: 1px;
+    pointer-events: none;
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+    scroll-margin-top: -64px;
+  }
+  body {
+    position: relative;
+  }
+  .free {
+    position: absolute;
+    top: 280svh;
+    bottom: 0;
+    left: 0;
+    width: 1px;
+    pointer-events: none;
+    scroll-snap-align: start;
+    scroll-margin-top: -64px;
   }
 }

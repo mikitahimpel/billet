@@ -201,8 +201,7 @@ h1 {
   margin-left: auto;
   display: flex;
 }
-.nav a,
-.menu-panel a {
+.nav a {
   color: var(--ink-soft);
   border-radius: 999px;
   padding: 8px 14px;
@@ -250,26 +249,6 @@ h1 {
   stroke-linecap: round;
   width: 20px;
   height: 20px;
-}
-.menu-panel {
-  border-radius: var(--r-card);
-  -webkit-backdrop-filter: blur(18px);
-  background: #20140ef0;
-  flex-direction: column;
-  width: min(240px, 100%);
-  padding: 8px;
-  display: flex;
-  position: absolute;
-  top: calc(100% - 6px);
-  right: 0;
-  box-shadow:
-    inset 0 0 0 1px #f7e7d41a,
-    0 30px 60px -20px #000;
-}
-.menu-panel a {
-  border-radius: var(--r-sm);
-  padding: 12px 16px;
-  font-size: 16px;
 }
 .page-chrome {
   z-index: 20;
@@ -384,4 +363,14 @@ h1 {
   to {
     background-position: 0 0;
   }
+}
+.endcard {
+  --EH: min(56svh, (100vw - 32px) / var(--room-aspect), 620px);
+  overflow: hidden;
+}
+.end-stage {
+  position: relative;
+  width: calc(var(--EH) * var(--room-aspect));
+  height: var(--EH);
+  margin-inline: auto;
 }

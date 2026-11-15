@@ -1,5 +1,10 @@
 import type { ImageMetadata } from "astro";
 import datePlans from "./assets/art/datescene-plans.webp";
+import shotCalendar from "./assets/art/shot-calendar-1.webp";
+import shotLockDrawings from "./assets/art/shot-lock-screen-drawings-1.webp";
+import shotMoments from "./assets/art/shot-moments-1.webp";
+import shotMovieNight from "./assets/art/shot-movie-night-1.webp";
+import shotShop from "./assets/art/shot-shop-1.webp";
 import room from "./assets/art/shared-room.webp";
 import shotLoves from "./assets/art/shot-after-loves.webp";
 import shotMineAdded from "./assets/art/shot-after-mine-added.webp";
@@ -27,7 +32,9 @@ import type { CropName } from "./lib/crops";
 // named `shot`, showing a close-up (or `src`) on the room's night meanwhile; "lock": their lock screen with one
 // notification; "pair": your phone and their lock screen; "set": the shop window.
 export type Picture =
-  | { kind: "scene" | "cutout" | "shot" | "portrait" | "ui"; src: ImageMetadata; alt: string }
+  | { kind: "scene" | "cutout" | "portrait" | "ui"; src: ImageMetadata; alt: string }
+  // A real app screenshot; shot names the slot it filled (features.ts slots are the stand-ins).
+  | { kind: "shot"; src: ImageMetadata; alt: string; shot?: string }
   | { kind: "crop"; crop: CropName; alt: string; fitHeight?: string; sizes?: string }
   | { kind: "slot"; shot: string; crop: CropName; alt: string }
   | { kind: "slot"; shot: string; src: ImageMetadata; alt: string }
@@ -171,10 +178,10 @@ export const featureList: Feature[] = [
     h1: "Draw on your partner's Lock Screen.",
     lead: "Ourio is a lock screen drawing app for couples. You draw on a canvas that shows your partner's Lock Screen, clock and wallpaper included. When you send it, they get a notification and the drawing appears in Ourio's Drawing widget on their Lock Screen or Home Screen. Seven ink colors, one free.",
     hero: {
-      kind: "slot",
+      kind: "shot",
       shot: "lock-screen-drawings-1",
-      crop: "paw",
-      alt: "The paw picture on the wall of Mochi's room",
+      src: shotLockDrawings,
+      alt: "The drawing canvas over your partner's Lock Screen",
     },
     steps: [
       {
@@ -262,10 +269,10 @@ export const featureList: Feature[] = [
     h1: "Your photos, as polaroids on a shared wall.",
     lead: "Moments is Ourio's shared photo wall for couples. Add a photo of the two of you with a short caption and it goes up on Mochi's wall as a little polaroid on both phones. Your partner can react with a heart, and each Moment earns 10 coins.",
     hero: {
-      kind: "slot",
+      kind: "shot",
       shot: "moments-1",
-      crop: "shelf",
-      alt: "The little bookshelf on the wall of Mochi's room",
+      src: shotMoments,
+      alt: "Moments: polaroids of the two of you on Mochi's wall",
     },
     steps: [
       { title: "Tap + and choose Moment", text: "Pick a photo of the two of you." },
@@ -640,10 +647,10 @@ export const featureList: Feature[] = [
     h1: "Pick a movie together, without the debate.",
     lead: "Pick tonight is Ourio's movie picker for couples. You each swipe through movies and shows on your own iPhone, Not tonight, Seen it or Want to, and when you both want the same title, it's a match and your partner gets a notification. A shared To watch list keeps the rest for later.",
     hero: {
-      kind: "slot",
+      kind: "shot",
       shot: "movie-night-1",
-      crop: "bed",
-      alt: "Mochi in her donut bed at night, the lamp on",
+      src: shotMovieNight,
+      alt: "Pick tonight: a match on a movie you both want to watch",
     },
     steps: [
       { title: "Open Pick tonight", text: "From the To watch list in the Us tab." },
@@ -718,10 +725,10 @@ export const featureList: Feature[] = [
           "The Us widget for the Lock Screen (inline, circular or rectangular) shows your days together or the next date. The Block widget on the Home Screen can show a countdown.",
         ],
         picture: {
-          kind: "slot",
+          kind: "shot",
           shot: "calendar-1",
-          crop: "window",
-          alt: "The round window of Mochi's room at night, with the lamp on",
+          src: shotCalendar,
+          alt: "The shared calendar with your dates and countdowns",
         },
       },
     ],
@@ -909,7 +916,12 @@ export const featureList: Feature[] = [
             ["Draw & guess: a solve", "4 to 10"],
           ],
         },
-        picture: { kind: "slot", shot: "shop-1", crop: "mochi", alt: "Mochi in her donut bed" },
+        picture: {
+          kind: "shot",
+          shot: "shop-1",
+          src: shotShop,
+          alt: "The shop: furniture for the room and your coins",
+        },
       },
       {
         id: "shop",
@@ -1203,11 +1215,11 @@ export const hub: Record<string, { picture: Picture; text: string }> = {
     text: "Ourio is a couples app with a shared virtual pet. You and your partner raise one cat, Mochi, in one cozy room on two iPhones: feed, water, play, brush and pet her, and the other sees it.",
   },
   "lock-screen-drawings": {
-    picture: { kind: "slot", shot: "lock-screen-drawings-1", crop: "paw", alt: "" },
+    picture: { kind: "shot", shot: "lock-screen-drawings-1", src: shotLockDrawings, alt: "" },
     text: "Draw on a canvas that looks like your partner's Lock Screen. Ourio sends it to their iPhone with a notification and shows it in the Drawing widget on their Lock Screen or Home Screen.",
   },
   moments: {
-    picture: { kind: "slot", shot: "moments-1", crop: "shelf", alt: "" },
+    picture: { kind: "shot", shot: "moments-1", src: shotMoments, alt: "" },
     text: "Send your partner a photo in Ourio and it lands on Mochi's wall as an instant-film polaroid with your caption. React with a heart, pin it, and share it as a polaroid.",
   },
   us: {
@@ -1227,7 +1239,7 @@ export const hub: Record<string, { picture: Picture; text: string }> = {
     text: "Ourio's shared lists sync between two iPhones: Groceries sorted by aisle with suggestions, To watch, Places to go, Places to eat, To read, a Bucket list and lists of your own. Tick items off as done together.",
   },
   "movie-night": {
-    picture: { kind: "slot", shot: "movie-night-1", crop: "bed", alt: "" },
+    picture: { kind: "shot", shot: "movie-night-1", src: shotMovieNight, alt: "" },
     text: "Can't decide what to watch? In Ourio's Pick tonight you and your partner each swipe movies and shows: Not tonight, Seen it or Want to. When you both want the same title, it's a match. Plus a shared To watch list.",
   },
   "calendar-and-countdown": {
