@@ -52,7 +52,7 @@ import Testing
     }
 
     private func frame(_ layout: HostedLayout, _ id: String) throws -> CGRect {
-        try #require(layout.element(id: id), "no \(id)").frame
+        try #require(layout.element(id: id), "no \(id) among \(layout.elements().map(\.identifier).filter { !$0.isEmpty })").frame
     }
 
     @Test(arguments: Case.all)
