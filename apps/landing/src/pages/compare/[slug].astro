@@ -1,9 +1,8 @@
 ---
 import type { GetStaticPaths } from "astro";
-import { getImage } from "astro:assets";
-import mochiPortrait from "../../assets/mochi-portrait.webp";
 import CompareTable from "../../components/compare-table.astro";
 import EndCard from "../../components/end-card.astro";
+import PairPhones from "../../components/pair-phones.astro";
 import StoreButton from "../../components/store-button.astro";
 import { alternatives, apps, checked, ourio, type Alternative } from "../../compare";
 import Page from "../../layouts/page.astro";
@@ -27,13 +26,10 @@ const fits = [
   { id: "they-fit", heading: `When ${page.app} is the better pick`, items: page.theyFit },
   { id: "ours-fit", heading: "When Ourio fits better", items: page.oursFit },
 ];
-const [mochiSmall, mochi] = await Promise.all(
-  [192, 320].map((width) => getImage({ src: mochiPortrait, width, format: "webp" })),
-);
 ---
 
 <Page title={page.title} description={page.description} schema={schema} bodyClass="site-compare">
-  <section class="wrap pg-hero pg-hero-solo">
+  <section class="wrap pg-hero">
     <div class="pg-hero-copy">
       <p class="eyebrow">{page.app} alternative</p>
       <h1>{page.h1}</h1>
@@ -45,6 +41,7 @@ const [mochiSmall, mochi] = await Promise.all(
       </p>
       <div class="pg-cta"><StoreButton /></div>
     </div>
+    <PairPhones yours="invite" class="pg-hero-art" />
   </section>
 
   <section class="pg wrap" aria-labelledby="side-by-side">
@@ -73,17 +70,6 @@ const [mochiSmall, mochi] = await Promise.all(
     <div class="qs-side">
       <h2 id="questions" class="pg-h2">Questions</h2>
       <p class="pg-note">More answers in the <a href="/faq/">FAQ</a> and the <a href="/help/">help pages</a>.</p>
-      <img
-        class="qs-mochi"
-        src={mochi.src}
-        srcset={`${mochiSmall.src} 192w, ${mochi.src} 320w`}
-        sizes="150px"
-        alt=""
-        width="320"
-        height="320"
-        loading="lazy"
-        decoding="async"
-      />
     </div>
     <div class="qs qs-static">
       {

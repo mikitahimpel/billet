@@ -101,6 +101,26 @@ private func settle(_ done: () -> Bool) async {
 
 @MainActor
 struct OnboardingFlowTests {
+  @Test func everyStepEventKeepsTheServersRules() async {
+    let sent = Sent()
+    let (flow, _, _) = makeFlow(sent: sent)
+    flow.start()
+    for _ in 0..<5 {
+      flow.appeared()
+      flow.skip()
+    }
+    flow.appeared()
+    await settle {
+      sent.events.withLock { $0 }.contains(
+        ClientEvent(.onboardingStepViewed, detail: "invite-partner"))
+    }
+    let events = sent.events.withLock { $0 }
+    #expect(events.allSatisfy { $0.problem == nil })
+    #expect(events.contains(ClientEvent(.onboardingStepSkipped, detail: "cat-coat")))
+    #expect(events.contains(ClientEvent(.onboardingStepSkipped, detail: "cat-name")))
+    #expect(events.contains(ClientEvent(.onboardingStepViewed, detail: "invite-partner")))
+  }
+
   @Test func walksWelcomeQuestionsNameAndInvite() {
     let (flow, _, _) = makeFlow()
     #expect(

@@ -34,4 +34,18 @@ import Testing
     #expect(CatProfile.chosenPronouns(in: defaults) == nil)
     #expect(CatProfile.pronouns(in: defaults) == .they)
   }
+
+  @Test func theWidgetsWearACoatNoLongerOfferedAsGinger() {
+    let defaults = defaults()
+    #expect(CatProfile.avatar(in: defaults) == "MochiPortrait")
+    let expected = [
+      "grey": "MochiPortrait", "ginger": "MochiPortrait-ginger", "cream": "MochiPortrait-cream",
+      "tuxedo": "MochiPortrait-ginger", "black": "MochiPortrait-ginger",
+      "calico": "MochiPortrait-ginger", "tabby": "MochiPortrait",
+    ]
+    for (saved, avatar) in expected {
+      defaults.set(saved, forKey: CatProfile.coatKey)
+      #expect(CatProfile.avatar(in: defaults) == avatar)
+    }
+  }
 }

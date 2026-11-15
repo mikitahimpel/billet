@@ -1,12 +1,12 @@
-# Billet privacy policy (release draft)
+# Ourio privacy policy
 
 > Draft for the first App Store release. Not legal advice: have it read by someone qualified, fill in the controller's name and address (open questions: docs/release-checklist.md B6), and host it at a public URL before submitting. It follows what the code collects as of this branch; `docs/privacy.md` is the policy of the TestFlight test version.
 
-Last updated: <DATE OF RELEASE>
+Last updated: 2026-11-15
 
-Provider: <NAME AND ADDRESS OF THE PROVIDER>, country <COUNTRY>. Contact: <SUPPORT_EMAIL>.
+Provider: Mikita Himpel, Kamionkowska 9, apt. 97, 03-805 Warsaw, Poland. Country: Poland. Contact: ourio@mikitahimpel.com.
 
-Billet is a private app for two people to send each other drawings and photos. This policy covers Billet on the App Store.
+Ourio is a private app for two people to send each other drawings and photos. This policy covers Ourio on the App Store.
 
 ## What the app handles
 - **Your account:** the app creates an anonymous account with a key kept in your iCloud Keychain. There is no password. You can also link your Apple ID to the account (Settings > Account > Sign in with Apple). This is optional and nothing in the app needs it. When you link, Apple gives us a private identifier for you, the same each time you use Ourio, and we keep it with your account. Signing back in with Apple on a phone that has lost its key is not available yet. We ask Apple for no name and no email address, and we keep none that arrives with it, and we don't keep Apple's tokens. If you never link, we receive nothing from your Apple Account. We never see your name or email address.

@@ -9,7 +9,7 @@ import Wire
 
 @MainActor @Suite(.serialized) struct InboxTargetTests {
     @Test func aTextNoteWaitsToBeSentAndThenOpensFromItsRow() throws {
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         let note = try #require(state.notes.add(text: "dinner at 8?", paper: .sky, author: state.viewer))
         defer { state.notes.delete(note) }
         #expect(state.notes.unsent.map(\.id) == [note.id])
@@ -22,7 +22,7 @@ import Wire
     }
 
     @Test func thePartnersNoteKeepsItsDateOrderAndComesOnce() throws {
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         let date = Date(timeIntervalSince1970: 1_000)
         state.notes.addReceived(text: "hi", paper: .blush, ink: nil, author: state.otherPartner, date: date,
                                 noteID: "note-in-1")
@@ -36,7 +36,7 @@ import Wire
     }
 
     @Test func aRowForSomethingThisPhoneLacksOpensItsTab() {
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         state.open(.moments(NoteId("not-on-this-phone")))
         #expect(state.tab == .moments)
         #expect(state.openedPin == nil)

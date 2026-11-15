@@ -1,15 +1,14 @@
 ---
-import { getImage } from "astro:assets";
-import appIcon from "../assets/app-icon.png";
+import icon from "../assets/app-icon-192b.webp?url";
 
 interface Props {
-  // On the home page the header is the first row of the pinned story; elsewhere it sits on the page.
+  // The home page's header is fixed: the story's clear header row over the story, then a compact bar once the story
+  // has scrolled past (main.js sets .compact), with the pill linking to the end card's app card.
   home?: boolean;
 }
 
 const { home = false } = Astro.props;
 const current = Astro.url.pathname;
-const icon = await getImage({ src: appIcon, width: 192, format: "webp" });
 const links = [
   { href: "/features/", label: "Features" },
   { href: "/how-it-works/", label: "How it works" },
@@ -18,9 +17,9 @@ const links = [
 ];
 ---
 
-<header class:list={["chrome", !home && "page-chrome"]} id="chrome" data-md={home ? "skip" : undefined}>
+<header class:list={["chrome", home ? "home-chrome" : "page-chrome"]} id="chrome" data-md={home ? "skip" : undefined}>
   <a class="mark" href="/" aria-label="Ourio">
-    <img src={icon.src} alt="" width="64" height="64" decoding="async" />
+    <img src={icon} alt="" width="64" height="64" decoding="async" />
     <span>Ourio</span>
   </a>
   <nav class="nav" aria-label="Main">
@@ -32,7 +31,7 @@ const links = [
       ))
     }
   </nav>
-  <span class="nav-soon">Coming soon</span>
+  {home ? <a class="nav-soon" href="#get">Coming soon</a> : <span class="nav-soon">Coming soon</span>}
   <details class="menu">
     <summary aria-label="Menu">
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"></path></svg>
