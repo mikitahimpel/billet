@@ -40,7 +40,7 @@ and Ourio has exactly one partner and no feed, so it would misdescribe the app.
 
 ## Version 1.0.0: English (U.S.)
 
-**Subtitle** [30]: `Raise a pet, draw love notes` (28)
+**Subtitle** [30]: `Shared pet, love notes for two` (30)
 
 **Promotional text** [170]:
 
@@ -98,7 +98,7 @@ finished drawing), any number of widgets (the count changes), any purchase.
 **Keywords** [100]:
 
 ```
-long,distance,relationship,games,calendar,questions,together,shared,drawing,lock,screen,doodle,cozy
+long,distance,relationship,games,calendar,questions,together,drawing,lock,screen,doodle,cozy,virtual
 ```
 
 (99). No spaces after commas (they count), no word from the name or the subtitle repeated where it
@@ -357,8 +357,7 @@ reason to choose otherwise.
       `https://apps.apple.com/app/id6832707480` in `apps/landing/src/config.ts`, then deploy the
       landing (`docs/landing.md`); until then the buttons say "Coming soon".
 - [ ] **9. EU Digital Services Act trader status** (App Store Connect > Business, or the prompt on
-      the first submission). Recommended: **trader** if the app is meant to earn money later (coins
-      for sale are planned); then Apple shows the name, address, phone and email of questions 1, 2
+      the first submission). Decided 2026-11-16 by the owner: **not a trader** while the app is free with no payments (it stays set in App Store Connect and must change when payments start). A trader instead:  Apple shows the name, address, phone and email of questions 1, 2
       and 5 on the EU product page. Choosing "not a trader" is allowed only while the app is not
       part of a business; it would have to change when payments start. Without an answer the app
       cannot be distributed in the EU.
