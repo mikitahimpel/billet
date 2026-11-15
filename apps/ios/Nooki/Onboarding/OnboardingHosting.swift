@@ -8,7 +8,7 @@ struct AppOnboardingScenery: OnboardingScenery {
     func heroBackdrop() -> AnyView { AnyView(HeroBackdrop()) }
     func warmBackdrop() -> AnyView { AnyView(WarmBackdrop()) }
     func heroStage(coat: CatCoat, time: TimeInterval, pokedAt: TimeInterval?, moving: Bool) -> AnyView {
-        AnyView(CatHeroStage(coat: coat, time: time, pokedAt: pokedAt, moving: moving))
+        AnyView(CatHeroStage(coat: coat, time: time, pokedAt: pokedAt, moving: moving, hearts: true))
     }
 }
 
