@@ -60,7 +60,7 @@ export const questions: Question[] = [
     topic: "Pairing",
     question: "Do we need to make an account?",
     answer:
-      "No. Ourio creates an anonymous account with no email or password and keeps its key in your iCloud Keychain. You can link Sign in with Apple later to save your cat and notes.",
+      "No. Ourio creates an anonymous account with no email or password and keeps its key in your iCloud Keychain. You can also link your Apple ID in Settings, which is optional.",
   },
   {
     topic: "Pairing",
@@ -72,7 +72,7 @@ export const questions: Question[] = [
     topic: "Pairing",
     question: "I got a new iPhone. Will my room come back?",
     answer:
-      "Yes, if your iCloud Keychain moved with you or you linked Sign in with Apple: open Ourio on the new phone and it finds your account.",
+      "Yes, if your iCloud Keychain moved with you: open Ourio on the new phone and it finds your account. Without iCloud Keychain the new phone starts a new account.",
   },
   {
     topic: "Features",
