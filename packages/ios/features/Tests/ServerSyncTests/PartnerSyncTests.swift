@@ -12,34 +12,36 @@ import Testing
   }
 
   @Test func comingToTheFrontPairedFollowsAndGivesTheSocketItsGrace() {
-    let (state, outputs) = M.transition(State(mode: .away(paired: true), serial: 4), .cameToFront)
+    let (state, outputs) = M.transition(
+      State(mode: .away(paired: true, pull: .resting), serial: 4), .cameToFront)
     #expect(state == Self.following(clock: 5, .resting, .opening, serial: 5))
     #expect(outputs == [.follow, .tick(clock: 5, after: M.openingGrace)])
   }
 
   @Test func comingToTheFrontUnpairedFollowsNothing() {
     let (state, outputs) = M.transition(.initial, .cameToFront)
-    #expect(state == State(mode: .unpaired, serial: 0))
+    #expect(state == State(mode: .unpaired(pull: .resting), serial: 0))
     #expect(outputs.isEmpty)
   }
 
   @Test func aPairMadeInFrontFollowsAtOnce() {
-    let (state, outputs) = M.transition(State(mode: .unpaired, serial: 0), .paired)
+    let (state, outputs) = M.transition(State(mode: .unpaired(pull: .resting), serial: 0), .paired)
     #expect(state == Self.following(clock: 1, .resting, .opening, serial: 1))
     #expect(outputs == [.follow, .tick(clock: 1, after: M.openingGrace)])
   }
 
   @Test func aPairLearnedAwayIsFollowedOnTheReturn() {
     let (away, none) = M.transition(.initial, .paired)
-    #expect(away == State(mode: .away(paired: true), serial: 0))
+    #expect(away == State(mode: .away(paired: true, pull: .resting), serial: 0))
     #expect(none.isEmpty)
     let (_, outputs) = M.transition(away, .cameToFront)
     #expect(outputs.first == .follow)
   }
 
   @Test func aPairEndedAwayIsNotFollowedOnTheReturn() {
-    let (state, _) = M.transition(State(mode: .away(paired: true), serial: 3), .unpaired)
-    #expect(state == State(mode: .away(paired: false), serial: 3))
+    let (state, _) = M.transition(
+      State(mode: .away(paired: true, pull: .resting), serial: 3), .unpaired)
+    #expect(state == State(mode: .away(paired: false, pull: .resting), serial: 3))
     #expect(M.transition(state, .cameToFront).1.isEmpty)
   }
 
@@ -122,8 +124,8 @@ import Testing
 
   @Test func goingAwayUnfollowsAndStopsTheClock() {
     let (state, outputs) = M.transition(
-      Self.following(clock: 1, .pulling(2), .healthy, serial: 2), .wentAway)
-    #expect(state == State(mode: .away(paired: true), serial: 2))
+      Self.following(clock: 1, .pullingThen(2, .summary), .healthy, serial: 2), .wentAway)
+    #expect(state == State(mode: .away(paired: true, pull: .pulling(2)), serial: 2))
     #expect(outputs == [.unfollow])
     #expect(M.transition(state, .ticked(clock: 1)).1.isEmpty)
   }
@@ -131,39 +133,60 @@ import Testing
   @Test func unpairingInFrontUnfollows() {
     let (state, outputs) = M.transition(
       Self.following(clock: 1, .resting, .healthy, serial: 2), .unpaired)
-    #expect(state == State(mode: .unpaired, serial: 2))
+    #expect(state == State(mode: .unpaired(pull: .resting), serial: 2))
     #expect(outputs == [.unfollow])
   }
 
   @Test func goingAwayUnpairedIsQuiet() {
-    let (state, outputs) = M.transition(State(mode: .unpaired, serial: 2), .wentAway)
-    #expect(state == State(mode: .away(paired: false), serial: 2))
+    let (state, outputs) = M.transition(
+      State(mode: .unpaired(pull: .resting), serial: 2), .wentAway)
+    #expect(state == State(mode: .away(paired: false, pull: .resting), serial: 2))
     #expect(outputs.isEmpty)
   }
 
-  @Test func aPullFromBeforeGoingAwayDoesNotEndTheNewOne() {
+  @Test func aPullStillRunningAcrossAReturnIsNotDoubled() {
     var (state, _) = M.transition(
       Self.following(clock: 1, .pulling(2), .healthy, serial: 2), .wentAway)
     (state, _) = M.transition(state, .cameToFront)
-    (state, _) = M.transition(state, .socketOpened)
-    #expect(state == Self.following(clock: 4, .pulling(5), .healthy, serial: 5))
-    let (after, outputs) = M.transition(state, .pulled(2))
-    #expect(after == state)
+    let outputs: [M.Output]
+    (state, outputs) = M.transition(state, .socketOpened)
+    #expect(state == Self.following(clock: 4, .pullingThen(2, .everything), .healthy, serial: 4))
+    #expect(!outputs.contains { if case .pull = $0 { true } else { false } })
+    let (after, next) = M.transition(state, .pulled(2))
+    #expect(after == Self.following(clock: 4, .pulling(5), .healthy, serial: 5))
+    #expect(next == [.pull(5, .everything)])
+  }
+
+  @Test func aPullThatEndsWhileAwayLeavesNothingRunning() {
+    let (state, outputs) = M.transition(
+      State(mode: .away(paired: true, pull: .pulling(2)), serial: 2), .pulled(2))
+    #expect(state == State(mode: .away(paired: true, pull: .resting), serial: 2))
     #expect(outputs.isEmpty)
   }
 
+  @Test func aHealthyFirstCheckWithoutTheOpeningPullsEverything() {
+    let (state, outputs) = M.transition(
+      Self.following(clock: 1, .resting, .opening, serial: 1), .checked(clock: 1, healthy: true))
+    #expect(state == Self.following(clock: 2, .pulling(3), .healthy, serial: 3))
+    #expect(outputs == [.tick(clock: 2, after: M.healthyEvery), .pull(3, .everything)])
+  }
+
   static let rejected: [(State, M.Event)] = [
-    (State(mode: .away(paired: true), serial: 1), .wentAway),
-    (State(mode: .away(paired: true), serial: 1), .socketOpened),
-    (State(mode: .away(paired: true), serial: 1), .ticked(clock: 1)),
-    (State(mode: .away(paired: true), serial: 1), .checked(clock: 1, healthy: true)),
-    (State(mode: .away(paired: false), serial: 1), .pulled(1)),
-    (State(mode: .unpaired, serial: 1), .cameToFront),
-    (State(mode: .unpaired, serial: 1), .unpaired),
-    (State(mode: .unpaired, serial: 1), .socketOpened),
-    (State(mode: .unpaired, serial: 1), .ticked(clock: 1)),
-    (State(mode: .unpaired, serial: 1), .checked(clock: 1, healthy: false)),
-    (State(mode: .unpaired, serial: 1), .pulled(1)),
+    (State(mode: .away(paired: true, pull: .resting), serial: 1), .wentAway),
+    (State(mode: .away(paired: true, pull: .resting), serial: 1), .socketOpened),
+    (State(mode: .away(paired: true, pull: .resting), serial: 1), .ticked(clock: 1)),
+    (
+      State(mode: .away(paired: true, pull: .resting), serial: 1), .checked(clock: 1, healthy: true)
+    ),
+    (State(mode: .away(paired: false, pull: .resting), serial: 1), .pulled(1)),
+    (State(mode: .away(paired: true, pull: .pulling(2)), serial: 2), .pulled(1)),
+    (State(mode: .unpaired(pull: .pulling(2)), serial: 2), .pulled(1)),
+    (State(mode: .unpaired(pull: .resting), serial: 1), .cameToFront),
+    (State(mode: .unpaired(pull: .resting), serial: 1), .unpaired),
+    (State(mode: .unpaired(pull: .resting), serial: 1), .socketOpened),
+    (State(mode: .unpaired(pull: .resting), serial: 1), .ticked(clock: 1)),
+    (State(mode: .unpaired(pull: .resting), serial: 1), .checked(clock: 1, healthy: false)),
+    (State(mode: .unpaired(pull: .resting), serial: 1), .pulled(1)),
     (following(clock: 1, .resting, .healthy, serial: 2), .cameToFront),
     (following(clock: 1, .resting, .healthy, serial: 2), .paired),
     (following(clock: 3, .resting, .healthy, serial: 3), .ticked(clock: 1)),
@@ -261,6 +284,6 @@ final class FakeLink {
     await sync.settled()
     #expect(link.follows == 0)
     #expect(link.pulls.isEmpty)
-    #expect(sync.state.mode == .unpaired)
+    #expect(sync.state.mode == .unpaired(pull: .resting))
   }
 }

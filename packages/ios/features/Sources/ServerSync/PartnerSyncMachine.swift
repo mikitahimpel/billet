@@ -17,14 +17,15 @@ nonisolated public enum PartnerSyncMachine: Machine {
     }
 
     /// Unpaired, the app not yet in front.
-    public static let initial = State(mode: .away(paired: false), serial: 0)
+    public static let initial = State(mode: .away(paired: false, pull: .resting), serial: 0)
   }
 
   public enum Mode: Equatable, Sendable {
-    /// The app is not in front; `paired` is whether it follows the partner on its return.
-    case away(paired: Bool)
+    /// The app is not in front; `paired` is whether it follows the partner on its return. A pull
+    /// still under way is kept, so the return doesn't start a second beside it; none is queued.
+    case away(paired: Bool, pull: Pull)
     /// In front without a partner: nothing to follow.
-    case unpaired
+    case unpaired(pull: Pull)
     case following(Following)
   }
 
@@ -61,6 +62,21 @@ nonisolated public enum PartnerSyncMachine: Machine {
     case pulling(Int)
     /// Asked for again during pull `Int`, so a pull of `Kind` starts when it ends: one at a time.
     case pullingThen(Int, Kind)
+
+    func isRunning(_ id: Int) -> Bool {
+      switch self {
+      case .resting: false
+      case .pulling(let running), .pullingThen(let running, _): running == id
+      }
+    }
+
+    /// The pull under way, with nothing queued after it.
+    var alone: Pull {
+      switch self {
+      case .resting: .resting
+      case .pulling(let id), .pullingThen(let id, _): .pulling(id)
+      }
+    }
   }
 
   public enum Event: Equatable, Sendable {
@@ -101,22 +117,32 @@ nonisolated public enum PartnerSyncMachine: Machine {
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     switch (state.mode, event) {
-    case (.away(let paired), .cameToFront):
-      return paired ? start(state) : (State(mode: .unpaired, serial: state.serial), [])
-    case (.away, .paired):
-      return (State(mode: .away(paired: true), serial: state.serial), [])
-    case (.away, .unpaired):
-      return (State(mode: .away(paired: false), serial: state.serial), [])
+    case (.away(let paired, let pull), .cameToFront):
+      guard paired else { return (State(mode: .unpaired(pull: pull), serial: state.serial), []) }
+      return start(state, pull)
+    case (.away(_, let pull), .paired):
+      return (State(mode: .away(paired: true, pull: pull), serial: state.serial), [])
+    case (.away(_, let pull), .unpaired):
+      return (State(mode: .away(paired: false, pull: pull), serial: state.serial), [])
+    case (.away(let paired, let pull), .pulled(let id)) where pull.isRunning(id):
+      return (State(mode: .away(paired: paired, pull: .resting), serial: state.serial), [])
 
-    case (.unpaired, .paired):
-      return start(state)
-    case (.unpaired, .wentAway):
-      return (State(mode: .away(paired: false), serial: state.serial), [])
+    case (.unpaired(let pull), .paired):
+      return start(state, pull)
+    case (.unpaired(let pull), .wentAway):
+      return (State(mode: .away(paired: false, pull: pull), serial: state.serial), [])
+    case (.unpaired(let pull), .pulled(let id)) where pull.isRunning(id):
+      return (State(mode: .unpaired(pull: .resting), serial: state.serial), [])
 
-    case (.following, .wentAway):
-      return (State(mode: .away(paired: true), serial: state.serial), [.unfollow])
-    case (.following, .unpaired):
-      return (State(mode: .unpaired, serial: state.serial), [.unfollow])
+    case (.following(let following), .wentAway):
+      return (
+        State(mode: .away(paired: true, pull: following.pull.alone), serial: state.serial),
+        [.unfollow]
+      )
+    case (.following(let following), .unpaired):
+      return (
+        State(mode: .unpaired(pull: following.pull.alone), serial: state.serial), [.unfollow]
+      )
 
     case (.following(var following), .socketOpened):
       var serial = state.serial + 1
@@ -135,19 +161,24 @@ nonisolated public enum PartnerSyncMachine: Machine {
       following.clock = serial
       let delay: Duration
       let kind: Kind
-      if healthy {
+      switch (following.socket, healthy) {
+      case (.opening, true):
+        // Open, but its opening wasn't heard here: nothing has been pulled since the front.
+        delay = healthyEvery
+        kind = .everything
         following.socket = .healthy
+      case (.healthy, true), (.silent, true):
         delay = healthyEvery
         kind = .summary
-      } else {
-        let failures: Int
-        switch following.socket {
-        case .opening, .healthy: failures = 1
-        case .silent(let before): failures = before + 1
-        }
-        following.socket = .silent(failures: failures)
-        delay = silentEvery(failures: failures)
+        following.socket = .healthy
+      case (.opening, false), (.healthy, false):
+        delay = silentEvery(failures: 1)
         kind = .everything
+        following.socket = .silent(failures: 1)
+      case (.silent(let before), false):
+        delay = silentEvery(failures: before + 1)
+        kind = .everything
+        following.socket = .silent(failures: before + 1)
       }
       var outputs: [Output] = [.tick(clock: serial, after: delay)]
       outputs += ask(kind, &following, serial: &serial)
@@ -187,11 +218,10 @@ nonisolated public enum PartnerSyncMachine: Machine {
 
   /// Follows the socket; its opening pulls. A socket still shut after ``openingGrace`` is checked
   /// and found down, which pulls without it.
-  private static func start(_ state: State) -> (State, [Output]) {
+  private static func start(_ state: State, _ pull: Pull) -> (State, [Output]) {
     let clock = state.serial + 1
     return (
-      State(
-        mode: .following(Following(clock: clock, pull: .resting, socket: .opening)), serial: clock),
+      State(mode: .following(Following(clock: clock, pull: pull, socket: .opening)), serial: clock),
       [.follow, .tick(clock: clock, after: openingGrace)]
     )
   }
