@@ -103,7 +103,7 @@ struct OurioApp: App {
                                 flow: onboarding, pairing: session?.pairing, scenery: AppOnboardingScenery(), signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
-                                demoPartner: demoPartnerPairing)
+                                demoPartner: demoPartnerPairing, retrySignIn: session.map { $0.signIn.retry })
                                 // Drawn over Home, which hides itself from VoiceOver only while its splash shows;
                                 // a modal view is the only one VoiceOver reads.
                                 .accessibilityAddTraits(.isModal)
