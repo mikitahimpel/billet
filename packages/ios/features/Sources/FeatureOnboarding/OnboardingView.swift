@@ -559,6 +559,8 @@ import Wire
     let avatar: String
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    private static let avatarSide: CGFloat = 52
+
     init(text: LocalizedStringKey, avatar: String) {
       self.text = text
       self.avatar = avatar
@@ -569,16 +571,17 @@ import Wire
       let layout =
         typeSize.isAccessibilitySize
         ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
-        : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
+        : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
       layout {
-        Portrait(name: avatar, size: 52)
-        Text(text)
-          .font(.ourioCallout.weight(.semibold))
-          .foregroundStyle(Ink.text)
-          .fixedSize(horizontal: false, vertical: true)
-          .padding(.horizontal, Space.m)
-          .padding(.vertical, Space.s)
-          .cardSurface()
+        Portrait(name: avatar, size: Self.avatarSide)
+        SpeechBubble(
+          tail: typeSize.isAccessibilitySize ? .top(x: Self.avatarSide / 2) : .leading
+        ) {
+          Text(text)
+            .font(.ourioCallout.weight(.semibold))
+            .foregroundStyle(Ink.text)
+            .fixedSize(horizontal: false, vertical: true)
+        }
       }
     }
   }

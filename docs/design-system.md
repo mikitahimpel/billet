@@ -114,6 +114,7 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 | A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
 | A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
+| A line the cat says, beside or under her avatar | `SpeechBubble(tail:) { Text(...) }`: one fill, one rim, no shadow |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
 | A screen's few big actions side by side | `ActionTiles([ActionTile(title, status:, symbol:, tint:) {}])`: equal squares while every label fits on one line, a `GroupedSection` of rows otherwise |
 | A progress toward one goal, in a hero | `ProgressRing(value:tint:) { centre }` |
