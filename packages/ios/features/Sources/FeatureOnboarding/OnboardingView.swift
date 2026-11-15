@@ -414,8 +414,11 @@ import Wire
           .autocorrectionDisabled()
           .textContentType(.oneTimeCode)
           .accessibilityLabel("Invite code")
-          if failure != nil {
-            ErrorLine(String(localized: "This code didn't work. Check it or ask for a new one."))
+          if let failure {
+            ErrorLine(
+              failure.isInvalidCode
+                ? String(localized: "This code didn't work. Check it or ask for a new one.")
+                : failure.message)
           } else if pasteMissed {
             ErrorLine(
               String(

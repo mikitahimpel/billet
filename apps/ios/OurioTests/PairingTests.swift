@@ -102,8 +102,18 @@ struct ServerSessionPairingTests {
         await session.watchPair()
         #expect(session.isPaired)
         #expect(saved.record.withLock { $0.isPaired && $0.pairID == "p1" })
-        // The inviter's phone adopts the cat; only the one that entered the code waits for it.
-        #expect(defaults.object(forKey: CatLife.joinedKey) == nil)
+    }
+
+    @Test func aPairFoundWithoutAShownInviteIsTheJoinersSoItAdoptsNoCat() async {
+        let saved = Saved()
+        var api = APIClient.offline
+        api.pair = { () async throws(TransportError) in
+            PairResponse(pairId: PairId("p1"), members: [UserId("u1"), UserId("u2")])
+        }
+        let session = session(saved, api: api)
+        await session.refreshPair()
+        #expect(session.isPaired)
+        #expect(defaults.bool(forKey: CatLife.joinedKey))
     }
 
     @Test func anUnpairedAccountStaysUnpairedAndAnOfflineOneKeepsItsRecord() async {
@@ -142,6 +152,8 @@ struct ServerSessionPairingTests {
         await session.watchPair()
         #expect(session.isPaired)
         #expect(session.pairing === model)
+        // The phone that showed the code adopts the cat.
+        #expect(!defaults.bool(forKey: CatLife.joinedKey))
         #expect(calls.withLock { $0 } == 2)
     }
 

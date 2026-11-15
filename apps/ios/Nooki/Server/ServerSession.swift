@@ -238,7 +238,18 @@ final class ServerSession {
     /// pairing under way is left as it is, so an open pairing sheet still shows its own end.
     func refreshPair() async {
         guard !isPaired, let pair = try? await backend.api.pair(), !isPaired else { return }
-        paired(pair.pairId.rawValue, role: .inviter, resetsPairing: false)
+        paired(pair.pairId.rawValue, role: foundRole, resetsPairing: false)
+    }
+
+    /// Who this phone was in a pair it found rather than made: the inviter only while it shows an invite. A claim
+    /// whose answer was lost, or that is still out, leaves the pair to be found here, and its phone must not adopt
+    /// a cat of its own.
+    private var foundRole: PairRole {
+        switch pairing.state {
+        case .waiting: .inviter
+        case .paired(let role): role
+        case .choosing, .creating, .claiming: .joiner(pairID: nil)
+        }
     }
 
     /// A pair the server no longer has, unpaired or deleted from the partner's phone, ends on this one too. Offline,
