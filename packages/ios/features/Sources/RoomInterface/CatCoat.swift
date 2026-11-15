@@ -7,13 +7,17 @@ public enum CatCoat: String, CaseIterable, Sendable {
 
   public static let key = "catCoat"
 
-  /// The coats the picker shows. Tuxedo and calico stay decodable for a phone that picked them,
-  /// but are not offered: their renders read badly.
-  public static let offered: [CatCoat] = [.grey, .ginger, .cream, .black]
+  /// The coats the picker shows and the app dresses her in. Tuxedo, black and calico read badly:
+  /// pale blush patches on dark fur, and a dark cat sinks into the dark cards.
+  public static let offered: [CatCoat] = [.grey, .ginger, .cream]
 
+  /// The coat she wears. A phone that saved one no longer offered keeps it on disk but sees her in
+  /// ginger, which has every picture and splat the others have.
   public static func current(in defaults: UserDefaults = .standard) -> CatCoat {
-    defaults.string(forKey: key).flatMap(CatCoat.init(rawValue:)) ?? .grey
+    (defaults.string(forKey: key).flatMap(CatCoat.init(rawValue:)) ?? .grey).worn
   }
+
+  public var worn: CatCoat { Self.offered.contains(self) ? self : .ginger }
 
   public var title: String {
     switch self {

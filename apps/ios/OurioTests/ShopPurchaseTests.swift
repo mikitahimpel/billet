@@ -29,7 +29,7 @@ private let t0 = Date(timeIntervalSinceReferenceDate: 815_000_000)
     }
 
     @Test func openingTheShopAtAnInkSwitchesTabAndLeavesTheFocus() {
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         state.openShop(.ink("ink-rose"))
         #expect(state.tab == .shop)
         #expect(state.shopFocus == .ink("ink-rose"))

@@ -411,7 +411,13 @@ public final class OnboardingFlow {
   /// Counts the step as seen, once per launch.
   func appeared() {
     guard let stepId, viewed.insert(stepId).inserted else { return }
-    events.append(ClientEvent(.onboardingStepViewed, detail: stepId.rawValue))
+    count(.onboardingStepViewed, stepId)
+  }
+
+  /// Event details take no underscore, which step ids such as `cat_coat` have: it is sent as `cat-coat`.
+  private func count(_ name: ClientEventName, _ stepId: OnboardingStepId) {
+    guard let detail = ClientEvent.detail(from: stepId.rawValue) else { return }
+    events.append(ClientEvent(name, detail: detail))
     Task { await send() }
   }
 
@@ -444,11 +450,7 @@ public final class OnboardingFlow {
     queue.add(
       SaveOnboardingAnswerRequest(
         version: catalogue.version, stepId: stepId, answer: answer, answeredAt: answeredAt))
-    events.append(
-      ClientEvent(
-        answer == .skipped ? .onboardingStepSkipped : .onboardingStepAnswered,
-        detail: stepId.rawValue))
-    Task { await send() }
+    count(answer == .skipped ? .onboardingStepSkipped : .onboardingStepAnswered, stepId)
   }
 
   /// Sends the queued answers, then the events, until both are empty or the server can't be reached. Events

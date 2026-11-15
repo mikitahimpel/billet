@@ -92,6 +92,7 @@
           \.thumbnail)
         await Thumbnails.prefetch(Array(names), maxPixels: 512)
       }
+      .onAppear { state.shop.opened() }
       .sheet(item: $sheetItem) { item in
         ItemSheet(item: item, state: state)
       }

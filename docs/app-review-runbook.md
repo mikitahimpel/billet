@@ -93,7 +93,7 @@ everything it sent, and unpairs the partner.
 Content in the app is only what the two paired people send each other: there is no public feed
 and no way to find or message strangers. The app is for ages 13 and older.
 
-Contact: <SUPPORT_EMAIL>
+Contact: ourio@mikitahimpel.com
 ```
 
 Before pasting, re-read it against the build: the Settings labels (`PartnerAndAccountSections.swift`),

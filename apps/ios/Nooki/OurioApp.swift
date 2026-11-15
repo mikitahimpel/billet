@@ -1,6 +1,7 @@
 import FeatureOnboarding
 import FeatureUs
 import MomentsInterface
+import Persistence
 import ServerSync
 import WidgetInterface
 import WidgetUI
@@ -9,6 +10,7 @@ import Transport
 import SwiftUI
 import Design
 import UsInterface
+import Wire
 
 @main
 struct OurioApp: App {
@@ -18,6 +20,8 @@ struct OurioApp: App {
     @State private var onboarding: OnboardingFlow
     @State private var hints: Hints
     @State private var home: HomeState
+    /// Nil in a build without a server, which has no account to report to.
+    @State private var events: EventQueue?
     @Environment(\.scenePhase) private var scenePhase
 
     init() {
@@ -34,6 +38,7 @@ struct OurioApp: App {
         _hints = State(initialValue: parts.hints)
         _onboarding = State(initialValue: parts.onboarding)
         _home = State(initialValue: parts.home)
+        _events = State(initialValue: parts.events)
     }
 
     /// Everything a launch builds from what is on the phone; building it again after the account is deleted is a
@@ -43,6 +48,15 @@ struct OurioApp: App {
         let hints: Hints
         let onboarding: OnboardingFlow
         let home: HomeState
+        let events: EventQueue?
+    }
+
+    nonisolated private static let eventsFile = "analytics-events.json"
+
+    private static func eventQueue(_ api: APIClient) -> EventQueue {
+        EventQueue(
+            saved: SharedFile.read([ClientEvent].self, from: eventsFile) ?? [], send: api.reportEvents,
+            save: { SharedFile.write($0, to: eventsFile) })
     }
 
     private static func assemble() -> Parts {
@@ -71,16 +85,19 @@ struct OurioApp: App {
                 NotificationCenter.default.post(name: .coupleChanged, object: nil)
             },
             coatChanged: { CatRoom.forgetMochi() })
-        let stores = LaunchSignposts.interval("stores") { HomeStores.live() }
-        return Parts(session: session, hints: hints, onboarding: onboarding, home: HomeState(stores: stores))
+        let events = session.map { eventQueue($0.api) }
+        let stores = LaunchSignposts.interval("stores") { HomeStores.live(events: events?.reporter ?? .none) }
+        return Parts(session: session, hints: hints, onboarding: onboarding, home: HomeState(stores: stores), events: events)
     }
 
     private func startOver() {
+        events?.forget()
         let parts = Self.assemble()
         session = parts.session
         hints = parts.hints
         onboarding = parts.onboarding
         home = parts.home
+        events = parts.events
     }
 
     var body: some Scene {
@@ -133,6 +150,11 @@ struct OurioApp: App {
                         onboarding.coatTaken()
                     }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
+                    // Sent as the app comes to the front and as it leaves, besides a few seconds after each event.
+                    .onChange(of: scenePhase) { _, phase in
+                        guard phase != .inactive, let events else { return }
+                        Task { await events.flush() }
+                    }
             }
         }
     }

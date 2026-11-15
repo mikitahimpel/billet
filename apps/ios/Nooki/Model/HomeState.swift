@@ -1,3 +1,4 @@
+import Wire
 import FeatureOnboarding
 import FeatureShop
 import FeatureUs
@@ -16,6 +17,7 @@ import ProfileInterface
 import ShopInterface
 import RoomInterface
 import SwiftUI
+import Transport
 import Design
 import UsInterface
 import WidgetKit
@@ -69,8 +71,9 @@ struct HomeStores {
     let journal: Journal
     let decor: DecorStore
     let decorSync: DecorSync
+    let events: EventReporter
 
-    static func live() -> HomeStores {
+    static func live(events: EventReporter) -> HomeStores {
         #if DEBUG
         LandingDemo.prepare()
         #endif
@@ -79,8 +82,8 @@ struct HomeStores {
         let streak = StreakStore()
         let moments = MomentStore()
         let notes = NoteStore()
-        let care = CatCare(wallet: wallet, streak: streak)
-        let shop = ShopModel(wallet: wallet, couple: profile, care: care) { CatProfile.name() }
+        let care = CatCare(wallet: wallet, streak: streak, events: events)
+        let shop = ShopModel(wallet: wallet, couple: profile, care: care, events: events) { CatProfile.name() }
         let us = UsStore { shop.earn($0) }
         let members: GiftsModel.Members = { profile.couple.pair.map { (profile.couple.viewer, $0.users) } }
         let decorSync = DecorSync()
@@ -93,7 +96,7 @@ struct HomeStores {
                     case .blocked, .rejected, .noRoomToTurn, .lastRest: UINotificationFeedbackGenerator().notificationOccurred(.warning)
                     }
                 },
-                share: { [weak decorSync] in decorSync?.push($0) }))
+                share: { [weak decorSync] in decorSync?.push($0) }, events: events))
         decorSync.store = decor
         #if DEBUG
         LandingDemo.seed(profile: profile, wallet: wallet, moments: moments, us: us)
@@ -103,7 +106,7 @@ struct HomeStores {
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
             journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
-            decor: decor, decorSync: decorSync)
+            decor: decor, decorSync: decorSync, events: events)
     }
 }
 
@@ -163,7 +166,9 @@ final class HomeState {
     }
 
     var room: RoomKind = .home
-    var showsProfile = false
+    var showsProfile = false {
+        didSet { if showsProfile, !oldValue { events(.profileOpened) } }
+    }
     /// Settings › Labs asks Home to play every animation; Home takes the request and clears it.
     var showcaseRequested = false
     var showsInbox = false
@@ -179,7 +184,12 @@ final class HomeState {
     var composingNote: NoteComposer.Mode?
     /// The lock-screen drawing is open; the Add menu's Draw and a drawing widget's tap set it.
     var drawing = false
-    var openedPin: PinRoute?
+    var openedPin: PinRoute? {
+        didSet {
+            guard let id = openedPin?.id, id != oldValue?.id, notes.notes.contains(where: { $0.id == id }) else { return }
+            events(.noteOpened, detail: "app")
+        }
+    }
     var momentsMode: MomentsMode = .photos
 
     let moods = [
@@ -208,6 +218,7 @@ final class HomeState {
     let lists: ListsModel
     let journal: Journal
     @ObservationIgnored private let wallet: WalletStore
+    @ObservationIgnored let events: EventReporter
 
     init(stores: HomeStores) {
         profile = stores.profile
@@ -225,6 +236,7 @@ final class HomeState {
         decor = stores.decor
         decorSync = stores.decorSync
         wallet = stores.wallet
+        events = stores.events
         #if DEBUG
         // For screenshots: `-shotMoments photos` or `board` opens Moments in that mode, `-shotMoment 0` opens that photo.
         let defaults = UserDefaults.standard
@@ -318,7 +330,7 @@ final class HomeState {
         let pets = activity.takePendingPets()
         guard pets > 0 else { return }
         activity.save()
-        for _ in 0..<min(pets, 5) { care.pet() }
+        for _ in 0..<min(pets, 5) { care.pet(fromWidget: true) }
     }
 
     /// The meals given from a widget since the last look, for her room to serve.
@@ -326,6 +338,7 @@ final class HomeState {
         var activity = WidgetActivity.load()
         let feeds = activity.takePendingFeeds()
         if feeds > 0 { activity.save() }
+        for _ in 0..<min(feeds, 2) { events(.widgetButtonTapped, detail: "treat") }
         return min(feeds, 2)
     }
 
