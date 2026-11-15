@@ -351,11 +351,14 @@ struct ResultToast: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
                 .fixedSize(horizontal: false, vertical: true)
+                // The card stands over the game: past this the title and the earnings would push the buttons off an SE.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility2)
             // Side by side at one width while both fit, else stacked, each the tray's inner width as the buttons are.
             ViewThatFits(in: .horizontal) {
                 EqualRow(spacing: Space.s) { earned }
                 VStack(spacing: Space.s) { earned }
             }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
             PrimaryButton("Back to the room", action: done)
             Button("Play again", action: again)
                 .buttonStyle(QuietButtonStyle())
@@ -386,6 +389,7 @@ private struct ResultStat<Mark: View>: View {
         .font(.ourioCallout.weight(.semibold))
         .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, Space.m)
+        .padding(.vertical, Space.xs)
         .frame(maxWidth: .infinity, minHeight: Size.control)
         .wellSurface(.control)
         .accessibilityElement(children: .combine)
