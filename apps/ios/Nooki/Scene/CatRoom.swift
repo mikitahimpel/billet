@@ -524,9 +524,16 @@ class CatRoom {
         pivot.addChild(decal)
     }
 
+    /// The sun's shadow map is a fixed box in the sun's own frame, around the room it looks at from 2 to 3 m away; the
+    /// scale is half the box's side in metres (at 1 the low sun's map ends halfway up the Bedroom's wall). An automatic
+    /// projection is refitted every frame something in view moves (she breathes, a mote rises), and each refit lays the
+    /// map's texels on the room afresh, so thin shadows like the lamp's stem shimmer on a phone.
+    static let sunShadowProjection = DirectionalLightComponent.Shadow.ShadowProjectionType.fixed(
+        zNear: 0.5, zFar: 4.5, orthographicScale: 2)
+
     static func castShadow(_ sun: Entity) {
         var shadow = DirectionalLightComponent.Shadow()
-        shadow.shadowProjection = .automatic(maximumDistance: 4)
+        shadow.shadowProjection = sunShadowProjection
         shadow.depthBias = 2
         sun.components.set(shadow)
     }
