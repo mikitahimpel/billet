@@ -36,7 +36,7 @@ import Testing
 
     private func host(_ test: Case) -> HostedLayout {
         UserDefaults.standard.set(true, forKey: "uitestStill")
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         state.decor.send(.loaded(DecorLayout(stored: Set(Self.bought))))
         state.decor.send(.owned(Set(Self.bought.prefix(test.pieces))))
         state.decor.send(.opened(item: nil))
