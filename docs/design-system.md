@@ -123,7 +123,8 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 ### Do and don't
 
 - Do give a sheet exactly one size: `.fit` for a few controls, `.medium` or `.large` for lists.
-- Do put an empty state in `.fit`, not in a large sheet.
+- Do put an empty state in `.fit`, not in a large sheet. A sheet that opens as a list and may load into an empty
+  or failed state (the Inbox) keeps the list's height and centres it in the free space, so nothing jumps.
 - Do mark a page pushed from a `.fit` sheet with `.expandsSheet()`, so the sheet rises to full height for it.
 - Do keep the toolbar to close or confirm.
 - Don't draw an `xmark` yourself, or add a `Button("Done")`.

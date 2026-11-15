@@ -110,6 +110,8 @@ struct CardShadow: View {
           resizingMode: .stretch
         )
         .padding(-Self.outset)
+        // A placeholder turns images into solid blocks: this one would be a grey slab past the card's edges.
+        .unredacted()
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

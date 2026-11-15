@@ -57,25 +57,34 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     case .idle, .loading:
       placeholderList
     case .unpaired:
-      EmptyState(
-        symbol: "tray", title: "Nothing here yet",
-        text: isPaired
-          ? "What you both do with \(names.cat) shows up here."
-          : "Once your partner joins, what you both do with \(names.cat) shows up here.")
+      InboxCentred {
+        EmptyState(
+          symbol: "tray", title: "Nothing here yet",
+          text: isPaired
+            ? "What you both do with \(names.cat) shows up here."
+            : "Once your partner joins, what you both do with \(names.cat) shows up here.")
+      }
     case .failed:
-      ErrorState("Couldn't load the Inbox", text: "Check your connection and try again.") {
-        Task { await model.open() }
+      InboxCentred {
+        ErrorState("Couldn't load the Inbox", text: "Check your connection and try again.") {
+          Task { await model.open() }
+        }
       }
     case .loaded(let page) where page.items.isEmpty:
-      VStack(spacing: 0) {
-        notice(EdgeInsets(top: 0, leading: 0, bottom: Space.l, trailing: 0))
+      InboxCentred {
         EmptyState(
           symbol: "tray", title: "All quiet",
           text: "Feeding \(names.cat), notes and gifts from you two will show up here.")
       }
+      .scrollHeader { notice(Self.noticeInsets) }
     case .loaded(let page), .refreshing(let page), .stale(let page):
       list(page)
     }
+  }
+
+  /// The notice spans the list's width, on the gutter the cards stand on.
+  private static var noticeInsets: EdgeInsets {
+    EdgeInsets(top: Space.s, leading: Space.gutter, bottom: 0, trailing: Space.gutter)
   }
 
   private func list(_ page: InboxMachine.Page) -> some View {
@@ -117,7 +126,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
     .scrollHeader {
       VStack(spacing: 0) {
         if case .stale = model.sheet { staleNotice }
-        notice(EdgeInsets(top: Space.s, leading: Space.l, bottom: 0, trailing: Space.l))
+        notice(Self.noticeInsets)
       }
     }
   }
@@ -131,7 +140,7 @@ public struct InboxView<Avatar: View, Face: View, Notice: View>: View {
         RetryButton(compact: true) { Task { await model.open() } }
       }
     }
-    .padding(.horizontal, Space.l)
+    .padding(.horizontal, Space.gutter)
     .padding(.top, Space.s)
   }
 
@@ -167,14 +176,32 @@ public struct InboxSignedOut: View {
   }
 
   public var body: some View {
-    BilletSheet("Inbox", size: InboxLayout.short.size) {
-      EmptyState(
-        symbol: "tray", title: "Nothing here yet",
-        text: isPaired
-          ? "What you both do with \(petName) shows up here once you're connected."
-          : "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
-      )
+    BilletSheet("Inbox", size: InboxLayout.short.size, scrolls: InboxLayout.short.scrolls) {
+      InboxCentred {
+        EmptyState(
+          symbol: "tray", title: "Nothing here yet",
+          text: isPaired
+            ? "What you both do with \(petName) shows up here once you're connected."
+            : "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
+        )
+      }
     }
+  }
+}
+
+/// A short state in the middle of the sheet's free space; at the largest text sizes it scrolls.
+private struct InboxCentred<Content: View>: View {
+  @ViewBuilder let content: Content
+
+  var body: some View {
+    ScrollView {
+      content
+        .padding(.horizontal, Space.gutter)
+        .padding(.vertical, Space.l)
+    }
+    .defaultScrollAnchor(.center, for: .alignment)
+    .scrollBounceBehavior(.basedOnSize)
+    .scrollIndicators(.hidden)
   }
 }
 

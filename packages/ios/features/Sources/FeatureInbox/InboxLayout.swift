@@ -1,7 +1,8 @@
 import Design
 
-/// How tall the Inbox opens: a short state hugs its content like every other short sheet, the list
-/// (and its placeholder while loading) takes the whole sheet and scrolls itself.
+/// How the Inbox lays out: every state opens the sheet at full height, so the first page, an empty Inbox or an error
+/// lands in the sheet the placeholder opened and nothing jumps. The list scrolls itself; a short state stands in the
+/// middle of the free space.
 public enum InboxLayout: Equatable {
   case short
   case list
@@ -10,25 +11,13 @@ public enum InboxLayout: Equatable {
     switch sheet {
     case .loaded(let page), .refreshing(let page), .stale(let page):
       self = page.items.isEmpty ? .short : .list
-    // Loading opens as the list does, so the first page lands without the sheet changing height.
     case .idle, .loading: self = .list
     case .unpaired, .failed: self = .short
     }
   }
 
-  public var size: SheetSize {
-    switch self {
-    case .short: .fit
-    case .list: .large
-    }
-  }
+  public var size: SheetSize { .large }
 
-  /// The list is a `List`, so the sheet must not wrap it in a second scroll view; a fitted sheet
-  /// measures its content through that scroll view.
-  public var scrolls: Bool {
-    switch self {
-    case .short: true
-    case .list: false
-    }
-  }
+  /// Both bring their own scroll view: the list's carries the notice above it, a short state's centres it.
+  public var scrolls: Bool { false }
 }
