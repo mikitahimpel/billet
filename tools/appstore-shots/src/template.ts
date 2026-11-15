@@ -47,8 +47,8 @@ html, body { width: ${width}px; height: ${height}px; overflow: hidden; backgroun
 .phone { position: absolute; left: 150px; top: 640px; width: 1020px; padding: 24px; border-radius: 140px; background: linear-gradient(160deg, #2b2623, #0c0a09 40%, #1b1715); box-shadow: 0 0 0 3px #4a413a inset, 0 60px 120px rgba(20, 8, 0, 0.45), 0 20px 40px rgba(20, 8, 0, 0.3); }
 .phone img { display: block; width: 100%; border-radius: 118px; }
 .island { position: absolute; top: 56px; left: 50%; width: 300px; height: 88px; margin-left: -150px; border-radius: 44px; background: #000; }
-.chip { position: absolute; display: flex; align-items: center; gap: 18px; padding: 24px 42px 24px 32px; border-radius: 999px; background: rgba(255, 255, 255, 0.97); color: ${color("lightText")}; font-weight: 700; font-size: 46px; white-space: nowrap; box-shadow: 0 18px 44px rgba(20, 8, 0, 0.3); }
-.emoji { font-size: 54px; line-height: 1; }
+.chip { position: absolute; display: flex; align-items: center; gap: 18px; padding: 20px 36px 20px 28px; border-radius: 999px; background: rgba(255, 255, 255, 0.97); color: ${color("lightText")}; font-weight: 700; font-size: 40px; white-space: nowrap; box-shadow: 0 18px 44px rgba(20, 8, 0, 0.3); }
+.emoji { font-size: 46px; line-height: 1; }
 </style></head><body><div class="panel">
 <div class="tag">${escapeHtml(panel.tag)}</div>
 <div class="headline">${headlineHtml(panel.headline)}</div>
