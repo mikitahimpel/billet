@@ -78,20 +78,27 @@ private struct CardSurface: ViewModifier {
 }
 
 /// The card's outline. A card not much taller than two of its corners would turn into a capsule, so
-/// its corners tighten with its height and a one-row card stays a card.
-struct CardShape: InsettableShape {
+/// its corners tighten with its height and a one-row card stays a card. Public for a card-shaped glass panel.
+public struct CardShape: InsettableShape {
   var radius: CGFloat
   var inset: CGFloat = 0
 
+  public init(radius: CGFloat = Radius.card) { self.radius = radius }
+
+  init(radius: CGFloat, inset: CGFloat) {
+    self.radius = radius
+    self.inset = inset
+  }
+
   static let heightShare: CGFloat = 0.38
 
-  func path(in rect: CGRect) -> Path {
+  public func path(in rect: CGRect) -> Path {
     let fitted = min(radius, rect.height * Self.heightShare)
     return RoundedRectangle(cornerRadius: max(0, fitted - inset), style: .continuous)
       .path(in: rect.insetBy(dx: inset, dy: inset))
   }
 
-  func inset(by amount: CGFloat) -> CardShape {
+  public func inset(by amount: CGFloat) -> CardShape {
     CardShape(radius: radius, inset: inset + amount)
   }
 }
