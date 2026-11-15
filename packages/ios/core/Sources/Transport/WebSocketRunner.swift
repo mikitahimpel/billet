@@ -120,7 +120,8 @@ final class WebSocketRunner: Sendable {
   func ping(attempt: Int, timeout: Duration) async -> Bool {
     guard let connection = await slot.connection(for: attempt) else { return false }
     let answer = FirstAnswer()
-    let answered = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+    let answered = await withCheckedContinuation {
+      (continuation: CheckedContinuation<Bool, Never>) in
       answer.set(continuation)
       Task {
         do throws(TransportError) {
