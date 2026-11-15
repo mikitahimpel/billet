@@ -178,10 +178,10 @@ public struct InboxSignedOut: View {
     BilletSheet("Inbox", size: InboxLayout.short.size, scrolls: InboxLayout.short.scrolls) {
       InboxCentred {
         EmptyState(
-        symbol: "tray", title: "Nothing here yet",
-        text: isPaired
-          ? "What you both do with \(petName) shows up here once you're connected."
-          : "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
+          symbol: "tray", title: "Nothing here yet",
+          text: isPaired
+            ? "What you both do with \(petName) shows up here once you're connected."
+            : "Once you're connected and your partner joins, what you both do with \(petName) shows up here."
         )
       }
     }
