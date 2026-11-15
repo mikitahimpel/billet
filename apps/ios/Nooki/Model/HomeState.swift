@@ -110,8 +110,13 @@ struct HomeStores {
 /// The tab, the room and the open sheets; data and rules live in the stores it is given.
 @Observable
 final class HomeState {
-    /// Named in onboarding; Mochi until then.
-    var petName: String { CatProfile.name() }
+    /// Named in onboarding, or by the pair's room for whoever joined; Mochi until then.
+    var petName: String {
+        _ = catNameRead
+        return CatProfile.name()
+    }
+    /// Bumped when the room may have renamed her, so what shows `petName` reads it again.
+    private var catNameRead = 0
     /// How the cat is worded, as the pair chose; `they` until then. Read from the app group again after the room is
     /// synced, since the partner may have chosen.
     private(set) var pronouns = CatProfile.pronouns()
@@ -137,7 +142,9 @@ final class HomeState {
     }
 
     /// After the room was read: the partner's choice is this phone's too.
+    /// Also reads her name again: the room's sync may have changed both.
     func refreshPronouns() {
+        catNameRead += 1
         let current = CatProfile.pronouns()
         if current != pronouns {
             pronouns = current

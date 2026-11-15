@@ -24,10 +24,14 @@ public nonisolated enum OnboardingPairingState: Equatable, Sendable {
 /// The pairing the invite and code steps drive. `PairingModel` conforms, in the app, which keeps the
 /// pairing feature out of this one.
 public protocol OnboardingPairing: AnyObject {
+  /// How often the invite page asks whether its code was claimed.
+  static var checkEvery: Duration { get }
   var onboardingState: OnboardingPairingState { get }
   func createInvite()
   func submit(code: String)
   func cancel()
+  /// Asks whether the partner has claimed the shown invite.
+  func tick()
   func spaced(_ code: String) -> String
   func expiry(expiresAt: Int, now: Date) -> String
 }

@@ -110,9 +110,9 @@ import Wire
       CreateInviteResponse(code: InviteCode("ABC"), expiresAt: 9)
     }
     let paired = Counter()
-    api.listNotes = { (_) async throws(TransportError) in
+    api.pair = { () async throws(TransportError) in
       if paired.next() < 1 { throw .api(.notFound) }
-      return ListNotesResponse(notes: [])
+      return PairResponse(pairId: PairId("p1"), members: [UserId("u1"), UserId("u2")])
     }
     let model = PairingModel(api: api)
     model.createInvite()

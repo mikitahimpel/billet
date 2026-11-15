@@ -241,6 +241,26 @@ struct OnboardingFlowTests {
     #expect(decodes.count.withLock { $0 } == 0)
   }
 
+  @Test func theRoomsCoatIsWornOnceAndPickedOnTheCoatPage() {
+    let suite = "coat-taken-\(UUID().uuidString)"
+    let defaults = UserDefaults(suiteName: suite)!
+    var changes = 0
+    let flow = OnboardingFlow(
+      client: .offline, report: { (_) async throws(TransportError) in },
+      queue: AnswerQueue(file: URL.temporaryDirectory.appending(path: "\(suite)/a.json")),
+      defaults: defaults, catNames: defaults, canInvite: false,
+      bundled: { OnboardingResponse(version: "v1", steps: []) },
+      coatChanged: { changes += 1 })
+    #expect(flow.wornCoat == .grey)
+    defaults.set(CatCoat.ginger.rawValue, forKey: CatCoat.key)
+    flow.coatTaken()
+    #expect(flow.wornCoat == .ginger)
+    #expect(flow.coat == .ginger)
+    #expect(changes == 1)
+    flow.coatTaken()
+    #expect(changes == 1)
+  }
+
   @Test func aPickedCoatIsWornAndSentAndASkippedOneIsGrey() async {
     let sent = Sent()
     let (flow, defaults, _) = makeFlow(sent: sent)
@@ -273,7 +293,7 @@ struct OnboardingFlowTests {
     #expect(sent.answers.withLock { $0.last?.answer } == .single(option: "cream"))
   }
 
-  @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheInvite() {
+  @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheInviteAndTheCat() {
     let (flow, _, _) = makeFlow(hasServer: true, asksTogetherSince: true)
     #expect(
       flow.pages == [
@@ -285,8 +305,7 @@ struct OnboardingFlowTests {
     #expect(flow.joinCode == "K7QM4R2XHP")
     #expect(
       flow.pages == [
-        .welcome, .join, .question(age), .question(goals), .togetherSince, .catCoat, .catName,
-        .notifications,
+        .welcome, .join, .question(age), .question(goals), .togetherSince, .notifications,
       ])
     flow.partnerJoined()
     #expect(flow.page == .question(age))
@@ -440,6 +459,9 @@ struct AnswerQueueTests {
     #expect(InviteInput.code(in: "https://api.example.com/i/K7QM4R2XHP") == "K7QM4R2XHP")
     #expect(InviteInput.code(in: "nooki://invite/K7QM4R2XHP") == "K7QM4R2XHP")
     #expect(InviteInput.code(in: "hello there, see you at 7") == nil)
+    #expect(InviteInput.pasted("Join me: https://api.example.com/i/K7QM4R2XHP") == "K7QM4R2XHP")
+    #expect(InviteInput.pasted("k7qm 4r2x hp") == "K7QM4R2XHP")
+    #expect(InviteInput.pasted("  \n") == "")
     #expect(InviteInput.code(in: "K7QM4R2X") == nil)
     #expect(InviteInput.code(in: "https://example.com/i/short") == nil)
     #expect(InviteInput.code(in: "abcd2345efghjklm npqrstuvwx") == "ABCD2345EFGHJKLMNPQRSTUVWX")

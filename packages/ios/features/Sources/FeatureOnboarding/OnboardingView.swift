@@ -26,13 +26,17 @@ import Wire
     var demoPartner: (() -> Void)?
     /// Starts the account's sign-in again, with the same account key, when it seems stuck.
     var retrySignIn: (() -> Void)?
+    /// Why the sign-in stopped; nil while it runs or once it is done.
+    var signInFailure: SignInFailure?
 
     public init(
       flow: OnboardingFlow, pairing: (any OnboardingPairing)?, scenery: any OnboardingScenery,
       signedIn: Bool = false,
       inviteBase: URL? = nil, alreadyPaired: Bool = false, paired: @escaping () -> Void = {},
-      demoPartner: (() -> Void)? = nil, retrySignIn: (() -> Void)? = nil
+      demoPartner: (() -> Void)? = nil, retrySignIn: (() -> Void)? = nil,
+      signInFailure: SignInFailure? = nil
     ) {
+      self.signInFailure = signInFailure
       self.flow = flow
       self.pairing = pairing
       self.scenery = scenery
@@ -47,6 +51,7 @@ import Wire
     let language = Locale.current.language.languageCode?.identifier
 
     @State private var scanning = false
+    @State private var pasteMissed = false
     @State private var errorTick = 0
     @State var tapTick = 0
     @State private var wavedTick = 0
@@ -100,6 +105,15 @@ import Wire
         else { return }
         pairing.createInvite()
       }
+      // The inviter waits here; the moment the partner claims the code, the page moves on.
+      .task(id: waitingCode) {
+        guard waitingCode != nil, let pairing else { return }
+        let every = type(of: pairing).checkEvery
+        while !Task.isCancelled {
+          do { try await Task.sleep(for: every) } catch { return }
+          pairing.tick()
+        }
+      }
       .onChange(of: isPaired || alreadyPaired, initial: true) { _, joined in
         guard joined else { return }
         flow.partnerJoined()
@@ -120,6 +134,14 @@ import Wire
 
     func clearFailure() {
       if case .choosing(.some, _)? = pairing?.onboardingState { pairing?.cancel() }
+    }
+
+    /// The shown invite's code while the invite page is up.
+    private var waitingCode: String? {
+      guard flow.page == .invite, case .waiting(let code, _, _)? = pairing?.onboardingState else {
+        return nil
+      }
+      return code
     }
 
     private var isPaired: Bool {
@@ -301,7 +323,7 @@ import Wire
           case .waiting(let code, let expiresAt, _):
             inviteCard(pairing, code: code, expiresAt: expiresAt)
           case .choosing(nil, _) where !signedIn:
-            ConnectingRow(retry: retrySignIn)
+            ConnectingRow(failure: signInFailure, retry: retrySignIn)
           case .creating, .claiming:
             GroupedSection { progressRow("Getting your code…") }
           case .choosing:
@@ -384,6 +406,7 @@ import Wire
               flow.joinCode
             } set: { typed in
               flow.joinCode = InviteInput.cleaned(typed)
+              pasteMissed = false
               clearFailure()
             }, font: .system(.title2, design: .monospaced, weight: .bold), failed: failure != nil
           )
@@ -393,14 +416,20 @@ import Wire
           .accessibilityLabel("Invite code")
           if failure != nil {
             ErrorLine(String(localized: "This code didn't work. Check it or ask for a new one."))
+          } else if pasteMissed {
+            ErrorLine(
+              String(
+                localized: "There's no code in what you copied. Copy your partner's message again.")
+            )
           }
           HStack(spacing: Space.s) {
-            Button {
-              pasteCode()
-            } label: {
-              Label("Paste", systemImage: "doc.on.clipboard")
+            // The system's own button pastes without asking and is greyed out with nothing to paste.
+            PasteButton(payloadType: String.self) { texts in
+              Task { @MainActor in pasted(texts.first ?? "") }
             }
-            .buttonStyle(SecondaryButtonStyle())
+            .labelStyle(.titleAndIcon)
+            .buttonBorderShape(.capsule)
+            .tint(.honey)
             if InviteScanner.isAvailable {
               Button {
                 scanning = true
@@ -416,7 +445,7 @@ import Wire
             .frame(maxWidth: .infinity, alignment: .leading)
         }
       }
-      .task { if flow.joinCode.isEmpty { pasteCode(onlyIfCode: true) } }
+      .task { if flow.joinCode.isEmpty { pasteCode() } }
     }
 
     private var scanner: some View {
@@ -432,15 +461,22 @@ import Wire
       }
     }
 
-    /// Fills the field from the clipboard. Reading it is what asks iOS for the paste permission.
-    private func pasteCode(onlyIfCode: Bool = false) {
-      guard UIPasteboard.general.hasStrings, let text = UIPasteboard.general.string else { return }
-      if let code = InviteInput.code(in: text) {
-        flow.joinCode = code
-        clearFailure()
-      } else if !onlyIfCode {
-        flow.joinCode = InviteInput.cleaned(text)
-      }
+    /// Fills the field from the clipboard when it holds a code. Reading it is what asks iOS for the paste permission.
+    private func pasteCode() {
+      guard UIPasteboard.general.hasStrings, let text = UIPasteboard.general.string,
+        let code = InviteInput.code(in: text)
+      else { return }
+      flow.joinCode = code
+      clearFailure()
+    }
+
+    private func pasted(_ text: String) {
+      let code = InviteInput.pasted(text)
+      pasteMissed = code.isEmpty
+      guard !code.isEmpty else { return }
+      flow.joinCode = code
+      clearFailure()
+      tapTick += 1
     }
 
     private func inviteLink(_ code: String) -> String {

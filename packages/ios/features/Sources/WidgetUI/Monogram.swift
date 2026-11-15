@@ -23,14 +23,22 @@ public struct Monogram: View {
   }
 
   private var initial: some View {
-    Text(profile.initial(of: partner))
-      .font(.system(size: size * 0.41, weight: .semibold, design: .rounded))
-      .foregroundStyle(.white)
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .background(
-        LinearGradient(
-          colors: Self.colors(partner, profile), startPoint: .topLeading,
-          endPoint: .bottomTrailing))
+    Group {
+      if let letter = profile.initial(of: partner) {
+        Text(letter)
+          .font(.system(size: size * 0.41, weight: .semibold, design: .rounded))
+      } else {
+        Image(systemName: "person.fill")
+          .font(.system(size: size * 0.41, weight: .semibold))
+          .accessibilityLabel(profile.name(of: partner))
+      }
+    }
+    .foregroundStyle(.white)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(
+      LinearGradient(
+        colors: Self.colors(partner, profile), startPoint: .topLeading,
+        endPoint: .bottomTrailing))
   }
 
   public var body: some View {

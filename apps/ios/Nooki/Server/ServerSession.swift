@@ -28,7 +28,7 @@ final class ServerSession {
     let appleLink: AppleLinkModel
     /// Replaced after a finished pairing, so the next one starts from the choice again.
     private(set) var pairing: PairingModel
-    /// Learned by pairing; the saved record keeps it across launches.
+    /// Learned by pairing or from the server (`watchPair()`); the saved record keeps it across launches.
     private(set) var isPaired: Bool
     /// Dev server only; nil without dev tools and until `checkDemoPartner()` has asked.
     private(set) var demoPartner: Bool?
@@ -57,14 +57,20 @@ final class ServerSession {
     /// Set each time the socket is followed; holds the last entry.
     @ObservationIgnored private var catEntry: (@MainActor (CatEntry) -> Void)?
     @ObservationIgnored private var lastCatSeq: (@MainActor () -> Int?)?
+    /// Set each time the socket is followed.
+    @ObservationIgnored private var catSaved: (@MainActor () -> Void)?
     /// Set by the open Pick tonight screen; nil while it is closed.
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
     @ObservationIgnored private let backend: Backend
     @ObservationIgnored let payments: any Payments
 
-    init(backend: Backend) {
+    /// Where `CatLife` reads when this phone entered the partner's code.
+    @ObservationIgnored private let defaults: UserDefaults
+
+    init(backend: Backend, defaults: UserDefaults = .standard) {
         self.backend = backend
+        self.defaults = defaults
         signIn = AnonymousSignInModel(api: backend.api, keys: backend.keys, accounts: backend.accounts)
         appleLink = AppleLinkModel(api: backend.api)
         pairing = PairingModel(api: backend.api)
@@ -141,10 +147,12 @@ final class ServerSession {
     func followInbox(
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
         lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil, streak: StreakStore? = nil,
-        cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil
+        cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil,
+        catSaved: (@MainActor () -> Void)? = nil
     ) {
         if follows, isPaired {
             catEntry = cat
+            self.catSaved = catSaved
             self.lastCatSeq = lastCatSeq
             self.photos = photos
             self.texts = texts
@@ -176,6 +184,7 @@ final class ServerSession {
                         },
                         catEntry: { [weak self] in self?.catEntry?($0) },
                         lastCatSeq: { [weak self] in self?.lastCatSeq?() },
+                        catSaved: { [weak self] in self?.catSaved?() },
                         presence: { [weak self] in self?.partnerPresence = $0 }))
             }
             inboxLink?.connect()
@@ -195,6 +204,25 @@ final class ServerSession {
         guard isPaired else { return nil }
         return PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner,
                          receiving: photoReceiving, defaults: .standard) { PhotoUpload(fileAt: $0) }
+    }
+
+    /// While the app is in front and this account has no partner: asks the server now, since the partner may have
+    /// entered the code while the app was closed, then every `PairingModel.checkEvery` while an invite is out, on
+    /// any screen. Returns once paired or cancelled.
+    func watchPair() async {
+        guard isSignedIn, !isPaired else { return }
+        await refreshPair()
+        while !isPaired {
+            do { try await Task.sleep(for: PairingModel.checkEvery) } catch { return }
+            if case .waiting = pairing.state { await refreshPair() }
+        }
+    }
+
+    /// Takes the pair the server has for this account; unpaired, offline or signed out, nothing changes. The
+    /// pairing under way is left as it is, so an open pairing sheet still shows its own end.
+    func refreshPair() async {
+        guard !isPaired, let pair = try? await backend.api.pair(), !isPaired else { return }
+        paired(pair.pairId.rawValue, joined: false, resetsPairing: false)
     }
 
     /// The pair as the server has it, this account first. `.api(.notFound)` once the server has no pair for it.
@@ -257,7 +285,7 @@ final class ServerSession {
     /// Dev server only; the server pairs the bot like a real partner.
     func pairWithDemoPartner() async throws(TransportError) {
         let pair = try await backend.api.createDemoPartner()
-        paired(pair.pairId.rawValue)
+        paired(pair.pairId.rawValue, joined: false)
         demoPartner = true
     }
 
@@ -311,7 +339,9 @@ final class ServerSession {
 
     private func pairEnded() {
         try? backend.accounts.setPaired(false, nil)
+        CatLife.forgetJoin(in: defaults)
         isPaired = false
+        pairing = PairingModel(api: backend.api)
         partnerPresence = .away
         reactions = nil
         whoKnows = Self.whoKnowsModel(backend, paired: false)
@@ -322,19 +352,22 @@ final class ServerSession {
     /// partner means this phone's saved pairing is stale, so it is brought up to date.
     func pairingFinished() {
         switch pairing.state {
-        case .paired(let pairID): paired(pairID)
-        case .choosing(failure: .alreadyPaired?, _): paired(nil)
+        // Only the partner who entered the code learns the pair's id from the claim.
+        case .paired(let pairID): paired(pairID, joined: pairID != nil)
+        case .choosing(failure: .alreadyPaired?, _): paired(nil, joined: false)
         case .choosing, .creating, .waiting, .claiming: return
         }
     }
 
-    private func paired(_ pairID: String?) {
+    /// `joined`: this phone entered the partner's code, so the cat it waits for is the inviter's.
+    private func paired(_ pairID: String?, joined: Bool, resetsPairing: Bool = true) {
+        if joined { CatLife.markJoined(in: defaults) }
         try? backend.accounts.setPaired(true, pairID)
         isPaired = true
         reactions = Self.reactionsModel(backend)
         whoKnows = Self.whoKnowsModel(backend, paired: true)
         drawGuess = Self.drawGuessModel(backend, paired: true)
-        pairing = PairingModel(api: backend.api)
+        if resetsPairing { pairing = PairingModel(api: backend.api) }
     }
 }
 

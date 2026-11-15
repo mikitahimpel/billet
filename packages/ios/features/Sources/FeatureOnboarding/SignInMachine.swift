@@ -171,3 +171,17 @@ nonisolated extension SignInMachine {
     }
   }
 }
+
+extension SignInFailure {
+  /// What the invite page says while the account it needs could not be signed in.
+  public var connectingMessage: String {
+    switch self {
+    case .storage:
+      String(localized: "Ourio couldn't keep your sign-in on this phone. Try again.")
+    case .unavailable:
+      String(localized: "Ourio can't be reached right now. Check your connection and try again.")
+    case .appleRefused, .rejected, .appleIdInUse:
+      String(localized: "Ourio couldn't sign you in. Try again.")
+    }
+  }
+}

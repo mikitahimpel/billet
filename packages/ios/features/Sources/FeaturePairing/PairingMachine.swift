@@ -147,8 +147,7 @@ public enum PairingMachine: Machine {
 }
 
 extension PairingMachine {
-  /// The calls the outputs make, on `api`. A partner's claim shows as the notes route answering,
-  /// because there is no route that reports the pair directly.
+  /// The calls the outputs make, on `api`. A partner's claim shows as `GET /v1/pair` answering.
   public static func run(_ output: Output, api: APIClient) async -> Event? {
     switch output {
     case .createInvite(let request):
@@ -168,7 +167,7 @@ extension PairingMachine {
       }
     case .checkPaired(let request):
       do {
-        _ = try await api.listNotes(nil)
+        _ = try await api.pair()
         return .checked(paired: true, request: request)
       } catch {
         if error == .api(.notFound) { return .checked(paired: false, request: request) }

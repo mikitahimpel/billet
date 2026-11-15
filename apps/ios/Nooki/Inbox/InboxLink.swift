@@ -32,6 +32,8 @@ final class InboxLink {
         var catEntry: @MainActor @Sendable (CatEntry) -> Void
         /// The last journal entry held, read as each socket opens; nil follows no cat frames.
         var lastCatSeq: @MainActor @Sendable () -> Int?
+        /// Either partner saved the cat: adopted, renamed, dressed or worded anew.
+        var catSaved: @MainActor @Sendable () -> Void
         var presence: @MainActor @Sendable (PartnerPresence) -> Void
     }
 
@@ -60,9 +62,10 @@ final class InboxLink {
                 case .riddleChanged(let riddle): await handlers.riddle(riddle)
                 case .streakChanged(let streak): await handlers.streak(streak)
                 case .catEntryAdded(let entry): await handlers.catEntry(entry)
+                case .catSaved: await handlers.catSaved()
                 case .presence(let presence): await handlers.presence(presence)
                 case .noteReceived, .stroke, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
-                     .clear, .catSaved:
+                     .clear:
                     break
                 }
             },

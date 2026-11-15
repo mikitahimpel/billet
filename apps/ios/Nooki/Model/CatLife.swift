@@ -59,9 +59,18 @@ final class CatLife: CatEventSource {
         URL.applicationSupportDirectory.appending(path: "Outbox/cat-events.json")
     }
 
+    /// When this phone entered the partner's code, in the app's defaults; gone once unpaired.
+    static let joinedKey = "cat.joinedPairAt"
+    /// How long a phone that entered the code waits for the inviter's phone to adopt the cat before it adopts its
+    /// own: the inviter may be on a build that never learns of the pair.
+    static let joinerWaits: TimeInterval = 120
+
     private let defaults: UserDefaults
     private let catName: () -> String
     private let catCoat: () -> String
+    /// Makes the room's name and coat this phone's.
+    private let takeLook: (_ name: String, _ coat: String) -> Void
+    private let now: () -> Date
     private let chosenPronouns: () -> CatPronouns?
     private let adoptPronouns: (CatPronouns) -> Void
     private var saved: Saved
@@ -95,8 +104,12 @@ final class CatLife: CatEventSource {
          catName: @escaping () -> String = { CatProfile.name() },
          catCoat: @escaping () -> String = { CatCoat.current().rawValue },
          chosenPronouns: @escaping () -> CatPronouns? = { CatProfile.chosenPronouns() },
-         adoptPronouns: @escaping (CatPronouns) -> Void = { CatProfile.setPronouns($0) }) {
+         adoptPronouns: @escaping (CatPronouns) -> Void = { CatProfile.setPronouns($0) },
+         takeLook: @escaping (_ name: String, _ coat: String) -> Void = CatLife.wear(name:coat:),
+         clock: @escaping () -> Date = Date.init) {
         self.defaults = defaults
+        self.takeLook = takeLook
+        self.now = clock
         self.catName = catName
         self.catCoat = catCoat
         self.chosenPronouns = chosenPronouns
@@ -188,7 +201,7 @@ final class CatLife: CatEventSource {
         defer { syncing = false }
         do throws(TransportError) {
             var cat = try await client.load()
-            if cat.cat == nil {
+            if cat.cat == nil, mayAdopt {
                 cat = try await client.adopt(SaveCatRequest(
                     name: catName(), pronouns: chosenPronouns()?.rawValue,
                     look: CatLook(model: "mochi", coat: catCoat()),
@@ -241,7 +254,37 @@ final class CatLife: CatEventSource {
         Task { await sync() }
     }
 
+    /// The pair has one cat, the inviter's: the phone that entered the code adopts only once it has waited.
+    private var mayAdopt: Bool {
+        guard let joined = defaults.object(forKey: Self.joinedKey) as? Date else { return true }
+        return now().timeIntervalSince(joined) >= Self.joinerWaits
+    }
+
+    /// Keeps the first mark, so a second report of the same pairing doesn't restart the wait.
+    static func markJoined(in defaults: UserDefaults = .standard, at now: Date = .now) {
+        guard defaults.object(forKey: joinedKey) == nil else { return }
+        defaults.set(now, forKey: joinedKey)
+    }
+
+    static func forgetJoin(in defaults: UserDefaults = .standard) {
+        defaults.removeObject(forKey: joinedKey)
+    }
+
+    /// Names and dresses her as the room has her. A new coat is posted, since the room has to load her anew.
+    static func wear(name: String, coat: String) {
+        if ProfileInterface.CatProfile.name() != name {
+            ProfileInterface.CatProfile.store.set(name, forKey: ProfileInterface.CatProfile.nameKey)
+        }
+        guard let coat = CatCoat(rawValue: coat), coat != CatCoat.current() else { return }
+        UserDefaults.standard.set(coat.rawValue, forKey: CatCoat.key)
+        ProfileInterface.CatProfile.store.set(coat.rawValue, forKey: ProfileInterface.CatProfile.coatKey)
+        NotificationCenter.default.post(name: .roomCatCoatTaken, object: nil)
+    }
+
     private func take(_ profile: Wire.CatProfile) {
+        if profile.name != catName() || profile.look.coat != catCoat() {
+            takeLook(profile.name, profile.look.coat)
+        }
         let seed = profile.seed ?? saved.seed
         let born = Date(timeIntervalSince1970: Double(profile.bornAt) / 1000)
         guard seed != saved.seed || born != saved.born || profile.utcOffsetSeconds != saved.utcOffset else { return }
@@ -337,4 +380,9 @@ final class CatLife: CatEventSource {
         case .note, .overfeed: nil
         }
     }
+}
+
+extension Notification.Name {
+    /// The pair's room has the cat in another coat than this phone had; Home loads her in it.
+    static let roomCatCoatTaken = Notification.Name("com.ourio.app.room-cat-coat-taken")
 }

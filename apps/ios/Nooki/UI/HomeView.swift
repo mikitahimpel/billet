@@ -228,7 +228,11 @@ struct HomeView: View {
         }
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
-        .task(id: session?.isPaired) { await followPair() }
+        .task(id: session?.isPaired) {
+            await followPair()
+            // A pair found while the app is in front opens the room's socket now, not at the next return.
+            if session?.isPaired == true, scenePhase == .active { followRoomSocket() }
+        }
         .modifier(ResendsUnsent(
             paired: session?.isPaired == true, photos: state.moments.unsent.map(\.id), notes: state.notes.unsent.map(\.id),
             sendPhotos: { await photoSync?.sendUnsent() ?? false },
@@ -438,6 +442,20 @@ struct HomeView: View {
         }
     }
 
+    /// The pair's room socket; nothing while unpaired.
+    private func followRoomSocket() {
+        session?.followInbox(
+            true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
+            moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
+            cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq },
+            catSaved: { [room, state] in
+                Task {
+                    await room.syncCat()
+                    state.refreshPronouns()
+                }
+            })
+    }
+
     /// Its own method: inline in `body`, the closure tips the type-checker over its time limit.
     private func phaseChanged(from old: ScenePhase, to phase: ScenePhase) {
         switch phase {
@@ -470,10 +488,7 @@ struct HomeView: View {
             // photos downloading above don't hold it up.
             Task { await session?.whoKnows.load() }
             session?.reactions?.refresh()
-            session?.followInbox(
-                true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
-                moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
-                cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq })
+            followRoomSocket()
             refreshRooms()
             if !launching { reportOpened(state.room) }
         case .background:
