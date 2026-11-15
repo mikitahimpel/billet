@@ -101,7 +101,7 @@ final class CatLife: CatEventSource {
          catCoat: @escaping () -> String = { CatCoat.current().rawValue },
          chosenPronouns: @escaping () -> CatPronouns? = { CatProfile.chosenPronouns() },
          adoptPronouns: @escaping (CatPronouns) -> Void = { CatProfile.setPronouns($0) },
-         takeLook: @escaping (_ name: String, _ coat: String) -> Void = CatLife.wear(name:coat:)) {
+         takeLook: @escaping (_ name: String, _ coat: String) -> Void = { CatLife.wear(name: $0, coat: $1) }) {
         self.defaults = defaults
         self.takeLook = takeLook
         self.catName = catName
