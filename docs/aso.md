@@ -22,8 +22,8 @@ description does not carry search weight.
 | Field | Value | Length |
 | --- | --- | --- |
 | Name | `Ourio: Couple Cat & Widgets` | 27 / 30 |
-| Subtitle | `Raise a pet, draw love notes` | 28 / 30 |
-| Keywords | `long,distance,relationship,games,calendar,questions,together,shared,drawing,lock,screen,doodle,cozy` | 99 / 100 |
+| Subtitle | `Shared pet, love notes for two` | 30 / 30 |
+| Keywords | `long,distance,relationship,games,calendar,questions,together,drawing,lock,screen,doodle,cozy,virtual` | 100 / 100 |
 | Promotional text | Share one cozy room and a cat with the person you love. Pet her, draw a note, and it appears on their widget. Made for couples, near or far. | 140 / 170 |
 | Primary / secondary category | Lifestyle / Entertainment | |
 
