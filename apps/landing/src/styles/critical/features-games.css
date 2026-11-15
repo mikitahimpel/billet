@@ -213,10 +213,10 @@ h1 {
   z-index: 6;
   background: #000;
   border-radius: 999px;
-  width: 5.6em;
-  height: 1.62em;
+  width: 5em;
+  height: 1.45em;
   position: absolute;
-  top: 0.68em;
+  top: 0.55em;
   left: 50%;
   translate: -50%;
 }
@@ -501,4 +501,14 @@ h1 {
   to {
     background-position: 0 0;
   }
+}
+.endcard {
+  --EH: min(56svh, (100vw - 32px) / var(--room-aspect), 620px);
+  overflow: hidden;
+}
+.end-stage {
+  position: relative;
+  width: calc(var(--EH) * var(--room-aspect));
+  height: var(--EH);
+  margin-inline: auto;
 }

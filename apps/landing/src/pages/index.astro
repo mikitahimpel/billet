@@ -154,6 +154,11 @@ const schema = [
 
   <!-- 01 · The story: one room, held in place while the copy changes beside it. -->
   <section id="story" class="story" data-beat="0">
+    <!-- The pin's four stops for the wheel (global.css, scroll-snap): p = 0, 1/3, 2/3, 1. -->
+    <i class="snap" style="--k: 0" aria-hidden="true"></i><i class="snap" style="--k: 1" aria-hidden="true"></i><i
+      class="snap"
+      style="--k: 2"
+      aria-hidden="true"></i><i class="snap" style="--k: 3" aria-hidden="true"></i>
     <div class="pin">
       <div class="beats">
         <div class="beat beat-0" data-for="0">
@@ -174,11 +179,7 @@ const schema = [
         <div class="beat beat-1" data-for="1">
           <p class="eyebrow">Late. Miles apart.</p>
           <h2 class="beat-title">Leave a light on for each other.</h2>
-          <p class="beat-note">The same room on both phones, at 2 a.m. or 2 p.m.</p>
-          <p class="hours" aria-hidden="true">
-            <span class="hour you"><i></i><b>11:41 PM</b><span>Your side</span></span>
-            <span class="hour them"><i></i><b>5:41 PM</b><span>Their side</span></span>
-          </p>
+          <p class="beat-note">Your <em>2 a.m.</em> is their <em>2 p.m.</em> Same room on both phones, lamp still on.</p>
         </div>
 
         <div class="beat beat-2" data-for="2">
