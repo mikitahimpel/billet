@@ -1,3 +1,4 @@
+import Synchronization
 import Wire
 
 /// Socket events share one pipe, so they reach the machine in order. Outputs are not ordered (a
@@ -114,6 +115,30 @@ final class WebSocketRunner: Sendable {
     }
   }
 
+  /// True once the attempt's server answers a ping within `timeout`. A socket that doesn't is
+  /// dropped, so the machine opens another.
+  func ping(attempt: Int, timeout: Duration) async -> Bool {
+    guard let connection = await slot.connection(for: attempt) else { return false }
+    let answer = FirstAnswer()
+    let answered = await withCheckedContinuation { (continuation: CheckedContinuation<Bool, Never>) in
+      answer.set(continuation)
+      Task {
+        do throws(TransportError) {
+          try await connection.ping()
+          answer.resume(true)
+        } catch {
+          answer.resume(false)
+        }
+      }
+      Task { [dependencies] in
+        await dependencies.sleep(timeout)
+        answer.resume(false)
+      }
+    }
+    if !answered { continuation.yield(.dropped(attempt: attempt)) }
+    return answered
+  }
+
   /// Sleeps, then reports `event`, unless the attempt ended and stopped the timer first.
   private func timer(
     _ event: WebSocketMachine.Event, after delay: Duration, for attempt: Int
@@ -187,5 +212,21 @@ actor ConnectionSlot {
     timers = [:]
     entries = [:]
     return connections
+  }
+}
+
+/// The first of a ping's answer and its timeout; a ping that never returns is left behind.
+private final class FirstAnswer: Sendable {
+  private let continuation = Mutex<CheckedContinuation<Bool, Never>?>(nil)
+
+  func set(_ continuation: CheckedContinuation<Bool, Never>) {
+    self.continuation.withLock { $0 = continuation }
+  }
+
+  func resume(_ answered: Bool) {
+    continuation.withLock { held in
+      held?.resume(returning: answered)
+      held = nil
+    }
   }
 }

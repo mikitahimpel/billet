@@ -57,6 +57,8 @@ final class ServerSession {
     /// Set each time the socket is followed; holds the last entry.
     @ObservationIgnored private var catEntry: (@MainActor (CatEntry) -> Void)?
     @ObservationIgnored private var lastCatSeq: (@MainActor () -> Int?)?
+    /// Set each time the socket is followed.
+    @ObservationIgnored private var socketOpened: (@MainActor () -> Void)?
     /// Set by the open Pick tonight screen; nil while it is closed.
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
@@ -141,9 +143,11 @@ final class ServerSession {
     func followInbox(
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
         lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil, streak: StreakStore? = nil,
-        cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil
+        cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil,
+        opened: (@MainActor () -> Void)? = nil
     ) {
         if follows, isPaired {
+            socketOpened = opened
             catEntry = cat
             self.lastCatSeq = lastCatSeq
             self.photos = photos
@@ -177,13 +181,19 @@ final class ServerSession {
                         },
                         catEntry: { [weak self] in self?.catEntry?($0) },
                         lastCatSeq: { [weak self] in self?.lastCatSeq?() },
-                        presence: { [weak self] in self?.partnerPresence = $0 }))
+                        presence: { [weak self] in self?.partnerPresence = $0 },
+                        opened: { [weak self] in self?.socketOpened?() }))
             }
             inboxLink?.connect()
         } else {
             inboxLink?.disconnect()
             partnerPresence = .away
         }
+    }
+
+    /// The room's socket was heard from within `quietLimit`, or answers a ping; false while it is down or unfollowed.
+    func roomSocketIsHealthy(quietLimit: Duration) async -> Bool {
+        await inboxLink?.isHealthy(quietLimit: quietLimit) ?? false
     }
 
     /// Nil until this account has a partner.
