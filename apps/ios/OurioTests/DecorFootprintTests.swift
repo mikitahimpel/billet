@@ -49,16 +49,17 @@ struct DecorFootprintTests {
         #expect(bounds.min.y > 0.15, "nothing reaches down to the floor: \(bounds.min.y)")
     }
 
+    /// The bounds of the piece's model alone: the contact blob under it is a plane on the floor.
     private func drawnBounds(of id: String, in layout: DecorLayout) async throws -> BoundingBox {
         let stage = DecorStage()
         stage.apply(RoomDecor(layout: layout), receiver: nil)
-        var holder: Entity?
-        for _ in 0..<200 {
+        var model: Entity?
+        for _ in 0..<200 where model == nil {
             try await Task.sleep(for: .milliseconds(50))
             stage.apply(RoomDecor(layout: layout), receiver: nil)
-            holder = stage.root.children.first { $0.name == "decor.\(id)" }
-            if holder?.children.isEmpty == false { break }
+            let holder = stage.root.children.first { $0.name == "decor.\(id)" }
+            model = holder?.children.first { !($0 is ModelEntity) }
         }
-        return try #require(holder).visualBounds(relativeTo: stage.root)
+        return try #require(model).visualBounds(relativeTo: stage.root)
     }
 }
