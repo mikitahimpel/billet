@@ -83,7 +83,11 @@ final class CatWalker {
                                  tail: [-0.8, -0.5, -0.4])
         // Lying with her paws tucked under her and the tail along her side.
         static let loaf = Posture(lift: -0.065, bend: 0.05, headPitch: 0.05, fore: [0, 0.035], hind: [0, -0.03],
-                                  tail: [-0.8, -0.6, -0.5], sway: [0.7, 0.6, 0.6])
+                                  tail: [-0.9, -0.7, -0.6], sway: [0.7, 0.6, 0.6])
+
+        /// How much of a behaviour's tail-tip lift plays at this body height: all of it down to a crouch's -0.035,
+        /// none in the loaf, whose tail rests on the floor and would fold back up at the tip.
+        static func tipLiftShare(lift: Float) -> Float { 1 - smoothstep(-lift, 0.035, 0.065) }
 
         static func blend(_ a: Posture, _ b: Posture, _ t: Float) -> Posture {
             Posture(lift: lerp(a.lift, b.lift, t), back: lerp(a.back, b.back, t), pitch: lerp(a.pitch, b.pitch, t),
@@ -557,12 +561,13 @@ final class CatWalker {
         // The tail rides high on the move and waves slowly, each joint a little later than the one before; on top of
         // that it swings with the body's turns, starts and landings.
         tailSpring.update(dt, tailPush)
+        let tipLift = r * Posture.tipLiftShare(lift: s.lift)
         for i in p.tail.indices {
             let spring = tailSpring.joints[min(i, tailSpring.joints.count - 1)]
             let fi = Float(i)
             p.tail[i].sway = s.sway[min(i, s.sway.count - 1)]
                 + lerp((0.06 + 0.05 * fi) * sin(time * 1.6 - fi * 0.8), b.tailSway[i], r)
-            p.tail[i].lift = s.tail[min(i, s.tail.count - 1)] + 0.1 * gait.amount + b.tailLift[i] * r + spring.lift
+            p.tail[i].lift = s.tail[min(i, s.tail.count - 1)] + 0.1 * gait.amount + b.tailLift[i] * tipLift + spring.lift
             p.tail[i].lean = spring.lean
         }
         standing.pose = p
