@@ -16,7 +16,7 @@ primary language either way.
 | --- | --- |
 | Name [30] | `Ourio: Couple Cat & Widgets` (27; see [../aso.md](../aso.md)) |
 | Bundle ID | `com.ourio.app` |
-| SKU | TODO-OWNER (any private string, e.g. `ourio-ios-1`) |
+| SKU | `ourio-ios-1` |
 | Apple ID | `6832707480` (from the owner's brief; confirm in App Information > General > Apple ID) |
 | Primary language | English (U.S.) |
 | Primary category | **Lifestyle** |
@@ -112,11 +112,11 @@ If the field appears, use:
 The first version of Ourio: a shared cat, two rooms to decorate, notes, drawings, Moments, games and widgets for the two of you.
 ```
 
-**Support URL**: `https://ourio.app/support/` (live, 200 on 2026-11-15; email `support@ourio.app`).
+**Support URL**: `https://ourio.app/support/` (live, 200 on 2026-11-15; email `ourio@mikitahimpel.com`).
 
 **Marketing URL**: `https://ourio.app/`
 
-**Copyright**: `© 2026 <PROVIDER LEGAL NAME>` (TODO-OWNER: the same name as the Apple Developer
+**Copyright**: `© 2026 Mikita Himpel` (TODO-OWNER: the same name as the Apple Developer
 account's seller name).
 
 **Version**: `1.0.0` (`MARKETING_VERSION`, `apps/ios/project.yml`). Release: **Manually release
@@ -257,10 +257,10 @@ has no custom crypto: invite codes and sessions are hashed on the server, not in
 | Field | Value |
 | --- | --- |
 | Sign-in required | **No** (the app signs in on its own; no user name or password exists) |
-| Contact first name | TODO-OWNER |
-| Contact last name | TODO-OWNER |
+| Contact first name | Mikita |
+| Contact last name | Himpel |
 | Contact phone | TODO-OWNER (with country code; Apple calls it only if review is blocked) |
-| Contact email | TODO-OWNER (recommended `support@ourio.app`, must be read during review) |
+| Contact email | `ourio@mikitahimpel.com` (routes to the owner's mailbox; test mail before submitting) |
 | Notes | the template below |
 | Attachment | none needed; optionally a short screen recording of pairing with the code |
 
@@ -286,7 +286,7 @@ Content in the app is only what the two paired people send each other: there is 
 
 Film and show titles and posters come from the TMDB API (credited in Settings).
 
-Contact: support@ourio.app
+Contact: ourio@mikitahimpel.com
 ```
 
 Before pasting, check the build against the notes: "I have an invite code" on the welcome
@@ -314,13 +314,15 @@ Read on 2026-11-15 from `apps/landing/src` on `main`.
 | "It shows up on your partner's Lock Screen and home widget, stroke by stroke, while you draw" | `index.astro` (Draw) | Strokes are live only when both have the canvas open (`features.ts` says so); the widget shows the sent drawing | #844 owns `index.astro`: drop "stroke by stroke, while you draw" from the widget sentence |
 | "two games and six widgets" | `index.astro`, `faq.ts` ("Yes, six…") | `OurioWidgets` has more than six kinds (Home Screen and Lock Screen) | Not an overclaim; say "widgets" without a count when the text is next edited |
 | "Ourio has no in-app purchases" | `privacy.astro`, `faq.ts` | True for 1.0.0 (`payments` off) | Revisit when coins are sold |
-| "a person will answer", "we read every report" | `support.astro`, `help.astro` | A process, not code | True only while someone reads `support@ourio.app` and the report alert |
+| "a person will answer", "we read every report" | `support.astro`, `help.astro` | A process, not code | True only while someone reads `ourio@mikitahimpel.com` and the report alert |
 
 The privacy policy and terms on the landing are what users read. The drafts
 [privacy-policy.md](privacy-policy.md) and [terms.md](terms.md) still call the app "Billet" and hold
 placeholders; the account wording there is corrected the same way as the landing in this PR.
 
 ## Open legal questions (owner checklist)
+
+**Answered 2026-11-15** (read from the owner's Apple Developer account, individual enrolment, with his consent): 1 provider Mikita Himpel; 2 the home address on the account, published on purpose: Kamionkowska 9, apt. 97, 03-805 Warsaw; 3 Poland; 4 Polish law, courts of Warsaw; 5 `ourio@mikitahimpel.com` (Cloudflare Email Routing to the owner's mailbox, later `support@ourio.app`); 6 and 7 the defaults below; 9 trader. The account's phone number is NOT written anywhere in this public repository: the owner enters it in App Store Connect (Contact phone and the EU trader card).
 
 Each is needed before or at submission; the recommended default is what to enter if there is no
 reason to choose otherwise.
@@ -338,7 +340,7 @@ reason to choose otherwise.
       bring a claim in the courts of where you live, and nothing here takes away the protection of
       the law of your country." Fill `<GOVERNING LAW AND COURTS>` in `terms.md` and the landing's
       `terms.astro` with it.
-- [ ] **5. Support email.** Recommended: `support@ourio.app` (already the landing's `supportEmail`
+- [ ] **5. Support email.** Recommended: `ourio@mikitahimpel.com` (already the landing's `supportEmail`
       in `apps/landing/src/site.ts`). Send one test mail to it before submitting: App Review and
       users write there, and it is the review contact email.
 - [ ] **6. Retention periods.** Stated today: server logs 7 days, usage events 3 months, Pick
