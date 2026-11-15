@@ -43,6 +43,10 @@ import Testing
         let view = Color.clear.overlay(alignment: .bottom) { DecorPanel(state: state) {} }
         let layout = HostedLayout(view, phone: test.screen.phone)
         layout.settle(0.5)
+        // The first window after accessibility comes on can list its elements a pass or two late.
+        for _ in 0..<20 where layout.element(id: "decorDone") == nil || layout.element(id: "decorReset") == nil {
+            layout.settle(0.25)
+        }
         return layout
     }
 
