@@ -30,6 +30,9 @@ final class ServerSession {
     private(set) var pairing: PairingModel
     /// Learned by pairing; the saved record keeps it across launches.
     private(set) var isPaired: Bool
+    /// Why the last pair ended when the partner ended it, as the server says; nil until it is asked, or when it
+    /// says nothing.
+    private(set) var partnerLeft: PartnerLeft?
     /// Dev server only; nil without dev tools and until `checkDemoPartner()` has asked.
     private(set) var demoPartner: Bool?
     let inbox: InboxModel
@@ -206,6 +209,12 @@ final class ServerSession {
         guard isPaired else { return nil }
         return PhotoSync(api: backend.api, accounts: backend.accounts, moments: moments, partner: partner,
                          receiving: photoReceiving, defaults: .standard) { PhotoUpload(fileAt: $0) }
+    }
+
+    /// Asked once the server has no pair for this account; offline, what was known stays.
+    func readPartnerLeft() async {
+        guard let account = try? await backend.api.account() else { return }
+        partnerLeft = account.partnerLeft
     }
 
     /// The pair as the server has it, this account first. `.api(.notFound)` once the server has no pair for it.
