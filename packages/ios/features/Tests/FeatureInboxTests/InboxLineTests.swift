@@ -83,27 +83,18 @@ private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner) -> 
     ActivityItem(id: "x", at: 0, actor: .partner, event: .catPetted, target: nil, cursor: "0~x")
   ])
 
-  @Test func shortStatesFitTheirContent() {
+  /// No state opens a short sheet over the hidden room, or changes the sheet's height when it lands.
+  @Test func everyStateOpensAtFullHeightWithItsOwnScrollView() {
     let empty = InboxMachine.Page(items: [])
-    let short: [InboxMachine.Sheet] = [
-      .unpaired, .failed, .loaded(empty), .stale(empty),
+    let short: [InboxMachine.Sheet] = [.unpaired, .failed, .loaded(empty), .stale(empty)]
+    let list: [InboxMachine.Sheet] = [
+      .idle, .loading, .loaded(Self.page), .refreshing(Self.page), .stale(Self.page),
     ]
-    for sheet in short {
-      let layout = InboxLayout(sheet)
-      #expect(layout == .short)
-      #expect(layout.size == .fit)
-      #expect(layout.scrolls, "a fitted sheet measures its content through its own scroll view")
-    }
-  }
-
-  @Test func itemsTakeTheWholeSheet() {
-    for sheet: InboxMachine.Sheet in [
-      .loaded(Self.page), .refreshing(Self.page), .stale(Self.page),
-    ] {
-      let layout = InboxLayout(sheet)
-      #expect(layout == .list)
-      #expect(layout.size == .large)
-      #expect(!layout.scrolls)
+    for sheet in short { #expect(InboxLayout(sheet) == .short) }
+    for sheet in list { #expect(InboxLayout(sheet) == .list) }
+    for sheet in short + list {
+      #expect(InboxLayout(sheet).size == .large)
+      #expect(!InboxLayout(sheet).scrolls)
     }
   }
 
