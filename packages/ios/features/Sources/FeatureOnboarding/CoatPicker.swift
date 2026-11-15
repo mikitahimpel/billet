@@ -10,6 +10,7 @@ import SwiftUI
     /// The cat's height; nil to fill the height the rest leaves, between 170 and 440.
     var stageHeight: CGFloat?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
       VStack(spacing: Space.l) {
@@ -45,9 +46,8 @@ import SwiftUI
 
     private var chips: some View {
       // A plain Grid, not a lazy one: the step measures the chips to see whether everything fits.
-      // Two to a row: four coats in two even rows, and at accessibility sizes a coat's name breaks
-      // between words, never inside one.
-      let perRow = 2
+      // Two to a row at accessibility sizes, so a coat's name breaks between words, never inside one.
+      let perRow = dynamicTypeSize.isAccessibilitySize ? 2 : 3
       let all = CatCoat.offered
       let rows = stride(from: 0, to: all.count, by: perRow).map {
         Array(all[$0..<min($0 + perRow, all.count)])

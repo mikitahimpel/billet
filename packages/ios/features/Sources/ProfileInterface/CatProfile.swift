@@ -46,12 +46,13 @@ public enum CatProfile {
   public static let coatKey = "catCoat"
 
   /// The image of her round portrait in her coat: the bundled `MochiPortrait` for the grey tabby or an unknown coat.
+  /// A coat the app no longer offers (`CatCoat.offered`) is worn as ginger, as in the app.
   public static func avatar(in defaults: UserDefaults = store) -> String {
-    let coats = ["ginger", "cream", "tuxedo", "black", "calico"]
-    guard let coat = defaults.string(forKey: coatKey), coats.contains(coat) else {
-      return "MochiPortrait"
+    switch defaults.string(forKey: coatKey) {
+    case "ginger", "tuxedo", "black", "calico": "MochiPortrait-ginger"
+    case "cream": "MochiPortrait-cream"
+    default: "MochiPortrait"
     }
-    return "MochiPortrait-\(coat)"
   }
 
   public static func named(_ text: String) -> String {
