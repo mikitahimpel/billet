@@ -16,7 +16,7 @@ final class InboxLink {
         /// A text note arrived; the text notes page from their own cursor too.
         var text: @MainActor @Sendable () -> Void
         /// A drawing arrived, with the room's `seq` for it.
-        var drawing: @MainActor @Sendable (Int, Note) -> Void
+        var drawing: @MainActor @Sendable (Int, Wire.Note) -> Void
         var reaction: @MainActor @Sendable (NoteReaction) -> Void
         var lastReactionRev: @MainActor @Sendable () -> Int?
         var shop: @MainActor @Sendable (ShopResponse) -> Void
