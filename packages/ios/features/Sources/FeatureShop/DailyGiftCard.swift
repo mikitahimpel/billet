@@ -87,7 +87,7 @@
 
     private func rewardText(_ reward: GiftReward) -> String {
       switch reward {
-      case .coins(let amount): "+\(amount) coins"
+      case .coins(let amount): GiftWords.coins(amount)
       case .item(let id): "\(Catalog.item(id, cat: state.petName)?.name ?? "A surprise") is yours"
       }
     }

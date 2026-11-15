@@ -27,7 +27,6 @@ struct PostagePicker: View {
 
     @State private var open = false
     @State private var phase = PostageUnlockMachine.State.idle
-    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         Button { open = true } label: {
@@ -50,11 +49,13 @@ struct PostagePicker: View {
         .accessibilityValue(summary)
         .accessibilityIdentifier("composerPostage")
         .popover(isPresented: $open) {
-            tray
-                .sheet(item: confirming) { postage in
-                    PostageUnlockSheet(postage: postage, shop: state.shop) { send(.buyTapped) }
-                }
-                .presentationCompactAdaptation(.popover)
+            PostageTray(stamp: $stamp, seal: $seal, owned: state.shop.owned) { postage, owned in
+                send(.tapped(postage, owned: owned))
+            }
+            .sheet(item: confirming) { postage in
+                PostageUnlockSheet(postage: postage, shop: state.shop) { send(.buyTapped) }
+            }
+            .presentationCompactAdaptation(.popover)
         }
     }
 
@@ -70,37 +71,6 @@ struct PostagePicker: View {
         } set: { postage in
             if postage == nil { send(.cancelled) }
         }
-    }
-
-    private var columns: [GridItem] {
-        Array(repeating: GridItem(.fixed(Size.control), spacing: Space.s, alignment: .top),
-              count: typeSize.isAccessibilitySize ? 3 : 6)
-    }
-
-    private var tray: some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeader("Stamp")
-            LazyVGrid(columns: columns, alignment: .leading, spacing: Space.s) {
-                none(selected: stamp == nil) { stamp = nil }
-                ForEach(NoteStamp.allCases, id: \.self) { option in
-                    choice(NotePostage(option), selected: stamp == option) {
-                        PostageStamp(option.art, width: 26)
-                    }
-                }
-            }
-            SectionHeader("Seal")
-            LazyVGrid(columns: columns, alignment: .leading, spacing: Space.s) {
-                none(selected: seal == nil) { seal = nil }
-                ForEach(NoteSeal.allCases, id: \.self) { option in
-                    choice(NotePostage(option), selected: seal == option) {
-                        WaxSeal(option.art, size: 32)
-                    }
-                }
-            }
-        }
-        .padding(Space.l)
-        .haptic(.selection, trigger: stamp)
-        .haptic(.selection, trigger: seal)
     }
 
     private func send(_ event: PostageUnlockMachine.Event) {
@@ -127,6 +97,51 @@ struct PostagePicker: View {
             }
         }
     }
+}
+
+/// The popover's stamps and seals, each a 44-point button over its price while locked. Its text stops growing at the
+/// largest regular size: at the accessibility sizes the prices would run into each other under the buttons.
+struct PostageTray: View {
+    @Binding var stamp: NoteStamp?
+    @Binding var seal: NoteSeal?
+    let owned: Set<String>
+    let tapped: (NotePostage, _ owned: Bool) -> Void
+
+    @Environment(\.dynamicTypeSize) private var typeSize
+
+    private var columns: [GridItem] {
+        Array(repeating: GridItem(.fixed(Size.control), spacing: Space.s, alignment: .top),
+              count: typeSize.isAccessibilitySize ? 3 : 6)
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.m) {
+            SectionHeader("Stamp")
+            LazyVGrid(columns: columns, alignment: .leading, spacing: Space.s) {
+                none(selected: stamp == nil) { stamp = nil }
+                ForEach(NoteStamp.allCases, id: \.self) { option in
+                    choice(NotePostage(option), selected: stamp == option) {
+                        PostageStamp(option.art, width: 26)
+                    }
+                }
+            }
+            SectionHeader("Seal")
+            LazyVGrid(columns: columns, alignment: .leading, spacing: Space.s) {
+                none(selected: seal == nil) { seal = nil }
+                ForEach(NoteSeal.allCases, id: \.self) { option in
+                    choice(NotePostage(option), selected: seal == option) {
+                        WaxSeal(option.art, size: 32)
+                    }
+                }
+            }
+        }
+        .padding(Space.l)
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("postageTray")
+        .haptic(.selection, trigger: stamp)
+        .haptic(.selection, trigger: seal)
+    }
 
     private func none(selected: Bool, action: @escaping () -> Void) -> some View {
         button("None", selected: selected, action: action) {
@@ -139,10 +154,10 @@ struct PostagePicker: View {
     private func choice<Label: View>(
         _ postage: NotePostage, selected: Bool, @ViewBuilder label: () -> Label
     ) -> some View {
-        let owned = postage.isOwned(state.shop.owned)
+        let owned = postage.isOwned(self.owned)
         return VStack(spacing: Space.xs) {
             button(owned ? postage.name : "Unlock \(postage.name), \(postage.price) coins", selected: selected) {
-                send(.tapped(postage, owned: owned))
+                tapped(postage, owned)
             } label: {
                 label().opacity(owned ? 1 : 0.55)
             }

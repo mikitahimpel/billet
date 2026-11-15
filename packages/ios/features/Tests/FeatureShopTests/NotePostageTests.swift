@@ -19,4 +19,10 @@ import Wire
     #expect(NotePostage.all.allSatisfy { !$0.isOwned(["lamp", "rug", "ink-graphite"]) })
     #expect(NotePostage(NoteSeal.honey).isOwned(["seal-honey"]))
   }
+
+  @Test func aShelfCardNamesItWithoutItsKind() {
+    #expect(NotePostage(NoteStamp.moon).shortName == "Moon")
+    #expect(NotePostage(NoteSeal.meadow).shortName == "Meadow")
+    #expect(NotePostage(NoteSeal.meadow).name == "Meadow seal")
+  }
 }

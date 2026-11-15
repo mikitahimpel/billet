@@ -40,11 +40,13 @@
         PostageArtView(postage, size: 56)
           .frame(height: Size.button)
           .accessibilityHidden(true)
-        Text(postage.name)
+        // Two cards a row at the accessibility sizes leave no room for a bigger name than this.
+        Text(postage.shortName)
           .font(.ourioHeadline)
           .foregroundStyle(Ink.text)
           .lineLimit(1)
           .minimumScaleFactor(0.8)
+          .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         Group {
           if owned {
             Chip("Owned", symbol: "checkmark")
@@ -60,6 +62,7 @@
       .frame(maxWidth: .infinity)
       .cardSurface()
       .accessibilityElement(children: .contain)
+      .accessibilityLabel(postage.name)
       .accessibilityIdentifier("shopPostage-\(postage.id)")
     }
   }

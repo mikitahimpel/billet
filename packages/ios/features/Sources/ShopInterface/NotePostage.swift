@@ -40,6 +40,14 @@ public nonisolated struct NotePostage: Identifiable, Hashable, Sendable {
     }
   }
 
+  /// "Moon", "Rose": the name alone, under a Stamps or Seals header.
+  public var shortName: String {
+    switch kind {
+    case .stamp(let stamp): stamp.rawValue.capitalized
+    case .seal(let seal): seal.rawValue.capitalized
+    }
+  }
+
   public func isOwned(_ owned: Set<String>) -> Bool { owned.contains(id) }
 
   /// As `packages/contracts/domain/src/postage.ts` prices them; the server charges its own.

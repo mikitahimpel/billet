@@ -70,6 +70,7 @@ struct NoteComposer: View {
                 toolToggle
                 paperColours
                 PostagePicker(stamp: $model.stamp, seal: $model.seal, state: state) { dismiss() }
+                    .onChange(of: state.shop.owned) { _, owned in model.dropLocked(owned: owned) }
                 Spacer(minLength: 0)
                 if style != .sticky { kindPicker }
                 if model.hasInk {
@@ -80,6 +81,8 @@ struct NoteComposer: View {
             .padding(.horizontal, Space.gutter)
             PenHolder(style: style, state: state, selection: $model.ink) { dismiss() }
         }
+        // A row of icons over price tags: past this size they overlap on every phone.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.vertical, Space.s)
         .overlay(alignment: .topTrailing) {
             LimitCounter(count: model.text.count, limit: NoteStore.maxLength, warnFrom: NoteStore.maxLength - 30)
