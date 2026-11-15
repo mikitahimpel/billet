@@ -18,15 +18,22 @@ struct DecorPanel: View {
 
     var body: some View {
         Card {
-            VStack(alignment: .leading, spacing: Space.m) {
+            VStack(alignment: .leading, spacing: 0) {
                 header
                 if let selected {
                     controls(for: selected)
+                        .padding(.top, Space.m)
                 } else {
                     closet
+                        .padding(.top, Space.m)
+                    actionRow
+                        .padding(.top, Space.l)
                 }
             }
         }
+        // One geometry for the card and everything on it: the tiles ride the panel's transition instead of
+        // animating to their own frames inside it.
+        .geometryGroup()
         .padding(.horizontal, Space.l)
         .padding(.bottom, Space.m)
         .accessibilityElement(children: .contain)
@@ -36,7 +43,7 @@ struct DecorPanel: View {
     /// Done sits level with the title and the hint runs under both at the card's full width; at accessibility sizes
     /// Done takes the whole width under the words, so neither it nor the title is broken to fit beside the other.
     private var header: some View {
-        VStack(alignment: .leading, spacing: Space.xs) {
+        VStack(alignment: .leading, spacing: Space.s) {
             if dynamicTypeSize.isAccessibilitySize {
                 title
                 hintLine
@@ -131,39 +138,42 @@ struct DecorPanel: View {
         undoButton(fullWidth: true)
     }
 
-    @ViewBuilder private var closet: some View {
-        let items = machine.book.closet
-        if items.isEmpty {
-            VStack(spacing: Space.xs) {
-                Image(systemName: "shippingbox")
-                    .font(.ourioTitle)
-                    .foregroundStyle(Ink.textSecondary)
-                    .accessibilityHidden(true)
-                Text("The closet is empty")
-                    .font(.ourioCallout.weight(.semibold))
-                    .foregroundStyle(Ink.text)
-                Text("Everything is in the room. Tap a piece to move, turn or put it away.")
-                    .font(.ourioCaption)
-                    .foregroundStyle(Ink.textSecondary)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+    /// As tall as the closet up to the cap, so the panel hugs a short closet and scrolls a long one; on a short screen
+    /// at the largest text it gives up its height first, so the title row and the actions stay on the screen.
+    private var closet: some View {
+        HeightCap(Self.closetCap, floor: Self.closetFloor) {
+            ScrollView {
+                let items = machine.book.closet
+                if items.isEmpty {
+                    emptyCloset
+                } else {
+                    closetGrid(items)
+                }
             }
-            .frame(maxWidth: .infinity)
-            .padding(CardMetrics.padding)
-            .cardSurface()
-            .accessibilityElement(children: .combine)
-            .accessibilityIdentifier("decorClosetEmpty")
-        } else {
-            // The whole closet while it fits a few rows; past that it scrolls, so the panel never climbs over the room.
-            ViewThatFits(in: .vertical) {
-                closetGrid(items)
-                ScrollView { closetGrid(items) }
-                    .scrollIndicators(.hidden)
-                    .ourioScrollEdges()
-            }
-            .frame(maxHeight: Size.button * 5)
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
+            .ourioScrollEdges()
         }
-        actionRow
+    }
+
+    private var emptyCloset: some View {
+        VStack(spacing: Space.xs) {
+            Image(systemName: "shippingbox")
+                .font(.ourioTitle)
+                .foregroundStyle(Ink.textSecondary)
+                .accessibilityHidden(true)
+            Text("The closet is empty")
+                .font(.ourioCallout.weight(.semibold))
+                .foregroundStyle(Ink.text)
+            Text("Everything is in the room. Tap a piece to move, turn or put it away.")
+                .font(.ourioCaption)
+                .foregroundStyle(Ink.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("decorClosetEmpty")
     }
 
     private func closetGrid(_ items: [DecorItem]) -> some View {
@@ -173,20 +183,19 @@ struct DecorPanel: View {
                 Button { state.decor.send(.closetTapped(item.id)) } label: {
                     VStack(spacing: Space.s) {
                         art(item.id)
+                            .frame(maxWidth: .infinity)
                             .aspectRatio(Self.closetArtAspect, contentMode: .fit)
-                            .corners(.inner)
                         Text(name)
                             .font(.ourioCallout)
                             .foregroundStyle(Ink.text)
-                            .lineLimit(2)
+                            .lineLimit(2, reservesSpace: true)
                             .multilineTextAlignment(.center)
                             .frame(maxWidth: .infinity)
-                        Spacer(minLength: 0)
                     }
-                    .padding(CardMetrics.padding)
+                    .padding(Space.m)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .cardSurface()
-                    .contentShape(.rect)
+                    .wellSurface(.inner)
+                    .contentShape(.containerRelative)
                 }
                 .buttonStyle(PressScaleStyle())
                 .accessibilityLabel("Place \(name)")
@@ -201,6 +210,12 @@ struct DecorPanel: View {
 
     /// Wider than tall, so two rows of the closet stay under the room's floor.
     static let closetArtAspect: CGFloat = 1.6
+
+    /// The closet's tallest: about a row and a half of tiles, so a third row shows it scrolls.
+    static let closetCap: CGFloat = Size.button * 5
+
+    /// The least the closet keeps when the screen is short: a tile's worth to see and scroll.
+    static let closetFloor: CGFloat = Size.button * 2
 
     @ViewBuilder private func undoButton(fullWidth: Bool) -> some View {
         if machine.book.undo != nil {
@@ -230,15 +245,16 @@ struct DecorPanel: View {
         undoButton(fullWidth: true)
     }
 
-    private func art(_ id: String) -> some View {
-        Ink.surfaceRaised.overlay {
-            if let image = Thumbnails.image("Item_\(id)", maxPixels: 256) {
-                Image(uiImage: image).resizable().scaledToFit().padding(Space.xs)
-            } else {
-                Image(systemName: Self.symbol(id))
-                    .font(.ourioTitle)
-                    .foregroundStyle(Ink.textSecondary)
-            }
+    /// Decoded while the panel is built, so the art is drawn in the panel's first frame; a piece without a picture
+    /// gets its symbol in the same box.
+    @ViewBuilder private func art(_ id: String) -> some View {
+        if let image = Thumbnails.image("Item_\(id)", maxPixels: 256) {
+            Image(uiImage: image).resizable().scaledToFit()
+        } else {
+            Image(systemName: Self.symbol(id))
+                .font(.ourioTitle)
+                .foregroundStyle(Ink.textSecondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
@@ -255,5 +271,29 @@ struct DecorPanel: View {
         case "base-nightstand": "tablecells"
         default: "shippingbox"
         }
+    }
+}
+
+/// Its content at the height it asks for with the width given, no taller than `cap` or than the height offered, and
+/// no shorter than `floor` while the content is taller. The most flexible child of a stack, so it takes what is left.
+private struct HeightCap: Layout {
+    let cap: CGFloat
+    let floor: CGFloat
+
+    init(_ cap: CGFloat, floor: CGFloat) {
+        self.cap = cap
+        self.floor = floor
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        guard let content = subviews.first else { return .zero }
+        let natural = content.sizeThatFits(ProposedViewSize(width: proposal.width, height: nil)).height
+        let offered = proposal.height ?? .infinity
+        let height = max(min(natural, cap, offered), min(natural, floor))
+        return CGSize(width: proposal.width ?? 0, height: height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        subviews.first?.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size))
     }
 }
