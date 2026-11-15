@@ -426,3 +426,18 @@ struct FeedMessTests {
     #expect(sweptOver.line(pronouns: .she).hasSuffix(", but the mat is spotless"))
   }
 }
+
+@Suite struct GameResultCoinsTests {
+  @Test func aRoundShowsWhatItsEventsPayBeforeTheDailyCaps() {
+    #expect(GameResult(game: .laser, score: 100, pounces: 12).coins == 3)
+    #expect(GameResult(game: .water, score: 80).coins == 3)
+    #expect(GameResult(game: .brush, score: 100).coins == 4)
+    #expect(GameResult(game: .feed, score: 90, grams: 40).coins == 4)
+    #expect(GameResult(game: .feed, score: 90).coins == 3)
+  }
+
+  @Test func pouncesNeverGoBelowZero() {
+    #expect(GameResult(game: .laser, score: 100, pounces: -2).pounces == 0)
+    #expect(GameResult(game: .laser, score: 100).pounces == nil)
+  }
+}

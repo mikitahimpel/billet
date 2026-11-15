@@ -32,11 +32,14 @@ public struct GameResult: Equatable, Sendable {
   public let spotless: Bool
   /// Something was left on the mat: the reward is cut a little.
   public let messy: Bool
+  /// The cat's pounces on the dot, for `laser`.
+  public let pounces: Int?
 
   public init(
     game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false, spotless: Bool = false,
-    messy: Bool = false
+    messy: Bool = false, pounces: Int? = nil
   ) {
+    self.pounces = pounces.map { max($0, 0) }
     self.spotless = spotless
     self.messy = messy
     self.game = game
@@ -72,6 +75,18 @@ public struct GameResult: Equatable, Sendable {
     case .water: return [played]
     case .laser: return [played]
     case .brush: return [.petted, played]
+    }
+  }
+
+  /// What `events` pay before the server's daily caps, as `rewardFor` in
+  /// `packages/contracts/domain/src/coins.ts`: 3 for a won game, 1 for each care.
+  public var coins: Int {
+    events.reduce(0) { sum, event in
+      switch event {
+      case .gamePlayed(_, _, let won): sum + (won ? 3 : 1)
+      case .fed, .petted, .played, .watered: sum + 1
+      case .noteShared, .slept, .shooed: sum
+      }
     }
   }
 

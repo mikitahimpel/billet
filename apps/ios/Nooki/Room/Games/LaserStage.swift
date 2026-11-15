@@ -144,7 +144,7 @@ final class LaserStage: GameStage {
             if deck.result == nil, laser.isDone {
                 dot.isEnabled = false
                 deck.cheer(big: true)
-                deck.result = GameResult(game: .laser, score: 100)
+                deck.result = GameResult(game: .laser, score: 100, pounces: laser.pounces)
             } else if let cue = laser.cue(cat: SIMD2(Double(at.x), Double(at.z))) {
                 switch cue {
                 case .chase(let p): run(to: p, from: at, pounce: false)

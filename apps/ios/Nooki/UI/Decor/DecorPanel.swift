@@ -27,7 +27,6 @@ struct DecorPanel: View {
                 }
             }
         }
-        
         .padding(.horizontal, Space.l)
         .padding(.bottom, Space.m)
         .accessibilityElement(children: .contain)
@@ -135,48 +134,73 @@ struct DecorPanel: View {
     @ViewBuilder private var closet: some View {
         let items = machine.book.closet
         if items.isEmpty {
-            VStack(alignment: .leading, spacing: Space.s) {
+            VStack(spacing: Space.xs) {
+                Image(systemName: "shippingbox")
+                    .font(.ourioTitle)
+                    .foregroundStyle(Ink.textSecondary)
+                    .accessibilityHidden(true)
+                Text("The closet is empty")
+                    .font(.ourioCallout.weight(.semibold))
+                    .foregroundStyle(Ink.text)
                 Text("Everything is in the room. Tap a piece to move, turn or put it away.")
                     .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
-                resetButton
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+            .frame(maxWidth: .infinity)
+            .padding(CardMetrics.padding)
+            .cardSurface()
+            .accessibilityElement(children: .combine)
+            .accessibilityIdentifier("decorClosetEmpty")
         } else {
-            ScrollView(.horizontal) {
-                HStack(alignment: .top, spacing: Space.s) {
-                    ForEach(items) { item in
-                        let name = Catalog.item(item.id, cat: state.petName)?.name ?? item.base?.title ?? item.id
-                        Button { state.decor.send(.closetTapped(item.id)) } label: {
-                            VStack(spacing: Space.s) {
-                                art(item.id)
-                                    .aspectRatio(1, contentMode: .fit)
-                                    .corners(.inner)
-                                Text(name)
-                                    .font(.ourioCallout)
-                                    .foregroundStyle(Ink.text)
-                                    .lineLimit(2)
-                                    .multilineTextAlignment(.center)
-                                    // A tile is a third or a half of the tray: larger text breaks the names mid-word.
-                                    .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-                            }
-                            .containerRelativeFrame(
-                                .horizontal, count: Self.closetColumns(at: dynamicTypeSize), spacing: Space.s)
-                            .contentShape(.rect)
-                        }
-                        .buttonStyle(PressScaleStyle())
-                        .accessibilityLabel("Place \(name)")
-                        .accessibilityHint("Stands it in the room")
-                    }
-                }
+            // The whole closet while it fits a few rows; past that it scrolls, so the panel never climbs over the room.
+            ViewThatFits(in: .vertical) {
+                closetGrid(items)
+                ScrollView { closetGrid(items) }
+                    .scrollIndicators(.hidden)
+                    .ourioScrollEdges()
             }
-            .scrollIndicators(.hidden)
-            .fixedSize(horizontal: false, vertical: true)
-            resetButton
+            .frame(maxHeight: Size.button * 5)
+        }
+        actionRow
+    }
+
+    private func closetGrid(_ items: [DecorItem]) -> some View {
+        ItemGrid(columns: Self.closetColumns(at: dynamicTypeSize)) {
+            ForEach(items) { item in
+                let name = Catalog.item(item.id, cat: state.petName)?.name ?? item.base?.title ?? item.id
+                Button { state.decor.send(.closetTapped(item.id)) } label: {
+                    VStack(spacing: Space.s) {
+                        art(item.id)
+                            .aspectRatio(Self.closetArtAspect, contentMode: .fit)
+                            .corners(.inner)
+                        Text(name)
+                            .font(.ourioCallout)
+                            .foregroundStyle(Ink.text)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity)
+                        Spacer(minLength: 0)
+                    }
+                    .padding(CardMetrics.padding)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .cardSurface()
+                    .contentShape(.rect)
+                }
+                .buttonStyle(PressScaleStyle())
+                .accessibilityLabel("Place \(name)")
+                .accessibilityHint("Stands it in the room")
+                .accessibilityIdentifier("decorCloset.\(item.id)")
+            }
         }
     }
 
-    /// Three tiles across the tray, two at the accessibility sizes so a name still has room on two lines.
-    static func closetColumns(at size: DynamicTypeSize) -> Int { size.isAccessibilitySize ? 2 : 3 }
+    /// Two equal tiles across the tray; `ItemGrid` stacks them one to a row at the accessibility sizes.
+    static func closetColumns(at size: DynamicTypeSize) -> Int { size.isAccessibilitySize ? 1 : 2 }
+
+    /// Wider than tall, so two rows of the closet stay under the room's floor.
+    static let closetArtAspect: CGFloat = 1.6
 
     @ViewBuilder private func undoButton(fullWidth: Bool) -> some View {
         if machine.book.undo != nil {
@@ -185,17 +209,25 @@ struct DecorPanel: View {
         }
     }
 
-    private var resetButton: some View {
-        HStack(spacing: Space.s) {
-            PillButton("Reset room", symbol: "arrow.counterclockwise") { confirmingReset = true }
-                .accessibilityIdentifier("decorReset")
-            Spacer(minLength: 0)
-            undoButton(fullWidth: false)
+    /// Reset and Undo at one width across the panel's insets; one under the other at the accessibility sizes.
+    @ViewBuilder private var actionRow: some View {
+        Group {
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(spacing: Space.s) { actionButtons }
+            } else {
+                HStack(spacing: Space.s) { actionButtons }
+            }
         }
         .confirmationDialog("Put everything back where it first stood? What you bought is placed again where it fits.", isPresented: $confirmingReset, titleVisibility: .visible) {
             Button("Reset room", role: .destructive) { state.decor.send(.resetRoom) }
             Button("Cancel", role: .cancel) {}
         }
+    }
+
+    @ViewBuilder private var actionButtons: some View {
+        PillButton("Reset room", symbol: "arrow.counterclockwise", fullWidth: true) { confirmingReset = true }
+            .accessibilityIdentifier("decorReset")
+        undoButton(fullWidth: true)
     }
 
     private func art(_ id: String) -> some View {

@@ -105,4 +105,11 @@ import Testing
         #expect(done.maxY <= again.minY + 1, "the main action comes first")
         #expect(max(care.maxY, coins.maxY) <= done.minY + 1)
     }
+
+    @Test func theResultCountsWhatWasPlayed() {
+        #expect(GameResult(game: .laser, score: 100, pounces: 12).careLabel == "12 pounces")
+        #expect(GameResult(game: .laser, score: 100, pounces: 1).careLabel == "1 pounce")
+        #expect(GameResult(game: .laser, score: 100, pounces: 0).careLabel == "0 pounces")
+        #expect(GameResult(game: .feed, score: 90, grams: 40).careLabel == "Fed 40 g")
+    }
 }
