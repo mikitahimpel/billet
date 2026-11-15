@@ -47,12 +47,17 @@ final class ComposerModel {
     /// Text alone stays a text note for the partner; anything drawn is a picture of the whole note. A stamp or seal
     /// the pair hasn't unlocked (`owned`, as the Shop last heard it) stays off the note.
     func save(into journal: Journal, size: CGSize, owned: Set<String>) -> Bool {
-        let stamp = stamp.flatMap { NotePostage($0).isOwned(owned) ? $0 : nil }
-        let seal = seal.flatMap { NotePostage($0).isOwned(owned) ? $0 : nil }
+        dropLocked(owned: owned)
         guard hasInk || !decorations.isEmpty else {
             return journal.addNote(text: text, paper: paper, ink: ink.light, stamp: stamp, seal: seal)
         }
         return journal.addNote(doodle: picture(size: size), paper: paper, stamp: stamp, seal: seal)
+    }
+
+    /// Takes off the paper a stamp or seal the pair doesn't own, such as one whose unlock the server refused.
+    func dropLocked(owned: Set<String>) {
+        if let stamp, !NotePostage(stamp).isOwned(owned) { self.stamp = nil }
+        if let seal, !NotePostage(seal).isOwned(owned) { self.seal = nil }
     }
 
     /// The strokes over the text, on a transparent square so the board's paper shows through.

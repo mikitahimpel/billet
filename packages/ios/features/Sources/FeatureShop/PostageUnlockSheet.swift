@@ -67,8 +67,7 @@
         }
       }
       .font(.ourioHeadline)
-      .lineLimit(1)
-      .minimumScaleFactor(0.8)
+      .buyLabelFit()
     }
   }
 #endif

@@ -67,6 +67,20 @@ import Wire
         #expect(note.seal == .rose)
     }
 
+    @Test func anUnlockTheServerRefusedComesOffThePaper() {
+        let model = ComposerModel(kind: .sticky, drawing: false)
+        model.stamp = .moon
+        model.seal = .rose
+
+        model.dropLocked(owned: ["stamp-moon", "seal-rose"])
+        #expect(model.stamp == .moon)
+        #expect(model.seal == .rose)
+
+        model.dropLocked(owned: ["seal-rose"])
+        #expect(model.stamp == nil)
+        #expect(model.seal == .rose)
+    }
+
     @Test func aPlainNoteHasNeither() throws {
         let notes = NoteStore()
         let words = "plain \(UUID().uuidString.prefix(6))"
