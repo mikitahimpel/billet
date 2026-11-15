@@ -347,12 +347,13 @@ struct HomeView: View {
                     .modifier(QuietFade(store: quiet, chrome: quietChrome))
             }
         }
-        // Above the tab bar, so both stay clear of the "+" in the right corner.
+        // Above the tab bar, so both stay clear of the "+" in the right corner. Whole in the World's first frame, like
+        // the page: the World's last frame shows them over the room until it draws, so a fade in from nothing would
+        // blink them out between the two.
         .overlay(alignment: .bottom) {
             ZStack {
                 if state.tab == .world, room.game == nil, !arranging { petControls }
             }
-            .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
         .overlay {
