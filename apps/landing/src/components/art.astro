@@ -2,6 +2,11 @@
 import { getImage } from "astro:assets";
 import type { ImageMetadata } from "astro";
 import type { Picture } from "../features";
+import { crop } from "../lib/crops";
+import CropPicture from "./crop-picture.astro";
+import LockScreen from "./lock-screen.astro";
+import PairPhones from "./pair-phones.astro";
+import ShopSet from "./shop-set.astro";
 
 interface Props {
   picture: Picture;
@@ -15,7 +20,8 @@ interface Props {
   sizes?: string;
 }
 
-const { picture, class: className, eager = false, fitHeight = "30rem", alt = picture.alt, sizes } = Astro.props;
+const { picture, class: className, eager = false, fitHeight = "30rem", sizes } = Astro.props;
+const alt = Astro.props.alt ?? ("alt" in picture ? picture.alt : "");
 
 // WebP steps under the original, which stays the largest candidate; a step within 100 px of it adds nothing.
 async function variants(src: ImageMetadata, steps: number[]) {
@@ -27,30 +33,35 @@ async function variants(src: ImageMetadata, steps: number[]) {
   return [...made, { width: src.width, url: src.src }];
 }
 
-const { src } = picture;
-const steps = picture.kind === "portrait" ? [96, 192, 320] : [400, 800, 1200];
-const candidates = await variants(src, steps);
-const srcset = candidates.map((candidate) => `${candidate.url} ${candidate.width}w`).join(", ");
-// The 800 px step (320 px for the portrait) is the fallback when there is one, else the original.
-const fallback = candidates.find((candidate) => candidate.width === (picture.kind === "portrait" ? 320 : 800)) ?? candidates.at(-1)!;
-const imgSizes =
-  sizes ??
-  (picture.kind === "shot"
-    ? "(max-width: 640px) 62vw, 300px"
-    : picture.kind === "portrait"
-      ? "(max-width: 640px) 40vw, 160px"
-      : "(max-width: 900px) 92vw, 560px");
-const img = {
-  src: fallback.url,
-  srcset,
-  sizes: imgSizes,
-  alt,
-  width: src.width,
-  height: src.height,
-  loading: eager ? ("eager" as const) : ("lazy" as const),
-  decoding: "async" as const,
-  fetchpriority: eager ? ("high" as const) : undefined,
-};
+async function image(src: ImageMetadata, kind: "scene" | "cutout" | "shot" | "portrait" | "ui" | "slot") {
+  const candidates = await variants(src, kind === "portrait" ? [96, 192, 320] : [400, 800, 1200]);
+  // The 800 px step (320 px for the portrait) is the fallback when there is one, else the original.
+  const fallback =
+    candidates.find((candidate) => candidate.width === (kind === "portrait" ? 320 : 800)) ?? candidates.at(-1)!;
+  return {
+    src: fallback.url,
+    srcset: candidates.map((candidate) => `${candidate.url} ${candidate.width}w`).join(", "),
+    sizes:
+      sizes ??
+      (kind === "shot"
+        ? "(max-width: 640px) 62vw, 300px"
+        : kind === "slot"
+          ? "(max-width: 640px) 50vw, 230px"
+          : kind === "portrait"
+            ? "(max-width: 640px) 40vw, 160px"
+            : "(max-width: 900px) 92vw, 560px"),
+    alt,
+    width: src.width,
+    height: src.height,
+    loading: eager ? ("eager" as const) : ("lazy" as const),
+    decoding: "async" as const,
+    fetchpriority: eager ? ("high" as const) : undefined,
+  };
+}
+
+const img = "src" in picture ? await image(picture.src, picture.kind) : undefined;
+const still = picture.kind === "crop" ? crop(picture.crop) : undefined;
+const slotSizes = "(max-width: 640px) 50vw, 230px";
 ---
 
 {
@@ -64,12 +75,52 @@ const img = {
         <div class="home-bar" />
       </div>
     </figure>
+  ) : picture.kind === "slot" ? (
+    <figure class:list={["art art-shot", className]}>
+      <div class="phone">
+        <div class="screen stand-screen">
+          {"crop" in picture ? (
+            <CropPicture name={picture.crop} alt={alt} sizes={sizes ?? slotSizes} eager={eager} shot={picture.shot} />
+          ) : (
+            <img class="shot-img stand-in" {...img} data-shot={picture.shot} />
+          )}
+        </div>
+        <div class="island" />
+        <div class="home-bar" />
+      </div>
+    </figure>
+  ) : picture.kind === "crop" ? (
+    <figure
+      class:list={["art still fit", className]}
+      style={`--ar: ${still!.aspect.toFixed(4)}; --fit-h: ${picture.fitHeight ?? fitHeight}`}
+    >
+      <CropPicture
+        name={picture.crop}
+        alt={alt}
+        sizes={picture.sizes ?? sizes ?? "(max-width: 900px) 92vw, 560px"}
+        eager={eager}
+      />
+    </figure>
   ) : picture.kind === "scene" ? (
     <figure
       class:list={["art still fit", className]}
-      style={`--ar: ${(src.width / src.height).toFixed(4)}; --fit-h: ${fitHeight}`}
+      style={`--ar: ${(picture.src.width / picture.src.height).toFixed(4)}; --fit-h: ${fitHeight}`}
     >
       <img {...img} />
+    </figure>
+  ) : picture.kind === "ui" ? (
+    <figure class:list={["art art-ui", className]}>
+      <img {...img} />
+    </figure>
+  ) : picture.kind === "lock" ? (
+    <figure class:list={["art art-lock", className]} aria-hidden="true">
+      <LockScreen line={picture.line} full widgets />
+    </figure>
+  ) : picture.kind === "pair" ? (
+    <PairPhones yours={picture.yours} class={className} />
+  ) : picture.kind === "set" ? (
+    <figure class:list={["art art-set", className]} aria-hidden="true">
+      <ShopSet />
     </figure>
   ) : (
     <figure class:list={["art art-cutout", className]}>

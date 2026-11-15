@@ -1,0 +1,47 @@
+---
+// Your phone in the app: the room at the phone's width under the "Living room" sheet, Pet her pressed.
+import { getImage } from "astro:assets";
+import room from "../assets/art/shared-room.webp";
+import StatusBar from "./status-bar.astro";
+
+interface Props {
+  sizes: string;
+  // The home page's beat 2 has no status bar and a heart over Mochi.
+  home?: boolean;
+}
+
+const { sizes, home = false } = Astro.props;
+const small = (await getImage({ src: room, width: 400, format: "webp" })).src;
+---
+
+<div class="phone">
+  <div class="screen yours">
+    <img
+      class="app-room"
+      src={small}
+      srcset={`${small} 400w, ${room.src} ${room.width}w`}
+      sizes={sizes}
+      alt=""
+      width={room.width}
+      height={room.height}
+      loading="lazy"
+      decoding="async"
+    />
+    {
+      home && (
+        <span class="tw-heart">
+          <svg viewBox="0 0 24 22">
+            <path d="M12 21.5 10.3 20C4.4 14.6.5 11.1.5 6.8.5 3.3 3.2.6 6.7.6c2 0 3.9.9 5.3 2.4C13.4 1.5 15.3.6 17.3.6c3.5 0 6.2 2.7 6.2 6.2 0 4.3-3.9 7.8-9.8 13.2L12 21.5Z" />
+          </svg>
+        </span>
+      )
+    }
+    {!home && <StatusBar />}
+    <span class="island"></span>
+    <div class="sheet">
+      <p class="screen-label">Living room</p>
+      <div class="acts"><span class="primary">Pet her</span><span>Feed her</span><span>Leave a note</span></div>
+    </div>
+    <span class="home-bar"></span>
+  </div>
+</div>

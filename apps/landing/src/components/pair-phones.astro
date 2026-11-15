@@ -1,0 +1,50 @@
+---
+// Two phones, one per person: yours (the invite screen, or the app's room) and their lock screen.
+import AppRoomScreen from "./app-room-screen.astro";
+import LockScreen from "./lock-screen.astro";
+import StatusBar from "./status-bar.astro";
+
+interface Props {
+  yours: "invite" | "room";
+  class?: string;
+}
+
+const { yours, class: className } = Astro.props;
+---
+
+<figure class:list={["art pair2", className]} aria-hidden="true">
+  <div class="tw">
+    {
+      yours === "room" ? (
+        <AppRoomScreen sizes="(max-width: 640px) 46vw, 210px" />
+      ) : (
+        <div class="phone">
+          <div class="screen pairing">
+            <StatusBar />
+            <span class="island" />
+            <div class="pair-body">
+              <div class="pair-group">
+                <div class="pair-head">
+                  <p class="pair-title">I'm happier with two of you!</p>
+                  <p class="pair-sub">Send them your code. They type it in Ourio to join you and Mochi.</p>
+                </div>
+                <div class="code-card">
+                  <span class="code-label">Your code</span>
+                  <span class="code-plate"><span>7KQM2</span><span>XWPRD</span></span>
+                  <span class="code-btns"><span>Copy</span><span class="gold">Share</span></span>
+                </div>
+              </div>
+              <p class="pair-foot">Expires in 24 h</p>
+            </div>
+            <span class="home-bar" />
+          </div>
+        </div>
+      )
+    }
+    <p class="tw-cap">Your phone</p>
+  </div>
+  <div class="tw">
+    <LockScreen line="They petted Mochi. She purred." full />
+    <p class="tw-cap">Their lock screen</p>
+  </div>
+</figure>

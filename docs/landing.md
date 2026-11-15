@@ -2,8 +2,15 @@
 
 The marketing site, `apps/landing`: a static Astro build served by Cloudflare Pages. Every route
 is listed once in `src/site.ts`; the copy lives in `src/config.ts`, `features.ts`, `faq.ts`,
-`compare.ts` and `dates.ts`. The look is `src/styles/global.css`, with each first screen's rules
-inlined from `critical-home.css` and `critical-site.css`.
+`compare.ts` and `dates.ts`. The look is `src/styles/global.css`; each page's first-screen rules
+are a subset of it in `src/styles/critical/<page>.css` (`/` is `index`, `/features/games/` is
+`features-games`), inlined minified with the fonts of `critical/fonts.css`. The home page's set
+stays under 15 KB. A rule changed in `global.css` is changed in the critical files that hold it.
+
+Images are pre-encoded and ship byte for byte under hashed names: room renders and close-ups
+(`crop-*`) in `src/assets/room` through `roomAsset()` and `src/lib/crops.ts`, shop pieces in
+`src/assets/props` through `src/lib/shop.ts`. A phone whose screen still shows a close-up has
+`data-shot="<page>-<n>"`: that is the app screenshot it waits for.
 
 ```sh
 pnpm --filter @billet/landing dev     # http://pc:4321 with --host 0.0.0.0

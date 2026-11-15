@@ -75,7 +75,7 @@
 
   /* ---------- the animated Mochi, swapped in only once she has decoded ---------- */
 
-  // The lights-on (style.css, "The lights coming on"): a short dark beat after the unlit room
+  // The lights-on (global.css, "The lights coming on"): a short dark beat after the unlit room
   // decodes, capped so a slow network never holds the title back for long.
   run("lights", () => {
     const story = document.getElementById("story");
@@ -87,12 +87,12 @@
       if (started) return;
       started = true;
       story.classList.add("lamp-on");
-      setTimeout(() => story.classList.add("lamp-settled"), 2000);
+      setTimeout(() => story.classList.add("lamp-settled"), 1300);
     };
-    const afterDark = () => setTimeout(on, 900);
+    const afterDark = () => setTimeout(on, 400);
     if (img?.decode) img.decode().then(afterDark, afterDark);
     else afterDark();
-    setTimeout(on, 2000);
+    setTimeout(on, 1200);
   });
 
   // Mochi is the loop over the cat-less renders; if it can't play, the lit room with her in it
@@ -165,6 +165,20 @@
     stage.addEventListener("pointercancel", release);
   });
 
+  /* ---------- the header: compact once the story has scrolled past ---------- */
+
+  run("header", () => {
+    // The story starts at the top of the page, so it stops intersecting only once scrolled past,
+    // however the reader got there (a flick, a jump, an anchor).
+    const header = document.getElementById("chrome");
+    const story = document.getElementById("story");
+    if (!header || !story || !("IntersectionObserver" in window))
+      return header?.classList.add("compact");
+    new IntersectionObserver(([entry]) => {
+      header.classList.toggle("compact", !entry.isIntersecting);
+    }).observe(story);
+  });
+
   /* ---------- the pinned story ---------- */
 
   run("story", () => {
@@ -172,9 +186,15 @@
     const beats = [...story.querySelectorAll(".beat")];
 
     // Which beat shows at each stretch of the story's scroll.
-    const beatAt = (p) => (p < 0.16 ? "0" : p < 0.43 ? "1" : p < 0.7 ? "2" : "3");
+    const beatAt = (p) => (p < 0.22 ? "0" : p < 0.48 ? "1" : p < 0.72 ? "2" : "3");
+
+    // Beat 1 dims the room by scroll, not by a timer, so a fast scroll still sees it: down over the
+    // first 0.10 of the story after 0.22, back up over 0.08 from beat 2 (0.48).
+    const clamp01 = (x) => Math.min(1, Math.max(0, x));
+    const dimAt = (p) => (p < 0.48 ? clamp01((p - 0.22) / 0.1) : 1 - clamp01((p - 0.48) / 0.08));
 
     let current = null;
+    let dim = null;
     let ticking = false;
 
     function update() {
@@ -182,6 +202,11 @@
       const rect = story.getBoundingClientRect();
       const p = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height - innerHeight)));
       const next = beatAt(p);
+      const nextDim = still ? "0" : dimAt(p).toFixed(3);
+      if (nextDim !== dim) {
+        dim = nextDim;
+        story.style.setProperty("--dim", dim);
+      }
       if (next !== current) {
         current = next;
         story.dataset.beat = next;
@@ -229,6 +254,7 @@
 
     // From the actions on your phone to the notification on theirs, in the duo's own pixels.
     function drawThread() {
+      if (close.matches) return;
       const box = duo.getBoundingClientRect();
       if (!box.width) return;
       const a = acts.getBoundingClientRect();
@@ -261,8 +287,12 @@
       grad.setAttribute("y2", finish.y);
     }
 
+    // Under 900px the thread is hidden (global.css): the notification just arrives after a beat.
+    const close = matchMedia("(max-width: 900px)");
+
     function send(done) {
       if (still) return done();
+      if (close.matches) return setTimeout(done, 450);
       const length = lit.getTotalLength();
       const t0 = performance.now();
       const duration = 950;
@@ -321,18 +351,25 @@
     document.fonts?.ready.then(drawThread);
 
     if (still || !("IntersectionObserver" in window)) return;
+    let first = 0;
     new IntersectionObserver(
       ([entry]) => {
         clearInterval(auto);
+        clearTimeout(first);
         if (!entry.isIntersecting || touched) return;
-        // The reveal has moved the phones by now; measure again before the first spark.
-        setTimeout(drawThread, 800);
-        auto = setInterval(() => {
+        // The first pat soon after the phones come into view (the reveal has settled by then, so
+        // measure the thread again first), then one every 4.2 s.
+        first = setTimeout(() => {
+          drawThread();
           act(autoStep % 3);
           autoStep += 1;
-        }, 4200);
+          auto = setInterval(() => {
+            act(autoStep % 3);
+            autoStep += 1;
+          }, 4200);
+        }, 600);
       },
-      { threshold: 0.4 },
+      { threshold: 0.25 },
     ).observe(duo);
   });
 
@@ -380,6 +417,25 @@
 
   /* ---------- reveals on scroll ---------- */
 
+  // A fast scroll (more than 1.5 screens in the last 250 ms) sets html.fast until 500 ms after the
+  // last scroll event; global.css drops the reveal fades meanwhile.
+  run("fast", () => {
+    const samples = [];
+    let calm = 0;
+    addEventListener(
+      "scroll",
+      () => {
+        const now = performance.now();
+        samples.push([now, scrollY]);
+        while (samples.length > 1 && now - samples[0][0] > 250) samples.shift();
+        if (Math.abs(scrollY - samples[0][1]) > 1.5 * innerHeight) html.classList.add("fast");
+        clearTimeout(calm);
+        calm = setTimeout(() => html.classList.remove("fast"), 500);
+      },
+      { passive: true },
+    );
+  });
+
   run("reveal", () => {
     for (const group of document.querySelectorAll(".strip, .posters, .steps")) {
       [...group.children].forEach((child, n) => child.style.setProperty("--n", n));
@@ -398,7 +454,7 @@
           }
         }
       },
-      { rootMargin: "0px 0px 20% 0px" },
+      { rootMargin: "0px 0px 35% 0px" },
     );
     reveals.forEach((el) => seen.observe(el));
   });

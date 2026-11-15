@@ -6,8 +6,7 @@ import { appStoreId } from "../config";
 import bricolage from "../assets/fonts/bricolage-grotesque-latin.woff2?url";
 import nunito from "../assets/fonts/nunito-latin.woff2?url";
 import { pages } from "../site";
-import criticalHome from "../styles/critical-home.css?raw";
-import criticalSite from "../styles/critical-site.css?raw";
+import fonts from "../styles/critical/fonts.css?inline";
 import sheet from "../styles/global.css?url";
 
 interface Props {
@@ -18,7 +17,7 @@ interface Props {
   shareDescription?: string;
   // Extra schema.org nodes for this page; WebPage and its breadcrumb are added here.
   schema?: Record<string, unknown>[];
-  // The home page brings its own header (inside the story), first-screen styles and scripts.
+  // The home page brings its own header (fixed over the story) and scripts.
   home?: boolean;
   // A class per page template on <body>: site-feature, site-faq, site-doc...
   bodyClass?: string;
@@ -37,10 +36,19 @@ const {
   noindex = false,
 } = Astro.props;
 const path = Astro.url.pathname;
-// A ?raw import keeps the critical sheets' url()s as written, so their font paths become the hashed build URLs here.
-const critical = (home ? criticalHome : criticalSite)
-  .replaceAll("../assets/fonts/bricolage-grotesque-latin.woff2", bricolage)
-  .replaceAll("../assets/fonts/nunito-latin.woff2", nunito);
+// Each page's first-screen rules, a subset of global.css in styles/critical/<page>.css: / → index,
+// /features/games/ → features-games. ?inline gives them minified, with the fonts' hashed URLs.
+const criticalSets = import.meta.glob<string>("../styles/critical/*.css", {
+  eager: true,
+  query: "?inline",
+  import: "default",
+});
+const criticalKey = path.split("/").filter(Boolean).join("-") || "index";
+const criticalSet = criticalSets[`../styles/critical/${criticalKey}.css`];
+if (criticalSet === undefined) {
+  throw new Error(`No critical CSS for ${path} in styles/critical/${criticalKey}.css`);
+}
+const critical = fonts + criticalSet;
 const canonical = new URL(path, Astro.site).href;
 const ogImage = new URL("/og.png", Astro.site).href;
 const homeUrl = new URL("/", Astro.site).href;
@@ -147,7 +155,7 @@ const structuredData = {
   <body class:list={[!home && "site", bodyClass]}>
     <!-- Cloudflare's Email Obfuscation would turn support@ourio.app into a script-only link that crawlers and agents can't read. -->
     <!--email_off-->
-    {!home && <SiteHeader />}
+    {home ? <slot name="header" /> : <SiteHeader />}
     <main>
       {
         trail.length > 0 && (
