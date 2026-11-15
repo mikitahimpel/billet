@@ -72,11 +72,13 @@ struct GameView: View {
                     .background { Color.clear.glass(.circle, role: .control).allowsHitTesting(false) }
             }
             .padding(.horizontal, Space.gutter)
+            .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).maxY }) { session.titleMoved(bottom: $0) }
 
             Spacer(minLength: 0)
 
             if let result = session.finished {
                 ResultToast(result: result, again: session.playAgain, done: end)
+                    .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { session.cardMoved(top: $0) }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
                 GameTray(
@@ -366,10 +368,11 @@ struct ResultToast: View {
     }
 
     @ViewBuilder private var earned: some View {
-        ResultStat(title: result.game.careLabel(grams: result.grams), id: "game.care") {
+        ResultStat(title: result.careLabel, id: "game.care") {
             Image(systemName: result.game.symbol)
         }
-        ResultStat(title: "Coins", id: "game.coins") { CoinIcon(size: Space.l, relativeTo: .subheadline) }
+        ResultStat(title: "+\(result.coins)", id: "game.coins") { CoinIcon(size: Space.l, relativeTo: .subheadline) }
+            .accessibilityLabel("\(result.coins) coins")
     }
 }
 
@@ -384,9 +387,9 @@ private struct ResultStat<Mark: View>: View {
             mark
                 .foregroundStyle(Ink.glassGlyphSecondary)
                 .accessibilityHidden(true)
-            Text(title).lineLimit(1)
+            Text(title).lineLimit(1).monospacedDigit()
         }
-        .font(.ourioCallout.weight(.semibold))
+        .font(.ourioHeadline)
         .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, Space.m)
         .padding(.vertical, Space.xs)
@@ -438,12 +441,15 @@ extension MiniGame {
         case .brush: "Brush"
         }
     }
+}
 
-    fileprivate func careLabel(grams: Int?) -> String {
-        switch self {
+extension GameResult {
+    /// What the round did, with its number where it has one.
+    var careLabel: String {
+        switch game {
         case .feed: grams.map { "Fed \($0) g" } ?? "Fed"
         case .water: "Fresh water"
-        case .laser: "Played"
+        case .laser: pounces.map { $0 == 1 ? "1 pounce" : "\($0) pounces" } ?? "Played"
         case .brush: "Brushed"
         }
     }

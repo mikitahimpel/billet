@@ -17,6 +17,13 @@ import Testing
     #expect(GameFraming.distance(radius: 0, tanHalf: 0.2, aspect: 0.5, fill: 0.9, push: 0) > 0)
   }
 
+  @Test func aResultIsFramedBetweenTheTitleRowAndTheCard() {
+    #expect(abs(GameFraming.covered(top: 0.12, card: 0.3) - 0.18) < 0.0001)
+    #expect(GameFraming.covered(top: 0.2, card: 0.1) == 0)
+    #expect(GameFraming.covered(top: 0, card: 0) == 0)
+    #expect(GameFraming.covered(top: 0, card: 2) == 1)
+  }
+
   @Test func smoothingIsTheSameHoweverTheTimeIsCut() {
     var coarse: Float = 0
     coarse = GameFraming.smooth(coarse, toward: 1, dt: 0.1, rate: 5)

@@ -29,6 +29,9 @@ final class GameSession {
     @ObservationIgnored private var subscription: (any Cancellable)?
     @ObservationIgnored private var wasDirected = false
     @ObservationIgnored private var lens: CGSize = .zero
+    /// The title row's bottom and the result card's top, in points from the screen's top.
+    @ObservationIgnored private var titleBottom: CGFloat = 0
+    @ObservationIgnored private var cardTop: CGFloat?
     @ObservationIgnored private var ended = false
     @ObservationIgnored private var coach = GameCoach.State.idle
     @ObservationIgnored private var gaze = GameGaze()
@@ -104,6 +107,25 @@ final class GameSession {
     func resize(_ viewport: CGSize) {
         lens = viewport
         camera?.viewport = viewport
+        frameResult()
+    }
+
+    /// Where the game's own controls stand, so the finished room is framed in the space between them.
+    func titleMoved(bottom: CGFloat) {
+        titleBottom = bottom
+        frameResult()
+    }
+
+    func cardMoved(top: CGFloat) {
+        cardTop = top
+        frameResult()
+    }
+
+    private func frameResult() {
+        guard let camera, finished != nil, lens.height > 0 else { return }
+        // Until the card has been laid out, about the share it takes on a phone.
+        let card = cardTop.map { Float(1 - $0 / lens.height) } ?? 0.36
+        camera.covered = GameFraming.covered(top: Float(titleBottom / lens.height), card: card)
     }
 
     private func update(_ dt: Float) {
@@ -193,7 +215,7 @@ final class GameSession {
 
     private func finish(_ result: GameResult) {
         finished = result
-        camera?.covered = 0.36
+        frameResult()
         finger = nil
         deck.bar = nil
         UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -205,6 +227,7 @@ final class GameSession {
     func playAgain() {
         stage?.tearDown()
         camera?.covered = 0
+        cardTop = nil
         begin()
     }
 

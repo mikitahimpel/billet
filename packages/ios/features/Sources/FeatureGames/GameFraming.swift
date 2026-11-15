@@ -13,6 +13,12 @@ public enum GameFraming {
     return max(radius, 0.05) / (narrow * fill) * (1 - 0.1 * push)
   }
 
+  /// What a game camera's `covered` is for a card over the bottom `card` share of the screen's height under a title
+  /// row over the top `top` share: the subject is framed in the middle of the room left between them.
+  public static func covered(top: Float, card: Float) -> Float {
+    min(max(card - top, 0), 1)
+  }
+
   /// `value` moved toward `target` by `rate` per second, the same however the seconds are cut into frames.
   public static func smooth(_ value: Float, toward target: Float, dt: Float, rate: Float) -> Float {
     guard dt > 0 else { return value }
