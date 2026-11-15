@@ -7,6 +7,7 @@ import SwiftUI
 import Design
 import TipKit
 import UsInterface
+import enum Wire.EarnAmount
 
 struct TabBar: View {
     let state: HomeState
@@ -198,13 +199,13 @@ struct AddButton: View {
     var body: some View {
         Menu {
             Button { picking = true } label: {
-                Label("Moment · +10", systemImage: "photo.badge.plus")
+                Label("Moment · +\(EarnAmount.moment)", systemImage: "photo.badge.plus")
             }
             Button { state.drawing = true } label: {
                 Label("Draw", systemImage: "scribble.variable")
             }
             Button { state.composingNote = .write } label: {
-                Label("Note · +5", systemImage: "note.text")
+                Label("Note · +\(EarnAmount.note)", systemImage: "note.text")
             }
             Menu {
                 ForEach(state.us.lists) { list in

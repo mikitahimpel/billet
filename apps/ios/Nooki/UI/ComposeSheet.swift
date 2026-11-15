@@ -44,7 +44,7 @@ struct ComposeSheet: View {
                 LimitCounter(count: caption.count, limit: Self.captionLimit)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
-                PrimaryButton("Add to Moments · +10") {
+                PrimaryButton("Add to Moments · +\(EarnAmount.moment)") {
                     onSave(caption.trimmingCharacters(in: .whitespacesAndNewlines))
                     dismiss()
                 }
