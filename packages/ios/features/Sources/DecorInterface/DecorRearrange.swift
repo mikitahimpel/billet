@@ -69,7 +69,8 @@ extension DecorLayout {
   private func exchanging(_ placement: Placement, verdict: Verdict, in room: DecorRoom) -> Drop? {
     let blocking = blockers(of: placement)
     guard verdict == .occupied, blocking.count == 1, let other = self.placement(of: blocking[0]),
-      let mine = self.placement(of: placement.item)
+      let mine = self.placement(of: placement.item),
+      DecorItem.item(shopID: other.item)?.isAnchored != true
     else { return nil }
 
     if mine.surface == other.surface {

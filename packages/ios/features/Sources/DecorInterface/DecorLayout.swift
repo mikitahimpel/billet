@@ -386,7 +386,8 @@ public struct DecorLayout: Codable, Equatable, Sendable {
   /// wall, `dx` and `dz` on the floor. The grid is 5 cm and a piece is not, so a piece left within a cell of a wall
   /// (or, on a wall, of the window or the fittings) stands that far off it; it is drawn touching instead. Only
   /// toward what is there to touch, never into another piece, and never for the room's own furniture at home,
-  /// which is modelled where it stands. The cells it is judged by do not change.
+  /// which is modelled where it stands. An anchored piece lies flush with the wall only, so a neighbour never moves
+  /// it. The cells it is judged by do not change.
   public func flushShift(of placement: Placement, in room: DecorRoom = .home) -> (
     dx: Double, dz: Double
   ) {
@@ -405,7 +406,7 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     case .floor:
       guard !item.isFlat else { return (0, 0) }
       let others = allPlacements(in: room).compactMap { other -> Span? in
-        guard other.item != placement.item, other.surface == .floor,
+        guard !item.isAnchored, other.item != placement.item, other.surface == .floor,
           let otherItem = DecorItem.item(shopID: other.item), !otherItem.isFlat
         else { return nil }
         return Self.span(of: other, item: otherItem)

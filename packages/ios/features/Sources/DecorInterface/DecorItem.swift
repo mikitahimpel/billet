@@ -73,6 +73,10 @@ public struct DecorItem: Equatable, Sendable, Identifiable {
   public let base: BaseSpot?
 
   public var isBase: Bool { base != nil }
+  /// Built against a fixture of the room, as the window seat is under the round window: another piece's drop
+  /// stops against it and never swaps it or moves it aside, and it is never drawn shifted toward a neighbour.
+  public var isAnchored: Bool { Self.anchored.contains(id) }
+  static let anchored: Set<String> = ["base-windowseat"]
   /// The cat lies on it: a bed or a sofa.
   public var isRest: Bool { base?.isRest == true || cat == .catBed || cat == .sofa }
 
