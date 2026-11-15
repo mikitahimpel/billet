@@ -25,6 +25,7 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
   @ObservationIgnored let wallet: WalletStore
   @ObservationIgnored private let couple: CoupleStore
   @ObservationIgnored private let catName: () -> String
+  @ObservationIgnored private let events: EventReporter
   /// Nil until this phone follows a pair on the server, and with it nothing can be bought or earned.
   @ObservationIgnored private var sync: ShopClient?
   @ObservationIgnored var undoWindow: Duration = .seconds(Purchase.undoWindow)
@@ -38,11 +39,13 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
   private var left = 0
 
   public init(
-    wallet: WalletStore, couple: CoupleStore, care: any CatTending, catName: @escaping () -> String
+    wallet: WalletStore, couple: CoupleStore, care: any CatTending, events: EventReporter = .none,
+    catName: @escaping () -> String
   ) {
     self.wallet = wallet
     self.couple = couple
     self.catName = catName
+    self.events = events
     store = .shop(
       ShopServices(
         client: { [unowned self] in self.sync },
@@ -208,7 +211,11 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
   func undo(_ purchase: Purchase, at now: Date = .now) -> Bool {
     guard purchase.canUndo(at: now) else { return false }
     store.send(.undoTapped(purchase.id))
-    return !pending.contains { $0.id == purchase.id }
+    let undone = !pending.contains { $0.id == purchase.id }
+    if undone, case (_, let id)? = purchase.boughtEvent {
+      events(.shopPurchaseUndone, detail: id, value: purchase.cost)
+    }
+    return undone
   }
 
   /// Opens the Coins sheet: just the coins, or for a buy that needs `missing` more, which it can finish after.
@@ -235,7 +242,24 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     if open == nil, order.itemIDs.allSatisfy(owned.contains) { return false }
     let before = Set(pending.map(\.id))
     store.send(.buyTapped(order, id: UUID(), at: .now))
-    return pending.contains { !before.contains($0.id) }
+    guard let placed = pending.first(where: { !before.contains($0.id) }) else { return false }
+    if case (let name, let id)? = placed.boughtEvent {
+      events(name, detail: id, value: placed.cost)
+    }
+    return true
+  }
+
+  // MARK: Looking
+
+  public func opened() { events(.shopOpened) }
+
+  func viewed(_ item: ShopItem) {
+    if let id = ClientEvent.detail(from: item.id) { events(.shopItemViewed, detail: id) }
+  }
+
+  /// A bundle's id, or a deal's item.
+  func offerViewed(_ id: String) {
+    if let id = ClientEvent.detail(from: id) { events(.shopOfferViewed, detail: id) }
   }
 
   func toggleWish(_ item: ShopItem) {
@@ -259,7 +283,13 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
     }
     defer { store.send(.giftShown) }
     switch open?.gift {
-    case .opened(let reward): return .opened(reward)
+    case .opened(let reward):
+      switch reward {
+      case .coins(let coins): events(.shopDailyGiftClaimed, detail: "coins", value: coins)
+      case .item(let item):
+        if let id = ClientEvent.detail(from: item) { events(.shopDailyGiftClaimed, detail: id) }
+      }
+      return .opened(reward)
     case .taken: return .taken
     case .idle, .opening, .checking, .failed, nil: return nil
     }
@@ -347,5 +377,21 @@ public final class ShopModel: CoinsBalanceProviding, CoinEarning, TreatBuying {
   /// `YYYY-MM-DD` on this phone's calendar, the day the server counts the gift on.
   nonisolated static func localDay(_ date: Date, calendar: Calendar = .current) -> String {
     ShopMachine.localDay(date, calendar: calendar)
+  }
+}
+
+extension Purchase {
+  /// The analytics name and catalogue id of this buy; nil for a treat, which counts as `CatFed`.
+  var boughtEvent: (ClientEventName, String)? {
+    let raw: String
+    let name: ClientEventName
+    switch offer {
+    case .set(let set): (raw, name) = (set.rawValue, .shopBundleBought)
+    case .item(let item): (raw, name) = (item.rawValue, asGift ? .shopGiftSent : .shopItemBought)
+    case .ink(let ink): (raw, name) = (ink.rawValue, .shopItemBought)
+    case .postage(let postage): (raw, name) = (postage.rawValue, .shopItemBought)
+    case .treat: return nil
+    }
+    return ClientEvent.detail(from: raw).map { (name, $0) }
   }
 }

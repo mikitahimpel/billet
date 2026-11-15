@@ -1,9 +1,12 @@
+import Wire
 import FeatureShop
+import GamesInterface
 import Foundation
 import MomentsInterface
 import Pet
 import Observation
 import ShopInterface
+import Transport
 import WidgetInterface
 import WidgetUI
 import UsInterface
@@ -14,6 +17,7 @@ import UsInterface
 final class CatCare {
     @ObservationIgnored private let wallet: WalletStore
     @ObservationIgnored private let streak: StreakStore
+    @ObservationIgnored private let events: EventReporter
 
     /// Bumped by every pet, treat and buy; the room's cat purrs at the next look.
     var petPulse = 0
@@ -24,9 +28,10 @@ final class CatCare {
     /// The care the sheet has given lately, and whether the next is welcome.
     private(set) var gate = CareGate()
 
-    init(wallet: WalletStore, streak: StreakStore) {
+    init(wallet: WalletStore, streak: StreakStore, events: EventReporter) {
         self.wallet = wallet
         self.streak = streak
+        self.events = events
     }
 
     var level: Int { wallet.wallet.level }
@@ -49,11 +54,25 @@ final class CatCare {
         gate.attempt(care, needs: needs, now: now)
     }
 
-    func pet() {
+    /// A pet from a widget's button is counted as the button's, not as a stroke in the app.
+    func pet(fromWidget: Bool = false) {
         petsGiven += 1
         petPulse += 1
         fill(Self.petFill)
         streak.record()
+        if fromWidget {
+            events(.widgetButtonTapped, detail: "pet")
+        } else {
+            events(.catPetted)
+        }
+    }
+
+    /// A game from the pet sheet; weighing her food counts as feeding her.
+    func played(_ game: MiniGame) {
+        switch game {
+        case .feed: events(.catFed, detail: "food")
+        case .water, .laser, .brush: events(.catPlayed, detail: game.rawValue)
+        }
     }
 
     /// A treat that was paid for: it fills more of her bar than a pet.
@@ -62,6 +81,7 @@ final class CatCare {
         petPulse += 1
         fill(0.1)
         streak.record()
+        events(.catFed, detail: "treat")
     }
 
     func notice() {

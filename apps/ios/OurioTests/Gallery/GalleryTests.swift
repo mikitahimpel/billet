@@ -102,22 +102,22 @@ enum GalleryScreen: String, CaseIterable, Sendable {
         switch loaded {
         case .inbox(let model):
             NavigationStack {
-                InboxSheet(model: model, state: HomeState(stores: .live()), open: { _ in }, opensModel: false,
+                InboxSheet(model: model, state: HomeState(stores: .live(events: .none)), open: { _ in }, opensModel: false,
                            now: { Self.now })
             }
         case .whoKnows(let model):
-            NavigationStack { WhoKnowsScreen(state: HomeState(stores: .live()), model: model) }
+            NavigationStack { WhoKnowsScreen(state: HomeState(stores: .live(events: .none)), model: model) }
                 // The intro shows until this phone has seen the round; a store of its own keeps it unseen on every run.
                 .defaultAppStorage(Self.freshStorage())
                 // A reveal pops in on appear; drawn without animation it is always at rest.
                 .transaction { $0.animation = nil }
         case .drawGuess(let model):
-            NavigationStack { DrawGuessScreen(state: HomeState(stores: .live()), model: model) }
+            NavigationStack { DrawGuessScreen(state: HomeState(stores: .live(events: .none)), model: model) }
                 // The drawing replays over a few seconds; with Reduce Motion it is drawn whole at once.
                 .environment(\._accessibilityReduceMotion, true)
                 .transaction { $0.animation = nil }
         case .settings:
-            NavigationStack { SettingsView(state: HomeState(stores: .live())) {} }
+            NavigationStack { SettingsView(state: HomeState(stores: .live(events: .none))) {} }
         case .game(let finished):
             VStack {
                 Spacer(minLength: 0)

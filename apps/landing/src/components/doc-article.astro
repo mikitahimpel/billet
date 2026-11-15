@@ -1,4 +1,6 @@
 ---
+import EndCard from "./end-card.astro";
+
 interface Props {
   eyebrow: string;
   title: string;
@@ -36,3 +38,4 @@ const { eyebrow, title, lead, updated, topics } = Astro.props;
     </div>
   </div>
 </article>
+<EndCard />

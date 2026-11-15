@@ -35,6 +35,21 @@
   // Set by the Mochi part, called by the story part; no-ops until then or if it fails.
   let startPurring = () => {};
   let stopPurring = () => {};
+  let notice = () => {};
+
+  // A custom property written only when its text changes: each write restyles all under el.
+  const written = new WeakMap();
+  function setVar(el, name, value) {
+    let last = written.get(el);
+    if (!last) written.set(el, (last = new Map()));
+    if (last.get(name) === value) return;
+    last.set(name, value);
+    el.style.setProperty(name, value);
+  }
+  function dropVar(el, name) {
+    written.get(el)?.delete(name);
+    el.style.removeProperty(name);
+  }
 
   /* ---------- fairy lights, from the render's bulb positions in :root ---------- */
 
@@ -75,7 +90,7 @@
 
   /* ---------- the animated Mochi, swapped in only once she has decoded ---------- */
 
-  // The lights-on (style.css, "The lights coming on"): a short dark beat after the unlit room
+  // The lights-on (global.css, "The lights coming on"): a short dark beat after the unlit room
   // decodes, capped so a slow network never holds the title back for long.
   run("lights", () => {
     const story = document.getElementById("story");
@@ -87,12 +102,12 @@
       if (started) return;
       started = true;
       story.classList.add("lamp-on");
-      setTimeout(() => story.classList.add("lamp-settled"), 2000);
+      setTimeout(() => story.classList.add("lamp-settled"), 1300);
     };
-    const afterDark = () => setTimeout(on, 900);
+    const afterDark = () => setTimeout(on, 400);
     if (img?.decode) img.decode().then(afterDark, afterDark);
     else afterDark();
-    setTimeout(on, 2000);
+    setTimeout(on, 1200);
   });
 
   // Mochi is the loop over the cat-less renders; if it can't play, the lit room with her in it
@@ -123,6 +138,10 @@
       heartIn(hearts, "heart", (el) =>
         el.style.setProperty("--dx", `${(Math.random() - 0.5) * 5}%`),
       );
+
+    notice = () => {
+      if (!still) heart();
+    };
 
     let purr = 0;
     startPurring = () => {
@@ -165,29 +184,126 @@
     stage.addEventListener("pointercancel", release);
   });
 
+  /* ---------- the header: compact once the story has scrolled past ---------- */
+
+  run("header", () => {
+    // The story starts at the top of the page, so it stops intersecting only once scrolled past,
+    // however the reader got there (a flick, a jump, an anchor). On a phone the story isn't pinned
+    // and scrolls under the header, which is the bar after 24px.
+    const header = document.getElementById("chrome");
+    const story = document.getElementById("story");
+    if (!header || !story || !("IntersectionObserver" in window))
+      return header?.classList.add("compact");
+    const phone = matchMedia("(max-width: 900px)");
+    let inStory = true;
+    const update = () => {
+      const past = !phone.matches && story.getBoundingClientRect().bottom < innerHeight - 1;
+      header.classList.toggle("compact", !inStory || past || (phone.matches && scrollY > 24));
+    };
+    new IntersectionObserver(([entry]) => {
+      inStory = entry.isIntersecting;
+      update();
+    }).observe(story);
+    addEventListener("scroll", update, { passive: true });
+    phone.addEventListener("change", update);
+  });
+
   /* ---------- the pinned story ---------- */
 
+  // Wide screens: the story pins for 1.8 screens of scroll and its progress p (0 to 1) drives it
+  // all, in proportion, with nothing on a timer or a threshold. Beat i holds from B[i] to B[i+1],
+  // the boundaries halfway between the snap stops (p = 0, 1/3, 2/3, 1), so each stop shows one beat;
+  // at each boundary b the outgoing beat fades over b - 0.07 to b + 0.01 and the incoming one over
+  // b - 0.01 to b + 0.07, rising 16px into place (the outgoing one leaves 16px up). The room dims
+  // to the lamp as beat 1 arrives and comes back as beat 2 does (--dim); beat 2's phones ride in
+  // with its arrival (--ride); Mochi gives one heart when beat 3 is 0.9 in, again only after it
+  // has gone below 0.5.
+  //
+  // Phones: no pin. The beats are in flow under the room; the room dims while it leaves, from
+  // 0.15 H to 0.4 H of scroll (H: the room and beat 0, at least a screen tall), and the heart is
+  // at --dim 0.8; the beat nearest the screen's middle is data-beat, and beat 3 purrs.
   run("story", () => {
     const story = document.getElementById("story");
     const beats = [...story.querySelectorAll(".beat")];
-
-    // Which beat shows at each stretch of the story's scroll.
-    const beatAt = (p) => (p < 0.16 ? "0" : p < 0.43 ? "1" : p < 0.7 ? "2" : "3");
+    const phone = matchMedia("(max-width: 900px)");
+    const clamp01 = (x) => Math.min(1, Math.max(0, x));
+    const B = [0, 1 / 6, 1 / 2, 5 / 6, 1];
+    const arrived = (i, p) => (i === 0 ? 1 : clamp01((p - B[i] + 0.01) / 0.08));
+    const staying = (i, p) =>
+      i === beats.length - 1 ? 1 : 1 - clamp01((p - B[i + 1] + 0.07) / 0.08);
 
     let current = null;
     let ticking = false;
+    let noticed = false;
+
+    function pinned() {
+      const rect = story.getBoundingClientRect();
+      const travel = Math.max(1, rect.height - innerHeight);
+      const p = clamp01(-rect.top / travel);
+      // Leaving the pin: the beats and the room fade over the first 0.45 screen of the exit instead
+      // of sliding out cut by the viewport and under the header.
+      const exit = still ? 0 : clamp01((-rect.top - travel) / (0.45 * innerHeight));
+      setVar(story, "--exit", exit.toFixed(3));
+      let next = 0;
+      let best = -1;
+      beats.forEach((beat, i) => {
+        const a = arrived(i, p);
+        const s = staying(i, p);
+        const v = Math.min(a, s) * (1 - exit);
+        const y = still ? 0 : a < 1 ? 16 * (1 - a) : -16 * (1 - s);
+        setVar(beat, "--v", v.toFixed(3));
+        setVar(beat, "--y", y.toFixed(1));
+        const hidden = String(v === 0);
+        if (beat.getAttribute("aria-hidden") !== hidden) beat.setAttribute("aria-hidden", hidden);
+        if (v > best) {
+          best = v;
+          next = i;
+        }
+      });
+      setVar(story, "--dim", still ? "0" : (arrived(1, p) - arrived(2, p)).toFixed(3));
+      setVar(story, "--ride", still ? "1" : arrived(2, p).toFixed(3));
+      const cue = arrived(3, p);
+      if (cue >= 0.9 && !noticed) {
+        noticed = true;
+        notice();
+      } else if (cue < 0.5) noticed = false;
+      return next;
+    }
+
+    function flowing() {
+      const line = innerHeight / 2;
+      let next = 0;
+      let gap = Infinity;
+      beats.forEach((beat, i) => {
+        dropVar(beat, "--v");
+        dropVar(beat, "--y");
+        beat.removeAttribute("aria-hidden");
+        const box = beat.getBoundingClientRect();
+        const d = Math.abs(box.top + box.height / 2 - line);
+        if (d < gap) {
+          gap = d;
+          next = i;
+        }
+      });
+      const hero = beats[0].getBoundingClientRect().bottom + scrollY;
+      const dim = clamp01((scrollY - 0.15 * hero) / Math.max(1, 0.25 * hero));
+      if (!still) {
+        setVar(story, "--dim", dim.toFixed(3));
+        if (dim > 0.8 && !noticed) {
+          noticed = true;
+          notice();
+        } else if (dim < 0.6) noticed = false;
+      }
+      return next;
+    }
 
     function update() {
       ticking = false;
-      const rect = story.getBoundingClientRect();
-      const p = Math.min(1, Math.max(0, -rect.top / Math.max(1, rect.height - innerHeight)));
-      const next = beatAt(p);
+      const next = String(phone.matches ? flowing() : pinned());
       if (next !== current) {
         current = next;
         story.dataset.beat = next;
-        for (const beat of beats)
-          beat.setAttribute("aria-hidden", String(beat.dataset.for !== next));
-        if (next === "3") startPurring();
+        if (next === "3" && phone.matches) startPurring();
         else stopPurring();
       }
     }
@@ -229,6 +345,7 @@
 
     // From the actions on your phone to the notification on theirs, in the duo's own pixels.
     function drawThread() {
+      if (close.matches) return;
       const box = duo.getBoundingClientRect();
       if (!box.width) return;
       const a = acts.getBoundingClientRect();
@@ -261,8 +378,12 @@
       grad.setAttribute("y2", finish.y);
     }
 
+    // Under 900px the thread is hidden (global.css): the notification just arrives after a beat.
+    const close = matchMedia("(max-width: 900px)");
+
     function send(done) {
       if (still) return done();
+      if (close.matches) return setTimeout(done, 450);
       const length = lit.getTotalLength();
       const t0 = performance.now();
       const duration = 950;
@@ -321,18 +442,25 @@
     document.fonts?.ready.then(drawThread);
 
     if (still || !("IntersectionObserver" in window)) return;
+    let first = 0;
     new IntersectionObserver(
       ([entry]) => {
         clearInterval(auto);
+        clearTimeout(first);
         if (!entry.isIntersecting || touched) return;
-        // The reveal has moved the phones by now; measure again before the first spark.
-        setTimeout(drawThread, 800);
-        auto = setInterval(() => {
+        // The first pat soon after the phones come into view (the reveal has settled by then, so
+        // measure the thread again first), then one every 4.2 s.
+        first = setTimeout(() => {
+          drawThread();
           act(autoStep % 3);
           autoStep += 1;
-        }, 4200);
+          auto = setInterval(() => {
+            act(autoStep % 3);
+            autoStep += 1;
+          }, 4200);
+        }, 600);
       },
-      { threshold: 0.4 },
+      { threshold: 0.25 },
     ).observe(duo);
   });
 
@@ -380,6 +508,25 @@
 
   /* ---------- reveals on scroll ---------- */
 
+  // A fast scroll (more than 1.5 screens in the last 250 ms) sets html.fast until 500 ms after the
+  // last scroll event; global.css drops the reveal fades meanwhile.
+  run("fast", () => {
+    const samples = [];
+    let calm = 0;
+    addEventListener(
+      "scroll",
+      () => {
+        const now = performance.now();
+        samples.push([now, scrollY]);
+        while (samples.length > 1 && now - samples[0][0] > 250) samples.shift();
+        if (Math.abs(scrollY - samples[0][1]) > 1.5 * innerHeight) html.classList.add("fast");
+        clearTimeout(calm);
+        calm = setTimeout(() => html.classList.remove("fast"), 500);
+      },
+      { passive: true },
+    );
+  });
+
   run("reveal", () => {
     for (const group of document.querySelectorAll(".strip, .posters, .steps")) {
       [...group.children].forEach((child, n) => child.style.setProperty("--n", n));
@@ -398,7 +545,7 @@
           }
         }
       },
-      { rootMargin: "0px 0px 20% 0px" },
+      { rootMargin: "0px 0px 35% 0px" },
     );
     reveals.forEach((el) => seen.observe(el));
   });

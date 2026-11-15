@@ -107,3 +107,6 @@ export const dateIdeas: DateIdea[] = [
     art: date133,
   },
 ];
+
+// The cards fanned out like a hand under date night's steps, left to right.
+export const fanCards: ImageMetadata[] = [date1, date10, date31, date97, date133];
