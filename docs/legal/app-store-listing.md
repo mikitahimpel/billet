@@ -23,9 +23,9 @@ primary language either way.
 | Secondary category | **Entertainment** |
 | Content rights | **Yes, it contains third-party content, and we have the rights.** The To watch list and Pick tonight show film and show titles and posters from TMDB under its API terms; Settings > About credits TMDB ("This product uses the TMDB API but is not endorsed or certified by TMDB") and JustWatch. |
 | Age rating | Answers in [age-rating.md](age-rating.md); expected result 13+ (the app stops under 13, the terms say 13+). |
-| Privacy Policy URL | `https://ourio.app/privacy/` |
+| Privacy Policy URL | `https://ourio.mikitahimpel.com/privacy/` (the landing's own domain until ourio.app moves to the owner; switch then) |
 | Privacy Choices URL | leave empty (no opt-out page; deletion is in the app) |
-| License agreement | Apple's standard EULA. Our terms are at `https://ourio.app/terms/` and in the app; there is no need for a custom EULA. |
+| License agreement | Apple's standard EULA. Our terms are at `https://ourio.mikitahimpel.com/terms/` and in the app; there is no need for a custom EULA. |
 
 Name: a longer name such as `Ourio: Couples App & Cat` (24) would add search words, but the brief
 and the landing use `Ourio`; keep the plain name and let the subtitle and keywords carry the search
@@ -80,8 +80,8 @@ There is no sign-up form and no password: the app makes an anonymous account and
 
 Ourio needs two iPhones on iOS 18 or later, one for each of you. You pair with a one-time invite code. For ages 13 and up.
 
-Terms: https://ourio.app/terms/
-Privacy: https://ourio.app/privacy/
+Terms: https://ourio.mikitahimpel.com/terms/
+Privacy: https://ourio.mikitahimpel.com/privacy/
 ```
 
 (1,964)
@@ -112,9 +112,9 @@ If the field appears, use:
 The first version of Ourio: a shared cat, two rooms to decorate, notes, drawings, Moments, games and widgets for the two of you.
 ```
 
-**Support URL**: `https://ourio.app/support/` (live, 200 on 2026-11-15; email `ourio@mikitahimpel.com`).
+**Support URL**: `https://ourio.mikitahimpel.com/support/` (live, 200 on 2026-11-15; email `ourio@mikitahimpel.com`). `ourio.app` is served by a Pages project in an account we cannot see (an old landing with a mailbox-less support address): use it only after it is replaced.
 
-**Marketing URL**: `https://ourio.app/`
+**Marketing URL**: `https://ourio.mikitahimpel.com/`
 
 **Copyright**: `© 2026 Mikita Himpel` (TODO-OWNER: the same name as the Apple Developer
 account's seller name).
@@ -168,8 +168,8 @@ Ourio — приватное приложение для двоих. У вас �
 
 Приложение пока на английском языке.
 
-Условия: https://ourio.app/terms/
-Конфиденциальность: https://ourio.app/privacy/
+Условия: https://ourio.mikitahimpel.com/terms/
+Конфиденциальность: https://ourio.mikitahimpel.com/privacy/
 ```
 
 (1,999; the landing's terms and privacy pages are English.)
