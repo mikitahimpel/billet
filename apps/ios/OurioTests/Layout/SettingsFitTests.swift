@@ -55,7 +55,7 @@ import Wire
     @Test(arguments: Screen.allCases)
     func nothingReachesPastTheEdges(screen: Screen) async throws {
         UserDefaults.standard.set(true, forKey: "uitestStill")
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         let session = Self.session()
         // The card asks the stubbed server when it appears; a window without a scene never says so: asked here.
         session.appleLink.appeared()

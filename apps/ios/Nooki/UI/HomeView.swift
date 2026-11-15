@@ -186,6 +186,7 @@ struct HomeView: View {
             hints.done(PetHint())
         }
         .onChange(of: state.care.treatsGiven) { hints.done(TreatHint()) }
+        .onChange(of: state.decor.state.isArranging) { _, arranging in if arranging { state.events(.decoratingOpened) } }
         .onChange(of: state.tab, initial: true) { visitHints() }
         .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in phaseChanged(from: old, to: phase) }
@@ -302,7 +303,7 @@ struct HomeView: View {
                     AppHeader(state: state, erase: {
                         room.stop()
                         HomeState.eraseAll()
-                        state = HomeState(stores: .live())
+                        state = HomeState(stores: .live(events: state.events))
                         Task { await followPair() }
                     }) {
                         if state.tab == .world {
@@ -411,7 +412,10 @@ struct HomeView: View {
                     .transition(.opacity)
             }
             HStack(alignment: .bottom) {
-                PetButton(state: state, needs: { room }) { room.play($0) }
+                PetButton(state: state, needs: { room }) { game in
+                    state.care.played(game)
+                    room.play(game)
+                }
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
                 let waiting = state.decor.state.closetCount

@@ -62,6 +62,7 @@
           actions
         }
       }
+      .onAppear { state.shop.viewed(item) }
       // A buy the coins don't cover opens the Coins sheet, which can't show over this one.
       .onChange(of: state.shop.coinsAsk) { _, ask in if ask != nil { send(.coinsAsked) } }
     }

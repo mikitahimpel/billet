@@ -28,7 +28,7 @@ import Testing
     @Test(arguments: Screen.allCases)
     func theEmptyStateIsWholeAndReachable(screen: Screen) throws {
         UserDefaults.standard.set(true, forKey: "uitestStill")
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         for moment in state.moments.moments { state.moments.delete(moment) }
         state.tab = .moments
         let layout = HostedLayout(MomentsView(state: state), phone: screen.phone)
