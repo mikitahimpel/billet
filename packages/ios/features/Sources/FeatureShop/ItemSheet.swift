@@ -12,6 +12,7 @@
     let state: any ShopHost
 
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     @State private var turntable: any ItemPreview
     /// Still frame stays up until the 3D preview has really had a chance to draw.
@@ -114,8 +115,12 @@
     // MARK: Actions
 
     private var actions: some View {
-      VStack(spacing: Space.s) {
-        HStack(spacing: Space.s) {
+      // At the accessibility sizes the buy button takes the full width under 3D: beside it, its words don't fit.
+      let row =
+        typeSize.isAccessibilitySize
+        ? AnyLayout(VStackLayout(spacing: Space.s)) : AnyLayout(HStackLayout(spacing: Space.s))
+      return VStack(spacing: Space.s) {
+        row {
           // A short word beside the cube, so the primary button keeps its label on one line on a small phone.
           Button(action: reveal) {
             Label("3D", systemImage: "cube")
@@ -169,12 +174,11 @@
           CoinPrice(price: cost, was: isDeal ? item.price : nil)
         } else {
           Image(systemName: "plus.circle.fill")
-          Text("Need \(cost - state.shop.coins) more")
+          Text("Need \(state.shop.shortBy(cost)) more")
             .monospacedDigit()
         }
       }
-      .lineLimit(1)
-      .minimumScaleFactor(0.8)
+      .buyLabelFit()
     }
 
     private func send(_ event: ItemSheetMachine.Event) {

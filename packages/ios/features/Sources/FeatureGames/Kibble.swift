@@ -122,3 +122,34 @@ func smoothstep(_ x: Double, _ edge0: Double, _ edge1: Double) -> Double {
   let t = min(max((x - edge0) / (edge1 - edge0), 0), 1)
   return t * t * (3 - 2 * t)
 }
+
+/// The kibble that bounced out of an overfull bowl and lies on the mat, until it is swept up.
+public struct FeedMess: Equatable, Sendable {
+  public enum Phase: Equatable, Sendable {
+    case tidy, messy
+  }
+
+  /// Pieces on the mat now.
+  public private(set) var pieces = 0
+  /// Whether any piece ever left the bowl.
+  public private(set) var spilled = false
+
+  public init() {}
+
+  public var phase: Phase { pieces > 0 ? .messy : .tidy }
+  public var isSpotless: Bool { spilled && pieces == 0 }
+
+  /// Whether the `poured`th piece of a bowl whose zone ends at `zoneEnd` grams bounces out: every second one
+  /// past the zone. The grams still count for the meal, so the overfeed table is untouched.
+  public static func spills(poured: Int, zoneEnd: Int) -> Bool {
+    poured > zoneEnd && (poured - zoneEnd).isMultiple(of: 2)
+  }
+
+  public mutating func spill() {
+    pieces += 1
+    spilled = true
+  }
+
+  /// A sweep takes up `count` pieces.
+  public mutating func sweep(_ count: Int = 1) { pieces = max(0, pieces - max(count, 0)) }
+}

@@ -1,5 +1,6 @@
 import { Effect, Layer } from "effect";
 import { freeInk, InkId } from "@billet/contracts-domain/inks";
+import { PostageId } from "@billet/contracts-domain/postage";
 import { RoomItemId, starterItems } from "@billet/contracts-domain/shop";
 import { CoinEntryId } from "@billet/contracts-domain/coins";
 import { Schema } from "effect";
@@ -19,6 +20,7 @@ import { spanMethods } from "@billet/backend-observability/span-methods";
 
 const decodeInk = Schema.decodeSync(InkId);
 const decodeItem = Schema.decodeSync(RoomItemId);
+const decodePostage = Schema.decodeUnknownSync(PostageId);
 const decodeEntryId = Schema.decodeSync(CoinEntryId);
 
 /**
@@ -82,6 +84,7 @@ export const PairingObserverLive: Layer.Layer<
         coins: shop.balance,
         inks: shop.inks.filter((ink) => ink !== freeInk),
         items: shop.items.filter((item) => !starterItems.includes(item)),
+        postage: shop.postage ?? [],
       });
       yield* Effect.forEach(kept, ([userId, purchases]) => pairing.keep(userId, purchases), {
         discard: true,
@@ -105,10 +108,15 @@ export const PairingObserverLive: Layer.Layer<
           pairId,
           all.items.map((item) => decodeItem(item)),
         );
+      if (all.postage.length > 0)
+        yield* rooms.grantPostage(
+          pairId,
+          all.postage.map((id) => decodePostage(id)),
+        );
       if (all.coins > 0) {
         yield* rooms.creditPurchase(pairId, {
-          kind: "buy",
-          id: decodeEntryId(`buy:kept-${pairId}`),
+          kind: "purchase",
+          id: decodeEntryId(`purchase:kept-${pairId}`),
           ref: "kept",
           coins: all.coins,
         });

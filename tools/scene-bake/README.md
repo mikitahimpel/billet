@@ -72,6 +72,7 @@ and the fairy-light wire. Together they have the same 283,820 triangles the sing
 rsync -a apps/ios/Tools/ pc:billet-gpu/rearr/Tools/
 ssh pc 'cd ~/billet-gpu/rearr && ~/billet-gpu/blender-app/blender-billet -b --python Tools/make_room.py -- new'   # about 5 s
 scp 'pc:billet-gpu/rearr/new/Base_*.usdz' pc:billet-gpu/rearr/new/Room_furniture.usdz apps/ios/Nooki/Resources/Room/
+Note: `make_room.py` now writes the lean models (`FULL=1` for full detail); put a full-detail `Room_furniture.usdz` in `scripts/bake-room/`, not in Resources.
 # one piece only: ... make_room.py -- new Base_rug
 # bounds (width, depth, top, and the bounds' middle dx, dz from the cell middle) for tools/decor-lod/catalog.py
 blender -b -P tools/decor-lod/bounds.py -- apps/ios/Nooki/Resources tools/decor-lod/bounds.json

@@ -1,5 +1,13 @@
+/// Where an entry's coins came from or went. `refund` is an App Store refund and the only kind that
+/// can take the balance below 0; `buy` is what `purchase` was called before. A kind this build
+/// doesn't know decodes as `unknown`, so a newer server's entry never fails a whole answer.
 public enum CoinEntryKind: String, Codable, Hashable, Sendable {
-  case earn, buy, spend, refund, gift, bonus
+  case earn, purchase, spend, refund, gift, bonus, admin, buy, unknown
+
+  public init(from decoder: any Decoder) throws {
+    let raw = try decoder.singleValueContainer().decode(String.self)
+    self = CoinEntryKind(rawValue: raw) ?? .unknown
+  }
 }
 
 /// `amount` is signed, so a spend is negative. `id` is `<kind>:<source>`; `ref` names the cat
@@ -183,4 +191,12 @@ public struct EarnResponse: Codable, Hashable, Sendable {
     balance = try container.decode(Int.self, forKey: .balance)
     entry = try container.decodeOptionalKey(CoinEntry.self, forKey: .entry)
   }
+}
+
+/// What one thing done together pays, as `packages/contracts/domain/src/coins.ts` (`rewardForEarn`) pays
+/// it; the daily caps can pay less.
+public enum EarnAmount {
+  public static let moment = 2
+  public static let note = 1
+  public static let dateMatched = 2
 }

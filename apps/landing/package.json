@@ -14,6 +14,7 @@
     "test": "node --test scripts/ai/page-to-markdown.test.mjs scripts/ai/negotiate.test.mjs"
   },
   "dependencies": {
+    "@billet/backend-guess": "workspace:*",
     "astro": "catalog:"
   },
   "devDependencies": {

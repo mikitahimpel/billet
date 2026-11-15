@@ -1,7 +1,7 @@
 import Foundation
 
 public enum ShopCategory: String, CaseIterable, Identifiable, Sendable {
-  case today, furniture, decor, mochi, room, inks
+  case today, furniture, decor, mochi, room, inks, notes
 
   public var id: Self { self }
 
@@ -13,6 +13,7 @@ public enum ShopCategory: String, CaseIterable, Identifiable, Sendable {
     case .mochi: "For \(cat)"
     case .room: "Room"
     case .inks: "Inks"
+    case .notes: "Notes"
     }
   }
 
@@ -24,6 +25,7 @@ public enum ShopCategory: String, CaseIterable, Identifiable, Sendable {
     case .mochi: "pawprint.fill"
     case .room: "house.fill"
     case .inks: "paintpalette.fill"
+    case .notes: "envelope.fill"
     }
   }
 }

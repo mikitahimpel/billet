@@ -42,10 +42,12 @@ struct WidgetShowcase: Identifiable, Equatable {
     let preview: Preview?
     let symbol: String
 
-    static var all: [WidgetShowcase] {
-        let pronouns = CatProfile.pronouns()
-        return [
-        .init(id: "cat", group: .homeScreen, title: "Mochi",
+    static var all: [WidgetShowcase] { all(cat: CatProfile.name(), pronouns: CatProfile.pronouns()) }
+
+    /// The gallery for a cat called `cat`: the words name it, never the default name.
+    static func all(cat: String, pronouns: CatPronouns) -> [WidgetShowcase] {
+        [
+        .init(id: "cat", group: .homeScreen, title: cat,
               detail: pronouns.say(.widgetShowcaseState),
               preview: .cat(.medium), symbol: "pawprint.fill"),
         .init(id: "us", group: .homeScreen, title: "Days together",
@@ -55,13 +57,13 @@ struct WidgetShowcase: Identifiable, Equatable {
               detail: "Their latest drawing or mood on a stamped card. Tap to reply.",
               preview: .partner(.medium), symbol: "envelope.fill"),
         .init(id: "coins", group: .homeScreen, title: "Coins",
-              detail: "Your coins and how far Mochi's care has come.",
+              detail: "Your coins and how far \(cat)'s care has come.",
               preview: .coins(.medium), symbol: "star.circle.fill"),
         .init(id: "memory", group: .homeScreen, title: "Memory",
               detail: "A pinned moment, printed like a photo.",
               preview: .memory(.medium), symbol: "photo.fill"),
         .init(id: "day", group: .homeScreen, title: "Our day",
-              detail: "Mochi, your days together and your partner in one large widget.",
+              detail: "\(cat), your days together and your partner in one large widget.",
               preview: .day, symbol: "square.grid.2x2.fill"),
         .init(id: "lock-us", group: .lockScreen, title: "Days together",
               detail: "A number above the clock, or a line with the next date.",
@@ -69,14 +71,14 @@ struct WidgetShowcase: Identifiable, Equatable {
         .init(id: "lock-streak", group: .lockScreen, title: "Streak",
               detail: "A ring that fills toward the next milestone.",
               preview: .lockStreak, symbol: "flame.fill"),
-        .init(id: "lock-cat", group: .lockScreen, title: "Mochi",
+        .init(id: "lock-cat", group: .lockScreen, title: cat,
               detail: pronouns.say(.widgetShowcaseMood),
               preview: .lockCat, symbol: "pawprint.fill"),
         .init(id: "lock-partner", group: .lockScreen, title: "Your partner",
               detail: "How they are, and when they drew you something. Hidden while the phone is locked.",
               preview: .lockPartner, symbol: "person.fill"),
         .init(id: "control-pet", group: .controls, title: "Pet Your Cat",
-              detail: "Mochi purrs, no need to open Ourio.", preview: nil, symbol: "pawprint.fill"),
+              detail: "\(cat) purrs, no need to open Ourio.", preview: nil, symbol: "pawprint.fill"),
         .init(id: "control-hug", group: .controls, title: "Send a Hug",
               detail: "Lets your partner know you are thinking of them.", preview: nil, symbol: "heart.fill"),
         ]

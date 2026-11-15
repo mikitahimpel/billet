@@ -22,6 +22,17 @@ struct RoomHost: View, Equatable {
     }
 }
 
+/// The part of the input the Bedroom's lamps read.
+private struct LampsInput: Equatable {
+    let choice: Bool?
+    let fades: Bool
+
+    init(_ input: RoomInput) {
+        choice = input.lights
+        fades = input.lightsFade
+    }
+}
+
 /// The part of the input the cat's notice of the partner reads.
 private struct PartnerSight: Equatable {
     let here: Bool
@@ -43,6 +54,14 @@ enum RoomViewSize {
     }
 }
 
+/// The City's window is a SwiftUI layer under the Bedroom's RealityKit view, seen through the hole in its wall. It is
+/// drawn only while that view is: a covered room is transparent, and the window alone would float over the backdrop.
+enum RoomWindowLayer {
+    static func isShown(scene: RoomScene, visibility: RoomVisibility) -> Bool {
+        scene == .city && visibility == .visible
+    }
+}
+
 /// What is drawn for one input: the City's window under the room and the room itself while it can be seen.
 private struct RoomStage: View {
     let input: RoomInput
@@ -57,7 +76,7 @@ private struct RoomStage: View {
         let _ = controller.probe.stageBody()
         ZStack {
             // The City window's view, seen through the hole in the room's wall; never takes a touch.
-            if !controller.isStandIn, input.scene == .city, input.visibility != .hidden,
+            if !controller.isStandIn, RoomWindowLayer.isShown(scene: input.scene, visibility: input.visibility),
                 let window = controller.cityWindowView
             {
                 CityWindowLayer(view: window)
@@ -84,9 +103,8 @@ private struct RoomStage: View {
                 let shrunk = RoomViewSize.isShrunk(wanted: wantsShrunk, inFront: shrunkInFront, phase: scenePhase)
                 DioramaView(scene: visible || loop != nil ? scene : controller.offStage,
                             paused: !visible || controller.corner != nil, petPulse: controller.petPulse,
-                            showsBubble: !input.decor.isArranging, rendering: input.rendering, loop: loop) {
-                    controller.petted()
-                }
+                            showsBubble: !input.decor.isArranging, rendering: input.rendering, loop: loop,
+                            onPet: { controller.petted() }, onTouch: { controller.fingerMoved($0) })
                 .frame(width: shrunk ? 1 : nil, height: shrunk ? 1 : nil)
                 .allowsHitTesting(visible && controller.game == nil)
                 .opacity(visible ? 1 : 0)
@@ -106,7 +124,10 @@ private struct RoomStage: View {
         // The room's view no longer drives a room it doesn't show; the next look starts it again.
         .onChange(of: visible) { _, visible in
             if !visible { controller.stop() }
+            controller.looked()
         }
+        .onChange(of: input.rendering, initial: true) { _, rendering in controller.setRendering(rendering) }
+        .onChange(of: LampsInput(input), initial: true) { _, lamps in controller.setLights(lamps.choice, fades: lamps.fades) }
         .onChange(of: input.decor, initial: true) { _, decor in controller.showDecor(decor) }
         .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         .onChange(of: input.rendering.splatRate, initial: true) { _, rate in SplatSkinner.limit(toHertz: rate) }
@@ -156,31 +177,21 @@ struct RoomGameLayer: View {
 
     @ViewBuilder private var game: some View {
         if let game = controller.game, let room = controller.gameRoom {
-            let switcher = GameSceneSwitch(
-                options: GameScenery.options(for: game), selected: controller.scenery,
-                select: { controller.showScenery($0) })
             if controller.playsInCorner {
                 if let corner = controller.corner {
-                    GameView(
-                        session: GameSession(game: game, room: corner, catLife: controller.catLife),
-                        scenes: switcher
-                    ) { controller.endGame() }
-                    .id(GameKey(game: game, inCorner: true))
+                    GameView(session: GameSession(game: game, room: corner, catLife: controller.catLife)) {
+                        controller.endGame()
+                    }
+                    .id(game)
                     .transition(.opacity)
                 }
             } else {
-                GameView(session: GameSession(game: game, room: room, catLife: controller.catLife), scenes: switcher) {
+                GameView(session: GameSession(game: game, room: room, catLife: controller.catLife)) {
                     controller.endGame()
                 }
-                .id(GameKey(game: game, inCorner: false))
+                .id(game)
                 .transition(.opacity)
             }
         }
-    }
-
-    /// A game keeps its session while it moves from one corner to another, and starts over between the room and one.
-    private struct GameKey: Hashable {
-        let game: MiniGame
-        let inCorner: Bool
     }
 }

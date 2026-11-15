@@ -1,7 +1,9 @@
 import CoreGraphics
 import Design
+import FeatureShop
 import Foundation
 import MomentsInterface
+import ServerSync
 import WidgetInterface
 import WidgetUI
 import Persistence
@@ -40,11 +42,43 @@ import Wire
         model.stamp = .moon
         model.seal = .rose
 
-        #expect(model.save(into: journal, size: CGSize(width: 280, height: 280)))
+        #expect(model.save(into: journal, size: CGSize(width: 280, height: 280), owned: ["stamp-moon", "seal-rose"]))
         let note = try #require(notes.notes.first { $0.text == words })
         defer { notes.delete(note) }
         #expect(note.stamp == .moon)
         #expect(note.seal == .rose)
+    }
+
+    @Test func aStampOrSealNotUnlockedStaysOffTheNote() throws {
+        let notes = NoteStore()
+        let journal = Journal(
+            moments: MomentStore(), notes: notes,
+            streak: StreakStore(file: "Tests/\(UUID().uuidString)-streak.json"), couple: CoupleStore()) { _ in }
+        let model = ComposerModel(kind: .sticky, drawing: false)
+        let words = "locked \(UUID().uuidString.prefix(6))"
+        model.text = words
+        model.stamp = .moon
+        model.seal = .rose
+
+        #expect(model.save(into: journal, size: CGSize(width: 280, height: 280), owned: ["seal-rose"]))
+        let note = try #require(notes.notes.first { $0.text == words })
+        defer { notes.delete(note) }
+        #expect(note.stamp == nil)
+        #expect(note.seal == .rose)
+    }
+
+    @Test func anUnlockTheServerRefusedComesOffThePaper() {
+        let model = ComposerModel(kind: .sticky, drawing: false)
+        model.stamp = .moon
+        model.seal = .rose
+
+        model.dropLocked(owned: ["stamp-moon", "seal-rose"])
+        #expect(model.stamp == .moon)
+        #expect(model.seal == .rose)
+
+        model.dropLocked(owned: ["seal-rose"])
+        #expect(model.stamp == nil)
+        #expect(model.seal == .rose)
     }
 
     @Test func aPlainNoteHasNeither() throws {
@@ -73,7 +107,7 @@ import Wire
                 note: .text(id: NoteId(key.rawValue), author: UserId("me"), sentAt: 0, text: text, paper: paper,
                             stamp: stamp, seal: seal, ink: ink))
         }
-        let sync = TextNoteSync(api: api, accounts: Self.accounts, notes: notes, partner: "L")
+        let sync = TextNoteSync(api: api, accounts: Self.accounts, notes: notes, partner: "L", defaults: .standard)
         #expect(await sync.sendUnsent() == false)
 
         let ours = sent.withLock { $0 }.first {
@@ -85,6 +119,40 @@ import Wire
         }
         #expect(stamp == .paw)
         #expect(seal == .night)
+    }
+
+    @Test func aNoteRefusedForItsStampGoesAgainPlain() async throws {
+        let notes = NoteStore()
+        let note = try #require(
+            notes.add(text: "refused \(UUID().uuidString.prefix(6))", paper: .cream, author: "M", stamp: .paw,
+                      seal: .night))
+        defer { if let kept = notes.notes.first(where: { $0.id == note.id }) { notes.delete(kept) } }
+
+        let sent = Mutex<[SendNoteRequest]>([])
+        var api = APIClient.offline
+        api.sendNote = { (request) async throws(TransportError) in
+            sent.withLock { $0.append(request) }
+            guard case .text(let key, let text, let paper, let stamp, let seal, let ink) = request else {
+                throw .decoding
+            }
+            if stamp != nil { throw .api(.postageNotOwned(postage: PostageId(NoteStamp.paw))) }
+            return SendNoteResponse(
+                note: .text(id: NoteId(key.rawValue), author: UserId("me"), sentAt: 0, text: text, paper: paper,
+                            stamp: stamp, seal: seal, ink: ink))
+        }
+        let sync = TextNoteSync(api: api, accounts: Self.accounts, notes: notes, partner: "L", defaults: .standard)
+        #expect(await sync.sendUnsent() == false)
+
+        let ours = sent.withLock { $0 }.filter {
+            if case .text(let key, _, _, _, _, _) = $0 { key.rawValue == note.id.uuidString } else { false }
+        }
+        #expect(ours.count == 2)
+        guard case .text(_, _, _, let stamp, let seal, _) = try #require(ours.last) else {
+            Issue.record("expected a text note")
+            return
+        }
+        #expect(stamp == nil)
+        #expect(seal == nil)
     }
 
     @Test func thePartnersStampAndSealArriveOnTheirNote() async throws {

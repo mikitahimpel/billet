@@ -5,6 +5,7 @@ import type { ActivityResponse } from "@billet/contracts-http-api/activity";
 import type { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import type { IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { PostageId } from "@billet/contracts-domain/postage";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { LayoutChange } from "@billet/contracts-domain/decor";
 import type { CollectionId, RoomItemId, ShopOffer } from "@billet/contracts-domain/shop";
@@ -59,6 +60,11 @@ export class PairRooms extends Context.Service<
     readonly grantItems: (
       pairId: PairId,
       items: ReadonlyArray<RoomItemId>,
+    ) => Effect.Effect<RoomDecision, NotesUnavailable>;
+    /** Gives the pair stamps and seals it does not have yet. Safe to repeat. */
+    readonly grantPostage: (
+      pairId: PairId,
+      postage: ReadonlyArray<PostageId>,
     ) => Effect.Effect<RoomDecision, NotesUnavailable>;
     /** Gives the pair ink colours it does not have yet. Safe to repeat. */
     readonly grantInks: (

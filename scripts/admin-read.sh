@@ -1,11 +1,11 @@
 #!/bin/sh
 #   PROTON_PASS_AGENT_REASON="<why>" pp run --env-file .env.pass.agents -- scripts/admin-read.sh flags
 # Routes: overview, experiments, flags, flag-history[?key=&limit=], pairs/<pair id>, status,
-# status-history[?limit=], purchases[?limit=]. Read-only; see docs/admin.md#agent-api.
+# status-history[?limit=], purchases[?limit=], economy[?range=&hold=]. Read-only; see docs/admin.md#agent-api.
 set -eu
 
 usage() {
-  echo "usage: admin-read.sh overview|experiments|flags|flag-history[?query]|status|status-history[?query]|purchases[?query]|pairs/<pair id>" >&2
+  echo "usage: admin-read.sh overview|experiments|flags|flag-history[?query]|status|status-history[?query]|purchases[?query]|economy[?query]|pairs/<pair id>" >&2
   exit 2
 }
 
@@ -15,6 +15,9 @@ case "$route" in
   overview | experiments | flags | status) ;;
   purchases | purchases\?*)
     printf '%s' "$route" | grep -Eq '^purchases(\?limit=[0-9]{1,4})?$' || usage
+    ;;
+  economy | economy\?*)
+    printf '%s' "$route" | grep -Eq '^economy(\?(range=[0-9]{1,2}|hold=[0-9]{1,3})(&(range=[0-9]{1,2}|hold=[0-9]{1,3}))?)?$' || usage
     ;;
   status-history | status-history\?*)
     printf '%s' "$route" | grep -Eq '^status-history(\?limit=[0-9]{1,3})?$' || usage

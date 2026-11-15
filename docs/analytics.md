@@ -66,6 +66,11 @@ is needed, a word outside a closed list, and a value anywhere but a price.
   see the new names too, and the admin can split pairs by build past Analytics Engine's 90 days.
 - **`event_details`** (D1): per name, detail and UTC day, a count and the sum of the values. No
   person and no pair, so it can say which cats and items are chosen without saying by whom.
+- **`economy_days`** and **`economy_pair_days`** (D1): the coin economy, apart from the events above.
+  Per UTC day and source, the coins that came in and went out; per pair and UTC day, the coins
+  earned, the balance after the last change and which daily caps were reached. Written by the
+  pair's room after each commit that enters coins, never in the request path and never failing it.
+  No person, no note, no item: see [economy.md](economy.md#metrics).
 - **Analytics Engine** (`EVENTS`): one row per event, with the detail as `blob6` and the value as
   `double2`. See [experiments.md](experiments.md#analytics-engine).
 

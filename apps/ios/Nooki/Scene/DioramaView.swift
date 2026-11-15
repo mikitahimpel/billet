@@ -1,3 +1,4 @@
+import Design
 import RealityKit
 import RoomInterface
 import SwiftUI
@@ -13,12 +14,15 @@ struct DioramaView: View {
     /// Draws the room with its own renderer and frame loop in place of a `RealityView`, when there is one.
     var loop: RoomRenderLoop?
     var onPet: () -> Void
+    /// A finger came down on the room (true) or lifted from it; the quality governor reads it.
+    var onTouch: (Bool) -> Void = { _ in }
 
     @State private var rig = ZoomRig()
     @State private var dragStartYaw: Float?
     @State private var pinchStartZoom: Float?
     @State private var bubble = BubbleSpot()
     @State private var photoFocused = false
+    @AppStorage(AppSettings.followMochiKey) private var followMochi = false
 
     /// Shows `scene` in place of any other room and drives it from this view's frames.
     private func attach(_ scene: CatRoom, to content: RealityViewCameraContent) {
@@ -39,11 +43,10 @@ struct DioramaView: View {
         let bubble = bubble
         scene.start(on: surface, viewer: rig.camera, beforeProjecting: { dt in
             rig.update(dt: dt, framing: scene.framing, focusDistance: scene.focusDistance,
-                       yaw: scene.settledYaw, focus: scene.catFocus, photo: scene.photoPose)
+                       yaw: scene.settledYaw, focus: scene.catFocus, photo: scene.photoPose, adjust: scene.cameraAdjust)
         }) { projected in
             guard let projected else { return }
-            if let old = bubble.point, hypot(old.x - projected.x, old.y - projected.y) < 2 { return }
-            bubble.point = projected
+            bubble.move(to: projected, dt: scene.frameTime)
         }
     }
 
@@ -64,6 +67,7 @@ struct DioramaView: View {
             RoomCanvas(loop: loop)
                 .onChange(of: ObjectIdentifier(scene), initial: true) { attach(scene, to: loop) }
                 .onChange(of: rendering.antialiasing, initial: true) { loop.setAntialiasing(rendering.antialiasing) }
+                .onChange(of: rendering, initial: true) { loop.setQuality(rendering) }
                 // A room that stopped while covered or hidden is the same scene when it comes back, so this is where
                 // it starts again.
                 .onChange(of: paused, initial: true) {
@@ -95,6 +99,9 @@ struct DioramaView: View {
 
     var body: some View {
         canvas
+        .onChange(of: followMochi, initial: true) {
+            for each in [rig, loop?.rig] as [ZoomRig?] { each?.followsCat = followMochi }
+        }
         .onGeometryChange(for: Float.self) { Float($0.size.width / max($0.size.height, 1)) } action: { aspect in
             rig.aspect = aspect
             loop?.rig.aspect = aspect
@@ -118,7 +125,7 @@ struct DioramaView: View {
         .onChange(of: paused) {
             scene.paused = paused
             // Out of the hierarchy, its endless float stops being animated behind a room nobody sees.
-            if paused { bubble.point = nil }
+            if paused { bubble.clear() }
         }
         .gesture(
             SpatialTapGesture()
@@ -146,10 +153,15 @@ struct DioramaView: View {
             including: loop == nil ? .none : .all
         )
         // Taps on empty space, which the entity-targeted gestures never see, also leave a photo.
-        .simultaneousGesture(SpatialTapGesture().onEnded { _ in scene.unfocusPhoto() })
+        .simultaneousGesture(SpatialTapGesture().onEnded { _ in
+            onTouch(true)
+            onTouch(false)
+            scene.unfocusPhoto()
+        })
         .simultaneousGesture(
             DragGesture(minimumDistance: 6)
                 .onChanged { value in
+                    if dragStartYaw == nil { onTouch(true) }
                     let start = dragStartYaw ?? scene.currentYaw
                     dragStartYaw = start
                     scene.setYaw(start + Float(value.translation.width) * 0.006)
@@ -160,6 +172,7 @@ struct DioramaView: View {
                 }
                 .onEnded { _ in
                     dragStartYaw = nil
+                    onTouch(false)
                     scene.follow(nil)
                 }
         )
@@ -167,12 +180,19 @@ struct DioramaView: View {
             MagnifyGesture()
                 .onChanged { value in
                     guard !photoFocused else { return }
-                    let start = pinchStartZoom ?? rig.targetZoom
+                    if pinchStartZoom == nil { onTouch(true) }
+                    let zoomRig = loop?.rig ?? rig
+                    zoomRig.isZooming = true
+                    let start = pinchStartZoom ?? zoomRig.targetZoom
                     pinchStartZoom = start
                     let delta = Float(log2(Double(value.magnification))) * 0.6
-                    rig.targetZoom = min(max(start + delta, 0), 1)
+                    zoomRig.targetZoom = min(max(start + delta, 0), 1)
                 }
-                .onEnded { _ in pinchStartZoom = nil }
+                .onEnded { _ in
+                    (loop?.rig ?? rig).isZooming = false
+                    pinchStartZoom = nil
+                    onTouch(false)
+                }
         )
     }
 }
@@ -182,6 +202,20 @@ struct DioramaView: View {
 @Observable
 private final class BubbleSpot {
     var point: CGPoint?
+    @ObservationIgnored private var smoother = ScreenSmoother()
+
+    /// Moves toward `projected`, eased so the head's small motions do not shake it; the overlay is told only of a
+    /// change a pixel could show.
+    func move(to projected: CGPoint, dt: Float) {
+        let next = smoother.step(projected, dt: dt)
+        if let old = point, hypot(old.x - next.x, old.y - next.y) < 0.01 { return }
+        point = next
+    }
+
+    func clear() {
+        smoother.reset()
+        point = nil
+    }
 }
 
 private struct BubbleOverlay: View {
@@ -202,6 +236,12 @@ private struct BubbleOverlay: View {
 final class ZoomRig {
     let camera = PerspectiveCamera()
     var targetZoom: Float = 0.25
+    /// Labs: the close-up follows Mochi's head wherever she goes. Off, the camera frames the room and she walks in it.
+    var followsCat = false
+    /// A pinch is on: the zoom draws toward where she was when it began, then eases back to the room.
+    var isZooming = false
+    private var follow: Float = 0
+    private var zoomedOn = SIMD3<Float>.zero
     private var zoom: Float = 0.25
 
     /// Width over height of the view the camera draws into; the field of view follows it (`RoomFit`).
@@ -227,27 +267,36 @@ final class ZoomRig {
     /// `framing` and `focusDistance` come from the room, `focus` is Mochi's head in pivot space, rotated by yaw so the
     /// close-up follows the room and her. `photo` is a wall photo to fly up to and look at straight on, in world space.
     func update(dt: Float, framing: CatRoom.Framing, focusDistance: Float,
-                yaw: Float, focus: SIMD3<Float>, photo pose: (center: SIMD3<Float>, normal: SIMD3<Float>)?) {
+                yaw: Float, focus: SIMD3<Float>, photo pose: (center: SIMD3<Float>, normal: SIMD3<Float>)?,
+                adjust: ((Float, CameraPose) -> CameraPose)? = nil) {
         self.framing = framing
         self.focusDistance = focusDistance
+        // What she is at when a zoom begins is held for its length, so the view does not chase her.
+        if followsCat || (!isZooming && follow == 0) { zoomedOn = focus }
+        follow = CameraFollow.follow(follow, active: followsCat || isZooming, dt: dt)
         zoom += (targetZoom - zoom) * min(1, dt * 10)
         if abs(targetZoom - zoom) < 0.0005 { zoom = targetZoom }
         if let pose { photoPose = pose }
         let goal: Float = pose == nil ? 0 : 1
         photo += (goal - photo) * min(1, dt * 3.2)
         if abs(goal - photo) < 0.0005 { photo = goal }
-        apply(zoom: zoom, yaw: yaw, focus: focus)
+        apply(zoom: zoom, yaw: yaw, focus: zoomedOn, dt: dt, adjust: adjust)
     }
 
-    private func apply(zoom z: Float, yaw: Float, focus: SIMD3<Float>) {
+    private func apply(zoom z: Float, yaw: Float, focus: SIMD3<Float>, dt: Float = 0,
+                       adjust: ((Float, CameraPose) -> CameraPose)? = nil) {
         let distance = framing.far + (framing.near - framing.far) * z
         let rotatedCat = simd_quatf(angle: yaw, axis: [0, 1, 0]).act(focus)
-        var target = framing.target + (rotatedCat - framing.target) * z
+        var target = CameraFollow.target(framing: framing.target, cat: rotatedCat, zoom: z, follow: follow)
         var eye = target + framing.direction * distance
         if photo > 0, let photoPose {
             let s = photo * photo * (3 - 2 * photo)
             target = simd_mix(target, photoPose.center, SIMD3(repeating: s))
             eye = simd_mix(eye, photoPose.center + photoPose.normal * focusDistance, SIMD3(repeating: s))
+        }
+        if let adjust {
+            let pose = adjust(dt, CameraPose(eye: eye, target: target))
+            (eye, target) = (pose.eye, pose.target)
         }
         // A pose written again is a camera that moved, to everything that follows it.
         guard target != placed?.target || eye != placed?.eye else { return }

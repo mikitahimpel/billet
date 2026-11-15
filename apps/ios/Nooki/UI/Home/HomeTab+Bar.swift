@@ -40,3 +40,28 @@ extension HomeTab {
         return allCases[min(max(index, 0), allCases.count - 1)]
     }
 }
+
+/// The finger on the tab bar, as a value. The tab under it is shown the moment it lands or slides there, and
+/// lifting it changes nothing more, so a tap's page comes with the pill and not a tap's length after it.
+struct TabScrub: Equatable {
+    /// The tab under the finger; nil while the bar is not touched.
+    var hovered: HomeTab?
+
+    struct Move: Equatable {
+        let scrub: TabScrub
+        /// The tab to show, when it isn't the shown one yet.
+        let shows: HomeTab?
+    }
+
+    init(hovered: HomeTab? = nil) {
+        self.hovered = hovered
+    }
+
+    /// The finger lands on, or slides onto, `tab` while `shown` is on screen; nil while it stays in the same slot.
+    func finger(on tab: HomeTab, shown: HomeTab) -> Move? {
+        guard tab != hovered else { return nil }
+        return Move(scrub: TabScrub(hovered: tab), shows: tab == shown ? nil : tab)
+    }
+
+    func lifted() -> TabScrub { TabScrub() }
+}

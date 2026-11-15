@@ -22,6 +22,8 @@ struct MomentsView: View {
     /// Just added and still a milky blank until the compose sheet is gone.
     @State private var undeveloped: Set<UUID> = []
     @State private var feedWidth: CGFloat = 0
+    /// The room the empty state has between the header and the tab bar.
+    @State private var emptyHeight: CGFloat = 0
 
     private let columnGap: CGFloat = Space.m
 
@@ -33,16 +35,25 @@ struct MomentsView: View {
             if state.momentsMode == .board {
                 boardOverlay
             } else if store.moments.isEmpty {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    EmptyMoments(pick: $pick)
-                        .padding(.horizontal, Space.xl)
-                    Spacer(minLength: 0)
+                // Centred while it fits between the header and the tab bar; at the largest text it is taller than
+                // that and scrolls from its top.
+                ScrollView {
+                    VStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        EmptyMoments(pick: $pick)
+                            .padding(.horizontal, Space.xl)
+                            .tabContentInsets()
+                        Spacer(minLength: 0)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: emptyHeight)
                 }
-                .tabContentInsets()
+                .scrollIndicators(.hidden)
+                .scrollBounceBehavior(.basedOnSize)
+                .ourioScrollEdges()
+                .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { emptyHeight = $0 }
             } else {
                 TabPage {
-                    WallStrip(store: store)
+                    WallStrip(store: store, pick: $pick)
                     feed
                 }
             }
@@ -126,59 +137,67 @@ struct MomentsView: View {
         }
     }
 
-    /// The board room shows underneath; its actions are in the header beside the switch (`BoardActions`), and only
-    /// a hint sits over an empty board.
-    @ViewBuilder private var boardOverlay: some View {
-        if notes.isEmpty, store.pinned.isEmpty {
-            Text("Leave a note or doodle for the board")
+    /// The board room shows underneath; over it the history of notes at the top and, always, the way to add one at
+    /// the foot, so it is plain where a note comes from.
+    private var boardOverlay: some View {
+        VStack(spacing: Space.m) {
+            if !notes.isEmpty {
+                BoardActions(state: state)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .padding(.horizontal, Space.l)
+            }
+            Spacer(minLength: 0)
+            if notes.isEmpty, store.pinned.isEmpty {
+                Text("The board is empty. Leave the first note.")
+                    .font(.ourioCallout)
+                    .foregroundStyle(Ink.glassGlyph)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, Space.l)
+            }
+            HStack(spacing: GlassMetrics.gap) {
+                BoardAddButton(title: "New note", symbol: "note.text", identifier: "boardNewNote") {
+                    state.composingNote = .write
+                }
+                BoardAddButton(title: "Doodle", symbol: "scribble", identifier: "boardNewDoodle") {
+                    state.composingNote = .draw
+                }
+            }
+            .padding(.bottom, Space.l)
+        }
+        .tabContentInsets()
+    }
+}
+
+private struct BoardAddButton: View {
+    let title: String
+    let symbol: String
+    let identifier: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
                 .font(.ourioCallout.weight(.semibold))
                 .foregroundStyle(Ink.glassGlyph)
                 .padding(.horizontal, Space.l)
                 .frame(minHeight: Size.control)
                 .glass(.capsule, role: .bar)
-                .padding(.bottom, Space.l)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottom)
-        } else {
-            Color.clear
         }
+        .buttonStyle(PressScaleStyle())
+        .accessibilityIdentifier(identifier)
     }
 }
 
-/// The board's own buttons, after the Photos | Board switch in the header: all notes, and a + for notes and doodles,
-/// which the tab bar's + doesn't offer.
+/// All notes, at the top of the board.
 struct BoardActions: View {
     let state: HomeState
     @State private var showsHistory = false
 
-    private var onBoard: Int { min(state.notes.notes.count + state.moments.pinned.count, BoardRoomScene.slots) }
-
     var body: some View {
-        HStack(spacing: GlassMetrics.gap) {
-            if !state.notes.notes.isEmpty {
-                GlassIconButton(symbol: "clock.arrow.circlepath", label: "All notes") { showsHistory = true }
+        GlassIconButton(symbol: "clock.arrow.circlepath", label: "All notes") { showsHistory = true }
+            .sheet(isPresented: $showsHistory) {
+                NotesHistory(state: state)
             }
-
-            Menu {
-                Button { state.composingNote = .write } label: {
-                    Label("Note", systemImage: "note.text")
-                    Text("+5")
-                }
-                Button { state.composingNote = .draw } label: {
-                    Label("Doodle", systemImage: "scribble")
-                    Text("+5")
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.body.weight(.bold))
-                    .frame(width: Size.control, height: Size.control)
-            }
-            .accentGlass()
-            .accessibilityLabel("Add a note")
-            .accessibilityValue(onBoard > 0 ? "\(onBoard) on the board" : "")
-        }
-        .sheet(isPresented: $showsHistory) {
-            NotesHistory(state: state)
-        }
     }
 }
 
@@ -191,6 +210,7 @@ private struct Draft: Identifiable {
 
 private struct EmptyMoments: View {
     @Binding var pick: PhotosPickerItem?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(spacing: Space.section) {
@@ -205,27 +225,52 @@ private struct EmptyMoments: View {
                 Text("Your first moment")
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.primary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
                 Text("Add a photo of the two of you. It goes up on \(CatProfile.name())'s wall as a little polaroid.")
                     .font(.ourioCallout)
                     .foregroundStyle(Ink.secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             PhotosPicker(selection: $pick, matching: .images) {
-                HStack(spacing: Space.s) {
-                    Image(systemName: "photo.badge.plus")
-                    Text("Add a photo")
-                    Text("+10")
-                        .font(.ourioCaption.weight(.semibold).monospacedDigit())
-                        .padding(.horizontal, Space.s)
-                        .padding(.vertical, Space.xs / 2)
-                        .background(Ink.heroInk.opacity(0.12), in: .capsule)
+                Group {
+                    if typeSize.isAccessibilitySize {
+                        // The words take the line; the reward goes whole under them.
+                        VStack(spacing: Space.s) {
+                            words
+                            reward
+                        }
+                    } else {
+                        HStack(spacing: Space.s) {
+                            words
+                            reward
+                        }
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }
             .buttonStyle(PrimaryButtonStyle())
+            .accessibilityIdentifier("moments.add")
             .padding(.top, Space.xs)
         }
+    }
+
+    private var words: some View {
+        HStack(spacing: Space.s) {
+            Image(systemName: "photo.badge.plus")
+            Text("Add a photo")
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    private var reward: some View {
+        Text("+\(EarnAmount.moment)")
+            .font(.ourioCaption.weight(.semibold).monospacedDigit())
+            .padding(.horizontal, Space.s)
+            .padding(.vertical, Space.xs / 2)
+            .background(Ink.heroInk.opacity(0.12), in: .capsule)
     }
 }
 
@@ -313,34 +358,80 @@ struct MomentPrint: View {
     }
 }
 
-/// Pinned moments in wall order, so it's clear what Mochi's room shows: six small prints across the card, the empty
-/// slots as blank paper.
-private struct WallStrip: View {
+/// Pinned moments in wall order, so it's clear what Mochi's room shows: six small prints across the card, each
+/// empty slot a well with the honey "+" of the bar's own button, and the same picker as a pill in the header.
+struct WallStrip: View {
     let store: MomentStore
+    @Binding var pick: PhotosPickerItem?
 
     var body: some View {
         Card {
             VStack(alignment: .leading, spacing: Space.m) {
-                CardHeader("On \(CatProfile.name())'s wall",
-                           detail: "\(store.pinned.count) of \(MomentStore.wallSlots) · pin a photo to hang it",
-                           symbol: "house.fill", opens: false)
+                CardHeader("On \(CatProfile.name())'s wall") {
+                    RowIcon(symbol: "house.fill", size: Size.cardMark, style: .clay)
+                } detail: {
+                    Text(WallCopy.detail(pinned: store.pinned.count, slots: MomentStore.wallSlots))
+                } trailing: {
+                    PhotosPicker(selection: $pick, matching: .images) {
+                        Label("Add photo", systemImage: "plus")
+                            .lineLimit(1)
+                            .fixedSize()
+                    }
+                    .buttonStyle(PillButtonStyle())
+                    .accessibilityIdentifier("wallAddPhoto")
+                }
                 HStack(spacing: Space.s) {
                     ForEach(0..<MomentStore.wallSlots, id: \.self) { slot in
                         let moment = slot < store.pinned.count ? store.pinned[slot] : nil
-                        PolaroidPaper.blank
-                            .aspectRatio(1, contentMode: .fit)
-                            .overlay {
-                                if let moment { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
+                        if let moment {
+                            WallSlot(store: store, moment: moment).accessibilityHidden(true)
+                        } else {
+                            PhotosPicker(selection: $pick, matching: .images) {
+                                EmptyWallSlot()
                             }
-                            .clipped()
-                            .padding(Space.xs)
-                            .background { PaperSheet(lift: moment == nil ? nil : PaperSheet.Lift(radius: 2, y: 1)) }
-                            .rotationEffect(moment.map { $0.id.polaroidTilt } ?? .zero)
+                            .buttonStyle(PressScaleStyle())
+                            .accessibilityLabel("Add a photo to the wall")
+                        }
                     }
                 }
-                .accessibilityHidden(true)
             }
         }
+    }
+}
+
+/// The wall card's line under its title.
+enum WallCopy {
+    static func detail(pinned: Int, slots: Int) -> String {
+        if pinned == 0 { return "Empty · tap + to hang a photo" }
+        if pinned >= slots { return "\(pinned) of \(slots) · full; a new pin swaps the oldest" }
+        return "\(pinned) of \(slots) · tap + to hang one"
+    }
+}
+
+private struct WallSlot: View {
+    let store: MomentStore
+    let moment: Moment
+
+    var body: some View {
+        PolaroidPaper.blank
+            .aspectRatio(1, contentMode: .fit)
+            .overlay { MomentPhoto(store: store, moment: moment, maxPixels: MomentStore.wallPixels) }
+            .clipped()
+            .padding(Space.xs)
+            .background { PaperSheet(lift: PaperSheet.Lift(radius: 2, y: 1)) }
+            .rotationEffect(moment.id.polaroidTilt)
+    }
+}
+
+/// A print's size, recessed where a print would lie, with the "+" on a honey disc: the same accent as the bar's
+/// button, so it reads as the place to add one in either appearance.
+private struct EmptyWallSlot: View {
+    var body: some View {
+        Color.clear
+            .aspectRatio(1, contentMode: .fit)
+            .padding(Space.xs)
+            .overlay { SymbolBadge(symbol: "plus") }
+            .wellSurface()
     }
 }
 

@@ -19,6 +19,15 @@ private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner) -> 
 @Suite struct InboxLineTests {
   @Test func linesNameWhoDidIt() {
     #expect(InboxLine(item(.catFed(grams: 40)), names: names).text == "Anya fed Mochi 40 g")
+    #expect(
+      InboxLine(item(.giftClaimed(coins: 2)), names: names).text
+        == "Anya opened the daily gift: 2 coins")
+    #expect(
+      InboxLine(item(.giftClaimed(coins: 1)), names: names).text
+        == "Anya opened the daily gift: 1 coin")
+    #expect(
+      InboxLine(item(.giftClaimed(coins: 0)), names: names).text
+        == "Anya opened the daily gift: a piece")
     #expect(InboxLine(item(.catFed(grams: 40), .me), names: names).text == "You fed Mochi 40 g")
     #expect(InboxLine(item(.catSlept, .cat), names: names).text == "Mochi had a nap")
     #expect(
@@ -74,27 +83,18 @@ private func item(_ event: ActivityEvent, _ actor: ActivityActor = .partner) -> 
     ActivityItem(id: "x", at: 0, actor: .partner, event: .catPetted, target: nil, cursor: "0~x")
   ])
 
-  @Test func shortStatesFitTheirContent() {
+  /// No state opens a short sheet over the hidden room, or changes the sheet's height when it lands.
+  @Test func everyStateOpensAtFullHeightWithItsOwnScrollView() {
     let empty = InboxMachine.Page(items: [])
-    let short: [InboxMachine.Sheet] = [
-      .unpaired, .failed, .loaded(empty), .stale(empty),
+    let short: [InboxMachine.Sheet] = [.unpaired, .failed, .loaded(empty), .stale(empty)]
+    let list: [InboxMachine.Sheet] = [
+      .idle, .loading, .loaded(Self.page), .refreshing(Self.page), .stale(Self.page),
     ]
-    for sheet in short {
-      let layout = InboxLayout(sheet)
-      #expect(layout == .short)
-      #expect(layout.size == .fit)
-      #expect(layout.scrolls, "a fitted sheet measures its content through its own scroll view")
-    }
-  }
-
-  @Test func itemsTakeTheWholeSheet() {
-    for sheet: InboxMachine.Sheet in [
-      .loaded(Self.page), .refreshing(Self.page), .stale(Self.page),
-    ] {
-      let layout = InboxLayout(sheet)
-      #expect(layout == .list)
-      #expect(layout.size == .large)
-      #expect(!layout.scrolls)
+    for sheet in short { #expect(InboxLayout(sheet) == .short) }
+    for sheet in list { #expect(InboxLayout(sheet) == .list) }
+    for sheet in short + list {
+      #expect(InboxLayout(sheet).size == .large)
+      #expect(!InboxLayout(sheet).scrolls)
     }
   }
 

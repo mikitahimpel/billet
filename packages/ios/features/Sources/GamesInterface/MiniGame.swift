@@ -28,8 +28,20 @@ public struct GameResult: Equatable, Sendable {
   public let grams: Int?
   /// The bowl went past the portion (feed) or the brim (water): the reward is cut.
   public let tooMuch: Bool
+  /// Water spilled and was wiped up again.
+  public let spotless: Bool
+  /// Something was left on the mat: the reward is cut a little.
+  public let messy: Bool
+  /// The cat's pounces on the dot, for `laser`.
+  public let pounces: Int?
 
-  public init(game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false) {
+  public init(
+    game: MiniGame, score: Int, grams: Int? = nil, tooMuch: Bool = false, spotless: Bool = false,
+    messy: Bool = false, pounces: Int? = nil
+  ) {
+    self.pounces = pounces.map { max($0, 0) }
+    self.spotless = spotless
+    self.messy = messy
     self.game = game
     self.score = min(max(score, 0), 100)
     self.grams = grams
@@ -38,13 +50,21 @@ public struct GameResult: Equatable, Sendable {
 
   /// A feed that hit `target` with `food` in the bowl: 100 on the gram, less for each gram off,
   /// and past the portion's zone the table in ``FeedPenalty`` decides.
-  public static func feed(target: Int, food: Double) -> GameResult {
+  public static func feed(
+    target: Int, food: Double, crumbs: Int = 0, spotless: Bool = false
+  ) -> GameResult {
     let target = FeedPenalty.portion(target)
     let grams = Int(max(food.isFinite ? food : 0, 0).rounded())
     let penalty = FeedPenalty.over(target: target, food: food)
-    let score = penalty?.score ?? max(0, 100 - 10 * abs(grams - target))
-    return GameResult(game: .feed, score: score, grams: grams, tooMuch: penalty != nil)
+    let base = penalty?.score ?? max(0, 100 - 10 * abs(grams - target))
+    let messy = crumbs > 0
+    return GameResult(
+      game: .feed, score: messy ? max(0, base - messCost) : base, grams: grams,
+      tooMuch: penalty != nil, spotless: spotless && !messy, messy: messy)
   }
+
+  /// Points off a feed that leaves crumbs on the mat.
+  public static let messCost = 15
 
   /// The care itself where a need calls for it, and the game, which pays the coins (the server
   /// caps them by day).
@@ -58,14 +78,31 @@ public struct GameResult: Equatable, Sendable {
     }
   }
 
+  /// What `events` pay before the server's daily caps, as `rewardFor` in
+  /// `packages/contracts/domain/src/coins.ts`: 3 for a won game, 1 for each care.
+  public var coins: Int {
+    events.reduce(0) { sum, event in
+      switch event {
+      case .gamePlayed(_, _, let won): sum + (won ? 3 : 1)
+      case .fed, .petted, .played, .watered: sum + 1
+      case .noteShared, .slept, .shooed: sum
+      }
+    }
+  }
+
   /// The toast's line.
   public func line(pronouns: CatPronouns) -> String {
     switch game {
     case .feed:
-      if tooMuch { return pronouns.say(.tooMuchResult) }
+      if tooMuch {
+        let stuffed = pronouns.say(.tooMuchResult)
+        if messy { return "\(stuffed), and a little messy" }
+        return spotless ? "\(stuffed), but the mat is spotless" : stuffed
+      }
       return score == 100 ? "Exactly right. Dinner's served" : "Close enough. Dinner's served"
     case .water:
-      if tooMuch { return "Too much! A puddle, but fresh water" }
+      if tooMuch { return "A little messy. Fresh water, though" }
+      if spotless { return "Spotless. Fresh water" }
       return score >= 80 ? "Right on the line. Fresh water" : "Fresh water"
     case .laser: return "Played out"
     case .brush: return "Soft and shiny"

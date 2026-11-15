@@ -110,7 +110,8 @@ public struct InboxLine: Equatable {
         title.map { "the \($0)" } ?? (items.count == 1 ? "something" : "\(items.count) things")
       self.init(symbol: "bag.fill", text: "\(who) bought \(what) for \(coins) coins")
     case .giftClaimed(let coins):
-      self.init(symbol: "gift.fill", text: "\(who) opened the daily gift: \(coins) coins")
+      self.init(
+        symbol: "gift.fill", text: "\(who) opened the daily gift: \(Self.giftReward(coins))")
     case .bonusEarned(let collection, let coins):
       let name = names.title(collection) ?? Self.readable(collection)
       self.init(symbol: "star.fill", text: "\(who) finished \(name): +\(coins) coins")
@@ -123,6 +124,15 @@ public struct InboxLine: Equatable {
     case .listItemAdded(_, let kind, let title, let count, let text):
       let what = count == 1 ? "“\(text)”" : "\(count) items"
       self.init(symbol: names.list(kind), text: "\(who) added \(what) to \(title)")
+    }
+  }
+
+  /// A gift that paid no coins gave a piece: its amount-0 entry names it.
+  static func giftReward(_ coins: Int) -> String {
+    switch coins {
+    case ..<1: "a piece"
+    case 1: "1 coin"
+    default: "\(coins) coins"
     }
   }
 

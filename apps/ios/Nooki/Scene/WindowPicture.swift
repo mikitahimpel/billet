@@ -3,7 +3,7 @@ import Foundation
 import Pet
 import WindowViews
 
-/// What the City room's window looks out on, as chosen in Settings.
+/// What the City room's window looks out on, as chosen in Settings → Labs. A build without Labs always shows `defaultChoice`.
 enum WindowChoice: String, CaseIterable, Identifiable {
     /// The suburb for the hour and weather: the cul-de-sac by day, the suburb at night, the rainy suburb in rain and
     /// the December street in snow.
@@ -28,13 +28,23 @@ enum WindowChoice: String, CaseIterable, Identifiable {
         }
     }
 
+    static let defaultChoice = WindowChoice.suburbia
+
     static var current: WindowChoice {
-        UserDefaults.standard.string(forKey: key).flatMap(WindowChoice.init(rawValue:)) ?? .suburbia
+        #if DEBUG || LABS_YES
+        UserDefaults.standard.string(forKey: key).flatMap(WindowChoice.init(rawValue:)) ?? defaultChoice
+        #else
+        defaultChoice
+        #endif
     }
 
     /// The weather Suburbia shows; the named views keep their own.
     static var weather: ViewWeather {
+        #if DEBUG || LABS_YES
         UserDefaults.standard.string(forKey: weatherKey).flatMap(ViewWeather.init(rawValue:)) ?? .clear
+        #else
+        .clear
+        #endif
     }
 
     /// The view, its light and its weather at `hour` (0–24).

@@ -242,6 +242,18 @@ private struct QualityTierPicker: View {
             Text("Quality tier: \(lab.tier.title)\(forced == nil ? " (follows heat and Low Power Mode)" : " (forced)")")
                 .font(.ourioMicro)
                 .foregroundStyle(Ink.textSecondary)
+            Text(GovernorReadout.line(
+                tier: lab.tier, forced: forced != nil,
+                reason: GovernorReadout.why(lab.quality.reason, recovering: lab.quality.recovering, forced: forced != nil),
+                changes: lab.tierChanges))
+                .font(.ourioMicro.monospacedDigit())
+                .foregroundStyle(Ink.text)
+            Text("Inputs: \(GovernorReadout.inputs(lab.quality.conditions))")
+                .font(.ourioMicro.monospacedDigit())
+                .foregroundStyle(Ink.textSecondary)
+            Text("Draws: \(GovernorReadout.plan(lab.tier.plan))")
+                .font(.ourioMicro.monospacedDigit())
+                .foregroundStyle(Ink.textSecondary)
             Picker("Quality tier", selection: Binding(get: { forced }, set: { lab.force($0) })) {
                 Text("Auto").tag(RoomQualityTier?.none)
                 ForEach(RoomQualityTier.allCases, id: \.self) { Text($0.title).tag(Optional($0)) }
@@ -249,6 +261,30 @@ private struct QualityTierPicker: View {
             .pickerStyle(.segmented)
             .font(.ourioMicro)
         }
+    }
+}
+
+/// The visible room's counts, read when this card appears and again on Refresh; what moved since the reading before.
+private struct RoomStatsReadout: View {
+    let lab: PerfLab
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.xs) {
+            if let stats = lab.roomStats {
+                ForEach(Array(stats.lines.enumerated()), id: \.offset) { _, line in
+                    Text(line)
+                        .font(.ourioMicro.monospacedDigit())
+                        .foregroundStyle(Ink.text)
+                }
+                if let previous = lab.previousStats, let moved = stats.changes(since: previous) {
+                    Text(moved).font(.ourioMicro.monospacedDigit()).foregroundStyle(Ink.textSecondary)
+                }
+            } else {
+                Text("Room stats: no room to count yet.").font(.ourioMicro).foregroundStyle(Ink.textSecondary)
+            }
+            SecondaryButton("Refresh room stats", fullWidth: true) { lab.refreshRoomStats() }
+        }
+        .onAppear { lab.refreshRoomStats() }
     }
 }
 
@@ -266,13 +302,16 @@ struct PerfLabSwitches: View {
                     ToggleRow(suspect.title, symbol: suspect.symbol, tint: UsTint.honey.color, isOn: lab.binding(suspect))
                 }
                 QualityTierPicker(lab: lab)
+                RoomStatsReadout(lab: lab)
                 Text(lab.day?.line ?? "MetricKit: no day delivered yet; the system sends one about once a day.")
                     .font(.ourioMicro)
                     .foregroundStyle(Ink.textSecondary)
                 HStack(spacing: Space.s) {
                     SecondaryButton("Copy settings", fullWidth: true) {
+                        lab.refreshRoomStats()
                         UIPasteboard.general.string = PerfLabMachine.summary(lab.state, reading: reading,
-                                                                             energy: energy, tabs: tabs, day: lab.day)
+                                                                             energy: energy, tabs: tabs, day: lab.day,
+                                                                             room: lab.roomStats?.line, governor: lab.governorLine)
                     }
                     if let json = MetricsReceiver.savedJSON() {
                         SecondaryButton("Copy MetricKit", fullWidth: false) { UIPasteboard.general.string = json }

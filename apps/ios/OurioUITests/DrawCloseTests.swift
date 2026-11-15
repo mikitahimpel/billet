@@ -30,9 +30,12 @@ final class DrawCloseTests: XCTestCase {
     @MainActor
     func testSwipingDownFromTheTopBarReturnsToHome() {
         let app = openDraw()
-        let close = app.buttons["drawClose"]
-        let start = close.coordinate(withNormalizedOffset: CGVector(dx: 6, dy: 0.5))
-        start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 220)))
+        // One snapshot of the button, then plain screen coordinates: a drag measured from the element looks it up again
+        // for the start, the end and every retry, and each lookup walks the whole composer's accessibility tree.
+        let bar = app.buttons["drawClose"].frame
+        let origin = app.coordinate(withNormalizedOffset: .zero)
+        let start = origin.withOffset(CGVector(dx: bar.maxX + 160, dy: bar.midY))
+        start.press(forDuration: 0.05, thenDragTo: origin.withOffset(CGVector(dx: bar.maxX + 160, dy: bar.midY + 220)))
         XCTAssertTrue(app.buttons["coins"].waitForExistence(timeout: 10), "Home did not come back")
     }
 }

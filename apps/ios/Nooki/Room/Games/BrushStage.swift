@@ -29,6 +29,8 @@ final class BrushStage: GameStage {
     private var sinceTouch: Float = 99
     private var time: Float = 0
     private var hearted = 0
+    /// Whether the groom bar has passed its middle: a curious head tilt at the player the first time.
+    private var halfway = false
     private let seat: SIMD3<Float>
     private let furTone: UInt32
     /// Radians her body turns from the player.
@@ -139,6 +141,7 @@ final class BrushStage: GameStage {
             }
         case .flinches:
             room.walker?.behavior.perform(.flick)
+            deck.tap(0.9)
             deck.say(BrushStrokes.wrongWay, for: 1.8)
         case nil: break
         }
@@ -173,6 +176,11 @@ final class BrushStage: GameStage {
             }
         }
         deck.show(strokes.groom, "Groomed")
+        if strokes.groom >= 0.5, !halfway {
+            halfway = true
+            room.walker?.behavior.perform(.tilt)
+            deck.cheer()
+        }
         for index in tufts.indices.reversed() {
             tufts[index].life -= dt
             tufts[index].velocity.y -= 0.02 * dt

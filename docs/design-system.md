@@ -114,6 +114,7 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 | A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
 | A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
+| A line the cat says, beside or under her avatar | `SpeechBubble(tail:) { Text(...) }`: one fill, one rim, no shadow |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
 | A screen's few big actions side by side | `ActionTiles([ActionTile(title, status:, symbol:, tint:) {}])`: equal squares while every label fits on one line, a `GroupedSection` of rows otherwise |
 | A progress toward one goal, in a hero | `ProgressRing(value:tint:) { centre }` |
@@ -123,7 +124,8 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 ### Do and don't
 
 - Do give a sheet exactly one size: `.fit` for a few controls, `.medium` or `.large` for lists.
-- Do put an empty state in `.fit`, not in a large sheet.
+- Do put an empty state in `.fit`, not in a large sheet. A sheet that opens as a list and may load into an empty
+  or failed state (the Inbox) keeps the list's height and centres it in the free space, so nothing jumps.
 - Do mark a page pushed from a `.fit` sheet with `.expandsSheet()`, so the sheet rises to full height for it.
 - Do keep the toolbar to close or confirm.
 - Don't draw an `xmark` yourself, or add a `Button("Done")`.
@@ -313,9 +315,12 @@ One scale, in `Tokens/Motion.swift`: two durations and one spring. Screens never
 - **A tab switch fades the page and nothing else.** The new page fades in over the old one on
   `Motion.fade()`; the header and the tab bar stay put and never animate as a whole (no `withAnimation`
   around `state.tab`).
+- **The switch lands with the finger.** The tab under the finger is shown the moment it lands on the bar or
+  slides onto another slot (`TabScrub`); lifting the finger changes nothing. A tap lasts about a tenth of a
+  second, so a switch that waited for its end would come that late after the pill.
 - **The selection pill follows the finger.** One pill for the bar, moved by an offset: it slides on
-  `Motion.spring(Motion.quick)` while the finger is on the bar and is already in place when the switch
-  lands, so the switch's frames redraw no glass. A switch from elsewhere (a link, VoiceOver) moves it at once.
+  `Motion.spring(Motion.quick)` while the finger is on the bar. A switch from elsewhere (a link, VoiceOver)
+  moves it at once.
 - **Opacity and drawn offsets only**, never a frame, a padding or a safe area: those lay the page out again
   on every frame of the animation. Nothing is inserted or removed inside glass to animate it.
 - **Keep the switch's frame light.** It already builds the new page; state written in

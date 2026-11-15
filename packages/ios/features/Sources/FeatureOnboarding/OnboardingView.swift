@@ -24,12 +24,14 @@ import Wire
     var paired: () -> Void
     /// Dev server only: pairs with a bot partner instead of waiting for a real one; nil elsewhere.
     var demoPartner: (() -> Void)?
+    /// Starts the account's sign-in again, with the same account key, when it seems stuck.
+    var retrySignIn: (() -> Void)?
 
     public init(
       flow: OnboardingFlow, pairing: (any OnboardingPairing)?, scenery: any OnboardingScenery,
       signedIn: Bool = false,
       inviteBase: URL? = nil, alreadyPaired: Bool = false, paired: @escaping () -> Void = {},
-      demoPartner: (() -> Void)? = nil
+      demoPartner: (() -> Void)? = nil, retrySignIn: (() -> Void)? = nil
     ) {
       self.flow = flow
       self.pairing = pairing
@@ -39,6 +41,7 @@ import Wire
       self.alreadyPaired = alreadyPaired
       self.paired = paired
       self.demoPartner = demoPartner
+      self.retrySignIn = retrySignIn
     }
 
     let language = Locale.current.language.languageCode?.identifier
@@ -298,7 +301,7 @@ import Wire
           case .waiting(let code, let expiresAt, _):
             inviteCard(pairing, code: code, expiresAt: expiresAt)
           case .choosing(nil, _) where !signedIn:
-            GroupedSection { progressRow("Connecting…") }
+            ConnectingRow(retry: retrySignIn)
           case .creating, .claiming:
             GroupedSection { progressRow("Getting your code…") }
           case .choosing:
@@ -559,6 +562,8 @@ import Wire
     let avatar: String
     @Environment(\.dynamicTypeSize) private var typeSize
 
+    private static let avatarSide: CGFloat = 52
+
     init(text: LocalizedStringKey, avatar: String) {
       self.text = text
       self.avatar = avatar
@@ -569,16 +574,17 @@ import Wire
       let layout =
         typeSize.isAccessibilitySize
         ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
-        : AnyLayout(HStackLayout(alignment: .center, spacing: Space.m))
+        : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
       layout {
-        Portrait(name: avatar, size: 52)
-        Text(text)
-          .font(.ourioCallout.weight(.semibold))
-          .foregroundStyle(Ink.text)
-          .fixedSize(horizontal: false, vertical: true)
-          .padding(.horizontal, Space.m)
-          .padding(.vertical, Space.s)
-          .cardSurface()
+        Portrait(name: avatar, size: Self.avatarSide)
+        SpeechBubble(
+          tail: typeSize.isAccessibilitySize ? .top(x: Self.avatarSide / 2) : .leading
+        ) {
+          Text(text)
+            .font(.ourioCallout.weight(.semibold))
+            .foregroundStyle(Ink.text)
+            .fixedSize(horizontal: false, vertical: true)
+        }
       }
     }
   }

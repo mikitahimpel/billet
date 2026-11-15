@@ -148,13 +148,13 @@ describe("decide on an active room", () => {
       entry: {
         id: `earn:${photoFrom(alice).id}`,
         kind: "earn",
-        amount: 10,
+        amount: 2,
         ref: photoFrom(alice).id,
         at: photoFrom(alice).sentAt,
       },
     });
     expect(sent.state._tag === "Active" && sent.state.wallet.balance).toBe(
-      active.wallet.balance + 10,
+      active.wallet.balance + 2,
     );
   });
 
@@ -391,6 +391,7 @@ describe("tagged unions", () => {
     SaveCat: saveCat(),
     RecordCatEvent: pet(),
     GrantInks: RoomCommand.cases.GrantInks.make({ inks: [rose] }),
+    GrantPostage: RoomCommand.cases.GrantPostage.make({ postage: ["stamp-moon"] }),
     GrantItems: RoomCommand.cases.GrantItems.make({
       items: [Schema.decodeSync(RoomItemId)("lantern")],
     }),
@@ -452,7 +453,7 @@ describe("tagged unions", () => {
     }),
     CreditPurchase: RoomCommand.cases.CreditPurchase.make({
       id: Schema.decodeSync(CoinEntryId)("purchase:2000"),
-      kind: "buy",
+      kind: "purchase",
       coins: 550,
       ref: "com.ourio.app.coins.550",
       at: 1_700_000_000_000,
@@ -485,6 +486,7 @@ describe("tagged unions", () => {
     CatEntryRepeated: RoomOutput.cases.CatEntryRepeated.make({ entry: petEntry }),
     InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),
     ItemsGranted: RoomOutput.cases.ItemsGranted.make({ items: [tower] }),
+    PostageGranted: RoomOutput.cases.PostageGranted.make({ postage: ["seal-rose"] }),
     WishlistChanged: RoomOutput.cases.WishlistChanged.make({ wishlist: [tower] }),
     LayoutChanged: RoomOutput.cases.LayoutChanged.make({ layout: [] }),
     LayoutRepeated: RoomOutput.cases.LayoutRepeated.make({}),
@@ -556,6 +558,7 @@ describe("tagged unions", () => {
     CatNotAdopted: RoomRejection.cases.CatNotAdopted.make({}),
     CatEntryIdTaken: RoomRejection.cases.CatEntryIdTaken.make({}),
     InkNotOwned: RoomRejection.cases.InkNotOwned.make({ ink: rose }),
+    PostageNotOwned: RoomRejection.cases.PostageNotOwned.make({ postage: "seal-rose" }),
     NotEnoughCoins: RoomRejection.cases.NotEnoughCoins.make({ needed: 60, have: 5 }),
     PriceChanged: RoomRejection.cases.PriceChanged.make({ price: 560 }),
     AlreadyOwned: RoomRejection.cases.AlreadyOwned.make({ ink: rose }),

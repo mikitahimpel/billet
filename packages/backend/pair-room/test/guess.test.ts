@@ -336,8 +336,8 @@ describe("GuessRoom", () => {
     expect(last.revealed).toBe(true);
     expect(last.result._tag === "Done" && last.result.view.reveal).toHaveLength(5);
     expect(rooms.memory.coins.map((entry) => [entry.id, entry.amount])).toEqual([
-      ...(await viewOf(guess, alice)).round.questions.map((id) => [`earn:guess:${today}.${id}`, 2]),
-      [`earn:round:${today}`, 10],
+      ...(await viewOf(guess, alice)).round.questions.map((id) => [`earn:guess:${today}.${id}`, 1]),
+      [`earn:round:${today}`, 2],
     ]);
     const view = await viewOf(guess, guesser);
     expect(view.score).toMatchObject({ week: { mine: 5, partner: 0 }, allTime: { mine: 5 } });

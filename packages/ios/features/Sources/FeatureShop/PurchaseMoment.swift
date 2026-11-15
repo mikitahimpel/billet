@@ -10,7 +10,8 @@
   /// same place.
   public struct PurchaseMoment: View {
     let state: any ShopHost
-    /// The top of the tab bar in global coordinates, which the card keeps clear of; nil where there is no bar.
+    /// The top of what stands along the screen's bottom (the tab bar, the controls over it, a sheet's tools) in global
+    /// coordinates, which the card keeps clear of; nil where nothing does.
     var floor: CGFloat?
 
     public init(state: any ShopHost, floor: CGFloat? = nil) {
@@ -101,6 +102,7 @@
           ? "\(state.petName) is already sniffing it. It's in your closet."
           : "\(state.petName) is already sniffing it. It's in your room."
       case .ink: "It's in your pens for notes and drawings, for both of you."
+      case .postage: "It's in your notes' stamps and seals, for both of you."
       case .treat: "\(state.petName) loved it."
       }
     }
@@ -122,8 +124,8 @@
       }
     }
 
-    /// How far above its container's bottom (`bottom`, global) the card sits: `Space.m` over the tab bar's top edge
-    /// (`floor`), or `Space.l` over the home indicator where there is no bar.
+    /// How far above its container's bottom (`bottom`, global) the card sits: `Space.m` over `floor`, or `Space.l` over
+    /// the home indicator where there is none.
     static func lift(bottom: CGFloat, floor: CGFloat?, safeBottom: CGFloat) -> CGFloat {
       guard let floor, floor < bottom else { return safeBottom + Space.l }
       return bottom - floor + Space.m
@@ -178,6 +180,7 @@
           Text("Couldn't buy \(purchase.title). Your coins are back.")
             .font(.ourioCallout)
             .foregroundStyle(Ink.text)
+            .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
       }

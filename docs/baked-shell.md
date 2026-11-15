@@ -30,7 +30,9 @@ is unchanged; the baked shell is a second path chosen at runtime.
   multiplied by a tint.
 - The cat, the toys, bought items, bulbs, the candle, the window picture and the garland stay live. Lights: the City
   drops its sky, lamp, fairy and candle point lights (the sun, the fill and the ambient stay); the Room keeps all of
-  its lights, because its furniture (`Room_furniture.usdz`) is still live.
+  its lights, because its furniture is live. Nothing of the furniture is in the bake: the pieces are the player's to
+  move, and a floor baked with them standing keeps a black footprint and a shadow wherever a piece was
+  (`BakedShellTests.theRoomShellsFloorIsLitUnderTheFurnituresHomes`). Each piece draws its own contact blob.
 - City time of day: one lightmap (15:00, lamps off) times a tint from the hour (`BakedShell.tint`).
 
 ## Re-baking
@@ -40,7 +42,7 @@ is unchanged; the baked shell is a second path chosen at runtime.
 1. `BakedShellTests.export` builds each room with its static parts tagged and writes their shapes, transforms and
    materials to `scripts/bake-room/shells/*.shapes` (one source: the Swift code).
 2. `bake_shell.py` in headless Blender rebuilds the shapes with few triangles, merges them, unwraps one atlas, bakes
-   Cycles light (sun, window, lamp, candle, sky, with the Room's furniture as a shadow caster) and writes a USDZ
+   Cycles light (sun, window, lamp, candle, sky) and writes a USDZ
    with one JPEG lightmap, 2048².
 3. `sources.json` records what the shells were baked from. `BakedShellTests.theBakedShellsAreUpToDate` fails after
    any change to a room's static boxes until the bake is run again. The lights are a copy in `bake_shell.py`; change
@@ -48,7 +50,7 @@ is unchanged; the baked shell is a second path chosen at runtime.
 
 ## What can no longer change at runtime (baked path)
 
-Wall, floor, bed, rug and other static colours; positions of static furniture; the sun's patch and the cat's
+Wall, floor, bed, rug and other static colours; the sun's patch and the cat's
 sun shadow on the shell (the shell is unlit: Mochi keeps her grounding shadow, but the sun does not shadow the walls);
 City lamp pools at night (only the tint changes). Each needs a re-bake (about two minutes) after the Swift change.
 

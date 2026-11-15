@@ -1,7 +1,8 @@
 import { Effect, Exit, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { CatGameId, CatLook, CatName, NatureSeed } from "@billet/contracts-domain/cat";
-import { CoinEntryId } from "@billet/contracts-domain/coins";
+import { CoinEntryId, dailyEarnCaps } from "@billet/contracts-domain/coins";
+import { welcomeCoins } from "@billet/contracts-domain/shop";
 import { IdempotencyKey, MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import { freeInk, InkId, inks } from "@billet/contracts-domain/inks";
@@ -13,6 +14,8 @@ import {
   AlreadyOwned,
   InkNotOwned,
   InvalidNote,
+  NotEnoughCoins,
+  PostageNotOwned,
   NotesNotFound,
   NotesUnavailable,
 } from "../src/notes-error.ts";
@@ -337,6 +340,66 @@ describe("sendNote", () => {
     }
   });
 
+  it("refuses a stamp or seal the pair has not unlocked, and takes it once either partner buys it", async () => {
+    const { layer } = world();
+    const write = (notes: NotesService["Service"], author: UserId, postage: object) =>
+      notes.sendNote(
+        author,
+        SendNoteRequest.cases.Text.make({ key: newKey(), text: "hi", ink: freeInk, ...postage }),
+      );
+    const unlock = (notes: NotesService["Service"], id: IdempotencyKey, postage: "stamp-moon") =>
+      notes.order(ana, { id, offer: { _tag: "Postage", postage }, expectedPrice: 30 });
+    const orderId = newKey();
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const plain = yield* write(notes, ana, {});
+        const stamped = yield* Effect.flip(write(notes, ana, { stamp: "moon" }));
+        const bought = yield* unlock(notes, orderId, "stamp-moon");
+        const retried = yield* unlock(notes, orderId, "stamp-moon");
+        const sent = yield* write(notes, ben, { stamp: "moon" });
+        const sealed = yield* Effect.flip(write(notes, ben, { stamp: "moon", seal: "rose" }));
+        const elsewhere = yield* Effect.flip(write(notes, cal, { stamp: "moon" }));
+        const owned = yield* Effect.flip(unlock(notes, newKey(), "stamp-moon"));
+        return { plain, stamped, bought, retried, sent, sealed, elsewhere, owned };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { plain, stamped, bought, retried, sent, sealed, elsewhere, owned } = outcome.value;
+      expect(plain).not.toHaveProperty("stamp");
+      expect(stamped).toEqual(new PostageNotOwned({ postage: "stamp-moon" }));
+      expect(bought.entry).toMatchObject({ kind: "spend", amount: -30, ref: "stamp-moon" });
+      expect(bought.shop.postage).toEqual(["stamp-moon"]);
+      expect(retried.entry).toEqual(bought.entry);
+      expect(retried.shop.balance).toBe(bought.shop.balance);
+      expect(sent).toMatchObject({ _tag: "Text", author: ben, stamp: "moon" });
+      expect(sealed).toEqual(new PostageNotOwned({ postage: "seal-rose" }));
+      expect(elsewhere).toEqual(new PostageNotOwned({ postage: "stamp-moon" }));
+      expect(owned).toEqual(new AlreadyOwned({ itemId: "stamp-moon" }));
+    }
+  });
+
+  it("refuses a seal the balance cannot pay, charging nothing", async () => {
+    const { layer } = world();
+    const seal = (notes: NotesService["Service"], postage: "seal-plum" | "seal-rose") =>
+      notes.order(cal, { id: newKey(), offer: { _tag: "Postage", postage } });
+    const outcome = await run(layer, (notes) =>
+      Effect.gen(function* () {
+        const first = yield* seal(notes, "seal-plum");
+        const poor = yield* Effect.flip(seal(notes, "seal-rose"));
+        return { first, poor, after: yield* notes.shop(dee) };
+      }),
+    );
+    expect(Exit.isSuccess(outcome)).toBe(true);
+    if (Exit.isSuccess(outcome)) {
+      const { first, poor, after } = outcome.value;
+      expect(first.shop.balance).toBe(welcomeCoins - 45);
+      expect(poor).toEqual(new NotEnoughCoins({ needed: 45, have: welcomeCoins - 45 }));
+      expect(after.balance).toBe(welcomeCoins - 45);
+      expect(after.postage).toEqual(["seal-plum"]);
+    }
+  });
+
   it("buys an ink with coins the pair earned, once per id, and refuses what it cannot", async () => {
     const { layer, pairRooms } = world();
     const rose = Schema.decodeUnknownSync(InkId)("ink-rose");
@@ -351,7 +414,8 @@ describe("sendNote", () => {
         );
         const seed = Schema.decodeUnknownSync(NatureSeed)("7");
         yield* pairRooms.saveCat(pairA, ana, { name: catName, look, utcOffsetSeconds: 0 }, seed);
-        // The note before the cat (5), four wins (40) and four notes (20): 65, rose costs 60.
+        // The caps cut the four wins to 3+1 and the five notes to 1+1+1: with the welcome coins
+        // that is 67 in all, and rose costs 60.
         for (let n = 0; n < 4; n++) {
           yield* pairRooms.recordCatEvent(pairA, ben, {
             id: newKey(),
@@ -374,18 +438,18 @@ describe("sendNote", () => {
     expect(Exit.isSuccess(outcome)).toBe(true);
     if (Exit.isSuccess(outcome)) {
       const { earned, bought, retried, twice, after } = outcome.value;
-      // The welcome coins (560) come with the room.
-      expect(earned.balance).toBe(625);
-      expect(earned.entries.map((e) => e.kind)).toEqual(["gift", ...Array(9).fill("earn")]);
+      const earnedCoins = dailyEarnCaps.games + dailyEarnCaps.notes;
+      expect(earned.balance).toBe(welcomeCoins + earnedCoins);
+      expect(earned.entries.map((e) => e.kind)).toEqual(["gift", ...Array(5).fill("earn")]);
       expect(bought).toMatchObject({
         entry: { kind: "spend", amount: -60, ref: rose },
-        balance: 565,
+        balance: welcomeCoins + earnedCoins - 60,
         granted: [rose],
         owned: [freeInk, rose],
       });
       expect(retried).toEqual(bought);
       expect(twice).toEqual(new AlreadyOwned({ itemId: rose }));
-      expect(after).toEqual({ balance: 565, entries: [bought.entry] });
+      expect(after).toEqual({ balance: welcomeCoins + earnedCoins - 60, entries: [bought.entry] });
     }
   });
 
@@ -543,7 +607,7 @@ describe("coins bought with money", () => {
   it("opens the room and pays the pack into the wallet the pair reads, once", async () => {
     const outcome = await run(world().layer, (notes) =>
       Effect.gen(function* () {
-        const credit = { kind: "buy" as const, id: purchase, ref: pack, coins: 550 };
+        const credit = { kind: "purchase" as const, id: purchase, ref: pack, coins: 550 };
         const first = yield* notes.creditPurchase(pairA, credit);
         const again = yield* notes.creditPurchase(pairA, credit);
         const refunded = yield* notes.creditPurchase(pairA, {
@@ -558,19 +622,19 @@ describe("coins bought with money", () => {
     );
     expect(outcome).toEqual(
       Exit.succeed({
-        // The welcome coins (560) come with the room.
-        first: { balance: 1110, coins: 550 },
-        again: { balance: 1110, coins: 550 },
-        refunded: { balance: 560, coins: 550 },
+        // The welcome coins come with the room.
+        first: { balance: welcomeCoins + 550, coins: 550 },
+        again: { balance: welcomeCoins + 550, coins: 550 },
+        refunded: { balance: welcomeCoins, coins: 550 },
         coins: {
-          balance: 560,
+          balance: welcomeCoins,
           entries: [
             expect.objectContaining({ id: "gift:welcome" }),
-            expect.objectContaining({ id: "purchase:2000", kind: "buy", amount: 550 }),
+            expect.objectContaining({ id: "purchase:2000", kind: "purchase", amount: 550 }),
             expect.objectContaining({ id: "refund:2000", kind: "refund", amount: -550 }),
           ],
         },
-        balance: 560,
+        balance: welcomeCoins,
       }),
     );
   });

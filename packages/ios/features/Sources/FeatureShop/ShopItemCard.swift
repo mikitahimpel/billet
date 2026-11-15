@@ -22,7 +22,7 @@
     private var isDeal: Bool { price < item.price }
     private var face: ShopPriceFace {
       ShopPriceFace(
-        price: price, was: item.price, coins: state.shop.coins, owned: owned, standing: standing)
+        price: price, was: item.price, coins: state.shop.balance, owned: owned, standing: standing)
     }
 
     var body: some View {

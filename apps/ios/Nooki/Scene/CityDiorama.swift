@@ -55,6 +55,27 @@ enum CityDiorama {
         return CGRect(x: x, y: y, width: size.width * scale, height: size.height * scale)
     }()
 
+    /// The frame of a layer that must cover `opening`, which turns away from layers that follow the room only in
+    /// part. The sky has nothing to distort: it grows, keeping its shape, and slides until the opening is inside
+    /// it. A picture layer is drawn where its art puts it and only slides sideways, by as little as it takes, so
+    /// the horizon stays where it is however the room is framed.
+    static func covering(_ frame: CGRect, opening: CGRect, isSky: Bool) -> CGRect {
+        var out = frame
+        if isSky {
+            let need = opening.insetBy(dx: -opening.width * 0.04, dy: -opening.height * 0.04)
+            let scale = max(1, need.width / frame.width, need.height / frame.height)
+            out = frame.insetBy(dx: -frame.width * (scale - 1) / 2, dy: -frame.height * (scale - 1) / 2)
+            out.origin.y = min(out.minY, need.minY)
+            out.origin.y = max(out.minY, need.maxY - out.height)
+            out.origin.x = min(out.minX, need.minX)
+            out.origin.x = max(out.minX, need.maxX - out.width)
+        } else {
+            out.origin.x = min(out.minX, opening.minX)
+            out.origin.x = max(out.minX, opening.maxX - out.width)
+        }
+        return out
+    }
+
     /// How much of day, dusk and night is on show at `hour`; they sum to one and only neighbours mix.
     static func weights(hour: Float) -> [Float] {
         let h = hour.truncatingRemainder(dividingBy: 24) + (hour < 0 ? 24 : 0)

@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import type { CatEvent } from "@billet/contracts-domain/cat";
 import { EpochMillis, IdempotencyKey, NoteId, UserId } from "@billet/contracts-domain/ids";
+import { NoteText } from "@billet/contracts-domain/note";
 import { freeInk } from "@billet/contracts-domain/inks";
 import type { Note } from "@billet/contracts-domain/note";
 import type { Reaction } from "@billet/contracts-domain/reaction";
@@ -35,6 +36,9 @@ export const DemoBotState = Schema.Struct({
   giftAt: EpochMillis,
   /** When the bot plays its part of today's Who knows who round, after the owner played theirs. */
   guessAt: Schema.optional(EpochMillis),
+  /** Notes the bot sends one by one from `welcomeAt` on, without the minute's rest between them. */
+  welcome: Schema.optional(Schema.Array(NoteText)),
+  welcomeAt: Schema.optional(EpochMillis),
 });
 export type DemoBotState = typeof DemoBotState.Type;
 
@@ -95,12 +99,26 @@ const drawer = (seed: number, draws: number) => {
 type Drawer = ReturnType<typeof drawer>;
 
 /** The bot as it joins: it looks in on the cat a minute or two in, and opens a gift soon after. */
-export const startDemoBot = (bot: UserId, owner: UserId, now: number): DemoBotState => {
+export const startDemoBot = (
+  bot: UserId,
+  owner: UserId,
+  now: number,
+  welcome: ReadonlyArray<NoteText> = [],
+): DemoBotState => {
   const seed = seedOf(bot);
   const draw = drawer(seed, 0);
   const catAt = now + draw.between(1 * minute, 3 * minute);
   const giftAt = now + draw.between(5 * minute, 15 * minute);
-  return { bot, owner, seed, draws: draw.drawn(), reactions: [], catAt, giftAt };
+  const state: DemoBotState = {
+    bot,
+    owner,
+    seed,
+    draws: draw.drawn(),
+    reactions: [],
+    catAt,
+    giftAt,
+  };
+  return welcome.length === 0 ? state : { ...state, welcome, welcomeAt: now + 2 * second };
 };
 
 /**
@@ -143,11 +161,14 @@ const catEvent = (draw: Drawer): CatEvent =>
 const reactionOf = (draw: Drawer): Reaction =>
   draw.pick<Reaction>(["heart", "heart", "heart", "laugh", "wow", "fire"]);
 
-type Plan = "reply" | "react" | "cat" | "gift" | "guess";
+type Plan = "welcome" | "reply" | "react" | "cat" | "gift" | "guess";
 
 const planned = (state: DemoBotState): ReadonlyArray<readonly [Plan, number]> => {
   const [photo] = state.reactions;
   return [
+    ...(state.welcomeAt === undefined || (state.welcome ?? []).length === 0
+      ? []
+      : [["welcome", state.welcomeAt] as const]),
     ...(state.replyAt === undefined ? [] : [["reply", state.replyAt] as const]),
     ...(photo === undefined ? [] : [["react", photo.at] as const]),
     ...(state.guessAt === undefined ? [] : [["guess", state.guessAt] as const]),
@@ -159,6 +180,7 @@ const planned = (state: DemoBotState): ReadonlyArray<readonly [Plan, number]> =>
 /** When the bot next has something to do: never sooner than a minute after its last action. */
 export const nextWakeAt = (state: DemoBotState): number => {
   const earliest = Math.min(...planned(state).map(([, at]) => at));
+  if (state.welcomeAt !== undefined && earliest === state.welcomeAt) return earliest;
   return state.lastActionAt === undefined
     ? earliest
     : Math.max(earliest, state.lastActionAt + demoBotMinGapMs);
@@ -175,7 +197,7 @@ export const demoBotStep = (
   const due = planned(state)
     .filter(([, at]) => at <= now)
     .toSorted(([, a], [, b]) => a - b)[0];
-  if (resting || due === undefined) return { action: undefined, state };
+  if (due === undefined || (resting && due[0] !== "welcome")) return { action: undefined, state };
 
   const draw = drawer(state.seed, state.draws);
   const acted = (change: Partial<DemoBotState>): DemoBotState => ({
@@ -185,6 +207,16 @@ export const demoBotStep = (
     draws: draw.drawn(),
   });
   switch (due[0]) {
+    case "welcome": {
+      const [text, ...rest] = state.welcome ?? [];
+      if (text === undefined) return { action: undefined, state };
+      const request: SendNoteRequest = { _tag: "Text", key: draw.key(), text, ink: freeInk };
+      const change =
+        rest.length === 0
+          ? { welcome: undefined, welcomeAt: undefined }
+          : { welcome: rest, welcomeAt: now + 3 * second };
+      return { action: { _tag: "SendNote", request }, state: acted(change) };
+    }
     case "reply": {
       const request: SendNoteRequest = {
         _tag: "Text",

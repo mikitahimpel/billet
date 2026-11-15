@@ -27,8 +27,8 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
 | `Media` | `Cloudflare.R2.Bucket`, private: no public access, no custom domain | `MEDIA` |
 | `Titles` | `Cloudflare.KV.Namespace`, TMDB's answers for the To watch list, keyed by hash | `TITLES` |
 | `PairRoom` | `Cloudflare.DurableObject`, SQLite-backed, one object per couple | `PAIR_ROOM` |
-| `Events` | `Cloudflare.AnalyticsEngine.Dataset`, dataset `billet_<stage>_events` | `EVENTS` |
-| `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts`, static assets from `./apps/api/public` | `ASSETS` |
+| `Events` | `Cloudflare.AnalyticsEngine.Dataset`, dataset `<stack>_<stage>_events` | `EVENTS` |
+| `Api` | `Cloudflare.Worker`, `main: ./apps/api/src/worker.ts`, static assets from `./apps/api/public`, custom domain `API_DOMAIN` when set | `ASSETS` |
 
 - `Events` is only a binding: Analytics Engine creates the dataset on the first write, so there is
   nothing to provision and nothing to destroy. The row layout is in
@@ -45,9 +45,56 @@ Effect v4), so older posts do not apply. Check the `.d.ts` files in `node_module
   binding types in `worker-env.ts` and `env` in `alchemy.run.ts` must stay in step.
 - The `PairRoom` rules live in `packages/backend/pair-room`. `/v1/` serves the auth, pairing, notes and
   media routes, and anything else answers the placeholder that the deploy smoke test reads.
-- Physical names derive from the stack (`billet`), the stage and the logical id. Nothing personal is
-  committed. The Cloudflare account comes from `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`,
-  read only by a real deploy.
+- Physical names derive from the stack, the stage and the logical id, with a random tail
+  (`<stack>-Database-<stage>-<hash>`); only the Worker's is set by hand, so its address reads well
+  ([Worker name](#worker-name)). Nothing personal is committed. The Cloudflare account comes from
+  `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN`, read only by a real deploy.
+
+### Stack name
+
+The stack name is `ALCHEMY_STACK`, default `ourio`. It prefixes every physical name, names the
+state database `<stack>-alchemy-state` and the dataset `<stack>_<stage>_events`, and is bound to
+the Worker as `STACK`, which answers `/` with `{"service":"<stack>-api","status":"ok"}` and tells
+the admin's trends which dataset to read. Every stage is `ourio`: dev is Worker `ourio-api-dev`
+and dataset `ourio_dev_events`, prod is `ourio-api` and `ourio_prod_events`, both keep their state
+in the D1 `ourio-alchemy-state`, and `/` answers `ourio-api` on each. The deploy workflow sets
+`ALCHEMY_STACK=ourio` explicitly, so its smoke test and the deploy can never disagree. Lowercase
+letters and digits only; the stack file refuses anything else before planning.
+
+A different stack name is a different stack with its own state: nothing of the other one is
+touched or recreated. `dev` was first deployed as `billet`, so the switch to `ourio` orphaned those
+resources: the Worker `billet-api-dev-<hash>`, its D1, R2, KV and Durable Objects, the dataset
+`billet_dev_events` and the state D1 `billet-alchemy-state` stay in the account, unmanaged, until
+someone deletes them in the dashboard (or runs `ALCHEMY_STACK=billet pnpm exec alchemy destroy
+--stage dev`, which the state D1 still describes). Their data does not move. TestFlight builds
+already installed keep talking to the old `billet-api-dev` host until the `testflight`
+environment's `API_HOST` variable names the new Worker and a new build ships
+([testflight-ci.md](testflight-ci.md)); the agents' `~/.config/billet/admin.env` and the Access
+applications in front of `/admin` ([admin.md](admin.md)) name the host too.
+
+### Worker name
+
+Alchemy names a resource `<stack>-<id>-<stage>-<hash>`, the hash from a random instance id kept in
+the state, so the generated Worker name was `ourio-api-dev-<hash>` and its `workers.dev` address
+unreadable. `Cloudflare.Worker` takes a `name` prop instead (`WorkerProps.name`, "Worker name
+override"), and the stack sets it from `apiWorkerName(stack, stage)` in
+`packages/backend/platform/src/service-names.ts`: `<stack>-api` on prod, `<stack>-api-<stage>`
+on every other stage. So prod answers on `https://ourio-api.<account-subdomain>.workers.dev` and
+dev on `https://ourio-api-dev.<account-subdomain>.workers.dev`, and prod's address is the service
+name `/` answers. The other resources keep their generated names: nothing reads them by name.
+
+An explicit name that differs from the deployed one **replaces** the Worker: Alchemy uploads a
+new script, moves the `workers.dev` subdomain, the custom domain and the routes to it, and deletes
+the old script. A replaced Worker would lose its Durable Object namespaces, with every room in
+them, so `PairRoom` and `DemoRoom` declare `transferredFrom: "Api"`: on the deploy that renames the
+script, Alchemy finds the former host by the Worker's logical id (the old script's ownership
+tags), ships Cloudflare's `transferred_classes` migration, and the rooms move with their data. On a
+stage with nothing to move (a fresh stage, or once the transfer has happened) the declaration is
+inert and stays in place. So the first `dev` deploy after this change turns `ourio-api-dev-<hash>`
+into `ourio-api-dev`, keeping the rooms: afterwards the `testflight` environment's `API_HOST`
+variable, the agents' `~/.config/billet/admin.env` and the Access applications in front of `/admin`
+must name the new host, like after the `billet` to `ourio` switch above. Prod has not been deployed
+with the generated name, so its first deploy creates `ourio-api` outright.
 
 ## Drizzle
 
@@ -109,7 +156,8 @@ but that room is down until a fixed migration ships.
 - **Local** (`alchemy dev`): every resource runs on a local simulator, with no Cloudflare calls and no
   credentials. State is in the gitignored `.alchemy/` folder.
 - **`dev` and `prod`** (`alchemy deploy --stage <stage>`): real Cloudflare resources. State is kept in
-  a D1 database named `billet-alchemy-state`, in the same account, through
+  a D1 database named `<stack>-alchemy-state` (`ourio-alchemy-state` for both,
+  [Stack name](#stack-name)), in the same account, through
   [`alchemy-d1-state.ts`](../alchemy-d1-state.ts). It is created on first use, is not part of the
   stack (so `destroy` keeps it) and holds Worker secrets in plaintext, like the local store.
 - `Cloudflare.state()` is not used: it keeps its token in the account's Secrets Store, which the
@@ -119,39 +167,56 @@ but that room is down until a fixed migration ships.
 
 ```sh
 pnpm alchemy dev                              # local, no credentials
-curl -si http://localhost:8787/               # 200 {"service":"billet-api","status":"ok"}
+curl -si http://localhost:8787/               # 200 {"service":"ourio-api","status":"ok"}
+ALCHEMY_STACK=billet pnpm alchemy dev         # another stack's names, still local: {"service":"billet-api",...}
 ```
 
 Stop `alchemy dev` with Ctrl-C. Killing only the `pnpm` wrapper leaves Alchemy and workerd running.
 
 ## Deploying
 
-Secrets are Proton Pass references, never values. `.env.pass` (dev, vault `Billet`) and
-`.env.pass.release` (prod, vault `Billet Release`) hold them:
+Secrets are Proton Pass references, never values. `.env.pass` (dev, vaults `Agents` and `Ourio`) and
+`.env.pass.release` (prod, vault `Ourio Release`) hold them. `.env.pass.release` is the single list
+of what prod needs:
 
-| Variable | Vault item | Field |
+| Variable | Vault, item (prod) | Field |
 | --- | --- | --- |
-| `CLOUDFLARE_ACCOUNT_ID` | `cloudflare` | `account_id` |
-| `CLOUDFLARE_API_TOKEN` | `cloudflare` | `api_token` |
-| `APNS_KEY` | `Apple` | `APNS_KEY` |
-| `APNS_KEY_ID` | `Apple` | `APNS_KEY_ID` |
-| `APPLE_SIGN_IN_KEY` | `Apple` | `APPLE_SIGN_IN_KEY` |
-| `APPLE_SIGN_IN_KEY_ID` | `Apple` | `APPLE_SIGN_IN_KEY_ID` |
+| `CLOUDFLARE_ACCOUNT_ID` | `Ourio Release`, `Cloudflare` | `account_id` |
+| `CLOUDFLARE_API_TOKEN` | `Ourio Release`, `Cloudflare` | `api_token` |
+| `APNS_KEY`, `APNS_KEY_ID` | `Ourio Release`, `Apple` | same names |
+| `APPLE_SIGN_IN_KEY`, `APPLE_SIGN_IN_KEY_ID` | `Ourio Release`, `Apple` | same names |
+| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access` | `team_domain`, `aud` |
+| `TMDB_TOKEN` | `Ourio Release`, `TMDB` | `api_token` |
+| `API_DOMAIN` | `Ourio Release`, `Cloudflare` | `api_domain` |
 
-The API token needs Workers Scripts, D1 and R2 edit on the account. Create one item per vault.
+The prod API token is its own token, separate from dev's: Account, Workers Scripts, D1 and R2, all
+Edit, on this account only. The deploy also makes KV namespaces, an Analytics Engine dataset and
+Durable Object migrations; if a deploy fails with an authentication error naming one of them, add
+that permission (Workers KV Storage: Edit) to the token and rerun.
 
-`APPLE_SIGN_IN_KEY` (the `.p8` key's PEM) and its key id let the Worker revoke a user's Sign in
-with Apple token when they delete their account (App Store guideline 5.1.1(v)). Only the `dev`
-stage binds them for now. Before `prod` serves real accounts, the owner:
+### Custom domain
 
-1. adds the fields `APPLE_SIGN_IN_KEY` and `APPLE_SIGN_IN_KEY_ID` to an `Apple` item in
-   `Billet Release` (the same key works: it is the team's Sign in with Apple key, with
-   `com.ourio.app` as its primary App ID; the Worker still accepts tokens and revokes codes for
-   the first app, `com.mikitahimpel.billet`, until the owner retires it);
-2. adds both `pass://Billet Release/Apple/...` lines to `.env.pass.release`;
-3. moves the two bindings in `alchemy.run.ts` out of the `dev`-only block.
+`API_DOMAIN` is optional. Set to a hostname such as `api.ourio.app`, it attaches that hostname to
+the Worker as a Cloudflare custom domain: Alchemy looks the zone up from the hostname's parent
+labels (`api.ourio.app`, then `ourio.app`; `GET /zones?name=`), creates the DNS record and the
+edge certificate, and the deploy output's `url` becomes `https://<API_DOMAIN>`. The zone must
+already be in the **same Cloudflare account** as the Worker, and the token needs two more zone
+permissions on it: Workers Routes: Edit and DNS: Edit. Empty (the default) changes nothing: the
+Worker keeps its `workers.dev` address, and a domain attached by hand in the dashboard is left as it
+is. `dev` is deployed without it; a stage can set it in the shell for one deploy
+(`API_DOMAIN=api-dev.ourio.app pp run ...`) once that zone is in the account.
 
-Without them deletion still deletes everything and logs `not-configured` for the revocation.
+The four `Apple` fields are account-wide Apple keys: the APNs key (push) and the Sign in with
+Apple key (`APPLE_SIGN_IN_KEY`, the `.p8` PEM, which lets the Worker revoke a user's Apple token
+when they delete their account, App Store guideline 5.1.1(v)). The same `.p8` files work for every
+stage, so every stage binds them (`alchemy.run.ts`); only `DEMO_ROOM` stays dev-only. A `dev` or `prod`
+deploy stops before planning, naming the missing variables, if one is absent (local `alchemy dev`
+needs none). Because the keys are the same, `.env.pass.release` reads
+them from the item `Apple` in the vault `Ourio`, like `.env.pass`; there is no second copy to keep in
+step. The Sign in with Apple key has `com.ourio.app` as its primary App ID; the Worker still accepts
+tokens and revokes codes for the first app, `com.mikitahimpel.billet`, until the owner retires it.
+
+The `dev` stage is deployed locally, by the manager, through `pp`:
 
 ```sh
 PROTON_PASS_AGENT_REASON="billet deploy dev" pp run --env-file .env.pass -- pnpm exec alchemy deploy --stage dev
@@ -160,26 +225,74 @@ PROTON_PASS_AGENT_REASON="billet deploy dev" pp run --env-file .env.pass -- pnpm
 Do not pass `--env-file` to `alchemy` itself: the file would then win over the shell, and Alchemy
 would read the literal `pass://` strings.
 
+**Prod is deployed only by the owner, only from GitHub Actions** (below). Agents never deploy prod,
+never run `.env.pass.release` through `pp`, and never run the sync script.
+
 ### Deploy workflow
 
 [`.github/workflows/deploy.yml`](../.github/workflows/deploy.yml) is manual only
-(`workflow_dispatch`). It never runs from a pull request or a push. It also does nothing until the
-owner:
+(`workflow_dispatch`, stage `prod`). It never runs from a pull request or a push. It runs on a
+GitHub-hosted runner in the GitHub environment `prod`, which needs the owner's approval (required
+reviewer) and accepts only the `main` branch. Its secrets are the environment's secrets, a copy of
+the Proton Pass items above; Proton Pass stays the source of truth. The `dev` stage has no GitHub
+environment and does not run here.
 
-1. creates the vaults `Billet` and `Billet Release`, each with a `cloudflare` item;
-2. installs and logs in `pp` on a runner that can read both vaults;
-3. sets the repository variables `DEPLOY_RUNNER` (a JSON label list for that runner) and
-   `DEPLOY_ENABLED=true`;
-4. adds required reviewers to the `prod` environment.
+The workflow checks that the six required secrets are present (names only) and warns about missing optional ones, runs
+`pnpm turbo run lint typecheck test format:check`, then
+`pnpm exec alchemy deploy --stage prod --yes --no-input`, prints the log with the `workers.dev`
+address masked (public repository logs are public; the account ID is a secret, so GitHub masks it
+too), smoke-tests the Worker (`https://<API_DOMAIN>` when it is set, else the `workers.dev` URL from
+the log) for HTTP 200 and `"service":"ourio-api"`, and deletes the raw log in a last step. The job
+sets `ALCHEMY_STACK=ourio` ([Stack name](#stack-name)), the same as the default, so the smoke test
+checks the name the deploy used.
 
-The workflow runs the checks, deploys, prints the log with the `workers.dev` address masked (public
-repository logs are public), and smoke-tests the Worker URL for HTTP 200. The account ID is masked too, and the raw log is deleted
-from the runner in a final step that runs even when the deploy fails. Read the log of the first
-`dev` run for anything private before enabling `prod`. To deploy on push later,
-add a `push` trigger in a separate change, once the above works.
+Owner steps, once. The secrets are copied from Proton Pass to GitHub; the Mac's `pp` session is
+the agents' session and cannot read the prod vault, so the main path is by hand.
+
+1. Create the prod items in Proton Pass (the vault and field names are in the table above), and
+   back up the Apple `.p8` keys in the item `Apple`: Apple shows each one only once.
+2. **Manual copy (main path).** GitHub, Settings, Environments, `prod`, Environment secrets, Add
+   secret, for each name below, pasting the value from Proton Pass. `APPLE_SIGN_IN_KEY` and
+   `APNS_KEY` are multi-line PEM (`.p8`) values: paste them whole, with the BEGIN and END lines.
+
+   | Secret | Proton item and field | Needed |
+   | --- | --- | --- |
+   | `CLOUDFLARE_ACCOUNT_ID` | `Ourio Release`, `Cloudflare`, `account_id` | required |
+   | `CLOUDFLARE_API_TOKEN` | `Ourio Release`, `Cloudflare`, `api_token` | required |
+   | `APNS_KEY` | `Ourio Release`, `Apple`, `APNS_KEY` (PEM) | required |
+   | `APNS_KEY_ID` | `Ourio Release`, `Apple`, `APNS_KEY_ID` | required |
+   | `APPLE_SIGN_IN_KEY` | `Ourio Release`, `Apple`, `APPLE_SIGN_IN_KEY` (PEM) | required |
+   | `APPLE_SIGN_IN_KEY_ID` | `Ourio Release`, `Apple`, `APPLE_SIGN_IN_KEY_ID` | required |
+   | `ACCESS_TEAM_DOMAIN` | `Ourio Release`, `Cloudflare Access`, `team_domain` | optional |
+   | `ACCESS_AUD` | `Ourio Release`, `Cloudflare Access`, `aud` | optional |
+   | `TMDB_TOKEN` | `Ourio Release`, `TMDB`, `api_token` | optional |
+   | `API_DOMAIN` | `Ourio Release`, `Cloudflare`, `api_domain` | optional |
+
+   The first prod deploy works without the four optional ones: the Access application needs the
+   deployed host first, so `/admin` stays closed until `ACCESS_*` are set, without `TMDB_TOKEN`
+   prod serves no titles, and without `API_DOMAIN` the Worker answers on `workers.dev` only
+   ([Custom domain](#custom-domain)). The workflow warns by name. Add them later and run Deploy
+   again.
+3. **Script (optional).** `scripts/sync-prod-secrets.sh` does the same copy without printing a
+   value: `--dry-run` lists names; it skips an optional variable whose Proton item does not exist
+   yet and lists what it skipped. It needs a `pp` session that can read the prod vault, that is the
+   owner's own login (`PROTON_PASS_SESSION_DIR` pointing at a directory logged in as the owner),
+   and `gh` logged in.
+4. Actions, Deploy, Run workflow, stage `prod`. Approve the waiting run in the GitHub app or the
+   run page. Then check `GET /` and `/v1/flags` on the prod host.
+
+Rotation: change the value in Proton Pass first, update the secret in GitHub (by hand or with the script), then run
+the workflow so the Worker gets the new value. A new variable goes into `.env.pass.release` and
+`deploy.yml` together.
+
+State: the deploy keeps its state in the account's D1 database `ourio-alchemy-state`
+([Stages and state](#stages-and-state)), not on the runner, so CI and a local deploy agree on what
+exists. The first prod deploy creates that database if the account has none, then the prod
+resources. The raw log of the first run may hold something private; read it once after the run.
 
 ## Verified and not verified
 
 `alchemy deploy`, the D1 state store, D1 migrations and Durable Object migrations have run on the
-`dev` stage. The `prod` stage, the `pass://Billet Release/...` reference (a vault name with a space)
-and the workflow on a runner have not.
+`dev` stage, as the `billet` stack. The `ourio` stack (dev and prod), the explicit Worker name and
+the Durable Object transfer it needs on dev ([Worker name](#worker-name)), the
+`pass://Ourio Release/...` reference (a vault name with a space) and the workflow have not.

@@ -54,6 +54,8 @@ protocol GameStage: AnyObject {
     func update(_ dt: Float)
     /// The overlay's button (Feed, Serve), if the game has one now.
     var action: String? { get }
+    /// A second, quieter button beside it (Clean up) for a touch action done without the finger, if there is one now.
+    var assist: String? { get }
     /// What to show the player now, or nil when the game needs no gesture.
     var cue: GameCue? { get }
     /// Where she glances from her head, in points on screen, instead of at the player; nil for the usual gaze.
@@ -63,12 +65,15 @@ protocol GameStage: AnyObject {
     /// Where she sits for this game, in the pivot's space, so she can be put back if she is ever off screen.
     var seat: SIMD3<Float>? { get }
     func act()
+    func assistAct()
     /// Gives the room back: props gone, the cat on her way home.
     func tearDown()
 }
 
 extension GameStage {
     var action: String? { nil }
+    var assist: String? { nil }
+    func assistAct() {}
     var cue: GameCue? { nil }
     var glance: CGSize? { nil }
     var push: Float { 0 }
@@ -139,8 +144,10 @@ final class GameDeck {
 struct GameSpots {
     let center: SIMD3<Float>
     let floor: Float
-    /// Open floor for the laser dot.
+    /// Open floor in front of the camera, where the laser's lesson is shown.
     let area: FloorArea
+    /// Where the laser dot may go: the whole floor of a room, the mat of a corner.
+    let reach: FloorArea
     /// Meters.
     let length: Float
     /// Across the screen from left to right, and toward the camera, along the floor at the room's home view.
@@ -155,16 +162,19 @@ struct GameSpots {
             floor = TabletopRoom.floorTop
             center = [0, floor, 0.02]
             area = FloorArea(x: -0.25...0.25, z: -0.15...0.3)
+            reach = area
             length = 0.22
         } else if room is CityRoomScene {
             floor = 0.014
             center = [0.02, floor, 0.16]
             area = FloorArea(x: -0.3...0.25, z: -0.05...0.38)
+            reach = .room
             length = 0.2
         } else {
             floor = 0.023
             center = [0.3, floor, 0.12]
-            area = FloorArea(x: 0.18...0.47, z: -0.08...0.3)
+            area = FloorArea(x: 0.05...0.55, z: -0.2...0.36)
+            reach = .room
             length = 0.22
         }
     }
@@ -191,6 +201,14 @@ extension CatRoom {
     }
 }
 
+extension CatRoom {
+    /// She backs off from a mess with a shake, and comes back with a slow blink once it is gone.
+    func react(toMess messy: Bool, seat: SIMD3<Float>, back: SIMD3<Float>, facing: Float, id: String) {
+        send(to: messy ? back : seat, facing: facing, id: id)
+        walker?.behavior.perform(messy ? .shake : .slowBlink)
+    }
+}
+
 extension Entity {
     private static let blobTexture: TextureResource? = {
         let size = CGSize(width: 128, height: 128)
@@ -206,13 +224,13 @@ extension Entity {
     }()
 
     /// A soft contact shadow on the floor under a prop: a baked blob, no light and no shadow map.
-    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float) {
+    func contactBlob(at position: SIMD3<Float>, width: Float, depth: Float, lift: Float = 0.0015) {
         guard let texture = Self.blobTexture else { return }
         var material = UnlitMaterial(applyPostProcessToneMap: false)
         material.color = .init(tint: .white, texture: .init(texture))
         material.blending = .transparent(opacity: .init(floatLiteral: 1))
         let blob = ModelEntity(mesh: .generatePlane(width: width, depth: depth), materials: [material])
-        blob.position = position + [0, 0.0015, 0]
+        blob.position = position + [0, lift, 0]
         addChild(blob)
     }
 }

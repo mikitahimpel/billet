@@ -97,6 +97,50 @@ struct FeedTaskTests {
 }
 
 struct WaterBowlTests {
+  @Test func aPuddleGrowsToItsCapAndTheFloorDriesByWiping() {
+    var bowl = WaterBowl()
+    #expect(bowl.phase == .pouring)
+    bowl.pour(flow: 1, dt: 6)
+    #expect(bowl.phase == .messy && bowl.spilled)
+    let early = bowl.puddle
+    bowl.pour(flow: 1, dt: 30)
+    #expect(bowl.puddle > early && bowl.puddle == WaterBowl.puddleCap && bowl.isFlooded)
+    bowl.wipe(0.2)
+    #expect(bowl.phase == .messy && !bowl.isSpotless)
+    bowl.wipe(1)
+    #expect(bowl.puddle == 0 && bowl.phase == .settling)
+  }
+
+  @Test func theBowlSettlesToTheBandOnceTheFloorIsDry() {
+    var bowl = WaterBowl()
+    bowl.pour(flow: 1, dt: 20)
+    bowl.settle(dt: 5)
+    #expect(bowl.level == 1)
+    bowl.wipe(1)
+    bowl.settle(dt: 0.5)
+    #expect(bowl.level < 1 && bowl.phase == .settling)
+    bowl.settle(dt: 5)
+    #expect(bowl.level == WaterBowl.settled && bowl.phase == .pouring && bowl.isSpotless)
+    #expect(bowl.rating == .good)
+    let result = GameResult.water(bowl)
+    #expect(!result.tooMuch && result.spotless && result.score >= 80)
+    #expect(result.line(pronouns: .they) == "Spotless. Fresh water")
+  }
+
+  @Test func pouringAndSettlingDoNothingOutOfTurn() {
+    var bowl = WaterBowl()
+    bowl.settle(dt: 5)
+    bowl.wipe(1)
+    #expect(bowl.level == 0 && bowl.puddle == 0 && !bowl.spilled && !bowl.isSpotless)
+  }
+
+  @Test func aSkippedPuddleCostsTheScore() {
+    var bowl = WaterBowl()
+    bowl.pour(flow: 1, dt: 20)
+    let skipped = GameResult.water(bowl)
+    #expect(skipped.tooMuch && !skipped.spotless && skipped.score < 50)
+  }
+
   @Test func fullFlowReachesTheLineInTheFillTime() {
     var bowl = WaterBowl()
     #expect(!bowl.canServe)
@@ -109,7 +153,7 @@ struct WaterBowlTests {
     var bowl = WaterBowl()
     bowl.pour(flow: 1, dt: 10)
     #expect(bowl.level == 1)
-    #expect(bowl.isSpilling && bowl.puddle > 0.5)
+    #expect(bowl.isSpilling && bowl.puddle >= 0.5)
     #expect(bowl.rating == .spill)
     bowl.pourOut(dt: 3)
     #expect(bowl.level < 1)
@@ -146,6 +190,17 @@ struct LaserPlayTests {
     #expect(laser.dot == SIMD2(0.4, -0.4))
   }
 
+  /// The old patches of open floor held the dot to about half the room; it now reaches every corner.
+  @Test func inARoomTheDotReachesTheWholeFloor() {
+    var laser = LaserPlay(length: 0.2, floor: .room)
+    for corner in [SIMD2(-0.44, -0.44), SIMD2(0.44, -0.44), SIMD2(-0.44, 0.44), SIMD2(0.44, 0.44)] {
+      laser.aim(corner, dt: 0.1)
+      #expect(laser.dot == corner)
+    }
+    laser.aim(SIMD2(-2, 3), dt: 0.1)
+    #expect(laser.dot == SIMD2(-0.45, 0.45))
+  }
+
   @Test func chasingAndPouncingFillThePlayBar() {
     var laser = LaserPlay(length: 0.2, floor: floor)
     laser.ran(0.4)
@@ -156,6 +211,30 @@ struct LaserPlayTests {
     #expect(laser.isDone && laser.play == 1)
     laser.aim(SIMD2(0.3, 0), dt: 0.1)
     #expect(laser.cue(cat: .zero) == nil)
+  }
+
+  @Test func pouncesSoonAfterOneAnotherMakeAStreak() {
+    var laser = LaserPlay(length: 0.2, floor: floor)
+    laser.pounced()
+    #expect(laser.streak == 1 && laser.cheer == "Pounce!")
+    laser.aim(SIMD2(0.1, 0), dt: 3)
+    laser.pounced()
+    #expect(laser.streak == 2 && laser.cheer == "2 in a row!")
+    // The finger lifts for a long while: the next pounce starts over.
+    laser.aim(nil, dt: LaserPlay.streakWindow + 1)
+    laser.pounced()
+    #expect(laser.streak == 1 && laser.pounces == 3)
+    // A streak pays no more than its pounces.
+    #expect(abs(laser.play - 0.6) < 1e-9)
+  }
+
+  @Test func sheReadsAStoppedDotQuickly() {
+    var laser = LaserPlay(length: 0.2, floor: floor)
+    laser.aim(SIMD2(0.05, 0), dt: 1 / 60)
+    laser.aim(SIMD2(0.05, 0), dt: 0.2)
+    #expect(laser.cue(cat: .zero) == nil)
+    laser.aim(SIMD2(0.05, 0), dt: 0.1)
+    #expect(laser.cue(cat: .zero) == .pounce(SIMD2(0.05, 0)))
   }
 }
 
@@ -245,7 +324,7 @@ struct GameResultTests {
     #expect(!GameResult.water(bowl).tooMuch)
     bowl.pour(flow: 1, dt: 10)
     #expect(GameResult.water(bowl).tooMuch)
-    #expect(GameResult.water(bowl).line(pronouns: .they).hasPrefix("Too much!"))
+    #expect(GameResult.water(bowl).line(pronouns: .they).hasPrefix("A little messy"))
   }
 
   @Test func eachGameGoesToTheJournalItsOwnWay() {
@@ -302,5 +381,63 @@ struct GameClarityTests {
     #expect(BrushStrokes.goesWithFur(fit: 0.9))
     #expect(!BrushStrokes.goesWithFur(fit: 0))
     #expect(!BrushStrokes.goesWithFur(fit: -0.9))
+  }
+}
+
+struct FeedMessTests {
+  @Test func everySecondPieceAfterTheZoneBouncesOut() {
+    #expect(!FeedMess.spills(poured: 30, zoneEnd: 30))
+    #expect(!FeedMess.spills(poured: 31, zoneEnd: 30))
+    #expect(FeedMess.spills(poured: 32, zoneEnd: 30))
+    #expect(!FeedMess.spills(poured: 33, zoneEnd: 30))
+    #expect(FeedMess.spills(poured: 34, zoneEnd: 30))
+    #expect(!FeedMess.spills(poured: 10, zoneEnd: 30))
+  }
+
+  @Test func crumbsAreSweptUpToSpotless() {
+    var mess = FeedMess()
+    #expect(mess.phase == .tidy && !mess.isSpotless)
+    mess.sweep()
+    #expect(mess.pieces == 0 && !mess.spilled)
+    for _ in 0..<5 { mess.spill() }
+    #expect(mess.phase == .messy && mess.pieces == 5 && !mess.isSpotless)
+    mess.sweep(2)
+    #expect(mess.pieces == 3)
+    mess.sweep(99)
+    #expect(mess.phase == .tidy && mess.isSpotless)
+    mess.sweep(-4)
+    #expect(mess.pieces == 0)
+  }
+
+  @Test func crumbsLeftCostALittleAndSweepingThemCostsNothing() {
+    let clean = GameResult.feed(target: 40, food: 40)
+    #expect(clean.score == 100 && !clean.messy)
+    let left = GameResult.feed(target: 40, food: 40, crumbs: 4)
+    #expect(left.score == 100 - GameResult.messCost && left.messy)
+    let swept = GameResult.feed(target: 40, food: 40, spotless: true)
+    #expect(swept.score == 100 && swept.spotless && !swept.messy)
+    let over = GameResult.feed(target: 40, food: 50)
+    let overLeft = GameResult.feed(target: 40, food: 50, crumbs: 3)
+    #expect(overLeft.score == max(0, over.score - GameResult.messCost))
+    #expect(over.tooMuch && overLeft.tooMuch)
+    #expect(overLeft.line(pronouns: .she).hasSuffix(", and a little messy"))
+    let sweptOver = GameResult.feed(target: 40, food: 50, spotless: true)
+    #expect(sweptOver.score == over.score)
+    #expect(sweptOver.line(pronouns: .she).hasSuffix(", but the mat is spotless"))
+  }
+}
+
+@Suite struct GameResultCoinsTests {
+  @Test func aRoundShowsWhatItsEventsPayBeforeTheDailyCaps() {
+    #expect(GameResult(game: .laser, score: 100, pounces: 12).coins == 3)
+    #expect(GameResult(game: .water, score: 80).coins == 3)
+    #expect(GameResult(game: .brush, score: 100).coins == 4)
+    #expect(GameResult(game: .feed, score: 90, grams: 40).coins == 4)
+    #expect(GameResult(game: .feed, score: 90).coins == 3)
+  }
+
+  @Test func pouncesNeverGoBelowZero() {
+    #expect(GameResult(game: .laser, score: 100, pounces: -2).pounces == 0)
+    #expect(GameResult(game: .laser, score: 100).pounces == nil)
   }
 }

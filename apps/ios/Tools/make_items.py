@@ -58,7 +58,35 @@ def mat(hex_color, rough=0.8, emit=0.0, sheen=0.0):
     return m
 
 
-def _finish(obj, material, bevel=0.0, segments=4):
+# Facets by size on screen. A piece is seen at most about PIXELS_PER_METRE pixels to the metre (the room filling a
+# 3x phone's width), so a circle needs only the segments that keep it within TOLERANCE pixels of the true one. Off
+# for the shop's items, which are seen close up; make_room.py turns it on.
+LOD = False
+PIXELS_PER_METRE = 900
+TOLERANCE = 0.35
+
+
+def facets(radius, base, minimum=8):
+    """Segments round a circle of `radius` metres, at most `base`, even, at least `minimum`."""
+    if not LOD:
+        return base
+    pixels = max(radius * PIXELS_PER_METRE, TOLERANCE * 1.01)
+    step = 2 * math.acos(1 - TOLERANCE / pixels)
+    n = math.ceil(math.tau / step)
+    n += n % 2
+    return max(minimum, min(base, n))
+
+
+def bevel_segments(width, base=4):
+    """Segments across a bevel `width` metres wide: one per ~3 px of its arc, at most `base`."""
+    if not LOD:
+        return base
+    return max(1, min(base, round(width * PIXELS_PER_METRE / 3)))
+
+
+def _finish(obj, material, bevel=0.0, segments=None):
+    if segments is None:
+        segments = bevel_segments(bevel)
     obj.data.materials.append(material)
     if bevel:
         mod = obj.modifiers.new("Bevel", "BEVEL")
@@ -83,23 +111,25 @@ def box(size, loc, material, bevel=0.01, rot=(0, 0, 0)):
 
 
 def cyl(radius, depth, loc, material, bevel=0.006, rot=(0, 0, 0), verts=48):
-    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, vertices=verts, location=loc, rotation=rot)
+    bpy.ops.mesh.primitive_cylinder_add(radius=radius, depth=depth, vertices=facets(radius, verts), location=loc, rotation=rot)
     return _finish(bpy.context.object, material, bevel)
 
 
 def cone(r1, r2, depth, loc, material, bevel=0.004, rot=(0, 0, 0)):
-    bpy.ops.mesh.primitive_cone_add(radius1=r1, radius2=r2, depth=depth, vertices=48, location=loc, rotation=rot)
+    bpy.ops.mesh.primitive_cone_add(radius1=r1, radius2=r2, depth=depth, vertices=facets(max(r1, r2), 48), location=loc, rotation=rot)
     return _finish(bpy.context.object, material, bevel)
 
 
 def ball(radius, loc, material, scale=(1, 1, 1), rot=(0, 0, 0)):
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, segments=48, ring_count=24, location=loc, rotation=rot)
+    around = facets(radius * max(scale), 48)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=radius, segments=around, ring_count=around // 2, location=loc, rotation=rot)
     return _finish(_scaled(bpy.context.object, scale), material)
 
 
 def ring(major, minor, loc, material, rot=(0, 0, 0), scale=(1, 1, 1)):
-    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor, major_segments=72,
-                                     minor_segments=24, location=loc, rotation=rot)
+    bpy.ops.mesh.primitive_torus_add(major_radius=major, minor_radius=minor,
+                                     major_segments=facets(major * max(scale), 72),
+                                     minor_segments=facets(minor * max(scale), 24, minimum=6), location=loc, rotation=rot)
     return _finish(_scaled(bpy.context.object, scale), material)
 
 
@@ -382,7 +412,8 @@ def donut_bed():
     def normal(u, v):
         return Vector((math.cos(v) * math.cos(u), math.cos(v) * math.sin(u), math.sin(v) / squash)).normalized()
 
-    surface(lambda s, t: at(s * math.tau, t * math.tau), 192, 48, mat(0xF3DDBF, rough=1, sheen=0.7))
+    surface(lambda s, t: at(s * math.tau, t * math.tau), facets(big + small, 192, minimum=48), facets(small, 48, minimum=16),
+            mat(0xF3DDBF, rough=1, sheen=0.7))
     # Icing over the top, running down the outside in drips.
     def outer(u):
         return 0.35 - 0.55 * max(0.0, math.sin(7 * u + 0.6 * math.sin(3 * u))) ** 6
@@ -391,7 +422,7 @@ def donut_bed():
         return 2.6 + 0.12 * math.sin(5 * u + 1)
 
     surface(lambda s, t: at(s * math.tau, outer(s * math.tau) + t * (inner(s * math.tau) - outer(s * math.tau)), 0.005),
-            288, 24, mat(BLUSH, rough=0.35), wrap_v=False, thickness=0.006)
+            facets(big + small, 288, minimum=48), 24, mat(BLUSH, rough=0.35), wrap_v=False, thickness=0.006)
     ball(0.21, (0, 0, 0.06), mat(OAT, rough=1, sheen=0.7), scale=(1, 1, 0.3))
     colors = [CREAM, HONEY, SKY, SAGE, ROSE]
     for k in range(44):

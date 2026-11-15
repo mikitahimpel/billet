@@ -6,7 +6,7 @@ import SwiftUI
 import Design
 import UsInterface
 
-/// Sending pins the note and earns 5 coins.
+/// Sending pins the note and earns a coin.
 struct NoteComposer: View {
     enum Mode: String, Identifiable {
         case write, draw
@@ -20,6 +20,8 @@ struct NoteComposer: View {
     @State private var flight = 0.0
     @State private var sending = false
     @State private var paperSize = CGSize(width: 280, height: 280)
+    /// The top of the tools under the paper, global, which a purchase's card keeps clear of.
+    @State private var toolsTop: CGFloat?
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -45,9 +47,11 @@ struct NoteComposer: View {
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, Space.s)
-            .safeAreaInset(edge: .bottom, spacing: 0) { tools }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                tools.onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { toolsTop = $0 }
+            }
         }
-        .overlay { PurchaseMoment(state: state) }
+        .overlay { PurchaseMoment(state: state, floor: toolsTop) }
         .haptic(.selection, trigger: model.ink)
         .haptic(.success, trigger: sending)
         .onAppear { focused = !model.drawing }
@@ -65,7 +69,8 @@ struct NoteComposer: View {
             HStack(spacing: Space.s) {
                 toolToggle
                 paperColours
-                PostagePicker(stamp: $model.stamp, seal: $model.seal)
+                PostagePicker(stamp: $model.stamp, seal: $model.seal, state: state) { dismiss() }
+                    .onChange(of: state.shop.owned) { _, owned in model.dropLocked(owned: owned) }
                 Spacer(minLength: 0)
                 if style != .sticky { kindPicker }
                 if model.hasInk {
@@ -76,6 +81,8 @@ struct NoteComposer: View {
             .padding(.horizontal, Space.gutter)
             PenHolder(style: style, state: state, selection: $model.ink) { dismiss() }
         }
+        // A row of icons over price tags: past this size they overlap on every phone.
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
         .padding(.vertical, Space.s)
         .overlay(alignment: .topTrailing) {
             LimitCounter(count: model.text.count, limit: NoteStore.maxLength, warnFrom: NoteStore.maxLength - 30)
@@ -121,7 +128,7 @@ struct NoteComposer: View {
     }
 
     private func send() {
-        guard !sending, model.save(into: state.journal, size: paperSize) else { return }
+        guard !sending, model.save(into: state.journal, size: paperSize, owned: state.shop.owned) else { return }
         focused = false
         sending = true
         guard !reduceMotion else { return dismiss() }

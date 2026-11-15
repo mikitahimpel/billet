@@ -1,6 +1,7 @@
 import DrawInterface
 import Foundation
 import MomentsInterface
+import ServerSync
 import WidgetInterface
 import WidgetUI
 import UIKit
@@ -42,6 +43,38 @@ struct DeliveryHealth: Equatable {
         case 1: "1 on your Home Screen"
         default: "\(widgetCount) on your Home Screen"
         }
+    }
+
+    /// A row of Settings' Delivery section.
+    struct Line: Equatable {
+        let title: String
+        let detail: String
+        let symbol: String
+        let tint: UsTint
+    }
+
+    /// The section's three rows: the same three while the check runs and once it has answered, so the section has its
+    /// height in the first frame and only the words change when the answer lands.
+    struct Lines: Equatable {
+        let notifications: Line
+        let lastPush: Line
+        let widgets: Line
+
+        var all: [Line] { [notifications, lastPush, widgets] }
+    }
+
+    static let checking = Lines(
+        notifications: Line(title: "Notifications", detail: "Checking…", symbol: "bell.fill", tint: .sky),
+        lastPush: Line(title: "Last push", detail: "Checking…", symbol: "paperplane.fill", tint: .sky),
+        widgets: Line(title: "Widgets", detail: "Checking…", symbol: "rectangle.on.rectangle.fill", tint: .lilac))
+
+    var lines: Lines {
+        Lines(
+            notifications: Line(title: "Notifications", detail: pushDetail,
+                                symbol: pushesWork ? "bell.badge.fill" : "bell.slash.fill",
+                                tint: pushesWork ? .sage : .coral),
+            lastPush: Line(title: "Last push", detail: lastPushDetail, symbol: "paperplane.fill", tint: .sky),
+            widgets: Line(title: "Widgets", detail: widgetDetail, symbol: "rectangle.on.rectangle.fill", tint: .lilac))
     }
 
     /// Asks for alerts the first time; once asked, only the system's Settings can turn them back on.

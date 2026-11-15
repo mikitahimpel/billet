@@ -359,4 +359,31 @@ import Testing
         == ##"{"answer":{"_tag":"Single","option":"grey"},"answeredAt":1000,"stepId":"cat_coat","version":"2026-11-04"}"##
     )
   }
+
+  // MARK: coins
+
+  private func entry(kind: String, amount: Int) -> String {
+    ##"{"id":"\##(kind):1","kind":"\##(kind)","amount":\##(amount),"ref":"x","at":1}"##
+  }
+
+  @Test(arguments: [
+    ("earn", CoinEntryKind.earn), ("purchase", .purchase), ("spend", .spend),
+    ("refund", .refund), ("gift", .gift), ("bonus", .bonus), ("admin", .admin), ("buy", .buy),
+  ])
+  func everyCoinEntryKindDecodes(_ raw: String, _ kind: CoinEntryKind) throws {
+    #expect(try decode(CoinEntry.self, entry(kind: raw, amount: 5)).kind == kind)
+  }
+
+  @Test func aCoinEntryKindThisBuildDoesNotKnowDoesNotFailTheAnswer() throws {
+    let json = ##"{"balance":10,"entries":[\##(entry(kind: "chargeback", amount: -5))]}"##
+    let response = try decode(CoinsResponse.self, json)
+    #expect(response.entries.map(\.kind) == [.unknown])
+  }
+
+  @Test func aNegativeBalanceAfterARefundDecodes() throws {
+    let json = ##"{"balance":-480,"entries":[\##(entry(kind: "refund", amount: -550))]}"##
+    let response = try decode(CoinsResponse.self, json)
+    #expect(response.balance == -480)
+    #expect(response.entries.first?.amount == -550)
+  }
 }

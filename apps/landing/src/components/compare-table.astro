@@ -7,14 +7,25 @@ interface Props {
 }
 
 const { apps, caption } = Astro.props;
+// Each date the shown apps were read on, oldest first, naming the apps when there is more than one date.
+const read = apps.filter((app) => app.sources.length);
+const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.checked ?? checked])).values()]
+  .sort((a, b) => a.iso.localeCompare(b.iso))
+  .map((date) => ({ ...date, names: read.filter((app) => (app.checked ?? checked).iso === date.iso).map((app) => app.name) }));
 ---
 
 <div class="tbl tbl-wide">
   <table>
     <caption>
-      {caption} ✓ means the app's App Store page or website lists it; a dash means we didn't find it listed. Checked <time
-        datetime={checked.iso}>{checked.label}</time
-      >.
+      {caption} ✓ means the app's App Store page or website lists it; a dash means we didn't find it listed. Checked {
+        dates.map((date, i) => (
+          <>
+            {i > 0 && "; "}
+            <time datetime={date.iso}>{date.label}</time>
+            {dates.length > 1 && ` (${date.names.join(", ")})`}
+          </>
+        ))
+      }.
     </caption>
     <thead>
       <tr>

@@ -60,7 +60,8 @@ export const engineSql = (
   from: string,
   today: string,
 ): string => {
-  if (!/^billet_[a-z0-9]+_events$/.test(dataset)) throw new Error("unexpected dataset name");
+  if (!/^[a-z][a-z0-9]*_[a-z0-9]+_events$/.test(dataset))
+    throw new Error("unexpected dataset name");
   if (!funnelEventNames.includes(query.event) && query.event !== "AccountDeleted")
     throw new Error("unexpected event");
   if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(today))

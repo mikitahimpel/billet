@@ -27,6 +27,8 @@
               today
             case .inks:
               InkShelf(state: state, highlighted: highlightedInk)
+            case .notes:
+              PostageShelf(state: state)
             case .furniture, .decor, .mochi, .room:
               grid(Catalog.items(in: state.shopCategory, cat: state.petName))
                 .padding(.horizontal, Space.l)
@@ -119,6 +121,7 @@
           }
           .accessibilityLabel("New deals at midnight")
         }
+        .padding(.horizontal, Space.l)
         dealsRow(
           state.shop.offers.deals(on: now).compactMap {
             Catalog.item($0.itemID, cat: state.petName)
@@ -150,7 +153,6 @@
         }
         ForEach(Catalog.collections(cat: state.petName)) { collection in
           CollectionCard(state: state, collection: collection) { sheetItem = $0 }
-            .shopAppear()
         }
       }
       .padding(.horizontal, Space.l)
@@ -167,7 +169,7 @@
     /// The day's deals side by side in one row that scrolls sideways, each tile as wide as a grid tile on an iPhone.
     private func dealsRow(_ items: [ShopItem]) -> some View {
       ScrollView(.horizontal) {
-        LazyHStack(alignment: .top, spacing: Space.m) {
+        HStack(alignment: .top, spacing: Space.m) {
           ForEach(items) { item in
             ShopItemCard(item: item, state: state) { sheetItem = item }
               .modifier(DealWidth())

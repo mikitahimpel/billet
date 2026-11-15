@@ -205,6 +205,7 @@ nonisolated extension ShopError {
     case .api(.unauthorized): self = .signedOut
     case .api(.invalidRequest), .api(.unavailable), .api(.notFound), .api(.invalidInvite),
       .api(.alreadyPaired), .api(.appleIdInUse), .api(.invalidPurchase), .api(.inkNotOwned),
+      .api(.postageNotOwned),
       .api(.catNotAdopted), .api(.priceChanged), .api(.layoutRefused), .api(.streakNotRestorable),
       .network, .status,
       .maintenance, .encoding, .decoding:

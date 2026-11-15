@@ -25,7 +25,8 @@ extension DecorLayout {
     let occupancy = occupancy(in: room)
     var plans: [CatSpotPlan] = []
     var seen = Set<CatUse>()
-    for placement in placements.sorted(by: { $0.item < $1.item }) {
+    for placement in placements.filter({ $0.space == room.space }).sorted(by: { $0.item < $1.item })
+    {
       guard placement.surface == .floor, let item = DecorItem.item(shopID: placement.item),
         let use = item.cat, !seen.contains(use),
         let span = Self.span(of: placement, item: item),

@@ -38,7 +38,7 @@ struct DecorBudgetTests {
     /// under it.
     @Test func theRoomsOwnPiecesAreNoHeavierThanTheModelTheyCameFrom() async throws {
         var triangles = 0
-        for item in DecorItem.baseItems {
+        for item in DecorItem.baseItems(in: .living) {
             triangles += counts(try await Entity(named: item.assetName, in: .main)).triangles
         }
         #expect(triangles > 0)

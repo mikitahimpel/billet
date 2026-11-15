@@ -7,6 +7,10 @@ public enum CatCoat: String, CaseIterable, Sendable {
 
   public static let key = "catCoat"
 
+  /// The coats the picker shows. Tuxedo and calico stay decodable for a phone that picked them,
+  /// but are not offered: their renders read badly.
+  public static let offered: [CatCoat] = [.grey, .ginger, .cream, .black]
+
   public static func current(in defaults: UserDefaults = .standard) -> CatCoat {
     defaults.string(forKey: key).flatMap(CatCoat.init(rawValue:)) ?? .grey
   }

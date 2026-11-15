@@ -22,12 +22,7 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
   const notifications = new Map<string, StoredNotification>();
 
   const balanceOf = (owner: CoinOwner) =>
-    Math.max(
-      0,
-      entries
-        .filter(({ ownerId }) => ownerId === owner)
-        .reduce((sum, { amount }) => sum + amount, 0),
-    );
+    entries.filter(({ ownerId }) => ownerId === owner).reduce((sum, { amount }) => sum + amount, 0);
 
   const note = (notification: StoredNotification | undefined) => {
     if (notification !== undefined && !notifications.has(notification.notificationUuid)) {
@@ -76,14 +71,14 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
         return { duplicate: false, balance: balanceOf(purchase.ownerId) };
       }),
     findPurchase: (id) => Effect.sync(() => Option.fromNullishOr(purchases.get(id))),
-    refund: (purchase, at, notification) =>
+    refund: (purchase, at, notification, owed = false) =>
       Effect.sync(() => {
         note(notification);
         const current = unchanged(purchase);
         if (current === undefined || current.status !== "credited") {
           return { duplicate: true, coins: 0, balance: balanceOf(purchase.ownerId) };
         }
-        const taken = Math.min(current.coins, balanceOf(current.ownerId));
+        const taken = current.coins;
         const refunds = current.refunds + 1;
         entries.push({
           id: entryIds.refund(current.originalTransactionId, refunds),
@@ -98,7 +93,7 @@ export const makeInMemoryPaymentsRepository = (): InMemoryPaymentsRepository => 
           ...current,
           status: "refunded",
           refunds,
-          flagged: taken < current.coins ? 1 : current.flagged,
+          flagged: owed ? 1 : current.flagged,
           updatedAt: at,
         });
         return { duplicate: false, coins: taken, balance: balanceOf(current.ownerId) };

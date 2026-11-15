@@ -9,9 +9,11 @@ final class RearrangeRoomTests: XCTestCase {
     private func launchDecorate() {
         app = XCUIApplication()
         app.launchArguments += ["-onboardingDone", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES",
-                                "-decorate", "closet"]
+                                "-uitestNoCat", "YES", "-decorate", "closet"]
         app.launch()
         XCTAssertTrue(app.otherElements["decorPanel"].waitForExistence(timeout: 90), "Decorate mode should open on the closet")
+        let gone = expectation(for: NSPredicate(format: "exists == false"), evaluatedWith: app.otherElements["launch-splash"])
+        wait(for: [gone], timeout: 60)
     }
 
     private func at(_ x: Double, _ y: Double) -> XCUICoordinate {
@@ -25,8 +27,7 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testResetRoomAsksFirstAndDecorateCloses() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testResetRoomAsksFirstAndDecorateCloses() {
         launchDecorate()
         let reset = app.buttons["decorReset"]
         XCTAssertTrue(reset.waitForExistence(timeout: 15))
@@ -41,8 +42,7 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testTheRoomsOwnFurnitureTurnsStoresAndComesBack() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testTheRoomsOwnFurnitureTurnsStoresAndComesBack() {
         launchDecorate()
         look("0-start")
         // The cat tree stands in the right corner of the Living room.
@@ -71,9 +71,39 @@ final class RearrangeRoomTests: XCTestCase {
         look("4-placed")
     }
 
+    /// The chosen piece's pills are a grid: the two columns the same width, Rotate over Store, 45 degrees over Undo.
     @MainActor
-    func testTheLastBedCannotBeStored() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testTheChosenPiecesControlsLineUpInTwoEqualColumns() {
+        app = XCUIApplication()
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES",
+                                "-uitestNoCat", "YES", "-decorate", "base-cattree"]
+        app.launch()
+        let rotate = app.buttons["decorRotate"], fine = app.buttons["decorRotateFine"]
+        XCTAssertTrue(rotate.waitForExistence(timeout: 90), "Decorate mode opens on the cat tree")
+        let undo = app.buttons["decorUndo"], store = app.buttons["decorStore"]
+        // A turn that fits where the tree stands (its last turn is kept between launches) brings Undo.
+        for turn in [fine, rotate] where !undo.exists {
+            turn.tap()
+            _ = undo.waitForExistence(timeout: 10)
+        }
+        let done = app.buttons["decorDone"], title = app.staticTexts["Decorate"]
+        XCTAssertEqual(done.frame.midY, title.frame.midY, accuracy: 1, "Done sits level with the title")
+        let pills = [rotate, fine, store] + (undo.exists ? [undo] : [])
+        let widths = pills.map { $0.frame.width }
+        XCTAssertLessThan(widths.max()! - widths.min()!, 1, "the pills share one width: \(widths)")
+        XCTAssertEqual(rotate.frame.minX, store.frame.minX, accuracy: 0.5)
+        XCTAssertEqual(rotate.frame.midY, fine.frame.midY, accuracy: 0.5)
+        XCTAssertGreaterThan(fine.frame.minX, rotate.frame.maxX)
+        if undo.exists {
+            XCTAssertEqual(fine.frame.minX, undo.frame.minX, accuracy: 0.5)
+            XCTAssertEqual(store.frame.midY, undo.frame.midY, accuracy: 0.5)
+        }
+        let panel = app.otherElements["decorPanel"].frame
+        XCTAssertEqual(rotate.frame.minX - panel.minX, panel.maxX - fine.frame.maxX, accuracy: 1, "the grid fills the card")
+    }
+
+    @MainActor
+    func testTheLastBedCannotBeStored() {
         launchDecorate()
         // The cat's bed is in the middle of the rug.
         at(0.55, 0.54).tap()
@@ -85,8 +115,7 @@ final class RearrangeRoomTests: XCTestCase {
     }
 
     @MainActor
-    func testAFineTurnTurnsFortyFiveDegreesAndCanBeTakenBack() throws {
-        try XCTSkipIf(ProcessInfo.processInfo.environment["GITHUB_ACTIONS"] != nil, "needs a Simulator that can draw")
+    func testAFineTurnTurnsFortyFiveDegreesAndCanBeTakenBack() {
         launchDecorate()
         // The cat tree stands in a corner with room round it, so a turn of 45 degrees fits.
         for _ in 0..<3 where !app.staticTexts["Cat tree"].exists {

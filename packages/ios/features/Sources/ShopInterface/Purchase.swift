@@ -82,6 +82,8 @@ public struct Purchase: Identifiable, Hashable, Sendable {
     case item
     /// An ink colour for notes and drawings: the purchase moment, no Undo.
     case ink
+    /// A note's stamp or seal: the purchase moment, no Undo.
+    case postage
     /// A treat for the cat: no purchase moment and no Undo.
     case treat
   }
@@ -102,7 +104,7 @@ public struct Purchase: Identifiable, Hashable, Sendable {
   public var undoable: Bool {
     switch kind {
     case .item: true
-    case .ink, .treat: false
+    case .ink, .postage, .treat: false
     }
   }
 

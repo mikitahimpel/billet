@@ -13,9 +13,9 @@ export const DemoBotsLive = (rooms: DurableObjectNamespace<PairRoom>): Layer.Lay
     DemoBots,
     DemoBots.of(
       spanMethods("DemoBots", {
-        start: (pairId, owner, bot) =>
+        start: (pairId, owner, bot, welcome) =>
           Effect.tryPromise({
-            try: () => rooms.getByName(pairId).startDemo(owner, bot),
+            try: () => rooms.getByName(pairId).startDemo(owner, bot, welcome),
             catch: unavailable,
           }),
         stop: (pairId) =>

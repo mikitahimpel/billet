@@ -63,13 +63,13 @@ export const RiddleReward = Schema.Struct({ won: Schema.Boolean, score: Count })
 export type RiddleReward = typeof RiddleReward.Type;
 
 /** A solve with no hint. */
-export const solveCoins = 10;
+export const solveCoins = 3;
 /** What each hint takes off a solve. */
-export const hintCost = 2;
+export const hintCost = 1;
 /** The least a solve pays, however many hints it took. */
-export const solveFloor = 4;
+export const solveFloor = 1;
 /** What a give-up pays: the pair played, and that counts. */
-export const giveUpCoins = 3;
+export const giveUpCoins = 1;
 
 export const solveReward = (hints: number): RiddleReward => ({
   won: true,

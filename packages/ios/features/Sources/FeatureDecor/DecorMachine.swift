@@ -14,18 +14,23 @@ public enum DecorMachine: Machine {
     public var undo: DecorLayout?
     /// What the last event came to, when the player should be told.
     public var notice: Notice?
+    /// The room being arranged: its closet, its fit rules and its reset.
+    public var space: DecorSpace = .living
+
+    public var room: DecorRoom { space == .living ? .home : .bedroom }
 
     public init(layout: DecorLayout = DecorLayout(), owned: Set<String> = []) {
       self.layout = layout
       self.owned = owned
     }
 
-    public var closet: [DecorItem] { layout.closet(owned: owned) }
+    public var closet: [DecorItem] { layout.closet(owned: owned, in: room) }
 
-    /// A piece the pair can place: one it owns, or the room's own furniture.
+    /// A piece the pair can place here: one it owns, or this room's own furniture.
     public func has(_ item: String) -> Bool {
       guard let known = DecorItem.item(shopID: item) else { return false }
-      return known.isBase || owned.contains(item)
+      if let base = known.base { return base.space == space }
+      return owned.contains(item)
     }
   }
 
@@ -87,7 +92,7 @@ public enum DecorMachine: Machine {
     public var isValid: Bool {
       switch self {
       case .moving(let book, _, _, let to):
-        if case .rejected = book.layout.dropping(to) { false } else { true }
+        if case .rejected = book.layout.dropping(to, in: book.room) { false } else { true }
       case .off, .closet, .selected: true
       }
     }
@@ -95,7 +100,7 @@ public enum DecorMachine: Machine {
     /// Why a dragged piece does not fit, for the UI to say; `.fits` otherwise.
     public var verdict: DecorLayout.Verdict {
       switch self {
-      case .moving(let book, _, _, let to): book.layout.verdict(to)
+      case .moving(let book, _, _, let to): book.layout.verdict(to, in: book.room)
       case .off, .closet, .selected: .fits
       }
     }
@@ -147,6 +152,8 @@ public enum DecorMachine: Machine {
     case resetRoom
     /// The last change taken back.
     case undone
+    /// The room on screen changed: what is chosen or dragged is let go and the closet is that room's.
+    case roomChanged(DecorSpace)
   }
 
   public enum Output: Equatable, Sendable {
@@ -177,6 +184,8 @@ public enum DecorMachine: Machine {
 
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     let (next, outputs) = step(state, event)
+    // An event that changes nothing leaves the last notice standing too.
+    if next == state, outputs.isEmpty { return (state, []) }
     var book = next.book
     book.notice = nil
     for output in outputs {
@@ -196,7 +205,7 @@ public enum DecorMachine: Machine {
     case .closetTapped, .dropped, .turned, .turnedFine, .stored, .resetRoom: changing = true
     case .owned, .loaded, .remote, .opened, .closed, .roomTapped, .emptyTapped, .dragBegan,
       .dragged,
-      .dragCancelled, .undone:
+      .dragCancelled, .undone, .roomChanged:
       changing = false
     }
     if case .undone = event {
@@ -269,19 +278,22 @@ public enum DecorMachine: Machine {
 
     case (.moving(let book, let item, let from, _), .dragged(let to)):
       guard to.item == item else { return (state, []) }
-      return (.moving(book, item: item, from: from, to: to), [])
+      return (.moving(book, item: item, from: from, to: DecorLayout.insideRoom(to)), [])
 
     case (.off, .dragged), (.closet, .dragged), (.selected, .dragged):
       return (state, [])
 
     case (.moving(let book, let item, _, let to), .dropped):
       var next = book
-      switch book.layout.dropping(to) {
+      switch book.layout.dropping(to, in: book.room) {
       case .rejected:
         return (.selected(book, item: item), [.feedback(.rejected)])
       case .fits(let layout):
         next.layout = layout
         return (.selected(next, item: item), [.save(layout)])
+      case .slid(let layout, _):
+        next.layout = layout
+        return (.selected(next, item: item), [.save(layout), .feedback(.slid)])
       case .swapped(let layout, _), .nudged(let layout, _, _):
         next.layout = layout
         return (.selected(next, item: item), [.save(layout), .feedback(.swapped)])
@@ -298,7 +310,7 @@ public enum DecorMachine: Machine {
 
     case (.selected(let book, let item), .turned), (.selected(let book, let item), .turnedFine):
       var next = book
-      switch book.layout.turning(item, byEighths: event == .turnedFine ? 1 : 2) {
+      switch book.layout.turning(item, byEighths: event == .turnedFine ? 1 : 2, in: book.room) {
       case nil: return (state, [])
       case .turned(let layout):
         next.layout = layout
@@ -325,7 +337,7 @@ public enum DecorMachine: Machine {
 
     case (.closet(let book), .resetRoom), (.selected(let book, _), .resetRoom):
       var next = book
-      next.layout = book.layout.reset(owned: book.owned)
+      next.layout = book.layout.reset(owned: book.owned, in: book.room)
       guard next.layout != book.layout else { return (.closet(book), []) }
       return (.closet(next), [.save(next.layout), .feedback(.reset)])
 
@@ -340,6 +352,17 @@ public enum DecorMachine: Machine {
 
     case (.off, .undone), (.moving, .undone):
       return (state, [])
+
+    case (.off(var book), .roomChanged(let space)):
+      book.space = space
+      return (.off(book), [])
+    case (.closet(var book), .roomChanged(let space)),
+      (.selected(var book, _), .roomChanged(let space)),
+      (.moving(var book, _, _, _), .roomChanged(let space)):
+      // The shell says the room on screen again whenever its view settles; only another room lets go.
+      guard book.space != space else { return (state, []) }
+      book.space = space
+      return (.closet(book), [])
     }
   }
 
@@ -411,7 +434,7 @@ public enum DecorMachine: Machine {
     guard book.has(item), !book.layout.isPlaced(item) else {
       return book.layout.isPlaced(item) ? (.selected(book, item: item), []) : (.closet(book), [])
     }
-    guard let spot = book.layout.defaultPlacement(for: item) else {
+    guard let spot = book.layout.defaultPlacement(for: item, in: book.room) else {
       return (.closet(book), [.feedback(.blocked)])
     }
     var next = book

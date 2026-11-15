@@ -84,8 +84,8 @@ private struct BigNumber: View {
 // MARK: - Mochi
 
 /// Mochi in a drawn corner of the room, with a pet button.
-/// note: the portrait, not a render of the real diorama; a RealityKit snapshot can replace it once bought items
-/// actually appear in the room.
+/// note: the app's hero figure, not a render of the real diorama; a RealityKit snapshot can replace it once bought
+/// items actually appear in the room.
 struct MochiRoom: View {
     let snapshot: OurioSnapshot
     var showsCaption = true
@@ -98,9 +98,12 @@ struct MochiRoom: View {
                 // Tinted and clear Home Screens draw everything in one tint, where the room's fills would turn into
                 // flat grey blocks: there Mochi sits on the system's own background.
                 if renderingMode == .fullColor { room(in: size) }
+                // She sits on the floor at the room's right, her paws on the rug.
                 mochi
-                    .frame(width: size.height * 0.78, height: size.height * 0.78)
-                    .offset(x: size.width - size.height * 0.66, y: size.height * 0.3)
+                    .frame(height: size.height * 0.8)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                    .padding(.trailing, size.width * 0.05)
+                    .padding(.bottom, size.height * 0.04)
                 if snapshot.isPurring { hearts(in: size) }
                 if showsCaption { caption.padding(10) }
                 PetButton(catName: snapshot.catName)
@@ -134,17 +137,9 @@ struct MochiRoom: View {
             .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).stroke(.white.opacity(0.9), lineWidth: 3))
     }
 
-    @ViewBuilder
     private var mochi: some View {
-        if let portrait = UIImage(named: snapshot.catAvatar) ?? UIImage(named: "MochiPortrait") {
-            Image(uiImage: portrait)
-                .resizable()
-                .widgetAccentedRenderingMode(.desaturated)
-                .scaledToFit()
-                .scaleEffect(snapshot.isPurring ? 1.05 : 1)
-        } else {
-            Image(systemName: "cat.fill").resizable().scaledToFit().foregroundStyle(.white)
-        }
+        CatFigure(avatar: snapshot.catAvatar, asleep: snapshot.isNight)
+            .scaleEffect(snapshot.isPurring ? 1.05 : 1, anchor: .bottom)
     }
 
     private func hearts(in size: CGSize) -> some View {
@@ -153,7 +148,9 @@ struct MochiRoom: View {
                 .font(.system(size: [16, 12, 13][i]))
                 .foregroundStyle(Color.blushPink)
                 .widgetAccentable()
-                .offset(x: size.width * [0.5, 0.62, 0.44][i], y: size.height * [0.12, 0.06, 0.24][i])
+                // Around her head, which stands at the room's right.
+                .offset(x: size.width * 0.95 - size.height * [0.46, 0.26, 0.56][i],
+                        y: size.height * [0.1, 0.04, 0.22][i])
         }
     }
 

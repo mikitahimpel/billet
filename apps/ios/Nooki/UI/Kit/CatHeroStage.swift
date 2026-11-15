@@ -135,6 +135,8 @@ struct CatHeroStage: View {
     let time: TimeInterval
     var pokedAt: TimeInterval?
     var moving = true
+    /// A few soft hearts drift up past her; only on the welcome.
+    var hearts = false
 
     @State private var images: HeroImages?
 
@@ -151,6 +153,11 @@ struct CatHeroStage: View {
                     .offset(x: -8 * pose.sway, y: -cat * 0.06)
                 DustField(time: moving ? time : 0, count: 12, reach: cat * 0.012)
                     .offset(x: 10 * pose.sway)
+                if hearts && moving {
+                    HeartDrift(time: time, side: cat * 0.045)
+                        .frame(width: cat * 0.9)
+                        .offset(x: 6 * pose.sway)
+                }
                 EllipticalGradient(colors: [.black.opacity(0.42), .black.opacity(0.2), .clear],
                                    center: .center, startRadiusFraction: 0, endRadiusFraction: 0.5)
                     .frame(width: cat * 0.5, height: cat * 0.09)
@@ -269,6 +276,46 @@ struct DustField: View {
                     .opacity(0.2 + 0.45 * (0.5 + 0.5 * sin(time * 1.3 + speck.phase)))
                     .offset(x: (speck.x + 0.025 * sin(time * 0.6 + speck.phase)) * size.width - reach,
                             y: (rise < 0 ? rise + 1 : rise) * size.height - reach)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .onGeometryChange(for: CGSize.self) { $0.size } action: { size = $0 }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+
+/// Hearts rising slowly through the dust beside her, each fading in low and out high, one at a time on each side:
+/// like `DustField`, a frame only moves and fades views, so nothing is drawn per frame.
+struct HeartDrift: View {
+    let time: TimeInterval
+    /// The largest heart's width, in points.
+    let side: CGFloat
+
+    @State private var size = CGSize.zero
+
+    /// Where each heart rises (fraction of the width), its size, and its place in a shared 9 s cycle.
+    private static let hearts: [(x: Double, scale: CGFloat, phase: Double)] = [
+        (0.12, 1, 0), (0.86, 0.75, 0.3), (0.2, 0.6, 0.55), (0.8, 0.9, 0.8),
+    ]
+    private static let period: TimeInterval = 9
+
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(Self.hearts.indices, id: \.self) { index in
+                let heart = Self.hearts[index]
+                let age = (time / Self.period + heart.phase).truncatingRemainder(dividingBy: 1)
+                let width = side * heart.scale
+                Image(systemName: "heart.fill")
+                    .resizable()
+                    .scaledToFit()
+                    .foregroundStyle(Color.blushPink)
+                    .frame(width: width, height: width)
+                    // Up from 85% to 15% of the height, on a slow sideways wave.
+                    .opacity(0.45 * sin(.pi * age))
+                    .rotationEffect(.degrees(10 * sin(time * 0.8 + heart.phase * 6)))
+                    .offset(x: (heart.x + 0.03 * sin(time * 0.9 + heart.phase * 6)) * size.width - width / 2,
+                            y: (0.85 - 0.7 * age) * size.height - width / 2)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

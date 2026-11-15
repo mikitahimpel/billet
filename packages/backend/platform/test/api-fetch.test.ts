@@ -36,7 +36,7 @@ import { CoinsResponse } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
 import { InkId, inks as inkCatalog } from "@billet/contracts-domain/inks";
 import { CoinEntryId } from "@billet/contracts-domain/coins";
-import { RoomItemId } from "@billet/contracts-domain/shop";
+import { RoomItemId, welcomeCoins } from "@billet/contracts-domain/shop";
 import { OnboardingResponse } from "@billet/contracts-http-api/onboarding";
 import { PairResponse } from "@billet/contracts-http-api/pair";
 import { resetDirectory } from "./directory-migrations.ts";
@@ -270,7 +270,7 @@ describe("the Api Worker", () => {
   it("still answers the deploy smoke test outside /v1/", async () => {
     const response = await exports.default.fetch("https://billet.test/");
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({ service: "billet-api", status: "ok" });
+    expect(await response.json()).toEqual({ service: "ourio-api", status: "ok" });
   });
 
   it("answers 404 for an unknown /v1/ route", async () => {
@@ -546,6 +546,7 @@ describe("the Api Worker", () => {
         balance: number;
         inks: ReadonlyArray<string>;
         items: ReadonlyArray<string>;
+        postage: ReadonlyArray<string>;
       };
     const baseline = await pairOf("subject-base-a", "subject-base-b");
     const welcome = (await shopOf(baseline.owner)).balance;
@@ -554,8 +555,9 @@ describe("the Api Worker", () => {
     const room = env.PAIR_ROOM.getByName(pairId);
     await room.grantInks([Schema.decodeSync(InkId)("ink-rose")]);
     await room.grantItems([Schema.decodeSync(RoomItemId)("lantern")]);
+    await room.grantPostage(["stamp-moon"]);
     await room.creditPurchase({
-      kind: "buy",
+      kind: "purchase",
       id: Schema.decodeSync(CoinEntryId)("buy:test-pack"),
       ref: "pack",
       coins: 101,
@@ -574,20 +576,22 @@ describe("the Api Worker", () => {
     expect(wallets.reduce((sum, coins) => sum + coins, 0)).toBe(before.balance);
     expect(Math.abs((wallets[0] ?? 0) - (wallets[1] ?? 0))).toBeLessThanOrEqual(1);
     const kept = await env.DB.prepare("SELECT user_id, kind, item_id FROM kept_items").all();
-    expect(kept.results).toHaveLength(4);
+    expect(kept.results).toHaveLength(6);
 
-    // The owner pairs again: the new room gets their share, the pieces and the ink; their rows go.
+    // The owner pairs again: the new room gets their share, the pieces, the ink and the stamp; their
+    // rows go.
     const third = await signedInAs("subject-third");
     expect((await claimWith(third, await inviteFrom(owner))).status).toBe(200);
     const after = await shopOf(owner);
     expect(after.inks).toContain("ink-rose");
     expect(after.items).toContain("lantern");
+    expect(after.postage).toEqual(["stamp-moon"]);
     expect(wallets).toContain(after.balance - welcome);
     expect(
       await env.DB.prepare("SELECT * FROM kept_items")
         .all()
         .then((r) => r.results),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(
       (await env.DB.prepare("SELECT coins FROM kept_wallets").all<{ coins: number }>()).results,
     ).toHaveLength(1);
@@ -1044,7 +1048,11 @@ describe("notes", () => {
   });
 
   it("stores a note's stamp and seal, and gives them to the partner as chosen", async () => {
-    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const { owner, claimer, pairId } = await pairOf("subject-owner", "subject-claimer");
+    const locked = await sendText(owner, { text: "sealed", stamp: "moon", seal: "rose" });
+    expect(locked.status).toBe(400);
+    expect(await locked.json()).toEqual({ _tag: "PostageNotOwned", postage: "stamp-moon" });
+    await env.PAIR_ROOM.getByName(pairId).grantPostage(["stamp-moon", "seal-rose", "seal-night"]);
     const stamped = await sendText(owner, { text: "sealed", stamp: "moon", seal: "rose" });
     expect(stamped.status).toBe(200);
     expect((await sendText(owner, { text: "plain" })).status).toBe(200);
@@ -1105,26 +1113,20 @@ describe("notes", () => {
     expect(coins.headers.get("cache-control")).toBe("no-store");
     // Reading the wallet opens the pair's room, with its welcome coins.
     expect(Schema.decodeUnknownSync(CoinsResponse)(await coins.json())).toMatchObject({
-      balance: 560,
-      entries: [{ id: "gift:welcome", kind: "gift", amount: 560 }],
+      balance: welcomeCoins,
+      entries: [{ id: "gift:welcome", kind: "gift", amount: welcomeCoins }],
     });
-    const order = (item: string) =>
-      call("/v1/shop/orders", {
-        method: "POST",
-        headers: { ...bearer(owner), "content-type": "application/json" },
-        body: JSON.stringify({ id: crypto.randomUUID(), offer: { _tag: "Item", item } }),
-      });
-    // Neither piece is ever a deal: the tower leaves 20 of the 560.
-    expect((await order("tower")).status).toBe(200);
     const buy = (item: string) =>
       call("/v1/shop/buy", {
         method: "POST",
         headers: { ...bearer(owner), "content-type": "application/json" },
         body: JSON.stringify({ id: crypto.randomUUID(), item }),
       });
-    const broke = await buy("ink-rose");
+    // The welcome coins pay for exactly one 60-coin ink.
+    expect((await buy("ink-rose")).status).toBe(200);
+    const broke = await buy("ink-sea");
     expect(broke.status).toBe(409);
-    expect(await broke.json()).toEqual({ _tag: "NotEnoughCoins", needed: 60, have: 20 });
+    expect(await broke.json()).toEqual({ _tag: "NotEnoughCoins", needed: 60, have: 0 });
     const free = await buy("ink-graphite");
     expect(free.status).toBe(409);
     expect(await free.json()).toEqual({ _tag: "AlreadyOwned", itemId: "ink-graphite" });
@@ -1210,7 +1212,7 @@ describe("notes", () => {
     );
     const earn = { event: { _tag: "WishReceived", wish: "wish-1" } };
     const first = await (await post(owner, "/v1/coins/earn", earn)).json();
-    expect(first).toMatchObject({ entry: { id: "earn:wish:wish-1", amount: 20 } });
+    expect(first).toMatchObject({ entry: { id: "earn:wish:wish-1", amount: 5 } });
     expect(await (await post(claimer, "/v1/coins/earn", earn)).json()).toEqual(first);
     const bonus = await post(owner, "/v1/shop/bonus", { collection: "cozy-autumn" });
     expect(bonus.status).toBe(409);
@@ -2084,20 +2086,20 @@ describe("payments in the Worker", () => {
       post("/v1/purchases/mock", mockBody("purchase", transactionId), bearer(owner)),
     );
     expect(bought.status).toBe(200);
-    // The wallet's balance: the welcome coins (560) and the pack.
+    // The wallet's balance: the welcome coins and the pack.
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await bought.json())).toEqual({
       transactionId,
       productId: "com.ourio.app.coins.550",
       coins: 550,
-      balance: 1110,
+      balance: welcomeCoins + 550,
       duplicate: false,
     });
     expect((await purchasesAt("dev", bearer(claimer))).balance).toBe(550);
     const wallet = await walletOf(bearer(claimer));
-    expect(wallet.balance).toBe(1110);
+    expect(wallet.balance).toBe(welcomeCoins + 550);
     expect(wallet.entries.at(-1)).toMatchObject({
       id: `purchase:${transactionId}`,
-      kind: "buy",
+      kind: "purchase",
       amount: 550,
     });
 
@@ -2107,7 +2109,7 @@ describe("payments in the Worker", () => {
     );
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await again.json())).toMatchObject({
       duplicate: true,
-      balance: 1110,
+      balance: welcomeCoins + 550,
     });
 
     const refunded = await atStage(
@@ -2116,7 +2118,7 @@ describe("payments in the Worker", () => {
     );
     expect(Schema.decodeUnknownSync(PurchaseResponse)(await refunded.json())).toMatchObject({
       coins: 550,
-      balance: 560,
+      balance: welcomeCoins,
     });
     expect((await walletOf(bearer(owner))).entries.slice(-2)).toMatchObject([
       { id: `purchase:${transactionId}`, amount: 550 },
@@ -2216,15 +2218,15 @@ describe("payments in the Worker", () => {
     expect(await refused.json()).toEqual({ _tag: "InvalidPurchase" });
 
     const first = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
-    // The pair's wallet: the welcome coins (560) and the pack.
+    // The pair's wallet: the welcome coins and the pack.
     expect(first).toMatchObject({
       transactionId: "7",
       coins: 100,
-      balance: 660,
+      balance: welcomeCoins + 100,
       duplicate: false,
     });
     const again = Schema.decodeUnknownSync(PurchaseResponse)(await (await buy("dev")).json());
-    expect(again).toMatchObject({ balance: 660, duplicate: true });
+    expect(again).toMatchObject({ balance: welcomeCoins + 100, duplicate: true });
   });
 
   it("trusts only Apple's root, for transactions and notifications", async () => {

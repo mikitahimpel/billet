@@ -29,6 +29,9 @@ final class GameSession {
     @ObservationIgnored private var subscription: (any Cancellable)?
     @ObservationIgnored private var wasDirected = false
     @ObservationIgnored private var lens: CGSize = .zero
+    /// The title row's bottom and the result card's top, in points from the screen's top.
+    @ObservationIgnored private var titleBottom: CGFloat = 0
+    @ObservationIgnored private var cardTop: CGFloat?
     @ObservationIgnored private var ended = false
     @ObservationIgnored private var coach = GameCoach.State.idle
     @ObservationIgnored private var gaze = GameGaze()
@@ -45,11 +48,14 @@ final class GameSession {
         spots = GameSpots(room: room)
     }
 
-    var action: String? { finished == nil ? stage?.action : nil }
+    /// The stage's buttons, copied each frame: the stage is not observed, so a button that came or went with a
+    /// finger lifting would otherwise wait for an unrelated change to show.
+    private(set) var action: String?
+    private(set) var assist: String?
 
     func start(viewport: CGSize) {
         guard stage == nil, !ended else { return }
-        lens = viewport
+        if lens == .zero { lens = viewport }
         // The corner is in its view and Mochi in it a moment after the view appears.
         if let corner = room as? TabletopRoom, !corner.isReady {
             Task {
@@ -61,8 +67,9 @@ final class GameSession {
         room.isPlayingGame = true
         wasDirected = room.walker?.directed ?? false
         room.walker?.directed = true
+        room.walker?.pace = .eager
         let camera = GameCamera(room: room)
-        camera.viewport = viewport
+        camera.viewport = lens
         self.camera = camera
         let pivot = room.pivot
         deck.project = { [weak self] point in self?.lensNow?.project(pivot.convert(position: point, to: nil)) }
@@ -100,6 +107,25 @@ final class GameSession {
     func resize(_ viewport: CGSize) {
         lens = viewport
         camera?.viewport = viewport
+        frameResult()
+    }
+
+    /// Where the game's own controls stand, so the finished room is framed in the space between them.
+    func titleMoved(bottom: CGFloat) {
+        titleBottom = bottom
+        frameResult()
+    }
+
+    func cardMoved(top: CGFloat) {
+        cardTop = top
+        frameResult()
+    }
+
+    private func frameResult() {
+        guard let camera, finished != nil, lens.height > 0 else { return }
+        // Until the card has been laid out, about the share it takes on a phone.
+        let card = cardTop.map { Float(1 - $0 / lens.height) } ?? 0.36
+        camera.covered = GameFraming.covered(top: Float(titleBottom / lens.height), card: card)
     }
 
     private func update(_ dt: Float) {
@@ -116,6 +142,14 @@ final class GameSession {
         coach = GameCoach.transition(coach, .step(cue?.step)).0
         show(coach.shown == nil ? nil : cue)
         if finished == nil, let result = deck.result { finish(result) }
+        refreshButtons()
+    }
+
+    private func refreshButtons() {
+        let action = finished == nil ? stage?.action : nil
+        if action != self.action { self.action = action }
+        let assist = finished == nil ? stage?.assist : nil
+        if assist != self.assist { self.assist = assist }
     }
 
     // MARK: - Her
@@ -181,7 +215,7 @@ final class GameSession {
 
     private func finish(_ result: GameResult) {
         finished = result
-        camera?.covered = 0.36
+        frameResult()
         finger = nil
         deck.bar = nil
         UINotificationFeedbackGenerator().notificationOccurred(.success)
@@ -193,6 +227,7 @@ final class GameSession {
     func playAgain() {
         stage?.tearDown()
         camera?.covered = 0
+        cardTop = nil
         begin()
     }
 
@@ -212,6 +247,7 @@ final class GameSession {
         let room = room
         let directed = wasDirected
         room.walker?.directed = directed
+        room.walker?.pace = .usual
         room.isPlayingGame = false
         if room is TabletopRoom || now {
             camera?.cancel()
@@ -250,6 +286,8 @@ final class GameSession {
     }
 
     func act() { stage?.act() }
+
+    func assistAct() { stage?.assistAct() }
 
     private var lensNow: RoomLens? { RoomLens(camera: camera?.camera, size: lens) }
 

@@ -5,6 +5,7 @@ import { Clock, Effect, Layer, ManagedRuntime, Schema, Scope } from "effect";
 import { type CoinEntryId, type EarnEvent, LocalDay } from "@billet/contracts-domain/coins";
 import { type IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { PostageId } from "@billet/contracts-domain/postage";
 import type { PriceTerms } from "@billet/contracts-domain/shop-catalog";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import type { LayoutChange } from "@billet/contracts-domain/decor";
@@ -63,6 +64,7 @@ import {
 import { type RiddleRow, riddleView } from "@billet/backend-pair-room/riddle-rules";
 import { RiddleId } from "@billet/contracts-domain/riddle";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
+import { EconomyTapLive } from "./economy-sink-live.ts";
 import { PairRoomLive } from "./pair-room-runtime.ts";
 import { RoomDb } from "./pair-room-sqlite-store.ts";
 import { deliveriesOf } from "./pair-room-deliveries.ts";
@@ -80,7 +82,7 @@ import {
 } from "@billet/backend-pair-room/delivery-ledger";
 import { openRoomDatabase } from "./room-database.ts";
 import * as roomSchema from "./room-schema.ts";
-import type { Note } from "@billet/contracts-domain/note";
+import type { Note, NoteText } from "@billet/contracts-domain/note";
 import { ProviderTokens, sendApns } from "./apns-client.ts";
 import {
   enabledPushLanes,
@@ -154,6 +156,7 @@ const shopOutputs: ReadonlySet<string> = new Set([
   "CoinsEntered",
   "InksGranted",
   "ItemsGranted",
+  "PostageGranted",
   "WishlistChanged",
   "LayoutChanged",
   "GiftOpened",
@@ -186,7 +189,9 @@ export class PairRoom extends DurableObject {
   private readonly runtime = this.database.then((database) =>
     ManagedRuntime.make(
       Layer.mergeAll(
-        PairRoomLive.pipe(Layer.provide(Layer.succeed(RoomDb, database))),
+        PairRoomLive(EconomyTapLive(this.roomEnv.DB)).pipe(
+          Layer.provide(Layer.succeed(RoomDb, database)),
+        ),
         Observability,
         Layer.succeed(
           Clock.Clock,
@@ -815,9 +820,9 @@ export class PairRoom extends DurableObject {
   }
 
   /** Acts through the calls a phone reaches. Repeating it for the same bot keeps its plans. */
-  async startDemo(owner: UserId, bot: UserId): Promise<void> {
+  async startDemo(owner: UserId, bot: UserId, welcome?: ReadonlyArray<NoteText>): Promise<void> {
     if ((await this.demoBot())?.bot !== bot) {
-      await this.ctx.storage.put(demoBotKey, startDemoBot(bot, owner, this.clock()));
+      await this.ctx.storage.put(demoBotKey, startDemoBot(bot, owner, this.clock(), welcome));
     }
     await this.scheduleAlarm();
   }
@@ -927,6 +932,15 @@ export class PairRoom extends DurableObject {
     const decision = await this.run(
       (room) => room.dispatch({ _tag: "GrantItems", items }),
       "PairRoom.grantItems",
+    );
+    await this.pushShop(decision);
+    return decision;
+  }
+
+  async grantPostage(postage: ReadonlyArray<PostageId>): Promise<RoomDecision> {
+    const decision = await this.run(
+      (room) => room.dispatch({ _tag: "GrantPostage", postage }),
+      "PairRoom.grantPostage",
     );
     await this.pushShop(decision);
     return decision;

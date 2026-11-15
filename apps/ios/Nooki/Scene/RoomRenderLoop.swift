@@ -1,6 +1,7 @@
 import Metal
 import QuartzCore
 import RealityKit
+import RoomInterface
 import SwiftUI
 import UIKit
 
@@ -19,9 +20,15 @@ final class RoomRenderLoop: RoomSurface {
     private var link: CADisplayLink?
     private var target = DisplayLinkTarget()
     private var scene: CatRoom?
-    private var last: CFTimeInterval?
     private var fast = false
     private var running = false
+    private var idleRate = RoomRenderLoop.range(20)
+    private var activeRate = RoomRenderLoop.range(30)
+    /// The same rates in frames a second. The display link's range is a hint a screen may overshoot, so a frame that
+    /// comes sooner than the rate asks is not drawn.
+    private var idleHertz = 20.0
+    private var activeHertz = 30.0
+    private var lastDrawn: CFTimeInterval?
 
     /// Nil where RealityKit cannot make a renderer; the room then stays on `RealityView`.
     init?() {
@@ -43,6 +50,17 @@ final class RoomRenderLoop: RoomSurface {
         renderer.cameraSettings.antialiasing = on ? .multisample4X : .none
     }
 
+    /// The frames a second while something moves and while nothing does, and the pixels across per point, as the quality
+    /// tier says.
+    func setQuality(_ rendering: RoomRendering) {
+        idleRate = Self.range(rendering.idleRate)
+        activeRate = Self.range(min(rendering.activeRate, 120))
+        idleHertz = Double(max(rendering.idleRate, 10))
+        activeHertz = Double(max(min(rendering.activeRate, 120), 10))
+        view.scaleCap = CGFloat(rendering.scale)
+        if let link { link.preferredFrameRateRange = fast ? activeRate : idleRate }
+    }
+
     /// Puts `room` in the renderer in place of any other; the camera stays.
     func show(_ room: CatRoom) {
         guard scene !== room else { return }
@@ -55,7 +73,7 @@ final class RoomRenderLoop: RoomSurface {
     func setRunning(_ on: Bool) {
         guard on != running else { return }
         running = on
-        last = nil
+        lastDrawn = nil
         if on { startLink() } else { link?.isPaused = true }
     }
 
@@ -75,23 +93,27 @@ final class RoomRenderLoop: RoomSurface {
             return
         }
         let link = CADisplayLink(target: target, selector: #selector(DisplayLinkTarget.frame))
-        link.preferredFrameRateRange = Self.idleRate
+        link.preferredFrameRateRange = fast ? activeRate : idleRate
         link.add(to: .main, forMode: .common)
         self.link = link
     }
 
-    private static let idleRate = CAFrameRateRange(minimum: 24, maximum: 30, preferred: 30)
-    private static let activeRate = CAFrameRateRange(minimum: 60, maximum: 60, preferred: 60)
+    /// Exactly `rate`, or as close as the screen's own steps allow.
+    private static func range(_ rate: Int) -> CAFrameRateRange {
+        let hertz = Float(max(rate, 10))
+        return CAFrameRateRange(minimum: hertz <= 30 ? max(hertz - 6, 10) : hertz, maximum: hertz, preferred: hertz)
+    }
 
     private func frame(_ link: CADisplayLink) {
         let now = link.timestamp
-        defer { last = now }
         let wantsFast = scene?.isActive ?? false
         if wantsFast != fast {
             fast = wantsFast
-            link.preferredFrameRateRange = wantsFast ? Self.activeRate : Self.idleRate
+            link.preferredFrameRateRange = wantsFast ? activeRate : idleRate
         }
-        guard let last, let drawable = view.metalLayer.nextDrawable() else { return }
+        if let lastDrawn, now - lastDrawn < 0.9 / (wantsFast ? activeHertz : idleHertz) { return }
+        defer { lastDrawn = now }
+        guard let last = lastDrawn, let drawable = view.metalLayer.nextDrawable() else { return }
         let dt = min(now - last, 0.1)
         do {
             let output = try RealityRenderer.CameraOutput(.singleProjection(colorTexture: drawable.texture))
@@ -117,13 +139,15 @@ private final class DisplayLinkTarget: NSObject {
     @objc func frame(_ link: CADisplayLink) { tick(link) }
 }
 
-/// The layer the room is drawn into: transparent over the backdrop, at most twice the points across, since three times
-/// is more pixels than clay and splats show.
+/// The layer the room is drawn into: transparent over the backdrop, at most `scaleCap` pixels across a point (twice, at
+/// the best look), since three times is more pixels than clay and splats show.
 final class MetalRoomView: UIView {
     override class var layerClass: AnyClass { CAMetalLayer.self }
 
     var metalLayer: CAMetalLayer { layer as! CAMetalLayer }
-    static let scaleCap: CGFloat = 2
+    var scaleCap: CGFloat = 2 {
+        didSet { if scaleCap != oldValue { setNeedsLayout() } }
+    }
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -141,7 +165,7 @@ final class MetalRoomView: UIView {
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        let scale = min(traitCollection.displayScale, Self.scaleCap)
+        let scale = min(traitCollection.displayScale, scaleCap)
         metalLayer.contentsScale = scale
         metalLayer.drawableSize = CGSize(width: bounds.width * scale, height: bounds.height * scale)
     }

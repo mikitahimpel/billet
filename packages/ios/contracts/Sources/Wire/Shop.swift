@@ -34,18 +34,47 @@ public struct PieceSetId: Codable, Hashable, Sendable {
   }
 }
 
+/// A note's stamp or seal as the shop sells it: `stamp-<NoteStamp>` or `seal-<NoteSeal>`. A string, so an id a
+/// newer server sells never fails a whole response.
+public struct PostageId: Codable, Hashable, Sendable {
+  public let rawValue: String
+
+  public init(_ rawValue: String) {
+    self.rawValue = rawValue
+  }
+
+  public init(_ stamp: NoteStamp) {
+    self.init("stamp-\(stamp.rawValue)")
+  }
+
+  public init(_ seal: NoteSeal) {
+    self.init("seal-\(seal.rawValue)")
+  }
+
+  public init(from decoder: any Decoder) throws {
+    rawValue = try decoder.singleValueContainer().decode(String.self)
+  }
+
+  public func encode(to encoder: any Encoder) throws {
+    var container = encoder.singleValueContainer()
+    try container.encode(rawValue)
+  }
+}
+
 /// The server prices it; the app's price is only shown.
 public enum ShopOffer: Codable, Hashable, Sendable {
   case ink(InkId)
   case item(RoomItemId)
   case set(PieceSetId)
   case treat
+  case postage(PostageId)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
     case ink
     case item
     case set
+    case postage
   }
 
   public init(from decoder: any Decoder) throws {
@@ -60,6 +89,8 @@ public enum ShopOffer: Codable, Hashable, Sendable {
       self = .set(try container.decode(PieceSetId.self, forKey: .set))
     case "Treat":
       self = .treat
+    case "Postage":
+      self = .postage(try container.decode(PostageId.self, forKey: .postage))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -80,25 +111,33 @@ public enum ShopOffer: Codable, Hashable, Sendable {
       try container.encode(set, forKey: .set)
     case .treat:
       try container.encode("Treat", forKey: .tag)
+    case .postage(let postage):
+      try container.encode("Postage", forKey: .tag)
+      try container.encode(postage, forKey: .postage)
     }
   }
 }
 
 /// Where a piece stands: `surface` is `floor`, `backWall` or `leftWall`; `u` and `v` are grid cells of 5 cm
 /// from the room's middle, `v` being 0 on a wall. `quarterTurns` is 0 to 3, plus 4 for a further 45 degrees.
+/// `room` is `bedroom` for a piece in the Bedroom and absent for the living room, which is never named.
 public struct RoomPlacement: Codable, Hashable, Sendable {
   public let item: RoomItemId
   public let surface: String
   public let u: Int
   public let v: Int
   public let quarterTurns: Int
+  public let room: String?
 
-  public init(item: RoomItemId, surface: String, u: Int, v: Int, quarterTurns: Int) {
+  public init(
+    item: RoomItemId, surface: String, u: Int, v: Int, quarterTurns: Int, room: String? = nil
+  ) {
     self.item = item
     self.surface = surface
     self.u = u
     self.v = v
     self.quarterTurns = quarterTurns
+    self.room = room
   }
 }
 
@@ -159,6 +198,8 @@ public struct ShopResponse: Codable, Hashable, Sendable {
   public let balance: Int
   public let inks: [InkId]
   public let items: [RoomItemId]
+  /// The stamps and seals the pair unlocked, in purchase order; absent from a server before they were sold.
+  public let postage: [PostageId]?
   public let wishlist: [RoomItemId]
   public let giftDay: String?
   public let bonuses: [String]
@@ -171,6 +212,7 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     balance: Int,
     inks: [InkId],
     items: [RoomItemId],
+    postage: [PostageId]? = nil,
     wishlist: [RoomItemId],
     giftDay: String? = nil,
     bonuses: [String] = [],
@@ -180,6 +222,7 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     self.balance = balance
     self.inks = inks
     self.items = items
+    self.postage = postage
     self.wishlist = wishlist
     self.giftDay = giftDay
     self.bonuses = bonuses
@@ -188,7 +231,7 @@ public struct ShopResponse: Codable, Hashable, Sendable {
   }
 
   private enum CodingKeys: String, CodingKey {
-    case balance, inks, items, wishlist, giftDay, bonuses, layout, stowed
+    case balance, inks, items, postage, wishlist, giftDay, bonuses, layout, stowed
   }
 
   public init(from decoder: any Decoder) throws {
@@ -196,6 +239,7 @@ public struct ShopResponse: Codable, Hashable, Sendable {
     balance = try container.decode(Int.self, forKey: .balance)
     inks = try container.decode([InkId].self, forKey: .inks)
     items = try container.decode([RoomItemId].self, forKey: .items)
+    postage = try container.decodeOptionalKey([PostageId].self, forKey: .postage)
     wishlist = try container.decode([RoomItemId].self, forKey: .wishlist)
     giftDay = try container.decodeOptionalKey(String.self, forKey: .giftDay)
     // A server from before collection bonuses sends none.

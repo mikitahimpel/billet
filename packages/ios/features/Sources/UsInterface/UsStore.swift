@@ -145,6 +145,18 @@ public final class UsStore {
     if media != nil { setWant(item, in: listID, wants: true, by: author) }
   }
 
+  /// A line typed into a list's own field. A blank line adds nothing; a grocery goes to the aisle the pair last gave
+  /// the same item.
+  @discardableResult
+  public func addTyped(_ text: String, to listID: UUID, author: String) -> Bool {
+    let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty, let list = list(listID) else { return false }
+    var details = ListItemDetails()
+    if list.kind.isChecklist { details.aisle = groceries.entry(for: text)?.aisle }
+    addItem(text, to: listID, author: author, details: details)
+    return true
+  }
+
   /// A place brings its country along, so it shows under it; a country already on the list isn't added again.
   public func addTravel(country code: String, place: String? = nil, to listID: UUID, author: String)
   {
@@ -323,7 +335,7 @@ public final class UsStore {
     onGiftChange?(.plan(id, nil))
   }
 
-  /// Only the owner marks it arrived: it moves to "Gifted", the giver's plan closes, the couple earns 20 coins once.
+  /// Only the owner marks it arrived: it moves to "Gifted", the giver's plan closes, the couple earns 5 coins once.
   public func markReceived(_ id: UUID, by owner: String) {
     guard let i = wishes.firstIndex(where: { $0.id == id }), wishes[i].owner == owner,
       wishes[i].gifted == nil

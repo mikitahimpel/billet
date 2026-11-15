@@ -31,6 +31,9 @@
       BilletSheet("Coins", size: .large) {
         VStack(alignment: .leading, spacing: Space.section) {
           balance
+          if let debt {
+            DebtCard(debt: debt)
+          }
           if let retry = ask.retry {
             ShortBanner(state: state, retry: retry, canBuy: sellsPacks) { dismiss() }
           }
@@ -49,19 +52,23 @@
       .task { if sellsPacks { await packs?.load() } }
     }
 
-    private var missing: Int { ask.retry.map { max(0, $0.cost - state.shop.coins) } ?? 0 }
+    private var missing: Int { ask.retry.map { state.shop.shortBy($0.cost) } ?? 0 }
+
+    private var debt: CoinDebt? {
+      CoinDebt(balance: state.shop.balance, history: state.shop.history)
+    }
 
     private var balance: some View {
       Card(warm: true) {
         HStack(spacing: Space.l) {
           CoinIcon(size: 56)
           VStack(alignment: .leading, spacing: 2) {
-            Text("\(state.shop.coins)")
+            Text(state.shop.debt > 0 ? "−\(state.shop.debt)" : "\(state.shop.coins)")
               .font(.ourioLargeTitleDigits)
               .foregroundStyle(Ink.text)
               .contentTransition(.numericText())
-              .animation(.snappy, value: state.shop.coins)
-            Text("coins for the two of you")
+              .animation(.snappy, value: state.shop.balance)
+            Text(debt?.caption ?? "coins for the two of you")
               .font(.ourioCallout)
               .foregroundStyle(Ink.textSecondary)
           }
@@ -106,6 +113,18 @@
     }
   }
 
+  private struct DebtCard: View {
+    let debt: CoinDebt
+
+    var body: some View {
+      Card {
+        CardHeader(debt.title, detail: debt.detail, symbol: "arrow.uturn.backward", opens: false)
+      }
+      .accessibilityElement(children: .combine)
+      .accessibilityIdentifier("coinDebt")
+    }
+  }
+
   private struct HistoryRow: View {
     let line: CoinLine
 
@@ -142,7 +161,7 @@
     let canBuy: Bool
     let done: () -> Void
 
-    private var missing: Int { max(0, retry.cost - state.shop.coins) }
+    private var missing: Int { state.shop.shortBy(retry.cost) }
 
     var body: some View {
       Card {

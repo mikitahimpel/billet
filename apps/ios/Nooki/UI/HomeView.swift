@@ -5,6 +5,7 @@ import FeatureDecor
 import FeatureGames
 import FeatureInbox
 import MomentsInterface
+import ServerSync
 import WidgetInterface
 import WidgetUI
 import ProfileInterface
@@ -25,6 +26,11 @@ struct HomeView: View {
     @State private var launching = true
     /// The tab bar's top edge, global, which a purchase's card keeps clear of.
     @State private var tabBarTop: CGFloat?
+    /// The top of the pet and Decorate row over the tab bar, global, while it shows; the card keeps clear of it too.
+    @State private var petControlsTop: CGFloat?
+    /// The finger on the tab bar, and the bar's capsule in `space`, where `TabScrubLayer` takes its touches.
+    @State private var scrub = TabScrub()
+    @State private var tabCapsule = CGRect.zero
     /// The splash is still drawn while it fades out after `launching` ends, though it takes no touches by then.
     @State private var splashDrawn = true
     /// The screen as the World last showed it, held up on the way back until the room draws again.
@@ -52,6 +58,11 @@ struct HomeView: View {
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
     @AppStorage(AppSettings.brainCardKey) private var brainCard = false
+    /// The Bedroom's lamps on this phone, a `BedroomLights.Choice`.
+    @AppStorage(BedroomLights.storageKey) private var bedroomLights = BedroomLights.Choice.unset.rawValue
+    /// The time the light switch was last checked against: it shows from the evening to the morning.
+    @State private var lightsClock = Date.now
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @AppStorage(AppSettings.quietRoomKey) private var quietChrome = QuietChrome.dim
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOver
     @State private var quiet = QuietRoom.store()
@@ -91,6 +102,9 @@ struct HomeView: View {
             await lift()
         }
         .onChange(of: state.shop.owned, initial: true) { _, owned in state.decor.send(.owned(owned)) }
+        .onChange(of: state.room, initial: true) { _, kind in
+            state.decor.send(.roomChanged(kind == .city ? .bedroom : .living))
+        }
         .onChange(of: state.shop.serverLayout, initial: true) { _, layout in
             state.decorSync.client = { [weak session] in session?.shopSync }
             state.decorSync.heard(layout, stowed: state.shop.serverStowed)
@@ -175,6 +189,7 @@ struct HomeView: View {
         .onChange(of: state.tab, initial: true) { visitHints() }
         .task { hints.isHeldOut = { [rooms = state.rooms] in rooms.remote.variant(of: Experiments.hints) == HintHoldout.hold } }
         .onChange(of: scenePhase, initial: true) { old, phase in phaseChanged(from: old, to: phase) }
+        .task { await followLightsClock() }
         .onChange(of: quietAllowed, initial: true) { _, allowed in quiet.send(.allowed(allowed)) }
     }
 
@@ -229,6 +244,11 @@ struct HomeView: View {
         }
         .environment(\.sheetGround, sheetGround)
         .environment(perfLab)
+        .onAppear { perfLab.quality.quiet = { [room] in room.quiet() } }
+        #if DEBUG || LABS_YES
+        .onAppear { perfLab.statsSource = { [room] tier in room.roomStats(tier: tier) } }
+        .onChange(of: perfLab.state, initial: true) { _, state in room.setPerf(state) }
+        #endif
     }
 
     private var layout: some View {
@@ -299,7 +319,7 @@ struct HomeView: View {
                 }
             } bottom: {
                 if hud != .hidden {
-                    TabBar(state: state)
+                    TabBar(state: state, scrub: scrub, capsule: $tabCapsule)
                         .opacity(arranging ? 0 : 1)
                         .allowsHitTesting(!arranging)
                         .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
@@ -315,16 +335,25 @@ struct HomeView: View {
 
             // The composer and the canvas play it over themselves while they're up.
             if state.composingNote == nil, !state.drawing {
-                PurchaseMoment(state: state, floor: hud == .hidden ? nil : tabBarTop)
+                PurchaseMoment(state: state, floor: toastFloor)
             }
         }
+        .coordinateSpace(.named(Self.space))
         .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
-        // Above the tab bar, so both stay clear of the "+" in the right corner.
+        // The tab bar's touches, over it and outside its glass, so a switch under the bar never cuts a slide short.
+        .overlay(alignment: .topLeading) {
+            if hud != .hidden, room.game == nil, !arranging {
+                TabScrubLayer(state: state, scrub: $scrub, capsule: tabCapsule)
+                    .modifier(QuietFade(store: quiet, chrome: quietChrome))
+            }
+        }
+        // Above the tab bar, so both stay clear of the "+" in the right corner. Whole in the World's first frame, like
+        // the page: the World's last frame shows them over the room until it draws, so a fade in from nothing would
+        // blink them out between the two.
         .overlay(alignment: .bottom) {
             ZStack {
                 if state.tab == .world, room.game == nil, !arranging { petControls }
             }
-            .animation(Motion.fade(), value: state.tab)
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
         }
         .overlay {
@@ -385,8 +414,9 @@ struct HomeView: View {
                 PetButton(state: state, needs: { room }) { room.play($0) }
                 Spacer(minLength: 0)
                 if let showcase = room.showcase { ShowcaseLabel(label: showcase) }
-                if state.room == .home {
-                    let waiting = state.decor.state.closetCount
+                let waiting = state.decor.state.closetCount
+                VStack(alignment: .trailing, spacing: Space.s) {
+                    if BedroomLights.showsSwitch(in: state.room.scene, at: lightsClock) { lightsButton }
                     GlassIconButton(
                         symbol: "sofa.fill", label: "Decorate", badge: waiting > 0 ? .count(waiting) : .none
                     ) { state.decor.send(.opened(item: nil)) }
@@ -396,6 +426,8 @@ struct HomeView: View {
             }
             .padding(.horizontal, Space.xs)
         }
+        .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { petControlsTop = $0 }
+        .onDisappear { petControlsTop = nil }
         .padding(.horizontal, Space.m)
         .padding(.bottom, 94)
         .transition(.opacity)
@@ -410,6 +442,7 @@ struct HomeView: View {
     private func phaseChanged(from old: ScenePhase, to phase: ScenePhase) {
         switch phase {
         case .active:
+            lightsClock = .now
             // The first call is launch, where every store has just been read.
             state.refresh(reloading: old != phase)
             for _ in 0..<state.takeWidgetFeeds() { room.feed() }
@@ -477,8 +510,11 @@ struct HomeView: View {
             room.perfShown(.home)
         }
         #if DEBUG
-        // `-tab shop` opens the Shop, for screenshots.
-        if UserDefaults.standard.string(forKey: "tab") == "shop" { state.tab = .shop }
+        // `-tab shop` (or moments, us) opens that tab, for screenshots.
+        if let name = UserDefaults.standard.string(forKey: "tab"),
+           let tab = HomeTab.allCases.first(where: { $0.title.lowercased() == name }) {
+            state.tab = tab
+        }
         #endif
         reportOpened(state.room)
         await ShopView.prewarm(state.shop.offers)
@@ -519,9 +555,42 @@ struct HomeView: View {
         }
     }
 
+    /// The shell's coordinate space, for what lies over the bars from outside them.
+    static let space = "home"
+
     private static var keyWindow: UIWindow? {
         UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
             .flatMap(\.windows).first(where: \.isKeyWindow)
+    }
+
+    /// The highest of what stands along the bottom, which a purchase's card sits above: the pet and Decorate row
+    /// on the World, the tab bar elsewhere, nothing while the bars are hidden.
+    private var toastFloor: CGFloat? {
+        guard hud != .hidden else { return nil }
+        let controls = state.tab == .world && room.game == nil && !arranging ? petControlsTop : nil
+        return [tabBarTop, controls].compactMap { $0 }.min()
+    }
+
+    private var lightsChoice: BedroomLights.Choice { BedroomLights.Choice(rawValue: bedroomLights) ?? .unset }
+
+    private var lightsButton: some View {
+        let lit = BedroomLights.isLit(lightsChoice)
+        return GlassIconButton(
+            symbol: lit ? "lightbulb.fill" : "lightbulb", label: lit ? "Turn the lights off" : "Turn the lights on"
+        ) {
+            bedroomLights = BedroomLights.toggled(lightsChoice).rawValue
+        }
+        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
+        .accessibilityIdentifier("roomLights")
+    }
+
+    /// Wakes at six, morning and evening, so the light switch comes and goes on time.
+    private func followLightsClock() async {
+        while !Task.isCancelled {
+            let next = BedroomLights.nextChange(after: .now)
+            guard (try? await Task.sleep(for: .seconds(max(1, next.timeIntervalSinceNow + 1)))) != nil else { return }
+            lightsClock = .now
+        }
     }
 
     /// The header's and the tab bar's glass: a perf run's arm, flat while Labs → Performance has it off.
@@ -538,8 +607,12 @@ struct HomeView: View {
             motes: perfLab.isOn(.motes) && plan.motes,
             sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,
             rendering: RoomRendering(
-                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr),
-                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0))
+                antialiasing: perfLab.isOn(.msaa) && plan.antialiasing, hdr: perfLab.isOn(.hdr) && plan.hdr,
+                splatRate: [rate, plan.splatRate].filter { $0 > 0 }.min() ?? 0,
+                activeRate: plan.activeRate, idleRate: plan.idleRate, scale: plan.scale, bloom: plan.bloom,
+                sunShadow: plan.sunShadow, widestLightOnly: plan.widestLightOnly, ambientLift: plan.ambientLift,
+                pulseSlowdown: plan.pulseSlowdown),
+            lights: BedroomLights.lamps(lightsChoice, at: lightsClock), lightsFade: !reduceMotion)
     }
 
     private var arranging: Bool { state.decor.state.isArranging }

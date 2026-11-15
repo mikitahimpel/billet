@@ -5,6 +5,7 @@ import Observation
 import Pet
 import RealityKit
 import RoomInterface
+import ServerSync
 import SwiftUI
 import WidgetInterface
 import WidgetKit
@@ -42,7 +43,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
 
     @ObservationIgnored private let usesStandIn: Bool
     @ObservationIgnored private let ownLoop: Bool
-    /// The renderer and frame loop the room draws with when Labs asks for them, kept for the app's life: the room's
+    /// The renderer and frame loop the room draws with, kept for the app's life: the room's
     /// entities live in it, and a renderer freed and made again would draw them blank.
     @ObservationIgnored private(set) lazy var loop: RoomRenderLoop? = ownLoop ? RoomRenderLoop() : nil
     @ObservationIgnored private lazy var standIn = CatRoom()
@@ -51,12 +52,21 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored private var polaroids: [UIImage] = []
     @ObservationIgnored private var motes = false
     @ObservationIgnored let decorStage = DecorStage()
+    @ObservationIgnored let perf = RoomPerfCoordinator()
+    /// What Labs switches off, and what the quality tier does; the scene holds back both.
+    @ObservationIgnored var labsSwitches = RoomPerfSwitches()
+    @ObservationIgnored private var governed = RoomRendering()
+    @ObservationIgnored private var lampChoice: Bool?
+    @ObservationIgnored private var lampsFade = true
+    /// Where the player's finger is and was, and when a game began, for the quality governor's idea of a quiet room.
+    @ObservationIgnored private var fingerDown = false
+    @ObservationIgnored private var lastTouch = ProcessInfo.processInfo.systemUptime
+    @ObservationIgnored private var lastMoved = ProcessInfo.processInfo.systemUptime
+    @ObservationIgnored private var gameStarted: TimeInterval?
     @ObservationIgnored var decor = RoomDecor()
     @ObservationIgnored var decorRetries = 0
     @ObservationIgnored private var sway = true
     @ObservationIgnored private var pins: [BoardPin] = []
-    /// The scenery last picked for each game, for the next time it is played.
-    @ObservationIgnored private var picked: [MiniGame: GameScenery] = [:]
     @ObservationIgnored private var partnerNotice = PartnerNoticeMachine.State.away
     @ObservationIgnored private let defaults: UserDefaults
     /// A homecoming not told yet: since when this phone was away, and until when the partner's care still counts as
@@ -70,11 +80,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     init(usesStandIn: Bool = UserDefaults.standard.bool(forKey: "uitestNoRoom"), catLife: CatLife = CatRoom.catLife,
          defaults: UserDefaults = .standard) {
         self.usesStandIn = usesStandIn
-        #if DEBUG || LABS_YES
+        // On unless Labs puts the room back on a `RealityView`, which draws every frame the screen offers.
         ownLoop = PerfLabMachine.State.saved(in: defaults).isOn(.ownLoop)
-        #else
-        ownLoop = false
-        #endif
         self.catLife = catLife
         self.defaults = defaults
         (events, emit) = AsyncStream.makeStream(bufferingPolicy: .bufferingNewest(8))
@@ -124,7 +131,78 @@ final class RoomController: RoomControlling, CatStatusProviding {
         room.onShowcase = { [weak self] label in withAnimation(.snappy(duration: 0.25)) { self?.showcase = label } }
         if !motes { Self.show(motes: false, in: room) }
         room.swaying = sway
+        room.pulseSlowdown = Float(governed.pulseSlowdown)
+        room.ambientLift = Float(governed.ambientLift)
+        if let city = room as? CityRoomScene { city.lampChoice = lampChoice; city.lampsFade = lampsFade }
+        perf.lights(in: room)
     }
+
+    /// Brings the scene to what the quality tier asks beyond the Labs switches: the pulse rates, the sun's shadow, the
+    /// lights and the bloom.
+    func setRendering(_ rendering: RoomRendering) {
+        governed = rendering
+        for room in [home, city, board].compactMap({ $0 }) {
+            room.pulseSlowdown = Float(rendering.pulseSlowdown)
+            room.ambientLift = Float(rendering.ambientLift)
+        }
+        applySwitches()
+    }
+
+    /// The player's choice for the Bedroom's lamps, and whether they ease to it.
+    func setLights(_ choice: Bool?, fades: Bool) {
+        lampChoice = choice
+        lampsFade = fades
+        city?.lampChoice = choice
+        city?.lampsFade = fades
+    }
+
+    func applySwitches() {
+        var next = labsSwitches
+        next.noSunShadow = next.noSunShadow || !governed.sunShadow
+        next.fewerLights = next.fewerLights || governed.widestLightOnly
+        next.noBloom = next.noBloom || !governed.bloom
+        let furnitureChanged =
+            next.mergeFurniture != perf.switches.mergeFurniture || next.bakedBlobs != perf.switches.bakedBlobs
+        let meshesChanged = next.fullMeshes != perf.switches.fullMeshes
+        guard perf.set(next) else { return }
+        for room in [home, city, board].compactMap({ $0 }) { perf.lights(in: room) }
+        if meshesChanged {
+            // A merged copy of the furniture holds the old geometry: split it, and it builds again from the new.
+            #if DEBUG || LABS_YES
+            FurnitureMerge.split(decorStage.root)
+            if let city { FurnitureMerge.split(city.decorStage.root) }
+            #endif
+            for room in [home, city, board].compactMap({ $0 }) { perf.meshes(in: room) }
+        }
+        #if DEBUG || LABS_YES
+        if furnitureChanged || meshesChanged { perfDecorChanged() }
+        #endif
+    }
+
+    // MARK: Quiet
+
+    /// A finger went down on the room or came up.
+    func fingerMoved(_ down: Bool) {
+        fingerDown = down
+        lastTouch = ProcessInfo.processInfo.systemUptime
+    }
+
+    /// The room came on screen or left it: either way the player is here, so it is not a room nobody touches.
+    func looked() { lastTouch = ProcessInfo.processInfo.systemUptime }
+
+    /// What the quality governor reads: seconds since a finger touched the room or anything in it moved, and whether a
+    /// change of look now would be seen as a hitch (a drag, a game's first seconds, the pieces being arranged).
+    func quiet(now: TimeInterval = ProcessInfo.processInfo.systemUptime) -> (idle: TimeInterval, busy: Bool) {
+        if current?.isActive == true { lastMoved = now }
+        let gameBegan = game != nil && gameStarted.map { now - $0 < Self.gameGrace } == true
+        let dragging = fingerDown && now - lastTouch < Self.dragGrace
+        return (now - max(lastTouch, lastMoved), dragging || gameBegan || decor.isArranging)
+    }
+
+    /// Seconds a game's first moments are held at the look it began with.
+    static let gameGrace: TimeInterval = 10
+    /// A finger is taken as lifted after this long even if its gesture never said so (a cancelled one does not).
+    static let dragGrace: TimeInterval = 30
 
     /// Lets every room sway and pulse, or holds it still.
     func setSway(_ on: Bool) {
@@ -174,6 +252,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
                 let built = CityRoomScene()
                 wire(built)
                 city = built
+                built.arrange(decor)
             }
         }
     }
@@ -297,7 +376,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     func playAll() { current?.playAll() }
 
     func play(_ game: MiniGame) {
-        scenery = GameScenery.start(game, last: picked[game])
+        gameStarted = ProcessInfo.processInfo.systemUptime
+        scenery = GameScenery.start(game)
         if scenery.isCorner, !usesStandIn { corner = TabletopRoom(scenery: scenery) }
         withAnimation(.easeInOut(duration: 0.25)) { self.game = game }
     }
@@ -306,24 +386,6 @@ final class RoomController: RoomControlling, CatStatusProviding {
         if let corner, let room = current { corner.leave(to: room) }
         withAnimation(.easeInOut(duration: 0.25)) { game = nil }
         corner = nil
-    }
-
-    /// Moves the game being played to `next`: one corner is dressed as another with the game carrying on; between the
-    /// room and a corner the game starts over there, once the game layer has closed it here.
-    func showScenery(_ next: GameScenery) {
-        guard let game, next != scenery, GameScenery.options(for: game).contains(next) else { return }
-        picked[game] = next
-        let was = scenery
-        withAnimation(.easeInOut(duration: 0.25)) { scenery = next }
-        guard !usesStandIn else { return }
-        switch (was.isCorner, next.isCorner) {
-        case (true, true): corner?.dress(next)
-        case (false, true): corner = TabletopRoom(scenery: next)
-        case (true, false):
-            if let corner, let room = current { corner.leave(to: room) }
-            corner = nil
-        case (false, false): break
-        }
     }
 
     /// True while the game is played in a corner of its own, not in the room.

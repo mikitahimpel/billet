@@ -4,6 +4,7 @@ import { LocalDay } from "@billet/contracts-domain/coins";
 import { EpochMillis, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
 import { MoodCheckIn } from "@billet/contracts-domain/mood";
+import { PostageId } from "@billet/contracts-domain/postage";
 import { LoveStreak } from "@billet/contracts-domain/streak";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
@@ -39,7 +40,8 @@ export type RoomCat = typeof RoomCat.Type;
 
 /** The pair's coins: the balance, and what was earned on `day` against each daily cap. */
 export const RoomWallet = Schema.Struct({
-  balance: Count,
+  /** Signed: only an Apple refund of spent coins takes it below 0. */
+  balance: Schema.Int,
   /** The local day the earned counts are for, absent before the first coin is earned. */
   day: Schema.optionalKey(LocalDay),
   care: Count,
@@ -66,6 +68,8 @@ export const RoomState = Schema.TaggedUnion({
     cat: Schema.optionalKey(RoomCat),
     inks: Schema.Array(InkId),
     items: Schema.Array(RoomItemId),
+    /** The stamps and seals the pair unlocked, in the order it got them. */
+    postage: Schema.Array(PostageId).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),
     /** Pieces the pair wishes for, in the order they were wished. */
     wishlist: Schema.Array(RoomItemId),
     bonuses: Schema.Array(CollectionId).pipe(Schema.withDecodingDefaultKey(Effect.succeed([]))),

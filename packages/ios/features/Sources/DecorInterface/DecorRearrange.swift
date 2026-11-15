@@ -30,6 +30,8 @@ extension DecorLayout {
     case swapped(DecorLayout, with: String)
     /// The piece stands there and the one that was in the way moved aside.
     case nudged(DecorLayout, other: String, to: Placement)
+    /// It did not fit where it was let go, so it stands at the nearest spot that does, within `slideReach`.
+    case slid(DecorLayout, to: Placement)
     case rejected(Verdict)
   }
 
@@ -38,7 +40,7 @@ extension DecorLayout {
     guard let item = DecorItem.item(shopID: placement.item),
       let span = Self.span(of: placement, item: item)
     else { return [] }
-    return allPlacements.compactMap { other in
+    return allPlacements.filter { $0.space == placement.space }.compactMap { other in
       guard other.item != placement.item, other.surface == placement.surface,
         let otherItem = DecorItem.item(shopID: other.item),
         let otherSpan = Self.span(of: other, item: otherItem)
@@ -49,14 +51,27 @@ extension DecorLayout {
   }
 
   /// Puts a piece on `placement`: where it fits it stands; on one other piece it swaps with it when both fit
-  /// in each other's place, else moves it aside to the nearest spot that fits, else is rejected.
+  /// in each other's place, else moves it aside to the nearest spot that fits; otherwise it slides to the
+  /// nearest spot that fits within `slideReach` cells, else is rejected.
   public func dropping(_ placement: Placement, in room: DecorRoom = .home) -> Drop {
     let verdict = verdict(placement, in: room)
     if verdict == .fits { return .fits(putting(placement)) }
+    if let exchanged = exchanging(placement, verdict: verdict, in: room) { return exchanged }
+    if let spot = nearestFit(to: placement, in: room),
+      Self.cells(from: placement, to: spot) <= Self.slideReach
+    {
+      return .slid(putting(spot), to: spot)
+    }
+    return .rejected(verdict)
+  }
+
+  /// A swap with the one piece in the way, or that piece moved aside; nil when neither works.
+  private func exchanging(_ placement: Placement, verdict: Verdict, in room: DecorRoom) -> Drop? {
     let blocking = blockers(of: placement)
     guard verdict == .occupied, blocking.count == 1, let other = self.placement(of: blocking[0]),
-      let mine = self.placement(of: placement.item)
-    else { return .rejected(verdict) }
+      let mine = self.placement(of: placement.item),
+      DecorItem.item(shopID: other.item)?.isAnchored != true
+    else { return nil }
 
     if mine.surface == other.surface {
       let lifted = storing(placement.item)
@@ -75,12 +90,27 @@ extension DecorLayout {
     {
       return .nudged(aside.putting(spot), other: other.item, to: spot)
     }
-    return .rejected(verdict)
+    return nil
   }
 
-  /// The room as a pair that never arranged it has it: the room's own furniture at home, nothing the player
-  /// bought stood until it is settled again.
+  /// A room as a pair that never arranged it has it: its own furniture at home. The living room also takes
+  /// every bought piece that is not in the bedroom, as it settles; the bedroom's own go to the closet. The
+  /// other room is left as it is.
   public func reset(owned: Set<String>, in room: DecorRoom = .home) -> DecorLayout {
-    DecorLayout().settled(owned: owned, in: room)
+    func isOwn(_ id: String, of space: DecorSpace) -> Bool {
+      DecorItem.item(shopID: id)?.base?.space == space
+    }
+    let others = placements.filter { $0.space != room.space }
+    switch room.space {
+    case .living:
+      let away = stored.filter { isOwn($0, of: .bedroom) }
+      return DecorLayout(placements: others, stored: DecorItem.starters.union(away))
+        .settled(owned: owned, in: room)
+    case .bedroom:
+      let bought = placements.filter { $0.space == .bedroom && !isOwn($0.item, of: .bedroom) }
+        .map(\.item)
+      let kept = stored.filter { !isOwn($0, of: .bedroom) }
+      return DecorLayout(placements: others, stored: kept.union(bought))
+    }
   }
 }

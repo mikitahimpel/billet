@@ -2,8 +2,9 @@ import Foundation
 import RoomInterface
 
 /// Grey is the original cat; every other coat is a billet-gpu recolour differing only in each splat's `f_dc_0...2`.
-/// The app ships those (`Coats/<pose>-<coat>.fdc`, 3 little-endian floats per splat, PLY order) over a Caches copy
-/// of the original PLY, byte for byte billet-gpu's (`CatCoatTests`). Meshes wear `Coats/<model>Color-<coat>.jpg`.
+/// The app ships those (`Coats/<pose>-<coat>.fdh`, 3 little-endian half floats per splat, PLY order) over a Caches copy
+/// of the original PLY. A half float is within 0.002 of billet-gpu's `f_dc`, under a fifth of an 8-bit colour level
+/// (`CatCoatTests`). Meshes wear `Coats/<model>Color-<coat>.jpg`.
 typealias CatCoat = RoomInterface.CatCoat
 
 nonisolated extension CatCoat {
@@ -48,23 +49,25 @@ nonisolated extension CatCoat {
         return bundle
     }
 
-    /// The original PLY of `pose` with this coat's colours (`Coats/<pose>-<coat>.fdc`) laid over each splat's `f_dc`.
+    /// The original PLY of `pose` with this coat's colours (`Coats/<pose>-<coat>.fdh`) laid over each splat's `f_dc`.
     func dressedPLY(_ pose: String, from bundle: Bundle = .main) throws -> Data {
         let name = "\(pose)-\(rawValue)"
         guard let plyURL = bundle.url(forResource: pose, withExtension: "ply") else { throw Failure.missing(pose) }
-        guard let url = bundle.url(forResource: name, withExtension: "fdc") else { throw Failure.missing(name) }
+        guard let url = bundle.url(forResource: name, withExtension: "fdh") else { throw Failure.missing(name) }
         var ply = try Data(contentsOf: plyURL)
         let colours = try Data(contentsOf: url)
         guard let end = ply.range(of: Data("end_header\n".utf8))?.upperBound else { throw Failure.mismatch(pose) }
         let stride = 14 * MemoryLayout<Float>.size, offset = 11 * MemoryLayout<Float>.size
-        let size = 3 * MemoryLayout<Float>.size
+        let size = 3 * MemoryLayout<Float16>.size
         let count = (ply.count - end) / stride
         guard (ply.count - end) % stride == 0, colours.count == count * size else { throw Failure.mismatch(name) }
         ply.withUnsafeMutableBytes { out in
             colours.withUnsafeBytes { from in
                 for index in 0..<count {
-                    (out.baseAddress! + end + index * stride + offset)
-                        .copyMemory(from: from.baseAddress! + index * size, byteCount: size)
+                    for channel in 0..<3 {
+                        let colour = from.loadUnaligned(fromByteOffset: index * size + channel * MemoryLayout<Float16>.size, as: Float16.self)
+                        out.storeBytes(of: Float(colour), toByteOffset: end + index * stride + offset + channel * MemoryLayout<Float>.size, as: Float.self)
+                    }
                 }
             }
         }

@@ -156,6 +156,7 @@ const dataLayer = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>) =>
       accountId: env.ANALYTICS_ACCOUNT_ID,
       token: env.ANALYTICS_READ_TOKEN,
       stage: env.STAGE,
+      stack: env.STACK,
     }),
     OnboardingCatalogue.seed,
     Experiments.with(experiments),

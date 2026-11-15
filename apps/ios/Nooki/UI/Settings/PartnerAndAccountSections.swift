@@ -1,4 +1,6 @@
+import AuthenticationServices
 import Design
+import FeatureOnboarding
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -14,10 +16,12 @@ struct PartnerAndAccountSections: View {
     var erase: () -> Void
 
     @Environment(\.startOver) private var startOver
+    @Environment(\.authorizationController) private var authorizationController
     @State private var confirming: Action?
     @State private var reporting = false
     @State private var working: Busy?
     @State private var failed = false
+    @State private var appleFailed = false
     @State private var reported = false
 
     private enum Busy {
@@ -64,10 +68,12 @@ struct PartnerAndAccountSections: View {
         } message: {
             Text("What happened?")
         }
-        .alert("That didn't work", isPresented: $failed) {
+        .alert(appleFailed ? "Apple didn't confirm" : "That didn't work", isPresented: showingFailure) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("The server didn't answer. Nothing changed; try again in a moment.")
+            Text(appleFailed
+                 ? "Nothing was deleted. Try again in a moment."
+                 : "The server didn't answer. Nothing changed; try again in a moment.")
         }
     }
 
@@ -80,6 +86,10 @@ struct PartnerAndAccountSections: View {
             }
         }
         .buttonStyle(PressScaleStyle())
+    }
+
+    private var showingFailure: Binding<Bool> {
+        Binding(get: { failed || appleFailed }, set: { if !$0 { failed = false; appleFailed = false } })
     }
 
     private var isConfirming: Binding<Bool> {
@@ -109,7 +119,8 @@ struct PartnerAndAccountSections: View {
         case .block: "You are unpaired, and neither of you can pair with the other again."
         case .deleteAccount:
             "Your account and what you sent are deleted from the server, your partner is unpaired, and "
-                + "everything on this phone is erased. This can't be undone."
+                + "everything on this phone is erased. If you signed in with Apple, Apple asks you once more, "
+                + "and Ourio's access to your Apple ID ends. This can't be undone."
         }
     }
 
@@ -130,10 +141,16 @@ struct PartnerAndAccountSections: View {
                 case .unpair: try await session.unpair()
                 case .block: try await session.blockPartner()
                 case .deleteAccount:
-                    try await session.deleteAccount()
+                    var code: String?
+                    if try await session.isAppleLinked() {
+                        code = try await AppleAuthorizationCode.fresh(using: authorizationController)
+                    }
+                    try await session.deleteAccount(appleAuthorizationCode: code)
                     erase()
                     startOver()
                 }
+            } catch let failure as AppleAuthorizationCode.Failure {
+                appleFailed = failure == .failed
             } catch {
                 failed = true
             }

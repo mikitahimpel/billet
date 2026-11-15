@@ -1,7 +1,6 @@
 import GamesInterface
 
-/// Where a mini-game is played: the room itself, or one of the close-up corners. The game's scene
-/// switch offers the ones that suit it, in this order.
+/// Where a mini-game is played: the room itself, or one of the close-up corners.
 public enum GameScenery: String, CaseIterable, Hashable, Sendable {
   case room, rug, kitchen
 
@@ -21,7 +20,7 @@ public enum GameScenery: String, CaseIterable, Hashable, Sendable {
     }
   }
 
-  /// The first is where the game starts.
+  /// The scenes that suit the game; it is played in the first.
   public static func options(for game: MiniGame) -> [GameScenery] {
     switch game {
     case .feed, .water: [.kitchen]
@@ -30,10 +29,5 @@ public enum GameScenery: String, CaseIterable, Hashable, Sendable {
     }
   }
 
-  /// Where `game` starts: the place last picked for it, if it still offers it.
-  public static func start(_ game: MiniGame, last: GameScenery?) -> GameScenery {
-    let options = options(for: game)
-    if let last, options.contains(last) { return last }
-    return options[0]
-  }
+  public static func start(_ game: MiniGame) -> GameScenery { options(for: game)[0] }
 }

@@ -93,9 +93,11 @@ export const makeInMemoryPairingRepository = (): InMemoryPairingRepository => {
           coins: (before?.coins ?? 0) + kept.coins,
           inks: [...new Set([...(before?.inks ?? []), ...kept.inks])],
           items: [...new Set([...(before?.items ?? []), ...kept.items])],
+          postage: [...new Set([...(before?.postage ?? []), ...kept.postage])],
         });
       }),
-    kept: (userId) => Effect.sync(() => keeping.get(userId) ?? { coins: 0, inks: [], items: [] }),
+    kept: (userId) =>
+      Effect.sync(() => keeping.get(userId) ?? { coins: 0, inks: [], items: [], postage: [] }),
     clearKept: (userId) => Effect.sync(() => void keeping.delete(userId)),
     saveReport: (report) => Effect.sync(() => void reports.push(report)),
   };

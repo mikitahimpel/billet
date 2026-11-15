@@ -3,7 +3,7 @@ import { HttpRouter } from "effect/http";
 import { afterAll, describe, expect, it } from "vitest";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
 import { RoomDecision, RoomRejection } from "@billet/backend-pair-room/room-decision";
-import { LocalDay } from "@billet/contracts-domain/coins";
+import { CoinEntryId, LocalDay } from "@billet/contracts-domain/coins";
 import { DeviceId } from "@billet/contracts-domain/ids";
 import { collectionOf, starterItems, welcomeCoins } from "@billet/contracts-domain/shop";
 import { CoinsResponse, EarnResponse } from "@billet/contracts-http-api/coins";
@@ -118,7 +118,7 @@ describe("the coin routes", () => {
   it("pay an app earn once per ref", async () => {
     const earn = { event: { _tag: "DateRated", plan: "plan-1" }, utcOffsetSeconds: 3600 };
     const first = decodeEarn(await (await call("POST", "/v1/coins/earn", "ana", earn)).json());
-    expect(first.entry).toMatchObject({ id: "earn:plan:plan-1", amount: 30 });
+    expect(first.entry).toMatchObject({ id: "earn:plan:plan-1", amount: 6 });
     const again = await (await call("POST", "/v1/coins/earn", "ben", earn)).json();
     expect(again).toEqual(first);
   });
@@ -133,10 +133,16 @@ describe("the coin routes", () => {
   });
 
   it("pay a complete collection's bonus once, to either partner", async () => {
-    // The pieces cost more than the welcome coins, so the pair earns some first.
-    for (let n = 0; n < 12; n++) {
-      await call("POST", "/v1/coins/earn", "fin", { event: { _tag: "DateRated", plan: `p${n}` } });
-    }
+    // The pieces cost more than the welcome coins, so the pair buys a pack first.
+    await call("GET", "/v1/coins", "fin");
+    await Effect.runPromise(
+      world.pairRooms.creditPurchase(pair("pair-c"), {
+        kind: "purchase",
+        id: Schema.decodeSync(CoinEntryId)("purchase:1"),
+        ref: "pack",
+        coins: 2_000,
+      }),
+    );
     const missing = (collectionOf("cozy-autumn")?.items ?? []).filter(
       (id) => !starterItems.includes(id),
     );
@@ -151,7 +157,7 @@ describe("the coin routes", () => {
     expect(paid.status).toBe(200);
     const bonus = decodeBonus(await paid.json());
     expect(bonus).toMatchObject({
-      entry: { id: "bonus:cozy-autumn", amount: 150 },
+      entry: { id: "bonus:cozy-autumn", amount: collectionOf("cozy-autumn")?.bonus },
       shop: { bonuses: ["cozy-autumn"] },
     });
     const again = await call("POST", "/v1/shop/bonus", "gus", { collection: "cozy-autumn" });

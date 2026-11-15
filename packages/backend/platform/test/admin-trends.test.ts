@@ -148,6 +148,7 @@ describe("AnalyticsEngineReaderLive", () => {
       { ...config, accountId: "" },
       { ...config, stage: undefined },
       { ...config, stage: "Dev Stage" },
+      { ...config, stack: "Ourio" },
     ]) {
       const reader = await readerOf(AnalyticsEngineReaderLive(partial, () => Promise.reject()));
       expect(Option.isNone(await Effect.runPromise(reader.trend(query, "2026-08-07", today)))).toBe(
@@ -178,9 +179,22 @@ describe("AnalyticsEngineReaderLive", () => {
     const sql = String(sent[0]?.init?.body);
     expect(sql).toMatch(/^SELECT /);
     expect(sql.match(/SELECT/g)).toHaveLength(1);
-    expect(sql).toContain("FROM billet_dev_events");
+    expect(sql).toContain("FROM ourio_dev_events");
     expect(sql).toContain("blob1 = 'AppOpened'");
     expect(sql).toContain("toDateTime('2026-11-05 00:00:00')");
+  });
+
+  it("reads the stack's own dataset", async () => {
+    const sent: string[] = [];
+    const fetcher = (async (_url: string, init?: RequestInit) => {
+      sent.push(String(init?.body));
+      return Response.json({ data: [] });
+    }) as unknown as typeof fetch;
+    const reader = await readerOf(
+      AnalyticsEngineReaderLive({ ...config, stage: "prod", stack: "ourio" }, fetcher),
+    );
+    await Effect.runPromise(reader.trend(query, "2026-08-07", today));
+    expect(sent[0]).toContain("FROM ourio_prod_events");
   });
 
   it("fails with a fixed reason on an error answer, never its body", async () => {

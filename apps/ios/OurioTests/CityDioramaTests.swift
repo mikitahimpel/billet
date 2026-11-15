@@ -48,4 +48,27 @@ struct CityDioramaTests {
         let a = CityDiorama.sky(hour: hour), b = CityDiorama.sky(hour: hour + 0.5)
         #expect(simd_length(a.top - b.top) < 0.45 && simd_length(a.horizon - b.horizon) < 0.45)
     }
+
+    @Test(arguments: [true, false])
+    func aLayerAlreadyCoveringTheOpeningStaysWhereItIs(isSky: Bool) {
+        let frame = CGRect(x: -6, y: -4, width: 112, height: 70)
+        #expect(CityDiorama.covering(frame, opening: CGRect(x: 0, y: 0, width: 100, height: 58), isSky: isSky) == frame)
+    }
+
+    @Test func aPictureLayerNeverMovesUpOrDownAndSlidesSidewaysOnlyAsFarAsItMust() {
+        let frame = CGRect(x: 0, y: 0, width: 112, height: 70)
+        let low = CGRect(x: 6, y: 20, width: 100, height: 58)
+        #expect(CityDiorama.covering(frame, opening: low, isSky: false) == frame)
+        let turned = CGRect(x: 30, y: 4, width: 100, height: 58)
+        #expect(CityDiorama.covering(frame, opening: turned, isSky: false) == CGRect(x: 18, y: 0, width: 112, height: 70))
+        let left = CGRect(x: -20, y: 4, width: 100, height: 58)
+        #expect(CityDiorama.covering(frame, opening: left, isSky: false) == CGRect(x: -20, y: 0, width: 112, height: 70))
+    }
+
+    @Test func theSkyGrowsAndSlidesOverAnOpeningThatTurnedPastIt() {
+        let frame = CGRect(x: 0, y: 0, width: 100, height: 60)
+        for opening in [CGRect(x: 40, y: 0, width: 160, height: 90), CGRect(x: -50, y: -20, width: 100, height: 58)] {
+            #expect(CityDiorama.covering(frame, opening: opening, isSky: true).contains(opening))
+        }
+    }
 }

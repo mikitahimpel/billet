@@ -21,7 +21,8 @@ public nonisolated enum SignInFailure: Equatable, Sendable {
     case .api(.unauthorized), .api(.invalidRequest): self = .rejected
     case .api(.appleIdInUse): self = .appleIdInUse
     case .api(.unavailable), .api(.notFound), .api(.invalidInvite), .api(.alreadyPaired),
-      .api(.invalidPurchase), .api(.inkNotOwned), .api(.notEnoughCoins), .api(.alreadyOwned),
+      .api(.invalidPurchase), .api(.inkNotOwned), .api(.postageNotOwned), .api(.notEnoughCoins),
+      .api(.alreadyOwned),
       .api(.collectionIncomplete), .api(.giftTaken), .api(.bonusTaken), .api(.catNotAdopted),
       .api(.streakNotRestorable), .api(.priceChanged), .api(.layoutRefused),
       .network, .status, .maintenance, .encoding, .decoding:

@@ -2,7 +2,7 @@
 
 Run by bake.sh, headless:
 
-  blender -b -P bake_shell.py -- <room> <shell.json> <out.usdz> [--size 2048] [--samples 128] [--furniture <usdz>]
+  blender -b -P bake_shell.py -- <room> <shell.json> <out.usdz> [--size 2048] [--samples 128]
 
 `shell.json` is what the app's BakedShellTests.export wrote: the room's static boxes, spheres and cylinders with
 their transforms and materials, in the room's own space (meters, Y up). Everything is merged into one mesh, unwrapped to one atlas
@@ -32,7 +32,6 @@ def option(name, default):
 
 SIZE = int(option("--size", 2048))
 SAMPLES = int(option("--samples", 128))
-FURNITURE = option("--furniture", None)
 QUALITY = int(option("--quality", 88))
 # Cycles' scene-linear result is scaled by this before it is written, to match the look RealityKit gives the live
 # room (compared on screenshots of both). One number per room.
@@ -288,17 +287,6 @@ bm.to_mesh(shell.data)
 bm.free()
 log("kept", len(shell.data.polygons), "triangles after removing hidden faces")
 
-occluders = []
-if FURNITURE:
-    before = set(bpy.data.objects)
-    bpy.ops.wm.usd_import(filepath=FURNITURE)
-    for obj in set(bpy.data.objects) - before:
-        obj.visible_camera = False
-        obj.is_shadow_catcher = False
-        occluders.append(obj)
-    # RealityKit's USD is Y up; Blender's importer turns it into Z up.
-    log("furniture:", len(occluders), "objects")
-
 bpy.ops.object.select_all(action="DESELECT")
 shell.select_set(True)
 bpy.context.view_layer.objects.active = shell
@@ -415,8 +403,6 @@ tree.links.new(tex.outputs["Color"], bsdf.inputs["Base Color"])
 bsdf.inputs["Roughness"].default_value = 1
 bsdf.inputs["Specular IOR Level"].default_value = 0
 
-for obj in occluders:
-    bpy.data.objects.remove(obj, do_unlink=True)
 for obj in list(bpy.data.objects):
     if obj.type == "LIGHT":
         bpy.data.objects.remove(obj, do_unlink=True)

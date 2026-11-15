@@ -35,7 +35,7 @@ final class GameSparkles {
     func burst(at point: SIMD3<Float>, big: Bool) {
         guard var p = entity.components[ParticleEmitterComponent.self] else { return }
         entity.position = point
-        p.burstCount = big ? 70 : 16
+        p.burstCount = big ? 80 : 24
         p.speed = big ? 0.16 : 0.09
         p.burst()
         entity.components.set(p)

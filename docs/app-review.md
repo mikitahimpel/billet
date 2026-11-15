@@ -3,8 +3,8 @@
 **Status: built; needs the owner's OK and a code on prod before the first submission.** The
 backend is `packages/backend/review` (`ReviewService`, `POST /v1/review/claim`), the controls are
 the admin's **App Review** page ([admin.md](admin.md#app-review-pair)), and the app's invite field
-takes the 26-symbol code and sends it to the review route. Not built: a seed of notes and photos
-for the partner, dropping the reviewer's push tokens on a wipe, and leaving the review pair out of
+takes the 26-symbol code and sends it to the review route. Each claim starts the partner's bot with
+three welcome notes. Not built: photos and a name for the partner, dropping the reviewer's push tokens on a wipe, and leaving the review pair out of
 experiment assignment (it is already out of the funnel).
 
 App Review guideline 2.1 needs the reviewer to use the whole app. Billet needs two paired
@@ -31,9 +31,9 @@ Each piece is a plain addition, with no special case for the reviewer inside the
 and pairing rules: a claim makes an ordinary invite for the partner and claims it for the
 reviewer.
 
-- **The review partner.** One ordinary user that we create and own, on prod only, from a seed
-  script run by the owner (never by an agent). It has a name, a seeded cat state, a handful of
-  notes and photos, and a saved profile. It is a real `users` row with a pair slot, not a bot
+- **The review partner.** One ordinary user that we create and own, on prod only, made by the first **New code** in the
+  admin (never by an agent). Its room starts with three welcome notes from its bot; photos and a
+  name are not built. It is a real `users` row with a pair slot, not a bot
   that skips checks.
 - **A reserved code type.** Today an invite is 10 symbols from a 32-symbol alphabet, valid 24
   hours, claimed once (`pairing-service.ts`). A review code is a different kind of row:
@@ -90,7 +90,7 @@ than reusing it.
 > The coin packs are off in this version: nothing in the app can be bought with money. Pairing
 > with a real partner works by sharing a 10-character invite code from **Us > Invite**; the code
 > above is the same screen with a longer code.
-> Contact: <SUPPORT_EMAIL>
+> Contact: ourio@mikitahimpel.com
 
 (Check the last two sentences against the release before submitting: the coin-pack line is true
 while the `payments` flag stays off, see `docs/release-flags.md`.)

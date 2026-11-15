@@ -123,6 +123,14 @@ const handlerFor = (email: string) =>
                     ledger: [],
                     notifications: [],
                   }),
+                economy: (since) =>
+                  Effect.succeed({
+                    days: [
+                      { day: since, source: "earn.care", credited: 40, debited: 0, entries: 4 },
+                      { day: since, source: "spend", credited: 0, debited: 60, entries: 1 },
+                    ],
+                    pairDays: [],
+                  }),
                 onboarding: Effect.succeed({
                   rows: [
                     { stepId: "age", kind: "Single", optionIds: ["age-18-24"], value: null },
@@ -657,6 +665,23 @@ describe("purchases", () => {
     expect(listed.body).toMatchObject({ ledger: [], notifications: [] });
     expect((await call(`${adminApi.purchases}?limit=0`)).status).toBe(400);
     expect((await call(adminApi.purchases, "POST", {})).status).toBe(404);
+  });
+});
+
+describe("economy", () => {
+  it("answers the range's days and totals, read-only, with the range and hold checked", async () => {
+    const report = await call(`${adminApi.economy}?range=7&hold=10`);
+    expect(report.status).toBe(200);
+    expect(report.body.days).toHaveLength(7);
+    expect(report.body).toMatchObject({
+      range: 7,
+      hoarding: { holdDays: 10, share: null },
+      totals: { minted: 40, spent: 60, refunded: 0 },
+      balance: { pairs: 0, median: null },
+    });
+    expect((await call(`${adminApi.economy}?range=0`)).status).toBe(400);
+    expect((await call(`${adminApi.economy}?hold=400`)).status).toBe(400);
+    expect((await call(adminApi.economy, "POST", {})).status).toBe(404);
   });
 });
 

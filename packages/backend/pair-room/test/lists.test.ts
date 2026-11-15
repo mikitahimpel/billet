@@ -286,9 +286,9 @@ describe("decide: lists", () => {
     const list = after([[alice, add(1)]], empty());
     const decision = accept(active, changeOf(tick(1), list, { by: bob }));
     expect(coinsOf(decision)).toEqual([
-      { id: `earn:list:${itemId(1)}`, kind: "earn", amount: 5, ref: itemId(1), at: noon },
+      { id: `earn:list:${itemId(1)}`, kind: "earn", amount: 1, ref: itemId(1), at: noon },
     ]);
-    expect(decision.state.wallet).toMatchObject({ balance: 5, lists: 5 });
+    expect(decision.state.wallet).toMatchObject({ balance: 1, lists: 1 });
     expect(decision.outputs.map((output) => output._tag)).toEqual(["ListSaved", "CoinsEntered"]);
   });
 

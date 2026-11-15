@@ -13,7 +13,12 @@ export const splitKept = (
   const extra = shop.coins - share * sorted.length;
   return sorted.map((userId, index) => [
     userId,
-    { coins: share + (index < extra ? 1 : 0), inks: shop.inks, items: shop.items },
+    {
+      coins: share + (index < extra ? 1 : 0),
+      inks: shop.inks,
+      items: shop.items,
+      postage: shop.postage,
+    },
   ]);
 };
 
@@ -22,4 +27,5 @@ export const mergeKept = (kept: ReadonlyArray<KeptPurchases>): KeptPurchases => 
   coins: kept.reduce((total, one) => total + one.coins, 0),
   inks: [...new Set(kept.flatMap((one) => one.inks))],
   items: [...new Set(kept.flatMap((one) => one.items))],
+  postage: [...new Set(kept.flatMap((one) => one.postage))],
 });

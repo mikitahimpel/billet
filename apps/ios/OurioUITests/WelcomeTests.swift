@@ -1,7 +1,8 @@
 import XCTest
 import notify
 
-/// The welcome screen fits the smallest iPhone and the largest text, and plays its timeline without visible jank.
+/// The welcome screen plays its timeline without visible jank. That it fits the smallest iPhone and the largest text
+/// is `OnboardingFitTests`.
 final class WelcomeTests: XCTestCase {
     @MainActor
     private func launch(textSize: String? = nil) -> XCUIApplication {
@@ -11,32 +12,6 @@ final class WelcomeTests: XCTestCase {
         if let textSize { app.launchArguments += ["-UIPreferredContentSizeCategoryName", textSize] }
         app.launch()
         return app
-    }
-
-    /// Everything the screen says sits inside the window, so nothing is cut off at the edge or off-centre.
-    @MainActor
-    private func assertFits(_ app: XCUIApplication, file: StaticString = #filePath, line: UInt = #line) {
-        let window = app.windows.firstMatch.frame
-        let title = app.staticTexts["A cat for the two of you"]
-        XCTAssertTrue(title.waitForExistence(timeout: 20), file: file, line: line)
-        let go = app.buttons["Let's go"]
-        XCTAssertTrue(go.waitForExistence(timeout: 20), file: file, line: line)
-        for element in [title, go, app.buttons["I have an invite code"]] where element.exists {
-            XCTAssertGreaterThanOrEqual(element.frame.minX, window.minX, "\(element.label)", file: file, line: line)
-            XCTAssertLessThanOrEqual(element.frame.maxX, window.maxX, "\(element.label)", file: file, line: line)
-        }
-        XCTAssertEqual(title.frame.midX, window.midX, accuracy: 2, "the title is centred", file: file, line: line)
-        XCTAssertLessThanOrEqual(go.frame.maxY, window.maxY, file: file, line: line)
-    }
-
-    @MainActor
-    func testWelcomeFitsTheScreen() {
-        assertFits(launch())
-    }
-
-    @MainActor
-    func testWelcomeFitsAtTheLargestText() {
-        assertFits(launch(textSize: "UICTContentSizeCategoryAccessibilityXXXL"))
     }
 
     @MainActor

@@ -33,7 +33,7 @@ struct RoomPiecesTests {
     }
 
     @MainActor @Test func everyBaseModelIsInTheBundle() async throws {
-        for item in DecorItem.baseItems {
+        for item in DecorItem.baseItems(in: .living) {
             _ = try await Entity(named: item.assetName, in: .main)
         }
     }

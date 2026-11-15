@@ -18,25 +18,4 @@ struct SharedMomentsTests {
         #expect(text.bodyAfterName == nil)
         #expect(reaction.bodyAfterName == "Reacted 🔥 to your photo")
     }
-
-    @MainActor
-    @Test func aReceiveWhileOneRunsGoesOnceMoreInsteadOfAlongside() async {
-        let gate = PhotoReceiving()
-        var runs = 0
-        var overlapping = false
-        var running = false
-        func body() async {
-            overlapping = overlapping || running
-            running = true
-            runs += 1
-            if runs == 1 {
-                await gate.run(body)
-                await gate.run(body)
-            }
-            running = false
-        }
-        await gate.run(body)
-        #expect(runs == 2)
-        #expect(!overlapping)
-    }
 }

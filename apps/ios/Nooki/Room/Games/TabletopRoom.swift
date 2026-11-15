@@ -7,6 +7,10 @@ import UIKit
 /// a floor and a wall dressed as the picked scenery, its own warm light and camera, and Mochi in her coat, borrowed
 /// from the room for as long as the game lasts. The camera sits low, near her eye line, so she can look up at the
 /// player.
+///
+/// The corner's lights cast no shadow map: a map fitted to the scene is refitted every frame something in it moves,
+/// and in a game something always does (she breathes, the bag tips, kibble flies), so every shadow edge on the floor
+/// this low camera makes large would swim or sparkle. What stands on the floor stands on a baked blob instead.
 final class TabletopRoom: CatRoom {
     static let floorTop: Float = 0.02
     static let catScale: Float = 0.68
@@ -16,11 +20,10 @@ final class TabletopRoom: CatRoom {
     private static let backRow: Float = wallAt + 0.06
 
     let camera = PerspectiveCamera()
-    private(set) var scenery: GameScenery
+    let scenery: GameScenery
     private let ibl = Entity()
     private let sun = Entity()
     private let fill = Entity()
-    private var dressing: Entity?
 
     override var framing: Framing {
         Framing(target: [0, 0.07, 0.02], direction: simd_normalize([0.1, 0.24, 1]), far: 3.2, near: 3.2)
@@ -34,30 +37,33 @@ final class TabletopRoom: CatRoom {
         self.scenery = scenery
         super.init()
         camera.camera.fieldOfViewInDegrees = 22
+        // The corner is a metre across seen from about three: a tight depth range keeps the 1 mm steps of rugs and
+        // worktops from fighting.
+        camera.camera.near = 1.2
+        camera.camera.far = 7
         root.addChild(camera)
         let framing = framing
         camera.look(at: framing.target, from: framing.target + framing.direction * framing.far, relativeTo: nil)
 
-        dressing = Self.dress(pivot, as: scenery)
+        Self.dress(pivot, as: scenery)
         buildCat(at: [0, Self.floorTop + 0.003, -0.1], rests: [.pi], scale: Self.catScale, wandering: false)
         buildLighting()
         buildMotes()
     }
 
-    /// Swaps the floor, wall and props for `next`'s, in place: the game on it carries on.
-    func dress(_ next: GameScenery) {
-        guard next != scenery, next.isCorner else { return }
-        scenery = next
-        dressing?.removeFromParent()
-        let built = Self.dress(pivot, as: next)
-        if let iblReceiver { built.forEachDescendant { $0.components.set(iblReceiver) } }
-        dressing = built
-        light(for: next)
+    /// The corner's camera stands still; a game's framing is the only thing that moves it.
+    func placeCamera(_ dt: Float) {
+        let framing = framing
+        var pose = CameraPose(eye: framing.target + framing.direction * framing.far, target: framing.target)
+        if let cameraAdjust { pose = cameraAdjust(dt, pose) }
+        guard pose != placed else { return }
+        placed = pose
+        camera.look(at: pose.target, from: pose.eye, relativeTo: nil)
     }
+    private var placed: CameraPose?
 
     private func buildLighting() {
         receiveAmbient(from: ibl)
-        Self.castShadow(sun)
         sun.look(at: .zero, from: [-0.6, 1.5, 0.8], relativeTo: nil)
         root.addChild(sun)
         fill.look(at: .zero, from: [1.5, 1.2, 1.6], relativeTo: nil)
@@ -89,6 +95,7 @@ final class TabletopRoom: CatRoom {
     }
 
     /// The floor, the wall behind her and a few props, all clear of the play area in front of her.
+    @discardableResult
     private static func dress(_ pivot: Entity, as scenery: GameScenery) -> Entity {
         if scenery == .kitchen { return KitchenSet.build(in: pivot, floorTop: floorTop) }
         let g = pivot.group()
@@ -98,8 +105,8 @@ final class TabletopRoom: CatRoom {
             rugCorner(g)
         case .room:
             g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
-            g.cylinder(0.002, 0.42, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, 0.02])
-            g.cylinder(0.0024, 0.36, Clay.matte(0xE9C9A0, roughness: 1), at: [0, top + 0.0012, 0.02])
+            g.cylinder(0.0014, 0.42, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0007, 0.02])
+            g.cylinder(0.0022, 0.36, Clay.matte(0xE9C9A0, roughness: 1), at: [0, top + 0.0011, 0.02])
             wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
             window(g, at: [0.2, 0.25, wallAt + 0.012])
             Props.bookStack(g, at: [0.14, top, backRow], tones: [0x6F8FB0, 0xE98A5B, 0x93A86A], rotation: .identity)
@@ -117,8 +124,8 @@ final class TabletopRoom: CatRoom {
         let top = floorTop
         let side: Float = -0.27
         g.box(3, 0.04, 3, r: 0.002, Clay.matte(0xCF8E58, roughness: 0.7), at: [0, 0, 0])
-        g.cylinder(0.002, 0.3, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.001, -0.02], scale: [1.25, 1, 1])
-        g.cylinder(0.0024, 0.25, Clay.matte(0xE9B8A0, roughness: 1), at: [0, top + 0.0012, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0014, 0.3, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0007, -0.02], scale: [1.25, 1, 1])
+        g.cylinder(0.0022, 0.25, Clay.matte(0xE9B8A0, roughness: 1), at: [0, top + 0.0011, -0.02], scale: [1.25, 1, 1])
         g.cylinder(0.0028, 0.17, Clay.matte(0xF3E6D2, roughness: 1), at: [0, top + 0.0014, -0.02], scale: [1.25, 1, 1])
         wall(g, tone: 0xF3E2CC, skirting: 0xE6CDAE)
         let left = g.group(at: [side, 0, 0], rotation: .y(.pi / 2))
@@ -193,6 +200,6 @@ struct CornerStage: View {
         for entity in Array(content.entities) where entity !== room?.root { content.remove(entity) }
         guard let room, !content.entities.contains(where: { $0 === room.root }) else { return }
         content.add(room.root)
-        room.start(on: content, viewer: room.camera, beforeProjecting: { _ in }, onFrame: { _ in })
+        room.start(on: content, viewer: room.camera, beforeProjecting: { [weak room] dt in room?.placeCamera(dt) }, onFrame: { _ in })
     }
 }

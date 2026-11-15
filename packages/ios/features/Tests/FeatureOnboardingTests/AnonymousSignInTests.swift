@@ -27,10 +27,22 @@ import Wire
     #expect(outputs == [.signIn(request: 2)])
   }
 
-  @Test func aLateAnswerIsDropped() {
+  @Test func aLateFailureIsDroppedButALateSessionCounts() {
     let state = M.State.signingIn(request: 2)
-    #expect(M.transition(state, .sessionSaved(request: 1)).0 == state)
     #expect(M.transition(state, .failed(.unavailable, request: 1)).0 == state)
+    #expect(M.transition(state, .sessionSaved(request: 1)) == (.signedIn, []))
+    #expect(M.transition(state, .sessionSaved(request: 3)).0 == state)
+  }
+
+  @Test func aRetryWhileSigningInStartsAnotherRequest() {
+    let (state, outputs) = M.transition(.signingIn(request: 1), .retried)
+    #expect(state == .signingIn(request: 2))
+    #expect(outputs == [.signIn(request: 2)])
+  }
+
+  @Test func aRetryOnceSignedInStartsNothing() {
+    #expect(M.transition(.signedIn, .retried) == (.signedIn, []))
+    #expect(M.transition(.idle, .retried) == (.idle, []))
   }
 
   @Test func appearingAgainStartsNothingNew() {

@@ -1,9 +1,11 @@
 // Alchemy v2 (beta), docs/alchemy.md. Physical names derive from the stack, the stage and the
-// logical ids. CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN are read only by a real deploy;
-// `alchemy dev` emulates every resource locally and needs no credentials.
+// logical ids; the Worker's is set by hand so its address reads well. CLOUDFLARE_ACCOUNT_ID and
+// CLOUDFLARE_API_TOKEN are read only by a real deploy; `alchemy dev` emulates every resource
+// locally and needs no credentials.
 import * as Cloudflare from "@alchemy.run/cloudflare";
 import { providers as drizzleProviders } from "@alchemy.run/drizzle/Providers";
 import { Schema } from "@alchemy.run/drizzle/Schema";
+import { apiWorkerName } from "@billet/backend-platform/service-names";
 import * as Alchemy from "alchemy";
 import * as State from "alchemy/State";
 import * as Config from "effect/Config";
@@ -14,6 +16,17 @@ import * as Layer from "effect/Layer";
 import * as Option from "effect/Option";
 import * as Path from "effect/Path";
 import * as D1State from "./alchemy-d1-state.ts";
+
+// The stack name: the prefix of every physical name (the Worker `<stack>-api` on prod and
+// `<stack>-api-<stage>` elsewhere, `<stack>-Database-<stage>-<hash>` and the like for the rest),
+// of the state database and of the events dataset, and the `<stack>-api` the Worker answers on
+// `/`. Every stage is `ourio`; ALCHEMY_STACK overrides it. A different name is a different stack:
+// nothing of the other one is touched or recreated, so the `billet` resources dev once used are
+// orphaned.
+const stack = process.env["ALCHEMY_STACK"] || "ourio";
+if (!/^[a-z][a-z0-9]*$/.test(stack)) {
+  throw new Error(`ALCHEMY_STACK must be lowercase letters and digits, got "${stack}"`);
+}
 
 // A deploy applies the committed migrations; a test fails if a schema change has none. Import the
 // subpaths above, not the package root: that pulls `@effect/sql-d1`, which needs effect 4.1, into
@@ -48,7 +61,7 @@ const state = Layer.unwrap(
     const local = yield* Alchemy.ALCHEMY_DEV;
     return local
       ? State.localState()
-      : (D1State.d1State({ databaseName: "billet-alchemy-state" }) as Layer.Layer<
+      : (D1State.d1State({ databaseName: `${stack}-alchemy-state` }) as Layer.Layer<
           State.State,
           never,
           HttpClient.HttpClient | FileSystem.FileSystem | Path.Path
@@ -57,7 +70,7 @@ const state = Layer.unwrap(
 );
 
 export default Alchemy.Stack(
-  "billet",
+  stack,
   {
     providers: Layer.mergeAll(Cloudflare.providers(), drizzleProviders()),
     state,
@@ -77,7 +90,7 @@ export default Alchemy.Stack(
     // Accepted app events, written by the Worker (docs/experiments.md). Analytics Engine makes a
     // dataset on its first write, so a deploy creates nothing else. One dataset per stage.
     const events = yield* Cloudflare.AnalyticsEngine.Dataset("Events", {
-      dataset: `billet_${stage}_events`,
+      dataset: `${stack}_${stage}_events`,
     });
 
     // Workers Logs and traces (docs/observability.md). Head sampling keeps or drops a whole
@@ -90,6 +103,33 @@ export default Alchemy.Stack(
     const liveActivityPush = yield* Config.String("LIVE_ACTIVITY_PUSH").pipe(
       Config.withDefault(""),
     );
+    // The Worker's custom domain (`api.ourio.app`), a hostname in a zone of the same Cloudflare
+    // account. Alchemy finds the zone from the hostname's parent labels and manages the DNS record
+    // and the certificate; the token needs Workers Routes and DNS Edit on that zone. Empty leaves
+    // the Worker on its workers.dev address and any domain attached by hand untouched.
+    const apiDomain = yield* Config.String("API_DOMAIN").pipe(Config.withDefault(""));
+    // Apple's push and Sign in with Apple keys are account-wide: `dev` and `prod` bind the same
+    // four values, each from its own vault (.env.pass, .env.pass.release). Without them a deployed
+    // Worker would send no pushes and could not revoke Apple tokens, so those two stages stop here
+    // and name what is missing (names only, never a value). Local `alchemy dev` needs no keys.
+    const apple = {
+      APNS_KEY: yield* Config.option(Config.Redacted("APNS_KEY")),
+      APNS_KEY_ID: yield* Config.option(Config.Redacted("APNS_KEY_ID")),
+      APPLE_SIGN_IN_KEY: yield* Config.option(Config.Redacted("APPLE_SIGN_IN_KEY")),
+      APPLE_SIGN_IN_KEY_ID: yield* Config.option(Config.Redacted("APPLE_SIGN_IN_KEY_ID")),
+    };
+    const missingApple = Object.entries(apple)
+      .filter(([, value]) => Option.isNone(value))
+      .map(([name]) => name);
+    if ((stage === "dev" || stage === "prod") && missingApple.length > 0) {
+      return yield* Effect.die(
+        new Error(
+          `Stage "${stage}" needs ${missingApple.join(", ")} in the environment. Run the deploy ` +
+            "through pp with the stage's env file (.env.pass for dev, .env.pass.release for " +
+            "prod); the vault item `Apple` must exist first (docs/alchemy.md).",
+        ),
+      );
+    }
     const observability = {
       enabled: true,
       headSamplingRate: samplingRate,
@@ -101,7 +141,16 @@ export default Alchemy.Stack(
 
     // Bindings must match packages/backend/platform/src/worker-env.ts. `PairRoom` is the class
     // exported by apps/api/src/worker.ts, one object per couple, SQLite-backed by default.
+    //
+    // The Durable Object classes name this Worker as their former host: a Worker whose name
+    // changes is replaced by a new script, and without the declaration the namespaces, with every
+    // room in them, would be created afresh on the new one. Alchemy then moves each namespace from
+    // the old script instead. On a stage that has nothing to move the declaration is inert.
     const api = yield* Cloudflare.Worker("Api", {
+      // Short and without Alchemy's random tail: prod answers on
+      // `https://ourio-api.<account>.workers.dev`, dev on `ourio-api-dev`. A change of this name
+      // replaces the Worker (see the Durable Objects above).
+      name: apiWorkerName(stack, stage),
       main: "./apps/api/src/worker.ts",
       // Static files, such as the date cards' pictures under /art/. A path that matches a file is
       // served from the CDN without running the Worker; any other path reaches the Worker. Keep an
@@ -117,6 +166,8 @@ export default Alchemy.Stack(
         // Shown in the admin panel's top bar, so the owner always sees which stage they change.
         // Payments read it too: only `dev` takes Xcode and mock purchases (docs/payments.md).
         STAGE: stage,
+        // Names the service on `/` and the events dataset the admin's trends read.
+        STACK: stack,
         // The Access application in front of /admin (docs/admin.md): not secret, but kept out of
         // the public repo. Empty keeps the panel closed to everyone.
         ACCESS_TEAM_DOMAIN: Config.String("ACCESS_TEAM_DOMAIN").pipe(Config.withDefault("")),
@@ -130,22 +181,24 @@ export default Alchemy.Stack(
               ANALYTICS_ACCOUNT_ID: Config.String("CLOUDFLARE_ACCOUNT_ID"),
             }
           : {}),
-        PAIR_ROOM: Cloudflare.DurableObject("PairRoom"),
+        PAIR_ROOM: Cloudflare.DurableObject("PairRoom", { transferredFrom: "Api" }),
+        LIVE_ACTIVITY_PUSH: liveActivityPush,
+        // The Sign in with Apple key revokes a deleted account's Apple token.
+        ...(Option.isSome(apple.APNS_KEY) ? { APNS_KEY: apple.APNS_KEY.value } : {}),
+        ...(Option.isSome(apple.APNS_KEY_ID) ? { APNS_KEY_ID: apple.APNS_KEY_ID.value } : {}),
+        ...(Option.isSome(apple.APPLE_SIGN_IN_KEY)
+          ? { APPLE_SIGN_IN_KEY: apple.APPLE_SIGN_IN_KEY.value }
+          : {}),
+        ...(Option.isSome(apple.APPLE_SIGN_IN_KEY_ID)
+          ? { APPLE_SIGN_IN_KEY_ID: apple.APPLE_SIGN_IN_KEY_ID.value }
+          : {}),
         // Temporary demo rooms: bound on the dev stage only, so no other stage serves /demo.
-        // The Sign in with Apple key revokes a deleted account's Apple token. Only the dev vault
-        // has it; prod needs it in "Billet Release" first (docs/alchemy.md).
         ...(stage === "dev"
-          ? {
-              DEMO_ROOM: Cloudflare.DurableObject("DemoRoom"),
-              APNS_KEY: Config.Redacted("APNS_KEY"),
-              APNS_KEY_ID: Config.Redacted("APNS_KEY_ID"),
-              LIVE_ACTIVITY_PUSH: liveActivityPush,
-              APPLE_SIGN_IN_KEY: Config.Redacted("APPLE_SIGN_IN_KEY"),
-              APPLE_SIGN_IN_KEY_ID: Config.Redacted("APPLE_SIGN_IN_KEY_ID"),
-            }
+          ? { DEMO_ROOM: Cloudflare.DurableObject("DemoRoom", { transferredFrom: "Api" }) }
           : {}),
       },
       observability,
+      ...(apiDomain === "" ? {} : { domain: apiDomain }),
       dev: { host: "0.0.0.0", port: 8787 },
     });
 

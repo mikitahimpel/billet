@@ -1,7 +1,9 @@
 // Other couples apps, as their own App Store page (US) and site described them on `checked`. Only what those pages
 // said is here: a feature missing from `has` means we didn't find it listed, not that the app lacks it.
 
-export const checked = { iso: "2026-11-09", label: "November 9, 2026" };
+export type Checked = { iso: string; label: string };
+
+export const checked: Checked = { iso: "2026-11-09", label: "November 9, 2026" };
 
 export type Capability =
   | "questions"
@@ -35,7 +37,11 @@ export type App = {
   rating: string;
   has: Capability[];
   sources: string[];
+  // When this app's pages were read, if not on `checked`.
+  checked?: Checked;
 };
+
+const november13: Checked = { iso: "2026-11-13", label: "November 13, 2026" };
 
 export const ourio: App = {
   name: "Ourio",
@@ -71,6 +77,34 @@ export const apps: App[] = [
       "https://apps.apple.com/us/app/between-couples-love-tracker/id458035189",
       "https://between.us",
     ],
+  },
+  {
+    name: "Couple Joy",
+    what: "Couple widgets, mood, a distance tracker, games and daily questions",
+    price:
+      "Free; Couple Joy Premium $12.99 to $39.99 (the store page doesn't say per what period), streak repairs from $0.99",
+    android: true,
+    rating: "4.9 (40k ratings)",
+    has: ["questions", "games", "widgets", "calendar", "chat"],
+    sources: [
+      "https://apps.apple.com/us/app/couple-joy-relationship-app/id1624758651",
+      "https://couplejoyapp.com",
+    ],
+    checked: november13,
+  },
+  {
+    name: "Candle",
+    what: "One-minute daily rituals: questions, photo prompts, games and local date ideas",
+    price:
+      "Free; Premium $4.99 a week, $12.99 a month or $39.99 to $49.99 a year, plus Sparks and streak reignites",
+    android: true,
+    rating: "4.8 (12k ratings)",
+    has: ["questions", "games", "dates"],
+    sources: [
+      "https://apps.apple.com/us/app/candle-couples-relationship/id6743355635",
+      "https://www.trycandle.app",
+    ],
+    checked: november13,
   },
   {
     name: "Locket Widget",
@@ -266,6 +300,81 @@ export const alternatives: Alternative[] = [
       {
         question: "Does Ourio work with friends?",
         answer: "No. Ourio pairs exactly two people and is made for couples.",
+      },
+    ],
+  },
+  {
+    slug: "couple-joy-alternative",
+    app: "Couple Joy",
+    title: "Couple Joy alternative: a free couples app, no premium · Ourio",
+    description:
+      "A free Couple Joy alternative: Ourio is an iPhone couples app with widgets, daily questions, games, a shared cat and Lock Screen drawings. No subscription.",
+    summary:
+      "Ourio vs Couple Joy: widgets, questions and games for two, free with no premium tier.",
+    h1: "A Couple Joy alternative with nothing to unlock.",
+    lead: "Couple Joy has couple widgets, mood, a distance tracker, daily questions and games, with Couple Joy Premium from $12.99 to $39.99 and paid streak repairs. Ourio is a free alternative for iPhone: widgets, five daily questions, two games, a love streak you can restore for free, a shared cat and drawings on your partner's Lock Screen, with no premium tier.",
+    theyFit: [
+      "You want to see how far apart you are: Couple Joy has a distance tracker. Ourio never uses your location.",
+      "You want to chat about your answers inside the app; Ourio has no chat.",
+      "One of you uses Android. Couple Joy runs on both; Ourio is iPhone-only for now.",
+    ],
+    oursFit: [
+      "You don't want to pay to unlock anything: every Ourio feature is free for both of you.",
+      "You'd rather draw than type: drawings and notes land on your partner's Lock Screen.",
+      "You want a planner too: date night ideas you swipe together, wishlists, shared lists and countdowns.",
+    ],
+    questions: [
+      {
+        question: "Is there a free alternative to Couple Joy?",
+        answer:
+          "Yes. Ourio has couple widgets, daily questions, games, a love streak and countdowns, free for both partners with no subscription and no in-app purchases.",
+      },
+      {
+        question: "Does Ourio have a streak like Couple Joy?",
+        answer:
+          "Yes. The love streak grows each day either of you does something together, and a broken streak of 3 days or more can be restored once every 30 days, at no cost.",
+      },
+      {
+        question: "Does Ourio track the distance between us?",
+        answer:
+          "No. Ourio never asks for your location. For long distance it has drawings, notes, a shared cat and a countdown to your next visit.",
+      },
+    ],
+  },
+  {
+    slug: "candle-alternative",
+    app: "Candle",
+    title: "Candle app alternative: a free couples app for iPhone · Ourio",
+    description:
+      "Looking for a free alternative to the Candle couples app? Ourio has daily questions, games, date ideas, a shared cat and Lock Screen drawings. No subscription.",
+    summary: "Ourio vs Candle: daily questions, games and date ideas without a subscription.",
+    h1: "A Candle alternative that stays free.",
+    lead: "Candle is a couples app of one-minute daily rituals: questions, photo prompts, games and local date ideas. A year of Candle Premium costs $39.99 to $49.99. Ourio is a free alternative for iPhone: five daily questions in Who knows who, Draw & guess, 150 date ideas you swipe together, a shared cat and drawings on your partner's Lock Screen. The same year costs nothing.",
+    theyFit: [
+      "You want a daily photo prompt, BeReal-style, for the two of you.",
+      "You want date ideas near you: Candle suggests local ones each week. Ourio's ideas don't use your location.",
+      "One of you uses Android. Candle runs on both; Ourio is iPhone-only for now.",
+    ],
+    oursFit: [
+      "You don't want a subscription. Everything in Ourio is free for both of you.",
+      "You want something on your Lock Screen: your partner's drawings and notes, your shared cat, days together.",
+      "You want to plan, not only talk: wishlists, shared lists, a shared calendar and countdowns.",
+    ],
+    questions: [
+      {
+        question: "Is there a free app like Candle?",
+        answer:
+          "Yes. Ourio has daily questions, couples games and date ideas, free with no subscription and no in-app purchases.",
+      },
+      {
+        question: "Does Ourio have daily questions like Candle?",
+        answer:
+          "Yes, as a game: each day five multiple-choice questions about one of you, from 150; the other guesses, and the answers open together. All 150 are on our list of questions to ask your partner.",
+      },
+      {
+        question: "Does Ourio have date ideas?",
+        answer:
+          "Yes. Date night has 150 ideas for home, going out, outdoors and long distance. You each swipe on your own phone, and when you both love one, it's a match.",
       },
     ],
   },

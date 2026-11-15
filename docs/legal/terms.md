@@ -1,20 +1,20 @@
-# Billet terms of use (draft)
+# Ourio terms of use
 
 > Draft for the first App Store release. Not legal advice: have it read by someone qualified, fill
 > in the provider's name and address, the governing law and the host URL before submitting.
 
-Last updated: <DATE OF RELEASE>
+Last updated: 2026-11-15
 
 ## Who we are
-Billet is provided by <NAME AND ADDRESS OF THE PROVIDER> ("we"). Contact: <SUPPORT_EMAIL>.
+Ourio is provided by Mikita Himpel, Kamionkowska 9, apt. 97, 03-805 Warsaw, Poland ("we"). Contact: ourio@mikitahimpel.com.
 
-## What Billet is
-A private app for two people to send each other drawings and photos, and to share a cat, a room and
+## What Ourio is
+Ourio is a private app for two people to send each other drawings and photos, and to share a cat, a room and
 small games. A pair is exactly two accounts. By using the app you accept these terms.
 
 ## Your account
 - The app creates an anonymous account for you. Keep your iCloud Keychain on if you want a new
-  phone to find your account; the app has no sign-in.
+  phone to find your account. Linking your Apple ID in Settings > Account is optional.
 - You must be at least 13. If you are under the age of majority where you live, you need a
   parent's or guardian's permission.
 - You are responsible for who you share your invite code with. Anyone with a valid code can become
@@ -47,4 +47,4 @@ will never be down or lose data. To the extent the law allows, we aren't liable 
 Nothing here limits rights you have by law as a consumer.
 
 ## Changes and law
-We may change these terms and will change the date above. <GOVERNING LAW AND COURTS>.
+We may change these terms and will change the date above. These terms are governed by the laws of Poland. Courts of Warsaw, Poland have jurisdiction, but if you are a consumer you may also bring a claim in the courts of where you live, and nothing here takes away the protection of the law of your country.

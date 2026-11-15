@@ -1,6 +1,7 @@
 import Design
 import FeatureInbox
 import Foundation
+import GamesInterface
 import SwiftUI
 import Testing
 @testable import Billet
@@ -49,12 +50,16 @@ enum GalleryScreen: String, CaseIterable, Sendable {
     case drawGuessSolved = "drawguess-solved"
     case drawGuessOffline = "drawguess-offline"
     case drawGuessUnpaired = "drawguess-unpaired"
+    case gameFeed = "game-feed"
+    case gameResult = "game-result"
 
     enum Loaded {
         case inbox(InboxModel)
         case whoKnows(WhoKnowsModel)
         case drawGuess(DrawGuessModel)
         case settings
+        /// A mini-game's tray at the end of a meal, or its result.
+        case game(finished: Bool)
     }
 
     @MainActor func loaded() async -> Loaded {
@@ -82,6 +87,8 @@ enum GalleryScreen: String, CaseIterable, Sendable {
         case .drawGuessSolved: return .drawGuess(await GameFixture.drawGuess(.solved))
         case .drawGuessOffline: return .drawGuess(await GameFixture.drawGuess(.offline))
         case .drawGuessUnpaired: return .drawGuess(await GameFixture.drawGuess(.unpaired))
+        case .gameFeed: return .game(finished: false)
+        case .gameResult: return .game(finished: true)
         }
     }
 
@@ -111,6 +118,21 @@ enum GalleryScreen: String, CaseIterable, Sendable {
                 .transaction { $0.animation = nil }
         case .settings:
             NavigationStack { SettingsView(state: HomeState(stores: .live())) {} }
+        case .game(let finished):
+            VStack {
+                Spacer(minLength: 0)
+                if finished {
+                    ResultToast(result: GameResult(game: .feed, score: 90, grams: 40, tooMuch: false), again: {}, done: {})
+                } else {
+                    GameTray(
+                        hint: "Sweep up the crumbs, or feed Tofu as it is",
+                        bar: GameMeter(value: 1.1, label: "Bowl", detail: "42 / 38 g"), symbol: "fork.knife",
+                        action: "Feed", assist: "Clean up", act: {}, assistAct: {})
+                }
+            }
+            .padding(.bottom, Space.l)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Ink.screen)
         }
     }
 

@@ -359,6 +359,169 @@ How to read it: the step with the largest battery/GPU drop is the next thing to 
 splat is not the bill and the batching and light work (8.1, last bullet) is next. If steps 1 to 3 save most of it,
 ship pruning at 55% as the default and re-run.
 
+## 9. Room and furniture audit
+
+Numbers are from Labs → Performance → Room stats on a Simulator (iPhone 17 Pro, iOS 27.2, Debug), so the cat is her
+mesh stand-in there: the triangle counts include her 131k-splat mesh and are far above a phone's. The counts of
+entities, parts, lights and shadows do not depend on that. Nothing here is a GPU measurement.
+
+### 9.1 What the scenes hold
+
+| | Living room | Bedroom |
+| --- | --- | --- |
+| Entities enabled (+ disabled) | 191 (+12) | 270 (+0) |
+| Models / mesh parts (draw units per pass) | 106 / 176 | 236 / 236 |
+| Distinct materials by value / slots | 87 / 181 | 64 / 236 |
+| Directional lights (with a shadow map) | 1 (1) | 2 (1) |
+| Point lights | 3 (window 1800 lm r 1.1, lamp 700 r 0.7, candle 450 r 0.6) | 4 (sky 2500 r 1.2, lamp 2200 r 1.1, fairy 900 r 1.0, candle 500 r 0.5) |
+| Image-based light | 1 | 1 |
+| Grounding shadows (cast, receive) | 51, 51 | 0 |
+| Contact blobs | 9 (+10 plates, off until selected) | 0 |
+| IBL receivers | 171 | 263 |
+
+Stowing the window seat removed 8 entities, 32 parts and 4 grounding shadows: cost scales with the pieces' parts, not
+with the pieces.
+
+### 9.2 Ranked findings
+
+| # | Finding | Est. impact | Switch |
+| --- | --- | --- | --- |
+| 1 | The sun's shadow map redraws every shadow-casting model from the light each frame the room renders (both rooms; size is not settable, `maximumDistance` is 4 m for a 1 m room). Draw calls roughly double | High on GPU and `encodeDrawCalls` | `noSunShadow` |
+| 2 | Living room has 176 parts and Bedroom 236, each drawn at least once, plus again in the shadow pass; the 10 base pieces carry 62 material parts that never move outside Decorate | High (CPU encode, shadow pass) | `mergeFurniture` |
+| 3 | Dynamic lights: 4 in the Living room, 6 in the Bedroom. Every light adds to the per-fragment loop and the light constant buffers; the Bedroom rewrites all of them whenever the hour moves 0.1 h | Medium-high | `fewerLights` |
+| 4 | 9 transparent blob quads, each its own blended draw, plus 51 grounding shadows | Medium | `bakedBlobs` (blobs); grounding shadows fall with merging |
+| 5 | Bloom (iOS 27 only, unbounded scope): a full-screen downsample chain | Medium on GPU, if the phone is on iOS 27 | `noBloom` |
+| 6 | Living room pulse runs while `swaying` is true, which is the setting, not idleness: flame scale at 30 Hz, candle light intensity at 15 Hz (a light update), 26 bulb scales at 10 Hz, in an idle room | Medium (keeps the light data dirty). Slowed while idle in 9.5 | `sway` (existing) |
+| 7 | Bedroom tick every frame: `Calendar.dateComponents` and `Daylight.sample`, two clock-hand orientation writes (a same-value write still dirties the subtree), 12 projections for the window | Low-medium CPU; keeps the scene dirty. Fixed in 9.5 | none |
+| 8 | Sway rewrites `pivot.orientation` each frame while active, so every descendant transforms; scales with entity count (191 / 270) | Low-medium while she walks or a finger is down; idle is already still (`SwayEnvelope`) | merging cuts the entity count |
+| 9 | `showDecor` recomputes occupancy and cat routes per input change (not per frame) | Low | none |
+
+Already fine: the camera pose is guarded against rewrites, the pivot turns only when the yaw changed, motes and AA are
+off by default, a covered or hidden room does not render, and `ownLoop` caps an idle room at 30 fps. A scene-tick cap
+was not added: the tick is cheap next to the render, and `ownLoop` is the cap.
+
+### 9.5 Idle writes
+
+Each scene write below is gated by a pure type in `SwayEnvelope.swift` (`Throttle`, `ChangeGate`, `PulseRates`) and
+counted by `SceneWrites` (Labs → Performance → Refresh room stats prints writes per second since the last refresh).
+
+- Bedroom: the live hour is read once a second; the palette sample, the clock hands, the shell tint and the image light
+  follow only a new hour; the window is projected again only when the camera, the room's turn or the surface moved
+  (one probe point stands for the surface). The lights still redo at 0.1 h.
+- Living room: while the room is idle (`!isActive`) the flame scale steps at 10 Hz (30 Hz active), the candle light at
+  2 Hz (15 Hz) and the 26 bulbs at 4 Hz (10 Hz). Reduce Motion and the `sway` setting still hold them still.
+- `catBody.scale` is written only when the squash changes.
+
+### 9.3 Labs switches (all off by default, runtime toggles)
+
+`mergeFurniture` bakes the opaque plain-PBR parts of the stage's pieces into one mesh per material and shadow
+behaviour while the player is not arranging; opening Decorate or changing the layout puts every piece's own model back
+at once, and the merge is rebuilt after 0.4 s of stillness. `bakedBlobs` replaces the 9 blobs with one 512 px layer.
+`noSunShadow` removes the shadow component from every directional light. `fewerLights` keeps each room's widest point
+light. `noBloom` removes the bloom pass. `fullMeshes` (9.6) draws RealityKit's own boxes and spheres in place of the lean ones. Tests count each switch with the room stats and check that switching back
+restores the scene.
+
+### 9.4 Phone steps
+
+Labs → Performance: Refresh room stats, Copy settings (baseline). Flip one of `noSunShadow`, `fewerLights`,
+`mergeFurniture`, `bakedBlobs`, `noBloom`, `fullMeshes` at a time, leave Home alone for 60 s, Copy settings, paste it back, and flip
+it off again. The line holds the switches, fps, CPU, heat, battery slope and the room stats.
+
+### 9.6 Scene diet
+
+What each room's scene costs, by piece, and what was cut. Simulator, Debug, iPhone 17 Pro, iOS 27.2, the cat out of
+the count. Counted by `RoomCostRankTests` and the room stats.
+
+**Where the triangles are.** RealityKit's `generateBox(cornerRadius:)` makes 13,068 triangles at every radius (a 4 mm
+fillet costs the same as a 3 cm one) and `generateSphere` 8,064. The rooms are built almost only from those.
+
+| | Living room | Bedroom |
+| --- | --- | --- |
+| Triangles | 972,356 | 2,083,836 |
+| Rounded boxes | 51 models, 431,460 | 95 models, 1,228,404 |
+| Spheres (bulbs, snow, leaves, cushions) | 29 models, 233,856 | 105 models, 846,720 |
+| USDZ furniture, 26 models (donut bed 145,442, `Room_furniture` 50,628, yarn 19,920, rug 16,956, tree 14,722 ...) | 307,040 | none (built in code) |
+| Everything else (cylinders 256, cones 128, planes 2) | none | 8,712 |
+
+Ranked by piece, Bedroom: the pivot's own boxes and spheres (walls, floor, trim, 73 models) 767,958; the props on it
+(curtains, shelf, clock, plant, 68 models) 560,488; cat bed 194,050; dresser 190,958; bed 134,858; nightstand 66,108;
+bowls 62,476; slippers 42,264; books 39,204; mouse 24,448; rug 1,024. Living room: the pivot's own boxes and spheres
+(51 models) 508,286; props and `Room_furniture` (35 models) 230,860; donut bed 145,442; rug 16,956; cat tree 14,722;
+nightstand 13,126; plant 10,986; window seat 10,418; basket 8,218; lamp 6,122; bowls 6,018; books 1,202.
+
+What does not cost much: textures are one 1024 x 1024 contact-shadow bake (sRGB, 11 mips) in the Living room and 64 x 64
+blobs (7 mips) in both; there is nothing to cap. Transparent parts: 10 in the Living room (9 blobs and the bake), 3 in
+the Bedroom. No skinned mesh in either room, one particle emitter in the Bedroom, none in the Living room. Materials:
+88 by value in 181 slots (Living), 64 in 238 (Bedroom); `Clay.matte` already hands out one instance per tone, so the
+slots share.
+
+**Tried and taken back.** A grounding shadow only on the entities that hold a mesh (51 casters to 15) rendered the same
+in the Simulator, and on a phone a moved piece left a black quad at its old place. The shadow is on every entity of the
+model again.
+
+**Shipped, on for everyone: lean meshes.** Boxes and spheres get the facets their radius can show (`SmoothBox`,
+`SmoothSphere`: 108 triangles for a box with a fillet under 1 cm, 300 up to 3 cm, 12 for a square one; a sphere 12 to 64
+segments by size on screen), and the Living room's USDZ furniture is the lean model (`blender -b --python
+Tools/make_room.py`: the same shapes with `make_items.facets`; donut bed 145,442 to 25,384). Labs has `fullMeshes`
+(off) to draw RealityKit's own boxes and spheres again, at once and back, for an A/B; the furniture models have no
+full copy any more.
+
+| | Before | Lean | Change |
+| --- | --- | --- | --- |
+| Bedroom triangles | 2,083,836 | 49,876 | -97.6 % |
+| Living room triangles | 972,356 | 141,140 | -85.5 % |
+| Living room's USDZ furniture | 307,020 | 130,916 | -57 % |
+| Models, parts, entities, materials | same | same | none |
+
+Same picture, to the gallery's bar: the room is drawn off-screen with a `RealityRenderer` at 780 x 1688 from the default
+camera, ten frames so the lights settle, without antialiasing as in the app (`OffscreenRoom`). Two renders of one room
+differ by 0 (Living room) and 0.01 % of pixels over 2 (Bedroom), so that is the noise. Lean against full, boxes,
+spheres and models together: Bedroom 0.18 % of pixels more than 8 of 255 off, mean 0.14 a channel, 0.10 % over 32;
+Living room 0.40 %, mean 0.22, 0.18 % over 32; the gallery's own match is 0.5 % over 8. The maximum is 250 to 252 at
+single pixels. The difference image is a one-pixel outline on silhouettes (a silhouette a fraction of a pixel off flips
+an edge pixel with no antialiasing), with no change inside any surface. `RoomMeshDiffTests` holds the boxes and spheres
+to 0.5 % over 8; the model comparison was run once, before the full copies were removed.
+
+Sizes: every lean furniture model's bounds (RealityKit's `visualBounds`) are within 0.4 mm of the full one's, on every face, so footprints, picking and where the cat can stand do not move; `RoomFurnitureCostTests` holds each
+model to its full-detail size within 1 mm.
+
+Bundle: the 13 full models (14.1 MB) are gone and their lean copies (4.7 MB) stand in: -9.4 MB. `Room_furniture.usdz`
+is now `scripts/bake-room/Room_furniture.usdz`, full detail, outside the bundle, because the bake casts shadows with it
+(`bake.sh` reads it from there; the bake was run with it and works). `FULL=1` makes `make_room.py` write full-detail
+models.
+
+Budgets (cannot creep back): `BedroomFurnitureCostTests` holds the Bedroom to 55 k triangles as built and to 2.1 M
+with the full-detail meshes; `RoomFurnitureCostTests` holds the models to 135 k and their sizes.
+
+**Not done, from the ranking.** Draw units stay at 106 models / 181 parts (Living) and 238 / 238 (Bedroom): merging
+the room's static boxes per material would save draw calls, not triangles, and `mergeFurniture` already does it for the
+pieces. The bake (`roomShell` Baked) already replaces the shell. Hidden faces: a box's floor face is back-facing to a
+camera above it and culled, so removing it saves vertices only. Textures and transparent parts: nothing left to cut.
+
+### 9.7 The room's own loop is the default
+
+A phone at 5 to 7 % battery read "60 fps, CPU 44 %, room drawing" with the governor at `serious` (30/20 fps, 1.25x): the
+caps reach only `RoomRenderLoop`, and that was a Labs switch, off, so every phone drew on a `RealityView` at the
+screen's rate whatever the tier said.
+
+- The loop is on unless Labs puts the room back on a `RealityView` (`ownLoop`, read at launch). The full tier now asks
+  30 fps while something moves and 20 at rest (2x, 4x MSAA, bloom, shadow as before); fair is 30/20 at 1.5x, serious
+  30/20 at 1.25x, critical 20/15 at 1x.
+- A display link's frame-rate range is a hint a screen may overshoot, so the loop also drops a frame that arrives
+  sooner than 0.9 of the asked interval. Drawn frames a second, counted from the renderer's own update events over 4 s
+  with the screen delivering 60 (`RoomLoopCapTests`, Simulator): full 19.5, fair 19.8, serious 20.0, critical 15.0
+  against 20, 20, 20, 15 asked. A `RealityView` draws 60.
+- Taps, Decorate and picking use the loop's camera. The projection of known points of the room (tree foot, basket, sill,
+  bed) falls on the same points in the picture the renderer draws (`RoomArtifactTests`, the crosses in
+  `art-projected.png`), so `unproject` and `project` agree with what is on screen.
+- The pinch zoom wrote to the `RealityView`'s rig, which the loop does not use: it now writes to the loop's.
+- UI tests on the loop (Simulator): `RearrangeRoomTests` (4), `RoomSwipeTests`, `RoomReturnTests`, `GameCloseTests` pass.
+  One run of the tree-selection test failed once under a load average above 300 and passed on the next two.
+
+Not verified: the splat cat on `RealityRenderer` on an iOS 27 phone (the Simulator draws the mesh stand-in); fps and heat
+on a phone. If the cat does not draw on the loop, Labs "Room on its own capped frame loop" off puts the room back on
+`RealityView` from the next launch.
+
 ## Sources
 
 - [RealityRenderer](https://developer.apple.com/documentation/realitykit/realityrenderer),
@@ -383,3 +546,33 @@ ship pruning at 55% as the default and re-run.
   [Enable Metal Performance HUD on iPhone & iPad?](https://developer.apple.com/forums/thread/760649)
 - [Measuring your app's power use with Power Profiler](https://developer.apple.com/documentation/xcode/measuring-your-app-s-power-use-with-power-profiler),
   [WWDC25 session 226](https://developer.apple.com/videos/play/wwdc2025/226)
+
+## 7. The quality governor
+
+The room's look follows the phone: `RoomQualityPolicy` (package `RoomInterface`, Foundation only, tested on the pc) turns
+`RoomConditions` into a `RoomQualityTier`, and each tier's `RoomQualityPlan` says what is spent. `QualityMonitor`
+(`Perf/PerfLab.swift`) reads the inputs on the system's notifications (thermal state, Low Power Mode, battery level and
+state) and every two seconds (idle time, busy), and `HomeView.roomInput` carries the plan to the room as `RoomRendering`.
+
+| Tier | Asked by | Loop active / idle fps | Scale | Bloom, sun shadow, lights, HDR | Pulses | Other |
+| --- | --- | --- | --- | --- | --- | --- |
+| full | nothing | 60 / 30 | 2x | all on | x1 | as before the governor |
+| fair | heat fair, Low Power Mode, battery <= 20% off the charger, room untouched 60 s | 30 / 20 | 1.5x | all on | x1.5 | no motes or AA, splats at 30 Hz |
+| serious | heat serious, battery <= 10% | 30 / 20 | 1.25x | bloom and sun shadow off, ambient +0.15 stop; every lamp and HDR stay | x3 | no sway |
+| critical | heat critical | 20 / 15 | 1x | as serious | x3 | room held on its last frame |
+
+A tier never puts a lamp out or narrows the colour range: the first plan did (widest light only, HDR off), and in the Bedroom at night the widest light is the sky's, so a phone at 5% battery showed a dark room. Tiers give up shadows, bloom, frames, pixels and pulses, and `RoomPerfTests` checks that every tier keeps the Bedroom's lamps, their light and its ambient light.
+
+The Bedroom's lamps follow the hour (lit from dusk, with an ambient floor so a night room is never black). From 18:00 to 06:00 a light button beside Decorate (Bedroom only) turns them on or off, easing over about a second, and the choice is kept on this phone (`room.lights.bedroom`, `BedroomLights`); by day there is no button and the lamps follow the hour. The Living room has no hour.
+
+- Degrades at once, recovers one tier per 90 quiet seconds. Idleness is outside that hysteresis (it only grows until a
+  touch) and stops at `fair`, which looks like `full`, so a room being watched never changes and never jumps back.
+- A drag, a game's first 10 seconds or Decorate hold a degradation until they stop, unless the system says `serious`.
+- Frame rate and scale reach only the room's own loop (on by default since 9.7; Labs "Room on its own capped frame loop", read at launch). A
+  `RealityView` has no pause, cap or scale (section 2). The loop is not the default because touch, picking, Decorate and
+  games on it are checked only by the code's own tests, not on a phone, and `RealityRenderer`'s support for the splat cat
+  is unverified on iOS 27 (section 3.1). Everything else in the plan works on both paths: lights, shadow and bloom through
+  `RoomPerfCoordinator`, HDR and antialiasing through the view's rendering effects, pulses and sway in the scene.
+- Reduce Motion is not an input: the room never read it and the governor leaves that as it was.
+- Labs → Performance shows the tier, why, the inputs, what it draws and how many times it changed; Copy settings carries
+  the first and last of those.

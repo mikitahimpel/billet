@@ -25,7 +25,7 @@ export const emptyStreak: LoveStreak = { days: 0, best: 0 };
 export const streakMilestones: ReadonlyArray<number> = [3, 7, 14, 30, 50, 100, 200, 365];
 
 /** Coins a lit day pays the pair. A token: a week of lit days stays well under the cheapest paid
- * shop piece, and care alone earns far more (docs/love-streak.md#coins). */
+ * shop piece (docs/love-streak.md#coins). */
 export const streakDayCoins = 1;
 
 /** What a lit day pays on top when it reaches one of these: small against the shop's prices. */

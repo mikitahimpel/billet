@@ -35,3 +35,34 @@ struct TabMotionTests {
         #expect(HomeTab.at(10, across: 0) == nil)
     }
 }
+
+/// The page switches when the finger lands on its tab, not when the finger lifts.
+struct TabScrubTests {
+    @Test func landingOnAnotherTabShowsItAtOnce() {
+        let move = TabScrub().finger(on: .shop, shown: .world)
+        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .shop), shows: .shop))
+    }
+
+    @Test func landingOnTheShownTabOnlyHoversIt() {
+        let move = TabScrub().finger(on: .world, shown: .world)
+        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .world), shows: nil))
+    }
+
+    @Test func movingWithinTheSlotIsNotAMove() {
+        #expect(TabScrub(hovered: .shop).finger(on: .shop, shown: .shop) == nil)
+    }
+
+    @Test func slidingOntoTheNextTabShowsIt() {
+        let move = TabScrub(hovered: .moments).finger(on: .shop, shown: .moments)
+        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .shop), shows: .shop))
+    }
+
+    @Test func slidingBackOntoTheShownTabShowsNothingNew() {
+        let move = TabScrub(hovered: .shop).finger(on: .us, shown: .us)
+        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .us), shows: nil))
+    }
+
+    @Test func liftingClearsTheHoverAndSwitchesNothing() {
+        #expect(TabScrub(hovered: .us).lifted() == TabScrub())
+    }
+}

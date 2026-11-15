@@ -2,6 +2,7 @@ import { Schema } from "effect";
 
 const nonEmpty = Schema.String.check(Schema.isNonEmpty());
 const coinCount = Schema.Int.check(Schema.isGreaterThanOrEqualTo(0));
+const balance = Schema.Int;
 
 /** `POST /v1/purchases`: StoreKit 2's `Transaction.jwsRepresentation`, as the app received it. */
 export const PurchaseRequest = Schema.Struct({ signedTransaction: nonEmpty });
@@ -22,7 +23,7 @@ export const PurchaseResponse = Schema.Struct({
   transactionId: nonEmpty,
   productId: nonEmpty,
   coins: coinCount,
-  balance: coinCount,
+  balance,
   duplicate: Schema.Boolean,
 });
 export type PurchaseResponse = typeof PurchaseResponse.Type;
@@ -39,9 +40,9 @@ export const PurchaseEntry = Schema.Struct({
 });
 export type PurchaseEntry = typeof PurchaseEntry.Type;
 
-/** `GET /v1/purchases`: the bought coins of the caller's pair. `balance` is never below 0. */
+/** `GET /v1/purchases`: the bought coins of the caller's pair. `balance` is the wallet's, and negative after a refund of spent coins. */
 export const PurchasesResponse = Schema.Struct({
-  balance: coinCount,
+  balance,
   entries: Schema.Array(PurchaseEntry),
 });
 export type PurchasesResponse = typeof PurchasesResponse.Type;

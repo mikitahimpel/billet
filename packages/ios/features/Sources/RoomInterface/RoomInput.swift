@@ -27,11 +27,36 @@ public struct RoomRendering: Equatable, Sendable {
 
   /// The splat cat is rewritten and re-sorted at most this many times a second; 0 is every frame.
   public var splatRate: Int
+  /// What the room's own frame loop draws at while something moves and while nothing does, in frames a second, and the
+  /// pixels it draws across each point. A `RealityView` has neither.
+  public var activeRate: Int
+  public var idleRate: Int
+  public var scale: Double
+  /// The glow pass, the sun's shadow map and every point light but the widest.
+  public var bloom: Bool
+  public var sunShadow: Bool
+  public var widestLightOnly: Bool
+  /// Stops of ambient light added to make up for the glow pass being off.
+  public var ambientLift: Double
+  /// How many times longer the flame, candle and bulbs wait between steps.
+  public var pulseSlowdown: Double
 
-  public init(antialiasing: Bool = false, hdr: Bool = true, splatRate: Int = 0) {
+  public init(
+    antialiasing: Bool = false, hdr: Bool = true, splatRate: Int = 0, activeRate: Int = 60,
+    idleRate: Int = 30, scale: Double = 2, bloom: Bool = true, sunShadow: Bool = true,
+    widestLightOnly: Bool = false, ambientLift: Double = 0, pulseSlowdown: Double = 1
+  ) {
     self.antialiasing = antialiasing
     self.hdr = hdr
     self.splatRate = splatRate
+    self.activeRate = activeRate
+    self.idleRate = idleRate
+    self.scale = scale
+    self.bloom = bloom
+    self.sunShadow = sunShadow
+    self.widestLightOnly = widestLightOnly
+    self.ambientLift = ambientLift
+    self.pulseSlowdown = pulseSlowdown
   }
 }
 
@@ -58,6 +83,14 @@ public struct RoomDecor: Equatable, Sendable {
     case .arranging: true
     }
   }
+
+  /// The piece under the finger, while a drag carries it; a chosen piece at rest is none.
+  public var dragged: String? {
+    switch mode {
+    case .arranging(let selected?, _, .some): selected
+    case .showing, .arranging: nil
+    }
+  }
 }
 
 /// Everything the room is told to show. The host takes one of these and nothing else, and
@@ -79,12 +112,17 @@ public struct RoomInput: Equatable, Sendable {
   public var sway: Bool
   public var decor: RoomDecor
   public var rendering: RoomRendering
+  /// The Bedroom's lamps: on, off, or nil to follow the hour (`BedroomLights`).
+  public var lights: Bool?
+  /// The lamps ease to their new state; off, they change at once (Reduce Motion).
+  public var lightsFade: Bool
 
   public init(
     scene: RoomScene, coat: CatCoat, visibility: RoomVisibility, catName: String = "Mochi",
     catPronouns: CatPronouns = .unchosen, partnerHere: Bool = false, motes: Bool = false,
     sway: Bool = true,
-    decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering()
+    decor: RoomDecor = RoomDecor(), rendering: RoomRendering = RoomRendering(), lights: Bool? = nil,
+    lightsFade: Bool = true
   ) {
     self.scene = scene
     self.coat = coat
@@ -96,5 +134,7 @@ public struct RoomInput: Equatable, Sendable {
     self.sway = sway
     self.decor = decor
     self.rendering = rendering
+    self.lights = lights
+    self.lightsFade = lightsFade
   }
 }

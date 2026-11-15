@@ -26,6 +26,8 @@ struct NeedGrid: View {
     let needs: PetNeeds?
     let asleep: Bool
     var care: (NeedCare) -> Void
+    /// Why a care is turned down just now, or nil while it is welcome.
+    var declined: (NeedCare) -> String? = { _ in nil }
 
     var body: some View {
         if let needs {
@@ -52,7 +54,10 @@ struct NeedGrid: View {
         let state = need.word(NeedLevel(value))
         let hint = need.hint(NeedForecast.outlook(need, in: needs, asleep: asleep))
         let emphasis: GaugeTile.Emphasis = raised ? .raised : .quiet
-        if let action = need.care {
+        if let action = need.care, let why = declined(action) {
+            GaugeTile(need.title, state: state, hint: hint, value: value, symbol: need.symbol, tint: need.tint,
+                      emphasis: .quiet, note: why)
+        } else if let action = need.care {
             GaugeTile(need.title, state: state, hint: hint, value: value, symbol: need.symbol, tint: need.tint,
                       emphasis: emphasis, action: action.title) {
                 care(action)

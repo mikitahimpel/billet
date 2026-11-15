@@ -222,7 +222,7 @@ export const respondApi = (
     );
   }
   const appLink = respondAppLink(pathname);
-  if (appLink === undefined) return Promise.resolve(respondPlaceholder());
+  if (appLink === undefined) return Promise.resolve(respondPlaceholder(env.STACK));
   return limitRequest(request, env.DB, now()).then((limited) =>
     limited === undefined
       ? appLink

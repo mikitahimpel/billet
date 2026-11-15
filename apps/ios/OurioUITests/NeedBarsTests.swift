@@ -34,7 +34,19 @@ final class NeedBarsTests: XCTestCase {
                           "the \(need) tile should show")
         }
         // Every care is there, on a tile or under them, and the hero's line is on screen.
-        for action in ["Feed", "Water", "Play", "Brush", "Pet"] {
+        // A need that is met turns its care down: its tile says why at the foot instead of offering a button.
+        let met = (Double(value) ?? 0) >= 0.95
+        let tileCare = [("Feed", "Full", "Full for now"), ("Play", "Playful", "Played out"), ("Pet", "Loved", "Plenty of cuddles")]
+        for (action, need, note) in tileCare {
+            if met {
+                let tile = app.descendants(matching: .any)[need].firstMatch
+                XCTAssertTrue(((tile.value as? String) ?? "").contains(note), "the \(need) tile should say \(note)")
+                XCTAssertFalse(app.buttons[action].exists, "a met need should not offer \(action)")
+            } else {
+                XCTAssertTrue(app.buttons[action].exists, "the \(action) care should show")
+            }
+        }
+        for action in ["Water", "Brush"] {
             XCTAssertTrue(app.buttons[action].exists, "the \(action) care should show")
         }
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label BEGINSWITH 'Treat'")).firstMatch.exists)

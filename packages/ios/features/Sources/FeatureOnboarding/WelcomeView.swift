@@ -68,7 +68,7 @@ import SwiftUI
             pokedAt = Date.now.timeIntervalSince(start)
             waved()
           }
-          .modifier(Reveal(script.progress(.cat, at: time), rise: 12))
+          .modifier(SpringIn(script.spring(.cat, at: time), rise: 28))
         card(time: time)
       }
       .padding(.horizontal, Space.gutter)
@@ -135,14 +135,18 @@ import SwiftUI
   /// Comes in on a spring with no overshoot: it fades in quickly, rises and grows to its size as the spring settles.
   private struct SpringIn: ViewModifier {
     let progress: Double
+    let rise: CGFloat
 
-    init(_ progress: Double) { self.progress = progress }
+    init(_ progress: Double, rise: CGFloat = 18) {
+      self.progress = progress
+      self.rise = rise
+    }
 
     func body(content: Content) -> some View {
       content
         .opacity(min(progress * 1.6, 1))
-        .scaleEffect(0.9 + 0.1 * progress)
-        .offset(y: 18 * (1 - progress))
+        .scaleEffect(0.9 + 0.1 * progress, anchor: .bottom)
+        .offset(y: rise * (1 - progress))
     }
   }
 

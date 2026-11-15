@@ -3,6 +3,8 @@ import { HttpRouter } from "effect/http";
 import { afterAll, describe, expect, it } from "vitest";
 import { AuthRejected } from "@billet/backend-auth/auth-error";
 import { AuthService, type Principal } from "@billet/backend-auth/auth-service";
+import { CoinEntryId } from "@billet/contracts-domain/coins";
+import { welcomeCoins } from "@billet/contracts-domain/shop";
 import { DeviceId } from "@billet/contracts-domain/ids";
 import {
   noteTextMaxCharacters,
@@ -165,6 +167,34 @@ describe("the notes routes", () => {
   const postNote = (name: string, body: unknown) =>
     handler(request("/v1/notes", name, { method: "POST", body: JSON.stringify(body) }));
 
+  it("answers 400 PostageNotOwned to a stamp the pair has not unlocked, and sends it once bought", async () => {
+    const note = {
+      _tag: "Text",
+      key: "1f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+      text: "hi",
+      stamp: "paw",
+    };
+    const refused = await postNote("ana", note);
+    expect(refused.status).toBe(400);
+    expect(await refused.json()).toEqual({ _tag: "PostageNotOwned", postage: "stamp-paw" });
+    const bought = await handler(
+      request("/v1/shop/orders", "ben", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: "2f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
+          offer: { _tag: "Postage", postage: "stamp-paw" },
+          expectedPrice: 30,
+        }),
+      }),
+    );
+    expect(bought.status).toBe(200);
+    expect(await bought.json()).toMatchObject({ shop: { postage: ["stamp-paw"] } });
+    const sent = await postNote("ana", note);
+    expect(sent.status).toBe(200);
+    expect(await sent.json()).toMatchObject({ note: { stamp: "paw" } });
+  });
+
   it("takes the largest photo note there can be, under the note size limit", async () => {
     const image = await uploadedKey("ana", jpeg);
     // 120 characters, each a letter under three-byte combining marks, to the UTF-16 cap: the most
@@ -235,9 +265,10 @@ describe("the shop routes", () => {
     expect(response.headers.get("cache-control")).toBe("no-store");
     // Reading the shop opens the room, so the welcome coins are there on the first read.
     expect(await response.json()).toEqual({
-      balance: 560,
+      balance: welcomeCoins,
       inks: ["ink-graphite"],
       items: ["lamp", "rug"],
+      postage: [],
       wishlist: [],
       bonuses: [],
       layout: [],
@@ -300,7 +331,16 @@ describe("the shop routes", () => {
           method: "POST",
         }),
       );
-    // The welcome coins pay for the tower and leave 20. Neither piece is ever a deal.
+    // A 500-coin pack and the welcome coins pay for the tower and leave 20. Neither piece is ever a deal.
+    await handler(request("/v1/shop", "dee"));
+    await Effect.runPromise(
+      world.pairRooms.creditPurchase(pair("pair-b"), {
+        kind: "purchase",
+        id: Schema.decodeSync(CoinEntryId)("purchase:1"),
+        ref: "pack",
+        coins: 560 - welcomeCoins,
+      }),
+    );
     expect((await order("tower", 1)).status).toBe(200);
     const poor = await order("armchair", 2);
     expect(poor.status).toBe(409);

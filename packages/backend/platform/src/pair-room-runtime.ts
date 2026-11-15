@@ -2,6 +2,7 @@ import { Effect, Layer, Schema } from "effect";
 import { NoteId } from "@billet/contracts-domain/ids";
 import { questionCatalog } from "@billet/backend-guess/question-catalog";
 import { NoteIdSource } from "@billet/backend-pair-room/note-id-source";
+import { EconomyTap } from "@billet/backend-pair-room/economy";
 import { GiftsRoom } from "@billet/backend-pair-room/gifts";
 import { GuessDeck, GuessRoom } from "@billet/backend-pair-room/guess";
 import { PickTonightRoom } from "@billet/backend-pair-room/pick-tonight";
@@ -26,21 +27,21 @@ const CatalogDeck = Layer.succeed(GuessDeck, {
 /**
  * Needs `RoomDb`. Who knows who and draw-guess commit through `RoomService`, sharing its lock.
  */
-export const PairRoomLive: Layer.Layer<
-  RoomService | GiftsRoom | PickTonightRoom | GuessRoom | RiddleRoom,
-  never,
-  RoomDb
-> = Layer.mergeAll(GiftsRoom.layer, PickTonightRoom.layer, GuessRoom.layer, RiddleRoom.layer).pipe(
-  Layer.provideMerge(RoomService.layer),
-  Layer.provide(
-    Layer.mergeAll(
-      SqliteRoomStore,
-      SqliteGiftsStore,
-      SqlitePickTonightStore,
-      SqliteGuessStore,
-      SqliteRiddleStore,
-      RandomNoteIds,
-      CatalogDeck,
+export const PairRoomLive = (
+  economy: Layer.Layer<EconomyTap>,
+): Layer.Layer<RoomService | GiftsRoom | PickTonightRoom | GuessRoom | RiddleRoom, never, RoomDb> =>
+  Layer.mergeAll(GiftsRoom.layer, PickTonightRoom.layer, GuessRoom.layer, RiddleRoom.layer).pipe(
+    Layer.provideMerge(RoomService.layer),
+    Layer.provide(
+      Layer.mergeAll(
+        economy,
+        SqliteRoomStore,
+        SqliteGiftsStore,
+        SqlitePickTonightStore,
+        SqliteGuessStore,
+        SqliteRiddleStore,
+        RandomNoteIds,
+        CatalogDeck,
+      ),
     ),
-  ),
-);
+  );

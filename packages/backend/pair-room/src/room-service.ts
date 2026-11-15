@@ -37,6 +37,7 @@ import { catNeeds, lifeHorizonMillis } from "./cat-life.ts";
 import { newTemper } from "./cat-temper.ts";
 import { decide, isMember } from "./decide.ts";
 import { listRefusalOf, ListsResult } from "./lists.ts";
+import { EconomyTap } from "./economy.ts";
 import { NoteIdSource } from "./note-id-source.ts";
 import type { RiddleWrite } from "./riddle-rules.ts";
 import type { RoomCommand } from "./room-command.ts";
@@ -57,6 +58,7 @@ const notesIn = (outputs: ReadonlyArray<RoomOutput>): ReadonlyArray<AppendedNote
       case "CatEntryRepeated":
       case "InksGranted":
       case "ItemsGranted":
+      case "PostageGranted":
       case "WishlistChanged":
       case "LayoutChanged":
       case "LayoutRepeated":
@@ -103,13 +105,13 @@ const decodeEarnRef = Schema.decodeSync(EarnRef);
  */
 export type PurchaseCredit =
   | {
-      readonly kind: "buy";
+      readonly kind: "purchase";
       readonly id: CoinEntryId;
       readonly ref: string;
       readonly coins: number;
     }
   | {
-      readonly kind: "buy" | "refund";
+      readonly kind: "purchase" | "refund";
       readonly id: CoinEntryId;
       readonly ref: string;
       readonly reverses: CoinEntryId;
@@ -169,9 +171,12 @@ export class RoomService extends Context.Service<RoomService>()(
       // between load and commit. Without this lock two commands could decide from the same state.
       const lock = yield* Semaphore.make(1);
 
+      const tap = yield* Effect.serviceOption(EconomyTap);
+
       const commitOnly = (command: RoomCommand): Effect.Effect<RoomDecision> =>
         Effect.gen(function* () {
-          const decision = decide(yield* store.load, command);
+          const loaded = yield* store.load;
+          const decision = decide(loaded, command);
           switch (decision._tag) {
             case "Accepted":
               yield* store.commit(
@@ -184,6 +189,19 @@ export class RoomService extends Context.Service<RoomService>()(
                 listWritesIn(decision.outputs),
                 riddlesIn(decision.outputs),
               );
+              if (Option.isSome(tap) && loaded._tag === "Active") {
+                const entries = coinsIn(decision.outputs);
+                const first = entries[0];
+                if (first !== undefined) {
+                  yield* tap.value.observe({
+                    pairId: decision.state.pairId,
+                    at: first.at,
+                    entries,
+                    before: loaded.wallet,
+                    after: decision.state.wallet,
+                  });
+                }
+              }
               return decision;
             case "Rejected":
               return decision;

@@ -54,13 +54,14 @@ struct HomecomingLabel: View {
         HStack(spacing: Space.s) {
             Image(systemName: "heart.fill")
             Text(line.text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .font(.ourioCallout.weight(.semibold))
         .foregroundStyle(Ink.glassGlyph)
         .padding(.horizontal, Space.l)
-        .frame(height: 40)
+        .padding(.vertical, Space.s)
+        .frame(minHeight: 40)
         .glass(.capsule, role: .bar)
         .accessibilityElement(children: .combine)
     }

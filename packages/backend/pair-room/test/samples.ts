@@ -37,6 +37,7 @@ export const active: ActiveRoom = RoomState.cases.Active.make({
   streak: { days: 0, best: 0 },
   inks: [],
   items: [],
+  postage: [],
   wishlist: [],
   layout: [],
   stowed: [],
@@ -60,7 +61,7 @@ export const adoptedCat: RoomCat = { profile: catProfile, temper: newTemper, las
 export const withCat: ActiveRoom = { ...active, cat: adoptedCat };
 
 /** A room the service just opened: welcomed with its coins. */
-export const welcomed: ActiveRoom = { ...active, wallet: { ...emptyWallet, balance: 560 } };
+export const welcomed: ActiveRoom = { ...active, wallet: { ...emptyWallet, balance: 60 } };
 
 /** A UUID numbered `n`, for journal ids and note keys. */
 export const uuid = (n: number) =>

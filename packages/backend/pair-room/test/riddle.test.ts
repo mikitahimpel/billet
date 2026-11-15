@@ -2,7 +2,7 @@ import { Effect, Layer, Schema } from "effect";
 import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { CatEvent } from "@billet/contracts-domain/cat";
-import { rewardFor } from "@billet/contracts-domain/coins";
+import { dailyEarnCaps, rewardFor } from "@billet/contracts-domain/coins";
 import type { UserId } from "@billet/contracts-domain/ids";
 import { RiddleWord } from "@billet/contracts-domain/riddle";
 import {
@@ -11,9 +11,12 @@ import {
   decideHint,
   decideSend,
   decoysOf,
+  giveUpCoins,
+  hintCost,
   noRiddleSeries,
   type RiddleRow,
   riddleView,
+  solveCoins,
   solveReward,
   tilesFor,
 } from "../src/riddle-rules.ts";
@@ -141,7 +144,7 @@ describe("a try", () => {
       _tag: "Stored",
       right: true,
       write: { riddle: { state: { _tag: "Solved", at } }, series: { series: 1, best: 1 } },
-      reward: { won: true, score: 10 },
+      reward: { won: true, score: solveCoins },
     });
   });
 
@@ -182,20 +185,18 @@ describe("hints", () => {
     expect(decideHint(riddleOf(alice), alice)).toMatchObject({ reason: "NotGuesser" });
   });
 
-  it("lower a solve's coins by two each, to no fewer than four", () => {
-    expect([0, 1, 2, 3, 4, 9].map((hints) => solveReward(hints).score)).toEqual([
-      10, 8, 6, 4, 4, 4,
-    ]);
+  it("lower a solve's coins by one each, to no fewer than one", () => {
+    expect([0, 1, 2, 3, 4, 9].map((hints) => solveReward(hints).score)).toEqual([3, 2, 1, 1, 1, 1]);
   });
 });
 
 describe("a give-up", () => {
-  it("shows the word, pays three and starts the series again, keeping the best", () => {
+  it("shows the word, pays one coin and starts the series again, keeping the best", () => {
     const decision = decideGiveUp(riddleOf(alice), { series: 4, best: 7 }, bob, at);
     expect(decision).toMatchObject({
       _tag: "Stored",
       write: { riddle: { state: { _tag: "GivenUp", at } }, series: { series: 0, best: 7 } },
-      reward: { won: false, score: 3 },
+      reward: { won: false, score: giveUpCoins },
     });
   });
 });
@@ -206,13 +207,13 @@ describe("the reward", () => {
       rewardFor(
         Schema.decodeSync(CatEvent)({ _tag: "GamePlayed", game: "draw-guess", score, won }),
       );
-    expect(played(6, true)).toEqual({ source: "games", coins: 6 });
-    expect(played(3, false)).toEqual({ source: "games", coins: 3 });
+    expect(played(3, true)).toEqual({ source: "games", coins: 3 });
+    expect(played(1, false)).toEqual({ source: "games", coins: 1 });
     expect(
       rewardFor(
         Schema.decodeSync(CatEvent)({ _tag: "GamePlayed", game: "laser", score: 6, won: true }),
       ),
-    ).toEqual({ source: "games", coins: 10 });
+    ).toEqual({ source: "games", coins: 3 });
   });
 });
 
@@ -281,10 +282,10 @@ describe("RiddleRoom", () => {
     expect(solved.result).toMatchObject({ right: true, riddle: { tries: 2, word: "cat" } });
     expect(solved.push?.kind).toBe("ended");
     expect(rooms.memory.cat.map((entry) => [entry.by, entry.event])).toEqual([
-      [bob, { _tag: "GamePlayed", game: "draw-guess", score: 8, won: true }],
+      [bob, { _tag: "GamePlayed", game: "draw-guess", score: solveCoins - hintCost, won: true }],
     ]);
     expect(rooms.memory.coins.map((entry) => [entry.id, entry.amount])).toEqual([
-      [`earn:${riddleId(1)}`, 8],
+      [`earn:${riddleId(1)}`, solveCoins - hintCost],
     ]);
 
     const again = await run(bob, guess(1, 2, "whatever"));
@@ -314,7 +315,10 @@ describe("RiddleRoom", () => {
     if (after.result._tag !== "Listed") throw new Error(after.result._tag);
     expect(after.result.view).toMatchObject({ series: 0, best: 2, open: [] });
     expect(after.result.view.ended.map((riddle) => riddle.word)).toEqual(["fish", "dog", "cat"]);
-    expect(rooms.memory.coins.map((entry) => entry.amount)).toEqual([10, 10, 3]);
+    expect(rooms.memory.coins.map((entry) => entry.amount)).toEqual([
+      solveCoins,
+      dailyEarnCaps.games - solveCoins,
+    ]);
   });
 
   it("refuses an app's GamePlayed for draw-guess, and takes other games", async () => {

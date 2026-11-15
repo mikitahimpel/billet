@@ -23,9 +23,15 @@ class CatRoom {
     var onShowcase: ((String?) -> Void)?
     /// While set the room neither animates nor draws, though it stays attached to its view.
     var paused = false {
-        didSet { root.isEnabled = !paused }
+        didSet {
+            root.isEnabled = !paused
+            if oldValue, !paused, subscription != nil { claimCat() }
+        }
     }
     var isPlayingGame = false
+    /// Last say on where the camera goes each frame, given the dt and the pose the room's own camera works out. A game
+    /// frames itself here, so no other writer of the pose can undo it.
+    var cameraAdjust: ((Float, CameraPose) -> CameraPose)?
     /// Screen point to world point on a plane (a transform whose Y axis is its normal); set by the view that draws
     /// the room, for the arranging of its pieces.
     var unprojector: ((CGPoint, simd_float4x4) -> SIMD3<Float>?)?
@@ -39,6 +45,7 @@ class CatRoom {
 
     private(set) var catGroup = Entity()
     private var catBody = Entity()
+    private var squashGate = ChangeGate<SIMD3<Float>>()
     private var catModel = Entity()
     private(set) var walker: CatWalker?
     private var watch = CatWatch()
@@ -51,9 +58,13 @@ class CatRoom {
     var iblReceiver: ImageBasedLightReceiverComponent?
 
     private(set) var time: Float = 0
+    /// Seconds the latest frame took, for what follows the room on screen.
+    private(set) var frameTime: Float = 0
     private(set) var frame = 0
     /// Whether the room turns a little under the sun and its lights pulse; off, they hold where they are.
     var swaying = true
+    /// How many times longer the lights wait between pulses; the quality tier sets it.
+    var pulseSlowdown: Float = 1
     private var sway = SwayEnvelope()
     private var turned: simd_quatf?
     private var touchedAt: Float = -10
@@ -176,18 +187,27 @@ class CatRoom {
     /// spot above Mochi's head lands on screen. `viewer` is the camera.
     func start(on surface: any RoomSurface, viewer: Entity, beforeProjecting: @escaping (Float) -> Void,
                onFrame: @escaping (CGPoint?) -> Void) {
-        Self.shown = self
-        adoptCat()
+        if Self.takesCat(paused: paused) { claimCat() }
         subscription?.cancel()
         subscription = surface.updates { [weak self] event in
             guard let self, !paused else { return }
             let dt = Float(event.deltaTime)
+            frameTime = dt
             walker?.watch(catModel.convert(position: viewer.position(relativeTo: nil), from: nil))
             tick(dt)
             beforeProjecting(dt)
             let anchor = catGroup.position(relativeTo: nil) + [0, catHeadTop, 0]
             onFrame(walker == nil ? nil : surface.project(anchor))
         }
+    }
+
+    /// A paused room is held under a game played in a corner, or is an empty stand-in while the app is not in front;
+    /// either way the cat is drawn somewhere else, and a room that took her on starting would empty that one.
+    static func takesCat(paused: Bool) -> Bool { !paused }
+
+    private func claimCat() {
+        Self.shown = self
+        adoptCat()
     }
 
     /// Also ends any showcase.
@@ -209,8 +229,8 @@ class CatRoom {
         let t = time
 
         yaw += (targetYaw - yaw) * min(1, dt * 8)
-        sway.update(dt: dt, active: walker?.moving == true || t - touchedAt < 1 || isShowcasing || isPlayingGame,
-                    enabled: swaying)
+        sway.update(dt: dt, active: walker?.moving == true || t - touchedAt < 1 || isShowcasing,
+                    enabled: swaying && !isPlayingGame)
         // Setting an orientation, even the same one, makes every entity under it move; a still room sets none.
         let turn = simd_quatf.y(yaw + 0.035 * sway.strength * sin(t * 0.35))
         if turn != turned {
@@ -227,7 +247,11 @@ class CatRoom {
         // instead, and breathes on her own skeleton.
         let p = t - purrStart
         let bounce: Float = p < 0.7 && walker?.standing.entity == nil ? sin(p / 0.7 * .pi * 3) * (1 - p / 0.7) * 0.12 : 0
-        catBody.scale = [1 + 0.4 * bounce, 1 - bounce, 1 + 0.4 * bounce]
+        let squash: SIMD3<Float> = [1 + 0.4 * bounce, 1 - bounce, 1 + 0.4 * bounce]
+        if squashGate.passes(squash) {
+            catBody.scale = squash
+            SceneWrites.note(.catBodyScale)
+        }
 
         advanceShowcase(dt)
     }
@@ -269,6 +293,10 @@ class CatRoom {
             Self.rooms.add(self)
             walker.avoid = avoid
             self.walker = walker
+            // `-uitestNoCat YES`: her skinned meshes update a GPU buffer every frame, which CI's virtual GPU does not
+            // survive for long (GPU execution error 4, then "Connection to SimMetalHost was lost"); the tests that
+            // pass it drive Decorate, which needs the furniture drawn and touchable, not her.
+            if UserDefaults.standard.bool(forKey: "uitestNoCat") { catGroup.isEnabled = false }
             defer { catBuilt() }
             director = CatDirector(walker: walker, spots: catSpots, source: Self.catLife, analytics: Self.catAnalytics,
                                    cameraDirection: { [unowned self] in cameraDirection })
@@ -455,8 +483,25 @@ class CatRoom {
 
     // MARK: - Lighting
 
+    private var ambientSource: Entity?
+    private var liftApplied: Float = 0
+    /// Stops of ambient light added on top of what the room sets, to make up for the glow pass being off.
+    var ambientLift: Float = 0 {
+        didSet { if ambientLift != oldValue { liftAmbient() } }
+    }
+
+    /// Brings the ambient light's exponent to the lift; `reset` when the room has just written an exponent of its own.
+    func liftAmbient(reset: Bool = false) {
+        guard let source = ambientSource, var light = source.components[ImageBasedLightComponent.self] else { return }
+        if reset { liftApplied = 0 }
+        light.intensityExponent += ambientLift - liftApplied
+        liftApplied = ambientLift
+        source.components.set(light)
+    }
+
     /// Lights everything built so far with `ibl`; parts added later set `iblReceiver` on themselves.
     func receiveAmbient(from ibl: Entity) {
+        ambientSource = ibl
         root.addChild(ibl)
         let receiver = ImageBasedLightReceiverComponent(imageBasedLight: ibl)
         iblReceiver = receiver
@@ -479,9 +524,16 @@ class CatRoom {
         pivot.addChild(decal)
     }
 
+    /// The sun's shadow map is a fixed box in the sun's own frame, around the room it looks at from 2 to 3 m away; the
+    /// scale is half the box's side in metres (at 1 the low sun's map ends halfway up the Bedroom's wall). An automatic
+    /// projection is refitted every frame something in view moves (she breathes, a mote rises), and each refit lays the
+    /// map's texels on the room afresh, so thin shadows like the lamp's stem shimmer on a phone.
+    static let sunShadowProjection = DirectionalLightComponent.Shadow.ShadowProjectionType.fixed(
+        zNear: 0.5, zFar: 4.5, orthographicScale: 2)
+
     static func castShadow(_ sun: Entity) {
         var shadow = DirectionalLightComponent.Shadow()
-        shadow.shadowProjection = .automatic(maximumDistance: 4)
+        shadow.shadowProjection = sunShadowProjection
         shadow.depthBias = 2
         sun.components.set(shadow)
     }

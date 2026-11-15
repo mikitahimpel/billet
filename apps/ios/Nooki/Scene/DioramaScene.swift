@@ -75,31 +75,36 @@ final class DioramaScene: CatRoom {
         loadFurniture()
     }
 
-    private var flameClock = Throttle(interval: 1.0 / 30)
-    private var bulbClock = Throttle(interval: 0.1)
-    private var flameSteps = 0
+    private var flameClock = Throttle(interval: PulseRates.active.flame)
+    private var candleClock = Throttle(interval: PulseRates.active.candle)
+    private var bulbClock = Throttle(interval: PulseRates.active.bulbs)
 
     override func tick(_ dt: Float) {
         super.tick(dt)
         let t = time
 
         if swaying {
+            let rates = PulseRates.at(active: isActive, slowedBy: pulseSlowdown)
+            flameClock.interval = rates.flame
+            candleClock.interval = rates.candle
+            bulbClock.interval = rates.bulbs
+            let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
             if flameClock.fires(dt) {
-                let flicker = 1 + 0.12 * sin(t * 13) + 0.08 * sin(t * 7.3 + 1)
                 flame.scale = Self.flameRadius * [0.85, 1.45 * flicker, 0.85]
-                // Its light needs half as many steps as its shape.
-                flameSteps += 1
-                if flameSteps.isMultiple(of: 2), var light = candleLight.components[PointLightComponent.self] {
-                    light.intensity = 450 * flicker
-                    candleLight.components.set(light)
-                }
+                SceneWrites.note(.flameScale)
             }
-            // A bulb's pulse takes seconds; ten steps a second read as continuous.
+            if candleClock.fires(dt), var light = candleLight.components[PointLightComponent.self] {
+                light.intensity = 450 * flicker
+                candleLight.components.set(light)
+                SceneWrites.note(.candleLight)
+            }
+            // A bulb's pulse takes seconds; four to ten steps a second read as continuous.
             if bulbClock.fires(dt) {
                 for (i, bulb) in bulbs.enumerated() {
                     let s = 1 + 0.22 * sin(t * 2.1 + Float(i) * 1.3)
                     bulb.scale = .init(repeating: Self.bulbRadius * s)
                 }
+                SceneWrites.note(.bulbScale, bulbs.count)
             }
         }
 
@@ -439,13 +444,20 @@ final class DioramaScene: CatRoom {
         place(lampLight, "base-lamp", Self.lampLightHome)
         flame.orientation = .identity
 
-        let spawn = next.spawn()
+        let spawn = next.spawnSpot()
         let floor: Float = 0.023
         let from: SIMD3<Float> = [Float(spawn.x), floor, Float(spawn.z)]
 
+        /// A floor stop she can stand on: where a piece the player moved stands on it, the free floor beside it, so she
+        /// walks to the piece and never into it. Nil when no floor is near.
+        func standing(_ point: SIMD3<Float>, beside piece: String) -> SIMD3<Float>? {
+            next.standing(near: (Double(point.x), Double(point.z)), beside: piece)
+                .map { [Float($0.x), point.y, Float($0.z)] }
+        }
+
         func walk(to id: String, _ home: SIMD3<Float>, yaw extra: Float = 0) -> (SIMD3<Float>, Float)? {
             guard let frame = PieceFrame(id, in: next) else { return nil }
-            let point = frame.map(home)
+            guard let point = standing(frame.map(home), beside: id) else { return nil }
             return (point, atan2(-(point.x - from.x), -(point.z - from.z)))
         }
 
@@ -459,11 +471,11 @@ final class DioramaScene: CatRoom {
                 id: "basket", path: [.init(at: from, move: .jump), .init(at: to)], rest: atan2(-1, -1), play: true,
                 arrive: { [unowned self] in bounce(yarn, spins: false) })
         }
-        if let seat = PieceFrame("base-windowseat", in: next) {
+        if let seat = PieceFrame("base-windowseat", in: next), let stop = standing(seat.map([-0.24, floor, 0.04]), beside: "base-windowseat") {
             sillVisit = .init(
                 id: "sill",
                 path: [
-                    .init(at: from, move: .jump), .init(at: seat.map([-0.24, floor, 0.04])),
+                    .init(at: from, move: .jump), .init(at: stop),
                     .init(at: seat.map([-0.38, 0.295, 0.01]), move: .jump),
                 ], rest: Self.restYaw + seat.yaw)
         }

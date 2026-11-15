@@ -322,6 +322,41 @@ export const eventDetails = sqliteTable(
   ],
 );
 
+// Coins moved per UTC day and source (`EconomySource`), summed over every pair. No pair, no person.
+export const economyDays = sqliteTable(
+  "economy_days",
+  {
+    day: text("day").notNull(),
+    source: text("source").notNull(),
+    credited: integer("credited").notNull(),
+    debited: integer("debited").notNull(),
+    entries: integer("entries").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.day, table.source] })],
+);
+
+// One row per pair and UTC day it earned or spent: coins earned in play that day, the balance after
+// its last coin change (`last_at`, so a late write never overwrites a later one), and whether each
+// daily cap was reached (1) by then. Pair id only.
+export const economyPairDays = sqliteTable(
+  "economy_pair_days",
+  {
+    pairId: text("pair_id").notNull(),
+    day: text("day").notNull(),
+    earned: integer("earned").notNull(),
+    balance: integer("balance").notNull(),
+    lastAt: integer("last_at").notNull(),
+    cappedCare: integer("capped_care").notNull(),
+    cappedNotes: integer("capped_notes").notNull(),
+    cappedGames: integer("capped_games").notNull(),
+    cappedLists: integer("capped_lists").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.pairId, table.day] }),
+    index("economy_pair_days_day_index").on(table.day),
+  ],
+);
+
 // `created_by` is the Cloudflare Access email. Nothing about any pair or person.
 export const adminFunnels = sqliteTable("admin_funnels", {
   id: text("id").primaryKey(),

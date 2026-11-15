@@ -20,6 +20,8 @@ final class FeedStage: GameStage {
         let to: SIMD3<Float>
         var time: Float
         let length: Float
+        /// Bounced out of the bowl onto the mat instead of into it.
+        var spills = false
     }
 
     private static let kibbleTones: [UInt32] = [0x8A5528, 0x9E6530, 0x7A4622, 0xB07A3E]
@@ -27,6 +29,10 @@ final class FeedStage: GameStage {
     /// The scale's body under the bowl: width, depth and height in metres, its display on the front face.
     private static let scaleSize = SIMD3<Float>(0.21, 0.026, 0.17)
     private static let bowlRadius: Float = 0.05
+    private static let floorInside: Float = 0.006
+    private static let heapRadius: Float = 0.04
+    private static let heapTone = Clay.matte(0x8A5528, roughness: 0.8)
+    private static let heapOver = Clay.matte(0xA85A38, roughness: 0.8)
     private static let ringRadius: Float = 0.074
     private static let beads = 36
     /// Grams one kibble on screen stands for.
@@ -47,6 +53,12 @@ final class FeedStage: GameStage {
     private let bagPour: SIMD3<Float>
     private let bowl: Entity
     private let bag: Entity
+    /// The kibble's mound in the bowl: one shared sphere, squashed, rising with the grams in the bowl.
+    private let heap: ModelEntity
+    private var shownHeap: Float = 0
+    private var heapIsOver = false
+    private var shake: Float = 0
+    private var clock: Float = 0
     private var ring: [ModelEntity] = []
     private let materials: (empty: PhysicallyBasedMaterial, filled: PhysicallyBasedMaterial, zone: PhysicallyBasedMaterial,
                             zoneFilled: PhysicallyBasedMaterial, over: PhysicallyBasedMaterial,
@@ -73,13 +85,19 @@ final class FeedStage: GameStage {
     private var aftermath: FeedAftermath?
     private var loafed = false
     private var shownHint = ""
+    private var mess = FeedMess()
+    private var crumbs: [ModelEntity] = []
+    /// Seconds into the Clean up button's sweep, while it runs.
+    private var assisted: Float?
+    private var assistedFrom = 0
+    private var messSeen = false
+    private var sinceSweep: Float = 0
+    /// Whether the bowl has reached the zone once: she hops for it the first time.
+    private var readySeen = false
 
     /// The most the bowl takes.
     private var cap: Double { Double(task.hardCap) }
     private var zoneEnd: Double { Double(task.target + task.tolerance) }
-
-    /// How far the camera leans toward the bowl while the bag pours.
-    var push: Float { tip * 0.6 }
 
     var seat: SIMD3<Float>? { spots.at(0, -0.13) }
 
@@ -104,10 +122,13 @@ final class FeedStage: GameStage {
 
         bowl = root.group(at: bowlAt)
         bowl.cylinder(0.006, Self.bowlRadius + 0.004, Clay.matte(0xD8653F, roughness: 0.4), at: [0, 0.003, 0])
-        bowl.cylinder(Self.bowlHeight - 0.006, Self.bowlRadius, Clay.matte(0xE98A5B, roughness: 0.4),
-                      at: [0, 0.006 + (Self.bowlHeight - 0.006) / 2, 0])
-        bowl.cylinder(0.004, Self.bowlRadius + 0.003, Clay.matte(0xFFF3E2, roughness: 0.35), at: [0, Self.bowlHeight - 0.002, 0])
-        bowl.cylinder(0.001, Self.bowlRadius - 0.006, Clay.matte(0x7A4A2A, roughness: 0.9), at: [0, Self.bowlHeight + 0.0004, 0])
+        if let mesh = BowlMesh.make(outer: Self.bowlRadius, inner: Self.bowlRadius - 0.005, height: Self.bowlHeight,
+                                    floor: Self.floorInside) {
+            bowl.addChild(ModelEntity(mesh: mesh, materials: [Clay.matte(0xE98A5B, roughness: 0.4),
+                                                              Clay.matte(0x7A4A2A, roughness: 0.9)]))
+        }
+        heap = bowl.sphere(1, Self.heapTone, at: [0, Self.floorInside, 0], scale: [Self.heapRadius, 0.0005, Self.heapRadius])
+        heap.isEnabled = false
 
         // The bag stands on the floor by its mouth's pivot, kraft paper with a cream label and a paw.
         bag = root.group(at: bagRest)
@@ -140,6 +161,9 @@ final class FeedStage: GameStage {
     var action: String? { served == nil && canServe ? "Feed" : nil }
 
     var cue: GameCue? {
+        if served == nil, mess.phase == .messy, let crumb = crumbs.first {
+            return GameCue(step: 2, gesture: .drag(to: crumb.position + spots.right * 0.07), at: crumb.position - spots.right * 0.04)
+        }
         guard served == nil, !canServe, food == 0 else { return nil }
         return GameCue(step: 0, gesture: .hold, at: bagRest + [0, -0.06, 0])
     }
@@ -167,10 +191,67 @@ final class FeedStage: GameStage {
 
     func began(_ touch: GameTouch) {
         guard served == nil else { return }
-        holding = 0
+        if mess.phase == .messy {
+            sweep(at: touch)
+        } else {
+            holding = 0
+        }
     }
 
-    func moved(_ touch: GameTouch) {}
+    func moved(_ touch: GameTouch) {
+        if mess.phase == .messy, served == nil { sweep(at: touch) }
+    }
+
+    var assist: String? { mess.phase == .messy && served == nil && assisted == nil && holding == nil ? "Clean up" : nil }
+
+    func assistAct() {
+        guard mess.phase == .messy, assisted == nil else { return }
+        if UIAccessibility.isReduceMotionEnabled {
+            sweepAll()
+        } else {
+            assisted = 0
+            assistedFrom = crumbs.count
+        }
+    }
+
+    /// Kibble under the finger is swept off the mat.
+    private func sweep(at touch: GameTouch) {
+        var taken = 0
+        for index in crumbs.indices.reversed() where touch.distance(to: crumbs[index].position) < 0.03 {
+            crumbs.remove(at: index).removeFromParent()
+            mess.sweep()
+            taken += 1
+        }
+        if taken > 0, sinceSweep > 0.08 {
+            sinceSweep = 0
+            deck.stroke()
+        }
+    }
+
+    private func sweepAll() {
+        for crumb in crumbs { crumb.removeFromParent() }
+        mess.sweep(crumbs.count)
+        crumbs.removeAll()
+    }
+
+    private func tidy(_ dt: Float) {
+        sinceSweep += dt
+        if let t = assisted {
+            assisted = t + dt
+            let left = Int((Float(assistedFrom) * max(0, 1 - (t + dt) / 0.9)).rounded(.up))
+            while crumbs.count > left { crumbs.removeLast().removeFromParent(); mess.sweep() }
+            if left == 0 { assisted = nil }
+        }
+        if mess.phase == .messy, !messSeen {
+            messSeen = true
+            room.react(toMess: true, seat: spots.at(0, -0.13), back: spots.at(0, -0.19), facing: spots.facingPlayer, id: "feed-watch")
+        } else if mess.isSpotless, messSeen, served == nil {
+            messSeen = false
+            deck.say("Spotless!", for: 1.4)
+            deck.cheer()
+            room.react(toMess: false, seat: spots.at(0, -0.13), back: spots.at(0, -0.19), facing: spots.facingPlayer, id: "feed-watch")
+        }
+    }
 
     func ended(_ touch: GameTouch?) { holding = nil }
 
@@ -187,8 +268,15 @@ final class FeedStage: GameStage {
         let pouring = served == nil && !capped && (holding ?? 0) > Self.grace
         tip += ((pouring ? 1 : 0) - tip) * min(1, dt * 7)
         drawBag()
+        drawHeap(dt)
         if pouring, tip > 0.85 { pourFlow(dt) }
         fly(dt)
+        tidy(dt)
+        if isReady, served == nil, !readySeen {
+            readySeen = true
+            room.walker?.hop()
+            deck.tap(1)
+        }
         if let time = served { eat(time + dt, dt: dt) }
         drawRing()
         drawReadout()
@@ -197,6 +285,7 @@ final class FeedStage: GameStage {
     }
 
     private var hint: String {
+        if mess.phase == .messy { return "Sweep up the crumbs, or feed \(name) as it is" }
         if capped { return pronouns.say(.bowlCapped) }
         switch task.check(food: food) {
         case .ready: return "Right there. Let go, tap Feed"
@@ -228,6 +317,7 @@ final class FeedStage: GameStage {
         if poured >= cap, !capped {
             capped = true
             debt = 0
+            shake = 1
             deck.thump()
         }
         if sinceTap > 0.08 {
@@ -242,14 +332,38 @@ final class FeedStage: GameStage {
         bag.orientation = simd_quatf(from: [0, 0, 1], to: spots.toward) * simd_quatf(angle: 1.55 * s, axis: [0, 0, 1])
     }
 
+    /// The mound's size follows the grams that have landed, eased; past the zone it goes the warning tone, and at the
+    /// cap the bowl gives a shudder.
+    private func drawHeap(_ dt: Float) {
+        clock += dt
+        let target = min(Float(pile.count) / Float(max(cap, 1)), 1)
+        shownHeap += (target - shownHeap) * min(1, dt * 10)
+        heap.isEnabled = shownHeap > 0.01
+        heap.scale = [Self.heapRadius * (0.5 + 0.5 * shownHeap), Self.mound(shownHeap), Self.heapRadius * (0.5 + 0.5 * shownHeap)]
+        if heapIsOver != isOver {
+            heapIsOver = isOver
+            heap.model?.materials = [heapIsOver ? Self.heapOver : Self.heapTone]
+        }
+        if shake > 0 {
+            shake = max(0, shake - dt * 3)
+            let calm = UIAccessibility.isReduceMotionEnabled
+            bowl.position = bowlAt + spots.right * (calm ? 0 : sin(clock * 48) * 0.0015 * shake)
+        }
+    }
+
+    private static func mound(_ fill: Float) -> Float { 0.003 + 0.02 * fill.squareRoot() }
+
     private var mouth: SIMD3<Float> { bag.position }
 
     private func drop() {
-        let kibble = root.sphere(0.0052, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),
+        let kibble = root.sphere(0.0062, Clay.matte(Self.kibbleTones.randomElement() ?? 0x8A5528, roughness: 0.75),
                                  at: mouth, scale: [1, 0.65, 1])
-        let slot = slot(pile.count + flights.count)
-        flights.append(Flight(entity: kibble, from: mouth + spots.right * Float.random(in: -0.004...0.004), to: slot, time: 0,
-                              length: Float.random(in: 0.22...0.32)))
+        let poured = Int(food) + flights.count + 1
+        let spills = FeedMess.spills(poured: poured, zoneEnd: task.target + task.tolerance)
+        let inBowl = pile.count + flights.filter { !$0.spills }.count
+        flights.append(Flight(entity: kibble, from: mouth + spots.right * Float.random(in: -0.004...0.004),
+                              to: spills ? scatter() : slot(inBowl), time: 0, length: Float.random(in: 0.22...0.32),
+                              spills: spills))
     }
 
     private func fly(_ dt: Float) {
@@ -260,22 +374,41 @@ final class FeedStage: GameStage {
             flight.entity.position = simd_mix(flight.from, flight.to, SIMD3(repeating: u * u))
             guard u >= 1 else { continue }
             flights.remove(at: index)
+            food += Self.piece
+            if flight.spills {
+                crumbs.append(flight.entity)
+                mess.spill()
+                continue
+            }
             let local = bowl.convert(position: flight.to, from: root)
             flight.entity.removeFromParent()
             bowl.addChild(flight.entity)
             flight.entity.position = local
             pile.append(flight.entity)
-            food += Self.piece
         }
     }
 
-    /// Where the `index`th kibble rests in the bowl, in `root`'s space: a spiral that rises as it fills.
+    /// Where a kibble that bounced out lands: round the bowl's foot, on the scale or the mat beyond it.
+    private func scatter() -> SIMD3<Float> {
+        // Behind and to the sides of the bowl: toward the player the mat lies under the game's own buttons.
+        let angle = Float.random(in: 0.85 * .pi...2.15 * .pi)
+        let r = Float.random(in: Self.bowlRadius + 0.012...Self.bowlRadius + 0.05)
+        let across = r * cos(angle), along = r * sin(angle)
+        let onScale = abs(across) < Self.scaleSize.x / 2 - 0.01 && abs(along) < Self.scaleSize.z / 2 - 0.01
+        let y = onScale ? bowlAt.y : bowlAt.y - Self.scaleSize.y + 0.0075
+        return [bowlAt.x, y, bowlAt.z] + spots.right * across + spots.toward * along
+    }
+
+    /// Where the `index`th kibble rests in the bowl, in `root`'s space: spread over the mound it is piling, at the height
+    /// the mound will have by then.
     private func slot(_ index: Int) -> SIMD3<Float> {
-        let layer = index / 28
-        let k = Float(index % 28)
-        let r = (Self.bowlRadius - 0.012) * (k / 28).squareRoot()
-        let local = SIMD3<Float>(r * cos(k * 2.4), Self.bowlHeight - 0.004 + Float(layer) * 0.0042, r * sin(k * 2.4))
-        return bowlAt + local
+        let fill = min(Float(index + 1) / Float(max(cap, 1)), 1)
+        let reach = Self.heapRadius * (0.5 + 0.5 * fill) * 0.85
+        let r = reach * (Float(index) * 0.618).truncatingRemainder(dividingBy: 1).squareRoot()
+        let across = r / (Self.heapRadius * (0.5 + 0.5 * fill))
+        let height = Self.mound(fill) * (1 - across * across).squareRoot()
+        let angle = Float(index) * 2.4
+        return bowlAt + [r * cos(angle), Self.floorInside + height, r * sin(angle)]
     }
 
     // MARK: - The ring
@@ -361,9 +494,10 @@ final class FeedStage: GameStage {
     private func serve() {
         served = 0
         servedPile = pile.count
-        let result = GameResult.feed(target: task.target, food: food)
+        assisted = nil
+        let result = GameResult.feed(target: task.target, food: food, crumbs: mess.pieces, spotless: mess.isSpotless)
         if result.tooMuch {
-            deck.say("Too much! \(name) is stuffed", for: 1.8)
+            deck.say(result.messy ? "Too much, and crumbs everywhere" : "Too much! \(name) is stuffed", for: 1.8)
             deck.thump()
         } else {
             deck.say(task.check(food: food) == .ready(perfect: true) ? "Exactly \(task.target) g!" : "\(Int(food.rounded())) g: just right", for: 1.5)

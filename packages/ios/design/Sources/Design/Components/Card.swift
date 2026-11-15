@@ -308,6 +308,13 @@ public struct RowIcon: View {
     self.style = style
   }
 
+  /// A ring `gap` outside a tile of `size`, with corners concentric to the tile's own.
+  public static func ring(size: CGFloat, gap: CGFloat = 3, lineWidth: CGFloat = 2) -> some View {
+    RoundedRectangle(cornerRadius: size * cornerFraction + gap, style: .continuous)
+      .stroke(Ink.text, lineWidth: lineWidth)
+      .padding(-gap)
+  }
+
   private var shape: RoundedRectangle {
     RoundedRectangle(cornerRadius: size * Self.cornerFraction, style: .continuous)
   }

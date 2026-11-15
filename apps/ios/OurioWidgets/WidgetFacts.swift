@@ -143,7 +143,7 @@ struct CoinsGlance: Equatable {
     var wished: Int
 
     init(_ wallet: Wallet) {
-        coins = wallet.coins
+        coins = max(0, wallet.coins)
         level = wallet.level
         progress = min(1, max(0, wallet.progress))
         wished = wallet.wishlist.count

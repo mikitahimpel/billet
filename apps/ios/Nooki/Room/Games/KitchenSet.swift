@@ -10,6 +10,10 @@ import UIKit
 /// frame is turned by `yaw` about the play area so the left wall shows to the camera.
 enum KitchenSet {
     static let yaw: Float = -0.45
+    /// The planks and their seams lie on the slab, this tall at the seams; the set is sunk by it so the floor's top is
+    /// `floorTop`, where the games stand their props and lay their blobs. A blob inside a plank is hidden on one GPU
+    /// and flickers through on another.
+    static let plankTop: Float = 0.0018
     private static let backZ: Float = -0.40
     private static let leftX: Float = -0.40
     private static let counterDepth: Float = 0.14
@@ -24,8 +28,8 @@ enum KitchenSet {
     @discardableResult
     static func build(in pivot: Entity, floorTop: Float) -> Entity {
         let root = pivot.group()
-        root.box(3, 0.04, 3, r: 0.002, Clay.matte(0xD9AE78, roughness: 0.8), at: [0, 0, 0])
-        let k = root.group(at: [0, floorTop, 0], rotation: .y(yaw))
+        root.box(3, 0.04, 3, r: 0.002, Clay.matte(0xD9AE78, roughness: 0.8), at: [0, -plankTop, 0])
+        let k = root.group(at: [0, floorTop - plankTop, 0], rotation: .y(yaw))
         var b = MeshBatch()
         floor(&b)
         rug(&b)
@@ -47,7 +51,7 @@ enum KitchenSet {
             ([0.45, 0, backZ + 0.13], 2.0, 0.2), ([leftX + 0.13, 0, 0.3], 0.2, 1.4),
             ([0.24, 0, -0.19], 0.14, 0.14), ([-0.22, 0, -0.2], 0.17, 0.12), ([0.04, 0, -0.02], 0.62, 0.5),
         ]
-        for (at, width, depth) in shadows { k.contactBlob(at: at, width: width, depth: depth) }
+        for (at, width, depth) in shadows { k.contactBlob(at: at, width: width, depth: depth, lift: 0.0026) }
         return root
     }
 
@@ -59,10 +63,10 @@ enum KitchenSet {
         var row = 0
         while z < 1.2 {
             b.box([2.2, 0.0016, width - 0.003], at: [0.5, 0.0008, z + width / 2], tones[row % 3], roughness: 0.75)
-            b.box([2.2, 0.0018, 0.003], at: [0.5, 0.0009, z + width], seam, roughness: 0.9)
+            b.box([2.2, plankTop, 0.003], at: [0.5, plankTop / 2, z + width], seam, roughness: 0.9)
             var x = leftX + Float(row % 4) * 0.13
             while x < 1.5 {
-                b.box([0.003, 0.0018, width], at: [x, 0.0009, z + width / 2], seam, roughness: 0.9)
+                b.box([0.003, plankTop, width], at: [x, plankTop / 2, z + width / 2], seam, roughness: 0.9)
                 x += 0.52
             }
             z += width
@@ -86,7 +90,9 @@ enum KitchenSet {
     private static func cabinet(_ b: inout MeshBatch, center: SIMD3<Float>, width: Float, facing: Float, handle: Bool = true) {
         let turn = simd_quatf.y(facing)
         let height = counterTop - 0.014
-        b.box([width, height, counterDepth - 0.01], at: center + turn.act([0, height / 2, 0]), rotation: turn, 0xE9DCC6)
+        // The body stops under the worktop's underside: a top at the worktop's own height would be coplanar with it.
+        let body = height - 0.014
+        b.box([width, body, counterDepth - 0.01], at: center + turn.act([0, body / 2, 0]), rotation: turn, 0xE9DCC6)
         b.box([width - 0.012, height - 0.034, 0.008], at: center + turn.act([0, height / 2 + 0.008, counterDepth / 2 - 0.004]),
               rotation: turn, door, roughness: 0.6)
         if handle {
@@ -123,7 +129,7 @@ enum KitchenSet {
         }
         // A sink with a mixer tap, behind her left.
         b.box([0.17, 0.003, 0.1], at: [-0.2, counterTop + 0.0008, backZ + 0.075], steel, roughness: 0.25)
-        b.box([0.145, 0.004, 0.078], at: [-0.2, counterTop + 0.002, backZ + 0.075], 0x8E9AA4, roughness: 0.3)
+        b.box([0.145, 0.004, 0.078], at: [-0.2, counterTop + 0.003, backZ + 0.075], 0x8E9AA4, roughness: 0.3)
         b.cylinder(height: 0.07, radius: 0.005, at: [-0.2, counterTop + 0.035, backZ + 0.02], steel, roughness: 0.2)
         b.cylinder(height: 0.05, radius: 0.004, at: [-0.2, counterTop + 0.07, backZ + 0.045],
                    rotation: .x(.pi / 2), steel, roughness: 0.2)
@@ -131,7 +137,8 @@ enum KitchenSet {
     }
 
     private static func leftCounter(_ b: inout MeshBatch) {
-        let start = backZ + counterDepth
+        // Starts where the back run's worktop ends, so the two tops never overlap in the corner.
+        let start = backZ + counterDepth + 0.01
         let end: Float = 1.0
         b.box([counterDepth + 0.01, 0.014, end - start], at: [leftX + (counterDepth + 0.01) / 2, counterTop - 0.007, (start + end) / 2],
               wood, roughness: 0.6)
@@ -249,7 +256,7 @@ enum KitchenSet {
         let turn = simd_quatf.y(0.5)
         let at = SIMD3<Float>(-0.22, 0, -0.2)
         b.box([0.07, 0.11, 0.045], at: at + [0, 0.055, 0], rotation: turn, 0xC96F4A, roughness: 0.85)
-        b.box([0.07, 0.014, 0.036], at: at + turn.act([0, 0.116, 0]), rotation: turn, 0xA8573A, roughness: 0.9)
+        b.box([0.072, 0.014, 0.036], at: at + turn.act([0, 0.116, 0]), rotation: turn, 0xA8573A, roughness: 0.9)
         b.box([0.044, 0.05, 0.002], at: at + turn.act([0, 0.055, 0.0235]), rotation: turn, cream, roughness: 0.7)
         b.sphere(radius: 0.007, at: at + turn.act([0, 0.05, 0.0255]), scale: [1.2, 1, 0.3], 0xC96F4A)
     }

@@ -1,10 +1,12 @@
-import { asc, count, countDistinct, desc, eq, min } from "drizzle-orm";
+import { asc, count, countDistinct, desc, eq, gte, min } from "drizzle-orm";
 import { Effect, Layer, Schema } from "effect";
 import { AdminData, AdminUnavailable } from "@billet/backend-admin/admin-data";
 import { MetricEventName } from "@billet/contracts-domain/metrics";
 import { openDirectoryDatabase, type DirectoryDatabase } from "./directory-database.ts";
 import {
   appStoreNotifications,
+  economyDays,
+  economyPairDays,
   eventDetails,
   onboardingAnswers,
   pairEvents,
@@ -118,6 +120,13 @@ const makeAdminData = (db: DirectoryDatabase): AdminData["Service"] =>
             notifications,
           })),
         ),
+      economy: (since) =>
+        guarded(
+          Effect.all([
+            db.select().from(economyDays).where(gte(economyDays.day, since)),
+            db.select().from(economyPairDays).where(gte(economyPairDays.day, since)),
+          ]),
+        ).pipe(Effect.map(([days, pairDays]) => ({ days, pairDays }))),
       // Never `text`: what a person typed stays in the table.
       onboarding: guarded(
         Effect.all([

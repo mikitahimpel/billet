@@ -10,6 +10,7 @@ import {
 import { CoinEntryId, EarnEvent } from "@billet/contracts-domain/coins";
 import { EpochMillis, IdempotencyKey, UserId } from "@billet/contracts-domain/ids";
 import { InkId } from "@billet/contracts-domain/inks";
+import { PostageId } from "@billet/contracts-domain/postage";
 import { ListCommand, SharedList } from "@billet/contracts-domain/list";
 import { Mood } from "@billet/contracts-domain/mood";
 import { Note } from "@billet/contracts-domain/note";
@@ -58,6 +59,8 @@ export const RoomCommand = Schema.TaggedUnion({
   GrantInks: { inks: Schema.Array(InkId) },
   /** Gives the pair room pieces it does not have, as a kept purchase comes back after a pairing. */
   GrantItems: { items: Schema.Array(RoomItemId) },
+  /** Gives the pair stamps and seals it does not have, as a kept purchase comes back. */
+  GrantPostage: { postage: Schema.Array(PostageId) },
   /** Buys one ink with the pair's coins, at its catalog price. `id` is the buyer's, once. */
   Buy: {
     id: IdempotencyKey,
@@ -133,7 +136,7 @@ export const RoomCommand = Schema.TaggedUnion({
   /** Coins bought with money; `id` is the payments ledger's entry id, written once. */
   CreditPurchase: {
     id: CoinEntryId,
-    kind: Schema.Literals(["buy", "refund"]),
+    kind: Schema.Literals(["purchase", "refund"]),
     coins: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
     ref: Schema.String.check(Schema.isNonEmpty(), Schema.isMaxLength(100)),
     at: EpochMillis,

@@ -135,7 +135,7 @@ export const paymentsRepositoryContract = (label: string, make: () => Promise<Co
       });
     });
 
-    it("takes back at most the balance, and flags a purchase it could not take back whole", async () => {
+    it("takes back the whole pack even when it was spent, and flags a refund that leaves a debt", async () => {
       const { repository, spend } = await make();
       const pair = owner(`pair-${crypto.randomUUID()}`);
       const purchase = purchaseOf(pair, 100);
@@ -143,23 +143,20 @@ export const paymentsRepositoryContract = (label: string, make: () => Promise<Co
       await run(repository.credit(purchase));
       await spend(pair, 70);
 
-      expect(await run(repository.refund(await stored(repository, id), later(2)))).toEqual({
-        duplicate: false,
-        coins: 30,
-        balance: 0,
-      });
+      expect(
+        await run(repository.refund(await stored(repository, id), later(2), undefined, true)),
+      ).toEqual({ duplicate: false, coins: 100, balance: -70 });
       const after = await stored(repository, id);
       expect({ status: after.status, flagged: after.flagged }).toEqual({
         status: "refunded",
         flagged: 1,
       });
       const ledger = await run(repository.ledger(pair));
-      expect(ledger.entries.find(({ id: entry }) => entry === `refund:${id}`)?.amount).toBe(-30);
+      expect(ledger.entries.find(({ id: entry }) => entry === `refund:${id}`)?.amount).toBe(-100);
 
-      // Apple reversing that refund gives back what it took, not the whole pack.
       expect(await run(repository.restore(after, later(3)))).toEqual({
         duplicate: false,
-        coins: 30,
+        coins: 100,
         balance: 30,
       });
     });

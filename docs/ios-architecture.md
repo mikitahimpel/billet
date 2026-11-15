@@ -41,6 +41,7 @@ packages/ios/features          BilletFeatures, one pair of targets per feature
 ├── FeatureProfile   ProfileInterface     the couple, settings, variants, erase
 ├── FeatureOnboarding, FeaturePairing     as today, with OnboardingInterface
 ├── RoomInterface                         RoomInput, RoomEvent, RoomControlling, CatStatus (no scene code)
+├── ServerSync                            the room's clients and syncs over Foundation (no feature)
 └── WidgetBridge                          as today
 │
 packages/ios/{pet, core, design, contracts, payments}     the layers, unchanged
@@ -880,6 +881,18 @@ dust and the room's glow. The invite and code steps drive an `OnboardingPairing`
 conforms to in the app, so the feature does not import `FeaturePairing`. The flow takes both
 `UserDefaults` (its own and the cat's) in `init` and reads the cat's name through the one it is given,
 never `CatProfile.store`. The bundled questions (`Onboarding.json`) are still a resource of the app.
+
+The server code moved the same way, into `ServerSync`, a target of the features package that is no
+feature: the cat events, gift and list clients, the streak routes (`StreakRemote.live`), the photo,
+text and drawing syncs, `PhotoReceiving`, `Resend` and the purchase routes of `PaymentsServer`. It
+imports Foundation, the layers and the `*Interface`s only, and is not in the Linux `appleOnly` list,
+so its tests also run under `pc-test --swift`. It cannot live in `packages/ios/core` because the
+syncs fill the Interfaces' stores. What each of them needs from the phone is passed in: the
+`UserDefaults` of the cursors (`defaults:`), the widget reload (`DrawingSync.reloadWidgets`) and the
+photo compressor (`PhotoSync.prepare`). `ServerSession`, `Backend` (it holds `OnboardingClient`),
+`DecorSync`, the Who knows who and Draw & guess syncs, `ShopFixture` and `MoodSync` stay in the app,
+because each names a feature's type, as do the APNs, Live Activity and network-monitor code
+(`DrawingPushes.swift`, `NetworkReturns.swift`, `PhotoUpload.swift`, `AppPayments`).
 
 PRs 3 to 11 can be reordered around other agents' work; 1 and 2 cannot. Where a PR would touch
 more than about 25 files of UI that others are editing, it splits: the store and interface first

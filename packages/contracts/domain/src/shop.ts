@@ -2,6 +2,7 @@ import { Schema } from "effect";
 import { LocalDay } from "./coins.ts";
 import type { EpochMillis } from "./ids.ts";
 import { InkId } from "./inks.ts";
+import { PostageId } from "./postage.ts";
 import type { PriceBook } from "./shop-catalog.ts";
 
 const slug = Schema.String.check(
@@ -131,6 +132,8 @@ export const setPrice = (
 export const ShopOffer = Schema.TaggedUnion({
   Ink: { ink: InkId },
   Item: { item: RoomItemId },
+  /** A note's stamp or seal, unlocked for good. */
+  Postage: { postage: PostageId },
   Set: { set: KnownPieceSetId },
   Treat: {},
 });
@@ -169,9 +172,13 @@ export type Placement = typeof Placement.Type;
 /** `inks` and `items` start with the free ink and starter pieces, then purchase order.
  * `giftDay`: the local day the daily gift was last opened, absent before the first. */
 export const PairShop = Schema.Struct({
-  balance: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  /** Signed: negative after an Apple refund of spent coins, until earning pays it down. */
+  balance: Schema.Int,
   inks: Schema.Array(InkId),
   items: Schema.Array(RoomItemId),
+  /** The stamps and seals the pair unlocked, in purchase order. Absent from a server before they
+   * were sold, which let every one be sent. */
+  postage: Schema.optionalKey(Schema.Array(PostageId)),
   wishlist: Schema.Array(RoomItemId),
   giftDay: Schema.optionalKey(LocalDay),
   bonuses: Schema.Array(CollectionId),
@@ -198,21 +205,21 @@ const collection = (id: string, items: ReadonlyArray<string>, bonus: number): Pi
   bonus,
 });
 
-/** Starter pieces count as owned. Bonuses are placeholders until the owner sets them. */
+/** Starter pieces count as owned. Bonuses are small so a collection never shortcuts earning it. */
 export const collections: ReadonlyArray<PieceCollection> = [
   collection(
     "cozy-autumn",
     ["lamp", "lantern", "armchair", "rug", "teatable", "print", "monstera"],
-    150,
+    40,
   ),
-  collection("mochis-corner", ["yarn", "mouse", "tower", "donutbed"], 100),
+  collection("mochis-corner", ["yarn", "mouse", "tower", "donutbed"], 25),
 ];
 
 export const collectionOf = (id: string): PieceCollection | undefined =>
   collections.find((entry) => entry.id === id);
 
-/** Given once, when the room opens. A placeholder until the owner sets it. */
-export const welcomeCoins = 560;
+/** Given once, when the room opens: one cheap first piece at most, never a big one. */
+export const welcomeCoins = 60;
 
 /** Grams. */
 export const treatGrams = 20;
@@ -326,8 +333,8 @@ export const GiftReward = Schema.TaggedUnion({
 });
 export type GiftReward = typeof GiftReward.Type;
 
-/** Gift coins are one of these; one day in four it is one of `giftItems` instead. */
-export const giftCoins: ReadonlyArray<number> = [20, 30, 40];
+/** Gift coins are one of these; one day in ten it is one of `giftItems` instead. */
+export const giftCoins: ReadonlyArray<number> = [1, 2];
 export const giftItems: ReadonlyArray<RoomItemId> = ["mouse", "yarn", "monstera"].map((id) =>
   decodeItemId(id),
 );
@@ -336,8 +343,8 @@ export const giftItems: ReadonlyArray<RoomItemId> = ["mouse", "yarn", "monstera"
 export const giftOn = (seed: string, day: LocalDay, owned: ReadonlySet<string>): GiftReward => {
   const next = splitMix64(fnv1a(`${seed}|gift|${dayKey(day)}`));
   const roll = next();
-  if (roll % 4n === 0n) {
-    const item = giftItems[Number((roll / 4n) % BigInt(giftItems.length))];
+  if (roll % 10n === 0n) {
+    const item = giftItems[Number((roll / 10n) % BigInt(giftItems.length))];
     if (item !== undefined && !owned.has(item)) return { _tag: "Item", item };
   }
   return { _tag: "Coins", coins: giftCoins[Number(next() % BigInt(giftCoins.length))] ?? 0 };

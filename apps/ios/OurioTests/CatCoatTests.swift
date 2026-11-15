@@ -4,29 +4,29 @@ import Testing
 @testable import Billet
 
 struct CatCoatTests {
-    /// sha256 of billet-gpu's coat PLYs (coats/SHA256SUMS; the lying ones from coats/brain), which the original PLY
-    /// plus the shipped colours must rebuild.
+    /// sha256 of the original PLY with each splat's `f_dc` replaced by the shipped half float, printed by
+    /// `scripts/coats/coat-colours.py`; billet-gpu's coat PLYs (coats/SHA256SUMS) differ from these in `f_dc` by at most 0.002.
     static let expected: [String: String] = [
-        "Mochi-ginger": "41a838b2b7508d7dbdf71a8bcbdab1dbcf2cd7e038d7a18e9853a07df7a8c114",
-        "MochiStanding-ginger": "a11409cbd072d4a9855708e6e507e64d60d84906f226d2d1759bc8e0e0d0d761",
-        "Mochi-cream": "0b740549ff7497ad7606b5627eb969ec59516e3d4b368bf1c91b6df89a0c2cd3",
-        "MochiStanding-cream": "a3e5877b9fb5cd09790662ffcbf4ffbc1aeabff76c82739c4f2b10fcc55c1c93",
-        "Mochi-tuxedo": "06f78652fe54f6603f29cdded8577883f6953ca8504be8cd53e4d576b3052464",
-        "MochiStanding-tuxedo": "3c3e6974d02039c3ed7079ee2153a467fab9c96ac6484cf9db63e08871127787",
-        "Mochi-black": "e478b74296d0746753665883d32bb2c5c35ef584c580daa0b02d163bd3e5c030",
-        "MochiStanding-black": "20f56e95fa5f577c7c341b3f67d55a82fc89942476f855572274c735dc5e3a48",
-        "Mochi-calico": "5fc9176dddba1fc302b647d15666621b7b09af55e16981586315193ec285cd19",
-        "MochiLoaf-ginger": "e03d59d4240e8537bbfa33d851858b0fae8b6ec93d27c56125688dcd865eee5a",
-        "MochiLoaf-cream": "0b76a9064082ed55792e64f98345a4a7f4f5e1ffe94b0e4c15f53577ac863df5",
-        "MochiLoaf-tuxedo": "e92a3ee5724596bac376f0d0173e9458c7dd16431473f2b0d65cd4bea279e3ae",
-        "MochiLoaf-black": "49d7d3ce8b130245c314cca81ded9b22b087e9eb98ad6f33ed0edc6c24710e36",
-        "MochiLoaf-calico": "4eed55d67e958a84082dd62e7045665609ba90a4eb8db5e0afe5215928d4e2cd",
-        "MochiSleep-ginger": "be6f6cd93959123525f42533b56805f17d2a6e9ebdc8841fa5fc61a41b8e962d",
-        "MochiSleep-cream": "6ae96ffb6dd6eb0f5466053e3f5f66a25013b2f4bacb28ce223f56778f51cb2a",
-        "MochiSleep-tuxedo": "e66fe2ddcf9591e0281f483adfc0a18264ae608bf0c4043fe6600ae272fbf0d0",
-        "MochiSleep-black": "c5d02c7ee4bd80862f0b0954df12190259607b45494eb8932facfc60313a01be",
-        "MochiSleep-calico": "865fa2bbdc5b5222c8b211824258bed53abdc1cebf792ca651b83fd93b78574c",
-        "MochiStanding-calico": "95585254d29fcfe8fa46c7fb181120d8c781591e8959df2e57fbe87e0ab5fb0a",
+        "Mochi-ginger": "36eb64432b268b65fd95bec4196a961530fb9fef687b27fd72c87db82b5a2db2",
+        "MochiStanding-ginger": "a1ce18891c7f7a174226192b46927540514f2b0ad279328dcef91a49a23e1b46",
+        "Mochi-cream": "93096b26b504427652646282a8fbf701f2aca1840652489a30e70636cb37a821",
+        "MochiStanding-cream": "db3621d9a2d55a78155dfcb0db3d5873dd88d9d00d9642c443241b8e08be4394",
+        "Mochi-tuxedo": "ebc7b699cc7cebbc56b00c22d4921934115f65443dfd482f778606f98d3b01e5",
+        "MochiStanding-tuxedo": "68673865e817aa32dda88738178d1a06c7209d61ea9a41264c829d7c2473426f",
+        "Mochi-black": "a27be6b1164429985eadeee421636cff4375e2c4a0a7b8f3b31a8a4b2fb1709b",
+        "MochiStanding-black": "381c8f0cb067b794006cc78bbbcdd716a33386da3c52ef17617a51f6b01722de",
+        "Mochi-calico": "fc9bccd7b876a5e83fba1548f54f5820e5897a5226b95946ec46c0ce010a988f",
+        "MochiLoaf-ginger": "d412ad77d0026fd87473dcb422efce4921a2237e4919d83a265d399c09a85056",
+        "MochiLoaf-cream": "959568a166dbc831ef0768d7e13723eab4ed0a5a46b13fbafeac58b2747dbd5f",
+        "MochiLoaf-tuxedo": "afc3089e2cc8e025681d85a950ed6eabfb5e2727cd639e9ea768a67dd9c9a85d",
+        "MochiLoaf-black": "e97157ed7c607f047eb2475ad47328f7318672ea41fc5b8bf03f3ab5bfa81b7b",
+        "MochiLoaf-calico": "fec37524ca2521d70447efc1f054bd49db86a0ab142cc0dc5f5e54b976e1dc94",
+        "MochiSleep-ginger": "444f0a64b566e8b5c874caf650b2e6bad195f456cbfae7ec9196772d8241891f",
+        "MochiSleep-cream": "8513e95e6e46f4fbb4e36bafac9fd7eef8232f343d5773e8ff025301533d5684",
+        "MochiSleep-tuxedo": "1f5fd1d0d58806760025d8a578d929bf17e05c16de43e08b8e962d9f12427302",
+        "MochiSleep-black": "58ca558a6c82eb2984203018519d54009e328c9234c22846a319c9b31afbb628",
+        "MochiSleep-calico": "c1e05ecfc47a2c6e77368ef50ebdef41402db74b168acee0369752a6b4589d44",
+        "MochiStanding-calico": "14e4472e71774e85812376f2f53f08d1609138845c10d2d78f0dcf53b314fe69",
     ]
 
     private static func sha256(_ data: Data) -> String {
@@ -34,7 +34,7 @@ struct CatCoatTests {
     }
 
     @Test(arguments: CatCoat.poses, CatCoat.allCases.filter { $0 != .grey })
-    func aCoatRebuildsBilletGPUsPLY(pose: String, coat: CatCoat) throws {
+    func aCoatKeepsEverythingButTheColoursOfTheOriginalPLY(pose: String, coat: CatCoat) throws {
         #expect(Self.sha256(try coat.dressedPLY(pose)) == Self.expected["\(pose)-\(coat.rawValue)"])
     }
 

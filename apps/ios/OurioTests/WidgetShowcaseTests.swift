@@ -1,4 +1,5 @@
 import Foundation
+import Pet
 import Design
 import SwiftUI
 import Testing
@@ -12,6 +13,16 @@ import UIKit
         for group in WidgetShowcase.Group.allCases {
             #expect(!WidgetShowcase.items(in: group).isEmpty, "\(group.title) lists nothing")
         }
+    }
+
+    @Test func theWordsNameTheCoupleOwnCat() {
+        for item in WidgetShowcase.all(cat: "Tofu", pronouns: .they) {
+            #expect(!item.title.contains("Mochi") && !item.detail.contains("Mochi"), "\(item.id) says Mochi")
+        }
+        let named = WidgetShowcase.all(cat: "Tofu", pronouns: .they).filter {
+            $0.title == "Tofu" || $0.detail.contains("Tofu")
+        }
+        #expect(named.map(\.id) == ["cat", "coins", "day", "lock-cat", "control-pet"])
     }
 
     @Test func onlyControlsHaveNoPreview() {

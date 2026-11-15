@@ -80,15 +80,11 @@ import Testing
     #expect(!GameScenery.options(for: .laser).contains(.kitchen))
   }
 
-  @Test func aGameStartsWhereItWasLastPlayedIfItCanBe() {
-    #expect(GameScenery.start(.feed, last: nil) == .kitchen)
-    #expect(GameScenery.start(.feed, last: .rug) == .kitchen)
-    #expect(GameScenery.start(.laser, last: .room) == .room)
-    #expect(GameScenery.start(.laser, last: .rug) == .room)
-    #expect(GameScenery.start(.laser, last: .kitchen) == .room)
-    #expect(GameScenery.start(.laser, last: nil) == .room)
-    #expect(GameScenery.start(.brush, last: .kitchen) == .kitchen)
-    #expect(GameScenery.start(.brush, last: .room) == .rug)
+  @Test func eachGameIsPlayedInItsOwnScene() {
+    #expect(GameScenery.start(.feed) == .kitchen)
+    #expect(GameScenery.start(.water) == .kitchen)
+    #expect(GameScenery.start(.brush) == .rug)
+    #expect(GameScenery.start(.laser) == .room)
   }
 }
 

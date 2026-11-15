@@ -4,7 +4,7 @@ import Page from "../layouts/page.astro";
 import { supportEmail } from "../site";
 
 // Follows docs/legal/terms.md. Change both together.
-const updated = { iso: "2026-11-09", label: "November 9, 2026" };
+const updated = { iso: "2026-11-15", label: "November 15, 2026" };
 const topics = [
   { id: "account", label: "Your account" },
   { id: "content", label: "What you send" },
@@ -29,11 +29,16 @@ const topics = [
     updated={updated}
     topics={topics}
   >
+    <h2 id="who">Who we are</h2>
+    <p>
+      Ourio is provided by Mikita Himpel, Kamionkowska 9, apt. 97, 03-805 Warsaw, Poland. Email:
+      <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
+    </p>
     <h2 id="account">Your account</h2>
     <ul>
       <li>
         The app creates an anonymous account for you. Keep your iCloud Keychain on if you want a new phone to
-        find your account; the app has no sign-in.
+        find your account. Linking your Apple ID in Settings › Account is optional.
       </li>
       <li>
         You must be at least 13. If you are under the age of majority where you live, you need a parent's or guardian's
@@ -84,7 +89,7 @@ const topics = [
 
     <h2 id="changes">Changes and contact</h2>
     <p>
-      We may change these terms and will change the date above. Questions: <a href={`mailto:${supportEmail}`}
+      We may change these terms and will change the date above. These terms are governed by the laws of Poland. Courts of Warsaw, Poland have jurisdiction, but if you are a consumer you may also bring a claim in the courts of where you live, and nothing here takes away the protection of the law of your country. Questions: <a href={`mailto:${supportEmail}`}
         >{supportEmail}</a
       >.
     </p>

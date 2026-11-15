@@ -1,0 +1,71 @@
+---
+import DocArticle from "../components/doc-article.astro";
+import EndCard from "../components/end-card.astro";
+import Page from "../layouts/page.astro";
+import { faq, questionCount, questionsByTopic, updated } from "../partner-questions";
+
+const topics = [
+  ...questionsByTopic.map((topic) => ({ id: topic.id, label: topic.heading })),
+  { id: "game", label: "Play them as a game" },
+  { id: "questions", label: "Questions about these questions" },
+];
+const schema = [
+  {
+    "@type": "FAQPage",
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
+---
+
+<Page
+  title="150 questions to ask your partner: fun, deep and before marriage"
+  description="150 questions to ask your partner, in 8 topics: fun questions, questions to get to know them better, and questions to ask before marriage about money and life."
+  schema={schema}
+  bodyClass="site-doc"
+>
+  <DocArticle
+    eyebrow="Questions for couples"
+    title="Questions to ask your partner"
+    lead={`Good questions to ask your partner are specific and a little playful: how they eat a pizza crust, their first concert, what they'd do with $1,000 found on the street. Here are ${questionCount} of them in ${questionsByTopic.length} topics, from fun ones to questions to ask before marriage.`}
+    updated={updated}
+    topics={topics}
+  >
+    {
+      questionsByTopic.map((topic) => (
+        <section>
+          <h2 id={topic.id}>{topic.heading}</h2>
+          <p>{topic.intro}</p>
+          <ol>
+            {topic.questions.map((question) => (
+              <li>{question}</li>
+            ))}
+          </ol>
+        </section>
+      ))
+    }
+
+    <h2 id="game">Play them as a game</h2>
+    <p>
+      These are the questions of Who knows who, the daily quiz in Ourio. Each day one of you answers five of them, picking
+      from four answers; the other guesses, and the answers open together once you both have played. It works across
+      two phones, so it fits long distance too. Ourio is free on iPhone, with no subscription. See <a
+        href="/features/games/">Ourio's couples games</a
+      >.
+    </p>
+
+    <h2 id="questions">Questions about these questions</h2>
+    {
+      faq.map((item) => (
+        <>
+          <h3>{item.question}</h3>
+          <p>{item.answer}</p>
+        </>
+      ))
+    }
+  </DocArticle>
+  <EndCard />
+</Page>

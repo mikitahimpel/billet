@@ -32,6 +32,7 @@ import { shopItemProblem } from "@billet/backend-shop/shop-validate";
 import type { AdminIdentity } from "./access.ts";
 import { AdminData } from "./admin-data.ts";
 import { buildAppEvents } from "./admin-app-events.ts";
+import { buildEconomyReport } from "./admin-economy.ts";
 import { buildOverview } from "./admin-overview.ts";
 import { buildRetentionGrid } from "./admin-retention.ts";
 import {
@@ -91,6 +92,7 @@ export const adminApi = {
   status: "/admin/api/status",
   statusHistory: "/admin/api/status/history",
   purchases: "/admin/api/purchases",
+  economy: "/admin/api/economy",
   reports: "/admin/api/reports",
   onboarding: "/admin/api/onboarding",
   shopItems: "/admin/api/shop-items",
@@ -116,6 +118,7 @@ export const agentApi = {
   status: "/admin/api/agent/status",
   statusHistory: "/admin/api/agent/status-history",
   purchases: "/admin/api/agent/purchases",
+  economy: "/admin/api/agent/economy",
   onboarding: "/admin/api/agent/onboarding",
   shopItems: "/admin/api/agent/shop-items",
   shopHistory: "/admin/api/agent/shop-history",
@@ -245,6 +248,14 @@ const PairKeyParams = Schema.Struct({ pairId: PairId, key: ExperimentKey });
 const PurchasesQuery = Schema.Struct({
   limit: Schema.optional(
     Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 1000 })),
+  ),
+});
+const EconomyQuery = Schema.Struct({
+  range: Schema.optional(
+    Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 90 })),
+  ),
+  hold: Schema.optional(
+    Schema.NumberFromString.check(Schema.isBetween({ minimum: 1, maximum: 365 })),
   ),
 });
 const HistoryQuery = Schema.Struct({
@@ -484,6 +495,22 @@ const readHandlers = Effect.gen(function* () {
     return respondJson(yield* data.purchases(limit ?? 200));
   }).pipe(guarded);
 
+  // Pair-level aggregates of every coin entry: by day and source, balance spread, cap hit rate.
+  const economy = Effect.gen(function* () {
+    const query = yield* HttpServerRequest.schemaSearchParams(EconomyQuery);
+    const range = query.range ?? 30;
+    const today = utcDay(yield* Clock.currentTimeMillis);
+    const rows = yield* data.economy(addDays(today, -(range - 1)));
+    return respondJson(
+      buildEconomyReport({
+        ...rows,
+        today,
+        range,
+        ...(query.hold === undefined ? {} : { holdDays: query.hold }),
+      }),
+    );
+  }).pipe(guarded);
+
   // Read-only: acting on a report (blocking, deleting an account) happens outside the panel.
   const reports = Effect.gen(function* () {
     const { limit } = yield* HttpServerRequest.schemaSearchParams(PurchasesQuery);
@@ -531,6 +558,7 @@ const readHandlers = Effect.gen(function* () {
     status,
     statusHistory,
     purchases,
+    economy,
     reports,
   };
 });
@@ -615,6 +643,7 @@ export const AdminRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", adminApi.status, reads.status);
     yield* router.add("GET", adminApi.statusHistory, reads.statusHistory);
     yield* router.add("GET", adminApi.purchases, reads.purchases);
+    yield* router.add("GET", adminApi.economy, reads.economy);
     yield* router.add("GET", adminApi.reports, reads.reports);
     yield* router.add("GET", adminApi.onboarding, reads.onboarding);
     yield* router.add("GET", adminApi.shopItems, reads.shopItems);
@@ -799,6 +828,7 @@ export const AgentRoutes = HttpRouter.use((router) =>
     yield* router.add("GET", agentApi.status, reads.status);
     yield* router.add("GET", agentApi.statusHistory, reads.statusHistory);
     yield* router.add("GET", agentApi.purchases, reads.purchases);
+    yield* router.add("GET", agentApi.economy, reads.economy);
     yield* router.add("GET", agentApi.onboarding, reads.onboarding);
     yield* router.add("GET", agentApi.shopItems, reads.shopItems);
     yield* router.add("GET", agentApi.shopHistory, reads.shopHistory);

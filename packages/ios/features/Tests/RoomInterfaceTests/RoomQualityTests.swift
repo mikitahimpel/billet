@@ -1,3 +1,4 @@
+import Foundation
 import Testing
 
 @testable import RoomInterface
@@ -8,15 +9,24 @@ import Testing
   @Test func conditionsAskForTheTierTheirHeatNames() {
     #expect(nominal.wanted == .full)
     #expect(RoomConditions(heat: .nominal, lowPower: true).wanted == .fair)
-    #expect(RoomConditions(heat: .fair, lowPower: false).wanted == .fair)
-    #expect(RoomConditions(heat: .serious, lowPower: true).wanted == .serious)
-    #expect(RoomConditions(heat: .critical, lowPower: false).wanted == .critical)
+    #expect(RoomConditions(heat: .fair, lowPower: false).wanted == .full)
+    #expect(RoomConditions(heat: .serious, lowPower: false).wanted == .full)
+    #expect(RoomConditions(heat: .serious, lowPower: true).wanted == .fair)
+    #expect(RoomConditions(heat: .critical, lowPower: false).wanted == .serious)
+    #expect(
+      RoomConditions(heat: .critical, lowPower: false, criticalFor: RoomConditions.criticalGrace)
+        .wanted == .critical)
   }
 
   @Test func degradesAtOnceAndSkipsSteps() {
     var policy = RoomQualityPolicy()
-    #expect(policy.update(RoomConditions(heat: .serious, lowPower: false), at: 0) == .serious)
-    #expect(policy.update(RoomConditions(heat: .critical, lowPower: false), at: 1) == .critical)
+    #expect(policy.update(RoomConditions(heat: .critical, lowPower: false), at: 0) == .serious)
+    #expect(
+      policy.update(RoomConditions(heat: .critical, lowPower: true), at: 1) == .serious)
+    #expect(
+      policy.update(
+        RoomConditions(heat: .critical, lowPower: false), at: RoomConditions.criticalGrace)
+        == .critical)
   }
 
   @Test func recoversOneStepAfterTheWaitNotBefore() {
@@ -31,7 +41,7 @@ import Testing
   @Test func aRelapseRestartsTheWait() {
     var policy = RoomQualityPolicy(tier: .fair)
     policy.update(nominal, at: 0)
-    policy.update(RoomConditions(heat: .fair, lowPower: false), at: 60)
+    policy.update(RoomConditions(heat: .nominal, lowPower: true), at: 60)
     #expect(policy.update(nominal, at: 100) == .fair)
     #expect(policy.update(nominal, at: 100 + RoomQualityPolicy.recoverAfter) == .full)
   }
@@ -47,6 +57,194 @@ import Testing
     }
     #expect(RoomQualityTier.full.plan.splatRate == 0)
     #expect(RoomQualityTier.critical.plan.still)
+  }
+}
+
+typealias Heat = RoomConditions.Heat
+
+@Suite struct QualityGovernorTests {
+  private func conditions(
+    _ heat: Heat = .nominal, lowPower: Bool = false, battery: RoomConditions.Battery? = nil,
+    idle: TimeInterval = 0, busy: Bool = false
+  ) -> RoomConditions {
+    RoomConditions(heat: heat, lowPower: lowPower, battery: battery, idle: idle, busy: busy)
+  }
+
+  @Test(arguments: [
+    (Heat.nominal, false, RoomQualityTier.full), (.nominal, true, .fair),
+    (.fair, false, .full), (.fair, true, .fair),
+    (.serious, false, .full), (.serious, true, .fair),
+    (.critical, false, .serious), (.critical, true, .serious),
+  ])
+  func thermalEscalationTable(heat: Heat, lowPower: Bool, tier: RoomQualityTier) {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(heat, lowPower: lowPower), at: 0) == tier)
+  }
+
+  @Test func theReasonNamesTheInputThatAsked() {
+    var policy = RoomQualityPolicy()
+    policy.update(conditions(lowPower: true), at: 0)
+    #expect(policy.reason == .lowPower)
+    policy.update(conditions(.critical, lowPower: true), at: 1)
+    #expect(policy.reason == .heat(.critical))
+  }
+
+  @Test func aLowBatteryOffTheChargerLightensTheRoom() {
+    func tier(_ level: Double, charging: Bool) -> RoomQualityTier {
+      var policy = RoomQualityPolicy()
+      return policy.update(
+        conditions(battery: .init(level: level, charging: charging)), at: 0)
+    }
+    #expect(tier(0.5, charging: false) == .full)
+    #expect(tier(0.2, charging: false) == .fair)
+    #expect(tier(0.1, charging: false) == .serious)
+    #expect(tier(0.05, charging: true) == .full)
+    var policy = RoomQualityPolicy()
+    policy.update(conditions(battery: .init(level: 0.15, charging: false)), at: 0)
+    #expect(policy.reason == .battery)
+  }
+
+  @Test func anUnknownBatteryAsksForNothing() {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(battery: nil), at: 0) == .full)
+  }
+
+  @Test func idlenessLightensAtOnceAndLetsGoWithTheFirstTouch() {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(idle: RoomConditions.idleFair - 1), at: 0) == .full)
+    #expect(policy.update(conditions(idle: RoomConditions.idleFair), at: 1) == .fair)
+    #expect(policy.update(conditions(idle: 100_000), at: 2) == .fair)
+    #expect(policy.reason == .idle)
+    #expect(policy.update(conditions(idle: 0), at: 3) == .full)
+    #expect(policy.reason == .none)
+  }
+
+  @Test func idlenessNeverHidesHeat() {
+    var policy = RoomQualityPolicy()
+    policy.update(conditions(.critical), at: 0)
+    #expect(policy.update(conditions(.nominal, idle: 100), at: 1) == .serious)
+    #expect(policy.update(conditions(.nominal, idle: 0), at: 2) == .serious)
+    #expect(
+      policy.update(conditions(.nominal), at: 1 + RoomQualityPolicy.recoverAfter - 1) == .serious)
+  }
+
+  @Test func heatRecoversOneStepAtATimeAfterTheWait() {
+    var policy = RoomQualityPolicy()
+    policy.update(conditions(.critical), at: 0)
+    policy.update(conditions(.critical), at: RoomConditions.criticalGrace)
+    var now = RoomConditions.criticalGrace + 10
+    var seen: [RoomQualityTier] = []
+    for _ in 0..<4 {
+      policy.update(conditions(), at: now)
+      now += RoomQualityPolicy.recoverAfter
+      seen.append(policy.update(conditions(), at: now))
+      now += 1
+    }
+    #expect(seen == [.serious, .fair, .full, .full])
+  }
+
+  @Test func aPhoneHoveringAtAThresholdDoesNotFlap() {
+    var policy = RoomQualityPolicy()
+    var changes = 0
+    var last = policy.tier
+    for second in 0..<600 {
+      let hot = second % 10 < 5
+      let tier = policy.update(conditions(lowPower: hot), at: Double(second))
+      if tier != last { changes += 1 }
+      last = tier
+    }
+    #expect(changes == 1)
+    #expect(last == .fair)
+  }
+
+  @Test func aBusyPlayerKeepsTheLookUntilTheyStop() {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(lowPower: true, busy: true), at: 0) == .full)
+    #expect(policy.update(conditions(lowPower: true, busy: true), at: 1) == .full)
+    #expect(
+      policy.update(conditions(battery: .init(level: 0.05, charging: false), busy: true), at: 2)
+        == .full)
+    #expect(policy.update(conditions(lowPower: true, busy: false), at: 3) == .fair)
+  }
+
+  @Test func theSystemsCriticalWarningIsNotHeldBack() {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(.critical, busy: true), at: 0) == .serious)
+  }
+
+  @Test func fairHeatAsksForNothing() {
+    var policy = RoomQualityPolicy()
+    for second in stride(from: 0.0, through: 3_600, by: 30) {
+      #expect(policy.update(conditions(.fair), at: second) == .full)
+    }
+  }
+
+  @Test func seriousHeatKeepsTheFullLookUntilItHasHeldForTheGrace() {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(.serious), at: 0) == .full)
+    #expect(policy.update(conditions(.serious), at: RoomConditions.seriousGrace - 1) == .full)
+    #expect(policy.update(conditions(.serious), at: RoomConditions.seriousGrace) == .fair)
+    #expect(policy.reason == .heat(.serious))
+  }
+
+  @Test func aBreakInSeriousHeatRestartsTheGrace() {
+    var policy = RoomQualityPolicy()
+    policy.update(conditions(.serious), at: 0)
+    policy.update(conditions(.fair), at: 200)
+    #expect(policy.update(conditions(.serious), at: 250) == .full)
+    #expect(policy.update(conditions(.serious), at: 250 + RoomConditions.seriousGrace - 1) == .full)
+  }
+
+  @Test func criticalHeatHoldsSeriousThenCritical() {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(.critical), at: 0) == .serious)
+    #expect(policy.update(conditions(.critical), at: RoomConditions.criticalGrace) == .critical)
+  }
+
+  @Test func aBusyRoomIsNotIdle() {
+    var policy = RoomQualityPolicy()
+    #expect(policy.update(conditions(idle: 1000, busy: true), at: 0) == .full)
+  }
+
+  @Test func theFullTierIsWhatTheRoomDrewBeforeTheGovernor() {
+    let plan = RoomQualityTier.full.plan
+    #expect(
+      plan.motes && plan.antialiasing && plan.sway && plan.hdr && plan.bloom && plan.sunShadow)
+    #expect(!plan.widestLightOnly && !plan.still)
+    #expect(plan.splatRate == 0 && plan.splatDetail == .full)
+    #expect(
+      plan.activeRate == 30 && plan.idleRate == 20 && plan.scale == 2 && plan.pulseSlowdown == 1)
+  }
+
+  @Test func noTierPutsALampOutOrNarrowsTheColourRange() {
+    for tier in RoomQualityTier.allCases {
+      let plan = tier.plan
+      #expect(!plan.widestLightOnly, "\(tier)")
+      #expect(plan.hdr, "\(tier)")
+    }
+  }
+
+  @Test func ambientLightMakesUpForTheGlowPassBeingOff() {
+    for tier in RoomQualityTier.allCases {
+      let plan = tier.plan
+      #expect(plan.bloom || plan.ambientLift > 0, "\(tier)")
+      #expect(plan.ambientLift >= 0 && plan.ambientLift <= 0.3)
+    }
+    #expect(RoomQualityTier.full.plan.ambientLift == 0)
+  }
+
+  @Test func eachTierDrawsNoMoreThanTheOneBefore() {
+    let plans = RoomQualityTier.allCases.map(\.plan)
+    for (a, b) in zip(plans, plans.dropFirst()) {
+      #expect(b.activeRate <= a.activeRate && b.idleRate <= a.idleRate)
+      #expect(b.idleRate <= b.activeRate)
+      #expect(b.scale <= a.scale)
+      #expect(!(b.hdr && !a.hdr) && !(b.bloom && !a.bloom) && !(b.sunShadow && !a.sunShadow))
+      #expect(!(a.widestLightOnly && !b.widestLightOnly))
+      #expect(b.ambientLift >= a.ambientLift)
+      #expect(b.pulseSlowdown >= a.pulseSlowdown)
+      #expect(b.splatRate == 0 || a.splatRate == 0 || b.splatRate <= a.splatRate)
+    }
   }
 }
 

@@ -256,31 +256,37 @@ public struct RetryButton: View {
 public struct PillButton: View {
   let title: String
   let symbol: String?
+  let fullWidth: Bool
   let action: () -> Void
 
-  public init(_ title: String, symbol: String? = nil, action: @escaping () -> Void) {
+  /// `fullWidth` fills its cell, so pills in a grid come out the same width.
+  public init(
+    _ title: String, symbol: String? = nil, fullWidth: Bool = false, action: @escaping () -> Void
+  ) {
     self.title = title
     self.symbol = symbol
+    self.fullWidth = fullWidth
     self.action = action
   }
 
   public var body: some View {
     Button(action: action) { ButtonLabel(title: title, symbol: symbol) }
-      .buttonStyle(PillButtonStyle())
+      .buttonStyle(PillButtonStyle(fullWidth: fullWidth))
   }
 }
 
 public struct PillButtonStyle: ButtonStyle {
+  var fullWidth: Bool
   @Environment(\.isEnabled) private var isEnabled
 
-  public init() {}
+  public init(fullWidth: Bool = false) { self.fullWidth = fullWidth }
 
   public func makeBody(configuration: Configuration) -> some View {
     configuration.label
       .font(.ourioCallout.weight(.semibold))
       .foregroundStyle(isEnabled ? Ink.accentText : Ink.disabledText)
       .padding(.horizontal, Space.m)
-      .frame(minHeight: Size.pill)
+      .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: Size.pill)
       .background(isEnabled ? Ink.surfaceRaised : Ink.disabledFill, in: .capsule)
       .overlay {
         if isEnabled { Capsule().strokeBorder(Ink.accentText.opacity(0.45), lineWidth: 1) }
@@ -357,6 +363,10 @@ public struct RowButtonStyle: ButtonStyle {
         GlassIconButton(symbol: "tray", label: "Inbox", badge: .count(3)) {}
         PriceButton(120) {}
         PillButton("Place", symbol: "mappin") {}
+      }
+      HStack(spacing: Space.s) {
+        PillButton("Rotate", symbol: "rotate.right", fullWidth: true) {}
+        PillButton("45°", symbol: "rotate.right", fullWidth: true) {}
       }
     }
     .padding(Space.gutter)

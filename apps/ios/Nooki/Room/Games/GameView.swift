@@ -7,54 +7,50 @@ import SwiftUI
 import Design
 import UsInterface
 
-/// A mini-game over the room: the whole screen takes the touches for the game, with a glass hint pill and a close
-/// button on top, the game's bar and button at the bottom, and its toast once it is done. Nothing else of Home
-/// shows meanwhile.
+/// A mini-game over the room: the whole screen takes the touches for the game, with its title and a close button on
+/// top and one tray at the bottom: the hint, the bar and the buttons while it is played, the result once it is done.
+/// Nothing else of Home shows meanwhile.
 struct GameView: View {
     @State var session: GameSession
-    var scenes: GameSceneSwitch
     var close: () -> Void
     @State private var touching = false
-    private static let swipeBand: CGFloat = 140
-    private static let swipeLength: CGFloat = 90
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// The hint and the bar sit over the game: past this they would cover the thing to touch.
+    static let overlayType = DynamicTypeSize.xxxLarge
+
     var body: some View {
-        GeometryReader { proxy in
-            let insets = proxy.safeAreaInsets
-            let full = CGSize(width: proxy.size.width, height: proxy.size.height + insets.top + insets.bottom)
-            ZStack {
-                Color.clear
-                    .ignoresSafeArea()
-                    .contentShape(.rect)
-                    .gesture(
-                        DragGesture(minimumDistance: 0, coordinateSpace: .local)
-                            .onChanged { value in
-                                session.touch(touching ? .moved : .began, at: value.location)
-                                touching = true
-                            }
-                            .onEnded { value in
-                                touching = false
-                                session.touch(.ended, at: value.location)
-                                // A swipe down from the top edge leaves, where the stages' own drags never start.
-                                let drag = value.translation
-                                if value.startLocation.y < Self.swipeBand, drag.height > Self.swipeLength, abs(drag.width) < drag.height {
-                                    end()
+        ZStack {
+            // The touches, the hand and the camera's lens share one space, the whole screen, which is what the room's
+            // view fills. Inside a `GeometryReader` a child cannot reach into the safe area, so the reader itself does.
+            GeometryReader { proxy in
+                ZStack {
+                    Color.clear
+                        .contentShape(.rect)
+                        .gesture(
+                            DragGesture(minimumDistance: 0, coordinateSpace: .local)
+                                .onChanged { value in
+                                    session.touch(touching ? .moved : .began, at: value.location)
+                                    touching = true
                                 }
-                            }
-                    )
-                    .accessibilityHidden(true)
+                                .onEnded { value in
+                                    touching = false
+                                    session.touch(.ended, at: value.location)
+                                    if GameExit.isSwipe(from: value.startLocation, translation: value.translation) { end() }
+                                }
+                        )
+                        .accessibilityHidden(true)
 
-                if let pointer = session.pointer {
-                    CueHand(pointer: pointer)
-                        .ignoresSafeArea()
-                        .transition(.opacity)
+                    if let pointer = session.pointer {
+                        CueHand(pointer: pointer).transition(.opacity)
+                    }
                 }
-
-                controls
+                .onGeometryChange(for: CGSize.self, of: \.size) { session.resize($0) }
+                .onAppear { session.start(viewport: proxy.size) }
             }
-            .onAppear { session.start(viewport: full) }
-            .onChange(of: full) { _, size in session.resize(size) }
+            .ignoresSafeArea()
+
+            controls
         }
     }
 
@@ -62,7 +58,6 @@ struct GameView: View {
         VStack(spacing: Space.m) {
             HStack(spacing: Space.s) {
                 GameTitle(game: session.game)
-                if scenes.options.count > 1 { SceneMenu(scenes: scenes, select: move) }
                 Spacer(minLength: 0)
                 // The glass sits behind the label and takes no touch itself: over the RealityKit room a glass view
                 // on the Button swallows the tap.
@@ -77,28 +72,19 @@ struct GameView: View {
                     .background { Color.clear.glass(.circle, role: .control).allowsHitTesting(false) }
             }
             .padding(.horizontal, Space.gutter)
+            .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).maxY }) { session.titleMoved(bottom: $0) }
 
             Spacer(minLength: 0)
 
             if let result = session.finished {
                 ResultToast(result: result, again: session.playAgain, done: end)
+                    .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { session.cardMoved(top: $0) }
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             } else {
-                VStack(spacing: Space.m) {
-                    if let hint = session.shownHint {
-                        GoalHint(text: hint)
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                            .id(hint)
-                    }
-                    if let bar = session.deck.bar {
-                        GameBar(meter: bar, symbol: session.game.symbol)
-                    }
-                    if let action = session.action {
-                        Button(action: session.act) { Text(action).frame(maxWidth: .infinity) }
-                            .buttonStyle(PrimaryButtonStyle())
-                    }
-                }
-                .padding(.horizontal, Space.gutter)
+                GameTray(
+                    hint: session.shownHint, bar: session.deck.bar, symbol: session.game.symbol,
+                    action: session.action, assist: session.assist, act: session.act, assistAct: session.assistAct)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
         .padding(.top, Space.s)
@@ -108,26 +94,9 @@ struct GameView: View {
         .animation(.easeInOut(duration: 0.2), value: session.pointer == nil)
     }
 
-    /// Between two corners the game carries on; to or from the room it is closed here and starts over there.
-    private func move(to next: GameScenery) {
-        guard next != scenes.selected else { return }
-        if next.isCorner == scenes.selected.isCorner {
-            scenes.select(next)
-        } else {
-            session.close(now: true) { scenes.select(next) }
-        }
-    }
-
     private func end() {
         session.close(close)
     }
-}
-
-/// The scenes a game can be played in, and the one it is in: a single control, the game's own Room | City.
-struct GameSceneSwitch {
-    let options: [GameScenery]
-    let selected: GameScenery
-    var select: (GameScenery) -> Void
 }
 
 /// The hint hand over the thing to touch: a honey ring on it, and a hand that taps it, presses and holds it, rubs it
@@ -225,20 +194,74 @@ private struct HandMotion {
     var rub: CGFloat = 0
 }
 
-/// The game's one goal, in words: a line of glass over the scene, gone at the first touch and back only to correct.
+/// The game's bottom: one tray with, top to bottom, what to do, how far along, the main action and the quieter one,
+/// each the tray's full inner width (`GameTrayTests`). Nothing to show, no tray.
+struct GameTray: View {
+    var hint: String?
+    var bar: GameMeter?
+    var symbol: String
+    var action: String?
+    var assist: String?
+    var act: () -> Void
+    var assistAct: () -> Void
+
+    var body: some View {
+        if hint != nil || bar != nil || action != nil || assist != nil {
+            TraySurface {
+                if let hint {
+                    GoalHint(text: hint)
+                        .dynamicTypeSize(...GameView.overlayType)
+                        .transition(.opacity)
+                        .id(hint)
+                }
+                if let bar {
+                    GameBar(meter: bar, symbol: symbol)
+                        .dynamicTypeSize(...GameView.overlayType)
+                }
+                if let action {
+                    Button(action: act) { Text(action).frame(maxWidth: .infinity) }
+                        .buttonStyle(PrimaryButtonStyle())
+                        .accessibilityIdentifier("game.action")
+                }
+                if let assist {
+                    Button(assist, action: assistAct)
+                        .buttonStyle(QuietButtonStyle())
+                        .accessibilityHint("Wipes up the puddle for you")
+                        .accessibilityIdentifier("game.assist")
+                }
+            }
+        }
+    }
+}
+
+/// The glass every game's tray and its result stand on: the card's corners and padding, between the gutters.
+private struct TraySurface<Content: View>: View {
+    @ViewBuilder let content: Content
+
+    var body: some View {
+        VStack(spacing: Space.m) { content }
+            .padding(CardMetrics.padding)
+            .frame(maxWidth: .infinity)
+            // Behind the content and taking no touch: over the RealityKit room a glass view on a Button swallows the tap.
+            .background { Color.clear.glass(CardShape(), role: .bar).allowsHitTesting(false) }
+            .padding(.horizontal, Space.gutter)
+    }
+}
+
+/// The game's one goal, in words, at the top of the tray: gone at the first touch and back only to correct.
 private struct GoalHint: View {
     let text: String
 
     var body: some View {
         Text(text)
-            .font(.ourioHeadline)
+            .font(.ourioCallout.weight(.medium))
             .foregroundStyle(Ink.glassGlyph)
             .multilineTextAlignment(.center)
-            .padding(.horizontal, Space.l)
-            .padding(.vertical, Space.m)
-            .glass(.capsule, role: .bar)
+            .frame(maxWidth: .infinity)
+            .fixedSize(horizontal: false, vertical: true)
             .accessibilityElement(children: .combine)
             .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityIdentifier("game.hint")
     }
 }
 
@@ -249,7 +272,7 @@ private struct GameTitle: View {
 
     var body: some View {
         HStack(spacing: Space.s) {
-            Image(systemName: game.symbol)
+            Image(systemName: game.symbol).dynamicTypeSize(...GameView.overlayType)
             if !type.isAccessibilitySize { Text(game.shortTitle) }
         }
         .font(.ourioHeadline)
@@ -263,39 +286,7 @@ private struct GameTitle: View {
     }
 }
 
-/// Where it is played, always visible, and the other places one tap away.
-private struct SceneMenu: View {
-    let scenes: GameSceneSwitch
-    var select: (GameScenery) -> Void
-
-    var body: some View {
-        Menu {
-            ForEach(scenes.options, id: \.self) { scene in
-                Button { select(scene) } label: {
-                    Label(scene.title, systemImage: scene == scenes.selected ? "checkmark" : scene.symbol)
-                }
-            }
-        } label: {
-            HStack(spacing: Space.xs) {
-                Image(systemName: scenes.selected.symbol)
-                Text(scenes.selected.title)
-                Image(systemName: "chevron.down").font(.ourioMicro)
-            }
-            .font(.ourioHeadline)
-            .foregroundStyle(Ink.glassGlyph)
-            .padding(.horizontal, Space.m)
-            .frame(minHeight: Size.control)
-            .background { Color.clear.glass(.capsule, role: .bar).allowsHitTesting(false) }
-            .contentShape(.capsule)
-        }
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .accessibilityIdentifier("gameScene")
-        .accessibilityLabel("Scene")
-        .accessibilityValue(scenes.selected.title)
-    }
-}
-
-/// How far along: an icon, what is filling, the count, and a thick honey meter on a dark glass track.
+/// How far along, in the tray: an icon, what is filling, the count, and a thick honey meter on a dark track.
 private struct GameBar: View {
     let meter: GameMeter
     let symbol: String
@@ -318,12 +309,11 @@ private struct GameBar: View {
         }
         .font(.ourioHeadline)
         .foregroundStyle(Ink.glassGlyph)
-        .padding(.horizontal, Space.l)
-        .padding(.vertical, Space.m)
-        .glass(.capsule, role: .bar)
+        .frame(minHeight: Size.control)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(meter.label)
         .accessibilityValue(meter.detail ?? "\(percent) percent")
+        .accessibilityIdentifier("game.bar")
     }
 
     private var value: some View {
@@ -348,34 +338,88 @@ private struct GameBar: View {
     }
 }
 
-/// The finished game: what she got, and either another round or back to the room.
-private struct ResultToast: View {
+/// The finished game, on the tray it was played from: what it came to, what it earned, then back to the room, the
+/// main action, and another round under it.
+struct ResultToast: View {
     let result: GameResult
     var again: () -> Void
     var done: () -> Void
 
     var body: some View {
-        Toast {
-            VStack(alignment: .leading, spacing: Space.m) {
-                Text(result.line(pronouns: CatProfile.pronouns()))
-                    .font(.ourioTitle)
-                    .foregroundStyle(Ink.text)
-                HStack(spacing: Space.s) {
-                    Chip(result.game.careLabel(grams: result.grams), symbol: result.game.symbol, style: .honey)
-                    HStack(spacing: Space.xs) {
-                        CoinIcon(size: Space.l)
-                        Text("Coins")
-                            .font(.ourioMicro)
-                            .foregroundStyle(Ink.text)
-                    }
-                }
-                ActionRow {
-                    SecondaryButton("Play again", action: again)
-                    PrimaryButton("Back to the room", action: done)
-                }
+        TraySurface {
+            Text(result.line(pronouns: CatProfile.pronouns()))
+                .font(.ourioTitle)
+                .foregroundStyle(Ink.glassGlyph)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .fixedSize(horizontal: false, vertical: true)
+                // The card stands over the game: past this the title and the earnings would push the buttons off an SE.
+                .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+            // Side by side at one width while both fit, else stacked, each the tray's inner width as the buttons are.
+            ViewThatFits(in: .horizontal) {
+                EqualRow(spacing: Space.s) { earned }
+                VStack(spacing: Space.s) { earned }
             }
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+            PrimaryButton("Back to the room", action: done)
+            Button("Play again", action: again)
+                .buttonStyle(QuietButtonStyle())
         }
-        .padding(.horizontal, Space.gutter)
+    }
+
+    @ViewBuilder private var earned: some View {
+        ResultStat(title: result.careLabel, id: "game.care") {
+            Image(systemName: result.game.symbol)
+        }
+        ResultStat(title: "+\(result.coins)", id: "game.coins") { CoinIcon(size: Space.l, relativeTo: .subheadline) }
+            .accessibilityLabel("\(result.coins) coins")
+    }
+}
+
+/// One thing the round earned, in a recess of the tray: its mark and a word, centred in its share of the row.
+private struct ResultStat<Mark: View>: View {
+    let title: String
+    let id: String
+    @ViewBuilder let mark: Mark
+
+    var body: some View {
+        HStack(spacing: Space.xs) {
+            mark
+                .foregroundStyle(Ink.glassGlyphSecondary)
+                .accessibilityHidden(true)
+            Text(title).lineLimit(1).monospacedDigit()
+        }
+        .font(.ourioHeadline)
+        .foregroundStyle(Ink.glassGlyph)
+        .padding(.horizontal, Space.m)
+        .padding(.vertical, Space.xs)
+        .frame(maxWidth: .infinity, minHeight: Size.control)
+        .wellSurface(.control)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(id)
+    }
+}
+
+/// A row whose items share the width of the widest one, so it reports a width that holds every label in full:
+/// an `HStack` of full-width buttons reports the sum of their own widths, and the equal split then cuts the longer.
+private struct EqualRow: Layout {
+    var spacing: CGFloat
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let sizes = subviews.map { $0.sizeThatFits(.unspecified) }
+        let widest = sizes.map(\.width).max() ?? 0
+        let width = widest * CGFloat(subviews.count) + spacing * CGFloat(max(subviews.count - 1, 0))
+        let offered = proposal.width.flatMap { $0.isFinite ? $0 : nil } ?? 0
+        return CGSize(width: max(width, offered), height: sizes.map(\.height).max() ?? 0)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        guard !subviews.isEmpty else { return }
+        let each = (bounds.width - spacing * CGFloat(subviews.count - 1)) / CGFloat(subviews.count)
+        for (index, subview) in subviews.enumerated() {
+            let x = bounds.minX + (each + spacing) * CGFloat(index)
+            subview.place(at: CGPoint(x: x, y: bounds.minY), proposal: ProposedViewSize(width: each, height: bounds.height))
+        }
     }
 }
 
@@ -397,23 +441,16 @@ extension MiniGame {
         case .brush: "Brush"
         }
     }
-
-    fileprivate func careLabel(grams: Int?) -> String {
-        switch self {
-        case .feed: grams.map { "Fed \($0) g" } ?? "Fed"
-        case .water: "Fresh water"
-        case .laser: "Played"
-        case .brush: "Brushed"
-        }
-    }
 }
 
-extension GameScenery {
-    fileprivate var symbol: String {
-        switch self {
-        case .room: "house.fill"
-        case .rug: "square.grid.2x2.fill"
-        case .kitchen: "fork.knife"
+extension GameResult {
+    /// What the round did, with its number where it has one.
+    var careLabel: String {
+        switch game {
+        case .feed: grams.map { "Fed \($0) g" } ?? "Fed"
+        case .water: "Fresh water"
+        case .laser: pounces.map { $0 == 1 ? "1 pounce" : "\($0) pounces" } ?? "Played"
+        case .brush: "Brushed"
         }
     }
 }

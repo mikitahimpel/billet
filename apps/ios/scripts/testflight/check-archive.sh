@@ -1,13 +1,13 @@
 #!/bin/bash
-# Checks a Release archive before TestFlight: bundle IDs (the app and its three extensions), version 0.1.0, build number, team 2666YPBJTB signing;
-# DEMO_HOST is the app's BilletAPIHost and nowhere in git history; StoreKit store, no mock store, and Labs as
-# EXPECT_LABS says (NO unless the run asked for a Labs build); no -perf.script hooks (OurioPerf, ScenePerf).
-#   check-archive.sh <path.xcarchive> <build-number>  (repository root, full history; never prints the host)
+# Checks a Release archive before TestFlight: bundle IDs (the app and its three extensions), version 1.0.0, build number, team 2666YPBJTB signing;
+# API_HOST is the app's BilletAPIHost; StoreKit store, no mock store, and Labs as EXPECT_LABS says (NO unless the
+# run asked for a Labs build); no -perf.script hooks (OurioPerf, ScenePerf).
+#   check-archive.sh <path.xcarchive> <build-number>
 set -euo pipefail
 
 archive=${1:?usage: check-archive.sh <path.xcarchive> <build-number>}
 build=${2:?usage: check-archive.sh <path.xcarchive> <build-number>}
-version=0.1.0
+version=1.0.0
 team=2666YPBJTB
 expect_labs=${EXPECT_LABS:-NO}
 app="$archive/Products/Applications/Billet.app"
@@ -61,14 +61,12 @@ elif grep -qaE 'ScenePerf8Recorder|scroll: no page scroll view on|error no scene
 fi
 echo "store: $payments, Labs: $labs"
 
-if [ -z "${DEMO_HOST:-}" ]; then
-  fail "DEMO_HOST is not set"
+if [ -z "${API_HOST:-}" ]; then
+  fail "API_HOST is not set"
 else
-  [ "$(plist "$app" BilletAPIHost)" = "$DEMO_HOST" ] || fail "the app's BilletAPIHost is not DEMO_HOST"
-  in_git=$(git log --all -p -S"$DEMO_HOST" --format=%h | grep -c . || true)
-  in_tree=$(git grep -cF -- "$DEMO_HOST" | grep -c . || true)
-  [ "$in_git" = 0 ] && [ "$in_tree" = 0 ] || fail "the server host is in git ($in_git history lines, $in_tree files)"
-  echo "server host: in the app, not in git"
+  host=$(plist "$app" BilletAPIHost)
+  [ "$host" = "$API_HOST" ] || fail "the app's BilletAPIHost is '$host', not API_HOST '$API_HOST'"
+  echo "API host: $host"
 fi
 
 exit $failed

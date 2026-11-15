@@ -15,6 +15,8 @@ public struct Occupancy: Equatable, Sendable {
   private var blocked: [Bool]
   /// Share of the floor the pieces themselves leave open, without the margin she keeps.
   public let bareShare: Double
+  /// The cells a piece itself covers, without the margin she keeps.
+  private let covered: [Bool]
 
   init(spans: [Span]) {
     blocked = Array(repeating: false, count: Self.side * Self.side)
@@ -40,6 +42,7 @@ public struct Occupancy: Equatable, Sendable {
       }
     }
     bareShare = Double(covered.filter { !$0 }.count) / Double(covered.count)
+    self.covered = covered
   }
 
   public static func == (a: Occupancy, b: Occupancy) -> Bool { a.blocked == b.blocked }
@@ -50,6 +53,13 @@ public struct Occupancy: Equatable, Sendable {
 
   public func isBlocked(u: Int, v: Int) -> Bool {
     !Self.inside(u, v) || blocked[Self.index(u, v)]
+  }
+
+  /// Whether a piece itself stands on `point`, as against its margin.
+  public func isSolid(at point: Point) -> Bool {
+    let u = DecorGrid.cell(point.x)
+    let v = DecorGrid.cell(point.z)
+    return !Self.inside(u, v) || covered[Self.index(u, v)]
   }
 
   public func isBlocked(at point: Point) -> Bool {

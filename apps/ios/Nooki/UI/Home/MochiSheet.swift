@@ -14,6 +14,7 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
     let progress: Double
     let days: Int
     var care: (NeedCare) -> Void
+    var declined: (NeedCare) -> String? = { _ in nil }
     /// Nil where the pronouns can't be changed, as in the gallery.
     var choosePronouns: ((CatPronouns) -> Void)?
     @ViewBuilder var portrait: Portrait
@@ -25,7 +26,8 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
             MochiHero(mood: status.needs?.moodLine(name: name) ?? "Settling in", level: level, progress: progress,
                       days: days) { portrait }
             VStack(alignment: .leading, spacing: Space.m) {
-                NeedGrid(name: name, pronouns: pronouns, needs: status.needs, asleep: status.about?.asleep ?? false, care: care)
+                NeedGrid(name: name, pronouns: pronouns, needs: status.needs, asleep: status.about?.asleep ?? false, care: care,
+                         declined: declined)
                 extraCare
             }
             if let about = status.about {

@@ -4,6 +4,7 @@ import type { FlagRow } from "@billet/backend-metrics/funnel";
 import type { BuildEventRow } from "./admin-retention.ts";
 import type { OnboardingCountRow } from "@billet/backend-onboarding/onboarding-stats";
 import type { DetailRow } from "./admin-top-details.ts";
+import type { EconomyDayRow, EconomyPairDayRow } from "./admin-economy.ts";
 
 /** A read failed. The panel answers 503; `reason` is a fixed label. */
 export class AdminUnavailable extends Data.TaggedError("AdminUnavailable")<{
@@ -22,7 +23,7 @@ export interface PurchaseRow {
   readonly environment: string;
   readonly status: string;
   readonly refunds: number;
-  /** A refund took back less than the pack, because the owner had fewer coins left. */
+  /** A refund left the pair's wallet below 0: it had spent some of the pack's coins. */
   readonly flagged: boolean;
   readonly purchasedAt: number;
   readonly createdAt: number;
@@ -80,6 +81,14 @@ export class AdminData extends Context.Service<
         readonly purchases: ReadonlyArray<PurchaseRow>;
         readonly ledger: ReadonlyArray<PurchaseEntryRow>;
         readonly notifications: ReadonlyArray<NotificationRow>;
+      },
+      AdminUnavailable
+    >;
+    /** The economy's rows from UTC day `since` on: coins by day and source, and each pair's day. */
+    readonly economy: (since: string) => Effect.Effect<
+      {
+        readonly days: ReadonlyArray<EconomyDayRow>;
+        readonly pairDays: ReadonlyArray<EconomyPairDayRow>;
       },
       AdminUnavailable
     >;

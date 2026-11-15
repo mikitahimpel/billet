@@ -43,6 +43,42 @@ extension DecorItem {
       width: 0.64, depth: 0.64, isFlat: true, height: 0.02, cat: nil,
       base: BaseSpot(title: "Rug", u: 0, v: 1, isRest: false)),
     DecorItem(
+      id: "base-bedroom-bed", model: "", assetName: "", fit: .width, size: 0.76, mount: .floor,
+      width: 0.76, depth: 0.36, isFlat: false, height: 0.2, cat: nil,
+      base: BaseSpot(title: "Bed", u: 1, v: -3, isRest: true, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-nightstand", model: "", assetName: "", fit: .width, size: 0.13,
+      mount: .floor, width: 0.13, depth: 0.13, isFlat: false, height: 0.28, cat: nil,
+      base: BaseSpot(title: "Nightstand and lamp", u: -8, v: -3, isRest: false, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-dresser", model: "", assetName: "", fit: .width, size: 0.12, mount: .floor,
+      width: 0.12, depth: 0.24, isFlat: false, height: 0.2, cat: nil,
+      base: BaseSpot(title: "Dresser", u: -8, v: 6, isRest: false, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-catbed", model: "", assetName: "", fit: .width, size: 0.23, mount: .floor,
+      width: 0.23, depth: 0.23, isFlat: false, height: 0.06, cat: nil,
+      base: BaseSpot(title: "Cat bed", u: 5, v: 6, isRest: true, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-rug", model: "", assetName: "", fit: .width, size: 0.44, mount: .floor,
+      width: 0.44, depth: 0.44, isFlat: true, height: 0.02, cat: nil,
+      base: BaseSpot(title: "Rug", u: 1, v: 5, isRest: false, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-bowls", model: "", assetName: "", fit: .width, size: 0.08, mount: .floor,
+      width: 0.08, depth: 0.14, isFlat: false, height: 0.03, cat: nil,
+      base: BaseSpot(title: "Bowls", u: 8, v: 2, isRest: false, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-slippers", model: "", assetName: "", fit: .width, size: 0.12, mount: .floor,
+      width: 0.12, depth: 0.1, isFlat: false, height: 0.04, cat: nil,
+      base: BaseSpot(title: "Slippers", u: -4, v: 2, isRest: false, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-books", model: "", assetName: "", fit: .width, size: 0.1, mount: .floor,
+      width: 0.1, depth: 0.08, isFlat: false, height: 0.05, cat: nil,
+      base: BaseSpot(title: "Books", u: -4, v: 8, isRest: false, space: .bedroom)),
+    DecorItem(
+      id: "base-bedroom-mouse", model: "", assetName: "", fit: .width, size: 0.05, mount: .floor,
+      width: 0.05, depth: 0.1, isFlat: false, height: 0.03, cat: nil,
+      base: BaseSpot(title: "Toy mouse", u: 0, v: 5, isRest: false, space: .bedroom)),
+    DecorItem(
       id: "armchair", model: "Item_armchair", assetName: "Decor_armchair", fit: .width, size: 0.36,
       mount: .floor, width: 0.36, depth: 0.287, isFlat: false, height: 0.322, cat: .sofa),
     DecorItem(

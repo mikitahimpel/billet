@@ -28,11 +28,11 @@
       "featured": "rainy-evening",
       "gift": {
         "_tag": "Coins",
-        "coins": 30
+        "coins": 1
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 30
+        "coins": 1
       }
     },
     {
@@ -67,7 +67,7 @@
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 1
       }
     },
     {
@@ -98,11 +98,11 @@
       "featured": "nap-time",
       "gift": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 1
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 1
       }
     },
     {
@@ -137,7 +137,7 @@
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 30
+        "coins": 2
       }
     },
     {
@@ -168,11 +168,11 @@
       "featured": "rainy-evening",
       "gift": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 2
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 2
       }
     },
     {
@@ -202,12 +202,12 @@
       ],
       "featured": "rainy-evening",
       "gift": {
-        "_tag": "Coins",
-        "coins": 20
+        "_tag": "Item",
+        "item": "monstera"
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 1
       }
     },
     {
@@ -238,11 +238,11 @@
       "featured": "rainy-evening",
       "gift": {
         "_tag": "Coins",
-        "coins": 30
+        "coins": 2
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 30
+        "coins": 2
       }
     },
     {
@@ -273,11 +273,11 @@
       "featured": "nap-time",
       "gift": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 2
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 2
       }
     },
     {
@@ -308,11 +308,11 @@
       "featured": "tea-for-two",
       "gift": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 1
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 1
       }
     },
     {
@@ -343,11 +343,11 @@
       "featured": "rainy-evening",
       "gift": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 1
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 1
       }
     },
     {
@@ -378,11 +378,11 @@
       "featured": "rainy-evening",
       "gift": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 2
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 2
       }
     },
     {
@@ -412,12 +412,12 @@
       ],
       "featured": "rainy-evening",
       "gift": {
-        "_tag": "Coins",
-        "coins": 40
+        "_tag": "Item",
+        "item": "monstera"
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 2
       }
     },
     {
@@ -448,11 +448,11 @@
       "featured": "nap-time",
       "gift": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 2
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 20
+        "coins": 2
       }
     },
     {
@@ -482,12 +482,12 @@
       ],
       "featured": "tea-for-two",
       "gift": {
-        "_tag": "Item",
-        "item": "yarn"
+        "_tag": "Coins",
+        "coins": 1
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 30
+        "coins": 1
       }
     },
     {
@@ -518,11 +518,11 @@
       "featured": "rainy-evening",
       "gift": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 2
       },
       "giftOwningGiftItems": {
         "_tag": "Coins",
-        "coins": 40
+        "coins": 2
       }
     }
   ]

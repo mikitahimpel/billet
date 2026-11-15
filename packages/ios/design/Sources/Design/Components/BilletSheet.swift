@@ -326,6 +326,9 @@ private struct ScrollHeader<Header: View>: ViewModifier {
       // header carries the sheet's ground itself, up through the title bar and fading out below.
       content
         .ourioScrollEdges()
+        // The header's own ground does the fading; the system's soft edge under a bar would also blur the
+        // first line below it, a section label, at rest.
+        .scrollEdgeEffectHidden(true, for: .top)
         .trackingScrolled($scrolled)
         .safeAreaBar(edge: .top, spacing: 0) {
           header.background { HeaderGround(ground: ground, fade: fade) }

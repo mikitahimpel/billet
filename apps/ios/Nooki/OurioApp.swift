@@ -1,6 +1,7 @@
 import FeatureOnboarding
 import FeatureUs
 import MomentsInterface
+import ServerSync
 import WidgetInterface
 import WidgetUI
 import ProfileInterface
@@ -92,7 +93,7 @@ struct OurioApp: App {
                     .id(onboarding.wornCoat)
                     .preferredColorScheme(.dark)
                     .environment(session)
-                    .environment(\.usServer, session)
+                    .environment(\.usServer, usServer)
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
                     .hintStyle(hints)
@@ -102,7 +103,7 @@ struct OurioApp: App {
                                 flow: onboarding, pairing: session?.pairing, scenery: AppOnboardingScenery(), signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
-                                demoPartner: demoPartnerPairing)
+                                demoPartner: demoPartnerPairing, retrySignIn: session.map { $0.signIn.retry })
                                 // Drawn over Home, which hides itself from VoiceOver only while its splash shows;
                                 // a modal view is the only one VoiceOver reads.
                                 .accessibilityAddTraits(.isModal)
@@ -123,6 +124,13 @@ struct OurioApp: App {
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
             }
         }
+    }
+
+    private var usServer: (any UsServer)? {
+        #if DEBUG
+        if let demo = LandingDemo.server { return demo }
+        #endif
+        return session
     }
 
     /// Built on its own: written inline, the compiler cannot check `body`.

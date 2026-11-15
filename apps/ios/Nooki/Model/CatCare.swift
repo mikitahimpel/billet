@@ -1,5 +1,7 @@
 import FeatureShop
+import Foundation
 import MomentsInterface
+import Pet
 import Observation
 import ShopInterface
 import WidgetInterface
@@ -19,6 +21,8 @@ final class CatCare {
     private(set) var treatsGiven = 0
     /// Pets given in the app, not from the widgets; each may reach the pair's journal.
     private(set) var petsGiven = 0
+    /// The care the sheet has given lately, and whether the next is welcome.
+    private(set) var gate = CareGate()
 
     init(wallet: WalletStore, streak: StreakStore) {
         self.wallet = wallet
@@ -37,6 +41,12 @@ final class CatCare {
         // Less a hair, so 0.6 of the bar is 20 pets and not 21 by rounding.
         let pets = max(1, Int((left / petFill - 1e-9).rounded(.up)))
         return pets == 1 ? "One more pet to Lv. \(level + 1)" : "\(pets) pets to Lv. \(level + 1)"
+    }
+
+    /// Asks the sheet's gate for `care`; given care is remembered, a turned-down ask is not.
+    @discardableResult
+    func attempt(_ care: Care, needs: PetNeeds?, now: Date = Date()) -> CareGate.Verdict {
+        gate.attempt(care, needs: needs, now: now)
     }
 
     func pet() {

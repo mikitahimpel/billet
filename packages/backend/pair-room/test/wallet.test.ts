@@ -5,6 +5,7 @@ import { CatGameId, type CatEvent } from "@billet/contracts-domain/cat";
 import { dailyEarnCaps, localDayOf } from "@billet/contracts-domain/coins";
 import type { EpochMillis } from "@billet/contracts-domain/ids";
 import { freeInk } from "@billet/contracts-domain/inks";
+import { welcomeCoins } from "@billet/contracts-domain/shop";
 import { SendNoteRequest } from "@billet/contracts-http-api/note";
 import { decide } from "../src/decide.ts";
 import { RoomCommand } from "../src/room-command.ts";
@@ -66,10 +67,10 @@ describe("earning coins", () => {
   it.each([
     [{ _tag: "Fed", grams: 40 }, 1],
     [{ _tag: "Watered" }, 1],
-    [{ _tag: "GamePlayed", game: yarn, score: 3, won: true }, 10],
-    [{ _tag: "GamePlayed", game: yarn, score: 0, won: false }, 3],
-    [{ _tag: "NoteShared", note: "note-1", kind: "Photo" }, 10],
-    [{ _tag: "NoteShared", note: "note-1", kind: "Text" }, 5],
+    [{ _tag: "GamePlayed", game: yarn, score: 3, won: true }, 3],
+    [{ _tag: "GamePlayed", game: yarn, score: 0, won: false }, 1],
+    [{ _tag: "NoteShared", note: "note-1", kind: "Photo" }, 2],
+    [{ _tag: "NoteShared", note: "note-1", kind: "Text" }, 1],
   ] as const)("%o earns %i", (event, coins) => {
     expect(coinsOf(accept(withCat, care(1, event as CatEvent))).map((e) => e.amount)).toEqual([
       coins,
@@ -83,16 +84,18 @@ describe("earning coins", () => {
   });
 
   it("stops at the day's cap, and cuts the entry that crosses it", () => {
-    const games = Array.from({ length: 5 }, (_, i) =>
+    // Wins pay 3 against a cap of 4: the second is cut to 1, the third pays nothing.
+    const games = Array.from({ length: 3 }, (_, i) =>
       care(i + 1, { _tag: "GamePlayed", game: yarn, score: 1, won: true }),
     );
-    const room = after(games.slice(0, 4));
+    const room = after(games.slice(0, 2));
     expect(room.wallet.games).toBe(dailyEarnCaps.games);
-    expect(coinsOf(accept(room, games[4]!))).toEqual([]);
+    expect(coinsOf(accept(room, games[2]!))).toEqual([]);
 
-    const nearly = after(games.slice(0, 3));
-    const lost = care(9, { _tag: "GamePlayed", game: yarn, score: 0, won: false });
-    expect(coinsOf(accept(after([lost], nearly), games[3]!)).map((e) => e.amount)).toEqual([7]);
+    const nearly = after(games.slice(0, 1));
+    expect(coinsOf(accept(nearly, games[1]!)).map((e) => e.amount)).toEqual([
+      dailyEarnCaps.games - 3,
+    ]);
   });
 
   it("keeps each kind of care to its own cap", () => {
@@ -100,7 +103,7 @@ describe("earning coins", () => {
     const room = after(pets);
     expect(room.wallet).toMatchObject({ balance: dailyEarnCaps.care, care: dailyEarnCaps.care });
     const game = care(99, { _tag: "GamePlayed", game: yarn, score: 1, won: true });
-    expect(coinsOf(accept(room, game)).map((e) => e.amount)).toEqual([10]);
+    expect(coinsOf(accept(room, game)).map((e) => e.amount)).toEqual([3]);
   });
 
   it("starts the caps again at the cat's midnight, not UTC's", () => {
@@ -126,7 +129,7 @@ describe("earning coins", () => {
       key: uuid(7),
       note: photoFrom(bob, "note-7"),
     });
-    expect(coinsOf(accept(withCat, note))).toMatchObject([{ id: `earn:${uuid(7)}`, amount: 10 }]);
+    expect(coinsOf(accept(withCat, note))).toMatchObject([{ id: `earn:${uuid(7)}`, amount: 2 }]);
   });
 });
 
@@ -220,10 +223,13 @@ describe("RoomService: the wallet", () => {
       _tag: "Accepted",
       outputs: [{ _tag: "CoinsRepeated", entry: { id: `spend:${uuid(20)}`, amount: -60 } }],
     });
-    // The welcome coins come first. Five wins hit the 40-coin cap after four, four notes add 20,
-    // and a 60-coin ink takes those 60 back.
-    expect(result.state._tag === "Active" && result.state.wallet.balance).toBe(560);
-    expect(result.page.map((e) => e.amount)).toEqual([560, 10]);
-    expect(result.rest.map((e) => e.amount)).toEqual([10, 10, 10, 5, 5, 5, 5, -60]);
+    // The welcome coins come first. Five wins pay 3 and then 1 up to the games cap, four notes
+    // pay 1 each up to the notes cap, and a 60-coin ink takes 60 back.
+    const earned = dailyEarnCaps.games + dailyEarnCaps.notes;
+    expect(result.state._tag === "Active" && result.state.wallet.balance).toBe(
+      welcomeCoins + earned - 60,
+    );
+    expect(result.page.map((e) => e.amount)).toEqual([welcomeCoins, 3]);
+    expect(result.rest.map((e) => e.amount)).toEqual([1, 1, 1, 1, -60]);
   });
 });
