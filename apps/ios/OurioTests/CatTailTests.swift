@@ -9,4 +9,11 @@ struct CatTailTests {
             for (a, b) in zip(bends, bends.dropFirst()) { #expect(abs(a - b) < 0.35) }
         }
     }
+
+    @Test func theLoafTailIsNotLiftedAtTheTip() {
+        #expect(CatWalker.Posture.tipLiftShare(lift: CatWalker.Posture.loaf.lift) == 0)
+        for lift: Float in [CatWalker.Posture.sit.lift, 0, -0.032, 0.035] {
+            #expect(CatWalker.Posture.tipLiftShare(lift: lift) == 1)
+        }
+    }
 }
