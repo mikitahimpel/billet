@@ -32,9 +32,9 @@
       self.defaults = defaults
     }
 
-    /// Sends every text note still waiting, oldest first. One the server refuses, such as one in an ink the pair
-    /// doesn't own, goes again in the free ink; one that fails to reach it stays waiting, and so do the rest. True
-    /// when that happened, so the caller tries again later.
+    /// Sends every text note still waiting, oldest first. One the server refuses, such as one in an ink, a stamp or a
+    /// seal the pair doesn't own, goes again plain: the free ink, no stamp, no seal. One that fails to reach it stays
+    /// waiting, and so do the rest. True when that happened, so the caller tries again later.
     public func sendUnsent() async -> Bool {
       for note in notes.unsent {
         guard !Task.isCancelled else { return true }
@@ -49,11 +49,9 @@
             .text(key: key, text: text, paper: paper, stamp: note.stamp, seal: note.seal, ink: ink))
         } catch {
           if error.isWorthRetrying { return true }
-          guard ink != .free else { continue }
+          guard ink != .free || note.stamp != nil || note.seal != nil else { continue }
           do {
-            sent = try await api.sendNote(
-              .text(
-                key: key, text: text, paper: paper, stamp: note.stamp, seal: note.seal, ink: .free))
+            sent = try await api.sendNote(.text(key: key, text: text, paper: paper, ink: .free))
           } catch {
             if error.isWorthRetrying { return true }
             continue

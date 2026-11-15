@@ -25,6 +25,7 @@ import type { PriceBook, PriceTerms } from "@billet/contracts-domain/shop-catalo
 import { earnsOnTick } from "@billet/contracts-domain/list";
 import { type MoodCheckIn, moodNoteMaxLength } from "@billet/contracts-domain/mood";
 import type { Note } from "@billet/contracts-domain/note";
+import { postageOf, postageOn, type PostageId } from "@billet/contracts-domain/postage";
 import type { PairId } from "@billet/contracts-domain/pair-id";
 import {
   collectionOf,
@@ -101,6 +102,10 @@ const unownedInk = (room: ActiveRoom, note: Note): InkId | undefined => {
   }
 };
 
+/** The first stamp or seal on `note` the pair has not unlocked, if any. */
+const unownedPostage = (room: ActiveRoom, note: Note): PostageId | undefined =>
+  postageOn(note).find((id) => !room.postage.includes(id));
+
 /** Whether the pair has the room piece: a starter, or one it bought. */
 export const ownsItem = (room: ActiveRoom, item: RoomItemId): boolean =>
   starterItems.includes(item) || room.items.includes(item);
@@ -117,6 +122,7 @@ type Quote = {
   readonly ref: string;
   readonly inks: ReadonlyArray<InkId>;
   readonly items: ReadonlyArray<RoomItemId>;
+  readonly postage?: PostageId;
   readonly offer?: string;
   readonly treat?: true;
 };
@@ -187,6 +193,14 @@ const quote = (
       const offered = `${featured ? "featured" : "bundle"}:${pieces.id}`;
       return { price: price.price, ref: pieces.id, inks: [], items, offer: offered };
     }
+    case "Postage": {
+      // Priced from the contract alone: the admin's price book does not list stamps or seals.
+      const sold = postageOf(offer.postage);
+      if (sold === undefined) return RoomRejection.cases.NotOffered.make({});
+      if (room.postage.includes(sold.id))
+        return RoomRejection.cases.OfferOwned.make({ offer: sold.id });
+      return { price: sold.price, ref: sold.id, inks: [], items: [], postage: sold.id };
+    }
     case "Treat":
       if (room.cat === undefined) return RoomRejection.cases.CatNotAdopted.make({});
       return { price: treatPrice, ref: "treat", inks: [], items: [], treat: true };
@@ -232,7 +246,14 @@ const charge = (
     id: order.id,
     by: order.by,
     at: order.at,
-    items: bought.treat === true ? [bought.ref] : [...bought.inks, ...bought.items],
+    items:
+      bought.treat === true
+        ? [bought.ref]
+        : [
+            ...bought.inks,
+            ...bought.items,
+            ...(bought.postage === undefined ? [] : [bought.postage]),
+          ],
     ...(bought.offer === undefined ? {} : { offer: bought.offer }),
     coins: bought.price,
   });
@@ -242,6 +263,7 @@ const charge = (
       ...(fed === undefined ? {} : { cat: fed.cat }),
       inks: [...room.inks, ...bought.inks],
       items: [...room.items, ...bought.items],
+      postage: bought.postage === undefined ? room.postage : [...room.postage, bought.postage],
       wishlist,
       wallet: { ...room.wallet, balance: have - bought.price },
     },
@@ -254,6 +276,9 @@ const charge = (
       ...(bought.items.length === 0
         ? []
         : [RoomOutput.cases.ItemsGranted.make({ items: bought.items })]),
+      ...(bought.postage === undefined
+        ? []
+        : [RoomOutput.cases.PostageGranted.make({ postage: [bought.postage] })]),
       ...(wishlist.length === room.wishlist.length
         ? []
         : [RoomOutput.cases.WishlistChanged.make({ wishlist })]),
@@ -467,6 +492,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
           streak: emptyStreak,
           inks: [],
           items: [],
+          postage: [],
           wishlist: [],
           layout: [],
           stowed: [],
@@ -485,6 +511,7 @@ const decideVacant = (command: RoomCommand): RoomDecision => {
     case "RecordCatEvent":
     case "GrantInks":
     case "GrantItems":
+    case "GrantPostage":
     case "Buy":
     case "Order":
     case "SetWish":
@@ -520,6 +547,9 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
       }
       const ink = unownedInk(room, note);
       if (ink !== undefined) return rejected(RoomRejection.cases.InkNotOwned.make({ ink }));
+      const postage = unownedPostage(room, note);
+      if (postage !== undefined)
+        return rejected(RoomRejection.cases.PostageNotOwned.make({ postage }));
       const seq = room.lastSeq + 1;
       const appended = RoomOutput.cases.NoteAppended.make({ entry: { seq, note }, key });
       const event: CatEvent = { _tag: "NoteShared", note: note.id, kind: note._tag };
@@ -621,6 +651,14 @@ const decideActive = (room: ActiveRoom, command: RoomCommand): RoomDecision => {
         ? accepted(room)
         : accepted({ ...room, items: [...room.items, ...added] }, [
             RoomOutput.cases.ItemsGranted.make({ items: added }),
+          ]);
+    }
+    case "GrantPostage": {
+      const added = [...new Set(command.postage)].filter((id) => !room.postage.includes(id));
+      return added.length === 0
+        ? accepted(room)
+        : accepted({ ...room, postage: [...room.postage, ...added] }, [
+            RoomOutput.cases.PostageGranted.make({ postage: added }),
           ]);
     }
     case "Buy": {

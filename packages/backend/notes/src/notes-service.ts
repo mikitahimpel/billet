@@ -43,6 +43,7 @@ import {
   GiftTaken,
   LayoutRefused,
   InkNotOwned,
+  PostageNotOwned,
   InvalidNote,
   NotEnoughCoins,
   NotesNotFound,
@@ -90,7 +91,10 @@ export class NotesService extends Context.Service<
     readonly sendNote: (
       userId: UserId,
       request: SendNoteRequest,
-    ) => Effect.Effect<Note, NotesNotFound | InvalidNote | InkNotOwned | NotesUnavailable>;
+    ) => Effect.Effect<
+      Note,
+      NotesNotFound | InvalidNote | InkNotOwned | PostageNotOwned | NotesUnavailable
+    >;
     /** Every ink the shop sells, and the ones the caller's pair owns: the free ink first. */
     readonly inks: (
       userId: UserId,
@@ -238,7 +242,10 @@ export class NotesService extends Context.Service<
       const sendNote = Effect.fn("NotesService.sendNote")(function* (
         userId: UserId,
         request: SendNoteRequest,
-      ): Effect.fn.Return<Note, NotesNotFound | InvalidNote | InkNotOwned | NotesUnavailable> {
+      ): Effect.fn.Return<
+        Note,
+        NotesNotFound | InvalidNote | InkNotOwned | PostageNotOwned | NotesUnavailable
+      > {
         const pairId = yield* pairOf(userId);
         if (request._tag === "Drawing" && !compactFits(request.compact)) {
           return yield* Effect.fail(new InvalidNote());
@@ -269,9 +276,16 @@ export class NotesService extends Context.Service<
             return yield* Effect.fail(new NotesUnavailable({ reason: "note-not-appended" }));
           }
           case "Rejected":
-            return yield* decision.rejection._tag === "InkNotOwned"
-              ? Effect.fail(new InkNotOwned({ ink: decision.rejection.ink }))
-              : Effect.fail(new NotesUnavailable({ reason: "room-refused-note" }));
+            switch (decision.rejection._tag) {
+              case "InkNotOwned":
+                return yield* Effect.fail(new InkNotOwned({ ink: decision.rejection.ink }));
+              case "PostageNotOwned":
+                return yield* Effect.fail(
+                  new PostageNotOwned({ postage: decision.rejection.postage }),
+                );
+              default:
+                return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-note" }));
+            }
         }
       });
 
@@ -340,6 +354,7 @@ export class NotesService extends Context.Service<
           case "RoomAlreadyOpen":
           case "CatEntryIdTaken":
           case "InkNotOwned":
+          case "PostageNotOwned":
           case "NoteNotFound":
           case "OwnNote":
           case "NotReactable":

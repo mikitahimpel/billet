@@ -3,6 +3,7 @@ import Design
 import DrawInterface
 import FeatureInbox
 import MomentsInterface
+import ShopInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -38,7 +39,7 @@ extension InboxLine.Names {
     /// The app's words and symbols: catalogue titles, mood names, list icons and reaction emoji.
     static func app(partner: String, cat: String) -> Self {
         Self(
-            partner: partner, cat: cat, title: { Catalog.item($0, cat: cat)?.name },
+            partner: partner, cat: cat, title: { id in Catalog.item(id, cat: cat)?.name ?? NotePostage.all.first { $0.id == id }?.name },
             mood: { PartnerMood(rawValue: $0.rawValue)?.title ?? $0.rawValue },
             list: { ListKind($0).icon.symbol },
             reaction: { $0.emoji })

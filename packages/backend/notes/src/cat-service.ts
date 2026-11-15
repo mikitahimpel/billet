@@ -136,6 +136,7 @@ export class CatService extends Context.Service<
             case "DuplicateMember":
             case "RoomAlreadyOpen":
             case "InkNotOwned":
+            case "PostageNotOwned":
             case "NotEnoughCoins":
             case "PriceChanged":
             case "AlreadyOwned":

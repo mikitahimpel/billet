@@ -546,6 +546,7 @@ describe("the Api Worker", () => {
         balance: number;
         inks: ReadonlyArray<string>;
         items: ReadonlyArray<string>;
+        postage: ReadonlyArray<string>;
       };
     const baseline = await pairOf("subject-base-a", "subject-base-b");
     const welcome = (await shopOf(baseline.owner)).balance;
@@ -554,6 +555,7 @@ describe("the Api Worker", () => {
     const room = env.PAIR_ROOM.getByName(pairId);
     await room.grantInks([Schema.decodeSync(InkId)("ink-rose")]);
     await room.grantItems([Schema.decodeSync(RoomItemId)("lantern")]);
+    await room.grantPostage(["stamp-moon"]);
     await room.creditPurchase({
       kind: "purchase",
       id: Schema.decodeSync(CoinEntryId)("buy:test-pack"),
@@ -574,20 +576,22 @@ describe("the Api Worker", () => {
     expect(wallets.reduce((sum, coins) => sum + coins, 0)).toBe(before.balance);
     expect(Math.abs((wallets[0] ?? 0) - (wallets[1] ?? 0))).toBeLessThanOrEqual(1);
     const kept = await env.DB.prepare("SELECT user_id, kind, item_id FROM kept_items").all();
-    expect(kept.results).toHaveLength(4);
+    expect(kept.results).toHaveLength(6);
 
-    // The owner pairs again: the new room gets their share, the pieces and the ink; their rows go.
+    // The owner pairs again: the new room gets their share, the pieces, the ink and the stamp; their
+    // rows go.
     const third = await signedInAs("subject-third");
     expect((await claimWith(third, await inviteFrom(owner))).status).toBe(200);
     const after = await shopOf(owner);
     expect(after.inks).toContain("ink-rose");
     expect(after.items).toContain("lantern");
+    expect(after.postage).toEqual(["stamp-moon"]);
     expect(wallets).toContain(after.balance - welcome);
     expect(
       await env.DB.prepare("SELECT * FROM kept_items")
         .all()
         .then((r) => r.results),
-    ).toHaveLength(2);
+    ).toHaveLength(3);
     expect(
       (await env.DB.prepare("SELECT coins FROM kept_wallets").all<{ coins: number }>()).results,
     ).toHaveLength(1);
@@ -1044,7 +1048,11 @@ describe("notes", () => {
   });
 
   it("stores a note's stamp and seal, and gives them to the partner as chosen", async () => {
-    const { owner, claimer } = await pairOf("subject-owner", "subject-claimer");
+    const { owner, claimer, pairId } = await pairOf("subject-owner", "subject-claimer");
+    const locked = await sendText(owner, { text: "sealed", stamp: "moon", seal: "rose" });
+    expect(locked.status).toBe(400);
+    expect(await locked.json()).toEqual({ _tag: "PostageNotOwned", postage: "stamp-moon" });
+    await env.PAIR_ROOM.getByName(pairId).grantPostage(["stamp-moon", "seal-rose", "seal-night"]);
     const stamped = await sendText(owner, { text: "sealed", stamp: "moon", seal: "rose" });
     expect(stamped.status).toBe(200);
     expect((await sendText(owner, { text: "plain" })).status).toBe(200);

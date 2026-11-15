@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 import { LocalDay } from "@billet/contracts-domain/coins";
 import { InkId } from "@billet/contracts-domain/inks";
+import { PostageId } from "@billet/contracts-domain/postage";
 import { CollectionId } from "@billet/contracts-domain/shop";
 
 /** Errors named by the auth, pairing, notes and payments flows. Each can grow fields later. */
@@ -19,6 +20,8 @@ export const ApiError = Schema.TaggedUnion({
   InvalidPurchase: {},
   /** A text note in an ink colour the pair has not bought. Buy it in the shop, or use another. */
   InkNotOwned: { ink: InkId },
+  /** A note with a stamp or seal the pair has not unlocked. Unlock it, or send without it. */
+  PostageNotOwned: { postage: PostageId },
   NotEnoughCoins: {
     needed: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
     have: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),

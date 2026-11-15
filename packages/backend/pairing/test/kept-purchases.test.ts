@@ -5,13 +5,13 @@ import { mergeKept, splitKept } from "../src/kept-purchases.ts";
 
 const user = Schema.decodeSync(UserId);
 const [ana, ben] = [user("user-a"), user("user-b")];
-const shop = { coins: 101, inks: ["ink-rose"], items: ["lantern"] };
+const shop = { coins: 101, inks: ["ink-rose"], items: ["lantern"], postage: ["seal-rose"] };
 
 describe("splitKept", () => {
-  it("gives each partner a copy of the inks and pieces and half of the coins", () => {
+  it("gives each partner a copy of the inks, pieces and postage and half of the coins", () => {
     expect(splitKept([ben, ana], shop)).toEqual([
-      [ana, { coins: 51, inks: ["ink-rose"], items: ["lantern"] }],
-      [ben, { coins: 50, inks: ["ink-rose"], items: ["lantern"] }],
+      [ana, { coins: 51, inks: ["ink-rose"], items: ["lantern"], postage: ["seal-rose"] }],
+      [ben, { coins: 50, inks: ["ink-rose"], items: ["lantern"], postage: ["seal-rose"] }],
     ]);
   });
 
@@ -32,12 +32,17 @@ describe("splitKept", () => {
 });
 
 describe("mergeKept", () => {
-  it("adds coins and takes each ink and piece once", () => {
+  it("adds coins and takes each ink, piece and stamp once", () => {
     expect(
       mergeKept([
-        { coins: 51, inks: ["ink-rose"], items: ["lantern"] },
-        { coins: 50, inks: ["ink-rose", "ink-sky"], items: [] },
+        { coins: 51, inks: ["ink-rose"], items: ["lantern"], postage: ["stamp-moon"] },
+        { coins: 50, inks: ["ink-rose", "ink-sky"], items: [], postage: ["stamp-moon"] },
       ]),
-    ).toEqual({ coins: 101, inks: ["ink-rose", "ink-sky"], items: ["lantern"] });
+    ).toEqual({
+      coins: 101,
+      inks: ["ink-rose", "ink-sky"],
+      items: ["lantern"],
+      postage: ["stamp-moon"],
+    });
   });
 });

@@ -45,6 +45,7 @@ import type {
   LayoutRefused,
   GiftTaken,
   InkNotOwned,
+  PostageNotOwned,
   InvalidNote,
   NotEnoughCoins,
   PriceChanged,
@@ -112,6 +113,7 @@ const respondNotesFailures = <R>(
     | NotesNotFound
     | InvalidNote
     | InkNotOwned
+    | PostageNotOwned
     | NotEnoughCoins
     | PriceChanged
     | AlreadyOwned
@@ -130,6 +132,8 @@ const respondNotesFailures = <R>(
       InvalidNote: () => respondError(ApiError.cases.InvalidRequest.make({}), { status: 400 }),
       InkNotOwned: ({ ink }) =>
         respondError(ApiError.cases.InkNotOwned.make({ ink }), { status: 400 }),
+      PostageNotOwned: ({ postage }) =>
+        respondError(ApiError.cases.PostageNotOwned.make({ postage }), { status: 400 }),
       NotEnoughCoins: ({ needed, have }) =>
         respondError(ApiError.cases.NotEnoughCoins.make({ needed, have }), { status: 409 }),
       PriceChanged: ({ price }) =>

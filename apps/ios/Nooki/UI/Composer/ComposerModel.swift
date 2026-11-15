@@ -44,8 +44,11 @@ final class ComposerModel {
         hasInk = false
     }
 
-    /// Text alone stays a text note for the partner; anything drawn is a picture of the whole note.
-    func save(into journal: Journal, size: CGSize) -> Bool {
+    /// Text alone stays a text note for the partner; anything drawn is a picture of the whole note. A stamp or seal
+    /// the pair hasn't unlocked (`owned`, as the Shop last heard it) stays off the note.
+    func save(into journal: Journal, size: CGSize, owned: Set<String>) -> Bool {
+        let stamp = stamp.flatMap { NotePostage($0).isOwned(owned) ? $0 : nil }
+        let seal = seal.flatMap { NotePostage($0).isOwned(owned) ? $0 : nil }
         guard hasInk || !decorations.isEmpty else {
             return journal.addNote(text: text, paper: paper, ink: ink.light, stamp: stamp, seal: seal)
         }

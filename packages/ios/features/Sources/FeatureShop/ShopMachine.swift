@@ -12,7 +12,7 @@ public nonisolated enum ShopMachine: Machine {
   /// What this phone last heard from the server: the wallet file keeps it between launches.
   public struct Mirror: Equatable, Sendable {
     public var balance: Int
-    /// Items and inks, as the wallet file keeps them together.
+    /// Items, inks, stamps and seals, as the wallet file keeps them together.
     public var owned: Set<String>
     public var wishlist: Set<String>
     /// Where the pair stood its pieces; nil from a server before placements.
@@ -34,6 +34,7 @@ public nonisolated enum ShopMachine: Machine {
     public init(_ shop: ShopResponse) {
       balance = shop.balance
       owned = Set(shop.items.map(\.rawValue)).union(shop.inks.map(\.rawValue))
+        .union((shop.postage ?? []).map(\.rawValue))
       wishlist = Set(shop.wishlist.map(\.rawValue))
       layout = shop.layout
       stowed = shop.stowed

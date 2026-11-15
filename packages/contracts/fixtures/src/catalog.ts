@@ -1201,6 +1201,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     "apple-id-in-use": ApiError.cases.AppleIdInUse.make({}),
     "invalid-purchase": ApiError.cases.InvalidPurchase.make({}),
     "ink-not-owned": ApiError.cases.InkNotOwned.make({ ink: rose }),
+    "postage-not-owned": ApiError.cases.PostageNotOwned.make({ postage: "seal-rose" }),
     "not-enough-coins": ApiError.cases.NotEnoughCoins.make({ needed: 60, have: 25 }),
     "already-owned": ApiError.cases.AlreadyOwned.make({ itemId: "ink-rose" }),
     "collection-incomplete": ApiError.cases.CollectionIncomplete.make({ collection: cozyAutumn }),
@@ -1253,6 +1254,7 @@ export const catalog: ReadonlyArray<Fixture> = [
     item: ShopOffer.cases.Item.make({ item: tower }),
     set: ShopOffer.cases.Set.make({ set: readingNook }),
     treat: ShopOffer.cases.Treat.make({}),
+    postage: ShopOffer.cases.Postage.make({ postage: "stamp-moon" }),
   }),
   fixture("ShopResponse", ShopResponse, {
     "in-debt": {
@@ -1272,10 +1274,23 @@ export const catalog: ReadonlyArray<Fixture> = [
       bonuses: [cozyAutumn],
     },
     new: { balance: 560, inks: [freeInk], items: [lamp, rug], wishlist: [], bonuses: [] },
+    postage: {
+      balance: 25,
+      inks: [freeInk],
+      items: [lamp, rug],
+      postage: ["stamp-moon", "seal-rose"],
+      wishlist: [],
+      bonuses: [],
+    },
   }),
   fixture("OrderRequest", OrderRequest, {
     default: { id: idempotencyKey, offer: ShopOffer.cases.Item.make({ item: tower }) },
     treat: { id: idempotencyKey, offer: ShopOffer.cases.Treat.make({}) },
+    postage: {
+      id: idempotencyKey,
+      offer: ShopOffer.cases.Postage.make({ postage: "seal-rose" }),
+      expectedPrice: 45,
+    },
     "expected-price": {
       id: idempotencyKey,
       offer: ShopOffer.cases.Item.make({ item: tower }),
@@ -1294,6 +1309,17 @@ export const catalog: ReadonlyArray<Fixture> = [
         balance: 65,
         inks: [freeInk],
         items: [lamp, rug, tower],
+        wishlist: [],
+        bonuses: [],
+      },
+    },
+    postage: {
+      entry: { ...spendEntry, amount: -30, ref: "stamp-moon" },
+      shop: {
+        balance: 35,
+        inks: [freeInk],
+        items: [lamp, rug],
+        postage: ["stamp-moon"],
         wishlist: [],
         bonuses: [],
       },

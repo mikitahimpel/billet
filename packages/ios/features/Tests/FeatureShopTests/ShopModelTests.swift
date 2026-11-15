@@ -320,6 +320,46 @@ private final class FakeCare: CatTending {
     #expect(server.orders.withLock { $0.first?.offer } == .ink(InkId("ink-rose")))
   }
 
+  @Test func aStampIsAnOrderLikeAnInk() async throws {
+    defer { cleanUp() }
+    let (model, _) = shop()
+    let server = FakeRoom(room(400))
+    await model.connect(server.sync())
+    let moon = NotePostage(NoteStamp.moon)
+
+    #expect(!moon.isOwned(model.owned))
+    #expect(model.buy(moon))
+    #expect(model.lastPurchase?.kind == .postage)
+    #expect(model.lastPurchase?.title == "Moon stamp")
+    #expect(moon.isOwned(model.owned))
+    #expect(!model.buy(moon))
+    await settle { !server.orders.withLock { $0.isEmpty } }
+    #expect(server.orders.withLock { $0.first?.offer } == .postage(PostageId("stamp-moon")))
+  }
+
+  @Test func theServersUnlockedPostageIsOwned() async {
+    defer { cleanUp() }
+    let (model, _) = shop()
+    let unlocked = ShopResponse(
+      balance: 10, inks: [.free], items: [RoomItemId("lamp")], postage: [PostageId(NoteSeal.rose)],
+      wishlist: [])
+    await model.connect(FakeRoom(unlocked).sync())
+
+    #expect(NotePostage(NoteSeal.rose).isOwned(model.owned))
+    #expect(!NotePostage(NoteStamp.heart).isOwned(model.owned))
+  }
+
+  @Test func aSealTheCoinsDontCoverOpensCoins() async {
+    defer { cleanUp() }
+    let (model, _) = shop()
+    let server = FakeRoom(room(20))
+    await model.connect(server.sync())
+
+    #expect(!model.buy(NotePostage(NoteSeal.plum)))
+    #expect(model.coinsAsk?.missing == 25)
+    #expect(server.orders.withLock { $0.isEmpty })
+  }
+
   @Test func anEarnAsksTheServerAndShowsOnlyItsBalance() async {
     defer { cleanUp() }
     let (model, _) = shop()

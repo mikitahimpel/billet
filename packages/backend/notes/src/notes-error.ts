@@ -2,6 +2,7 @@ import { Data } from "effect";
 import type { RiddleRefusal } from "@billet/backend-pair-room/riddle-rules";
 import type { LocalDay } from "@billet/contracts-domain/coins";
 import type { InkId } from "@billet/contracts-domain/inks";
+import type { PostageId } from "@billet/contracts-domain/postage";
 import type { CollectionId } from "@billet/contracts-domain/shop";
 
 /** The caller has no partner, or the couple has no such image: the client can't tell which. */
@@ -13,6 +14,11 @@ export class InvalidNote extends Data.TaggedError("InvalidNote") {}
 /** A text note in an ink colour the pair has not bought. */
 export class InkNotOwned extends Data.TaggedError("InkNotOwned")<{ readonly ink: InkId }> {}
 
+/** A note with a stamp or seal the pair has not unlocked. */
+export class PostageNotOwned extends Data.TaggedError("PostageNotOwned")<{
+  readonly postage: PostageId;
+}> {}
+
 export class NotEnoughCoins extends Data.TaggedError("NotEnoughCoins")<{
   readonly needed: number;
   readonly have: number;
@@ -21,7 +27,7 @@ export class NotEnoughCoins extends Data.TaggedError("NotEnoughCoins")<{
 /** The price is now above the one the buyer saw; nothing was charged. `price` is the new one. */
 export class PriceChanged extends Data.TaggedError("PriceChanged")<{ readonly price: number }> {}
 
-/** A buy of something the pair already owns: an ink, a piece, or every piece of a set. */
+/** A buy of something the pair already owns: an ink, a piece, a stamp or seal, or a whole set. */
 export class AlreadyOwned extends Data.TaggedError("AlreadyOwned")<{ readonly itemId: string }> {}
 
 export class CollectionIncomplete extends Data.TaggedError("CollectionIncomplete")<{

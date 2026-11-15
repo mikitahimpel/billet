@@ -391,6 +391,7 @@ describe("tagged unions", () => {
     SaveCat: saveCat(),
     RecordCatEvent: pet(),
     GrantInks: RoomCommand.cases.GrantInks.make({ inks: [rose] }),
+    GrantPostage: RoomCommand.cases.GrantPostage.make({ postage: ["stamp-moon"] }),
     GrantItems: RoomCommand.cases.GrantItems.make({
       items: [Schema.decodeSync(RoomItemId)("lantern")],
     }),
@@ -485,6 +486,7 @@ describe("tagged unions", () => {
     CatEntryRepeated: RoomOutput.cases.CatEntryRepeated.make({ entry: petEntry }),
     InksGranted: RoomOutput.cases.InksGranted.make({ inks: [rose] }),
     ItemsGranted: RoomOutput.cases.ItemsGranted.make({ items: [tower] }),
+    PostageGranted: RoomOutput.cases.PostageGranted.make({ postage: ["seal-rose"] }),
     WishlistChanged: RoomOutput.cases.WishlistChanged.make({ wishlist: [tower] }),
     LayoutChanged: RoomOutput.cases.LayoutChanged.make({ layout: [] }),
     LayoutRepeated: RoomOutput.cases.LayoutRepeated.make({}),
@@ -556,6 +558,7 @@ describe("tagged unions", () => {
     CatNotAdopted: RoomRejection.cases.CatNotAdopted.make({}),
     CatEntryIdTaken: RoomRejection.cases.CatEntryIdTaken.make({}),
     InkNotOwned: RoomRejection.cases.InkNotOwned.make({ ink: rose }),
+    PostageNotOwned: RoomRejection.cases.PostageNotOwned.make({ postage: "seal-rose" }),
     NotEnoughCoins: RoomRejection.cases.NotEnoughCoins.make({ needed: 60, have: 5 }),
     PriceChanged: RoomRejection.cases.PriceChanged.make({ price: 560 }),
     AlreadyOwned: RoomRejection.cases.AlreadyOwned.make({ ink: rose }),

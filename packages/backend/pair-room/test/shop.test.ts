@@ -1,6 +1,9 @@
 import { Effect, Layer, Schema } from "effect";
 import { describe, expect, it } from "vitest";
-import type { EpochMillis } from "@billet/contracts-domain/ids";
+import { type EpochMillis, NoteId } from "@billet/contracts-domain/ids";
+import { freeInk } from "@billet/contracts-domain/inks";
+import { Note } from "@billet/contracts-domain/note";
+import { postage, sealPrice, stampPrice } from "@billet/contracts-domain/postage";
 import { RoomItemId, type ShopOffer } from "@billet/contracts-domain/shop";
 import { decide } from "../src/decide.ts";
 import { RoomCommand } from "../src/room-command.ts";
@@ -8,7 +11,7 @@ import type { RoomDecision } from "../src/room-decision.ts";
 import { RoomService } from "../src/room-service.ts";
 import type { ActiveRoom } from "../src/room-state.ts";
 import { countingIds, memoryStore } from "./memory-store.ts";
-import { active, adoptedCat, alice, bob, mallory, rose, tower, uuid } from "./samples.ts";
+import { active, adoptedCat, alice, bob, mallory, rose, textFrom, tower, uuid } from "./samples.ts";
 
 // Monday 2024-01-08 12:00 UTC: week 1, so "nap-time" is the featured set.
 const monday: EpochMillis = Date.UTC(2024, 0, 8, 12);
@@ -164,5 +167,99 @@ describe("RoomService.order", () => {
     });
     expect(outcome.state._tag === "Active" && outcome.state.wallet.balance).toBe(2000 - 540);
     expect(store.memory.coins.map((entry) => entry.amount)).toEqual([-540]);
+  });
+});
+
+describe("unlocking a stamp or a seal", () => {
+  const stamped = (stamp: "moon", seal?: "rose"): Note =>
+    Note.cases.Text.make({
+      id: Schema.decodeUnknownSync(NoteId)("note-stamped"),
+      author: alice,
+      sentAt: 1_700_000_000_000,
+      text: "hi",
+      ink: freeInk,
+      stamp,
+      ...(seal === undefined ? {} : { seal }),
+    });
+  const send = (room: ActiveRoom, note: Note, n = 50) =>
+    decide(room, RoomCommand.cases.SendNote.make({ note, key: uuid(n) }));
+
+  it("charges every stamp 30 and every seal 45, and nothing is free", () => {
+    for (const entry of postage) {
+      const decision = accept(rich, order(1, { _tag: "Postage", postage: entry.id }));
+      expect(decision.state.postage).toEqual([entry.id]);
+      expect(decision.state.wallet.balance).toBe(
+        2000 - (entry.id.startsWith("stamp-") ? stampPrice : sealPrice),
+      );
+    }
+    expect(postage).toHaveLength(10);
+  });
+
+  it("grants the unlock to the pair and tells the shop and the Inbox", () => {
+    const decision = accept(rich, order(1, { _tag: "Postage", postage: "seal-rose" }));
+    expect(decision.outputs).toEqual([
+      {
+        _tag: "CoinsEntered",
+        entry: { id: `spend:${uuid(1)}`, kind: "spend", amount: -45, ref: "seal-rose", at: monday },
+      },
+      { _tag: "PostageGranted", postage: ["seal-rose"] },
+      { _tag: "Purchased", id: uuid(1), by: alice, at: monday, items: ["seal-rose"], coins: 45 },
+    ]);
+  });
+
+  it("refuses one the pair has, one the balance cannot pay, a raised price and a stranger", () => {
+    const owned = accept(rich, order(1, { _tag: "Postage", postage: "stamp-moon" })).state;
+    expect(
+      rejection(owned, order(2, { _tag: "Postage", postage: "stamp-moon" }, monday, bob)),
+    ).toEqual({ _tag: "OfferOwned", offer: "stamp-moon" });
+    expect(rejection(active, order(3, { _tag: "Postage", postage: "seal-plum" }))).toEqual({
+      _tag: "NotEnoughCoins",
+      needed: 45,
+      have: 0,
+    });
+    const capped = RoomCommand.cases.Order.make({
+      id: uuid(4),
+      by: alice,
+      offer: { _tag: "Postage", postage: "seal-plum" },
+      at: monday,
+      terms: { expectedPrice: 30 },
+    });
+    expect(rejection(rich, capped)).toEqual({ _tag: "PriceChanged", price: 45 });
+    expect(
+      rejection(rich, order(5, { _tag: "Postage", postage: "stamp-sun" }, monday, mallory))?._tag,
+    ).toBe("NotAMember");
+  });
+
+  it("refuses a note whose stamp or seal is locked, and sends it once both are the pair's", () => {
+    expect(send(active, textFrom(alice, freeInk))._tag).toBe("Accepted");
+    const refused = send(active, stamped("moon", "rose"));
+    expect(refused).toEqual({
+      _tag: "Rejected",
+      rejection: { _tag: "PostageNotOwned", postage: "stamp-moon" },
+    });
+    const withStamp = accept(rich, order(1, { _tag: "Postage", postage: "stamp-moon" })).state;
+    expect(send(withStamp, stamped("moon", "rose"))).toEqual({
+      _tag: "Rejected",
+      rejection: { _tag: "PostageNotOwned", postage: "seal-rose" },
+    });
+    expect(send(withStamp, stamped("moon"))._tag).toBe("Accepted");
+    const both = accept(withStamp, order(2, { _tag: "Postage", postage: "seal-rose" })).state;
+    expect(send(both, { ...stamped("moon", "rose"), author: bob })._tag).toBe("Accepted");
+  });
+
+  it("gives back kept stamps and seals once, in the order they come", () => {
+    const grant = (room: ActiveRoom, ids: ReadonlyArray<"stamp-moon" | "seal-rose">) =>
+      decide(room, RoomCommand.cases.GrantPostage.make({ postage: ids }));
+    const first = grant(active, ["seal-rose", "stamp-moon", "seal-rose"]);
+    if (first._tag !== "Accepted") throw new Error("rejected");
+    expect(first.state.postage).toEqual(["seal-rose", "stamp-moon"]);
+    expect(first.outputs).toEqual([
+      { _tag: "PostageGranted", postage: ["seal-rose", "stamp-moon"] },
+    ]);
+    expect(grant(first.state, ["stamp-moon"])).toEqual({
+      _tag: "Accepted",
+      state: first.state,
+      outputs: [],
+    });
   });
 });

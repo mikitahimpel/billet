@@ -32,6 +32,7 @@ import {
   mood,
   note,
   ownedInk,
+  ownedPostage,
   layoutLog,
   stowedPiece,
   ownedItem,
@@ -325,6 +326,7 @@ const roomFrom = (
   layout: ReadonlyArray<PlacementRow>,
   layoutIds: ReadonlyArray<string>,
   stowed: ReadonlyArray<string>,
+  postage: ReadonlyArray<string>,
 ): RoomState =>
   decodeRoom(
     row === undefined
@@ -347,6 +349,7 @@ const roomFrom = (
           ...(row.lastReactionRev === null ? {} : { lastReactionRev: row.lastReactionRev }),
           inks,
           items,
+          postage,
           wishlist,
           layout: layout.map(({ itemId, surface, u, v, quarterTurns, room }) => ({
             item: itemId,
@@ -412,6 +415,7 @@ export const SqliteRoomStore = Layer.effect(
         db.select().from(placement).orderBy(asc(placement.position)),
         db.select().from(layoutLog).orderBy(asc(layoutLog.position)),
         db.select().from(stowedPiece).orderBy(asc(stowedPiece.position)),
+        db.select().from(ownedPostage).orderBy(asc(ownedPostage.position)),
       ]).pipe(
         Effect.map(
           ([
@@ -426,6 +430,7 @@ export const SqliteRoomStore = Layer.effect(
             placed,
             logged,
             stowed,
+            postage,
           ]) =>
             roomFrom(
               row,
@@ -439,6 +444,7 @@ export const SqliteRoomStore = Layer.effect(
               placed,
               logged.map(({ changeId }) => changeId),
               stowed.map(({ itemId }) => itemId),
+              postage.map(({ postageId }) => postageId),
             ),
         ),
         Effect.orDie,
@@ -467,6 +473,12 @@ export const SqliteRoomStore = Layer.effect(
               }
               for (const [position, itemId] of state.items.entries()) {
                 yield* tx.insert(ownedItem).values({ itemId, position }).onConflictDoNothing();
+              }
+              for (const [position, postageId] of state.postage.entries()) {
+                yield* tx
+                  .insert(ownedPostage)
+                  .values({ postageId, position })
+                  .onConflictDoNothing();
               }
               // Bonuses are only ever added, like the inks.
               for (const [position, collectionId] of state.bonuses.entries()) {

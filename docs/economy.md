@@ -56,7 +56,8 @@ nothing already held or bought is reduced.
 earns nothing more, so there is no reason to play for coins.
 
 **Sinks** (coins out), all `spend`: the shop's room pieces, bundles and sets, ink colours for
-notes, treats for the cat, and the week's featured set (sold at half price). Seasonal items are
+notes, stamps and seals for notes, treats for the cat, and the week's featured set (sold at half
+price). Seasonal items are
 sinks that leave the catalogue, so they keep demand without making old items cost more.
 
 Coins are never traded between players and never cashed out: a pair can only spend them in its
@@ -64,6 +65,31 @@ own shop, and there is no way to turn them back into money except the App Store 
 inflation is a **pacing** question (how fast a pair earns against what the shop asks), not a
 market one. There is no price set by other players to run away, and nothing a pair holds is worth
 more or less to anyone else.
+
+## Stamps and seals
+
+A note's stamp and its wax seal are sold, never free; a note with neither stays free to send. The
+prices live in `packages/contracts/domain/src/postage.ts`:
+
+| What | Coins | Why |
+| --- | --- | --- |
+| A stamp (heart, moon, bloom, paw, sun) | 30 | Half a cheap ink: a small first unlock, about 2 days of full play, and the welcome 60 buys one stamp and leaves room for nothing else big |
+| A seal (rose, night, meadow, honey, plum) | 45 | The price of the cheapest room piece: a seal is the rarer, showier mark, about 3 to 4 days of full play |
+
+All ten together are 375 coins, about a month of full play, the same wait as a top room piece.
+
+- An unlock is **one-time and the pair's**, like an ink: one partner's buy is both partners', it
+  is kept for good (also through a re-pairing, as a kept purchase), and it is bought with the same
+  `spend` path (`POST /v1/shop/orders`, offer `Postage`), idempotent by the order id, refused while
+  the balance is below the price, negative included.
+- The server refuses a note with a stamp or a seal the pair has not unlocked: `400
+  PostageNotOwned {postage}`. The app shows locked ones with their price, so it never sends one.
+- A **recipient** sees any stamp or seal on a note they get, owned or not; only sending needs it.
+- Notes sent before stamps were sold keep their stamps and seals as they are.
+
+Their spends carry `ref` `stamp-<name>` or `seal-<name>` in the pair's ledger. The economy route
+below counts them in `spend` with every other sink, so read them in the spent line and in how fast
+balances fall after the first week.
 
 ## The pricing anchor
 
