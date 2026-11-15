@@ -116,12 +116,9 @@ jobs:
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
       # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
-      # Warmbuild lives at warmbuild.dev; the action's default `url` (v1.12.3) is the old host, which is gone, so both
-      # steps name the new one until the pins move to a release whose default is warmbuild.dev.
-      - uses: mikitahimpel/warmbuild-action@06ddfbfabe30554de4a1e4fa9a3b39da57f10dfc # v1.12.3
+      - uses: warmbuild/action@cf98788479872c00b8f3e76c802173b443b49b4d # v1.12.4
         id: warmbuild
         with:
-          url: https://cache-dev.warmbuild.dev
           select-tests: true
           select-tests-scheme: Billet
           select-tests-ignore: |
@@ -199,11 +196,10 @@ jobs:
       # Leaves out the test targets whose built products already passed (on main, or earlier in this pull request),
       # and adds test selection's arguments; WARMBUILD_ONLY_TESTING holds the result. `full-tests` or
       # "[warmbuild full tests]" in a commit message or the pull request runs every target.
-      - uses: mikitahimpel/warmbuild-action/test-cache@06ddfbfabe30554de4a1e4fa9a3b39da57f10dfc # v1.12.3
+      - uses: warmbuild/action/test-cache@cf98788479872c00b8f3e76c802173b443b49b4d # v1.12.4
         id: tests
         if: steps.warmbuild.outputs.tests != 'none'
         with:
-          url: https://cache-dev.warmbuild.dev
           derived-data: ${{ runner.temp }}/app-tests
           destination: id=${{ env.TEST_SIMULATOR }}
           args: ${{ github.event_name == 'pull_request' && '-skip-testing:OurioUITests' || '' }}
