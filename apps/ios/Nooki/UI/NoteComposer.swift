@@ -20,6 +20,8 @@ struct NoteComposer: View {
     @State private var flight = 0.0
     @State private var sending = false
     @State private var paperSize = CGSize(width: 280, height: 280)
+    /// The top of the tools under the paper, global, which a purchase's card keeps clear of.
+    @State private var toolsTop: CGFloat?
     @FocusState private var focused: Bool
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -45,9 +47,11 @@ struct NoteComposer: View {
             }
             .padding(.horizontal, Space.gutter)
             .padding(.top, Space.s)
-            .safeAreaInset(edge: .bottom, spacing: 0) { tools }
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                tools.onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { toolsTop = $0 }
+            }
         }
-        .overlay { PurchaseMoment(state: state) }
+        .overlay { PurchaseMoment(state: state, floor: toolsTop) }
         .haptic(.selection, trigger: model.ink)
         .haptic(.success, trigger: sending)
         .onAppear { focused = !model.drawing }

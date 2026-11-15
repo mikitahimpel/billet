@@ -190,6 +190,17 @@ struct LaserPlayTests {
     #expect(laser.dot == SIMD2(0.4, -0.4))
   }
 
+  /// The old patches of open floor held the dot to about half the room; it now reaches every corner.
+  @Test func inARoomTheDotReachesTheWholeFloor() {
+    var laser = LaserPlay(length: 0.2, floor: .room)
+    for corner in [SIMD2(-0.44, -0.44), SIMD2(0.44, -0.44), SIMD2(-0.44, 0.44), SIMD2(0.44, 0.44)] {
+      laser.aim(corner, dt: 0.1)
+      #expect(laser.dot == corner)
+    }
+    laser.aim(SIMD2(-2, 3), dt: 0.1)
+    #expect(laser.dot == SIMD2(-0.45, 0.45))
+  }
+
   @Test func chasingAndPouncingFillThePlayBar() {
     var laser = LaserPlay(length: 0.2, floor: floor)
     laser.ran(0.4)
