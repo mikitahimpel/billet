@@ -44,8 +44,7 @@ import Testing
         let layout = HostedLayout(view, phone: test.screen.phone)
         layout.settle(0.5)
         // The first window after accessibility comes on can list its elements a pass or two late.
-        let closet = test.pieces == 0 ? "decorClosetEmpty" : "decorCloset.\(Self.bought[0])"
-        for _ in 0..<40 where ["decorDone", "decorReset", closet].contains(where: { layout.element(id: $0) == nil }) {
+        for _ in 0..<20 where layout.element(id: "decorDone") == nil || layout.element(id: "decorReset") == nil {
             layout.settle(0.25)
         }
         return layout
@@ -87,7 +86,9 @@ import Testing
         let closetTop: CGFloat
         let closetBottom: CGFloat
         if test.pieces == 0 {
-            let empty = try frame(layout, "decorClosetEmpty")
+            // The iOS 26.2 Simulator drops the identifier of the combined note inside the scroll view; its words stay.
+            let note = layout.element(id: "decorClosetEmpty") ?? layout.elements().first { $0.label.hasPrefix("The closet is empty") }
+            let empty = try #require(note, "no empty note among \(layout.elements().map { $0.identifier + ":" + $0.label })").frame
             closetTop = empty.minY
             closetBottom = empty.maxY
         } else {
