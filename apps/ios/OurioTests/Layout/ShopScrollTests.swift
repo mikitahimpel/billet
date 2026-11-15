@@ -8,7 +8,7 @@ import Testing
 @MainActor @Suite(.serialized) struct ShopScrollTests {
     @Test func theShopScrollsOnlyUpAndDown() {
         UserDefaults.standard.set(true, forKey: "uitestStill")
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         state.tab = .shop
         let layout = HostedLayout(ShopView(state: state), phone: .se)
         layout.settle(1)
@@ -30,7 +30,7 @@ import Testing
     /// Today's section headers start at one left edge, the deals' (whose row scrolls edge to edge) with the rest.
     @Test func theTodaySectionHeadersShareOneLeftEdge() throws {
         UserDefaults.standard.set(true, forKey: "uitestStill")
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         state.tab = .shop
         state.shopCategory = .today
         let layout = HostedLayout(ShopView(state: state), phone: .se)

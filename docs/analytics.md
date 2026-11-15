@@ -81,9 +81,12 @@ five most chosen things per name over the same range, with the coins spent for p
 
 ## On the phone
 
-Events wait in a small file in the app group, at most 100: past that, the oldest are dropped, so a
-phone that is offline for long loses its oldest events, never the app's speed. They are sent 20 to
-a request when the app comes to the front and when it goes to the background. A request the server
+Events wait in a small file in the app group (`analytics-events.json`), at most 100: past that, the
+oldest are dropped, so a phone that is offline for long loses its oldest events, never the app's
+speed. They are sent 20 to a request a few seconds after one is recorded, when the app comes to the
+front and when it goes to the background. Features record through one `EventReporter`
+(`packages/ios/core/Sources/Transport/EventReporter.swift`) given to their stores in `init`; an event
+that breaks its name's rule is dropped on the phone and never sent. A request the server
 refuses with 400 is dropped rather than retried; any other failure keeps the events for next time.
 Sign-out forgets them.
 

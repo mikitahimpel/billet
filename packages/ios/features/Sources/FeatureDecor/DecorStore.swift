@@ -2,6 +2,7 @@ import BilletKit
 import DecorInterface
 import Foundation
 import Persistence
+import Transport
 
 public typealias DecorStore = Store<DecorMachine>
 
@@ -39,14 +40,17 @@ public struct DecorServices: Sendable {
   public var feedback: @MainActor @Sendable (DecorMachine.Feedback) -> Void
   /// A change the player made, for the server.
   public var share: @MainActor @Sendable (DecorLayout) -> Void
+  public var events: EventReporter
 
   public init(
     storage: DecorStorage, feedback: @escaping @MainActor @Sendable (DecorMachine.Feedback) -> Void,
-    share: @escaping @MainActor @Sendable (DecorLayout) -> Void = { _ in }
+    share: @escaping @MainActor @Sendable (DecorLayout) -> Void = { _ in },
+    events: EventReporter = .none
   ) {
     self.storage = storage
     self.feedback = feedback
     self.share = share
+    self.events = events
   }
 }
 
@@ -55,16 +59,22 @@ extension Store where M == DecorMachine {
   @MainActor
   public static func decor(_ services: DecorServices) -> DecorStore {
     let layout = services.storage.load() ?? DecorLayout()
-    return DecorStore(initial: .off(DecorMachine.Book(layout: layout))) { output in
+    let log = DecorEventLog(layout, events: services.events)
+    let store = DecorStore(initial: .off(DecorMachine.Book(layout: layout))) { output in
       switch output {
       case .save(let layout):
         services.storage.save(layout)
+        await log.saved(layout)
         await services.share(layout)
-      case .keep(let layout): services.storage.save(layout)
+      case .keep(let layout):
+        services.storage.save(layout)
+        await log.kept(layout)
       case .feedback(let kind): await services.feedback(kind)
       }
       return nil
     }
+    log.store = store
+    return store
   }
 }
 

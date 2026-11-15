@@ -129,7 +129,7 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 
     @Test func aShopInkLinkOpensTheShopAtThatInk() {
         #expect(DeepLink.shopInk("ink-rose").url.absoluteString == "ourio://shop/ink/ink-rose")
-        let state = HomeState(stores: .live())
+        let state = HomeState(stores: .live(events: .none))
         state.open(.shopInk("ink-rose"))
         #expect(state.tab == .shop)
         #expect(state.shopFocus == .ink("ink-rose"))
