@@ -37,6 +37,19 @@ import Testing
     #expect(abs(edges(placement).back + shift.dz + 0.5) < 1e-9)
   }
 
+  @Test func theWindowSeatMovedAndPutBackLiesAgainstTheWall() {
+    // Its home cell, -8, is past `DecorGrid.reach` for a piece of its width, so once moved it can only come back
+    // to -7: 5.5 cm off the wall, more than a cell.
+    let home = DecorLayout().placement(of: "base-windowseat")!
+    let moved = DecorLayout().putting(home.moved(to: .floor, u: -2, v: 0))
+    let back = moved.nearestFit(to: home)!
+    #expect(back.u == -7)
+    let layout = moved.putting(back)
+    let shift = layout.flushShift(of: back)
+    #expect(abs(edges(back).left + shift.dx + 0.5) < 1e-9)
+    #expect(shift.dz == 0)
+  }
+
   @Test func aPieceAFullCellOrMoreFromTheWallStaysWhereItIs() {
     let placement = floor("bookcase", 0, -7)
     #expect(empty.putting(placement).flushShift(of: placement).dz == 0)

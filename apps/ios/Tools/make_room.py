@@ -175,15 +175,11 @@ def window():
 
 def window_seat():
     wood, light = mat(WOOD, rough=0.6), mat(WOOD_LIGHT, rough=0.6)
-    # The deep sill Mochi sits on, with a rounded nose, an apron under it and two corbels at the wall. Two legs under
-    # the apron's ends reach the boards: the corbels hide under the sill from the room's camera, and a sill with
-    # nothing seen beneath it floats.
+    # The deep sill Mochi sits on, with a rounded nose, an apron under it and two corbels.
     rbox((0.19, 0.022, 0.42), (-0.41, 0.262, 0.0), light, bevel=0.007)
     rbox((0.024, 0.034, 0.4), (-0.322, 0.238, 0.0), wood, bevel=0.008)
     for z in (-0.15, 0.15):
         rbox((0.07, 0.05, 0.022), (-0.465, 0.226, z), wood, bevel=0.01)
-    for z in (-0.186, 0.186):
-        rbox((0.024, 0.208, 0.024), (-0.322, FLOOR + 0.104, z), wood, bevel=0.004)
     # Her cushion: plump, piped round the edge, two buttons pulling the top in.
     cushion = mat(BLANKET, rough=1, sheen=0.6)
     rbox((0.15, 0.026, 0.19), (-0.4, 0.286, 0.0), cushion, bevel=0.012)
