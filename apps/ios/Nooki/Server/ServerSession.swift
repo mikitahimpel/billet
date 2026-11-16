@@ -48,6 +48,7 @@ final class ServerSession {
     /// The partner has the app open; false while this phone's socket is down.
     var partnerHere: Bool { partnerPresence != .away && inboxLink?.isConnected == true }
     @ObservationIgnored private let photoReceiving = PhotoReceiving()
+    @ObservationIgnored private let textReceiving = PhotoReceiving()
     /// Set each time the socket is followed.
     @ObservationIgnored private var photos: PhotoSync?
     @ObservationIgnored private var texts: TextNoteSync?
@@ -181,7 +182,11 @@ final class ServerSession {
                     baseURL: backend.baseURL, token: { (try? accounts.load())?.token },
                     lastSeq: UserDefaults.standard.object(forKey: PhotoSync.cursorKey) as? Int,
                     handlers: .init(
-                        unread: { inbox.unreadChanged($0) },
+                        // A new note or drawing counts here first; the board pages its notes from its own cursor.
+                        unread: { [weak self] in
+                            inbox.unreadChanged($0)
+                            Task { await self?.texts?.receive() }
+                        },
                         photo: { [weak self] in Task { await self?.photos?.receive() } },
                         text: { [weak self] in Task { await self?.texts?.receive() } },
                         drawing: { [weak self] in self?.drawingSync?.received($1, seq: $0) },
@@ -350,7 +355,8 @@ final class ServerSession {
     /// Nil until this account has a partner.
     func textSync(notes: NoteStore, partner: String) -> TextNoteSync? {
         guard isPaired else { return nil }
-        return TextNoteSync(api: backend.api, accounts: backend.accounts, notes: notes, partner: partner, defaults: .standard)
+        return TextNoteSync(api: backend.api, accounts: backend.accounts, notes: notes, partner: partner,
+                            defaults: .standard, receiving: textReceiving)
     }
 
     /// Asks the server about the demo partner. Any answer but the dev server's, offline included, hides the dev tools.

@@ -174,7 +174,7 @@ export const rules = [
   {
     id: "tip",
     what: "TipKit hints drawn without the app's Hint style",
-    fix: "Show a hint with .hint(tip, arrowEdge:, target:), which draws HintStyle and its ring.",
+    fix: "Show a hint with .hint(tip, arrowEdge:, target:), which draws its card in HintLayer and its ring.",
     pattern: /\.popoverTip\(|\bTipView\(|\.tipViewStyle\(|\.tipBackground\(/g,
   },
   {

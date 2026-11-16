@@ -114,7 +114,6 @@ struct OurioApp: App {
                     .environment(\.usServer, usServer)
                     .environment(hints)
                     .environment(\.startOver, StartOver { startOver() })
-                    .hintStyle(hints)
                     .overlay {
                         if !onboarding.isFinished {
                             OnboardingView(

@@ -164,4 +164,38 @@ import Wire
         #expect(FileManager.default.fileExists(atPath: url.path))
         #expect(notes.note(noteID: text) != nil)
     }
+
+    @Test func framesArrivingTogetherDownloadThePartnersDrawingOnce() async throws {
+        let notes = NoteStore()
+        let suite = "doodles-\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { UserDefaults().removePersistentDomain(forName: suite) }
+        let noteID = "n-\(UUID().uuidString)"
+        let entry = NoteEntry(seq: 7, note: .drawing(id: NoteId(noteID), author: UserId("partner"), sentAt: 2_000,
+                                                     compact: CompactStrokes(strokes: []),
+                                                     image: MediaKey("pair/doodle"), paper: .sky))
+        let downloads = Mutex(0)
+        var api = APIClient.offline
+        api.listNotes = { (after) async throws(TransportError) in
+            ListNotesResponse(notes: [entry].filter { $0.seq > (after ?? 0) })
+        }
+        let png = try #require(Self.picture.pngData())
+        api.downloadImage = { (_) async throws(TransportError) in
+            downloads.withLock { $0 += 1 }
+            try? await Task.sleep(for: .milliseconds(50))
+            return png
+        }
+        let receiving = PhotoReceiving()
+        let sync = TextNoteSync(
+            api: api, accounts: Self.accounts, notes: notes, partner: "L", defaults: defaults, receiving: receiving)
+        defer { if let kept = notes.note(noteID: noteID) { notes.delete(kept) } }
+
+        async let first: Void = sync.receive()
+        async let second: Void = sync.receive()
+        _ = await (first, second)
+
+        #expect(downloads.withLock { $0 } == 1)
+        #expect(notes.notes.filter { $0.noteID == noteID }.count == 1)
+        #expect(defaults.integer(forKey: TextNoteSync.cursorKey) == 7)
+    }
 }

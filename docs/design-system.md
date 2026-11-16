@@ -112,7 +112,7 @@ where the app stands against it is [design/audit-2026-11-11.md](design/audit-202
 | A price in coins | `PriceButton(price, was:)`; a deal's old price sits inside it |
 | A small action inside a card or toast (Place, Undo) | `PillButton(title, symbol:)`, 36 pt tall with a 44 pt tap area, the price tag's height |
 | A passing confirmation over the screen | `Toast { }`: card surface and padding, above the tab bar with `Space.m` to spare |
-| A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a popover in the card style, with a ring on the target |
+| A first-run hint on a control | `.hint(tip, arrowEdge:, target:)`: a card drawn over Home with its arrow at the target, and a ring on it |
 | The same card outside TipKit | `Callout(symbol:title:message:close:)` on `.calloutBubble(pointer:)` |
 | A line the cat says, beside or under her avatar | `SpeechBubble(tail:) { Text(...) }`: one fill, one rim, no shadow |
 | A note's stamp and seal | `PostageStamp`, `WaxSeal`, or `.postage(stamp:seal:width:postmark:)` on the note's face |
@@ -203,8 +203,8 @@ Columns are equal and `Space.m` apart, every tile in a row has the row's height 
 stack instead of covering each other, and at accessibility sizes the grid is one column.
 
 Loading, empty and failed states are `EmptyState` and `ErrorState` (with the one `RetryButton`); a message that
-floats is `Toast`; a hint is `.hint(tip, arrowEdge:, target:)`, and the same card outside TipKit is `Callout`
-on `.calloutBubble(pointer:)`.
+floats is `Toast`; a hint is `.hint(tip, arrowEdge:, target:)`, whose card `HintLayer` draws in Home, never as a popover;
+the same card elsewhere is `Callout` on `.calloutBubble(pointer:)`.
 
 ## Enforcement
 

@@ -1,6 +1,6 @@
 import Foundation
 
-/// Runs one receive at a time across every `PhotoSync`: a call while one runs asks it to go once more instead, so a
+/// Runs one receive at a time across every `PhotoSync`, or every `TextNoteSync`, that shares it: a call while one runs asks it to go once more instead, so a
 /// burst of socket frames downloads each photo once and the cursor only moves forward.
 @MainActor
 public final class PhotoReceiving {

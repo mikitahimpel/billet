@@ -15,7 +15,7 @@ nonisolated struct HintContext: Hashable {
     var petted = false
     var added = false
     var usedMoments = false
-    /// The Moments tab has nothing to point at yet: its empty state has the action, and the hint's popover over the
+    /// The Moments tab has nothing to point at yet: its empty state has the action, and the hint's card over the
     /// tab bar would cover it on a small phone.
     var momentsEmpty = false
     var purchased = false
