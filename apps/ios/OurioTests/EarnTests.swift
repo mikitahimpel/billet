@@ -20,16 +20,17 @@ import Wire
             couple: CoupleStore()) { earned.append($0) }
         let image = UIGraphicsImageRenderer(size: CGSize(width: 4, height: 4)).image { _ in }
 
+        let notesBefore = Set(notes.notes.map(\.id))
         #expect(journal.addNote(text: "dinner at 8?", paper: .sky))
+        #expect(journal.addNote(doodle: image, compact: CompactStrokes(strokes: []), paper: .sky))
         #expect(journal.addMoment(image, caption: "shared", shares: true))
         #expect(earned.isEmpty)
+        let doodle = try #require(notes.notes.first { !notesBefore.contains($0.id) && $0.doodle != nil })
 
-        let notesBefore = Set(notes.notes.map(\.id)), momentsBefore = Set(moments.moments.map(\.id))
-        #expect(journal.addNote(doodle: image, paper: .sky))
+        let momentsBefore = Set(moments.moments.map(\.id))
         #expect(journal.addMoment(image, caption: "keepsake"))
-        let doodle = try #require(notes.notes.first { !notesBefore.contains($0.id) })
         let keepsake = try #require(moments.moments.first { !momentsBefore.contains($0.id) })
-        #expect(earned == [.noteAdded(note: doodle.id.uuidString), .momentAdded(moment: keepsake.id.uuidString)])
+        #expect(earned == [.momentAdded(moment: keepsake.id.uuidString)])
 
         for note in notes.notes where note.text == "dinner at 8?" || note.id == doodle.id { notes.delete(note) }
         for moment in moments.moments where moment.caption == "shared" || moment.id == keepsake.id {

@@ -35,13 +35,15 @@
     public var ink: UInt32? = nil
     /// The server's id once the note is on it; nil for notes kept on this phone only.
     public var noteID: String? = nil
-    /// True while a text note written here still has to reach the partner.
+    /// True while a note written here still has to reach the partner.
     public var unsent: Bool? = nil
+    /// A doodle's strokes as they travel with it; nil on text notes, received doodles and doodles kept here only.
+    public var compact: CompactStrokes? = nil
 
     public init(
       id: UUID, author: String, date: Date, text: String, doodle: String? = nil, paper: Paper,
       stamp: NoteStamp? = nil, seal: NoteSeal? = nil, ink: UInt32? = nil, noteID: String? = nil,
-      unsent: Bool? = nil
+      unsent: Bool? = nil, compact: CompactStrokes? = nil
     ) {
       self.id = id
       self.author = author
@@ -54,13 +56,14 @@
       self.ink = ink
       self.noteID = noteID
       self.unsent = unsent
+      self.compact = compact
     }
 
     public var inkHex: UInt32 { ink ?? 0x5B3A28 }
   }
 
   /// The couple's notes on this phone; the JSON index and doodle PNGs live in the app group's Notes folder. Text notes
-  /// also go to the partner (see `TextNoteSync`); doodles stay here.
+  /// and doodles also go to the partner (see `TextNoteSync`).
   @Observable
   public final class NoteStore {
     /// Longest note worth pinning on the board.
@@ -101,25 +104,30 @@
       return note
     }
 
+    /// A doodle drawn here waits in `unsent` until it reaches the partner.
     @discardableResult
     public func add(
-      doodle: UIImage, paper: Note.Paper, author: String, stamp: NoteStamp? = nil,
-      seal: NoteSeal? = nil
+      doodle: UIImage, compact: CompactStrokes, paper: Note.Paper, author: String,
+      stamp: NoteStamp? = nil, seal: NoteSeal? = nil
     ) -> Note? {
-      guard let data = doodle.pngData() else { return nil }
-      let file = "\(UUID().uuidString).png"
-      do {
-        try FileManager.default.createDirectory(at: Self.folder, withIntermediateDirectories: true)
-        try data.write(to: Self.folder.appending(path: file))
-      } catch {
-        return nil
-      }
+      guard let data = doodle.pngData(), let file = Self.store(data) else { return nil }
       let note = Note(
         id: UUID(), author: author, date: .now, text: "", doodle: file, paper: paper, stamp: stamp,
-        seal: seal)
+        seal: seal, unsent: true, compact: compact)
       notes.insert(note, at: 0)
       save()
       return note
+    }
+
+    private static func store(_ png: Data) -> String? {
+      let file = "\(UUID().uuidString).png"
+      do {
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try png.write(to: folder.appending(path: file))
+      } catch {
+        return nil
+      }
+      return file
     }
 
     public func delete(_ note: Note) {
@@ -128,8 +136,22 @@
       save()
     }
 
-    /// Text notes written here that the partner doesn't have yet, oldest first.
+    /// Notes written here that the partner doesn't have yet, oldest first.
     public var unsent: [Note] { notes.filter { $0.unsent == true }.reversed() }
+
+    /// Puts in `unsent` the doodles `author` drew here since `date` that never reached the server: versions before
+    /// doodles traveled kept them on this phone only. One sent or already waiting is left as it is.
+    public func queueDoodles(by author: String, since date: Date) {
+      var changed = false
+      for index in notes.indices
+      where notes[index].doodle != nil && notes[index].author == author
+        && notes[index].date >= date && notes[index].noteID == nil && notes[index].unsent == nil
+      {
+        notes[index].unsent = true
+        changed = true
+      }
+      if changed { save() }
+    }
 
     public func contains(noteID: String) -> Bool { notes.contains { $0.noteID == noteID } }
 
@@ -153,6 +175,22 @@
         seal: seal, ink: ink, noteID: noteID)
       notes.insert(note, at: notes.firstIndex { $0.date < date } ?? notes.endIndex)
       save()
+    }
+
+    /// The partner's drawing from the server. False when its picture could not be stored.
+    @discardableResult
+    public func addReceived(
+      doodle png: Data, paper: Note.Paper, stamp: NoteStamp?, seal: NoteSeal?, author: String,
+      date: Date, noteID: String
+    ) -> Bool {
+      guard !contains(noteID: noteID) else { return true }
+      guard let file = Self.store(png) else { return false }
+      let note = Note(
+        id: UUID(), author: author, date: date, text: "", doodle: file, paper: paper, stamp: stamp,
+        seal: seal, noteID: noteID)
+      notes.insert(note, at: notes.firstIndex { $0.date < date } ?? notes.endIndex)
+      save()
+      return true
     }
 
     public func latest(notBy viewer: String) -> Note? {

@@ -51,12 +51,13 @@ final class Journal {
         return true
     }
 
-    /// A doodle stays on this phone, so it earns as a note.
+    /// A doodle goes to the partner like a text note, as a drawing (`TextNoteSync`), and earns when it arrives.
     @discardableResult
-    func addNote(doodle: UIImage, paper: Note.Paper, stamp: NoteStamp? = nil, seal: NoteSeal? = nil) -> Bool {
-        guard let note = notes.add(doodle: doodle, paper: paper, author: viewer, stamp: stamp, seal: seal)
+    func addNote(
+        doodle: UIImage, compact: CompactStrokes, paper: Note.Paper, stamp: NoteStamp? = nil, seal: NoteSeal? = nil
+    ) -> Bool {
+        guard notes.add(doodle: doodle, compact: compact, paper: paper, author: viewer, stamp: stamp, seal: seal) != nil
         else { return false }
-        earn(.noteAdded(note: note.id.uuidString))
         streak.record()
         return true
     }
