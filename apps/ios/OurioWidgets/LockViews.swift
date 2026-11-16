@@ -1,5 +1,6 @@
 import Design
 import MoodInterface
+import ProfileInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -100,17 +101,21 @@ struct UsLockView: View {
     var body: some View {
         switch family {
         case .accessoryInline:
-            ViewThatFits {
-                if let next = s.next {
-                    Label("\(s.daysTogether) days · \(next.daysLeft == 0 ? "today" : "\(next.daysLeft)d to go")",
-                          systemImage: "heart.fill")
+            if let days = s.daysTogether {
+                ViewThatFits {
+                    if let next = s.next {
+                        Label("\(days) days · \(next.daysLeft == 0 ? "today" : "\(next.daysLeft)d to go")",
+                              systemImage: "heart.fill")
+                    }
+                    Label("\(days) days together", systemImage: "heart.fill")
+                    Label("\(days) days", systemImage: "heart.fill")
                 }
-                Label("\(s.daysTogether) days together", systemImage: "heart.fill")
-                Label("\(s.daysTogether) days", systemImage: "heart.fill")
+            } else {
+                Label(Couple.waitingLine, systemImage: "heart")
             }
         case .accessoryRectangular:
             VStack(alignment: .leading, spacing: 0) {
-                Label("Day \(s.daysTogether)", systemImage: "heart.fill")
+                Label(s.daysTogether.map { "Day \($0)" } ?? "Waiting", systemImage: s.daysTogether == nil ? "heart" : "heart.fill")
                     .font(.ourioHeadline)
                     .widgetAccentable()
                 if let next = s.next {
@@ -118,16 +123,22 @@ struct UsLockView: View {
                     Text(next.daysLeft == 0 ? "Today" : "in \(next.daysLeft) \(next.daysLeft == 1 ? "day" : "days")")
                         .font(.ourioCaption).foregroundStyle(.secondary)
                 } else {
-                    Text("together").font(.ourioCaption).foregroundStyle(.secondary)
+                    Text(s.daysTogether == nil ? "for your partner" : "together")
+                        .font(.ourioCaption).foregroundStyle(.secondary)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, Space.xs)
         default:
             VStack(spacing: 0) {
-                Image(systemName: "heart.fill").font(.ourioMicro)
-                Text("\(s.daysTogether)").font(.ourioTitle).monospacedDigit().minimumScaleFactor(0.5).widgetAccentable()
-                Text("days").font(.ourioMicro)
+                if let days = s.daysTogether {
+                    Image(systemName: "heart.fill").font(.ourioMicro)
+                    Text("\(days)").font(.ourioTitle).monospacedDigit().minimumScaleFactor(0.5).widgetAccentable()
+                    Text("days").font(.ourioMicro)
+                } else {
+                    Image(systemName: "heart").font(.ourioTitle).widgetAccentable()
+                        .accessibilityLabel(Couple.waitingLine)
+                }
             }
         }
     }

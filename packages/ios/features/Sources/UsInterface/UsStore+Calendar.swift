@@ -3,8 +3,9 @@ import Observation
 import Wire
 
 extension UsStore {
-  /// Next occurrence of every event, planned date and milestone from `now`'s day on, soonest first.
-  public func upcoming(togetherSince start: Date, limit: Int = 30, from now: Date = .now)
+  /// Next occurrence of every event, planned date and milestone from `now`'s day on, soonest first. No
+  /// milestones without `start`: an unpaired phone has no days together.
+  public func upcoming(togetherSince start: Date?, limit: Int = 30, from now: Date = .now)
     -> [Upcoming]
   {
     let cal = Calendar.current
@@ -30,15 +31,18 @@ extension UsStore {
 
     // Day-count milestones, plus the next month anniversary in the first year and the next yearly one.
     let future = { (row: Upcoming) in row.date >= today }
-    let (days, months, years) = milestones(since: start)
-    rows += days.filter(future)
-    rows += [months.first(where: future), years.first(where: future)].compactMap { $0 }
+    if let start {
+      let (days, months, years) = milestones(since: start)
+      rows += days.filter(future)
+      rows += [months.first(where: future), years.first(where: future)].compactMap { $0 }
+    }
 
     return Array(rows.sorted { $0.date < $1.date }.prefix(limit))
   }
 
   /// Every event, planned date and milestone that falls in `interval`, past ones too; yearly events once per year.
-  public func occurrences(togetherSince start: Date, in interval: DateInterval) -> [Upcoming] {
+  /// No milestones without `start`.
+  public func occurrences(togetherSince start: Date?, in interval: DateInterval) -> [Upcoming] {
     let cal = Calendar.current
     let contains = { (date: Date) in date >= interval.start && date < interval.end }
     var rows: [Upcoming] = []
@@ -62,8 +66,10 @@ extension UsStore {
     }
 
     rows += planned.filter { contains($0.date) }.map(row)
-    let (days, months, years) = milestones(since: start)
-    rows += (days + months + years).filter { contains($0.date) }
+    if let start {
+      let (days, months, years) = milestones(since: start)
+      rows += (days + months + years).filter { contains($0.date) }
+    }
 
     return rows.sorted { $0.date < $1.date }
   }

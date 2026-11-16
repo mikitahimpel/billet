@@ -7,10 +7,11 @@ import WidgetInterface
 import WidgetUI
 
 /// The top of Us: the couple's days together in one big number, and the love streak in a ring that fills toward its
-/// next badge, with one line on what today needs.
+/// next badge, with one line on what today needs. Unpaired, the number gives way to the wait for the partner and a
+/// way to invite them.
 struct StreakCard: View {
   let store: StreakStore
-  let daysTogether: Int
+  let daysTogether: Int?
   let partner: String
 
   var body: some View {
@@ -53,6 +54,11 @@ struct StreakCard: View {
           }
           .buttonStyle(PrimaryButtonStyle())
         }
+        #if canImport(UIKit)
+          if daysTogether == nil {
+            PairToPlayButton()
+          }
+        #endif
       }
     }
     .accessibilityElement(children: .combine)
@@ -60,15 +66,28 @@ struct StreakCard: View {
     .animation(Motion.spring(0.3), value: days)
   }
 
-  private var together: some View {
-    VStack(alignment: .leading, spacing: 0) {
-      Text(daysTogether, format: .number)
-        .font(.ourioHeroDigits)
-        .foregroundStyle(Ink.text)
-        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
-      Text(daysTogether == 1 ? "day together" : "days together")
-        .font(.ourioHeadline)
-        .foregroundStyle(Ink.textSecondary)
+  @ViewBuilder private var together: some View {
+    if let daysTogether {
+      VStack(alignment: .leading, spacing: 0) {
+        Text(daysTogether, format: .number)
+          .font(.ourioHeroDigits)
+          .foregroundStyle(Ink.text)
+          .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+        Text(daysTogether == 1 ? "day together" : "days together")
+          .font(.ourioHeadline)
+          .foregroundStyle(Ink.textSecondary)
+      }
+    } else {
+      VStack(alignment: .leading, spacing: Space.xs) {
+        Text(Couple.waitingLine)
+          .font(.ourioTitle)
+          .foregroundStyle(Ink.text)
+          .fixedSize(horizontal: false, vertical: true)
+        Text("Your days together start when they join.")
+          .font(.ourioCallout)
+          .foregroundStyle(Ink.textSecondary)
+          .fixedSize(horizontal: false, vertical: true)
+      }
     }
   }
 
@@ -125,7 +144,12 @@ struct StreakCard: View {
   }
 
   private func label(days: Int, turn: LoveStreak.Turn?, next: Int?) -> String {
-    let together = daysTogether == 1 ? "1 day together" : "\(daysTogether) days together"
+    let together =
+      switch daysTogether {
+      case nil: Couple.waitingLine
+      case 1?: "1 day together"
+      case let days?: "\(days) days together"
+      }
     let streak = days == 1 ? "1-day streak" : "\(days)-day streak"
     let waiting =
       switch turn {

@@ -55,15 +55,32 @@ public struct Couple: Codable, Hashable, Sendable {
     names?[partner].flatMap { $0.isEmpty ? nil : $0 }
   }
 
+  /// `togetherSince` once paired: with no partner on the server there are no days together to count.
+  public var pairedSince: Date? { pair == nil ? nil : togetherSince }
+
+  /// Day one counts as day 1; nil until paired.
+  public func daysTogether(on day: Date = .now) -> Int? {
+    guard pair != nil else { return nil }
+    return Self.days(since: togetherSince, on: day)
+  }
+
   /// Day one counts as day 1.
-  public func daysTogether(on day: Date = .now) -> Int {
+  public static func days(since start: Date, on day: Date = .now) -> Int {
     let cal = Calendar.current
     let days =
       cal.dateComponents(
-        [.day], from: cal.startOfDay(for: togetherSince), to: cal.startOfDay(for: day)
+        [.day], from: cal.startOfDay(for: start), to: cal.startOfDay(for: day)
       )
       .day ?? 0
     return days + 1
+  }
+
+  /// What stands in for the days together before pairing.
+  public static let waitingLine = "Waiting for your partner"
+
+  /// "Day 12 together", or the wait for the partner while unpaired.
+  public static func dayLine(_ days: Int?) -> String {
+    days.map { "Day \($0) together" } ?? waitingLine
   }
 
   /// First launch is day 1 until the couple sets their date.

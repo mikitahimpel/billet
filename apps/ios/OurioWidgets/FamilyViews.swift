@@ -1,6 +1,7 @@
 import Design
 import DrawInterface
 import MoodInterface
+import ProfileInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -499,16 +500,24 @@ struct UsFamilyView: View {
             if !calm {
                 Image(systemName: "heart.fill").font(.ourioHeadline).foregroundStyle(Color.blushPink).widgetAccentable()
             }
-            Text("\(s.daysTogether)")
-                .font(.ourioNumber)
-                .monospacedDigit()
-                .foregroundStyle(calm ? Ink.text : Ink.accentText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
-                .widgetAccentable()
-            Text(s.daysTogether == 1 ? "day together" : "days together")
-                .font(.ourioCaption)
-                .foregroundStyle(Ink.textSecondary)
+            if let days = s.daysTogether {
+                Text("\(days)")
+                    .font(.ourioNumber)
+                    .monospacedDigit()
+                    .foregroundStyle(calm ? Ink.text : Ink.accentText)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .widgetAccentable()
+                Text(days == 1 ? "day together" : "days together")
+                    .font(.ourioCaption)
+                    .foregroundStyle(Ink.textSecondary)
+            } else {
+                Text(Couple.waitingLine)
+                    .font(.ourioHeadline)
+                    .foregroundStyle(Ink.text)
+                    .multilineTextAlignment(.center)
+                    .minimumScaleFactor(0.8)
+            }
         }
         .accessibilityElement(children: .combine)
     }

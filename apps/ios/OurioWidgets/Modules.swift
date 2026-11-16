@@ -1,5 +1,6 @@
 import AppIntents
 import MomentsInterface
+import ProfileInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -213,10 +214,17 @@ struct UsModule: View {
                     .foregroundStyle(Ink.text)
                     .lineLimit(2)
             } else {
-                BigNumber(text: "\(snapshot.daysTogether)")
-                Text("days together")
-                    .font(.ourioCaption.weight(.semibold))
-                    .foregroundStyle(Ink.text)
+                if let days = snapshot.daysTogether {
+                    BigNumber(text: "\(days)")
+                    Text(days == 1 ? "day together" : "days together")
+                        .font(.ourioCaption.weight(.semibold))
+                        .foregroundStyle(Ink.text)
+                } else {
+                    Text(Couple.waitingLine)
+                        .font(.ourioCaption.weight(.semibold))
+                        .foregroundStyle(Ink.text)
+                        .lineLimit(2)
+                }
                 if let next = snapshot.next {
                     Text("\(next.title) in \(next.daysLeft)d")
                         .font(.ourioMicro)

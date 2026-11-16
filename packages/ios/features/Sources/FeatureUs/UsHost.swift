@@ -17,8 +17,9 @@ import Wire
     var viewer: String { get }
     var otherPartner: String { get }
     var partners: (String, String) { get }
-    var daysTogether: Int { get }
-    var togetherSince: Date { get }
+    /// Nil until paired, like `togetherSince`.
+    var daysTogether: Int? { get }
+    var togetherSince: Date? { get }
     var profile: CoupleStore { get }
     var us: UsStore { get }
     var moments: MomentStore { get }

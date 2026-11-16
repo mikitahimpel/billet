@@ -98,7 +98,8 @@ struct ProfileEditor: View {
             DatePicker("Together since", selection: $since, in: ...Date.now, displayedComponents: .date)
                 .font(.ourioHeadline)
                 .foregroundStyle(Ink.text)
-            Text("Day \(Couple(partners: profile.couple.partners, togetherSince: since, viewer: profile.couple.viewer).daysTogether()) together")
+            Text(profile.couple.pair == nil ? "Days together start counting once your partner joins."
+                                            : Couple.dayLine(Couple.days(since: since)))
                 .font(.ourioCaption)
                 .foregroundStyle(Ink.textSecondary)
         }
