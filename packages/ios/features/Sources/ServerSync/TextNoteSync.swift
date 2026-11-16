@@ -74,7 +74,7 @@
 
     /// The picture goes to /v1/media first. A doodle the server refuses for its stamp or seal goes again without them;
     /// one it refuses outright stays marked unsent.
-    private func send(doodle note: Note) async -> Sending {
+    private func send(doodle note: MomentsInterface.Note) async -> Sending {
       guard let url = NoteStore.doodleURL(for: note), let png = try? Data(contentsOf: url) else {
         return .refused
       }
@@ -138,8 +138,8 @@
       }
     }
 
-    private static func paper(_ paper: PaperColor?) -> Note.Paper {
-      paper.flatMap { Note.Paper(rawValue: $0.rawValue) } ?? .butter
+    private static func paper(_ paper: PaperColor?) -> MomentsInterface.Note.Paper {
+      paper.flatMap { MomentsInterface.Note.Paper(rawValue: $0.rawValue) } ?? .butter
     }
 
     private static func date(_ sentAt: Int) -> Date {
