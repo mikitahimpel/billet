@@ -16,7 +16,8 @@ final class InboxLink {
         var photo: @MainActor @Sendable () -> Void
         /// A text note arrived; the text notes page from their own cursor too.
         var text: @MainActor @Sendable () -> Void
-        /// A drawing arrived, with the room's `seq` for it.
+        /// A drawing arrived, with the room's `seq` for it; `text` follows it, since the board's drawings page with the
+        /// text notes.
         var drawing: @MainActor @Sendable (Int, Wire.Note) -> Void
         var reaction: @MainActor @Sendable (NoteReaction) -> Void
         var lastReactionRev: @MainActor @Sendable () -> Int?
@@ -67,7 +68,9 @@ final class InboxLink {
                 case .activityUnread(let count): await handlers.unread(count)
                 case .noteReceived(_, .photo): await handlers.photo()
                 case .noteReceived(_, .text): await handlers.text()
-                case .noteReceived(let seq, let note): await handlers.drawing(seq, note)
+                case .noteReceived(let seq, let note):
+                    await handlers.drawing(seq, note)
+                    await handlers.text()
                 case .reactionChanged(let change): await handlers.reaction(change)
                 case .shopChanged(let shop): await handlers.shop(shop)
                 case .listsChanged(let lists): await handlers.lists(lists)

@@ -191,6 +191,8 @@ final class HomeState {
         }
     }
     var momentsMode: MomentsMode = .photos
+    /// The Inbox row opened before its note or photo reached this phone.
+    @ObservationIgnored var awaitedTarget: ActivityTarget?
 
     let moods = [
         Mood(title: "Happy", symbol: "heart.fill", tint: Color(hex: 0xFF7A93)),

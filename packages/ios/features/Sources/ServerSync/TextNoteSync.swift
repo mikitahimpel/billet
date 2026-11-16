@@ -18,19 +18,22 @@
     /// Monogram the partner's notes are kept under.
     let partner: String
     let defaults: UserDefaults
+    /// Shared by every `TextNoteSync` of one session, so a burst of frames pages the notes once at a time.
+    let receiving: PhotoReceiving
 
     /// Separate from the photos' and drawings' cursors.
     public static let cursorKey = "texts.lastSeq"
 
     public init(
       api: APIClient, accounts: AccountStore, notes: NoteStore, partner: String,
-      defaults: UserDefaults
+      defaults: UserDefaults, receiving: PhotoReceiving = PhotoReceiving()
     ) {
       self.api = api
       self.accounts = accounts
       self.notes = notes
       self.partner = partner
       self.defaults = defaults
+      self.receiving = receiving
     }
 
     /// Sends every note still waiting, oldest first. One the server refuses, such as one in an ink, a stamp or a
@@ -105,6 +108,10 @@
     /// Pages through the notes after the last one looked at and keeps each text note and drawing the partner sent.
     /// Stops at a drawing whose picture won't download, so the next call tries it again.
     public func receive() async {
+      await receiving.run(page)
+    }
+
+    private func page() async {
       let viewer = (try? accounts.load())?.record.userID
       var after = defaults.object(forKey: Self.cursorKey) as? Int
       while let page = try? await api.listNotes(after), let last = page.lastSeq {

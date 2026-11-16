@@ -84,4 +84,44 @@ import Wire
         #expect(state.tab == .moments)
         #expect(state.openedPin?.id == note.id)
     }
+
+    @Test func anInboxRowOpenedBeforeItsDrawingArrivesOpensItWhenItLands() throws {
+        let state = HomeState(stores: .live(events: .none))
+        let png = try #require(
+            UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).image { _ in }.pngData())
+        let noteID = "d-\(UUID().uuidString)"
+        defer { if let kept = state.notes.note(noteID: noteID) { state.notes.delete(kept) } }
+
+        state.open(.note(NoteId(noteID)))
+        #expect(state.tab == .moments)
+        #expect(state.openedPin == nil)
+        #expect(state.awaitsTarget)
+
+        state.openAwaited()
+        #expect(state.awaitsTarget)
+
+        #expect(state.notes.addReceived(
+            doodle: png, paper: .blush, stamp: nil, seal: nil, author: "L", date: .now, noteID: noteID))
+        state.openAwaited()
+        let note = try #require(state.notes.note(noteID: noteID))
+        #expect(state.openedPin?.id == note.id)
+        #expect(!state.awaitsTarget)
+    }
+
+    @Test func leavingMomentsDropsTheAwaitedRow() throws {
+        let state = HomeState(stores: .live(events: .none))
+        let png = try #require(
+            UIGraphicsImageRenderer(size: CGSize(width: 8, height: 8)).image { _ in }.pngData())
+        let noteID = "d-\(UUID().uuidString)"
+        defer { if let kept = state.notes.note(noteID: noteID) { state.notes.delete(kept) } }
+
+        state.open(.moments(NoteId(noteID)))
+        state.tab = .world
+        #expect(state.notes.addReceived(
+            doodle: png, paper: .blush, stamp: nil, seal: nil, author: "L", date: .now, noteID: noteID))
+        state.openAwaited()
+        #expect(state.tab == .world)
+        #expect(state.openedPin == nil)
+        #expect(!state.awaitsTarget)
+    }
 }

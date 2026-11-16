@@ -135,6 +135,9 @@ struct HomeView: View {
             room.show(roomScene)
         }
         // Settings › Labs asks for the showcase, once it is closed.
+        .onChange(of: [state.notes.notes.count, state.moments.moments.count]) {
+            withAnimation(Motion.spring(0.4)) { state.openAwaited() }
+        }
         .onChange(of: state.showcaseRequested) { _, requested in
             guard requested else { return }
             state.showcaseRequested = false
@@ -205,6 +208,11 @@ struct HomeView: View {
             if let inbox = session?.inbox {
                 InboxSheet(model: inbox, state: state) { target in
                     withAnimation(Motion.spring(0.4)) { state.open(target) }
+                    guard state.awaitsTarget else { return }
+                    Task {
+                        await textSync?.receive()
+                        await photoSync?.receive()
+                    }
                 }
             } else {
                 InboxSignedOut(petName: state.petName, isPaired: state.profile.couple.pair != nil)
