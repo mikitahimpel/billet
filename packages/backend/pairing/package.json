@@ -7,11 +7,13 @@
   "exports": {
     "./kept-purchases": "./src/kept-purchases.ts",
     "./pair-moods": "./src/pair-moods.ts",
+    "./pair-profile-repository": "./src/pair-profile-repository.ts",
     "./pairing-error": "./src/pairing-error.ts",
     "./pairing-observer": "./src/pairing-observer.ts",
     "./pairing-repository": "./src/pairing-repository.ts",
     "./pairing-routes": "./src/pairing-routes.ts",
     "./pairing-service": "./src/pairing-service.ts",
+    "./test/in-memory-pair-profile-repository": "./test/in-memory-pair-profile-repository.ts",
     "./test/in-memory-pairing-repository": "./test/in-memory-pairing-repository.ts",
     "./test/pairing-repository-contract": "./test/pairing-repository-contract.ts"
   },

@@ -19,6 +19,7 @@ export type PushTokenRecord = typeof PushTokenRecord.Type;
 export const StoredUser = Schema.Struct({
   id: UserId,
   createdAt: EpochMillis,
+  displayName: Schema.NullOr(Schema.String),
 });
 
 export const StoredDevice = Schema.Struct({

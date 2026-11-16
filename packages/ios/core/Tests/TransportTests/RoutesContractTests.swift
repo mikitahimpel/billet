@@ -45,6 +45,8 @@ import Testing
       "reportPartner": Routes.reportPartner,
       "getPair": Routes.getPair,
       "setMood": Routes.setMood,
+      "setDisplayName": Routes.setDisplayName,
+      "setTogetherSince": Routes.setTogetherSince,
       "getStreak": Routes.getStreak,
       "recordStreakDay": Routes.recordStreakDay,
       "restoreStreak": Routes.restoreStreak,

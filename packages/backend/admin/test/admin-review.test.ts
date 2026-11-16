@@ -4,6 +4,7 @@ import { HttpRouter } from "effect/http";
 import { afterAll, describe, expect, it } from "vitest";
 import { DemoBots } from "@billet/backend-demo-partner/demo-bots";
 import { PairMoods } from "@billet/backend-pairing/pair-moods";
+import { PairProfileRepository } from "@billet/backend-pairing/pair-profile-repository";
 import { PairingObserver } from "@billet/backend-pairing/pairing-observer";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
@@ -21,6 +22,7 @@ const pairing = PairingService.layer.pipe(
       Layer.succeed(PairingRepository, makeInMemoryPairingRepository().repository),
       PairingObserver.silent,
       PairMoods.none,
+      PairProfileRepository.none,
       base,
     ),
   ),

@@ -8,6 +8,8 @@ import { DeviceId, UserId } from "@billet/contracts-domain/ids";
 import { ClaimInviteResponse, CreateInviteResponse } from "@billet/contracts-http-api/invite";
 import type { MoodCheckIn } from "@billet/contracts-domain/mood";
 import { PairMoods } from "../src/pair-moods.ts";
+import { PairProfileRepository } from "../src/pair-profile-repository.ts";
+import { makeInMemoryPairProfileRepository } from "./in-memory-pair-profile-repository.ts";
 import { PairingObserver } from "../src/pairing-observer.ts";
 import { PairingRepository } from "../src/pairing-repository.ts";
 import { PairingRoutes } from "../src/pairing-routes.ts";
@@ -45,6 +47,7 @@ const FakeAuth = Layer.succeed(
 const setup = (
   repository: PairingRepository["Service"],
   moods: Layer.Layer<PairMoods> = PairMoods.none,
+  profiles: PairProfileRepository["Service"] = makeInMemoryPairProfileRepository(),
 ) =>
   HttpRouter.toWebHandler(
     PairingRoutes.pipe(
@@ -52,6 +55,7 @@ const setup = (
       Layer.provide(
         Layer.mergeAll(
           Layer.succeed(PairingRepository, repository),
+          Layer.succeed(PairProfileRepository, profiles),
           PairingObserver.silent,
           moods,
           Digest.layerWebCrypto,
@@ -130,12 +134,56 @@ describe("pairing routes", () => {
       pairId: claimed.pairId,
       members: [tokenOf("hal"), tokenOf("ivy")],
       moods: [],
+      names: [],
+      pairedAt: expect.any(Number),
     });
     expect(await (await pair("ivy")).json()).toMatchObject({
       members: [tokenOf("ivy"), tokenOf("hal")],
     });
     await unpair("hal");
     expect((await pair("ivy")).status).toBe(404);
+  });
+
+  it("keeps each partner's name and the pair's one day, for both to read", async () => {
+    const put = (path: string, name: string, body: unknown) =>
+      handler(request(path, name, { method: "PUT", body: JSON.stringify(body) }));
+    const pair = async (name: string) =>
+      (await handler(request("/v1/pair", name, { method: "GET" }))).json();
+    const day = (name: string, body: unknown) => put("/v1/pair/together-since", name, body);
+
+    expect((await put("/v1/me", "kit", { displayName: "Kit" })).status).toBe(204);
+    expect((await day("kit", { day: "2025-02-14" })).status).toBe(404);
+    const { code } = await invite("kit");
+    await claim("lou", code);
+    expect((await put("/v1/me", "lou", { displayName: "Lou" })).status).toBe(204);
+
+    expect((await day("lou", { day: "2025-02-14", ifUnset: true })).status).toBe(204);
+    expect((await day("kit", { day: "2024-01-01", ifUnset: true })).status).toBe(204);
+    expect(await pair("kit")).toMatchObject({
+      names: [
+        { userId: tokenOf("kit"), displayName: "Kit" },
+        { userId: tokenOf("lou"), displayName: "Lou" },
+      ],
+      togetherSince: "2025-02-14",
+    });
+    expect((await day("kit", { day: "2024-01-01" })).status).toBe(204);
+    expect((await put("/v1/me", "lou", { displayName: null })).status).toBe(204);
+    expect(await pair("lou")).toMatchObject({
+      names: [{ userId: tokenOf("kit"), displayName: "Kit" }],
+      togetherSince: "2024-01-01",
+    });
+  });
+
+  it.each([
+    ["an empty name", { displayName: "" }],
+    ["untrimmed", { displayName: " Kit" }],
+    ["too long", { displayName: "x".repeat(41) }],
+    ["a control character", { displayName: "Ki\nt" }],
+  ])("refuses %s with 400", async (_name, body) => {
+    const response = await handler(
+      request("/v1/me", "mo", { method: "PUT", body: JSON.stringify(body) }),
+    );
+    expect(response.status).toBe(400);
   });
 
   it("answers 404 InvalidInvite for a code nobody issued", async () => {

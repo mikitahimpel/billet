@@ -14,6 +14,8 @@ import {
 export const users = sqliteTable("users", {
   id: text("id").primaryKey(),
   createdAt: integer("created_at").notNull(),
+  // What the partner sees them called; null until they set one.
+  displayName: text("display_name"),
 });
 
 // Better Auth writes dates as ISO text and booleans as 0 or 1, unlike epoch milliseconds elsewhere.
@@ -171,6 +173,8 @@ export const pairMembers = sqliteTable(
       .references(() => users.id),
     pairId: text("pair_id").notNull(),
     createdAt: integer("created_at").notNull(),
+    // The pair's day together, YYYY-MM-DD, the same on both rows; null until a partner sets it.
+    togetherSince: text("together_since"),
   },
   (table) => [index("pair_members_pair_id_index").on(table.pairId)],
 );

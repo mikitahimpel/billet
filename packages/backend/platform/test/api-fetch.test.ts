@@ -1429,7 +1429,7 @@ describe("demo partners in the Worker", () => {
 
     const read = await pairFor(caller);
     expect(read.status).toBe(200);
-    expect(Schema.decodeUnknownSync(PairResponse)(await read.json())).toEqual(pair);
+    expect(Schema.decodeUnknownSync(PairResponse)(await read.json())).toMatchObject(pair);
     const claimed = await env.DB.prepare(
       "SELECT user_id FROM pair_events WHERE name = 'PairClaimed' AND pair_id = ?",
     )

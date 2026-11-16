@@ -147,6 +147,11 @@ public struct APIClient: Sendable {
   public var dateCatalog: @Sendable () async throws(TransportError) -> DateCatalogResponse
   /// The shop's active items. Needs no session.
   public var shopCatalog: @Sendable () async throws(TransportError) -> ShopCatalogResponse
+  /// Sets or forgets this user's name, which the partner reads in `pair`. Works unpaired.
+  public var setDisplayName: @Sendable (SetDisplayNameRequest) async throws(TransportError) -> Void
+  /// Sets the pair's day together. `.api(.notFound)` while unpaired.
+  public var setTogetherSince:
+    @Sendable (SetTogetherSinceRequest) async throws(TransportError) -> Void
 
   public init(
     authChallenge: @escaping @Sendable () async throws(TransportError) -> AuthChallengeResponse,
@@ -339,7 +344,15 @@ public struct APIClient: Sendable {
     },
     shopCatalog: @escaping @Sendable () async throws(TransportError) -> ShopCatalogResponse = {
       () async throws(TransportError) in throw .network("offline")
-    }
+    },
+    setDisplayName:
+      @escaping @Sendable (SetDisplayNameRequest) async throws(TransportError) -> Void = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    setTogetherSince:
+      @escaping @Sendable (SetTogetherSinceRequest) async throws(TransportError) -> Void = {
+        (_) async throws(TransportError) in throw .network("offline")
+      }
   ) {
     self.authChallenge = authChallenge
     self.signInAnonymously = signInAnonymously
@@ -403,6 +416,8 @@ public struct APIClient: Sendable {
     self.removeDemoPartner = removeDemoPartner
     self.dateCatalog = dateCatalog
     self.shopCatalog = shopCatalog
+    self.setDisplayName = setDisplayName
+    self.setTogetherSince = setTogetherSince
   }
 }
 

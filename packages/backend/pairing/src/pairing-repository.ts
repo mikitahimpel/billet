@@ -3,6 +3,7 @@ import { TokenHash } from "@billet/backend-auth/auth-repository";
 import { EpochMillis, NoteId, UserId } from "@billet/contracts-domain/ids";
 import { ReportReason } from "@billet/contracts-http-api/safety";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { LocalDay } from "@billet/contracts-domain/coins";
 import type { AlreadyPaired, InvalidInvite, PairingUnavailable } from "./pairing-error.ts";
 
 /** What each stored table holds. A test in `platform` fails if a table's columns differ. */
@@ -18,6 +19,7 @@ export const StoredPairMember = Schema.Struct({
   userId: UserId,
   pairId: PairId,
   createdAt: EpochMillis,
+  togetherSince: Schema.NullOr(LocalDay),
 });
 
 export interface InviteClaim {

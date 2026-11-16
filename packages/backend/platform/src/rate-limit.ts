@@ -32,6 +32,8 @@ export const limits = {
   links: 30,
   // Search runs as the caller types, and the list fetches a card for each title it shows.
   titles: 120,
+  // A name or the pair's day, set from the profile.
+  profile: 30,
   // A report is rare and each one reaches the team's alert: per hour, not per minute.
   reports: 10,
 } as const;
@@ -46,6 +48,7 @@ export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname === "/v1/invites" || pathname === "/v1/invites/claim") return "pairing";
   if (pathname === "/v1/pair") return "pair";
   if (pathname === "/v1/pair/report") return "reports";
+  if (pathname === "/v1/me" || pathname === "/v1/pair/together-since") return "profile";
   if (pathname === "/v1/events") return "events";
   if (pathname === "/v1/onboarding/answers") return "onboarding";
   if (pathname === "/v1/purchases" || pathname === "/v1/purchases/mock") return "purchases";

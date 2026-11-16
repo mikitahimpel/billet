@@ -60,8 +60,9 @@ extension HomeView {
             })
     }
 
-    /// The games first: they are small, and a photo downloading below can take a while. The summary is three reads:
-    /// the Inbox count (a new note or drawing shows there), the riddles and the shop with the wallet. Everything
+    /// The games first: they are small, and a photo downloading below can take a while. The summary is four reads:
+    /// the Inbox count (a new note or drawing shows there), the riddles, the shop with the wallet and the pair, for
+    /// the partner's name and the pair's day. Everything
     /// includes the pair's cat, for a `CatSaved` the socket missed: the joiner's waits for the inviter's.
     private static func pullPartner(
         _ kind: PartnerSyncMachine.Kind, session: ServerSession, state: HomeState, room: RoomController
@@ -69,6 +70,9 @@ extension HomeView {
         await session.inbox.refreshCount()
         await session.drawGuess.load()
         await state.shop.refresh()
+        if state.profile.couple.pair != nil, let pair = try? await session.pair() {
+            await PairProfileSync.take(pair, into: state.profile, api: session.api)
+        }
         switch kind {
         case .summary: return
         case .everything: break
@@ -99,6 +103,7 @@ extension HomeView {
             let pair = try await session.pair()
             state.profile.adopt(
                 pairID: pair.pairId.rawValue, me: pair.members[0].rawValue, partner: pair.members[1].rawValue)
+            await PairProfileSync.take(pair, into: state.profile, api: session.api)
             state.moodSync = moods
             await moods.follow(pair.moods)
         } catch {

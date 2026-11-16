@@ -74,6 +74,7 @@ import { ShopStoreLive } from "./shop-store-live.ts";
 import { ShopCatalogRoutes } from "@billet/backend-shop/shop-routes";
 import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
 import { PairMoodsLive } from "./pair-moods-live.ts";
+import { PairProfileRepositoryLive } from "./pair-profile-repository-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
@@ -97,6 +98,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
   const pairing = PairingService.layer.pipe(
     Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
     Layer.provide(PairMoodsLive.pipe(Layer.provide(MoodService.layer))),
+    Layer.provide(PairProfileRepositoryLive(env.DB)),
   );
   return Layer.mergeAll(
     AuthRoutes,

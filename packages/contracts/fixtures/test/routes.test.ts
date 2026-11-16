@@ -287,6 +287,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/riddles",
       },
+      "setDisplayName": {
+        "method": "PUT",
+        "path": "/v1/me",
+      },
       "setGiftPlan": {
         "method": "PUT",
         "path": "/v1/gifts/plans",
@@ -294,6 +298,10 @@ it("pins the routes that clients call", () => {
       "setMood": {
         "method": "PUT",
         "path": "/v1/mood",
+      },
+      "setTogetherSince": {
+        "method": "PUT",
+        "path": "/v1/pair/together-since",
       },
       "setWish": {
         "method": "PUT",

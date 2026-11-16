@@ -13,6 +13,7 @@ import { FlagsRepositoryLive } from "./flags-repository-live.ts";
 import { MediaStoreLive } from "./media-store-live.ts";
 import { MetricsRepositoryLive } from "./metrics-repository-live.ts";
 import { PairMoodsLive } from "./pair-moods-live.ts";
+import { PairProfileRepositoryLive } from "./pair-profile-repository-live.ts";
 import { PairRoomsLive } from "./pair-rooms-live.ts";
 import { PairingObserverLive } from "./pairing-observer-live.ts";
 import { PairingRepositoryLive } from "./pairing-repository-live.ts";
@@ -42,6 +43,7 @@ export const ReviewServiceLive = (
   const pairing = PairingService.layer.pipe(
     Layer.provide(PairingObserverLive.pipe(Layer.provide(FlagsService.layer))),
     Layer.provide(PairMoodsLive.pipe(Layer.provide(MoodService.layer))),
+    Layer.provide(PairProfileRepositoryLive(env.DB)),
   );
   return ReviewService.layer.pipe(
     Layer.provide(Layer.mergeAll(pairing, DemoBotsLive(env.PAIR_ROOM))),

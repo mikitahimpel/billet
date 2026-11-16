@@ -49,7 +49,13 @@ import {
   EarnResponse,
 } from "@billet/contracts-http-api/coins";
 import { InksResponse } from "@billet/contracts-http-api/inks";
-import { DemoPartnerResponse, PairResponse } from "@billet/contracts-http-api/pair";
+import {
+  DemoPartnerResponse,
+  DisplayName,
+  PairResponse,
+  SetDisplayNameRequest,
+  SetTogetherSinceRequest,
+} from "@billet/contracts-http-api/pair";
 import {
   ClaimBonusRequest,
   ClaimBonusResponse,
@@ -1394,6 +1400,22 @@ export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairResponse", PairResponse, {
     default: { pairId, members: [alice, bob], moods: [missingAlice, sleepy] },
     "no-moods": { pairId, members: [alice, bob], moods: [] },
+    profile: {
+      pairId,
+      members: [alice, bob],
+      moods: [],
+      names: [{ userId: bob, displayName: Schema.decodeSync(DisplayName)("Sam") }],
+      togetherSince: giftDay,
+      pairedAt: 1_760_000_000_000,
+    },
+  }),
+  fixture("SetDisplayNameRequest", SetDisplayNameRequest, {
+    default: { displayName: Schema.decodeSync(DisplayName)("Alex") },
+    cleared: { displayName: null },
+  }),
+  fixture("SetTogetherSinceRequest", SetTogetherSinceRequest, {
+    default: { day: giftDay },
+    "if-unset": { day: giftDay, ifUnset: true },
   }),
   fixture("MoodCheckIn", MoodCheckIn, { default: sleepy, "with-note": missingAlice }),
   fixture("LoveStreak", LoveStreak, {

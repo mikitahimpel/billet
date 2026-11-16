@@ -11,6 +11,7 @@ import UsInterface
 struct ProfileEditor: View {
     let profile: CoupleStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(ServerSession.self) private var session: ServerSession?
     @State private var names: [String: String] = [:]
     @State private var since = Date.now
     @State private var photoFor: String?
@@ -29,6 +30,7 @@ struct ProfileEditor: View {
             ToolbarItem(placement: .confirmationAction) {
                 ConfirmButton {
                     profile.update(names: names, togetherSince: since)
+                    if let api = session?.api { Task { await PairProfileSync.edited(profile, api: api) } }
                     dismiss()
                 }
             }
