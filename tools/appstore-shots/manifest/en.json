@@ -81,14 +81,14 @@
           "text": "Hang it on Mochi's wall",
           "emoji": "🖼️",
           "x": 3,
-          "y": 53,
+          "y": 54,
           "rotate": -3
         },
         {
           "text": "Send a photo",
           "emoji": "📸",
           "x": 52,
-          "y": 67,
+          "y": 63,
           "rotate": 3
         }
       ]
