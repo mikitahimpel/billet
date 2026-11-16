@@ -1,0 +1,20 @@
+{
+  "_tag": "StrokesShown",
+  "strokes": [
+    {
+      "color": "#7B4FE0",
+      "id": 3,
+      "points": [
+        {
+          "x": 0.25,
+          "y": 0.5
+        },
+        {
+          "x": 0.75,
+          "y": 1.5
+        }
+      ],
+      "width": 14
+    }
+  ]
+}

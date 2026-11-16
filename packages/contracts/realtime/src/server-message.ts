@@ -11,7 +11,7 @@ import { GuessReveal, GuessScore } from "@billet/contracts-domain/guess";
 import { Riddle } from "@billet/contracts-domain/riddle";
 import { PairShop } from "@billet/contracts-domain/shop";
 import { LoveStreak } from "@billet/contracts-domain/streak";
-import { LivePoints, LiveStrokeId } from "./client-message.ts";
+import { KeptStrokeIds, LivePoints, LiveStrokeId, ShownStrokes } from "./client-message.ts";
 
 /**
  * The partner as the room sees them: `away` while they have no open socket, else what they last
@@ -42,6 +42,10 @@ export const ServerMessage = Schema.TaggedUnion({
   /** The partner's device left with this stroke still open: discard it, it will not end. */
   StrokeDropped: { id: LiveStrokeId },
   Clear: {},
+  /** The partner's finished strokes sent again whole: each replaces the one with its id. */
+  StrokesShown: { strokes: ShownStrokes },
+  /** Every finished stroke on the partner's canvas now: drop the partner's others. */
+  StrokesKept: { ids: KeptStrokeIds },
   /** Sent once to each socket that resumed the journal. */
   CatEntryAdded: { entry: CatEntry },
   CatSaved: { cat: CatProfile },

@@ -1258,6 +1258,9 @@ export class PairRoom extends DurableObject {
         return;
       }
       case "Clear":
+      case "StrokesShown":
+      case "StrokesKept":
+        // Relayed, never stored: the sender sends its strokes again when the partner needs them.
         this.toPartner(attachment.user, message.value);
         return;
     }

@@ -11,6 +11,10 @@ public enum ServerMessage: Codable, Hashable, Sendable {
   /// The partner's device left with this stroke open: discard it, it will not end.
   case strokeDropped(id: Int)
   case clear
+  /// The partner's finished strokes sent again whole: each replaces the one with its id.
+  case strokesShown([LiveStroke])
+  /// Every finished stroke on the partner's canvas now: drop the partner's others.
+  case strokesKept(ids: [Int])
   /// Sent to a socket that resumed with `lastCatSeq`.
   case catEntryAdded(CatEntry)
   case catSaved(CatProfile)
@@ -60,6 +64,8 @@ public enum ServerMessage: Codable, Hashable, Sendable {
     case score
     case riddle
     case streak
+    case strokes
+    case ids
   }
 
   public init(from decoder: any Decoder) throws {
@@ -89,6 +95,10 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       self = .strokeDropped(id: try container.decode(Int.self, forKey: .id))
     case "Clear":
       self = .clear
+    case "StrokesShown":
+      self = .strokesShown(try LiveStroke.decodeShown(container, forKey: .strokes))
+    case "StrokesKept":
+      self = .strokesKept(ids: try LiveStroke.decodeKept(container, forKey: .ids))
     case "CatEntryAdded":
       self = .catEntryAdded(try container.decode(CatEntry.self, forKey: .entry))
     case "CatSaved":
@@ -154,6 +164,12 @@ public enum ServerMessage: Codable, Hashable, Sendable {
       try container.encode(id, forKey: .id)
     case .clear:
       try container.encode("Clear", forKey: .tag)
+    case .strokesShown(let strokes):
+      try container.encode("StrokesShown", forKey: .tag)
+      try container.encode(strokes, forKey: .strokes)
+    case .strokesKept(let ids):
+      try container.encode("StrokesKept", forKey: .tag)
+      try container.encode(ids, forKey: .ids)
     case .catEntryAdded(let entry):
       try container.encode("CatEntryAdded", forKey: .tag)
       try container.encode(entry, forKey: .entry)

@@ -323,3 +323,174 @@ final class TestClock: @unchecked Sendable {
     }
   }
 }
+
+@Suite struct LiveCanvasEditTests {
+  typealias M = LiveRoomMachine
+
+  static func live(_ id: Int, points: Int = 1) -> LiveStroke {
+    LiveStroke(
+      id: id,
+      stroke: Stroke(
+        color: "#A5442B", width: 0.03,
+        points: (0..<points).map { Point(x: Double($0) / 10_000, y: 0.5) }))
+  }
+
+  static let online = M.State(isOnline: true, partner: .drawing)
+
+  /// The partner drew strokes 1 and 2, live.
+  static var partnerDrewTwo: M.State {
+    var state = online
+    for id in [1, 2] {
+      (state, _) = M.transition(
+        state, .received(.strokeBegin(LiveStrokeStart(id: id, color: "#A5442B", width: 0.03))))
+      (state, _) = M.transition(
+        state, .received(.strokePoints(id: id, points: [Point(x: 0.1, y: 0.1)])))
+      (state, _) = M.transition(state, .received(.strokeEnd(id: id)))
+    }
+    return state
+  }
+
+  @Test func anUndoOnTheirPhoneTakesTheStrokeOffThisOne() {
+    let (state, outputs) = M.transition(Self.partnerDrewTwo, .received(.strokesKept(ids: [1])))
+    #expect(state.partnerStrokes.map(\.id) == [1])
+    #expect(outputs.isEmpty)
+  }
+
+  @Test func anUndoHereSendsWhichStrokesAreLeft() {
+    var state = Self.online
+    var outputs: [M.Output]
+    for id in [1, 2] {
+      (state, _) = M.transition(state, .liveFrame(.strokeEnd(id: id)))
+      (state, outputs) = M.transition(
+        state, .canvasChanged((1...id).map { Self.live($0) }))
+      // A stroke that just ended live is not sent again.
+      #expect(outputs.isEmpty)
+    }
+    (state, outputs) = M.transition(state, .canvasChanged([Self.live(1)]))
+    #expect(outputs == [.send(.strokesKept(ids: [1]))])
+
+    // Undoing what is already undone changes nothing, here or on the partner's phone.
+    (state, outputs) = M.transition(state, .canvasChanged([Self.live(1)]))
+    #expect(outputs.isEmpty)
+    let partner = M.transition(Self.partnerDrewTwo, .received(.strokesKept(ids: [1]))).0
+    #expect(M.transition(partner, .received(.strokesKept(ids: [1]))).0 == partner)
+  }
+
+  @Test func anUndoThatBringsAStrokeBackSendsItWhole() {
+    var state = Self.online
+    (state, _) = M.transition(state, .liveFrame(.strokeEnd(id: 1)))
+    (state, _) = M.transition(state, .canvasChanged([Self.live(1)]))
+    (state, _) = M.transition(state, .canvasChanged([]))  // erased
+    let (_, outputs) = M.transition(state, .canvasChanged([Self.live(1)]))  // undo
+    #expect(outputs == [.send(.strokesShown([Self.live(1)]))])
+  }
+
+  @Test func aStrokeSentAgainReplacesItselfInPlace() {
+    let again = Stroke(color: "#000000", width: 0.05, points: [Point(x: 0.9, y: 0.9)])
+    let (state, _) = M.transition(
+      Self.partnerDrewTwo, .received(.strokesShown([LiveStroke(id: 1, stroke: again)])))
+    #expect(state.partnerStrokes.map(\.id) == [1, 2])
+    #expect(state.partnerStrokes.first?.stroke == again)
+  }
+
+  @Test func aReconnectSendsTheWholeCanvasAgainAndConverges() {
+    var sender = Self.online
+    (sender, _) = M.transition(sender, .liveFrame(.strokeEnd(id: 1)))
+    (sender, _) = M.transition(sender, .canvasChanged([Self.live(1)]))
+    (sender, _) = M.transition(sender, .linkChanged(online: false))
+    // Drawn and undone while the link was down: nothing goes out.
+    let (offline, nothing) = M.transition(sender, .canvasChanged([Self.live(1), Self.live(2)]))
+    #expect(nothing.isEmpty)
+    (sender, _) = M.transition(offline, .canvasChanged([Self.live(2)]))
+    let (back, outputs) = M.transition(sender, .linkChanged(online: true))
+    #expect(
+      outputs == [.send(.strokesShown([Self.live(2)])), .send(.strokesKept(ids: [2]))])
+    #expect(back.shown == [2])
+
+    // The partner, who still held stroke 1 from before the drop, ends up with stroke 2 alone.
+    var partner = M.State(isOnline: true, partner: .drawing)
+    (partner, _) = M.transition(partner, .received(.strokesShown([Self.live(1)])))
+    for output in outputs {
+      guard case .send(.strokesShown(let strokes)) = output else {
+        if case .send(.strokesKept(let ids)) = output {
+          (partner, _) = M.transition(partner, .received(.strokesKept(ids: ids)))
+        }
+        continue
+      }
+      (partner, _) = M.transition(partner, .received(.strokesShown(strokes)))
+    }
+    #expect(partner.partnerStrokes.map(\.id) == [2])
+  }
+
+  @Test func aPartnerWhoStartsDrawingLateIsSentTheCanvas() {
+    var state = M.State(isOnline: true, partner: .idle)
+    (state, _) = M.transition(state, .liveFrame(.strokeEnd(id: 4)))
+    (state, _) = M.transition(state, .canvasChanged([Self.live(4)]))
+    let (drawing, outputs) = M.transition(state, .received(.presence(.drawing)))
+    #expect(outputs == [.send(.strokesShown([Self.live(4)])), .send(.strokesKept(ids: [4]))])
+    // Presence repeated while they draw sends nothing more.
+    #expect(M.transition(drawing, .received(.presence(.drawing))).1.isEmpty)
+  }
+
+  @Test func aSentNoteIsNotTouchedByEdits() {
+    let note = Note.photo(id: NoteId("n"), author: UserId("them"), sentAt: 1, image: MediaKey("k"))
+    var (state, outputs) = M.transition(
+      Self.partnerDrewTwo, .received(.noteReceived(seq: 5, note: note)))
+    #expect(outputs == [.noteArrived(seq: 5, note)])
+    (state, outputs) = M.transition(state, .received(.strokesKept(ids: [])))
+    #expect(outputs.isEmpty)
+    #expect(state.lastNoteSeq == 5)
+    (state, outputs) = M.transition(state, .canvasChanged([]))
+    #expect(outputs.isEmpty)
+  }
+
+  @Test func aWholeStrokeFrameWithoutAnIdIsNeverDropped() {
+    var (state, _) = M.transition(
+      Self.online, .received(.stroke(seq: 1, stroke: Self.live(9).stroke)))
+    (state, _) = M.transition(state, .received(.strokesKept(ids: [])))
+    #expect(state.partnerStrokes.map(\.id) == [nil])
+  }
+
+  @Test func longStrokesAreThinnedAndPackedUnderTheFrameBudget() {
+    var state = Self.online
+    (state, _) = M.transition(state, .canvasChanged([]))
+    let strokes = [
+      Self.live(1, points: 2_000), Self.live(2, points: 500), Self.live(3, points: 200),
+    ]
+    let (_, outputs) = M.transition(state, .canvasChanged(strokes))
+    let frames = outputs.compactMap { output -> [LiveStroke]? in
+      if case .send(.strokesShown(let strokes)) = output { return strokes }
+      return nil
+    }
+    #expect(frames.map { $0.map(\.id) } == [[1], [2, 3]])
+    #expect(frames[0][0].stroke.points.count == LiveStroke.maxPoints)
+    #expect(frames[0][0].stroke.points.last == strokes[0].stroke.points.last)
+  }
+
+  static let rejectedOffline: [M.Event] = [
+    .received(.strokesShown([live(1)])),
+    .received(.strokesKept(ids: [])),
+  ]
+
+  @Test(arguments: rejectedOffline)
+  func offlineTheCanvasFramesChangeNothing(_ event: M.Event) {
+    let offline = M.State(isOnline: false)
+    #expect(M.transition(offline, event) == (offline, []))
+  }
+
+  @Test func offlineAnEditIsKeptButNotSent() {
+    let (state, outputs) = M.transition(M.State(), .canvasChanged([Self.live(1)]))
+    #expect(outputs.isEmpty)
+    #expect(state.mine == [Self.live(1)])
+    #expect(state.shown.isEmpty)
+  }
+
+  @Test func stoppingDrawingForgetsWhatWasShown() {
+    var state = Self.online
+    (state, _) = M.transition(state, .liveFrame(.strokeEnd(id: 1)))
+    (state, _) = M.transition(state, .canvasChanged([Self.live(1)]))
+    (state, _) = M.transition(state, .presenceChanged(.idle))
+    #expect(state.mine.isEmpty)
+    #expect(state.shown.isEmpty)
+  }
+}

@@ -13,6 +13,9 @@ public struct LiveStrokeBatcher: Sendable {
 
   public init() {}
 
+  /// The live id of the stroke still open.
+  public var openID: Int? { id }
+
   /// A new stroke starts. Ends any stroke still open first.
   public mutating func begin(color: String, width: Double, at point: Point, time: Double)
     -> [ClientMessage]
