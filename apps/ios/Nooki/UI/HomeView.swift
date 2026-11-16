@@ -54,6 +54,7 @@ struct HomeView: View {
     /// Labs → Performance: suspects switched off while the app runs, and its frame meter.
     @State private var perfLab = PerfLab(defaults: .standard)
     @State private var tabClock = TabSwitchClock()
+    @State private var partner = PartnerFollow()
     @Environment(\.scenePhase) private var scenePhase
     @Environment(Hints.self) var hints
     @Environment(ServerSession.self) var session: ServerSession?
@@ -230,6 +231,9 @@ struct HomeView: View {
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
         .task(id: session?.isPaired) { await followPair() }
+        .onChange(of: session?.isPaired, initial: true) { _, paired in
+            partnerSync?.send(paired == true ? .paired : .unpaired)
+        }
         .modifier(ResendsUnsent(
             paired: session?.isPaired == true, photos: state.moments.unsent.map(\.id), notes: state.notes.unsent.map(\.id),
             sendPhotos: { await photoSync?.sendUnsent() ?? false },
@@ -442,6 +446,17 @@ struct HomeView: View {
         }
     }
 
+    /// Made on first use for the session in the environment, and again for a new one; nil without a server.
+    private var partnerSync: PartnerSync? {
+        guard let session else { return nil }
+        return partner.sync(for: session) {
+            let sync = Self.partnerSync(session: session, state: state, room: room)
+            sync.send(session.isPaired ? .paired : .unpaired)
+            if scenePhase == .active { sync.send(.cameToFront) }
+            return sync
+        }
+    }
+
     /// Its own method: inline in `body`, the closure tips the type-checker over its time limit.
     private func phaseChanged(from old: ScenePhase, to phase: ScenePhase) {
         switch phase {
@@ -455,13 +470,7 @@ struct HomeView: View {
             visitHints()
             Task {
                 await DrawingSync.requestPushes(asking: false)
-                await session?.drawingSync?.fetchLatest()
                 await session?.drawingSync?.registerPushTokens()
-                await session?.inbox.refreshCount()
-                await photoSync?.receive()
-                await textSync?.receive()
-                await state.shop.refresh()
-                await state.lists.refresh()
             }
             // The pair's cat and streak catch up, and what this phone did offline goes. Their own task, so a slow
             // download above doesn't hold them up.
@@ -470,19 +479,12 @@ struct HomeView: View {
                 state.refreshPronouns()
                 await state.streak.refresh()
             }
-            // The room socket sends no game frames it missed while the app was away. Its own task, so missed
-            // photos downloading above don't hold it up.
-            Task { await session?.whoKnows.load() }
-            session?.reactions?.refresh()
-            session?.followInbox(
-                true, photos: photoSync, texts: textSync, shop: state.shop, lists: state.lists,
-                moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
-                cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq })
+            partnerSync?.send(.cameToFront)
             refreshRooms()
             if !launching { reportOpened(state.room) }
         case .background:
             state.didEnterBackground()
-            session?.followInbox(false)
+            partnerSync?.send(.wentAway)
             reportedRooms = []
         default: break
         }
@@ -688,5 +690,21 @@ private struct LeavingSnapshot: View {
             .opacity(shown ? 1 : 0)
             .onAppear { withAnimation(Motion.fade()) { shown = false } completion: { gone() } }
             .id(ObjectIdentifier(view))
+    }
+}
+
+/// Holds a session's `PartnerSync` across passes of `HomeView`. Another session gets its own; the one before stops
+/// following.
+@MainActor
+final class PartnerFollow {
+    private var current: (session: ObjectIdentifier, sync: PartnerSync)?
+
+    func sync(for session: ServerSession, make: () -> PartnerSync) -> PartnerSync {
+        let id = ObjectIdentifier(session)
+        if let current, current.session == id { return current.sync }
+        current?.sync.send(.wentAway)
+        let sync = make()
+        current = (id, sync)
+        return sync
     }
 }

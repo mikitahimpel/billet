@@ -164,3 +164,9 @@ import Wire
     #expect(sent.all.isEmpty)
   }
 }
+
+@Test func eachSignInFailureTellsTheInvitePageSomething() {
+  let failures: [SignInFailure] = [.storage, .unavailable, .rejected, .appleRefused, .appleIdInUse]
+  #expect(failures.allSatisfy { !$0.connectingMessage.isEmpty })
+  #expect(SignInFailure.storage.connectingMessage != SignInFailure.unavailable.connectingMessage)
+}

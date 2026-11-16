@@ -1,3 +1,4 @@
+import Synchronization
 import Foundation
 import Transport
 import Wire
@@ -15,6 +16,8 @@ final class InboxLink {
         var photo: @MainActor @Sendable () -> Void
         /// A text note arrived; the text notes page from their own cursor too.
         var text: @MainActor @Sendable () -> Void
+        /// A drawing arrived, with the room's `seq` for it.
+        var drawing: @MainActor @Sendable (Int, Wire.Note) -> Void
         var reaction: @MainActor @Sendable (NoteReaction) -> Void
         var lastReactionRev: @MainActor @Sendable () -> Int?
         var shop: @MainActor @Sendable (ShopResponse) -> Void
@@ -32,24 +35,39 @@ final class InboxLink {
         var catEntry: @MainActor @Sendable (CatEntry) -> Void
         /// The last journal entry held, read as each socket opens; nil follows no cat frames.
         var lastCatSeq: @MainActor @Sendable () -> Int?
+        /// Either partner saved the cat: adopted, renamed, dressed or worded anew.
+        var catSaved: @MainActor @Sendable () -> Void
         var presence: @MainActor @Sendable (PartnerPresence) -> Void
+        /// The socket opened, the first time or after a drop; it resumes, but a pull catches what it can't.
+        var opened: @MainActor @Sendable () -> Void
+        /// About to open again after a drop: the room closes the sockets of a pair that ended.
+        var reopening: @MainActor @Sendable () -> Void
     }
 
+    /// When a frame last came; any frame says the socket is alive.
+    private var lastHeard: ContinuousClock.Instant?
+
     init(baseURL: URL, token: @escaping @Sendable () async -> String?, lastSeq: Int?, handlers: Handlers) {
+        let opens = OpenCount()
         let dependencies = WebSocketDependencies(
             open: { () async throws(TransportError) -> WebSocketConnection in
+                if opens.count.add(1, ordering: .relaxed).oldValue > 0 { await handlers.reopening() }
                 guard let token = await token() else { throw .api(.unauthorized) }
                 guard let request = URLRequest.socket(baseURL: baseURL, token: token) else {
                     throw .network("invalid socket URL")
                 }
-                return try await WebSocketConnection.urlSession(request, session: .shared)
+                let connection = try await WebSocketConnection.urlSession(request, session: .shared)
+                await handlers.opened()
+                return connection
             },
             sleep: { try? await Task.sleep(for: $0) },
-            deliver: { message in
+            deliver: { [weak self] message in
+                await self?.heard()
                 switch message {
                 case .activityUnread(let count): await handlers.unread(count)
                 case .noteReceived(_, .photo): await handlers.photo()
                 case .noteReceived(_, .text): await handlers.text()
+                case .noteReceived(let seq, let note): await handlers.drawing(seq, note)
                 case .reactionChanged(let change): await handlers.reaction(change)
                 case .shopChanged(let shop): await handlers.shop(shop)
                 case .listsChanged(let lists): await handlers.lists(lists)
@@ -60,9 +78,9 @@ final class InboxLink {
                 case .riddleChanged(let riddle): await handlers.riddle(riddle)
                 case .streakChanged(let streak): await handlers.streak(streak)
                 case .catEntryAdded(let entry): await handlers.catEntry(entry)
+                case .catSaved: await handlers.catSaved()
                 case .presence(let presence): await handlers.presence(presence)
-                case .noteReceived, .stroke, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped,
-                     .clear, .catSaved:
+                case .stroke, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear:
                     break
                 }
             },
@@ -85,5 +103,21 @@ final class InboxLink {
 
     func connect() { client?.connect() }
 
+    private func heard() { lastHeard = .now }
+
+    /// Heard from within `quietLimit`, or else answering a ping; a socket that doesn't answer is opened again.
+    func isHealthy(quietLimit: Duration) async -> Bool {
+        guard isConnected, let client else { return false }
+        if let lastHeard, ContinuousClock.now - lastHeard < quietLimit { return true }
+        guard await client.ping() else { return false }
+        heard()
+        return true
+    }
+
     func disconnect() { client?.disconnect() }
+}
+
+/// How many times this link's socket was opened.
+private final class OpenCount: Sendable {
+    let count = Atomic<Int>(0)
 }

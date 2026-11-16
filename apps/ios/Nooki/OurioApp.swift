@@ -121,7 +121,8 @@ struct OurioApp: App {
                                 flow: onboarding, pairing: session?.pairing, scenery: AppOnboardingScenery(), signedIn: session?.isSignedIn ?? false,
                                 inviteBase: session?.baseURL, alreadyPaired: session?.isPaired ?? false,
                                 paired: { session?.pairingFinished() },
-                                demoPartner: demoPartnerPairing, retrySignIn: session.map { $0.signIn.retry })
+                                demoPartner: demoPartnerPairing, retrySignIn: session.map { $0.signIn.retry },
+                                signInFailure: signInFailure)
                                 // Drawn over Home, which hides itself from VoiceOver only while its splash shows;
                                 // a modal view is the only one VoiceOver reads.
                                 .accessibilityAddTraits(.isModal)
@@ -139,6 +140,15 @@ struct OurioApp: App {
                         await session?.refreshGuessCatalog()
                     }
                     .task(id: session?.isSignedIn) { await session?.checkDemoPartner() }
+                    // The saved record may be older than the pair: the partner can join while this app is closed or
+                    // on another screen.
+                    .task(id: PairWatch(session: session, active: scenePhase == .active)) {
+                        guard scenePhase == .active else { return }
+                        await session?.watchPair()
+                    }
+                    .onReceive(NotificationCenter.default.publisher(for: .roomCatCoatTaken)) { _ in
+                        onboarding.coatTaken()
+                    }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
                     // Sent as the app comes to the front and as it leaves, besides a few seconds after each event.
                     .onChange(of: scenePhase) { _, phase in
@@ -154,6 +164,11 @@ struct OurioApp: App {
         if let demo = LandingDemo.server { return demo }
         #endif
         return session
+    }
+
+    private var signInFailure: SignInFailure? {
+        guard case .failed(let failure, _)? = session?.signIn.state else { return nil }
+        return failure
     }
 
     /// Built on its own: written inline, the compiler cannot check `body`.
@@ -176,4 +191,19 @@ struct OurioApp: App {
     }
 
     private static let isHostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+}
+
+/// What restarts the pair watch: another launch's session, a sign-in, a pairing, or the app coming to the front.
+private struct PairWatch: Equatable {
+    let session: ObjectIdentifier?
+    let signedIn: Bool
+    let paired: Bool
+    let active: Bool
+
+    @MainActor init(session: ServerSession?, active: Bool) {
+        self.session = session.map(ObjectIdentifier.init)
+        signedIn = session?.isSignedIn ?? false
+        paired = session?.isPaired ?? false
+        self.active = active
+    }
 }

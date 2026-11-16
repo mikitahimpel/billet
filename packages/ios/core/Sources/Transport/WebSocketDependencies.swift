@@ -6,15 +6,19 @@ public struct WebSocketConnection: Sendable {
   public var messages: AsyncStream<ServerMessage>
   public var send: @Sendable (ClientMessage) async throws(TransportError) -> Void
   public var close: @Sendable () async -> Void
+  /// Returns once the server has answered; may wait forever on a dead socket.
+  public var ping: @Sendable () async throws(TransportError) -> Void
 
   public init(
     messages: AsyncStream<ServerMessage>,
     send: @escaping @Sendable (ClientMessage) async throws(TransportError) -> Void,
-    close: @escaping @Sendable () async -> Void
+    close: @escaping @Sendable () async -> Void,
+    ping: @escaping @Sendable () async throws(TransportError) -> Void = {}
   ) {
     self.messages = messages
     self.send = send
     self.close = close
+    self.ping = ping
   }
 }
 

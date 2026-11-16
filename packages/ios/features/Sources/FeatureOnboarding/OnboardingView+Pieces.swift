@@ -221,6 +221,8 @@ import Wire
   /// `patience` a calm line and a retry show, and a retry waits that long again before showing
   /// them. The retry signs in with the same account key, so it never makes a second account.
   struct ConnectingRow: View {
+    /// The sign-in stopped on it: said at once, with no spinner, since it waits for a retry.
+    let failure: SignInFailure?
     let retry: (() -> Void)?
     @State private var attempt = 0
     @State private var waitedLong = false
@@ -229,8 +231,19 @@ import Wire
 
     var body: some View {
       VStack(alignment: .leading, spacing: Space.m) {
-        GroupedSection { OnboardingView.progressRow("Connecting…") }
-        if waitedLong, let retry {
+        if let failure {
+          ErrorLine(failure.connectingMessage)
+          if let retry {
+            RetryButton {
+              attempt += 1
+              retry()
+            }
+            .accessibilityIdentifier("onboarding.retryConnecting")
+          }
+        } else {
+          GroupedSection { OnboardingView.progressRow("Connecting…") }
+        }
+        if failure == nil, waitedLong, let retry {
           VStack(alignment: .leading, spacing: Space.s) {
             Text("This is taking longer than usual. Check your connection, or try again.")
               .font(.ourioCallout)
@@ -246,6 +259,7 @@ import Wire
         }
       }
       .animation(Motion.fade(), value: waitedLong)
+      .animation(Motion.fade(), value: failure)
       .task(id: attempt) {
         waitedLong = false
         do {

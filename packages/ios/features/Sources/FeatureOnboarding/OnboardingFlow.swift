@@ -166,7 +166,9 @@ public final class OnboardingFlow {
   var pages: [Page] {
     let goals = Set(picks[Self.goalsStep] ?? [])
     return [.welcome] + (joining ? [.join] : []) + catalogue.steps.map(Page.question)
-      + (asksTogetherSince ? [.togetherSince] : []) + [.catCoat, .catName]
+      + (asksTogetherSince ? [.togetherSince] : [])
+      // The pair has one cat, the inviter's: whoever joins gets her from the pair's room.
+      + (joining ? [] : [.catCoat, .catName])
       + (canInvite && !joining ? [.invite] : []) + (hasServer ? [.notifications] : [])
       + (goals.isDisjoint(with: Self.widgetGoals) ? [] : [.widget])
   }
@@ -417,6 +419,13 @@ public final class OnboardingFlow {
     guard let detail = ClientEvent.detail(from: stepId.rawValue) else { return }
     events.append(ClientEvent(name, detail: detail))
     Task { await send() }
+  }
+
+  /// The pair's room has her in the coat now kept in the defaults: Home dresses her in it.
+  public func coatTaken() {
+    let room = CatCoat.current(in: defaults)
+    coat = room
+    wear(room)
   }
 
   private func wear(_ coat: CatCoat) {
