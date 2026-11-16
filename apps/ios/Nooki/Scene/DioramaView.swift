@@ -37,6 +37,9 @@ struct DioramaView: View {
     }
 
     private func drive(_ scene: CatRoom, on surface: any RoomSurface, rig: ZoomRig) {
+        // A room's frames come from the whole surface, drawn or not: one left running would steer the camera with its
+        // own framing and put the bubble over its own cat.
+        rig.steer(by: scene)?.stop()
         scene.paused = paused
         scene.unprojector = { point, plane in surface.unproject(point, ontoPlane: plane) }
         scene.onFocusChange = { focused in withAnimation(.easeOut(duration: 0.3)) { photoFocused = focused } }
@@ -258,6 +261,13 @@ final class ZoomRig {
     private var photo: Float = 0
     private var photoPose: (center: SIMD3<Float>, normal: SIMD3<Float>)?
     private var placed: (target: SIMD3<Float>, eye: SIMD3<Float>)?
+    private weak var steeredBy: CatRoom?
+
+    /// Makes `room` the one that moves this camera; returns the room that did until now, which has to stop.
+    func steer(by room: CatRoom) -> CatRoom? {
+        defer { steeredBy = room }
+        return steeredBy === room ? nil : steeredBy
+    }
 
     init() {
         camera.camera.fieldOfViewInDegrees = Self.baseFieldOfView
