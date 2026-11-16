@@ -74,6 +74,7 @@ struct HomeView: View {
 
     private var showsBoard: Bool { state.tab == .moments && state.momentsMode == .board }
     private var showsRoom: Bool { state.tab == .world || showsBoard }
+    private var roomScene: RoomScene { showsBoard ? .board : state.room.scene }
     /// Something hides the room whole, or near enough: the canvas, the Inbox, the composer, the profile with its
     /// Settings, the Coins sheet, or the app not in front. The sheets that open at their content's height (the pet,
     /// an item, the mood) leave the room showing, and live.
@@ -129,9 +130,9 @@ struct HomeView: View {
             let pins = await BoardFaces.pins(state: state)
             if !Task.isCancelled { room.setPins(pins) }
         }
-        .onChange(of: showsBoard) { _, new in
+        .onChange(of: showsBoard) {
             // DioramaView swaps the root by itself; the room that was showing stops so two never drive at once.
-            room.show(new ? .board : state.room.scene)
+            room.show(roomScene)
         }
         // Settings › Labs asks for the showcase, once it is closed.
         .onChange(of: state.showcaseRequested) { _, requested in
@@ -541,7 +542,8 @@ struct HomeView: View {
         Task {
             // One pass for the stand-in to be on screen before the room under it changes.
             try? await Task.sleep(for: .milliseconds(60))
-            self.room.show(kind.scene)
+            // The Board may have come on screen since the tap; the room driven is the one drawn now.
+            self.room.show(roomScene)
             self.room.perfShown(kind)
             await self.room.nextFrame()
             withAnimation(Motion.fade(0.25)) { roomLive = true }
@@ -608,7 +610,7 @@ struct HomeView: View {
             roomOnScreen && !plan.still ? .visible : (showsRoom ? .covered : .hidden)
         let rate = perfLab.isOn(.splatRate) ? 30 : 0
         return RoomInput(
-            scene: showsBoard ? .board : state.room.scene, coat: CatCoat.current(), visibility: visibility,
+            scene: roomScene, coat: CatCoat.current(), visibility: visibility,
             catName: state.petName, catPronouns: state.pronouns, partnerHere: session?.partnerHere == true,
             motes: perfLab.isOn(.motes) && plan.motes,
             sway: perfLab.isOn(.sway) && plan.sway, decor: roomDecor,

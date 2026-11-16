@@ -86,4 +86,13 @@ struct RoomCameraPlaneTests {
                             size: CGSize(width: 400, height: 400))
         #expect(up.unproject(CGPoint(x: 200, y: 200), ontoPlane: matrix_identity_float4x4) == nil)
     }
+
+    @Test func oneRoomAtATimeSteersTheCamera() {
+        let rig = ZoomRig()
+        let home = CatRoom(), board = CatRoom()
+        #expect(rig.steer(by: home) == nil)
+        #expect(rig.steer(by: home) == nil)
+        #expect(rig.steer(by: board) === home)
+        #expect(rig.steer(by: home) === board)
+    }
 }
