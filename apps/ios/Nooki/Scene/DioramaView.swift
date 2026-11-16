@@ -51,6 +51,7 @@ struct DioramaView: View {
             guard let projected else { return }
             bubble.move(to: projected, dt: scene.frameTime)
         }
+        scene.redrawSoon()
     }
 
     private func tapped(_ entity: Entity) {
@@ -109,6 +110,8 @@ struct DioramaView: View {
             rig.aspect = aspect
             loop?.rig.aspect = aspect
         }
+        // The view grows back from a point when a cover closes; a still room would keep its one-point frame.
+        .onGeometryChange(for: CGSize.self, of: \.size) { _ in scene.redrawSoon() }
         .overlay { BubbleOverlay(spot: bubble, pulse: petPulse).opacity(photoFocused || !showsBubble ? 0 : 1) }
         .overlay(alignment: .bottom) {
             if photoFocused {

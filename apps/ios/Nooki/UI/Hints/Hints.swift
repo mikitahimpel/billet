@@ -39,6 +39,8 @@ final class Hints {
     @ObservationIgnored private let now: @Sendable () -> Date
     /// The pair is in the holdout: the plan runs and reports, but nothing is drawn.
     @ObservationIgnored var isHeldOut: @MainActor () -> Bool = { false }
+    /// Where each hint's control is on screen while it is there, for `HintLayer`.
+    private(set) var spots: [String: HintSpot] = [:]
 
     init(
         report: @escaping @Sendable ([ClientEvent]) async throws(TransportError) -> Void,
@@ -73,7 +75,7 @@ final class Hints {
             Tips.showTipsForTesting([hint])
             Tips.hideTipsForTesting(all.filter { $0.hintId != only })
         }
-        // The UI tests tap through the app; a popover would take their first tap.
+        // The UI tests tap through the app; a card could cover what they tap.
         if defaults.bool(forKey: "uitestNoHints") { Tips.hideAllTipsForTesting() }
         #endif
         HintStage.current = ""
@@ -101,7 +103,7 @@ final class Hints {
     }
 
     /// Puts up the hint the plan picks for `context`, if any. It counts as seen from that moment, whether or not its
-    /// popover ever reports appearing, so neither a tab switch nor a relaunch brings it back.
+    /// card ever reports appearing, so neither a tab switch nor a relaunch brings it back.
     @discardableResult
     func show(_ context: HintContext) -> String? {
         for id in HintPlan.skipped(context, seen: seen) { see(id) }
@@ -137,6 +139,10 @@ final class Hints {
     }
 
     func appeared(_ tip: any Tip) { shown(tip.id) }
+
+    func place(_ id: String, _ spot: HintSpot?) {
+        if spots[id] != spot { spots[id] = spot }
+    }
 
     private func shown(_ id: String) {
         guard shownThisSession.insert(id).inserted else { return }

@@ -67,6 +67,7 @@ class CatRoom {
     var pulseSlowdown: Float = 1
     private var sway = SwayEnvelope()
     private var turned: simd_quatf?
+    private var redraw = RedrawWindow()
     private var touchedAt: Float = -10
     /// Whether the room is swaying, or still easing to rest.
     var isSwaying: Bool { sway.strength > 0 }
@@ -104,6 +105,9 @@ class CatRoom {
     var framing: Framing { Framing() }
     var yawLimit: Float { 0.75 }
     var focusDistance: Float { 0.8 }
+
+    /// Draws the room again for a moment though nothing in it moves, for a view that has just grown back to full size.
+    func redrawSoon() { redraw.open(at: time) }
 
     func setYaw(_ value: Float) {
         targetYaw = min(max(value, -yawLimit), yawLimit)
@@ -233,7 +237,7 @@ class CatRoom {
                     enabled: swaying && !isPlayingGame)
         // Setting an orientation, even the same one, makes every entity under it move; a still room sets none.
         let turn = simd_quatf.y(yaw + 0.035 * sway.strength * sin(t * 0.35))
-        if turn != turned {
+        if redraw.writes(at: t, changed: turn != turned) {
             turned = turn
             pivot.orientation = turn
         }
@@ -610,4 +614,18 @@ class CatRoom {
             onShowcase?(nil)
         }
     }
+}
+
+/// RealityKit draws a frame only when something in the scene changed, and a still room (the Board, a sleeping cat)
+/// changes nothing. A room's view that grew back from the point it shrinks to under a cover would show its last,
+/// one-point frame, an empty backdrop, until something moved. For `seconds` after `open` the room writes its pivot
+/// every frame, which makes every entity under it count as moved, whatever the drawable's size settles to meanwhile.
+struct RedrawWindow {
+    static let seconds: Float = 0.5
+    private var until: Float = -.infinity
+
+    mutating func open(at time: Float) { until = time + Self.seconds }
+
+    /// Whether a frame at `time` writes the pivot: when its turn changed, or while the window is open.
+    func writes(at time: Float, changed: Bool) -> Bool { changed || time <= until }
 }
