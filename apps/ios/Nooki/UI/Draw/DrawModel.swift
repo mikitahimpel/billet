@@ -174,14 +174,13 @@ final class DrawModel {
 
     // MARK: Sending
 
-    /// Sends the drawing as a note (the image to /v1/media, then the compact strokes to /v1/notes) and keeps it in
-    /// Moments. Without a server it only goes to Moments.
+    /// Pins the drawing to the board as a doodle that waits, marked unsent, until `TextNoteSync` delivers it under
+    /// the note's own id, so a retry never sends it twice; and keeps it in Moments. Without a server it only goes to
+    /// Moments.
     func send(api: APIClient?, canvas: CGSize, state: HomeState) async -> Bool {
         await send { drawing in
-            if let api {
-                do {
-                    try await Self.post(drawing, canvas: canvas, paper: wallpaper.paper, api: api)
-                } catch {
+            if api != nil {
+                guard Self.queue(drawing, canvas: canvas, paper: wallpaper.paper, journal: state.journal) else {
                     return false
                 }
             }
@@ -190,6 +189,14 @@ final class DrawModel {
             }
             return true
         }
+    }
+
+    /// False when the drawing could not be drawn or stored.
+    static func queue(_ drawing: [Stroke], canvas: CGSize, paper: PaperColor, journal: Journal) -> Bool {
+        guard let png = DrawingImage.png(drawing, canvas: canvas), let picture = UIImage(data: png),
+            let compact = try? InkEncoder.encodeKeepingWhatFits(drawing)
+        else { return false }
+        return journal.addNote(doodle: picture, compact: compact, paper: Note.Paper(paper))
     }
 
     /// Hands the finished drawing to `deliver`, which says whether it went, and keeps `sendState` while it runs. A
@@ -204,17 +211,22 @@ final class DrawModel {
         return sent
     }
 
-    private static func post(_ drawing: [Stroke], canvas: CGSize, paper: PaperColor, api: APIClient) async throws {
-        let (png, compact) = try encoded(drawing, canvas: canvas)
-        let upload = try await api.uploadImage(png)
-        _ = try await api.sendNote(
-            .drawing(key: .make(), compact: compact, image: upload.image, paper: paper))
-    }
-
     /// The drawing as it is sent: its PNG for /v1/media and its compact strokes.
     static func encoded(_ drawing: [Stroke], canvas: CGSize) throws -> (png: Data, compact: CompactStrokes) {
         guard let png = DrawingImage.png(drawing, canvas: canvas) else { throw InkError.encodingFailed }
         return (png, try InkEncoder.encodeWithinBudget(drawing))
+    }
+}
+
+private extension Note.Paper {
+    init(_ paper: PaperColor) {
+        switch paper {
+        case .butter: self = .butter
+        case .blush: self = .blush
+        case .sage: self = .sage
+        case .sky: self = .sky
+        case .cream: self = .cream
+        }
     }
 }
 
