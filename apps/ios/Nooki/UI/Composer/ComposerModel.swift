@@ -1,3 +1,4 @@
+import Ink
 import MomentsInterface
 import Observation
 import ShopInterface
@@ -51,7 +52,33 @@ final class ComposerModel {
         guard hasInk || !decorations.isEmpty else {
             return journal.addNote(text: text, paper: paper, ink: ink.light, stamp: stamp, seal: seal)
         }
-        return journal.addNote(doodle: picture(size: size), paper: paper, stamp: stamp, seal: seal)
+        return journal.addNote(
+            doodle: picture(size: size), compact: Self.compact(canvas.drawing, canvas: size), paper: paper,
+            stamp: stamp, seal: seal)
+    }
+
+    /// The strokes in the unit square of the canvas's width, as a drawing travels; what the budget can't carry is left
+    /// to the picture sent with them.
+    static func compact(_ drawing: PKDrawing, canvas: CGSize) -> CompactStrokes {
+        guard canvas.width > 0 else { return CompactStrokes(strokes: []) }
+        let strokes = drawing.strokes.compactMap { stroke -> Stroke? in
+            let points = stroke.path.interpolatedPoints(by: .distance(2)).map { point in
+                let location = point.location.applying(stroke.transform)
+                return Point(x: location.x / canvas.width, y: location.y / canvas.width)
+            }
+            guard !points.isEmpty else { return nil }
+            let width = (stroke.path.first?.size.width ?? 4) / canvas.width
+            return Stroke(color: hex(stroke.ink.color), width: width, points: points)
+        }
+        return (try? InkEncoder.encodeKeepingWhatFits(strokes)) ?? CompactStrokes(strokes: [])
+    }
+
+    private static func hex(_ color: UIColor) -> String {
+        var red: CGFloat = 0, green: CGFloat = 0, blue: CGFloat = 0, alpha: CGFloat = 0
+        color.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light))
+            .getRed(&red, green: &green, blue: &blue, alpha: &alpha)
+        let byte = { (value: CGFloat) in Int((min(max(value, 0), 1) * 255).rounded()) }
+        return String(format: "#%02x%02x%02x", byte(red), byte(green), byte(blue))
     }
 
     /// Takes off the paper a stamp or seal the pair doesn't own, such as one whose unlock the server refused.

@@ -84,8 +84,8 @@ extension HomeView {
         state.refreshPronouns()
     }
 
-    /// The ids of the newest notes on the board; a new set rebuilds their faces.
-    var boardKey: [String] { BoardFaces.key(state: state) }
+    /// The newest notes on the board and whether each still waits to be sent; a change rebuilds their faces.
+    var boardKey: [String] { BoardFaces.key(state: state, paired: session?.isPaired == true) }
 
     /// Once paired, the monograms belong to the pair's two accounts and the shop, the gifts and the lists follow the
     /// pair's room.
@@ -107,6 +107,7 @@ extension HomeView {
             guard state.profile.couple.pair != nil else { return }
             state.moodSync = moods
         }
+        if let since = state.togetherSince { state.notes.queueDoodles(by: state.viewer, since: since) }
         await state.shop.connect(sync)
         await state.gifts.connect(session.giftSync)
         await state.lists.connect(session.listSync)

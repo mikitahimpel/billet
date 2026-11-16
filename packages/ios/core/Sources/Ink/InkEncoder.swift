@@ -78,6 +78,26 @@ public enum InkEncoder {
     throw InkError.overBudget(budget: parameters.budget, smallest: smallest)
   }
 
+  /// Like `encodeWithinBudget`, but a drawing too big for the budget at any tolerance loses its last strokes until it
+  /// fits, down to none: the picture travels beside it, so the strokes may be a sketch of it.
+  public static func encodeKeepingWhatFits(
+    _ strokes: [Stroke], parameters: Parameters = Parameters()
+  ) throws(InkError) -> CompactStrokes {
+    var low = 0
+    var high = strokes.count
+    var best = CompactStrokes(strokes: [])
+    while low <= high {
+      let count = (low + high) / 2
+      do {
+        best = try encodeWithinBudget(Array(strokes.prefix(count)), parameters: parameters)
+        low = count + 1
+      } catch .overBudget {
+        high = count - 1
+      }
+    }
+    return best
+  }
+
   /// The size in bytes on the wire.
   public static func byteCount(_ compact: CompactStrokes) throws(InkError) -> Int {
     let encoder = JSONEncoder()

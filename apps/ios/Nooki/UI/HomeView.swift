@@ -126,7 +126,7 @@ struct HomeView: View {
         }
         .task(id: boardKey + [room.hasBoard ? "board" : ""]) {
             guard room.hasBoard else { return }
-            let pins = await BoardFaces.pins(state: state)
+            let pins = await BoardFaces.pins(state: state, paired: session?.isPaired == true)
             if !Task.isCancelled { room.setPins(pins) }
         }
         .onChange(of: showsBoard) { _, new in
