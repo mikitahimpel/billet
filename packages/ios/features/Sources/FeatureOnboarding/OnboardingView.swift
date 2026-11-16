@@ -409,12 +409,9 @@ import Wire
             )
           }
           HStack(spacing: Space.s) {
-            // The system's own button pastes without asking and is greyed out with nothing to paste.
-            PasteButton(payloadType: String.self) { texts in
+            PasteCapsuleButton(String.self) { texts in
               Task { @MainActor in pasted(texts.first ?? "") }
             }
-            .labelStyle(.titleAndIcon)
-            .tint(.honey)
             if InviteScanner.isAvailable {
               Button {
                 scanning = true
