@@ -19,7 +19,7 @@ struct DrawingEntry: TimelineEntry {
 /// they save a new one, so the timeline holds one entry and never refreshes on its own.
 struct DrawingProvider: TimelineProvider {
     func placeholder(in context: Context) -> DrawingEntry {
-        DrawingEntry(date: .now, drawing: nil, partner: "M")
+        DrawingEntry(date: .now, drawing: nil, partner: "Partner")
     }
 
     func getSnapshot(in context: Context, completion: @escaping (DrawingEntry) -> Void) {
@@ -31,7 +31,7 @@ struct DrawingProvider: TimelineProvider {
     }
 
     private func entry() -> DrawingEntry {
-        DrawingEntry(date: .now, drawing: LatestDrawing.load(), partner: CoupleStore().couple.other)
+        DrawingEntry(date: .now, drawing: LatestDrawing.load(), partner: CoupleStore().partnerName)
     }
 }
 

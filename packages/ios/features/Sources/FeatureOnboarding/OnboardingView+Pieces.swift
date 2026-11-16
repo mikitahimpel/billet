@@ -7,8 +7,10 @@ import Wire
   extension OnboardingView {
     // MARK: Pieces
 
+    /// - Parameter keepsBottom: when the page shrinks, as under the keyboard, what ends it stays in view rather
+    ///   than the title: on an SE the code field and its buttons would otherwise slip under the actions.
     func form<Content: View>(
-      say: String? = nil, subtitle: String?,
+      say: String? = nil, subtitle: String?, keepsBottom: Bool = false,
       @ViewBuilder content: () -> Content
     ) -> some View {
       ScrollView {
@@ -29,6 +31,7 @@ import Wire
         .padding(.top, Space.l)
         .padding(.bottom, Space.section)
       }
+      .defaultScrollAnchor(keepsBottom ? .bottom : nil, for: .sizeChanges)
       .ourioScrollEdges()
       .scrollIndicators(.hidden)
       .scrollBounceBehavior(.basedOnSize)

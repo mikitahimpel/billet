@@ -21,10 +21,12 @@ enum BoardFaces {
             switch card {
             case .note(let note):
                 let unsent = UnsentMark.shows(note.unsent, paired: paired)
-                let key = "note \(note.id) \(note.hashValue) \(unsent)" as NSString
+                let author = state.profile.name(of: note.author)
+                let key = "note \(note.id) \(note.hashValue) \(unsent) \(author)" as NSString
                 var face = faces.object(forKey: key)
                 if face == nil {
-                    face = render(NoteFace(note: note, doodle: await doodle(note), unsent: unsent), as: key)
+                    face = render(NoteFace(note: note, author: author, doodle: await doodle(note), unsent: unsent),
+                                  as: key)
                 }
                 if let face {
                     pins.append(BoardPin(id: note.id, face: face, size: [0.12, 0.12]))
@@ -52,9 +54,10 @@ enum BoardFaces {
 
     static func key(state: HomeState, paired: Bool) -> [String] {
         state.notes.notes.prefix(BoardRoomScene.slots).map {
-            "\($0.id)\(UnsentMark.shows($0.unsent, paired: paired) ? " unsent" : "")"
+            let unsent = UnsentMark.shows($0.unsent, paired: paired) ? " unsent" : ""
+            return "\($0.id)\(unsent) \(state.profile.name(of: $0.author))"
         }
-            + state.moments.pinned.map { "\($0.id)\($0.caption)" }
+            + state.moments.pinned.map { "\($0.id)\($0.caption) \(state.profile.byline(of: $0))" }
     }
 
     private static func doodle(_ note: Note) async -> UIImage? {
@@ -77,6 +80,7 @@ enum BoardFaces {
 
 private struct NoteFace: View {
     let note: Note
+    let author: String
     let doodle: UIImage?
     let unsent: Bool
 
@@ -98,7 +102,7 @@ private struct NoteFace: View {
 
             HStack(spacing: Space.xs) {
                 if unsent { UnsentMark(size: 14) }
-                Text("— \(note.author)")
+                Text("— \(author)")
                     .font(.custom("Noteworthy-Bold", size: 15))
             }
             .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))

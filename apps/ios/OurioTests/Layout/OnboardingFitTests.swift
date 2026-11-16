@@ -33,9 +33,12 @@ private struct StubScenery: OnboardingScenery {
         }
     }
 
-    private func layout(page: Int = 0, open: String? = nil, phone: HostedLayout.Phone) -> HostedLayout {
+    private func layout(
+        page: Int = 0, open: String? = nil, joining: Bool = false, phone: HostedLayout.Phone
+    ) -> HostedLayout {
         let defaults = UserDefaults(suiteName: "onboarding-fit-\(UUID().uuidString)")!
         defaults.set(false, forKey: "onboardingDone")
+        defaults.set(joining, forKey: "onboardingJoining")
         defaults.set(page, forKey: "onboardingPage")
         if let open { defaults.set(open, forKey: "onboardingOpen") }
         let flow = OnboardingFlow(
@@ -89,5 +92,22 @@ private struct StubScenery: OnboardingScenery {
         let terms = try #require(layout.element(id: "welcome.terms"), "no terms on \(name)").frame
         #expect(terms.minY >= 0, "\(name): the terms are on screen")
         #expect(terms.maxY <= go.minY, "\(name): the terms sit above the button")
+    }
+
+    /// The keyboard's height with its suggestion bar, as each phone draws it.
+    private func keyboard(_ screen: Screen) -> CGFloat { screen == .se ? 260 : 336 }
+
+    @Test(arguments: [Screen.iPhone, .se])
+    func theInviteCodeAndItsButtonsStayClearOfJoinUnderTheKeyboard(screen: Screen) throws {
+        let name = screen.rawValue
+        let layout = layout(page: 1, joining: true, phone: screen.phone)
+        layout.raiseKeyboard(keyboard(screen))
+        let join = try primary(layout, name)
+        let code = try #require(layout.element(id: "join.code"), "no code field on \(name)").frame
+        let rule = try #require(layout.element(id: "join.rule"), "no code rule on \(name)").frame
+        #expect(join.maxY <= screen.phone.size.height - keyboard(screen) + 1, "\(name): Join sits on the keyboard")
+        #expect(code.minY >= layout.window.safeAreaInsets.top, "\(name): the code field \(code) is under the status bar")
+        #expect(code.maxY <= join.minY, "\(name): the code field \(code) clears Join \(join)")
+        #expect(rule.maxY <= join.minY, "\(name): the line under the buttons \(rule) clears Join \(join)")
     }
 }

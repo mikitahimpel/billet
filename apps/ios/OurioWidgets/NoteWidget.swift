@@ -22,6 +22,7 @@ struct NoteAccessoryWidget: Widget {
 struct NoteEntry: TimelineEntry {
     let date: Date
     let note: Note?
+    let author: String
     let doodle: UIImage?
 }
 
@@ -40,15 +41,16 @@ struct NoteProvider: TimelineProvider {
 
     /// The app reloads the timeline on every save, so one entry is enough.
     private func entry() -> NoteEntry {
-        let note = NoteStore().latest(notBy: CoupleStore().couple.viewer)
+        let couple = CoupleStore()
+        let note = NoteStore().latest(notBy: couple.couple.viewer)
         let doodle = note.flatMap(NoteStore.doodleURL(for:)).flatMap { Downsample.image(at: $0, maxPixels: 300) }
-        return NoteEntry(date: .now, note: note, doodle: doodle)
+        return NoteEntry(date: .now, note: note, author: note.map { couple.name(of: $0.author) } ?? "", doodle: doodle)
     }
 
     private static func sample() -> NoteEntry {
         NoteEntry(date: .now,
                   note: Note(id: UUID(), author: "M", date: .now, text: "miss you already", doodle: nil, paper: .butter),
-                  doodle: nil)
+                  author: "Partner", doodle: nil)
     }
 }
 
@@ -95,7 +97,7 @@ private struct NoteAccessoryView: View {
                     .lineLimit(3)
                     .widgetAccentable()
             }
-            Text("— \(note.author)")
+            Text("— \(entry.author)")
                 .font(.ourioCaption)
                 .foregroundStyle(.secondary)
         }

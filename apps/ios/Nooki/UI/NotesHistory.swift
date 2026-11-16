@@ -37,7 +37,7 @@ struct NotesHistory: View {
                     LazyVGrid(columns: columns, spacing: Space.l + Space.xs) {
                         ForEach(month.notes) { note in
                             Button { opened = PinRoute(id: note.id) } label: {
-                                NoteCard(note: note)
+                                NoteCard(note: note, author: state.profile.name(of: note.author))
                                     .rotationEffect(note.id.polaroidTilt)
                             }
                             .buttonStyle(PressScaleStyle())
@@ -53,6 +53,7 @@ struct NotesHistory: View {
 
 private struct NoteCard: View {
     let note: Note
+    let author: String
 
     @State private var doodle: UIImage?
     @Environment(ServerSession.self) private var session: ServerSession?
@@ -84,7 +85,7 @@ private struct NoteCard: View {
                 }
             }
             .overlay(alignment: .bottomTrailing) {
-                Text("— \(note.author)")
+                Text("— \(author)")
                     .font(.custom("Noteworthy-Bold", size: 13))
                     .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
                     .padding(Space.s)

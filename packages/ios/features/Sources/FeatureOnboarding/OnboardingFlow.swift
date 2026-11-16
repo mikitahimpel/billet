@@ -166,8 +166,8 @@ public final class OnboardingFlow {
   var pages: [Page] {
     let goals = Set(picks[Self.goalsStep] ?? [])
     return [.welcome] + (joining ? [.join] : []) + catalogue.steps.map(Page.question)
-      + (asksTogetherSince ? [.togetherSince] : [])
-      // The pair has one cat, the inviter's: whoever joins gets her from the pair's room.
+      // The pair has one cat and one day, the inviter's: whoever joins gets both from the pair.
+      + (asksTogetherSince && !joining ? [.togetherSince] : [])
       + (joining ? [] : [.catCoat, .catName])
       + (canInvite && !joining ? [.invite] : []) + (hasServer ? [.notifications] : [])
       + (goals.isDisjoint(with: Self.widgetGoals) ? [] : [.widget])

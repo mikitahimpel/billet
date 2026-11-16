@@ -84,6 +84,14 @@ final class HostedLayout {
         MainActor.assumeIsolated { window.isHidden = true }
     }
 
+    /// Shrinks the window's room from below as the keyboard does, by a keyboard's `height` over the phone's own bottom.
+    func raiseKeyboard(_ height: CGFloat) {
+        var insets = phone.safeArea
+        insets.bottom = max(insets.bottom, height)
+        window.rootViewController?.additionalSafeAreaInsets = insets
+        settle(0.6)
+    }
+
     /// The bottom safe area the window really has: the simulator's own plus the phone's.
     var safeBottom: CGFloat { window.rootViewController?.view.safeAreaInsets.bottom ?? 0 }
 

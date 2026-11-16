@@ -48,6 +48,8 @@ public final class CoupleStore {
 
   public func name(of partner: String) -> String { couple.name(of: partner) }
 
+  public var partnerName: String { couple.name(of: couple.other) }
+
   /// Nil for the partner whose name this phone doesn't have.
   public func initial(of partner: String) -> String? {
     guard !couple.isUnknownPartner(partner) else { return nil }

@@ -14,12 +14,12 @@ import WidgetKit
 struct DrawingLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: DrawingAttributes.self) { context in
-            DrawingActivityBanner(state: context.state, partner: CoupleStore().couple.other)
+            DrawingActivityBanner(state: context.state, partner: CoupleStore().partnerName)
                 .activityBackgroundTint(Ink.surface)
                 .activitySystemActionForegroundColor(Ink.text)
                 .widgetURL(DeepLink.draw.url)
         } dynamicIsland: { context in
-            let partner = CoupleStore().couple.other
+            let partner = CoupleStore().partnerName
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     PartnerDot(initial: partner, size: 32)

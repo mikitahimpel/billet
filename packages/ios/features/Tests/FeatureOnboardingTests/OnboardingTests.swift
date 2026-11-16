@@ -313,7 +313,7 @@ struct OnboardingFlowTests {
     #expect(sent.answers.withLock { $0.last?.answer } == .single(option: "cream"))
   }
 
-  @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheInviteAndTheCat() {
+  @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheInviteTheCatAndTheDay() {
     let (flow, _, _) = makeFlow(hasServer: true, asksTogetherSince: true)
     #expect(
       flow.pages == [
@@ -325,7 +325,7 @@ struct OnboardingFlowTests {
     #expect(flow.joinCode == "K7QM4R2XHP")
     #expect(
       flow.pages == [
-        .welcome, .join, .question(age), .question(goals), .togetherSince, .notifications,
+        .welcome, .join, .question(age), .question(goals), .notifications,
       ])
     flow.partnerJoined()
     #expect(flow.page == .question(age))

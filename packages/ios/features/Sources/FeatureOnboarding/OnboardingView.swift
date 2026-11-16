@@ -380,7 +380,8 @@ import Wire
       let failure = OnboardingFlow.failure(in: pairing?.onboardingState, on: .join)
       return form(
         say: "Who's waiting for me?",
-        subtitle: String(localized: "It's in the message your partner sent, or on their screen.")
+        subtitle: String(localized: "It's in the message your partner sent, or on their screen."),
+        keepsBottom: true
       ) {
         VStack(spacing: Space.s) {
           Field(
@@ -397,6 +398,7 @@ import Wire
           .autocorrectionDisabled()
           .textContentType(.oneTimeCode)
           .accessibilityLabel("Invite code")
+          .accessibilityIdentifier("join.code")
           if let failure {
             ErrorLine(
               failure.isInvalidCode
@@ -425,6 +427,7 @@ import Wire
             .font(.ourioCaption)
             .foregroundStyle(Ink.textSecondary)
             .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("join.rule")
         }
       }
       .task { if flow.joinCode.isEmpty { pasteCode() } }
@@ -477,7 +480,8 @@ import Wire
     private var togetherSince: some View {
       form(
         say: "I'll count your days together!",
-        subtitle: String(localized: "Only on this phone. You can change it in your profile.")
+        subtitle: String(
+          localized: "Your partner sees the same day. You can change it in your profile.")
       ) {
         GroupedSection {
           DatePicker(

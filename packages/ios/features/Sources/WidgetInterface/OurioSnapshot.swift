@@ -173,12 +173,11 @@ extension OurioSnapshot {
     listID: UUID?, moment: MomentPreview?
   ) {
     let cal = Calendar.current
-    let partner = couple.other
     self.date = date
-    viewer = couple.viewer
-    self.partner = partner
+    viewer = couple.name(of: couple.viewer)
+    partner = couple.name(of: couple.other)
     daysTogether = couple.daysTogether(on: date)
-    partnerMood = moods[partner]
+    partnerMood = moods[couple.other]
     myMood = moods[couple.viewer]
     self.moment = moment
     isPurring = activity.isPurring(at: date)
