@@ -45,7 +45,7 @@ and Ourio has exactly one partner and no feed, so it would misdescribe the app.
 **Promotional text** [170]:
 
 ```
-Share one cozy room and a cat named Mochi with the person you love. Pet her, send a drawing or a note, and it shows up on their iPhone.
+Share one cozy room and a cat of your own with the person you love. Pet your cat, send a drawing or a note, and it shows up on their iPhone.
 ```
 
 (135)
@@ -53,16 +53,16 @@ Share one cozy room and a cat named Mochi with the person you love. Pet her, sen
 **Description** [4000]:
 
 ```
-Ourio is a private app for two people. You share one cozy home and a cat named Mochi, and everything one of you does, the other sees on their own iPhone.
+Ourio is a private app for two people. You share one cozy home and a cat you choose and name together, and everything one of you does, the other sees on their own iPhone.
 
 YOUR CAT, TOGETHER
-Mochi lives in two rooms, a living room and a bedroom. Pet her, feed her, fill her water bowl, brush her or play with a laser dot. Looking after her earns coins for the two of you.
+Your cat lives in two rooms, a living room and a bedroom. Pet, feed, fill the water bowl, brush or play with a laser dot. Looking after her earns coins for the two of you.
 
 MAKE THE ROOM YOURS
 Spend the coins you earn in the shop on furniture, plants and lights. Every piece you place appears in your partner's room as well. Coins are earned in the app; there is nothing to buy with money.
 
 NOTES, DRAWINGS AND MOMENTS
-Draw with your finger or write a note and send it. It lands on your partner's Home Screen or Lock Screen widget with a notification. Send photos to Moments and hang your favourites on Mochi's wall.
+Draw with your finger or write a note and send it. It lands on your partner's Home Screen or Lock Screen widget with a notification. Send photos to Moments and hang your favourites on your cat's wall.
 
 THINGS TO DO AS A PAIR
 - Pick tonight: swipe through films and shows, and see the ones you both want.
@@ -73,7 +73,7 @@ THINGS TO DO AS A PAIR
 - Draw & guess: one of you draws a word, the other guesses it.
 
 WIDGETS
-Home Screen and Lock Screen widgets for the room, Mochi, your partner's latest note and drawing, your days together and more, plus Control Center buttons to pet or feed Mochi.
+Home Screen and Lock Screen widgets for the room, your cat, your partner's latest note and drawing, your days together and more, plus Control Center buttons to pet or feed your cat.
 
 PRIVATE BY DESIGN
 There is no sign-up form and no password: the app makes an anonymous account and keeps its key in your iCloud Keychain, and you can link Sign in with Apple in Settings to keep your account. A pair is exactly two people. There is no public feed, no ads and no third-party tracking, and we never use your drawings or photos to train AI. You can report or block your partner, unpair, or delete your account in Settings at any time.

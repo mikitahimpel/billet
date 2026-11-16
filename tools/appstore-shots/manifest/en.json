@@ -39,7 +39,7 @@
           "rotate": -3
         },
         {
-          "text": "Mochi naps wherever",
+          "text": "Your cat naps wherever",
           "emoji": "😴",
           "x": 50,
           "y": 40,
@@ -51,7 +51,7 @@
       "id": "game",
       "raw": "game",
       "bg": "light",
-      "tag": "Your cat, Mochi",
+      "tag": "Your shared cat",
       "headline": "Raise a kitty {together}",
       "chips": [
         {
@@ -78,7 +78,7 @@
       "headline": "Little moments, {kept}",
       "chips": [
         {
-          "text": "Hang it on Mochi's wall",
+          "text": "Hang it on the wall",
           "emoji": "🖼️",
           "x": 3,
           "y": 54,
