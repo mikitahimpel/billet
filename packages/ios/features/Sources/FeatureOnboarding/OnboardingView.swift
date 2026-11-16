@@ -378,10 +378,9 @@ import Wire
 
     private var join: some View {
       let failure = OnboardingFlow.failure(in: pairing?.onboardingState, on: .join)
-      return form(
+      return pinnedForm(
         say: "Who's waiting for me?",
-        subtitle: String(localized: "It's in the message your partner sent, or on their screen."),
-        keepsBottom: true
+        subtitle: String(localized: "It's in the message your partner sent, or on their screen.")
       ) {
         VStack(spacing: Space.s) {
           Field(
