@@ -32,12 +32,14 @@ final class DrawModel {
     var photo: UIImage?
     private(set) var sendState = SendState.idle
 
-    /// This phone's finished strokes, oldest first.
-    private(set) var strokes: [Stroke] = []
+    /// This phone's finished strokes, oldest first, under their live ids. Every change goes to the partner.
+    private var mine: [LiveStroke] = [] {
+        didSet { room?.canvasChanged(mine) }
+    }
     private(set) var current: Stroke?
-    /// Earlier versions of `strokes`. Snapshots rather than single strokes, so undo also brings back what the
+    /// Earlier versions of `mine`. Snapshots rather than single strokes, so undo also brings back what the
     /// eraser or a clear took.
-    private var undoStack: [[Stroke]] = []
+    private var undoStack: [[LiveStroke]] = []
     private var erasing = false
 
     private var batcher = LiveStrokeBatcher()
@@ -62,6 +64,9 @@ final class DrawModel {
 
     /// Everything on the canvas, as it is sent.
     var drawing: [Stroke] { (room?.state.strokes ?? []) + strokes }
+
+    /// This phone's finished strokes, oldest first.
+    var strokes: [Stroke] { mine.map(\.stroke) }
 
     var isPartnerDrawing: Bool { room?.state.partner == .drawing }
     var isEmpty: Bool { drawing.isEmpty }
@@ -89,7 +94,7 @@ final class DrawModel {
 
     #if DEBUG
     func loadLandingDemo() {
-        strokes = LandingDemo.drawing()
+        mine = LandingDemo.drawing().enumerated().map { LiveStroke(id: Int(Int32.max) - $0.offset, stroke: $0.element) }
     }
     #endif
 
@@ -120,28 +125,28 @@ final class DrawModel {
     }
 
     private func finishStroke() {
-        guard let stroke = current else { return }
+        guard let stroke = current, let id = batcher.openID else { return }
         current = nil
         send(batcher.end())
-        undoStack.append(strokes)
-        strokes.append(stroke)
+        undoStack.append(mine)
+        mine.append(LiveStroke(id: id, stroke: stroke))
     }
 
     /// Takes away this phone's strokes that the eraser passes over; the partner's are theirs to erase.
     private func erase(at point: Point) {
         let reach = Self.eraserReach
-        let kept = strokes.filter { stroke in
-            !stroke.points.contains { hypot($0.x - point.x, $0.y - point.y) < reach + stroke.width / 2 }
+        let kept = mine.filter { live in
+            !live.stroke.points.contains { hypot($0.x - point.x, $0.y - point.y) < reach + live.stroke.width / 2 }
         }
-        guard kept.count != strokes.count else { return }
-        if !erasing { undoStack.append(strokes) }
+        guard kept.count != mine.count else { return }
+        if !erasing { undoStack.append(mine) }
         erasing = true
-        strokes = kept
+        mine = kept
     }
 
     func undo() {
         guard canUndo, let previous = undoStack.popLast() else { return }
-        strokes = previous
+        mine = previous
     }
 
     /// Wipes the canvas for both partners. Undo brings this phone's strokes back.
@@ -154,8 +159,9 @@ final class DrawModel {
 
     private func wipe() {
         current = nil
-        if !strokes.isEmpty { undoStack.append(strokes) }
-        strokes = []
+        guard !mine.isEmpty else { return }
+        undoStack.append(mine)
+        mine = []
     }
 
     private func tick() {

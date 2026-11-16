@@ -88,6 +88,13 @@ public final class LiveRoom {
     apply(.liveFrame(message))
   }
 
+  /// This phone's finished strokes after any change, so the partner's copy follows undo, the
+  /// eraser and a clear.
+  public func canvasChanged(_ strokes: [LiveStroke]) {
+    syncLink()
+    apply(.canvasChanged(strokes))
+  }
+
   func receive(_ message: ServerMessage) {
     syncLink()
     let arrived = now()

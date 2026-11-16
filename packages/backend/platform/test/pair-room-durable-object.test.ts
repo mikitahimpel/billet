@@ -1229,6 +1229,26 @@ describe("PairRoom realtime across eviction", () => {
     expect(live(a.frames)).toEqual([]);
   });
 
+  it("relays strokes sent again and the strokes kept, to the partner only", async () => {
+    const room = await openRoom();
+    const a = await open(room, alice);
+    const b = await open(room, bob);
+    const shown = {
+      _tag: "StrokesShown",
+      strokes: [{ id: 1, color: "#7B4FE0", width: 14, points: [{ x: 1, y: 2 }] }],
+    };
+    a.socket.send(frame(shown));
+    a.socket.send(frame({ _tag: "StrokesKept", ids: [] }));
+    // Over the cap: dropped, never relayed.
+    a.socket.send(frame({ _tag: "StrokesKept", ids: Array.from({ length: 501 }, (_, i) => i) }));
+    await until(() => live(b.frames).length === 2);
+
+    expect(live(b.frames)).toEqual([shown, { _tag: "StrokesKept", ids: [] }]);
+    await settle();
+    expect(live(b.frames)).toHaveLength(2);
+    expect(live(a.frames)).toEqual([]);
+  });
+
   it("drops points of a stroke that was never begun, and batches over the point cap", async () => {
     const room = await openRoom();
     const a = await open(room, alice);
