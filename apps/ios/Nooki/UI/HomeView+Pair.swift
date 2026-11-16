@@ -38,7 +38,7 @@ extension HomeView {
             follow: { followRoomSocket(session: session, state: state, room: room, opened: relay.opened) },
             unfollow: { session.followInbox(false) },
             isHealthy: { await session.roomSocketIsHealthy(quietLimit: $0) },
-            pull: { await pullPartner($0, session: session, state: state) }))
+            pull: { await pullPartner($0, session: session, state: state, room: room) }))
         relay.sync = sync
         return sync
     }
@@ -61,8 +61,11 @@ extension HomeView {
     }
 
     /// The games first: they are small, and a photo downloading below can take a while. The summary is three reads:
-    /// the Inbox count (a new note or drawing shows there), the riddles and the shop with the wallet.
-    private static func pullPartner(_ kind: PartnerSyncMachine.Kind, session: ServerSession, state: HomeState) async {
+    /// the Inbox count (a new note or drawing shows there), the riddles and the shop with the wallet. Everything
+    /// includes the pair's cat, for a `CatSaved` the socket missed: the joiner's waits for the inviter's.
+    private static func pullPartner(
+        _ kind: PartnerSyncMachine.Kind, session: ServerSession, state: HomeState, room: RoomController
+    ) async {
         await session.inbox.refreshCount()
         await session.drawGuess.load()
         await state.shop.refresh()
@@ -77,6 +80,8 @@ extension HomeView {
         await session.textSync(notes: state.notes, partner: state.otherPartner)?.receive()
         await session.photoSync(moments: state.moments, partner: state.otherPartner)?.receive()
         await state.lists.refresh()
+        await room.syncCat()
+        state.refreshPronouns()
     }
 
     /// The ids of the newest notes on the board; a new set rebuilds their faces.
@@ -107,7 +112,10 @@ extension HomeView {
         await state.lists.connect(session.listSync)
         guard let pair = state.profile.couple.catPair else { return }
         await state.streak.follow(session.streakRemote)
+        let followedCat = room.lastCatSeq != nil
         await room.connectCat(session.catEvents, pair: pair)
+        // A socket opened before the cat was the pair's follows no journal, so it never hears `CatSaved`.
+        if !followedCat, room.lastCatSeq != nil { session.reopenRoomSocket() }
         state.refreshPronouns()
     }
 

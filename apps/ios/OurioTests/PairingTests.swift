@@ -83,13 +83,44 @@ struct ServerSessionPairingTests {
 
     private let defaults = UserDefaults(suiteName: "ServerSessionPairingTests-\(UUID().uuidString)")!
 
+    /// The waits `watchPair` asked for, in order; each one returns at once.
+    final class Waits: Sendable {
+        let list = Mutex<[Duration]>([])
+    }
+
+    /// `GET /v1/pair` throwing each of `errors` in turn, then answering with the pair.
+    final class PairAnswers: Sendable {
+        let calls = Mutex(0)
+        let errors: [TransportError]
+
+        init(_ errors: [TransportError]) { self.errors = errors }
+
+        var count: Int { calls.withLock { $0 } }
+
+        func pair() throws(TransportError) -> PairResponse {
+            let call = calls.withLock { count in
+                count += 1
+                return count
+            }
+            if call <= errors.count { throw errors[call - 1] }
+            return PairResponse(pairId: PairId("p1"), members: [UserId("u1"), UserId("u2")])
+        }
+    }
+
+    private let waits = Waits()
+
     private func session(_ saved: Saved, api: APIClient) -> ServerSession {
         let backend = Backend(
             baseURL: URL(string: "https://api.example.dev")!, api: api, accounts: saved.store,
             keys: AccountKeyStore(loadOrCreate: { () throws(PersistenceError) in "key" },
                                   clear: { () throws(PersistenceError) in }))
-        return ServerSession(backend: backend, defaults: defaults)
+        return ServerSession(backend: backend, defaults: defaults) { [waits] wait in
+            waits.list.withLock { $0.append(wait) }
+        }
     }
+
+    /// An invite that runs out a day from now, in epoch milliseconds.
+    private static let tomorrow = Int(Date.now.timeIntervalSince1970 * 1000) + 86_400_000
 
     @Test func aPairMadeWhileTheAppWasClosedIsTakenFromTheServer() async {
         let saved = Saved()
@@ -130,31 +161,76 @@ struct ServerSessionPairingTests {
         #expect(saved.record.withLock { !$0.isPaired })
     }
 
-    @Test func theServersPairLeavesAnOpenInviteToShowItsOwnEnd() async {
+    @Test func aShownInviteIsCheckedEverySixSecondsUntilItsClaimEndsTheOpenPairing() async {
         let saved = Saved()
-        let calls = Mutex(0)
+        let answers = PairAnswers([.api(.notFound), .api(.notFound)])
         var api = APIClient.offline
+        let expiresAt = Self.tomorrow
         api.createInvite = { () async throws(TransportError) in
-            CreateInviteResponse(code: InviteCode("ABC"), expiresAt: 9)
+            CreateInviteResponse(code: InviteCode("ABC"), expiresAt: expiresAt)
         }
-        api.pair = { () async throws(TransportError) in
-            let call = calls.withLock { count in
-                count += 1
-                return count
-            }
-            if call < 2 { throw .api(.notFound) }
-            return PairResponse(pairId: PairId("p1"), members: [UserId("u1"), UserId("u2")])
-        }
+        api.pair = { () async throws(TransportError) in try answers.pair() }
         let session = session(saved, api: api)
         session.pairing.createInvite()
         await session.pairing.settled()
         let model = session.pairing
         await session.watchPair()
         #expect(session.isPaired)
+        // The open sheet or invite page shows the pairing's own end.
         #expect(session.pairing === model)
+        #expect(model.state == .paired(.inviter))
         // The phone that showed the code adopts the cat.
         #expect(!defaults.bool(forKey: CatLife.joinedKey))
-        #expect(calls.withLock { $0 } == 2)
+        #expect(answers.count == 3)
+        #expect(waits.list.withLock { $0 } == [.seconds(6), .seconds(6)])
+    }
+
+    @Test func aPhoneWithNoInviteOutAsksOnceAndThenWaitsForTheNextReturn() async {
+        let saved = Saved()
+        let answers = PairAnswers(Array(repeating: .api(.notFound), count: 10))
+        var api = APIClient.offline
+        api.pair = { () async throws(TransportError) in try answers.pair() }
+        let session = session(saved, api: api)
+        await session.watchPair()
+        #expect(!session.isPaired)
+        #expect(answers.count == 1)
+        #expect(waits.list.withLock { $0 }.isEmpty)
+    }
+
+    @Test func anInviteThatRanOutIsNotCheckedAgain() async {
+        let saved = Saved()
+        let answers = PairAnswers(Array(repeating: .api(.notFound), count: 10))
+        var api = APIClient.offline
+        api.createInvite = { () async throws(TransportError) in
+            CreateInviteResponse(code: InviteCode("ABC"), expiresAt: 9)
+        }
+        api.pair = { () async throws(TransportError) in try answers.pair() }
+        let session = session(saved, api: api)
+        session.pairing.createInvite()
+        await session.pairing.settled()
+        await session.watchPair()
+        #expect(!session.isPaired)
+        #expect(answers.count == 1)
+        #expect(waits.list.withLock { $0 }.isEmpty)
+    }
+
+    @Test func aRefusedCheckWaitsLongerEachTimeUpToAMinute() async {
+        let saved = Saved()
+        // A 429 arrives as `Unavailable`.
+        let answers = PairAnswers(
+            [.api(.notFound)] + Array(repeating: .api(.unavailable), count: 5) + [.api(.notFound)])
+        var api = APIClient.offline
+        let expiresAt = Self.tomorrow
+        api.createInvite = { () async throws(TransportError) in
+            CreateInviteResponse(code: InviteCode("ABC"), expiresAt: expiresAt)
+        }
+        api.pair = { () async throws(TransportError) in try answers.pair() }
+        let session = session(saved, api: api)
+        session.pairing.createInvite()
+        await session.pairing.settled()
+        await session.watchPair()
+        #expect(session.isPaired)
+        #expect(waits.list.withLock { $0 } == [6, 12, 24, 48, 60, 60, 6].map { .seconds($0) })
     }
 
     @Test func aRelaunchEndsAPairTheServerNoLongerHasWithItsCursors() async {

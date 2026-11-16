@@ -4,7 +4,7 @@ import FeaturePairing
 import SwiftUI
 import Design
 
-/// Whoever shows the code waits here while the sheet checks every few seconds whether it was claimed.
+/// Whoever shows the code waits here while `ServerSession.watchPair` checks whether it was claimed.
 struct PairingSheet: View {
     let model: PairingModel
     /// The code from an invite link.
@@ -32,13 +32,6 @@ struct PairingSheet: View {
             finished()
             dismiss()
         }
-        .task(id: waitingCode) {
-            guard waitingCode != nil else { return }
-            while !Task.isCancelled {
-                try? await Task.sleep(for: PairingModel.checkEvery)
-                model.tick()
-            }
-        }
     }
 
     @ViewBuilder private var content: some View {
@@ -58,7 +51,7 @@ struct PairingSheet: View {
                 .controlSize(.large)
                 .tint(Ink.accentText)
                 .frame(maxWidth: .infinity, minHeight: 260)
-        case .waiting(let code, let expiresAt, _):
+        case .waiting(let code, let expiresAt, _, _):
             waitingCard(code: code, expiresAt: expiresAt)
         case .paired:
             pairedCard
@@ -166,10 +159,6 @@ struct PairingSheet: View {
 
     private var isPaired: Bool {
         if case .paired = model.state { true } else { false }
-    }
-
-    private var waitingCode: String? {
-        if case .waiting(let code, _, _) = model.state { code } else { nil }
     }
 
     private func submit() {

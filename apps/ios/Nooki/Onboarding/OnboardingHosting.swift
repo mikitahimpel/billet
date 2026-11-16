@@ -18,7 +18,7 @@ extension PairingModel: OnboardingPairing {
         case .choosing(let failure, let request):
             .choosing(failure: failure.map(Self.onboarding), request: request)
         case .creating(let request): .creating(request: request)
-        case .waiting(let code, let expiresAt, let request):
+        case .waiting(let code, let expiresAt, let request, _):
             .waiting(code: code, expiresAt: expiresAt, request: request)
         case .claiming(let request): .claiming(request: request)
         case .paired: .paired

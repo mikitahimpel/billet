@@ -75,8 +75,9 @@ public enum PairingMachine: Machine {
   public enum State: Equatable, Sendable {
     case choosing(failure: PairingFailure?, request: Int)
     case creating(request: Int)
-    /// The invite exists. A tick asks whether the partner has claimed it.
-    case waiting(code: String, expiresAt: Int, request: Int)
+    /// The invite exists. A tick asks whether the partner has claimed it; `misses` counts the checks
+    /// in a row that got no answer, which space the next ones out (`checkDelay`).
+    case waiting(code: String, expiresAt: Int, request: Int, misses: Int)
     case claiming(request: Int)
     case paired(PairRole)
 
@@ -84,7 +85,7 @@ public enum PairingMachine: Machine {
 
     var request: Int {
       switch self {
-      case .choosing(_, let request), .creating(let request), .waiting(_, _, let request),
+      case .choosing(_, let request), .creating(let request), .waiting(_, _, let request, _),
         .claiming(let request):
         request
       case .paired: 0
@@ -141,20 +142,20 @@ public enum PairingMachine: Machine {
 
     case (.creating, .created(let code, let expiresAt, _)):
       return (
-        .waiting(code: code, expiresAt: expiresAt, request: state.request),
+        .waiting(code: code, expiresAt: expiresAt, request: state.request, misses: 0),
         [.keepInvite(KeptInvite(code: code, expiresAt: expiresAt))]
       )
 
-    case (.waiting(let code, let expiresAt, _), .ticked):
+    case (.waiting(let code, let expiresAt, _, let misses), .ticked):
       // A tick that finds the previous check still out starts another; the old answer is stale.
       return (
-        .waiting(code: code, expiresAt: expiresAt, request: request),
+        .waiting(code: code, expiresAt: expiresAt, request: request, misses: misses),
         [.checkPaired(request: request)]
       )
 
-    case (.waiting, .checked(let paired, _)):
+    case (.waiting(let code, let expiresAt, let request, _), .checked(let paired, _)):
       if paired { return (.paired(.inviter), [.forgetInvite]) }
-      return (state, [])
+      return (.waiting(code: code, expiresAt: expiresAt, request: request, misses: 0), [])
 
     case (.claiming, .claimed(let pairID, _)):
       return (.paired(.joiner(pairID: pairID)), [])
@@ -165,12 +166,14 @@ public enum PairingMachine: Machine {
     case (.creating, .failed(let failure, _)), (.claiming, .failed(let failure, _)):
       return (.choosing(failure: failure, request: state.request), [])
 
-    case (.waiting, .failed(let failure, _)):
+    case (.waiting(let code, let expiresAt, let request, let misses), .failed(let failure, _)):
       // A check that cannot be answered leaves the invite showing; only a lost session ends it.
       if failure == .signedOut {
         return (.choosing(failure: failure, request: state.request), [.forgetInvite])
       }
-      return (state, [])
+      return (
+        .waiting(code: code, expiresAt: expiresAt, request: request, misses: misses + 1), []
+      )
 
     case (.waiting, .cancelled):
       return (.choosing(failure: nil, request: request), [.forgetInvite])
@@ -196,6 +199,22 @@ public enum PairingMachine: Machine {
 }
 
 extension PairingMachine {
+  /// How long a shown invite waits before its next check: 6 s, doubled for each check in a row that got
+  /// no answer (a refusal for too many requests among them), up to the rate limiter's one-minute window.
+  public static func checkDelay(misses: Int) -> Duration {
+    .seconds(min(6 << min(misses, 4), 60))
+  }
+
+  /// When a shown invite is checked next; nil when no invite is out or it has run out. `now` in epoch
+  /// milliseconds.
+  public static func nextCheck(_ state: State, now: Int) -> Duration? {
+    switch state {
+    case .waiting(_, let expiresAt, _, let misses):
+      expiresAt > now ? checkDelay(misses: misses) : nil
+    case .choosing, .creating, .claiming, .paired: nil
+    }
+  }
+
   /// The calls the outputs make, on `api`. A partner's claim shows as `GET /v1/pair` answering.
   public static func run(_ output: Output, api: APIClient, invites: InviteKeeper) async -> Event? {
     switch output {

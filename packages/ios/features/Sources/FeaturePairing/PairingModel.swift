@@ -7,9 +7,6 @@ import Transport
 @MainActor
 @Observable
 public final class PairingModel {
-  /// How often a shown invite is checked for a claim.
-  public static let checkEvery = Duration.seconds(3)
-
   private let store: Store<PairingMachine>
 
   public var state: PairingMachine.State { store.state }
@@ -20,7 +17,9 @@ public final class PairingModel {
       $0.expiresAt > Int(now.timeIntervalSince1970 * 1000) ? $0 : nil
     }
     let initial =
-      kept.map { PairingMachine.State.waiting(code: $0.code, expiresAt: $0.expiresAt, request: 0) }
+      kept.map {
+        PairingMachine.State.waiting(code: $0.code, expiresAt: $0.expiresAt, request: 0, misses: 0)
+      }
       ?? .initial
     store = Store<PairingMachine>(initial: initial) { output in
       await PairingMachine.run(output, api: api, invites: invites)
@@ -30,7 +29,16 @@ public final class PairingModel {
   public func createInvite() { store.send(.createRequested) }
   public func submit(code: String) { store.send(.codeSubmitted(code)) }
   public func cancel() { store.send(.cancelled) }
+  /// Asks whether the partner has claimed the shown invite.
   public func tick() { store.send(.ticked) }
+  /// When the shown invite is checked next; nil while none is out or it has run out.
+  public func nextCheck(now: Date = .now) -> Duration? {
+    PairingMachine.nextCheck(state, now: Int(now.timeIntervalSince1970 * 1000))
+  }
+  /// While an invite is shown.
+  public var isWaiting: Bool {
+    if case .waiting = state { true } else { false }
+  }
   public func settled() async { await store.settled() }
 }
 

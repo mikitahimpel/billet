@@ -109,6 +109,22 @@ private nonisolated final class FakeListRoom: @unchecked Sendable {
         #expect(lena.pendingLists.isEmpty && max.pendingLists.isEmpty)
     }
 
+    @Test func twoPhonesThatBothFoundTheRoomEmptyMakeOneSetOfStarterLists() async {
+        defer { clean() }
+        let room = FakeListRoom()
+        let (lena, lenas) = phone("L", file: 0)
+        let (max, maxs) = phone("M", file: 1)
+        // Both read the new pair's room before either list reached it.
+        lena.mirrorLists([], me: "L")
+        max.mirrorLists([], me: "M")
+        await lenas.connect(room.sync(as: "user-l"))
+        await maxs.connect(room.sync(as: "user-m"))
+        await lenas.refresh()
+        #expect(room.lists.map(\.kind.rawValue).sorted() == ["groceries", "travel", "watch"])
+        #expect(lena.lists.map(\.id) == max.lists.map(\.id))
+        #expect(lena.lists.count == 3)
+    }
+
     @Test func listsBothPhonesMadeBeforePairingAreBothKept() async {
         defer { clean() }
         let room = FakeListRoom()

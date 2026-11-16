@@ -105,15 +105,6 @@ import Wire
         else { return }
         pairing.createInvite()
       }
-      // The inviter waits here; the moment the partner claims the code, the page moves on.
-      .task(id: waitingCode) {
-        guard waitingCode != nil, let pairing else { return }
-        let every = type(of: pairing).checkEvery
-        while !Task.isCancelled {
-          do { try await Task.sleep(for: every) } catch { return }
-          pairing.tick()
-        }
-      }
       .onChange(of: isPaired || alreadyPaired, initial: true) { _, joined in
         guard joined else { return }
         flow.partnerJoined()
@@ -134,14 +125,6 @@ import Wire
 
     func clearFailure() {
       if case .choosing(.some, _)? = pairing?.onboardingState { pairing?.cancel() }
-    }
-
-    /// The shown invite's code while the invite page is up.
-    private var waitingCode: String? {
-      guard flow.page == .invite, case .waiting(let code, _, _)? = pairing?.onboardingState else {
-        return nil
-      }
-      return code
     }
 
     private var isPaired: Bool {

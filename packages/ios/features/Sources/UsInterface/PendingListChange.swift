@@ -65,7 +65,23 @@ public struct PendingListChange: Codable, Hashable, Sendable {
   }
 
   /// The changes that put this phone's own lists in the room: each list the room lacks, its items oldest first,
-  /// and their ticks. An empty starter list is left out when the room already has one of its kind.
+  /// and their ticks. An empty starter list is left out when the room already has one of its kind, and goes under
+  /// its kind's `starterID`, so the two phones of a new pair, both reading an empty room, make one of each.
+  /// The same on every phone; the room keeps the first list made under an id.
+  public static func starterID(_ kind: ListKind) -> UUID {
+    let last =
+      switch kind {
+      case .watch: "1"
+      case .groceries: "2"
+      case .travel: "3"
+      case .food: "4"
+      case .books: "5"
+      case .bucket: "6"
+      case .custom: "7"
+      }
+    return UUID(uuidString: "0D1E5000-57A2-4E00-8000-00000000000\(last)")!
+  }
+
   public static func upload(_ local: [UsList], missingFrom room: [UsList], by me: String)
     -> [PendingListChange]
   {
@@ -76,7 +92,7 @@ public struct PendingListChange: Codable, Hashable, Sendable {
       let starter =
         list.items.isEmpty && list.kind != .custom && list.title == list.kind.defaultTitle
       if starter && kinds.contains(list.kind) { continue }
-      let id = UsStore.key(list.id)
+      let id = UsStore.key(starter ? starterID(list.kind) : list.id)
       changes.append(
         PendingListChange(
           change: .createList(
