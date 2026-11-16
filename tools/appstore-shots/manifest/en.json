@@ -48,8 +48,8 @@
       ]
     },
     {
-      "id": "game",
-      "raw": "game",
+      "id": "kitty",
+      "raw": "kitty",
       "bg": "light",
       "tag": "Your shared cat",
       "headline": "Raise a kitty {together}",
@@ -64,8 +64,8 @@
         {
           "text": "Earn coins as a team",
           "emoji": "🪙",
-          "x": 50,
-          "y": 61,
+          "x": 46,
+          "y": 74,
           "rotate": 2
         }
       ]

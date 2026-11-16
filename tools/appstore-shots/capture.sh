@@ -16,6 +16,7 @@ args_for() {
   case "$1" in
     room) echo "" ;;
     bedroom) echo "-room city" ;;
+    kitty) echo "" ;;
     game) echo "-perf.game laser" ;;
     mochi) echo "-landingGo pet" ;;
     groceries) echo "-landingGo groceries" ;;
@@ -28,7 +29,7 @@ args_for() {
   esac
 }
 PANELS=("$@")
-[ ${#PANELS[@]} -eq 0 ] && PANELS=(room bedroom game moments shop days)
+[ ${#PANELS[@]} -eq 0 ] && PANELS=(room bedroom kitty moments shop days)
 
 UDID=$(xcrun simctl list devices -j | python3 -c "
 import json,sys
@@ -80,6 +81,8 @@ for panel in "${PANELS[@]}"; do
   xcrun simctl launch "$UDID" com.ourio.app -onboardingDone YES -uitestNoHints YES -design.look dusk \
     -landingDemo YES $(args_for "$panel") >/dev/null
   sleep "${SETTLE:-14}"
+  # Mochi leaves the donut bed for the window seat about four minutes after a launch and faces the camera.
+  [ "$panel" = kitty ] && sleep "${KITTY_SETTLE:-270}"
   xcrun simctl io "$UDID" screenshot --type=png "$OUT/$panel.png"
   echo "captured $panel"
 done

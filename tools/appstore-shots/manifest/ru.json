@@ -48,8 +48,8 @@
       ]
     },
     {
-      "id": "game",
-      "raw": "game",
+      "id": "kitty",
+      "raw": "kitty",
       "bg": "light",
       "tag": "Ваша кошка Мочи",
       "headline": "Растите котёнка {вместе}",
