@@ -118,9 +118,54 @@ private let profile = Wire.CatProfile(
         init(_ pronouns: CatPronouns?) { self.pronouns = pronouns }
     }
 
-    private func life(chosen: Chosen = Chosen(nil)) -> CatLife {
-        CatLife(defaults: defaults, formerOutbox: formerOutbox, catName: { "Pancake" }, catCoat: { "ginger" },
-                chosenPronouns: { chosen.pronouns }, adoptPronouns: { chosen.pronouns = $0 })
+    /// The name and coat this phone wears, as the app group and the defaults would keep them.
+    private final class Look {
+        var name: String
+        var coat: String
+        var taken = 0
+        init(_ name: String = "Pancake", _ coat: String = "ginger") {
+            self.name = name
+            self.coat = coat
+        }
+    }
+
+    private func life(chosen: Chosen = Chosen(nil), look: Look = Look()) -> CatLife {
+        CatLife(defaults: defaults, formerOutbox: formerOutbox, catName: { look.name }, catCoat: { look.coat },
+                chosenPronouns: { chosen.pronouns }, adoptPronouns: { chosen.pronouns = $0 },
+                takeLook: { name, coat in
+                    look.name = name
+                    look.coat = coat
+                    look.taken += 1
+                })
+    }
+
+    @Test func thePhoneThatJoinedTakesTheInvitersNameAndCoat() async {
+        let room = FakeCatRoom(profile: profile)
+        let look = Look("Tofu", "grey")
+        let life = life(look: look)
+        await life.connect(room.client, pair: pair)
+        #expect(look.name == "Pancake")
+        #expect(look.coat == "ginger")
+        await life.sync()
+        #expect(look.taken == 1)
+        #expect(room.state.withLock { $0.adoptions }.isEmpty)
+    }
+
+    @Test func thePhoneThatJoinedNeverAdoptsAndTakesTheInvitersCatOnceSheIsThere() async {
+        CatLife.markJoined(in: defaults)
+        let room = FakeCatRoom()
+        let look = Look("Tofu", "grey")
+        let life = life(look: look)
+        await life.connect(room.client, pair: pair)
+        #expect(room.state.withLock { $0.adoptions }.isEmpty)
+        room.state.withLock { $0.profile = profile }
+        await life.sync()
+        #expect(look.name == "Pancake")
+        #expect(look.coat == "ginger")
+        #expect(room.state.withLock { $0.adoptions }.isEmpty)
+
+        CatLife.forgetJoin(in: defaults)
+        #expect(defaults.object(forKey: CatLife.joinedKey) == nil)
     }
 
     /// Lets the outbox's own task run.

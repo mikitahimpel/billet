@@ -48,8 +48,10 @@ public final class CoupleStore {
 
   public func name(of partner: String) -> String { couple.name(of: partner) }
 
-  public func initial(of partner: String) -> String {
-    String(name(of: partner).prefix(1)).uppercased()
+  /// Nil for the paired partner whose name this phone doesn't have.
+  public func initial(of partner: String) -> String? {
+    guard !couple.isUnknownPartner(partner) else { return nil }
+    return String(name(of: partner).prefix(1)).uppercased()
   }
 
   public func update(names: [String: String], togetherSince: Date) {

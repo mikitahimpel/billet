@@ -15,6 +15,14 @@ enum InviteInput {
     return lengths.contains(bare.count) && code.count == bare.count ? code : nil
   }
 
+  /// What the code field takes from a paste: the code or invite link in it, the shared message included, or else
+  /// its code-like symbols; empty when there are none.
+  static func pasted(_ text: String) -> String {
+    code(in: text)
+      ?? text.split(whereSeparator: \.isWhitespace).lazy.compactMap { code(in: String($0)) }.first
+      ?? cleaned(text)
+  }
+
   /// What was typed or pasted, kept to the symbols a code has, up to the App Review pair's longer code.
   static func cleaned(_ typed: String) -> String {
     String(

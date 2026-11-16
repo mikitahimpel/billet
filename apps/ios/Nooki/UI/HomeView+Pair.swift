@@ -51,7 +51,13 @@ extension HomeView {
             texts: session.textSync(notes: state.notes, partner: state.otherPartner), shop: state.shop,
             lists: state.lists, moods: { [state] in state.moodSync?.received($0) }, streak: state.streak,
             cat: { [room] in room.catEntryArrived($0) }, lastCatSeq: { [room] in room.lastCatSeq },
-            opened: opened)
+            opened: opened,
+            catSaved: { [room, state] in
+                Task {
+                    await room.syncCat()
+                    state.refreshPronouns()
+                }
+            })
     }
 
     /// The games first: they are small, and a photo downloading below can take a while. The summary is three reads:

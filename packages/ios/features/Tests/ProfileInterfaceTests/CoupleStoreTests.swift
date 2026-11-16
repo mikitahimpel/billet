@@ -55,4 +55,20 @@ import Testing
     #expect(couple.initial(of: "M") == "M")
     #expect(file.couple?.togetherSince == .distantPast)
   }
+
+  @Test func theUnnamedPartnerOfAPairHasNoInitial() {
+    let file = File()
+    let couple = store(file)
+    couple.update(names: ["L": "Sam"], togetherSince: .distantPast)
+    #expect(couple.initial(of: "M") == "M")
+    couple.adopt(pairID: "p", me: "u1", partner: "u2")
+    #expect(couple.initial(of: "L") == "S")
+    #expect(couple.initial(of: "M") == nil)
+    #expect(couple.name(of: "M") == "Partner")
+    couple.update(names: ["L": "Sam", "M": "Mia"], togetherSince: .distantPast)
+    #expect(couple.initial(of: "M") == "M")
+    #expect(couple.name(of: "M") == "Mia")
+    couple.update(names: [:], togetherSince: .distantPast)
+    #expect(couple.initial(of: "L") == "L")
+  }
 }
