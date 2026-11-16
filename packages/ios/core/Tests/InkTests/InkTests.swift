@@ -98,6 +98,23 @@ func referenceDrawing() -> [Stroke] {
     }
   }
 
+  @Test func aDrawingOverTheBudgetKeepsItsFirstStrokesThatFit() throws {
+    let scribble = (0..<60).flatMap { _ in referenceDrawing() }
+    #expect(throws: InkError.self) { try InkEncoder.encodeWithinBudget(scribble) }
+
+    let kept = try InkEncoder.encodeKeepingWhatFits(scribble)
+    #expect(!kept.strokes.isEmpty)
+    #expect(kept.strokes.count < scribble.count)
+    #expect(try InkEncoder.byteCount(kept) <= InkEncoder.Parameters().budget)
+    #expect(kept.strokes.first?.color == scribble.first?.color)
+  }
+
+  @Test func aDrawingThatFitsKeepsEveryStroke() throws {
+    let drawing = referenceDrawing()
+    #expect(
+      try InkEncoder.encodeKeepingWhatFits(drawing) == InkEncoder.encodeWithinBudget(drawing))
+  }
+
   @Test func roundTripStaysWithinQuantisation() throws {
     let drawing = referenceDrawing()
     let parameters = InkEncoder.Parameters(tolerance: 0)

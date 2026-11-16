@@ -9,7 +9,7 @@ import UsInterface
 enum BoardFaces {
     /// The newest `BoardRoomScene.slots` cards, newest first: the notes and doodles, and the photos pinned to the wall
     /// as polaroids.
-    static func pins(state: HomeState) async -> [BoardPin] {
+    static func pins(state: HomeState, paired: Bool) async -> [BoardPin] {
         enum Card { case note(Note), photo(Moment) }
         let cards = (state.notes.notes.map { (date: $0.date, card: Card.note($0)) }
             + state.moments.pinned.map { (date: $0.date, card: Card.photo($0)) })
@@ -20,9 +20,12 @@ enum BoardFaces {
         for (_, card) in cards {
             switch card {
             case .note(let note):
-                let key = "note \(note.id) \(note.hashValue)" as NSString
+                let unsent = UnsentMark.shows(note.unsent, paired: paired)
+                let key = "note \(note.id) \(note.hashValue) \(unsent)" as NSString
                 var face = faces.object(forKey: key)
-                if face == nil { face = render(NoteFace(note: note, doodle: await doodle(note)), as: key) }
+                if face == nil {
+                    face = render(NoteFace(note: note, doodle: await doodle(note), unsent: unsent), as: key)
+                }
                 if let face {
                     pins.append(BoardPin(id: note.id, face: face, size: [0.12, 0.12]))
                 }
@@ -47,8 +50,10 @@ enum BoardFaces {
         return pins
     }
 
-    static func key(state: HomeState) -> [String] {
-        state.notes.notes.prefix(BoardRoomScene.slots).map(\.id.uuidString)
+    static func key(state: HomeState, paired: Bool) -> [String] {
+        state.notes.notes.prefix(BoardRoomScene.slots).map {
+            "\($0.id)\(UnsentMark.shows($0.unsent, paired: paired) ? " unsent" : "")"
+        }
             + state.moments.pinned.map { "\($0.id)\($0.caption)" }
     }
 
@@ -73,6 +78,7 @@ enum BoardFaces {
 private struct NoteFace: View {
     let note: Note
     let doodle: UIImage?
+    let unsent: Bool
 
     var body: some View {
         ZStack(alignment: .bottomTrailing) {
@@ -90,10 +96,13 @@ private struct NoteFace: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
 
-            Text("— \(note.author)")
-                .font(.custom("Noteworthy-Bold", size: 15))
-                .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
-                .padding(10)
+            HStack(spacing: Space.xs) {
+                if unsent { UnsentMark(size: 14) }
+                Text("— \(note.author)")
+                    .font(.custom("Noteworthy-Bold", size: 15))
+            }
+            .foregroundStyle(Color(hex: note.inkHex).opacity(0.7))
+            .padding(10)
         }
         .frame(width: 240, height: 240)
         .postage(of: note, width: 240)
