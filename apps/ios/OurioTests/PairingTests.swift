@@ -84,12 +84,12 @@ struct ServerSessionPairingTests {
     private let defaults = UserDefaults(suiteName: "ServerSessionPairingTests-\(UUID().uuidString)")!
 
     /// The waits `watchPair` asked for, in order; each one returns at once.
-    final class Waits: Sendable {
+    nonisolated final class Waits: Sendable {
         let list = Mutex<[Duration]>([])
     }
 
     /// `GET /v1/pair` throwing each of `errors` in turn, then answering with the pair.
-    final class PairAnswers: Sendable {
+    nonisolated final class PairAnswers: Sendable {
         let calls = Mutex(0)
         let errors: [TransportError]
 
