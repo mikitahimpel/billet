@@ -248,8 +248,7 @@
     "apps/ios/Nooki/Room/Games/GameView.swift": 1,
     "apps/ios/Nooki/Scene/DioramaView.swift": 1,
     "apps/ios/Nooki/UI/PairingSheet.swift": 1,
-    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView+Pieces.swift": 1,
-    "packages/ios/features/Sources/FeatureUs/WishEditor.swift": 1
+    "packages/ios/features/Sources/FeatureOnboarding/OnboardingView+Pieces.swift": 1
   },
   "tip": {},
   "text-role": {

@@ -80,13 +80,10 @@
           .keyboardType(.URL)
           .textInputAutocapitalization(.never)
           .autocorrectionDisabled()
-        PasteButton(payloadType: URL.self) { urls in
+        PasteCapsuleButton(URL.self, look: .iconOnly) { urls in
           guard let pasted = urls.first else { return }
           Task { @MainActor in link = pasted.absoluteString }
         }
-        .labelStyle(.iconOnly)
-        .buttonBorderShape(.capsule)
-        .tint(.honey)
       }
     }
 
