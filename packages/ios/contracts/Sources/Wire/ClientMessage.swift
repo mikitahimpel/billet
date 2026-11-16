@@ -15,6 +15,11 @@ public enum ClientMessage: Codable, Hashable, Sendable {
   case strokePoints(id: Int, points: [Point])
   case strokeEnd(id: Int)
   case clear
+  /// Finished strokes sent again whole, for a partner who lost them or saw them undone; each
+  /// replaces the partner's stroke with its id. At most ``LiveStroke/maxPerFrame``.
+  case strokesShown([LiveStroke])
+  /// Every finished stroke on the sender's canvas now; the partner drops the sender's others.
+  case strokesKept(ids: [Int])
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -34,6 +39,8 @@ public enum ClientMessage: Codable, Hashable, Sendable {
     case color
     case width
     case points
+    case strokes
+    case ids
   }
 
   public init(from decoder: any Decoder) throws {
@@ -66,6 +73,10 @@ public enum ClientMessage: Codable, Hashable, Sendable {
       self = .strokeEnd(id: try container.decode(Int.self, forKey: .id))
     case "Clear":
       self = .clear
+    case "StrokesShown":
+      self = .strokesShown(try LiveStroke.decodeShown(container, forKey: .strokes))
+    case "StrokesKept":
+      self = .strokesKept(ids: try LiveStroke.decodeKept(container, forKey: .ids))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -108,6 +119,12 @@ public enum ClientMessage: Codable, Hashable, Sendable {
       try container.encode(id, forKey: .id)
     case .clear:
       try container.encode("Clear", forKey: .tag)
+    case .strokesShown(let strokes):
+      try container.encode("StrokesShown", forKey: .tag)
+      try container.encode(strokes, forKey: .strokes)
+    case .strokesKept(let ids):
+      try container.encode("StrokesKept", forKey: .tag)
+      try container.encode(ids, forKey: .ids)
     }
   }
 }

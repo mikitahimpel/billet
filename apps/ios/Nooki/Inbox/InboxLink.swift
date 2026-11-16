@@ -80,7 +80,7 @@ final class InboxLink {
                 case .catEntryAdded(let entry): await handlers.catEntry(entry)
                 case .catSaved: await handlers.catSaved()
                 case .presence(let presence): await handlers.presence(presence)
-                case .stroke, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear:
+                case .stroke, .strokeBegin, .strokePoints, .strokeEnd, .strokeDropped, .clear, .strokesShown, .strokesKept:
                     break
                 }
             },

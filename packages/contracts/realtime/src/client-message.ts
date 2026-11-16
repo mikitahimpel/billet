@@ -18,6 +18,29 @@ export const LivePoints = Schema.Array(Point).check(
   Schema.isMaxLength(maxLivePoints),
 );
 
+/** Points per `StrokesShown` frame, across its strokes; a longer stroke is thinned to fit. */
+export const maxShownPoints = 800;
+/** Strokes per `StrokesShown` frame. */
+export const maxShownStrokes = 64;
+/** Ids per `StrokesKept` frame, the live drawing's stroke limit. */
+export const maxKeptStrokes = 500;
+
+/** A finished stroke under the live id its sender gave it. */
+export const ShownStroke = Schema.Struct({
+  id: LiveStrokeId,
+  color: Color,
+  width: Schema.Finite,
+  points: Schema.Array(Point).check(Schema.isNonEmpty(), Schema.isMaxLength(maxShownPoints)),
+});
+export type ShownStroke = typeof ShownStroke.Type;
+
+export const ShownStrokes = Schema.Array(ShownStroke).check(
+  Schema.isNonEmpty(),
+  Schema.isMaxLength(maxShownStrokes),
+);
+
+export const KeptStrokeIds = Schema.Array(LiveStrokeId).check(Schema.isMaxLength(maxKeptStrokes));
+
 export const ClientMessage = Schema.TaggedUnion({
   /** A socket that leaves `lastCatSeq` out is sent no cat frames. Each flag below subscribes to
    * its server message. */
@@ -45,5 +68,9 @@ export const ClientMessage = Schema.TaggedUnion({
   StrokeEnd: { id: LiveStrokeId },
   /** For both partners. */
   Clear: {},
+  /** Finished strokes sent again whole: each replaces the partner's copy with its id. */
+  StrokesShown: { strokes: ShownStrokes },
+  /** Every finished stroke on the sender's canvas now: the partner drops the sender's others. */
+  StrokesKept: { ids: KeptStrokeIds },
 });
 export type ClientMessage = typeof ClientMessage.Type;

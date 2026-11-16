@@ -1630,6 +1630,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     "stroke-points": ClientMessage.cases.StrokePoints.make({ id: 3, points: stroke.points }),
     "stroke-end": ClientMessage.cases.StrokeEnd.make({ id: 3 }),
     clear: ClientMessage.cases.Clear.make({}),
+    "strokes-shown": ClientMessage.cases.StrokesShown.make({
+      strokes: [{ id: 3, color: "#7B4FE0", width: 14, points: stroke.points }],
+    }),
+    "strokes-kept": ClientMessage.cases.StrokesKept.make({ ids: [3, 5] }),
   }),
   fixture("ServerMessage", ServerMessage, {
     stroke: ServerMessage.cases.Stroke.make({ seq: 8, stroke }),
@@ -1651,6 +1655,10 @@ export const catalog: ReadonlyArray<Fixture> = [
     "stroke-end": ServerMessage.cases.StrokeEnd.make({ id: 3 }),
     "stroke-dropped": ServerMessage.cases.StrokeDropped.make({ id: 3 }),
     clear: ServerMessage.cases.Clear.make({}),
+    "strokes-shown": ServerMessage.cases.StrokesShown.make({
+      strokes: [{ id: 3, color: "#7B4FE0", width: 14, points: stroke.points }],
+    }),
+    "strokes-kept": ServerMessage.cases.StrokesKept.make({ ids: [] }),
     "cat-entry-added": ServerMessage.cases.CatEntryAdded.make({
       entry: catEntry(5, "petted", bob),
     }),
