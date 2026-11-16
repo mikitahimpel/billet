@@ -1,9 +1,8 @@
 import SwiftUI
 
 /// A hint: an icon on its tile, a title, a short message, optional actions and a close button, on the
-/// card surface in the app's theme. TipKit hints draw it through the app's `HintStyle`, inside a
-/// popover whose arrow points at the control; anywhere else `.calloutBubble(pointer:)` gives it the
-/// card and an arrow of its own.
+/// card surface in the app's theme. `.calloutBubble(pointer:)` gives it the card and an arrow toward
+/// the control it is about.
 public struct Callout<Icon: View, Title: View, Message: View, Actions: View>: View {
   let icon: Icon
   let title: Title
@@ -94,7 +93,7 @@ public struct CalloutPointer: Equatable, Sendable {
 }
 
 extension View {
-  /// The card a `Callout` sits on outside a TipKit popover, with an arrow toward its anchor.
+  /// The card a `Callout` sits on, with an arrow toward its anchor.
   public func calloutBubble(pointer: CalloutPointer? = nil) -> some View {
     modifier(CalloutBubble(pointer: pointer))
   }

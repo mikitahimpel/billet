@@ -21,8 +21,6 @@ nonisolated struct HintStage {
 
 nonisolated extension HintTip {
     var id: String { Self.hintId }
-    /// Once on screen, never again: a popover a sheet pushed away doesn't come back after it.
-    var options: [any TipOption] { [Tips.MaxDisplayCount(1)] }
 }
 
 nonisolated struct PetHint: HintTip {

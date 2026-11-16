@@ -372,6 +372,9 @@ struct HomeView: View {
             }
         }
         .animation(Motion.spring(0.3), value: arranging)
+        .overlay {
+            if hud != .hidden, room.game == nil, !arranging { HintLayer(hints: hints) }
+        }
         .background { TouchWatcher { [quiet] in quiet.send(.touched) } }
         #if DEBUG || LABS_YES
         .overlay(alignment: .topTrailing) {

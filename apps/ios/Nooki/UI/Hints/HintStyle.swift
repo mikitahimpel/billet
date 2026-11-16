@@ -6,38 +6,26 @@ import Design
 import TipKit
 import UsInterface
 
-/// TipKit's look for every hint: the design package's `Callout` card in the app's theme. Its popover's arrow points
-/// at the control it is about, and that control is ringed (`hint(_:arrowEdge:target:)`).
-struct HintStyle: TipViewStyle {
-    let hints: Hints
-
-    func makeBody(configuration: Configuration) -> some View {
-        Callout(close: { hints.close(configuration.tip) }) {
-            configuration.image
-        } title: {
-            configuration.title
-        } message: {
-            configuration.message
-        } actions: {
-            ForEach(configuration.actions) { action in
-                CalloutButton(action: action.handler) { action.label() }
-            }
-        }
-        // The popover is sized by TipKit, which clips a card taller than it allows; chrome caps its text as the header does.
-        .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .onAppear { hints.appeared(configuration.tip) }
+extension View {
+    /// The hint's card, drawn by `HintLayer` with its arrow at this view, and a honey ring around `target` while it
+    /// shows. `arrowEdge` is the card's edge the arrow is on: `.bottom` puts the card above the view.
+    func hint<T: HintTip>(_ tip: T, arrowEdge: Edge, target: some InsettableShape) -> some View {
+        modifier(HintRing(tip: tip, target: target)).modifier(HintAnchor(id: T.hintId, edge: arrowEdge))
     }
 }
 
-extension View {
-    func hintStyle(_ hints: Hints) -> some View {
-        tipViewStyle(HintStyle(hints: hints))
-            .tipBackground(Ink.surface)
-    }
+/// Tells `Hints` where its view is, for the card that points at it.
+private struct HintAnchor: ViewModifier {
+    let id: String
+    let edge: Edge
+    @Environment(Hints.self) private var hints
 
-    /// The hint's popover, with its arrow at this view, and a honey ring around `target` while it shows.
-    func hint<T: HintTip>(_ tip: T, arrowEdge: Edge, target: some InsettableShape) -> some View {
-        modifier(HintRing(tip: tip, target: target)).popoverTip(tip, arrowEdge: arrowEdge)
+    func body(content: Content) -> some View {
+        content
+            .onGeometryChange(for: CGRect.self, of: { $0.frame(in: .global) }) { frame in
+                hints.place(id, HintSpot(frame: frame, edge: edge))
+            }
+            .onDisappear { hints.place(id, nil) }
     }
 }
 
