@@ -193,17 +193,20 @@ struct OurioApp: App {
     private static let isHostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
 }
 
-/// What restarts the pair watch: another launch's session, a sign-in, a pairing, or the app coming to the front.
+/// What restarts the pair watch: another launch's session, a sign-in, a pairing, an invite shown or ended, or the
+/// app coming to the front.
 private struct PairWatch: Equatable {
     let session: ObjectIdentifier?
     let signedIn: Bool
     let paired: Bool
+    let inviting: Bool
     let active: Bool
 
     @MainActor init(session: ServerSession?, active: Bool) {
         self.session = session.map(ObjectIdentifier.init)
         signedIn = session?.isSignedIn ?? false
         paired = session?.isPaired ?? false
+        inviting = session?.pairing.isWaiting ?? false
         self.active = active
     }
 }

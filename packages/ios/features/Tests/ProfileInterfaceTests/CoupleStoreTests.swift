@@ -52,15 +52,16 @@ import Testing
     let couple = store(file)
     couple.update(names: ["L": "  Lu "], togetherSince: .distantPast)
     #expect(couple.name(of: "L") == "Lu")
-    #expect(couple.initial(of: "M") == "M")
+    #expect(couple.initial(of: "L") == "L")
     #expect(file.couple?.togetherSince == .distantPast)
   }
 
-  @Test func theUnnamedPartnerOfAPairHasNoInitial() {
+  @Test func theUnnamedPartnerHasNoInitialPairedOrNot() {
     let file = File()
     let couple = store(file)
     couple.update(names: ["L": "Sam"], togetherSince: .distantPast)
-    #expect(couple.initial(of: "M") == "M")
+    #expect(couple.initial(of: "M") == nil)
+    #expect(couple.name(of: "M") == "Partner")
     couple.adopt(pairID: "p", me: "u1", partner: "u2")
     #expect(couple.initial(of: "L") == "S")
     #expect(couple.initial(of: "M") == nil)
@@ -70,5 +71,11 @@ import Testing
     #expect(couple.name(of: "M") == "Mia")
     couple.update(names: [:], togetherSince: .distantPast)
     #expect(couple.initial(of: "L") == "L")
+    // After an unpair and a pair with someone new, the old partner's monogram is still nobody's name.
+    couple.leavePair()
+    #expect(couple.name(of: "M") == "Partner")
+    couple.adopt(pairID: "p2", me: "u1", partner: "u3")
+    #expect(couple.initial(of: "M") == nil)
+    #expect(couple.name(of: "M") == "Partner")
   }
 }

@@ -20,6 +20,9 @@ const hourMillis = 60 * windowMillis;
 export const limits = {
   auth: 30,
   pairing: 20,
+  // The pair is read while an invite is shown and on each return to the app, by every phone behind
+  // one address; creating and claiming invites stay under `pairing`.
+  pair: 120,
   // A review code is long enough not to be guessed; this keeps anyone from trying all the same.
   review: 5,
   media: 60,
@@ -40,9 +43,8 @@ export const windowOf = (group: LimitedGroup): number => windows[group] ?? windo
 export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname.startsWith("/v1/auth/")) return "auth";
   if (pathname === "/v1/review/claim") return "review";
-  if (pathname === "/v1/invites" || pathname === "/v1/invites/claim" || pathname === "/v1/pair") {
-    return "pairing";
-  }
+  if (pathname === "/v1/invites" || pathname === "/v1/invites/claim") return "pairing";
+  if (pathname === "/v1/pair") return "pair";
   if (pathname === "/v1/pair/report") return "reports";
   if (pathname === "/v1/events") return "events";
   if (pathname === "/v1/onboarding/answers") return "onboarding";

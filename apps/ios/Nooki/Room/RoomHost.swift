@@ -132,6 +132,7 @@ private struct RoomStage: View {
         .onChange(of: input.motes, initial: true) { _, motes in controller.showMotes(motes) }
         .onChange(of: input.rendering.splatRate, initial: true) { _, rate in SplatSkinner.limit(toHertz: rate) }
         .onChange(of: input.sway, initial: true) { _, sway in controller.setSway(sway) }
+        .onChange(of: input.coat) { controller.coatChanged() }
         // Her status is read once a second only while she can be seen; under a cover or a sheet that hides her it
         // waits, and the first look back reads it at once.
         .task(id: input.visibility == .visible && controller.hasHome) {

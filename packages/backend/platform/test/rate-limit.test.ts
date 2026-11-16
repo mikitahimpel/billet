@@ -25,7 +25,7 @@ describe("rate limit groups", () => {
     ["/v1/auth/apple", "auth"],
     ["/v1/invites", "pairing"],
     ["/v1/invites/claim", "pairing"],
-    ["/v1/pair", "pairing"],
+    ["/v1/pair", "pair"],
     ["/v1/media", "media"],
     ["/v1/media/pairs/p/notes/n.png", "media"],
     ["/v1/pair/report", "reports"],
@@ -62,6 +62,16 @@ describe("limitRequest", () => {
     await spend("/v1/auth/challenge", limits.auth + 1);
     expect(await spend("/v1/invites", 1)).toBeUndefined();
     expect(await spend("/v1/auth/challenge", 1, "198.51.100.9")).toBeUndefined();
+  });
+
+  it("reads of the pair spend nothing of the invites' limit", async () => {
+    // Two unpaired phones behind one address, each reading the pair every 6 s while an invite is out.
+    expect(await spend("/v1/pair", 20, "203.0.113.7")).toBeUndefined();
+    expect(await spend("/v1/pair", 20, "203.0.113.7")).toBeUndefined();
+    expect(await spend("/v1/invites", limits.pairing)).toBeUndefined();
+    expect((await spend("/v1/invites/claim", 1))?.status).toBe(429);
+    expect(await spend("/v1/pair", limits.pair - 40)).toBeUndefined();
+    expect((await spend("/v1/pair", 1))?.status).toBe(429);
   });
 
   it("starts counting again in the next window", async () => {

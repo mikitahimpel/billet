@@ -39,16 +39,16 @@ public struct Couple: Codable, Hashable, Sendable {
 
   public var other: String { viewer == partners[0] ? partners[1] : partners[0] }
 
-  /// The partner's own name, or their monogram until they set one. Each phone keeps only its holder's name,
-  /// so once paired the other one, unnamed here, is "Partner" rather than a letter that isn't theirs.
+  /// The holder's own name, or their monogram until they set one. Each phone keeps only its holder's name, so
+  /// the other one, unnamed here, is "Partner" rather than a letter that isn't theirs, paired or not.
   public func name(of partner: String) -> String {
     if let name = chosenName(of: partner) { return name }
     return isUnknownPartner(partner) ? "Partner" : partner
   }
 
-  /// The paired partner whose name this phone doesn't have: drawn without an initial.
+  /// The partner whose name this phone doesn't have: drawn without an initial.
   public func isUnknownPartner(_ partner: String) -> Bool {
-    pair != nil && partner != viewer && chosenName(of: partner) == nil
+    partner != viewer && chosenName(of: partner) == nil
   }
 
   private func chosenName(of partner: String) -> String? {

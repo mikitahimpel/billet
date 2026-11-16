@@ -48,7 +48,7 @@ public final class CoupleStore {
 
   public func name(of partner: String) -> String { couple.name(of: partner) }
 
-  /// Nil for the paired partner whose name this phone doesn't have.
+  /// Nil for the partner whose name this phone doesn't have.
   public func initial(of partner: String) -> String? {
     guard !couple.isUnknownPartner(partner) else { return nil }
     return String(name(of: partner).prefix(1)).uppercased()

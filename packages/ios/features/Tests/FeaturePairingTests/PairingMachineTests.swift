@@ -14,14 +14,14 @@ import Wire
     #expect(outputs == [.createInvite(request: 1)])
 
     (state, outputs) = M.transition(state, .created(code: "ABC", expiresAt: 9, request: 1))
-    #expect(state == .waiting(code: "ABC", expiresAt: 9, request: 1))
+    #expect(state == .waiting(code: "ABC", expiresAt: 9, request: 1, misses: 0))
     #expect(outputs == [.keepInvite(KeptInvite(code: "ABC", expiresAt: 9))])
 
     (state, outputs) = M.transition(state, .ticked)
     #expect(outputs == [.checkPaired(request: 2)])
 
     (state, _) = M.transition(state, .checked(paired: false, request: 2))
-    #expect(state == .waiting(code: "ABC", expiresAt: 9, request: 2))
+    #expect(state == .waiting(code: "ABC", expiresAt: 9, request: 2, misses: 0))
 
     (state, _) = M.transition(state, .ticked)
     (state, outputs) = M.transition(state, .checked(paired: true, request: 3))
@@ -30,7 +30,7 @@ import Wire
   }
 
   @Test func aShownInviteIsForgottenOnlyWhenItEnds() {
-    let waiting = M.State.waiting(code: "ABC", expiresAt: 9, request: 2)
+    let waiting = M.State.waiting(code: "ABC", expiresAt: 9, request: 2, misses: 0)
     #expect(M.transition(waiting, .cancelled).1 == [.forgetInvite])
     #expect(M.transition(waiting, .failed(.signedOut, request: 2)).1 == [.forgetInvite])
     #expect(M.transition(waiting, .failed(.unavailable, request: 2)).1.isEmpty)
@@ -80,17 +80,46 @@ import Wire
   }
 
   @Test func aStaleResultChangesNothing() {
-    let waiting = M.State.waiting(code: "ABC", expiresAt: 9, request: 3)
+    let waiting = M.State.waiting(code: "ABC", expiresAt: 9, request: 3, misses: 0)
     #expect(M.transition(waiting, .checked(paired: true, request: 2)).0 == waiting)
     #expect(M.transition(waiting, .failed(.unavailable, request: 1)).0 == waiting)
   }
 
   @Test func aFailedCheckKeepsTheInviteButALostSessionEndsIt() {
-    let waiting = M.State.waiting(code: "ABC", expiresAt: 9, request: 2)
-    #expect(M.transition(waiting, .failed(.unavailable, request: 2)).0 == waiting)
+    let waiting = M.State.waiting(code: "ABC", expiresAt: 9, request: 2, misses: 0)
+    #expect(
+      M.transition(waiting, .failed(.unavailable, request: 2)).0
+        == .waiting(code: "ABC", expiresAt: 9, request: 2, misses: 1))
     #expect(
       M.transition(waiting, .failed(.signedOut, request: 2)).0
         == .choosing(failure: .signedOut, request: 2))
+  }
+
+  @Test func unansweredChecksSpaceTheNextOnesOutUntilOneIsAnswered() {
+    var state = M.State.waiting(code: "ABC", expiresAt: 9, request: 0, misses: 0)
+    var delays: [Duration] = []
+    for _ in 0..<6 {
+      (state, _) = M.transition(state, .ticked)
+      (state, _) = M.transition(state, .failed(.unavailable, request: state.request))
+      delays.append(M.nextCheck(state, now: 0)!)
+    }
+    #expect(delays == [12, 24, 48, 60, 60, 60].map { .seconds($0) })
+    // A tick carries the count; only an answer clears it.
+    (state, _) = M.transition(state, .ticked)
+    #expect(M.nextCheck(state, now: 0) == .seconds(60))
+    (state, _) = M.transition(state, .checked(paired: false, request: state.request))
+    #expect(state == .waiting(code: "ABC", expiresAt: 9, request: 7, misses: 0))
+    #expect(M.nextCheck(state, now: 0) == .seconds(6))
+  }
+
+  @Test(arguments: [
+    M.State.initial, .creating(request: 1), .claiming(request: 1), .paired(.inviter),
+    .paired(.joiner(pairID: "p1")), .waiting(code: "ABC", expiresAt: 9, request: 1, misses: 0),
+  ])
+  func onlyAnInviteStillOutIsCheckedAgain(state: M.State) {
+    #expect(M.nextCheck(state, now: 9) == nil)
+    let expected: Duration? = if case .waiting = state { .seconds(6) } else { nil }
+    #expect(M.nextCheck(state, now: 8) == expected)
   }
 
   @Test func cancellingReturnsToChoosingAndDropsALateAnswer() {
@@ -138,7 +167,7 @@ import Wire
     await model.settled()
     model.tick()
     await model.settled()
-    #expect(model.state == .waiting(code: "ABC", expiresAt: 9, request: 2))
+    #expect(model.state == .waiting(code: "ABC", expiresAt: 9, request: 2, misses: 0))
     model.tick()
     await model.settled()
     #expect(model.state == .paired(.inviter))
@@ -152,7 +181,7 @@ import Wire
       return CreateInviteResponse(code: InviteCode("NEW"), expiresAt: 99_000)
     }
     let model = PairingModel(api: api, invites: kept.keeper, now: Date(timeIntervalSince1970: 9))
-    #expect(model.state == .waiting(code: "ABC", expiresAt: 10_000, request: 0))
+    #expect(model.state == .waiting(code: "ABC", expiresAt: 10_000, request: 0, misses: 0))
     model.cancel()
     await model.settled()
     #expect(kept.invite == nil)

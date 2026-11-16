@@ -102,6 +102,22 @@ final class RoomController: RoomControlling, CatStatusProviding {
         if !polaroids.isEmpty { room.setPolaroids(polaroids) }
     }
 
+    /// Builds the rooms again with her in the coat now kept: a built room holds her loaded body. For the joiner, whose
+    /// Home was built before the pair's cat arrived.
+    func coatChanged() {
+        guard let built = home else { return }
+        // The furniture moves over as it stands, so the base it already told of is not told again.
+        let furnished = built.baseFurnished
+        CatRoom.forgetMochi()
+        for room in [home, city, board].compactMap({ $0 }) { room.stop() }
+        home = nil
+        city = nil
+        board = nil
+        load()
+        home?.baseFurnished = furnished
+        prepare(shown)
+    }
+
     /// Returns once the room looks finished, or after `timeout`.
     func ready(timeout: Duration) async {
         await ScreenFrames.until(timeout: timeout) { [weak self] in self?.isReady != false }

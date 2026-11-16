@@ -72,10 +72,13 @@ final class ServerSession {
 
     /// Where `CatLife` reads when this phone entered the partner's code.
     @ObservationIgnored private let defaults: UserDefaults
+    @ObservationIgnored private let sleep: @Sendable (Duration) async throws -> Void
 
-    init(backend: Backend, defaults: UserDefaults = .standard) {
+    init(backend: Backend, defaults: UserDefaults = .standard,
+         sleep: @escaping @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) {
         self.backend = backend
         self.defaults = defaults
+        self.sleep = sleep
         signIn = AnonymousSignInModel(api: backend.api, keys: backend.keys, accounts: backend.accounts)
         appleLink = AppleLinkModel(api: backend.api)
         pairing = PairingModel(api: backend.api, invites: Self.invites(defaults))
@@ -204,6 +207,13 @@ final class ServerSession {
         }
     }
 
+    /// Opens the followed socket again, so it asks for what this phone follows now.
+    func reopenRoomSocket() {
+        guard let inboxLink else { return }
+        inboxLink.disconnect()
+        inboxLink.connect()
+    }
+
     /// The room's socket was heard from within `quietLimit`, or answers a ping; false while it is down or unfollowed.
     func roomSocketIsHealthy(quietLimit: Duration) async -> Bool {
         await inboxLink?.isHealthy(quietLimit: quietLimit) ?? false
@@ -221,17 +231,29 @@ final class ServerSession {
                          receiving: photoReceiving, defaults: .standard) { PhotoUpload(fileAt: $0) }
     }
 
-    /// While the app is in front. Paired, it checks once that the server still has the pair. Unpaired, it asks now,
-    /// since the partner may have entered the code while the app was closed, then every `PairingModel.checkEvery`
-    /// on any screen. Returns once paired or cancelled.
+    /// While the app is in front. Paired, it checks once that the server still has the pair. Unpaired, it asks once,
+    /// since the partner may have entered the code while the app was closed. Only a phone showing an invite that has
+    /// not run out keeps asking, through the pairing, as `PairingMachine.checkDelay` spaces it: the server limits
+    /// how often the phones behind one address may ask. Returns once paired, cancelled, or no invite is out.
     func watchPair() async {
         guard isSignedIn else { return }
         guard !isPaired else { return await confirmPair() }
-        await refreshPair()
-        while !isPaired {
-            do { try await Task.sleep(for: PairingModel.checkEvery) } catch { return }
-            await refreshPair()
+        guard pairing.nextCheck() != nil else { return await refreshPair() }
+        while true {
+            await checkInvite()
+            guard !isPaired, let wait = pairing.nextCheck() else { return }
+            do { try await sleep(wait) } catch { return }
         }
+    }
+
+    /// The shown invite's claim ends the pairing here as it would on the open sheet or invite page.
+    private func checkInvite() async {
+        let model = pairing
+        model.tick()
+        await model.settled()
+        guard model === pairing, !isPaired, case .paired(let role) = model.state else { return }
+        paired(nil, role: role, resetsPairing: false)
+        Task { await learnPairID() }
     }
 
     /// Takes the pair the server has for this account; unpaired, offline or signed out, nothing changes. The
