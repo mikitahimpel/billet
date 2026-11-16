@@ -54,9 +54,11 @@ struct StreakCard: View {
           }
           .buttonStyle(PrimaryButtonStyle())
         }
-        if daysTogether == nil {
-          PairToPlayButton()
-        }
+        #if canImport(UIKit)
+          if daysTogether == nil {
+            PairToPlayButton()
+          }
+        #endif
       }
     }
     .accessibilityElement(children: .combine)
