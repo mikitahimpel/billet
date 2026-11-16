@@ -106,7 +106,8 @@ public struct OurioSnapshot: Hashable, Sendable {
   public var date: Date
   public var viewer: String
   public var partner: String
-  public var daysTogether: Int
+  /// Nil until paired.
+  public var daysTogether: Int?
   public var next: NextEvent?
   public var partnerMood: MoodCheckIn?
   public var myMood: MoodCheckIn?
@@ -121,7 +122,7 @@ public struct OurioSnapshot: Hashable, Sendable {
   public var catAvatar = "MochiPortrait"
 
   public init(
-    date: Date, viewer: String, partner: String, daysTogether: Int, next: NextEvent? = nil,
+    date: Date, viewer: String, partner: String, daysTogether: Int?, next: NextEvent? = nil,
     partnerMood: MoodCheckIn? = nil, myMood: MoodCheckIn? = nil, list: ListPreview? = nil,
     planned: PlannedPreview? = nil, idea: IdeaPreview? = nil, moment: MomentPreview? = nil,
     isPurring: Bool, isNight: Bool, catName: String = CatProfile.defaultName,
@@ -186,7 +187,7 @@ extension OurioSnapshot {
     catAvatar = CatProfile.avatar()
 
     let today = cal.startOfDay(for: date)
-    next = us.upcoming(togetherSince: couple.togetherSince, limit: 1, from: date).first.map {
+    next = us.upcoming(togetherSince: couple.pairedSince, limit: 1, from: date).first.map {
       NextEvent(
         title: $0.title, icon: $0.icon, date: $0.date,
         daysLeft: cal.dateComponents([.day], from: today, to: cal.startOfDay(for: $0.date)).day ?? 0

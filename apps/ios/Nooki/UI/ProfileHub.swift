@@ -1,6 +1,7 @@
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
+import ProfileInterface
 import SwiftUI
 import Design
 import UsInterface
@@ -77,7 +78,7 @@ struct ProfileHub: View {
                     .font(.ourioTitle)
                     .foregroundStyle(Ink.text)
                     .lineLimit(1)
-                Text("Day \(state.daysTogether) together")
+                Text(Couple.dayLine(state.daysTogether))
                     .font(.ourioCaption)
                     .foregroundStyle(Ink.textSecondary)
             }

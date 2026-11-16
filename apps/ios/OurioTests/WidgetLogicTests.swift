@@ -102,8 +102,11 @@ private func snapshot(next: Int? = 18, partnerMood: MoodCheckIn? = nil, planned:
 }
 
 @Suite struct CoupleTests {
-    @Test func starterIsDayOne() {
-        #expect(Couple.starter(now: noon).daysTogether(on: noon) == 1)
+    @Test func starterHasNoDaysTogetherUntilPaired() {
+        var couple = Couple.starter(now: noon)
+        #expect(couple.daysTogether(on: noon) == nil)
+        couple.pair = PairMembers(pairID: "p", users: ["L": "a", "M": "b"])
+        #expect(couple.daysTogether(on: noon) == 1)
     }
 
     @Test func otherPartner() {

@@ -2,6 +2,7 @@
   import MomentsInterface
   import WidgetInterface
   import WidgetUI
+  import ProfileInterface
   import SwiftUI
   import Design
   import UsInterface
@@ -54,7 +55,7 @@
         .scrollIndicators(.hidden)
         .scrollHeader {
           VStack(spacing: 0) {
-            SheetSubtitle(text: "Day \(state.daysTogether) together")
+            SheetSubtitle(text: Couple.dayLine(state.daysTogether))
             HStack(spacing: Space.s) {
               FilterChip("Soon", isSelected: !showsMonth) {
                 withAnimation(Motion.spring(Motion.quick)) { showsMonth = false }

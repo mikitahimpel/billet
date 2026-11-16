@@ -12,7 +12,7 @@ struct MochiSheetContent<Portrait: View, ExtraCare: View>: View {
     let level: Int
     /// The way to the next level, 0...1.
     let progress: Double
-    let days: Int
+    let days: Int?
     var care: (NeedCare) -> Void
     var declined: (NeedCare) -> String? = { _ in nil }
     /// Nil where the pronouns can't be changed, as in the gallery.
@@ -47,7 +47,7 @@ struct MochiHero<Portrait: View>: View {
     let mood: String
     let level: Int
     let progress: Double
-    let days: Int
+    let days: Int?
     @ViewBuilder var portrait: Portrait
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
@@ -79,8 +79,10 @@ struct MochiHero<Portrait: View>: View {
                 .foregroundStyle(Ink.text)
                 .contentTransition(.opacity)
                 .fixedSize(horizontal: false, vertical: true)
-            Chip("With you two for \(days == 1 ? "1 day" : "\(days) days")", symbol: "heart.fill",
-                 style: .tinted(.blushPink))
+            if let days {
+                Chip("With you two for \(days == 1 ? "1 day" : "\(days) days")", symbol: "heart.fill",
+                     style: .tinted(.blushPink))
+            }
         }
     }
 

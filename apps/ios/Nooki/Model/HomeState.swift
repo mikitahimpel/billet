@@ -293,8 +293,8 @@ final class HomeState {
     }
 
     var partners: (String, String) { (profile.couple.partners[0], profile.couple.partners[1]) }
-    var daysTogether: Int { profile.couple.daysTogether() }
-    var togetherSince: Date { profile.couple.togetherSince }
+    var daysTogether: Int? { profile.couple.daysTogether() }
+    var togetherSince: Date? { profile.couple.pairedSince }
 
     /// Which partner is holding the phone: the signed-in user once paired, a switch on the Us tab before that.
     var viewer: String {
