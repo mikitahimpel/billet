@@ -4,6 +4,7 @@ import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { DemoBots } from "@billet/backend-demo-partner/demo-bots";
 import { PairMoods } from "@billet/backend-pairing/pair-moods";
+import { PairProfileRepository } from "@billet/backend-pairing/pair-profile-repository";
 import { PairingObserver } from "@billet/backend-pairing/pairing-observer";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
@@ -35,6 +36,7 @@ const setup = () => {
         Layer.succeed(PairingRepository, pairs),
         observer,
         PairMoods.none,
+        PairProfileRepository.none,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
       ),
@@ -187,6 +189,7 @@ const reviewLayerOf = () => {
         Layer.succeed(PairingRepository, makeInMemoryPairingRepository().repository),
         PairingObserver.silent,
         PairMoods.none,
+        PairProfileRepository.none,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
       ),

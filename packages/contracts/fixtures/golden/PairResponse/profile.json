@@ -1,0 +1,16 @@
+{
+  "members": [
+    "user-alice",
+    "user-bob"
+  ],
+  "moods": [],
+  "names": [
+    {
+      "displayName": "Sam",
+      "userId": "user-bob"
+    }
+  ],
+  "pairId": "pair-1",
+  "pairedAt": 1760000000000,
+  "togetherSince": "2026-11-05"
+}

@@ -322,6 +322,13 @@ extension APIClient {
       shopCatalog: { () async throws(TransportError) in
         try await http.perform(
           try await request(Routes.getShopCatalog, signed: false), as: ShopCatalogResponse.self)
+      },
+      setDisplayName: { (body) async throws(TransportError) in
+        try await http.performEmpty(try await json(Routes.setDisplayName, signed: true, body: body))
+      },
+      setTogetherSince: { (body) async throws(TransportError) in
+        try await http.performEmpty(
+          try await json(Routes.setTogetherSince, signed: true, body: body))
       })
   }
 }

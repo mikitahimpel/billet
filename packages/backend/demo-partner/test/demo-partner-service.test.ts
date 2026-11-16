@@ -3,6 +3,7 @@ import { Digest, SecureRandom } from "effect/crypto";
 import { describe, expect, it } from "vitest";
 import { AccountDeletion } from "@billet/backend-account/account-deletion";
 import { PairMoods } from "@billet/backend-pairing/pair-moods";
+import { PairProfileRepository } from "@billet/backend-pairing/pair-profile-repository";
 import { PairingObserver } from "@billet/backend-pairing/pairing-observer";
 import { PairingRepository } from "@billet/backend-pairing/pairing-repository";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
@@ -53,6 +54,7 @@ const setup = ({ botsDown = false } = {}) => {
         Layer.succeed(PairingRepository, pairs),
         observer,
         PairMoods.none,
+        PairProfileRepository.none,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
       ),
@@ -106,7 +108,7 @@ describe("DemoPartnerService", () => {
     expect(bots).toEqual([`start ${created.pairId} ${ana} ${bot}`]);
     expect(created.members[0]).toBe(ana);
     expect(bot).not.toBe(ana);
-    expect(await run((_, pairing) => pairing.pair(ana))).toEqual(created);
+    expect(await run((_, pairing) => pairing.pair(ana))).toMatchObject(created);
     expect(paired).toEqual([{ members: expect.arrayContaining([ana, bot]), claimer: ana }]);
     expect([...demos.bots]).toEqual([bot]);
   });
@@ -114,7 +116,7 @@ describe("DemoPartnerService", () => {
   it("pairs the caller with a bot whose room could not wake it", async () => {
     const { run } = setup({ botsDown: true });
     const created = await run((demo) => demo.create(ana));
-    expect(await run((_, pairing) => pairing.pair(ana))).toEqual(created);
+    expect(await run((_, pairing) => pairing.pair(ana))).toMatchObject(created);
   });
 
   it("gives each caller a bot of its own", async () => {

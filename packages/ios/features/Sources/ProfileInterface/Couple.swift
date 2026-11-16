@@ -25,6 +25,8 @@ public struct Couple: Codable, Hashable, Sendable {
   public var names: [String: String]? = nil
   /// Nil until this phone is paired on a server.
   public var pair: PairMembers? = nil
+  /// True once the holder chose `togetherSince` and no pair has taken a day of its own yet.
+  public var togetherSinceChosen: Bool? = nil
 
   public init(
     partners: [String], togetherSince: Date, viewer: String, names: [String: String]? = nil,

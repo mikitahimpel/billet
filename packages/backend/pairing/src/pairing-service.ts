@@ -8,7 +8,11 @@ import {
 } from "@billet/contracts-domain/ids";
 import { PairId } from "@billet/contracts-domain/pair-id";
 import type { CreateInviteResponse } from "@billet/contracts-http-api/invite";
-import type { PairResponse } from "@billet/contracts-http-api/pair";
+import type {
+  DisplayName,
+  PairResponse,
+  SetTogetherSinceRequest,
+} from "@billet/contracts-http-api/pair";
 import type { ReportPartnerRequest } from "@billet/contracts-http-api/safety";
 import {
   type AlreadyPaired,
@@ -17,6 +21,7 @@ import {
   type PairingUnavailable,
 } from "./pairing-error.ts";
 import { PairMoods } from "./pair-moods.ts";
+import { PairProfileRepository } from "./pair-profile-repository.ts";
 import { PairingObserver } from "./pairing-observer.ts";
 import { PairingRepository } from "./pairing-repository.ts";
 import { annotateRefs } from "@billet/backend-observability/opaque-ref";
@@ -49,6 +54,14 @@ export class PairingService extends Context.Service<
       userId: UserId,
       request: ReportPartnerRequest,
     ) => Effect.Effect<void, NotPaired | PairingUnavailable>;
+    readonly setDisplayName: (
+      userId: UserId,
+      name: DisplayName | null,
+    ) => Effect.Effect<void, PairingUnavailable>;
+    readonly setTogetherSince: (
+      userId: UserId,
+      request: SetTogetherSinceRequest,
+    ) => Effect.Effect<void, NotPaired | PairingUnavailable>;
     /** The caller first. */
     readonly pair: (userId: UserId) => Effect.Effect<PairResponse, NotPaired | PairingUnavailable>;
   }
@@ -56,13 +69,19 @@ export class PairingService extends Context.Service<
   static readonly layer: Layer.Layer<
     PairingService,
     never,
-    PairingRepository | PairingObserver | PairMoods | Digest.Digest | SecureRandom.SecureRandom
+    | PairingRepository
+    | PairProfileRepository
+    | PairingObserver
+    | PairMoods
+    | Digest.Digest
+    | SecureRandom.SecureRandom
   > = Layer.effect(
     PairingService,
     Effect.gen(function* () {
       const repository = yield* PairingRepository;
       const observer = yield* PairingObserver;
       const moods = yield* PairMoods;
+      const profiles = yield* PairProfileRepository;
       const digest = yield* Digest.Digest;
       const random = yield* SecureRandom.SecureRandom;
 
@@ -122,7 +141,35 @@ export class PairingService extends Context.Service<
         const partner = (yield* repository.findMembers(pairId)).find((member) => member !== userId);
         // The pair ended between the two reads.
         if (partner === undefined) return yield* Effect.fail(new NotPaired());
-        return { pairId, members: [userId, partner], moods: yield* moods.latest(pairId) };
+        const names = yield* profiles.names([userId, partner]);
+        const togetherSince = yield* profiles.togetherSince(pairId);
+        const pairedAt = yield* repository.pairedAt(pairId);
+        return {
+          pairId,
+          members: [userId, partner],
+          moods: yield* moods.latest(pairId),
+          names,
+          ...(Option.isSome(togetherSince) ? { togetherSince: togetherSince.value } : {}),
+          ...(Option.isSome(pairedAt) ? { pairedAt: pairedAt.value } : {}),
+        };
+      });
+
+      const setDisplayName = Effect.fn("PairingService.setDisplayName")(function* (
+        userId: UserId,
+        name: DisplayName | null,
+      ): Effect.fn.Return<void, PairingUnavailable> {
+        yield* annotateRefs({ user: userId });
+        yield* profiles.setName(userId, name);
+      });
+
+      const setTogetherSince = Effect.fn("PairingService.setTogetherSince")(function* (
+        userId: UserId,
+        request: SetTogetherSinceRequest,
+      ): Effect.fn.Return<void, NotPaired | PairingUnavailable> {
+        const found = yield* repository.findPair(userId);
+        if (Option.isNone(found)) return yield* Effect.fail(new NotPaired());
+        yield* annotateRefs({ user: userId, pair: found.value });
+        yield* profiles.setTogetherSince(found.value, request.day, request.ifUnset === true);
       });
 
       const unpair = Effect.fn("PairingService.unpair")(function* (
@@ -185,6 +232,8 @@ export class PairingService extends Context.Service<
         unpair,
         blockPartner,
         reportPartner,
+        setDisplayName,
+        setTogetherSince,
         pair,
       });
     }),

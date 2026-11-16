@@ -4,6 +4,7 @@ import { TestClock } from "effect/testing";
 import { describe, expect, it } from "vitest";
 import { InviteCode, NoteId, UserId } from "@billet/contracts-domain/ids";
 import { PairMoods } from "../src/pair-moods.ts";
+import { PairProfileRepository } from "../src/pair-profile-repository.ts";
 import { PairingObserver } from "../src/pairing-observer.ts";
 import { PairingRepository } from "../src/pairing-repository.ts";
 import { inviteLifetime, PairingService } from "../src/pairing-service.ts";
@@ -21,6 +22,7 @@ const setup = () => {
         Layer.succeed(PairingRepository, memory.repository),
         PairingObserver.silent,
         PairMoods.none,
+        PairProfileRepository.none,
         Digest.layerWebCrypto,
         SecureRandom.layerWebCrypto,
       ),
@@ -149,6 +151,7 @@ describe("PairingService", () => {
               unpaired: (pairId) => Effect.sync(() => void calls.push(`unpaired ${pairId}`)),
             }),
             PairMoods.none,
+            PairProfileRepository.none,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,
           ),
@@ -209,6 +212,7 @@ describe("PairingService", () => {
               unpaired: () => Effect.die("observer is down"),
             }),
             PairMoods.none,
+            PairProfileRepository.none,
             Digest.layerWebCrypto,
             SecureRandom.layerWebCrypto,
           ),

@@ -47,6 +47,26 @@ import Testing
     #expect(couple.couple.viewer == "M")
   }
 
+  @Test func leavingThePairForgetsThePartnersNameAndKeepsTheHolders() {
+    let file = File()
+    let couple = store(file)
+    couple.adopt(pairID: "p", me: "u1", partner: "u2")
+    _ = couple.take(PairProfile(myName: "Lu", partnerName: "Mia"))
+    #expect(couple.name(of: "M") == "Mia")
+    couple.leavePair()
+    #expect(couple.name(of: "M") == "Partner")
+    #expect(file.couple?.names?["L"] == "Lu")
+  }
+
+  @Test func onlyAChangedDayCountsAsChosen() {
+    let file = File()
+    let couple = store(file)
+    couple.update(names: ["L": "Lu"], togetherSince: couple.couple.togetherSince)
+    #expect(couple.couple.togetherSinceChosen == nil)
+    couple.update(names: ["L": "Lu"], togetherSince: .distantPast)
+    #expect(couple.couple.togetherSinceChosen == true)
+  }
+
   @Test func namesAreTrimmed() {
     let file = File()
     let couple = store(file)

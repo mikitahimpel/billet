@@ -34,6 +34,8 @@ public enum Routes {
   public static let reportPartner = Route(.post, "/v1/pair/report")
   public static let getPair = Route(.get, "/v1/pair")
   public static let setMood = Route(.put, "/v1/mood")
+  public static let setDisplayName = Route(.put, "/v1/me")
+  public static let setTogetherSince = Route(.put, "/v1/pair/together-since")
   /// The pair's love streak; `POST` a day the caller did something together, or a restore.
   public static let getStreak = Route(.get, "/v1/streak")
   public static let recordStreakDay = Route(.post, "/v1/streak/days")

@@ -9,7 +9,11 @@ import {
   ClaimInviteResponse,
   CreateInviteResponse,
 } from "@billet/contracts-http-api/invite";
-import { PairResponse } from "@billet/contracts-http-api/pair";
+import {
+  PairResponse,
+  SetDisplayNameRequest,
+  SetTogetherSinceRequest,
+} from "@billet/contracts-http-api/pair";
 import { ReportPartnerRequest } from "@billet/contracts-http-api/safety";
 import type {
   AlreadyPaired,
@@ -80,6 +84,28 @@ export const PairingRoutes = HttpRouter.use((router) =>
       Effect.gen(function* () {
         const { userId } = yield* principal;
         return yield* respondPair(yield* pairing.pair(userId), { headers: noStore });
+      }).pipe(respondPairingFailures),
+    );
+
+    yield* router.add(
+      routes.setDisplayName.method,
+      routes.setDisplayName.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const { displayName } = yield* HttpServerRequest.schemaBodyJson(SetDisplayNameRequest);
+        yield* pairing.setDisplayName(userId, displayName);
+        return HttpServerResponse.empty({ status: 204 });
+      }).pipe(respondPairingFailures),
+    );
+
+    yield* router.add(
+      routes.setTogetherSince.method,
+      routes.setTogetherSince.path,
+      Effect.gen(function* () {
+        const { userId } = yield* principal;
+        const request = yield* HttpServerRequest.schemaBodyJson(SetTogetherSinceRequest);
+        yield* pairing.setTogetherSince(userId, request);
+        return HttpServerResponse.empty({ status: 204 });
       }).pipe(respondPairingFailures),
     );
 

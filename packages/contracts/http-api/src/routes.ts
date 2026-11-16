@@ -35,6 +35,10 @@ export const routes = {
   reportPartner: route("POST", "/v1/pair/report"),
   /** The caller's pair and both members. 404 while the caller has no partner. */
   getPair: route("GET", "/v1/pair"),
+  /** Sets or forgets the caller's display name, which the partner reads in `getPair`. */
+  setDisplayName: route("PUT", "/v1/me"),
+  /** Either partner sets the day the pair counts its days together from. */
+  setTogetherSince: route("PUT", "/v1/pair/together-since"),
   setMood: route("PUT", "/v1/mood"),
   /** The pair's love streak. 404 while the caller has no partner. */
   getStreak: route("GET", "/v1/streak"),

@@ -56,8 +56,19 @@ public final class CoupleStore {
 
   public func update(names: [String: String], togetherSince: Date) {
     couple.names = names.mapValues { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+    if togetherSince != couple.togetherSince { couple.togetherSinceChosen = true }
     couple.togetherSince = togetherSince
     save(couple)
+  }
+
+  /// Takes the pair's profile from the server; answers what to tell it back.
+  public func take(_ server: PairProfile) -> [PairProfile.Push] {
+    let (merged, pushes) = couple.merging(server)
+    if merged != couple {
+      couple = merged
+      save(couple)
+    }
+    return pushes
   }
 
   /// Before pairing only; after it the viewer is the signed-in account.
@@ -81,8 +92,11 @@ public final class CoupleStore {
     save(couple)
   }
 
+  /// The partner's name goes with the pair; the holder's own and the day stay on this phone.
   public func leavePair() {
     guard couple.pair != nil else { return }
+    let partner = couple.other
+    couple.names?[partner] = nil
     couple.pair = nil
     save(couple)
   }

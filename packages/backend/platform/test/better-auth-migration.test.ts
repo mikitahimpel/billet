@@ -158,6 +158,10 @@ describe("the move to Better Auth", () => {
     ).all();
     expect(tables.results).toEqual([]);
     const columns = await env.DB.prepare("SELECT name FROM pragma_table_info('users')").all();
-    expect(columns.results).toEqual([{ name: "id" }, { name: "created_at" }]);
+    expect(columns.results).toEqual([
+      { name: "id" },
+      { name: "created_at" },
+      { name: "display_name" },
+    ]);
   });
 });
