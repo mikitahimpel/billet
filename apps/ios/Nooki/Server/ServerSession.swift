@@ -65,6 +65,8 @@ final class ServerSession {
     @ObservationIgnored private var socketOpened: (@MainActor () -> Void)?
     /// Set each time the socket is followed.
     @ObservationIgnored private var catSaved: (@MainActor () -> Void)?
+    /// Set each time the socket is followed: the partner opened the app, where they may have just named themselves.
+    @ObservationIgnored private var partnerCame: (@MainActor () -> Void)?
     /// Set by the open Pick tonight screen; nil while it is closed.
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
@@ -157,12 +159,14 @@ final class ServerSession {
         _ follows: Bool, photos: PhotoSync? = nil, texts: TextNoteSync? = nil, shop: ShopModel? = nil,
         lists: ListsModel? = nil, moods: (@MainActor (PartnerCheckIn) -> Void)? = nil, streak: StreakStore? = nil,
         cat: (@MainActor (CatEntry) -> Void)? = nil, lastCatSeq: (@MainActor () -> Int?)? = nil,
-        opened: (@MainActor () -> Void)? = nil, catSaved: (@MainActor () -> Void)? = nil
+        opened: (@MainActor () -> Void)? = nil, catSaved: (@MainActor () -> Void)? = nil,
+        partnerCame: (@MainActor () -> Void)? = nil
     ) {
         if follows, isPaired {
             // A follow without them keeps the ones the first follow gave.
             if let opened { socketOpened = opened }
             if let catSaved { self.catSaved = catSaved }
+            if let partnerCame { self.partnerCame = partnerCame }
             catEntry = cat
             self.lastCatSeq = lastCatSeq
             self.photos = photos
@@ -201,7 +205,12 @@ final class ServerSession {
                         catEntry: { [weak self] in self?.catEntry?($0) },
                         lastCatSeq: { [weak self] in self?.lastCatSeq?() },
                         catSaved: { [weak self] in self?.catSaved?() },
-                        presence: { [weak self] in self?.partnerPresence = $0 },
+                        presence: { [weak self] presence in
+                            guard let self else { return }
+                            let came = partnerPresence == .away && presence != .away
+                            partnerPresence = presence
+                            if came { partnerCame?() }
+                        },
                         opened: { [weak self] in self?.socketOpened?() },
                         reopening: { [weak self] in Task { await self?.confirmPair() } }))
             }

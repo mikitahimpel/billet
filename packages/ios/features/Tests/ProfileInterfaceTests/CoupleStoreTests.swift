@@ -36,6 +36,14 @@ import Testing
     #expect(file.saves == 3)
   }
 
+  @Test func thePartnerIsCalledByTheirNameAndPartnerUntilItArrivesNeverByTheirLetter() {
+    let file = File()
+    let couple = store(file)
+    #expect(couple.partnerName == "Partner")
+    couple.update(names: ["L": "Ben", "M": "Anna"], togetherSince: couple.couple.togetherSince)
+    #expect(couple.partnerName == "Anna")
+  }
+
   @Test func theViewerIsFixedOncePaired() {
     let file = File()
     let couple = store(file)

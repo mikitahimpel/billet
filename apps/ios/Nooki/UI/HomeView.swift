@@ -23,7 +23,7 @@ struct HomeView: View {
     @Binding var state: HomeState
     @State var room = RoomController()
     /// The splash stays over everything until the room has loaded (see `lift()`).
-    @State private var launching = true
+    @State var launching = true
     /// The tab bar's top edge, global, which a purchase's card keeps clear of.
     @State private var tabBarTop: CGFloat?
     /// The top of the pet and Decorate row over the tab bar, global, while it shows; the card keeps clear of it too.
@@ -235,7 +235,8 @@ struct HomeView: View {
         .fullScreenCover(isPresented: $state.drawing) {
             LockCanvasView(
                 state: state, api: session?.api,
-                model: DrawModel(room: session?.liveRoom(), partnerName: state.otherPartner), coinPacks: coinPacks)
+                model: DrawModel(room: session?.liveRoom(), partnerName: state.profile.name(of: state.otherPartner)),
+                coinPacks: coinPacks)
         }
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
@@ -519,7 +520,10 @@ struct HomeView: View {
         LaunchSignposts.event("room ready")
         // A few frames for the last loaded pieces to draw.
         try? await Task.sleep(for: .milliseconds(250))
-        withAnimation(Motion.fade(0.8)) { launching = false } completion: { splashDrawn = false }
+        withAnimation(Motion.fade(0.8)) { launching = false } completion: {
+            splashDrawn = false
+            visitHints()
+        }
         LaunchSignposts.event("splash lifting")
         // `-room city` on launch opens the City room, for recordings and screenshots.
         if UserDefaults.standard.string(forKey: "room") == "city" || state.rooms.variant.firstRoom == .city {
@@ -652,7 +656,8 @@ struct HomeView: View {
         case .careAsked: state.showsPetSheet = true
         case .partnerCared(let care):
             withAnimation(Motion.spring(0.3)) {
-                homecoming = HomecomingLine(care, partner: state.otherPartner, cat: CatProfile.name())
+                homecoming = HomecomingLine(
+                    care, partner: state.profile.name(of: state.otherPartner), cat: CatProfile.name())
             }
         }
     }

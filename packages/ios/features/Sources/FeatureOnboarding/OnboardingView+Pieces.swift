@@ -8,21 +8,11 @@ import Wire
     // MARK: Pieces
 
     func form<Content: View>(
-      say: String? = nil, subtitle: String?,
-      @ViewBuilder content: () -> Content
+      say: String? = nil, subtitle: String?, @ViewBuilder content: () -> Content
     ) -> some View {
       ScrollView {
         VStack(alignment: .leading, spacing: Space.section) {
-          VStack(alignment: .leading, spacing: Space.m) {
-            PageTitle(title)
-            if let say { MochiSays(text: LocalizedStringKey(say), avatar: flow.coat.avatar) }
-            if let subtitle {
-              Text(subtitle)
-                .font(.ourioCallout)
-                .foregroundStyle(Ink.textSecondary)
-            }
-          }
-          .frame(maxWidth: .infinity, alignment: .leading)
+          intro(say: say, subtitle: subtitle)
           content()
         }
         .padding(.horizontal, Space.gutter)
@@ -33,6 +23,47 @@ import Wire
       .scrollIndicators(.hidden)
       .scrollBounceBehavior(.basedOnSize)
       .scrollDismissesKeyboard(.interactively)
+    }
+
+    /// A form whose `content` never scrolls: it sits whole on the actions, and the title above it scrolls in what
+    /// room is left. Under the keyboard on an SE a scrolling form would leave the code field or its buttons under
+    /// Join, and the field keeps its identity (and its focus) as the room changes.
+    func pinnedForm<Content: View>(
+      say: String? = nil, subtitle: String?, @ViewBuilder content: () -> Content
+    ) -> some View {
+      VStack(alignment: .leading, spacing: Space.section) {
+        ViewThatFits(in: .vertical) {
+          intro(say: say, subtitle: subtitle)
+            .padding(.horizontal, Space.gutter)
+            .padding(.top, Space.l)
+          ScrollView {
+            intro(say: say, subtitle: subtitle)
+              .padding(.horizontal, Space.gutter)
+              .padding(.top, Space.l)
+          }
+          .ourioScrollEdges()
+          .scrollIndicators(.hidden)
+          .scrollBounceBehavior(.basedOnSize)
+          .scrollDismissesKeyboard(.interactively)
+        }
+        .layoutPriority(1)
+        content()
+          .padding(.horizontal, Space.gutter)
+        Spacer(minLength: 0)
+      }
+    }
+
+    private func intro(say: String?, subtitle: String?) -> some View {
+      VStack(alignment: .leading, spacing: Space.m) {
+        PageTitle(title)
+        if let say { MochiSays(text: LocalizedStringKey(say), avatar: flow.coat.avatar) }
+        if let subtitle {
+          Text(subtitle)
+            .font(.ourioCallout)
+            .foregroundStyle(Ink.textSecondary)
+        }
+      }
+      .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     func optionRow(

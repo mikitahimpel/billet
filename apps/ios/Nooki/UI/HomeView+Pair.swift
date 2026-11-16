@@ -57,7 +57,25 @@ extension HomeView {
                     await room.syncCat()
                     state.refreshPronouns()
                 }
+            },
+            partnerCame: { [weak session, state] in
+                // No frame says a name or the pair's day changed. The partner's phone sends both as it comes to
+                // front, often a moment after its presence: one read now and one shortly after.
+                guard let session else { return }
+                Task {
+                    await pullPairProfile(session: session, state: state)
+                    try? await Task.sleep(for: pairProfileSettle)
+                    await pullPairProfile(session: session, state: state)
+                }
             })
+    }
+
+    private static let pairProfileSettle = Duration.seconds(5)
+
+    /// The partner's name and the pair's day, and what the server lacks of this phone's.
+    private static func pullPairProfile(session: ServerSession, state: HomeState) async {
+        guard state.profile.couple.pair != nil, let pair = try? await session.pair() else { return }
+        await PairProfileSync.take(pair, into: state.profile, api: session.api)
     }
 
     /// The games first: they are small, and a photo downloading below can take a while. The summary is five reads:
@@ -71,9 +89,7 @@ extension HomeView {
         await session.textSync(notes: state.notes, partner: state.otherPartner)?.receive()
         await session.drawGuess.load()
         await state.shop.refresh()
-        if state.profile.couple.pair != nil, let pair = try? await session.pair() {
-            await PairProfileSync.take(pair, into: state.profile, api: session.api)
-        }
+        await pullPairProfile(session: session, state: state)
         switch kind {
         case .summary: return
         case .everything: break
@@ -148,7 +164,9 @@ extension HomeView {
                 || state.openedShopItem != nil
             let buying = state.shop.lastPurchase?.momentShows(at: .now) == true
             return HintContext(
-                screen: screen, busy: sheet || buying || room.showcase != nil, hasRoomChoice: hasRoomChoice,
+                // A hint shown under the splash points at nothing and pokes out over its title.
+                screen: screen, busy: launching || sheet || buying || room.showcase != nil,
+                hasRoomChoice: hasRoomChoice,
                 canAffordTreat: state.shop.coins >= ShopModel.treatPrice,
                 petted: state.care.petsGiven > 0,
                 added: !state.notes.notes.isEmpty || !state.moments.moments.isEmpty,
