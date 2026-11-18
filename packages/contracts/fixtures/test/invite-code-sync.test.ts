@@ -31,13 +31,21 @@ describe("the invite code in Swift", () => {
   });
 });
 
-// The app builds the link it shares on its own, from the API's host.
+// The app builds the link it shares on its own, from the API's host, and reads it back.
 describe("the invite link in Swift", () => {
   it("uses the contract's path", () => {
     const source = readFileSync(
-      join(root, "packages/ios/features/Sources/FeatureOnboarding/OnboardingView.swift"),
+      join(root, "packages/ios/contracts/Sources/Wire/InviteCode.swift"),
       "utf8",
     );
-    expect(source).toContain(`appending(path: "${inviteLinkPrefix.slice(1)}\\(code)")`);
+    expect(source).toContain(`appending(path: "${inviteLinkPrefix.slice(1)}\\(rawValue)")`);
+  });
+
+  it("is the path the app opens", () => {
+    const source = readFileSync(
+      join(root, "packages/ios/features/Sources/WidgetInterface/DeepLink.swift"),
+      "utf8",
+    );
+    expect(source).toContain(`path[0] == "${inviteLinkPrefix.slice(1, -1)}"`);
   });
 });

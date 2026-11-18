@@ -9,6 +9,7 @@ struct AppHeader<Below: View>: View {
     @ViewBuilder var below: Below
     @State private var pairing = false
     @State private var checkingIn = false
+    @State private var pairedAlready = false
     @AppStorage(PlusPass.key) private var plus = false
     @Environment(ServerSession.self) private var session: ServerSession?
 
@@ -37,8 +38,15 @@ struct AppHeader<Below: View>: View {
         }
         // Outside the group, so the badges it draws above its glass are capped too.
         .dynamicTypeSize(...DynamicTypeSize.xxxLarge)
-        .onChange(of: state.invitedCode) { _, code in
-            if code != nil, session?.isPaired == false { pairing = true }
+        // Initial too: a link that launched the app arrives before the header is on screen.
+        .onChange(of: state.invitedCode, initial: true) { _, code in
+            guard code != nil, let session else { return }
+            if session.isPaired { pairedAlready = true } else { pairing = true }
+        }
+        .alert("You already have a partner", isPresented: $pairedAlready) {
+            Button("OK", role: .cancel) { state.invitedCode = nil }
+        } message: {
+            Text("This iPhone is paired, so the invite link has nothing to join.").font(.ourioCallout)
         }
         .sheet(isPresented: Binding(get: { state.showsProfile }, set: { state.showsProfile = $0 })) {
             // A plain slide-up: a zoom out of the round avatars would morph through the sheet's rectangle.
@@ -49,7 +57,7 @@ struct AppHeader<Below: View>: View {
         }
         .sheet(isPresented: $pairing, onDismiss: { state.invitedCode = nil }) {
             if let session {
-                PairingSheet(model: session.pairing, prefill: state.invitedCode ?? "") { session.pairingFinished() }
+                PairingSheet(model: session.pairing, server: session.baseURL, prefill: state.invitedCode ?? "") { session.pairingFinished() }
             }
         }
     }

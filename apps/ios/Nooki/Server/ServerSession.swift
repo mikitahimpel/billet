@@ -498,6 +498,6 @@ extension ServerSession: UsServer {
     var hasFinishedSignIn: Bool { signIn.state == .signedIn }
 
     func pairingSheet() -> AnyView {
-        AnyView(PairingSheet(model: pairing) { [weak self] in self?.pairingFinished() })
+        AnyView(PairingSheet(model: pairing, server: baseURL) { [weak self] in self?.pairingFinished() })
     }
 }

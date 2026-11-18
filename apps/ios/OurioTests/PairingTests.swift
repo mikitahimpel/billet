@@ -4,6 +4,7 @@ import Persistence
 import Synchronization
 import Testing
 import Transport
+import WidgetInterface
 import Wire
 @testable import Billet
 
@@ -29,6 +30,14 @@ struct PairingCopyTests {
     func aDayLongCodeCountsInHoursUntilItsLastHour(left: Int, text: String) {
         let now = Date(timeIntervalSince1970: 1_000)
         #expect(PairingCopy.expiry(expiresAt: 1_000_000 + left * 1000, now: now) == text)
+    }
+
+    @Test func theInviteSendsTheLinkOfTheServerTheAppIsBuiltForAndTheCode() {
+        let server = URL(string: "https://ourio-api-dev.example.dev")!
+        #expect(PairingCopy.invite(code: "K7QM4R2XHP", server: server)
+            == "Join me in Ourio! https://ourio-api-dev.example.dev/i/K7QM4R2XHP or enter my code: K7QM4R2XHP")
+        let link = Backend.baseURL(host: "ourio-api.example.dev").map { InviteCode("K7QM4R2XHP").link(on: $0) }
+        #expect(link.flatMap(DeepLink.init(url:)) == .invite("K7QM4R2XHP"))
     }
 
     @Test func everyFailureSaysOurioNotBillet() {

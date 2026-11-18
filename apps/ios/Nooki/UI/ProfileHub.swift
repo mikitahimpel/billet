@@ -52,7 +52,7 @@ struct ProfileHub: View {
         }
         .sheet(isPresented: $pairing) {
             if let session {
-                PairingSheet(model: session.pairing) { session.pairingFinished() }
+                PairingSheet(model: session.pairing, server: session.baseURL) { session.pairingFinished() }
             }
         }
     }

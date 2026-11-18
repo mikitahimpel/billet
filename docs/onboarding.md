@@ -31,9 +31,16 @@ draws them. The questions come from the server (`GET /v1/onboarding`) or the bun
   push tokens are registered as for drawings (`DrawingSync`).
 - **The widget how-to** shows when the goals include `widgets` or `stay-close`.
 - **Without a server** there is no code page, invite or notifications primer.
-- **Invite links:** `https://<server>/i/<code>`. The Worker serves the
-  `apple-app-site-association` file for `/i/*` (`app-links.ts`), the app has the matching
-  associated domain, and `DeepLink.invite` also reads `ourio://invite/<code>`.
+- **Invite links:** `https://<server>/i/<code>`, built by `InviteCode.link(on:)` from the host the
+  app was built with (`BILLET_API_HOST`), so dev, stage and prod builds each send their own. Both
+  Share buttons (the onboarding invite page and Home's pairing sheet) send the link with the code
+  after it. The Worker serves the `apple-app-site-association` file for `/i/*` to both bundle ids
+  (`app-links.ts`), and the app has the matching associated domain; `DeepLink.invite` also reads
+  `ourio://invite/<code>`, and tidies the code (case, dashes) or leaves it empty when broken.
+  The link opens the code page with the code filled in; Join is still the joiner's tap. On Home,
+  unpaired, it opens the pairing sheet with the code; paired, it says the phone already has a
+  partner. Without the app, the page shows the code, a Smart App Banner, the App Store link
+  (`appStoreId`), "I have Ourio: open it" (`ourio://invite/<code>`) and Copy code.
 - **A closed app** opens again on the page it was on, with the questions and picks it had. A
   pairing that finished while it was closed moves the code page on.
 - **Sign in with Apple** is not part of onboarding: the account is anonymous, and linking an Apple ID is

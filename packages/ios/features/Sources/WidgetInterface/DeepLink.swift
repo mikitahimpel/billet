@@ -1,10 +1,12 @@
 import Foundation
+import Wire
 
 /// An ourio:// URL. Invites also come as the server's `https://<host>/i/<code>` Universal Link, or as a nooki://
 /// link from before the rename, which invites already sent and the server still carry.
 public enum DeepLink: Hashable, Sendable {
   case room, moments, us, calendar, dates, newNote, draw, inbox
   case list(UUID)
+  /// The code as the server takes it, or empty for a link whose code is broken: the code page still opens, empty.
   case invite(String)
   /// The Shop at an ink, by its catalog id.
   case shopInk(String)
@@ -33,7 +35,7 @@ public enum DeepLink: Hashable, Sendable {
   public init?(url: URL) {
     let path = url.pathComponents.filter { $0 != "/" }
     if url.scheme == "https", path.count == 2, path[0] == "i" {
-      self = .invite(path[1])
+      self = .invite(Self.inviteCode(path[1]))
       return
     }
     guard let scheme = url.scheme, Self.schemes.contains(scheme), let host = url.host() else {
@@ -49,12 +51,16 @@ public enum DeepLink: Hashable, Sendable {
     case ["notes", "new"]: self = .newNote
     case ["draw"]: self = .draw
     case ["inbox"]: self = .inbox
-    case let p where p.count == 2 && p[0] == "invite": self = .invite(p[1])
+    case let p where p.count == 2 && p[0] == "invite": self = .invite(Self.inviteCode(p[1]))
     case let p where p.count == 3 && p[0] == "shop" && p[1] == "ink": self = .shopInk(p[2])
     case let p where p.count == 3 && p[0] == "us" && p[1] == "list":
       guard let id = UUID(uuidString: p[2]) else { return nil }
       self = .list(id)
     default: return nil
     }
+  }
+
+  private static func inviteCode(_ part: String) -> String {
+    InviteCode.parsed(part)?.rawValue ?? ""
   }
 }
