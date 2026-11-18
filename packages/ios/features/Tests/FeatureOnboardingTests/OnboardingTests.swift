@@ -5,6 +5,7 @@ import RoomInterface
 import Synchronization
 import Testing
 import Transport
+import WidgetInterface
 import Wire
 
 @testable import FeatureOnboarding
@@ -311,6 +312,23 @@ struct OnboardingFlowTests {
     flow.continueTapped()
     await settle { sent.answers.withLock { $0.count } == 3 }
     #expect(sent.answers.withLock { $0.last?.answer } == .single(option: "cream"))
+  }
+
+  @Test(arguments: [
+    ("https://ourio-api.example.dev/i/k7qm4-r2xhp", "K7QM4R2XHP"),
+    ("ourio://invite/K7QM4R2XHP", "K7QM4R2XHP"),
+    ("https://ourio-api.example.dev/i/K7QM4", ""),
+  ])
+  func anInviteLinkOpensTheCodePageWithItsCodeForTheJoinerToConfirm(link: String, code: String) {
+    let (flow, _, _) = makeFlow(hasServer: true, asksTogetherSince: true)
+    guard case .invite(let carried)? = DeepLink(url: URL(string: link)!) else {
+      Issue.record("\(link) is no invite")
+      return
+    }
+    flow.join(code: carried)
+    #expect(flow.page == .join)
+    #expect(flow.joinCode == code)
+    #expect(flow.termsAccepted)
   }
 
   @Test func whoeverWasInvitedEntersTheCodeAndLeavesTheInviteTheCatAndTheDay() {

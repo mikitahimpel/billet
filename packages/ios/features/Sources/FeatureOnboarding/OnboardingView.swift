@@ -464,7 +464,7 @@ import Wire
     }
 
     private func inviteLink(_ code: String) -> String {
-      inviteBase?.appending(path: "i/\(code)").absoluteString ?? code
+      inviteBase.map { InviteCode(code).link(on: $0).absoluteString } ?? code
     }
 
     private var stopped: some View {
@@ -533,7 +533,7 @@ import Wire
     }
 
     func inviteMessage(_ code: String) -> String {
-      guard let link = inviteBase?.appending(path: "i/\(code)") else {
+      guard let link = inviteBase.map(InviteCode(code).link(on:)) else {
         return String(localized: "Join me in Ourio! Open the app and enter my code: \(code)")
       }
       return String(localized: "Join me in Ourio! \(link.absoluteString) or enter my code: \(code)")

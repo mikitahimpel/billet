@@ -7,7 +7,7 @@ enum InviteInput {
   static func code(in text: String) -> String? {
     let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
     if let url = URL(string: trimmed), case .invite(let code)? = DeepLink(url: url) {
-      return code.count == InviteCode.length ? cleaned(code) : nil
+      return code.isEmpty ? nil : code
     }
     let code = cleaned(trimmed)
     let bare = InviteCode.normalized(trimmed).filter { !$0.isWhitespace && $0 != "-" }

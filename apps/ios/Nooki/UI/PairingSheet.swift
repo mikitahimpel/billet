@@ -3,10 +3,13 @@ import FeatureUs
 import FeaturePairing
 import SwiftUI
 import Design
+import Wire
 
 /// Whoever shows the code waits here while `ServerSession.watchPair` checks whether it was claimed.
 struct PairingSheet: View {
     let model: PairingModel
+    /// The server the app is built for, whose invite link the partner opens.
+    let server: URL
     /// The code from an invite link.
     var prefill = ""
     /// Called once when the pairing is done and the user taps Done.
@@ -64,7 +67,7 @@ struct PairingSheet: View {
             Text("Show my code")
                 .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
-            Text("Your partner types it into Ourio on their phone.")
+            Text("Send your partner a link that opens Ourio, or read them the code.")
                 .font(.ourioCallout)
                 .foregroundStyle(Ink.textSecondary)
                 .multilineTextAlignment(.center)
@@ -121,8 +124,8 @@ struct PairingSheet: View {
                     .foregroundStyle(Ink.text)
             }
             .padding(.top, Space.xs)
-            ShareLink(item: "Pair with me on Ourio: \(code)") {
-                Label("Send the code", systemImage: "square.and.arrow.up")
+            ShareLink(item: PairingCopy.invite(code: code, server: server)) {
+                Label("Send the link", systemImage: "square.and.arrow.up")
             }
             .buttonStyle(SecondaryButtonStyle())
         }
@@ -176,6 +179,11 @@ enum PairingCopy {
         case .signedOut: "This phone was signed out. Open Ourio again to sign back in."
         case .unavailable: "Ourio can't reach its server right now. Try again in a moment."
         }
+    }
+
+    /// Messages and Mail turn the link into a tap that opens Ourio; the code is there for typing it in.
+    static func invite(code: String, server: URL) -> String {
+        "Join me in Ourio! \(InviteCode(code).link(on: server).absoluteString) or enter my code: \(code)"
     }
 
     static func spaced(_ code: String) -> String {

@@ -97,7 +97,7 @@ let onboardingTests: Target = .testTarget(
   name: "FeatureOnboardingTests",
   dependencies: dependencies([
     "FeatureOnboarding", "ProfileInterface", "RoomInterface", "Pet", "Persistence", "Transport",
-    "Wire",
+    "WidgetInterface", "Wire",
   ]))
 
 // Moved from the app, which builds with Xcode's approachable concurrency: a

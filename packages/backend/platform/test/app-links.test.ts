@@ -2,7 +2,7 @@ import { createExecutionContext, waitOnExecutionContext } from "cloudflare:test"
 import { env } from "cloudflare:workers";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { respondApi } from "../src/api-fetch.ts";
-import { codeOfInviteLink, respondAppLink } from "../src/app-links.ts";
+import { appStoreUrl, codeOfInviteLink, respondAppLink } from "../src/app-links.ts";
 import { limits } from "../src/rate-limit.ts";
 import { resetDirectory } from "./directory-migrations.ts";
 import { testExperiments } from "./test-experiments.ts";
@@ -10,6 +10,7 @@ import { testExperiments } from "./test-experiments.ts";
 describe("Universal Links", () => {
   it("serves the association file for invite links, to both apps", async () => {
     const response = respondAppLink("/.well-known/apple-app-site-association");
+    expect(response?.status).toBe(200);
     expect(response?.headers.get("content-type")).toBe("application/json");
     expect(await response?.json()).toEqual({
       applinks: {
@@ -47,6 +48,19 @@ describe("Universal Links", () => {
     expect(text).toContain("This invite link is broken");
     expect(text).not.toContain("<code>");
     expect(text).not.toContain("<script>");
+    expect(text).toContain(`href="${appStoreUrl}"`);
+    expect(text).not.toContain("ourio://");
+  });
+
+  it("sends someone without Ourio to the App Store, and opens the app for someone who has it", async () => {
+    expect(appStoreUrl).toBe("https://apps.apple.com/app/id6832707480");
+    const page = (await respondAppLink("/i/K7QM4R2XHP")?.text()) ?? "";
+    expect(page).toContain(`<a class="primary" href="${appStoreUrl}">`);
+    expect(page).toContain('href="ourio://invite/K7QM4R2XHP"');
+    expect(page).toContain(
+      '<meta name="apple-itunes-app" content="app-id=6832707480, app-argument=ourio://invite/K7QM4R2XHP">',
+    );
+    expect(page).toContain('<meta property="og:title" content="Join me in Ourio">');
   });
 
   it("keeps the page out of caches and search", () => {

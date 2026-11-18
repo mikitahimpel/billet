@@ -20,14 +20,25 @@ export const codeOfInviteLink = (pathname: string): string | undefined => {
   return match === null ? undefined : `${match[1]}${match[2]}`;
 };
 
+/** Ourio on the App Store, for every stage: there is one store app. */
+export const appStoreId = "6832707480";
+export const appStoreUrl = `https://apps.apple.com/app/id${appStoreId}`;
+
+/** The app's own scheme (`DeepLink.invite`), for a phone that has Ourio but opened the link in Safari. */
+const appInviteUrl = (code: string) => `ourio://invite/${code}`;
+
 // The code only ever holds the alphabet's letters and digits, so it goes into the page unescaped.
-// note: no public build exists yet, so the page names no store link; add one per stage when it does.
 const invitePage = (code: string | undefined) => `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
+<meta name="apple-itunes-app" content="app-id=${appStoreId}${
+  code === undefined ? "" : `, app-argument=${appInviteUrl(code)}`
+}">
+<meta property="og:title" content="Join me in Ourio">
+<meta property="og:description" content="Open this link on your iPhone to pair with me in Ourio.">
 <title>Join me in Ourio</title>
 <style>
 :root { color-scheme: light dark; --ink: #2a1a1c; --paper: #fbf5ee; --muted: #7a6a64; }
@@ -35,13 +46,15 @@ const invitePage = (code: string | undefined) => `<!doctype html>
 body { margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
   box-sizing: border-box; background: var(--paper); color: var(--ink);
   font: 17px/1.4 ui-rounded, -apple-system, system-ui, sans-serif; text-align: center; }
-main { max-width: 22rem; }
-h1 { font-size: 28px; margin: 0 0 12px; }
-p { color: var(--muted); margin: 0 0 24px; }
+main { max-width: 22rem; display: grid; gap: 12px; }
+h1 { font-size: 28px; margin: 0; }
+p { color: var(--muted); margin: 0 0 12px; }
 code { display: block; font: 600 32px/1.2 ui-monospace, monospace; letter-spacing: 0.08em;
-  margin: 0 0 16px; }
-button { font: inherit; font-weight: 600; padding: 12px 28px; border: 0; border-radius: 999px;
-  background: var(--ink); color: var(--paper); }
+  margin: 0 0 4px; }
+a, button { font: inherit; font-weight: 600; padding: 12px 28px; border-radius: 999px;
+  text-decoration: none; display: block; }
+.primary { border: 0; background: var(--ink); color: var(--paper); }
+.quiet { border: 1.5px solid var(--ink); background: transparent; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -49,10 +62,13 @@ button { font: inherit; font-weight: 600; padding: 12px 28px; border: 0; border-
 <h1>Join me in Ourio</h1>
 ${
   code === undefined
-    ? "<p>This invite link is broken. Ask your person for their code, and enter it in Ourio.</p>"
-    : `<p>Open this link on the iPhone that has Ourio, or enter this code in the app.</p>
+    ? `<p>This invite link is broken. Ask your person for their code, and enter it in Ourio.</p>
+<a class="primary" href="${appStoreUrl}">Get Ourio on the App Store</a>`
+    : `<p>Get Ourio on your iPhone, then open this link again, or enter this code in the app.</p>
 <code>${code.slice(0, half)} ${code.slice(half)}</code>
-<button type="button" id="copy">Copy code</button>
+<a class="primary" href="${appStoreUrl}">Get Ourio on the App Store</a>
+<a class="quiet" href="${appInviteUrl(code)}">I have Ourio: open it</a>
+<button type="button" class="quiet" id="copy">Copy code</button>
 <script>
 document.getElementById("copy").addEventListener("click", (event) => {
   navigator.clipboard.writeText("${code}").then(() => { event.target.textContent = "Copied"; });
@@ -76,9 +92,12 @@ const pageHeaders = {
 /** The invite page never reads or claims the invite, and nothing here logs the path. */
 export const respondAppLink = (pathname: string): Response | undefined => {
   if (pathname === "/.well-known/apple-app-site-association") {
-    return Response.json({
-      applinks: { details: [{ appIDs: appIds, components: [{ "/": `${inviteLinkPrefix}*` }] }] },
-    });
+    return Response.json(
+      {
+        applinks: { details: [{ appIDs: appIds, components: [{ "/": `${inviteLinkPrefix}*` }] }] },
+      },
+      { headers: { "cache-control": "max-age=3600" } },
+    );
   }
   if (isInviteLinkPath(pathname)) {
     return new Response(invitePage(codeOfInviteLink(pathname)), { headers: pageHeaders });

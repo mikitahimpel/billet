@@ -1,3 +1,5 @@
+import Foundation
+
 /// The server checks its format; the client checks only that it is not empty.
 public struct InviteCode: Codable, Hashable, Sendable {
   public let rawValue: String
@@ -18,6 +20,21 @@ public struct InviteCode: Codable, Hashable, Sendable {
   /// Drops case, spaces and dashes.
   public static func normalized(_ typed: String) -> String {
     String(typed.uppercased().filter { !$0.isWhitespace && $0 != "-" })
+  }
+
+  /// A code typed or carried by a link in any case, grouped by spaces or dashes; nil for anything else.
+  public static func parsed(_ typed: String) -> InviteCode? {
+    let code = normalized(typed)
+    guard [length, reviewLength].contains(code.count), code.allSatisfy(alphabet.contains) else {
+      return nil
+    }
+    return InviteCode(code)
+  }
+
+  /// The contract's `inviteLinkPath` on the server the app is built for: the universal link, or the page
+  /// for a phone without the app.
+  public func link(on server: URL) -> URL {
+    server.appending(path: "i/\(rawValue)")
   }
 
   public init(from decoder: any Decoder) throws {
