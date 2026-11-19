@@ -64,12 +64,19 @@ ${
   code === undefined
     ? `<p>This invite link is broken. Ask your person for their code, and enter it in Ourio.</p>
 <a class="primary" href="${appStoreUrl}">Get Ourio on the App Store</a>`
-    : `<p>Get Ourio on your iPhone, then open this link again, or enter this code in the app.</p>
+    : `<p>Get Ourio on your iPhone: it picks up this invite when it opens. Or enter this code in the app.</p>
 <code>${code.slice(0, half)} ${code.slice(half)}</code>
-<a class="primary" href="${appStoreUrl}">Get Ourio on the App Store</a>
+<a class="primary" id="get" href="${appStoreUrl}">Get Ourio on the App Store</a>
 <a class="quiet" href="${appInviteUrl(code)}">I have Ourio: open it</a>
 <button type="button" class="quiet" id="copy">Copy code</button>
 <script>
+// Ourio's first launch offers the link it finds on the clipboard, so the code survives the install.
+document.getElementById("get").addEventListener("click", (event) => {
+  event.preventDefault();
+  const store = event.currentTarget.href;
+  navigator.clipboard.writeText(location.origin + "${inviteLinkPrefix}${code}")
+    .finally(() => { location.href = store; });
+});
 document.getElementById("copy").addEventListener("click", (event) => {
   navigator.clipboard.writeText("${code}").then(() => { event.target.textContent = "Copied"; });
 });

@@ -41,6 +41,14 @@ draws them. The questions come from the server (`GET /v1/onboarding`) or the bun
   unpaired, it opens the pairing sheet with the code; paired, it says the phone already has a
   partner. Without the app, the page shows the code, a Smart App Banner, the App Store link
   (`appStoreId`), "I have Ourio: open it" (`ourio://invite/<code>`) and Copy code.
+- **After the install:** the page's App Store button copies the invite link first. iOS hands an app
+  nothing through the App Store, so the clipboard carries it: while a link is on it, the welcome's
+  join button reads "Join with the copied invite" (`detectPatterns`, no paste prompt). On the code
+  page, its Paste button (a system `PasteButton`, no prompt) fills the code in one tap; the page's
+  own read of the clipboard asks iOS's paste permission first. No fingerprinting or attribution SDK.
+- **Typing a code:** fields show it in fives ("K7QM4 R2XHP", as the page does), keep only the
+  code's symbols (`InviteCode.cleaned`), open the Latin keyboard and have a Paste button that also
+  takes a whole shared message.
 - **A closed app** opens again on the page it was on, with the questions and picks it had. A
   pairing that finished while it was closed moves the code page on.
 - **Sign in with Apple** is not part of onboarding: the account is anonymous, and linking an Apple ID is

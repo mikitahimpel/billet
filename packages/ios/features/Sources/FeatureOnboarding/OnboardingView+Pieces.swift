@@ -146,7 +146,10 @@ import Wire
     @ViewBuilder private var secondaryAction: some View {
       switch flow.page {
       case .welcome where pairing != nil:
-        Button("I have an invite code") {
+        Button(
+          linkCopied
+            ? LocalizedStringKey("Join with the copied invite") : "I have an invite code"
+        ) {
           tapTick += 1
           flow.join()
         }

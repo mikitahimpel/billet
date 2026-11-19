@@ -56,6 +56,9 @@ import Wire
     @State var tapTick = 0
     @State private var wavedTick = 0
     @State var welcomeStart = Date()
+    /// A link is on the clipboard, as the invite page's App Store button leaves it; the welcome offers to join.
+    @State var linkCopied = false
+    @Environment(\.scenePhase) private var scenePhase
     /// Only with `-uitestWelcomeProbe`: counts the welcome timeline's late frames. The UI test adds
     /// `-uitestWelcomeProbeHarness` and signals when its launch handling is done.
     @State private var probe: HitchProbe? =
@@ -93,6 +96,11 @@ import Wire
       .haptic(.rejected, trigger: errorTick)
       .overlay(alignment: .topLeading) { probeLabel }
       .task { await flow.load() }
+      // Asks only whether a link is there, which shows no paste prompt; the code page reads it.
+      .task(id: [flow.page == .welcome, scenePhase == .active]) {
+        guard flow.page == .welcome, scenePhase == .active else { return }
+        linkCopied = await Self.clipboardHasLink()
+      }
       .onChange(of: flow.index, initial: true) { flow.appeared() }
       // A failure belongs to the step it happened on: leaving the step clears it.
       .onChange(of: flow.index) { clearFailure() }
@@ -384,17 +392,19 @@ import Wire
       ) {
         VStack(spacing: Space.s) {
           Field(
-            "K7QM 4R2X HP",
+            "K7QM4 R2XHP",
             text: Binding {
-              flow.joinCode
+              InviteCode.grouped(flow.joinCode)
             } set: { typed in
-              flow.joinCode = InviteInput.cleaned(typed)
+              flow.joinCode = InviteCode.cleaned(typed)
               pasteMissed = false
               clearFailure()
             }, font: .system(.title2, design: .monospaced, weight: .bold), failed: failure != nil
           )
           .textInputAutocapitalization(.characters)
           .autocorrectionDisabled()
+          // Latin letters and digits whatever keyboard the phone has open.
+          .keyboardType(.asciiCapable)
           .textContentType(.oneTimeCode)
           .accessibilityLabel("Invite code")
           .accessibilityIdentifier("join.code")
@@ -442,6 +452,15 @@ import Wire
       .overlay(alignment: .topTrailing) {
         GlassIconButton(symbol: "xmark", label: "Close") { scanning = false }
           .padding(Space.gutter)
+      }
+    }
+
+    /// Off the main actor: the pasteboard answers on a queue of its own, where a main-actor closure would trap.
+    nonisolated private static func clipboardHasLink() async -> Bool {
+      await withCheckedContinuation { done in
+        UIPasteboard.general.detectPatterns(for: [.probableWebURL]) { @Sendable result in
+          done.resume(returning: (try? result.get())?.contains(.probableWebURL) ?? false)
+        }
       }
     }
 

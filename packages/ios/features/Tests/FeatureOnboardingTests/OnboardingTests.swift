@@ -503,7 +503,7 @@ struct AnswerQueueTests {
     #expect(InviteInput.code(in: "K7QM4R2X") == nil)
     #expect(InviteInput.code(in: "https://example.com/i/short") == nil)
     #expect(InviteInput.code(in: "abcd2345efghjklm npqrstuvwx") == "ABCD2345EFGHJKLMNPQRSTUVWX")
-    #expect(InviteInput.cleaned(String(repeating: "A", count: 30)).count == InviteCode.reviewLength)
+    #expect(InviteCode.cleaned(String(repeating: "A", count: 30)).count == InviteCode.reviewLength)
   }
 
   @Test func theWelcomeScriptIsDeterministicAndEndsSettled() {

@@ -22,6 +22,18 @@ public struct InviteCode: Codable, Hashable, Sendable {
     String(typed.uppercased().filter { !$0.isWhitespace && $0 != "-" })
   }
 
+  /// What was typed or pasted, kept to the symbols a code has, up to the App Review pair's longer code.
+  public static func cleaned(_ typed: String) -> String {
+    String(normalized(typed).filter { alphabet.contains($0) }.prefix(reviewLength))
+  }
+
+  /// In fives, as the invite page shows it ("K7QM4 R2XHP"): easier to read out and to type back.
+  public static func grouped(_ code: String) -> String {
+    stride(from: 0, to: code.count, by: 5).map { start in
+      String(code.dropFirst(start).prefix(5))
+    }.joined(separator: " ")
+  }
+
   /// A code typed or carried by a link in any case, grouped by spaces or dashes; nil for anything else.
   public static func parsed(_ typed: String) -> InviteCode? {
     let code = normalized(typed)
