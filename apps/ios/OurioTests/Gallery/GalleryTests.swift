@@ -1,9 +1,13 @@
 import Design
 import FeatureInbox
+import FeatureShop
 import Foundation
 import GamesInterface
+import Payments
+import ShopInterface
 import SwiftUI
 import Testing
+import WidgetBridge
 @testable import Billet
 
 /// Every design component, and the key screens, at the SE and Pro Max sizes and at the largest accessibility text
@@ -52,6 +56,7 @@ enum GalleryScreen: String, CaseIterable, Sendable {
     case drawGuessUnpaired = "drawguess-unpaired"
     case gameFeed = "game-feed"
     case gameResult = "game-result"
+    case coins
 
     enum Loaded {
         case inbox(InboxModel)
@@ -60,6 +65,7 @@ enum GalleryScreen: String, CaseIterable, Sendable {
         case settings
         /// A mini-game's tray at the end of a meal, or its result.
         case game(finished: Bool)
+        case coins(CoinPacksModel)
     }
 
     @MainActor func loaded() async -> Loaded {
@@ -89,6 +95,12 @@ enum GalleryScreen: String, CaseIterable, Sendable {
         case .drawGuessUnpaired: return .drawGuess(await GameFixture.drawGuess(.unpaired))
         case .gameFeed: return .game(finished: false)
         case .gameResult: return .game(finished: true)
+        case .coins:
+            // The StoreKit build's packs, the first one paid while the server was out of reach.
+            let model = CoinPacksModel(payments: GalleryStore()) {}
+            await model.load()
+            await model.buy(model.packs[0])
+            return .coins(model)
         }
     }
 
@@ -118,6 +130,8 @@ enum GalleryScreen: String, CaseIterable, Sendable {
                 .transaction { $0.animation = nil }
         case .settings:
             NavigationStack { SettingsView(state: HomeState(stores: .live(events: .none))) {} }
+        case .coins(let model):
+            CoinsSheet(state: SellingHost(), packs: model)
         case .game(let finished):
             VStack {
                 Spacer(minLength: 0)
@@ -145,4 +159,41 @@ enum GalleryScreen: String, CaseIterable, Sendable {
         UserDefaults().removePersistentDomain(forName: suite)
         return UserDefaults(suiteName: suite) ?? UserDefaults()
     }
+}
+
+/// The three packs at their US prices; a purchase is paid but not credited yet.
+nonisolated private struct GalleryStore: Payments {
+    func products() async throws(PaymentsError) -> [StampPack] {
+        StampPackCatalog.standard.packs.map { definition in
+            StampPack(id: definition.id, stamps: definition.stamps, displayName: "", description: "", displayPrice: "$\(definition.price)")
+        }
+    }
+
+    func purchase(_ pack: StampPack) async throws(PaymentsError) -> PurchaseResult { .awaitingCredit }
+    func restore() async throws(PaymentsError) -> StampLedger { .empty }
+    func settleUnfinished() async {}
+    func updates() -> AsyncStream<PaymentsUpdate> { AsyncStream { $0.finish() } }
+}
+
+/// A pair the server sells coins to, in a StoreKit build.
+private final class SellingHost: ShopHost {
+    private let home = HomeState(stores: .live(events: .none))
+
+    var shop: ShopModel { home.shop }
+    var shopCategory: ShopCategory {
+        get { home.shopCategory }
+        set { home.shopCategory = newValue }
+    }
+    var shopFocus: ShopFocus? {
+        get { home.shopFocus }
+        set { home.shopFocus = newValue }
+    }
+    var petName: String { "Tofu" }
+    var remoteFlags: RemoteFlags { RemoteFlags(assignments: ["payments": "on"]) }
+    var coatAvatarName: String { home.coatAvatarName }
+    var storeIsMock: Bool { false }
+    func isPlaced(_ itemID: String) -> Bool { false }
+    func decorate(_ item: String?) {}
+    func makeItemPreview() -> any ItemPreview { home.makeItemPreview() }
+    func launchValue(_ key: String) -> String? { nil }
 }

@@ -140,73 +140,77 @@ Which store the app carries is chosen when it is built, with one variable:
 
 | `BILLET_PAYMENTS` | Store | Server path | Use |
 | --- | --- | --- | --- |
-| `none` (the release default, to come) | none: no StoreKit, no mock, no "buy coins" anywhere | none | The first App Store release |
+| `none` | none: no store linked, no "buy coins" anywhere (`NoPaymentsBuild`) | none | The TestFlight default and the first App Store release |
 | `mock` (default) | `MockPayments`: packs and prices from `coin-packs.json`, no StoreKit, no network to Apple | `POST /v1/purchases/mock` (dev only) | Simulator and UI work; never uploaded |
-| `storekit` | `StoreKitPayments`: StoreKit 2 | `POST /v1/purchases` with the signed transaction | Xcode/Simulator with `Billet.storekit`, TestFlight sandbox, the App Store |
+| `storekit` | `StoreKitPayments`: StoreKit 2 | `POST /v1/purchases` with the signed transaction | Xcode/Simulator with `Ourio.storekit`, TestFlight sandbox, the App Store |
 
 Set it in the **environment**, never as an `xcodebuild` argument: `Package.swift` reads it to link
 only that store into `PaymentsLive`, and the app target reads the same variable as a build setting
-(`BILLET_PAYMENTS_MODE`, then the compile condition `PAYMENTS_MOCK` or `PAYMENTS_STOREKIT`). The two
-can't disagree silently: each mode of `PaymentsLive` has a type the other lacks
-(`MockPaymentsBuild`, `StoreKitPaymentsBuild`) and `apps/ios/App/AppPayments.swift` names the one
-for its condition, so a mix fails to compile. The mock build contains no StoreKit purchase path and
-the StoreKit build contains no mock: `check-archive.sh` checks the archive's binary for the other
-store's names and its `BilletPayments` Info.plist value.
+(`BILLET_PAYMENTS_MODE`, then the compile condition `PAYMENTS_MOCK`, `PAYMENTS_STOREKIT` or
+`PAYMENTS_NONE`). The two can't disagree silently: each mode of `PaymentsLive` has a type the others
+lack (`MockPaymentsBuild`, `StoreKitPaymentsBuild`, `NoPaymentsBuild`) and
+`apps/ios/Nooki/Server/AppPayments.swift` names the one for its condition, so a mix fails to
+compile. The mock build contains no StoreKit purchase path, the StoreKit build no mock, and the
+`none` build neither: `check-archive.sh` checks the archive's binary for the other stores' names
+and its `BilletPayments` Info.plist value.
 
 ```sh
 # Simulator or device builds
 BILLET_PAYMENTS=mock     xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet ...
 BILLET_PAYMENTS=storekit xcodebuild build -project apps/ios/Billet.xcodeproj -scheme Billet ...
 
-# StoreKit purchases on a Simulator, from Billet.storekit (also run by ios.yml). Use a
-# runtime before iOS 26.3: 26.4 and 26.5 Simulators don't load .storekit files from
-# xcodebuild test, and on 27.2 the first purchase hangs (ios.yml picks the newest one
-# before 26.3, downloading iOS 26.2 when the runner has none:
-# xcodebuild -downloadPlatform iOS -buildVersion 26.2).
-(cd apps/ios && xcodegen generate)
-BILLET_PAYMENTS=storekit xcodebuild test -project apps/ios/Billet.xcodeproj \
-  -scheme BilletStoreKitTests -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.2'
-
-# TestFlight
-gh workflow run testflight.yml --ref main   # always StoreKit, Labs compiled out
+# TestFlight: no store unless asked for; Labs compiled out unless asked for
+gh workflow run testflight.yml --ref main                      # BILLET_PAYMENTS=none
+gh workflow run testflight.yml --ref main -f payments=storekit # sandbox purchases
 ```
+
+Local StoreKit testing needs no App Store Connect, agreement or bank: the `Billet` scheme's Run
+action uses `apps/ios/Ourio.storekit`, so a `storekit` build run from Xcode buys from that file, and
+Xcode's Debug > StoreKit > Manage Transactions refunds, approves Ask to Buy or deletes a purchase.
+Its transactions are signed by Xcode and say `Xcode`, which only the dev stage credits. Use a
+runtime before iOS 26.3 for `xcodebuild test` with `SKTestSession`: 26.4 and 26.5 Simulators don't
+load `.storekit` files there.
 
 After switching modes in Xcode, quit Xcode and reopen it from a shell with the variable set (or
 `launchctl setenv BILLET_PAYMENTS storekit`), and resolve packages again, since Xcode caches the
 package manifest.
 
-The TestFlight workflow always builds with `BILLET_PAYMENTS=storekit`, because the binary it
-uploads is the one App Review and the App Store get, and `check-archive.sh` fails the upload when
-`BilletPayments` is not `storekit` or the binary carries `MockPaymentsBuild`.
+The TestFlight workflow builds with `BILLET_PAYMENTS=none` unless its `payments` input is
+`storekit`, because the binary it uploads is the one App Review and the App Store get. It never
+builds the mock. `check-archive.sh` reads the same choice (`EXPECT_PAYMENTS`) and fails the upload
+when `BilletPayments` differs, when the binary carries `MockPaymentsBuild`, or when a `none` build
+carries `StoreKitPayments`. Turning sales on is then: a `storekit` build through review, the packs
+in App Store Connect, and the `payments` flag.
 
 ## The app
 
-The Swift package types below still carry the old `Stamp` names (`StampPack`, `StampShop`, …);
-they count coins, and the Ourio client renames them when it wires payments (decoding already maps
-`coins`).
+The Swift package types still carry the old `Stamp` names (`StampPack`, `StampCredit`, …); they
+count coins (decoding maps `coins`).
 
 - `Payments` (no StoreKit): the `Payments` protocol (`products()`, `purchase(_:)`, `restore()`,
-  `updates()`), plain value types (`StampPack`, `PurchaseResult`, `StampCredit`, `StampLedger`,
-  `PaymentsError`), the pack list (`StampPackCatalog`, from `Resources/coin-packs.json`) and
-  `PaymentsServer`, the server half as closures.
-- `PaymentsMock`: `MockPayments` and its switches (`MockSwitches`, Labs → Payments): the next purchase
-  succeeds, is cancelled, fails or waits for Ask to Buy; buttons approve or decline Ask to Buy and
-  refund the last purchase (through the mock route's `kind: "refund"`).
-- `PaymentsStoreKit`: `StoreKitPayments`. `Product.products(for:)` for the prices; `purchase()`; the
-  JWS of a verified transaction goes to the server and the transaction is finished **only after the
-  server answered**, so a crash or lost network leaves it unfinished and `Transaction.updates` or
-  `restore()` (which walks `Transaction.unfinished`) sends it again. Refunds reach the server from
-  Apple's notifications; the device only sees a changed ledger.
-- `PaymentsLive`: the one store this build carries (see above).
-- `FeatureHome.StampShop`: the model the shop uses (`packs`, `state`, `buy(_:)`). It credits the
-  pair's wallet (`ShopStore.creditPurchase`, entry `purchase:<transaction>`), merges the server's
-  ledger on attach and on `updates()`, and takes App Store refunds back with
-  `ShopStore.revokePurchase` (source `revoked`, entry `revoked:<transaction>`, never below zero; the
-  shop's own `refund:` entries are its 5-second Undo). The shop's own row of packs (behind the Labs
-  switch "Stamp packs") gets them through `StampShopPacks`, its `StampPackSource`. Labs → Payments
-  also opens a plain `StampPacksSheet`, next to the mock store's switches.
-- The shop lives in the demo app, which has no session: on the dev server, its purchase calls carry
-  the room code in `X-Billet-Demo-Room` (see Stages).
+  `settleUnfinished()`, `updates()`), plain value types (`StampPack`, `PurchaseResult`,
+  `StampCredit`, `StampLedger`, `PaymentsError`), the pack list (`StampPackCatalog`, from
+  `Resources/coin-packs.json`) and `PaymentsServer`, the server half as closures.
+- `PaymentsMock`: `MockPayments` and its switches (`MockSwitches`): the next purchase succeeds, is
+  cancelled, fails or waits for Ask to Buy; approving, declining and refunding the last purchase
+  go through the mock route.
+- `PaymentsStoreKit`: `StoreKitPayments`. `Product.products(for:)` for the prices; `purchase()`;
+  the JWS of a verified transaction goes to the server and the transaction is finished **only after
+  the server answered**. Once Apple has charged, a server that can't be reached is not a failed
+  purchase: `purchase(_:)` answers `awaitingCredit` and the transaction stays unfinished.
+  `Transaction.updates` (listened to from launch, which also hands over every unfinished
+  transaction) and `settleUnfinished()` (run when the app comes back to the front, and when the
+  Coins sheet opens on a pack still on its way) send it again, and the credit is announced on
+  `updates()`. A refunded transaction seen on the device is finished and the ledger read again;
+  the refund itself reaches the server from Apple.
+- `PaymentsLive`: the one store this build carries, or none (see above).
+- `FeatureShop.CoinPacksModel`: the Coins sheet's packs, on two machines. `CoinShelfMachine` is
+  what is on sale (`loading`, `ready`, `unavailable`); `CoinPurchaseMachine` is the one buy on its
+  way (`idle`, `buying`, `waiting` for Ask to Buy, `delivering` while paid but not credited,
+  `bought`, `failed`). A credit or a changed ledger from `updates()` reads the wallet again, and
+  finishes a `waiting` or `delivering` buy. The sheet sells only while `payments` is `on` for the
+  pair (`CoinPacksModel.sells`), shows the wallet's signed balance, and below 0 says what the refund
+  took and that new coins cover it first (`CoinDebt`). Ourio Plus is shown in a mock build only.
 
 ## Backend
 
@@ -307,19 +311,19 @@ Crediting is one D1 batch: insert the purchase if its `originalTransactionId` is
 `purchase:` entry only for the owner the stored row names, and read the balance. A transaction sent
 again, by the same pair or another, credits nothing and answers `duplicate: true`.
 
-A refund is one batch too. It takes back the pack's coins but at most the owner's balance, so the
-balance never goes below 0. If it took less than the pack, the purchase is flagged for the admin
-(the Purchases page). Each step only applies to the purchase in the state it was read in, so two
-copies of the same refund apply once.
+A refund is one batch too. It takes back the whole pack, however little is left, so the ledger's
+balance can go below 0, and so can the wallet's. If the wallet ended below 0, the purchase is flagged
+for the admin (the Purchases page). Each step only applies to the purchase in the state it was read
+in, so two copies of the same refund apply once.
 
 This D1 ledger counts only bought coins. The pair's wallet (coins earned in play plus coins bought,
 minus coins spent in the shop) is in the pair's `PairRoom`, next to the cat's journal; a phone
 with no partner keeps its own. Every purchase, refund and restore is entered there too
-(`CreditPurchase`, through `PairWallet`), under the same entry id, kind `buy` or `refund`: once
+(`CreditPurchase`, through `PairWallet`), under the same entry id, kind `purchase` or `refund`: once
 per id, so the server always calls the room again for a repeated transaction or a retry. A credit
 goes to the room after D1, a refund or restore before it (D1 records the notification, which stops
-Apple's retries). A refund in the room takes at most the wallet's balance, which coins spent
-already may have lowered; a restore gives back what that refund took. A demo room has no wallet
+Apple's retries). A refund in the room takes exactly what the purchase credited, below 0 if the
+coins are spent already; a restore gives back what that refund took. A demo room has no wallet
 and keeps only the D1 ledger.
 
 ### App Store Server Notifications
@@ -331,13 +335,15 @@ so everything handled answers 200 and only a bad signature, chain or bundle is a
 
 | Type | What happens |
 | --- | --- |
-| `REFUND`, `REVOKE` | the purchase's coins come back off (`refund:<id>`), at most down to 0 |
+| `REFUND`, `REVOKE` | the purchase's coins come back off (`refund:<id>`), below 0 if they are spent |
 | `REFUND_REVERSED` | what the last refund took is credited again (`restore:<id>`, kind `purchase`) |
 | `CONSUMPTION_REQUEST` | recorded only (see below) |
 | anything else | recorded only |
 
 A notification already recorded is a 200 and changes nothing. One for a transaction the server
-never credited, or from an environment the stage doesn't accept, is recorded with that outcome.
+never credited, or from an environment the stage doesn't accept (the notification's
+`data.environment`, or the signed transaction's own when the notification names none), is recorded
+with that outcome.
 
 `CONSUMPTION_REQUEST` asks whether a refunded consumable was used. Answering it means calling the
 App Store Server API with a signed key (an in-app purchase key from App Store Connect), which does
@@ -348,7 +354,21 @@ not exist yet, so the server records the request and Apple decides without the a
 The full checklist is `~/.billet-manager/pet-concept/payments/OWNER-TODO.md` (outside the repo).
 
 1. Create the three consumables in App Store Connect with the ids and prices above.
-2. Set the App Store Server Notifications V2 URL (production and sandbox) to
-   `https://billet.mikitahimpel.com/v1/appstore/notifications`.
+2. Set the App Store Server Notifications V2 URLs (App Store Connect > the app > App Information >
+   App Store Server Notifications, Version 2). There is one production and one sandbox URL per
+   app, not one per stage:
+
+   | Field | URL | Stage |
+   | --- | --- | --- |
+   | Production Server URL | `https://ourio-api.gimpelllll.workers.dev/v1/appstore/notifications` | prod |
+   | Sandbox Server URL | `https://ourio-api-dev.gimpelllll.workers.dev/v1/appstore/notifications` | dev |
+
+   Sandbox goes to dev because TestFlight test builds talk to dev (docs/testflight-ci.md), so their
+   sandbox refunds must reach the ledger that credited them. App Review's sandbox purchases are
+   credited on prod; their refunds would go to dev, which records them as `unknown-transaction`.
+   No `stage` stage is deployed; one would answer on
+   `https://ourio-api-stage.gimpelllll.workers.dev/v1/appstore/notifications` and could take the
+   sandbox URL in dev's place. Once `API_DOMAIN` gives prod a custom domain, the production URL
+   moves to `https://<API_DOMAIN>/v1/appstore/notifications`.
 3. Later, for consumption answers and refund lookups: an App Store Server API key, stored in Proton
    Pass, never in the repository.

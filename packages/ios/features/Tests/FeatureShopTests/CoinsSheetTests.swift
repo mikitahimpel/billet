@@ -32,7 +32,7 @@ private let offers = ShopOffers(pairSeed: "L+M", cat: "Mochi")
     }
     await failing.load()
     await failing.buy(try #require(failing.packs.first))
-    #expect(failing.status == .failed(CoinPacksModel.message(.unavailable)))
+    #expect(failing.status == .failed(.unavailable))
 
     let cancelled = CoinPacksModel(payments: FakePayments(result: .cancel)) { reads.count += 1 }
     await cancelled.load()
@@ -54,6 +54,49 @@ private let offers = ShopOffers(pairSeed: "L+M", cat: "Mochi")
     await buying.value
     #expect(model.status == .bought(coins: 100))
     #expect(store.purchases == 1)
+  }
+
+  @Test @MainActor func anAskToBuyApprovedLaterIsBought() async throws {
+    let reads = Counter()
+    let credit = StampCredit(
+      entryID: "purchase:t2", transactionID: "t2", productID: "com.ourio.app.coins.550",
+      stamps: 550,
+      serverBalance: 550, duplicate: false)
+    let model = CoinPacksModel(
+      payments: FakePayments(result: .pending, feed: Feed([.credited(credit)]))
+    ) { reads.count += 1 }
+    await model.load()
+    await model.buy(try #require(model.packs.dropFirst().first))
+    #expect(model.status == .waiting)
+    await model.follow()
+    #expect(model.status == .bought(coins: 550))
+    #expect(reads.count == 1)
+  }
+
+  @Test @MainActor func aPaidPackTheServerMissedIsSentAgainAndThenBought() async throws {
+    let feed = Feed([
+      .credited(
+        StampCredit(
+          entryID: "purchase:t3", transactionID: "t3", productID: "com.ourio.app.coins.100",
+          stamps: 100, serverBalance: 100, duplicate: false))
+    ])
+    let model = CoinPacksModel(payments: FakePayments(result: .awaitingCredit, feed: feed)) {}
+    await model.load()
+    await model.buy(try #require(model.packs.first))
+    #expect(model.status == .delivering)
+    await model.follow()
+    #expect(feed.settled == 1)
+    #expect(model.status == .bought(coins: 100))
+  }
+
+  @Test @MainActor func aRefundReadsTheWalletAndKeepsWhatTheSheetSays() async {
+    let reads = Counter()
+    let model = CoinPacksModel(
+      payments: FakePayments(result: .succeed, feed: Feed([.ledgerChanged(.empty)]))
+    ) { reads.count += 1 }
+    await model.follow()
+    #expect(model.status == .idle)
+    #expect(reads.count == 1)
   }
 
   @Test @MainActor func aStoreThatCantBeReachedShowsAnEmptyShelfAndCanTryAgain() async {
@@ -110,6 +153,14 @@ private let offers = ShopOffers(pairSeed: "L+M", cat: "Mochi")
   }
 }
 
+/// What the store announces outside a purchase, and how often it was asked to send unfinished ones again.
+nonisolated private final class Feed: @unchecked Sendable {
+  let updates: [PaymentsUpdate]
+  var settled = 0
+
+  init(_ updates: [PaymentsUpdate]) { self.updates = updates }
+}
+
 /// A store sheet the buyer hasn't answered yet: each purchase waits in `held` until the test resumes it.
 nonisolated private final class HeldStore: @unchecked Sendable {
   var purchases = 0
@@ -124,6 +175,8 @@ nonisolated private struct FakePayments: Payments {
   enum Outcome: Sendable {
     case succeed
     case cancel
+    case pending
+    case awaitingCredit
     case fail(PaymentsError)
   }
 
@@ -136,6 +189,7 @@ nonisolated private struct FakePayments: Payments {
   let result: Outcome
   var shelf = Shelf.standard
   var held: HeldStore?
+  var feed: Feed?
 
   func products() async throws(PaymentsError) -> [StampPack] {
     switch shelf {
@@ -159,11 +213,23 @@ nonisolated private struct FakePayments: Payments {
           entryID: "purchase:t1", transactionID: "t1", productID: pack.id, stamps: pack.stamps,
           serverBalance: pack.stamps, duplicate: false))
     case .cancel: .cancelled
+    case .pending: .pending
+    case .awaitingCredit: .awaitingCredit
     case .fail(let error): throw error
     }
   }
 
   func restore() async throws(PaymentsError) -> StampLedger { StampLedger(balance: 0, entries: []) }
 
-  func updates() -> AsyncStream<PaymentsUpdate> { AsyncStream { $0.finish() } }
+  func settleUnfinished() async {
+    if let feed { feed.settled += 1 }
+  }
+
+  func updates() -> AsyncStream<PaymentsUpdate> {
+    guard let feed else { return AsyncStream { $0.finish() } }
+    return AsyncStream { continuation in
+      for update in feed.updates { continuation.yield(update) }
+      continuation.finish()
+    }
+  }
 }

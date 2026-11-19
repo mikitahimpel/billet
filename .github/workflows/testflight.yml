@@ -19,6 +19,11 @@ on:
         description: Compile Settings > Labs in, for the owner's test builds; never submit such a build for review
         type: boolean
         default: false
+      payments:
+        description: The store for coin packs. none sells nothing; storekit sells through StoreKit once the server's payments flag is on
+        type: choice
+        options: [none, storekit]
+        default: none
 
 concurrency:
   group: testflight
@@ -96,6 +101,12 @@ jobs:
         run: |
           echo "**Labs build: do not submit for review**" >> "$GITHUB_STEP_SUMMARY"
 
+      - name: Say which store the build carries
+        env:
+          PAYMENTS: ${{ inputs.payments || 'none' }}
+        run: |
+          echo "Coin packs store: \`$PAYMENTS\`" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Select Xcode from .xcode-version
         run: .github/scripts/select-xcode.sh .xcode-version
 
@@ -170,13 +181,14 @@ jobs:
           echo "Build number: $number"
 
       # BILLET_API_HOST is read by the build into Info.plist's BilletAPIHost (apps/ios/Nooki/Server/Backend.swift).
-      # BILLET_PAYMENTS picks the store for coin packs (docs/payments.md): always StoreKit, because the binary
-      # uploaded here is the one App Review and the App Store get. BILLET_LABS stays unset, so Labs is compiled out.
+      # BILLET_PAYMENTS picks the store for coin packs (docs/payments.md): none unless the run asks for storekit, never
+      # the mock, because the binary uploaded here is the one App Review and the App Store get. BILLET_LABS stays unset
+      # unless the run asks for Labs, so Labs is compiled out.
       - name: Archive
         env:
           BUILD_NUMBER: ${{ steps.build.outputs.number }}
           BILLET_API_HOST: ${{ vars.API_HOST || secrets.API_HOST }}
-          BILLET_PAYMENTS: storekit
+          BILLET_PAYMENTS: ${{ inputs.payments || 'none' }}
           BILLET_LABS: ${{ inputs.labs && 'YES' || '' }}
         run: |
           (cd apps/ios && xcodegen generate --quiet)
@@ -201,6 +213,7 @@ jobs:
         env:
           API_HOST: ${{ vars.API_HOST || secrets.API_HOST }}
           EXPECT_LABS: ${{ inputs.labs && 'YES' || 'NO' }}
+          EXPECT_PAYMENTS: ${{ inputs.payments || 'none' }}
         run: |
           "$TESTFLIGHT_SCRIPTS/check-archive.sh" "$ARCHIVE" "${{ steps.build.outputs.number }}"
           echo "API host: \`$API_HOST\`" >> "$GITHUB_STEP_SUMMARY"

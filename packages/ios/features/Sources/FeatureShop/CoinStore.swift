@@ -3,8 +3,8 @@
   import Payments
   import SwiftUI
 
-  /// Billet Plus, the pair's monthly subscription. What it gives isn't built yet, so a mock build turns it on for this
-  /// phone only and a StoreKit build says it is coming.
+  /// Billet Plus, the pair's monthly subscription. What it gives isn't built yet, so only a mock build shows it, turned
+  /// on for this phone only.
   public enum PlusPass {
     public static let key = "plus.mockOn"
     static let price = "$4.99"
@@ -19,7 +19,6 @@
   }
 
   struct PlusHero: View {
-    let mockStore: Bool
     let avatar: String
     @AppStorage(PlusPass.key) private var on = false
 
@@ -76,16 +75,11 @@
       .accessibilityHidden(true)
     }
 
-    @ViewBuilder private var action: some View {
-      if mockStore {
-        PrimaryButton(on ? "Turn off (test)" : "Try Ourio Plus · \(PlusPass.price) / month") {
-          on.toggle()
-        }
-        .accessibilityIdentifier("plusMock")
-      } else {
-        PrimaryButton("\(PlusPass.price) / month · coming soon") {}
-          .disabled(true)
+    private var action: some View {
+      PrimaryButton(on ? "Turn off (test)" : "Try Ourio Plus · \(PlusPass.price) / month") {
+        on.toggle()
       }
+      .accessibilityIdentifier("plusMock")
     }
   }
 
@@ -175,8 +169,9 @@
       switch model.status {
       case .idle, .buying: nil
       case .waiting: "Waiting for approval. The coins arrive once it's given."
+      case .delivering: "Paid. Your coins arrive as soon as Ourio reaches its server."
       case .bought(let coins): "+\(coins) coins. Enjoy!"
-      case .failed(let message): message
+      case .failed(let error): CoinPacksModel.message(error)
       }
     }
   }
@@ -190,42 +185,61 @@
     let locked: Bool
     let isFit: Bool
     let buy: () -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
       Card(state: isFit ? .selected : .rest) {
-        HStack(spacing: Space.l) {
-          CoinPile(rows: PackStore.piles[tier])
-            .frame(width: 88)
-          VStack(alignment: .leading, spacing: Space.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
-              Text(pack.stamps.formatted())
-                .font(.ourioTitleDigits)
-                .foregroundStyle(Ink.text)
-              Text("coins")
-                .font(.ourioCallout)
-                .foregroundStyle(Ink.textSecondary)
-            }
-            if isFit {
-              Chip("Covers what you need", symbol: "checkmark", style: .honey)
-            } else if let badge {
-              Chip(badge, style: .honey)
-            }
+        // At accessibility sizes the pile gives its room to the count, and the price button takes the row.
+        if typeSize.isAccessibilitySize {
+          VStack(alignment: .leading, spacing: Space.m) {
+            details
+            button.frame(maxWidth: .infinity)
           }
-          Spacer(minLength: 0)
-          Button(action: buy) {
-            if buying {
-              ProgressView().tint(Ink.heroInk)
-            } else {
-              Text(pack.displayPrice).monospacedDigit()
-            }
+        } else {
+          HStack(spacing: Space.m) {
+            CoinPile(rows: PackStore.piles[tier])
+              .frame(width: CoinPile.width)
+            details
+            Spacer(minLength: 0)
+            button
           }
-          .buttonStyle(PrimaryButtonStyle(fullWidth: false))
-          .disabled(locked)
-          .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
         }
       }
       .accessibilityElement(children: .contain)
       .accessibilityIdentifier(isFit ? "fitPack" : pack.id)
+    }
+
+    private var details: some View {
+      VStack(alignment: .leading, spacing: Space.xs) {
+        HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+          Text(pack.stamps.formatted())
+            .font(.ourioTitleDigits)
+            .foregroundStyle(Ink.text)
+            .fixedSize()
+          Text("coins")
+            .font(.ourioCallout)
+            .foregroundStyle(Ink.textSecondary)
+            .fixedSize()
+        }
+        if isFit {
+          Chip("Covers what you need", symbol: "checkmark", style: .honey)
+        } else if let badge {
+          Chip(badge, style: .honey)
+        }
+      }
+    }
+
+    private var button: some View {
+      Button(action: buy) {
+        if buying {
+          ProgressView().tint(Ink.heroInk)
+        } else {
+          Text(pack.displayPrice).monospacedDigit().lineLimit(1).fixedSize()
+        }
+      }
+      .buttonStyle(PrimaryButtonStyle(fullWidth: typeSize.isAccessibilitySize))
+      .disabled(locked)
+      .accessibilityLabel("Buy \(pack.stamps) coins for \(pack.displayPrice)")
     }
   }
 
@@ -233,12 +247,16 @@
   private struct CoinPile: View {
     let rows: [Int]
 
+    private static let coin: CGFloat = 20
+    /// The widest row, four coins overlapping.
+    static let width: CGFloat = coin * 4 - 5 * 3
+
     var body: some View {
-      VStack(spacing: -11) {
+      VStack(spacing: -8) {
         ForEach(Array(rows.reversed().enumerated()), id: \.offset) { _, count in
-          HStack(spacing: -6) {
+          HStack(spacing: -5) {
             ForEach(0..<count, id: \.self) { _ in
-              CoinIcon(size: 26)
+              CoinIcon(size: Self.coin)
             }
           }
         }
