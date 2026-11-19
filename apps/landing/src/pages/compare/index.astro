@@ -7,7 +7,7 @@ import { alternatives, apps, checked, ourio } from "../../compare";
 import Page from "../../layouts/page.astro";
 
 const picks = [
-  { need: "Daily questions and relationship coaching", apps: "Paired, Agapé, Lovewick" },
+  { need: "Daily questions and relationship coaching", apps: "Paired, Evergreen, Agapé, Lovewick" },
   { need: "A private chat and shared calendar", apps: "Between" },
   { need: "Couple widgets, mood, a distance tracker and daily questions", apps: "Couple Joy" },
   { need: "One-minute daily rituals: questions, photo prompts, local date ideas", apps: "Candle" },
@@ -15,6 +15,10 @@ const picks = [
   { need: "Widgets and pets with friends and a partner", apps: "Widgetable" },
   { need: "Planning life together: calendar, to-dos, key dates", apps: "Cupla" },
   { need: "A daily question and a pet to raise", apps: "SumOne" },
+  { need: "An AI pet you raise with a partner or friend", apps: "Pengu" },
+  { need: "Quizzes and an AI relationship coach", apps: "Flamme" },
+  { need: "Notes and drawings on a friend's Home Screen", apps: "noteit" },
+  { need: "A pet raised by a group of friends", apps: "Pokipet" },
   { need: "A shared cat, Lock Screen drawings, games and a planner, all free", apps: "Ourio" },
 ];
 const schema = [
@@ -41,8 +45,8 @@ const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name
 ---
 
 <Page
-  title="Best couples apps for iPhone compared: Paired, Between and more"
-  description="Couples apps for iPhone side by side: Paired, Between, Locket Widget, Widgetable, SumOne, Ourio and more. Prices, Android support and features compared."
+  title="Couples apps compared side by side: Paired, Between, Pengu and more"
+  description="16 couples apps side by side: Paired, Between, Evergreen, Widgetable, SumOne, Pengu, Ourio and more. Prices, Android support and features in one table."
   schema={schema}
   bodyClass="site-compare"
 >
@@ -53,7 +57,7 @@ const sources = apps.flatMap((app) => app.sources.map((url) => ({ name: app.name
       <p class="lead">
         The best couples app depends on what you want from it. Paired and Agapé are built around daily questions, Between is a
         private messenger, Locket and Widgetable live in widgets, Cupla is a shared planner. Ourio, the app this site is for,
-        is a free mix: a shared cat, Lock Screen drawings, games and a planner, with no subscription.
+        is a free mix: a shared cat, Lock Screen drawings, games and a planner, with no subscription. For a ranked list, see <a href="/best-couples-apps/">the best couples apps of 2026</a>.
       </p>
       <p class="pg-small">
         We make Ourio, so read this as our view. Prices and features come from each app's US App Store page and website,

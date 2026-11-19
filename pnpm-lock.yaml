@@ -161,6 +161,9 @@ importers:
 
   apps/landing:
     dependencies:
+      '@billet/backend-dates':
+        specifier: workspace:*
+        version: link:../../packages/backend/dates
       '@billet/backend-guess':
         specifier: workspace:*
         version: link:../../packages/backend/guess
