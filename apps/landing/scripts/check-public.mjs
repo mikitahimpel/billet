@@ -6,7 +6,7 @@ const allowed = new Set([
   "_headers",
   "favicon.png",
   "apple-touch-icon.png",
-  "og.png",
+  "og.jpg",
   "robots.txt",
   "site.webmanifest",
   "umami-filter.js",
