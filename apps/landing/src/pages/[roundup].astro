@@ -1,0 +1,129 @@
+---
+import type { GetStaticPaths } from "astro";
+import DocArticle from "../components/doc-article.astro";
+import { alternatives, apps, capabilities, checked, ourio } from "../compare";
+import Page from "../layouts/page.astro";
+import { roundups, type Roundup } from "../roundups";
+
+export const getStaticPaths = (() =>
+  roundups.map((page) => ({ params: { roundup: page.slug }, props: { page } }))) satisfies GetStaticPaths;
+
+const { page } = Astro.props as { page: Roundup };
+const entries = page.picks.map((pick, i) => {
+  const app = pick.app === ourio.name ? ourio : apps.find((other) => other.name === pick.app)!;
+  return {
+    ...pick,
+    app,
+    id: app.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
+    rank: i + 1,
+    has: capabilities.filter((capability) => app.has.includes(capability.key)).map((capability) => capability.label),
+    alternative: alternatives.find((alternative) => alternative.app === app.name),
+    read: app === ourio ? null : (app.checked ?? checked),
+    site: app.sources.find((url) => !url.startsWith("https://apps.apple.com/")) ?? app.sources[0],
+  };
+});
+const topics = [
+  { id: "picks", label: "The list at a glance" },
+  ...entries.map((entry) => ({ id: entry.id, label: `${entry.rank}. ${entry.app.name}` })),
+  { id: "questions", label: "Questions" },
+];
+const schema = [
+  {
+    "@type": "ItemList",
+    name: page.h1,
+    itemListElement: entries.map((entry) => ({
+      "@type": "ListItem",
+      position: entry.rank,
+      name: entry.app.name,
+      url: entry.app === ourio ? new URL("/", Astro.site).href : entry.site,
+    })),
+  },
+  {
+    "@type": "FAQPage",
+    mainEntity: page.questions.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
+---
+
+<Page title={page.title} description={page.description} schema={schema} bodyClass="site-doc">
+  <DocArticle eyebrow="Compare" title={page.h1} lead={page.lead} updated={page.updated} topics={topics}>
+    <p>{page.method}</p>
+
+    <h2 id="picks">The list at a glance</h2>
+    <ol>
+      {
+        entries.map((entry) => (
+          <li>
+            <a href={`#${entry.id}`}>{entry.app.name}</a>: {entry.bestFor}
+          </li>
+        ))
+      }
+    </ol>
+
+    {
+      entries.map((entry) => (
+        <>
+          <h2 id={entry.id}>
+            {entry.rank}. {entry.app.name}
+          </h2>
+          <p>
+            <strong>Best for:</strong> {entry.bestFor}
+          </p>
+          <dl class="facts">
+            <div>
+              <dt>What it is</dt>
+              <dd>{entry.app.what}</dd>
+            </div>
+            <div>
+              <dt>Price</dt>
+              <dd>{entry.app.price}</dd>
+            </div>
+            <div>
+              <dt>Android</dt>
+              <dd>{entry.app.android ? "Yes" : "No, iPhone only"}</dd>
+            </div>
+            <div>
+              <dt>App Store rating</dt>
+              <dd>{entry.app.rating}</dd>
+            </div>
+            <div>
+              <dt>Features</dt>
+              <dd>{entry.has.join(", ")}</dd>
+            </div>
+          </dl>
+          {entry.app === ourio ? (
+            <p>
+              See <a href="/features/">every Ourio feature</a> or <a href="/how-it-works/">how pairing works</a>.
+            </p>
+          ) : (
+            <p>
+              From its <a href={entry.site} rel="nofollow noopener">own pages</a>, read{" "}
+              <time datetime={entry.read!.iso}>{entry.read!.label}</time>.
+              {entry.alternative && (
+                <>
+                  {" "}
+                  See <a href={`/compare/${entry.alternative.slug}/`}>Ourio vs {entry.app.name}</a>.
+                </>
+              )}
+            </p>
+          )}
+        </>
+      ))
+    }
+
+    <h2 id="questions">Questions</h2>
+    {
+      page.questions.map((item) => (
+        <>
+          <h3>{item.question}</h3>
+          <p>{item.answer}</p>
+        </>
+      ))
+    }
+    <p>Every app side by side, feature by feature: <a href="/compare/">couples apps compared</a>.</p>
+  </DocArticle>
+</Page>

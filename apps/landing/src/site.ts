@@ -1,4 +1,5 @@
 import { alternatives } from "./compare";
+import { roundups } from "./roundups";
 
 // Every page of the site, once: the header, the footer, sitemap.xml and llms.txt all read this list.
 export type SitePage = {
@@ -137,12 +138,32 @@ export const pages: SitePage[] = [
     group: "product",
   },
   {
+    path: "/date-night-ideas-at-home/",
+    label: "Date ideas at home",
+    summary:
+      "Date night ideas at home from Ourio's Date night, free and cheap, with time and cost for each.",
+    group: "product",
+  },
+  {
+    path: "/long-distance-date-ideas/",
+    label: "Long distance date ideas",
+    summary:
+      "Date ideas for two homes: synced movie nights, the same recipe in two kitchens and video call dates.",
+    group: "product",
+  },
+  {
     path: "/compare/",
     label: "Compare apps",
     summary:
-      "Ourio, Paired, Between, Couple Joy, Candle, Locket Widget, Widgetable, SumOne and more: prices and features.",
+      "Ourio, Paired, Between, Couple Joy, Evergreen, Candle, Widgetable, SumOne, Pengu and more side by side: prices and features.",
     group: "compare",
   },
+  ...roundups.map((page): SitePage => ({
+    path: `/${page.slug}/`,
+    label: page.label,
+    summary: page.summary,
+    group: "compare",
+  })),
   ...alternatives.map((page): SitePage => ({
     path: `/compare/${page.slug}/`,
     label: `${page.app} alternative`,

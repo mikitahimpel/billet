@@ -1,0 +1,103 @@
+---
+import DocArticle from "../components/doc-article.astro";
+import Page from "../layouts/page.astro";
+import { apartIdeas, callIdeas, details, updated } from "../date-night-ideas";
+
+const count = apartIdeas.length + callIdeas.length;
+const faq = [
+  {
+    question: "What can long distance couples do together online?",
+    answer:
+      "Watch a movie in sync with the call on, cook the same recipe in two kitchens, play a co-op game, tour a museum online, read the same book a chapter a night, or join a live trivia night together.",
+  },
+  {
+    question: "What are free long distance date ideas?",
+    answer:
+      "A same-sky walk at sunset, falling asleep on a call, a shared playlist session, touring each other's rooms, drawing on one canvas, or planning the first day of your next visit.",
+  },
+  {
+    question: "How do you plan dates in a long distance relationship?",
+    answer:
+      "Pick one a week and put it on a shared calendar. In Ourio you each swipe date ideas, including long distance ones, and a match goes in your plans; a countdown to your next visit sits on both Lock Screens.",
+  },
+  {
+    question: "Where do these ideas come from?",
+    answer:
+      "They are from Date night in Ourio, a free couples app for iPhone with 150 date ideas for home, going out, outdoors and long distance.",
+  },
+];
+const topics = [
+  { id: "apart", label: "Long distance date ideas" },
+  { id: "on-a-call", label: "Date ideas over a video call" },
+  { id: "between-dates", label: "Between dates" },
+  { id: "questions", label: "Questions" },
+];
+const schema = [
+  {
+    "@type": "FAQPage",
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
+---
+
+<Page
+  title={`${count} long distance date ideas for couples, online and off`}
+  description={`${count} long distance date ideas: a synced movie night, the same recipe in two kitchens, a same-sky walk, mailed surprises and video call dates, most free.`}
+  schema={schema}
+  bodyClass="site-doc"
+>
+  <DocArticle
+    eyebrow="Date ideas"
+    title="Long distance date ideas"
+    lead={`A long distance date works when you do the same thing at the same time, not just talk about your days. Here are ${count} ideas for two homes: ${apartIdeas.length} made for distance and ${callIdeas.length} at-home dates that work just as well over a video call.`}
+    updated={updated}
+    topics={topics}
+  >
+    <h2 id="apart">Long distance date ideas</h2>
+    <p>Made for two cities: most need only a call and the same hour.</p>
+    <ol>
+      {
+        apartIdeas.map((idea) => (
+          <li>
+            <strong>{idea.title}.</strong> {idea.pitch}. <em>{details(idea)}</em>
+          </li>
+        ))
+      }
+    </ol>
+
+    <h2 id="on-a-call">Date ideas over a video call</h2>
+    <p>At-home dates that don't need you in one room. Prop the phone up and do them side by side.</p>
+    <ol>
+      {
+        callIdeas.map((idea) => (
+          <li>
+            <strong>{idea.title}.</strong> {idea.pitch}. <em>{details(idea)}</em>
+          </li>
+        ))
+      }
+    </ol>
+
+    <h2 id="between-dates">Between dates</h2>
+    <p>
+      The days between calls matter as much as the dates. Ourio, a free couples app for iPhone, is made for them: draw on
+      your partner's Lock Screen, look after one cat together, play a daily guessing game and count down to your next
+      visit. Its Date night has every idea on this page; you each swipe them, and a match goes in your plans. See <a
+        href="/long-distance-relationship-app/">Ourio for long distance</a
+      > and more <a href="/date-night-ideas-at-home/">date night ideas at home</a>.
+    </p>
+
+    <h2 id="questions">Questions</h2>
+    {
+      faq.map((item) => (
+        <>
+          <h3>{item.question}</h3>
+          <p>{item.answer}</p>
+        </>
+      ))
+    }
+  </DocArticle>
+</Page>

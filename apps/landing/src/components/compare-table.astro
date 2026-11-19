@@ -14,9 +14,8 @@ const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.c
   .map((date) => ({ ...date, names: read.filter((app) => (app.checked ?? checked).iso === date.iso).map((app) => app.name) }));
 ---
 
-<div class="tbl tbl-wide">
-  <table>
-    <caption>
+<figure class="tbl-fig">
+  <figcaption id="compare-caption">
       {caption} ✓ means the app's App Store page or website lists it; a dash means we didn't find it listed. Checked {
         dates.map((date, i) => (
           <>
@@ -26,7 +25,9 @@ const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.c
           </>
         ))
       }.
-    </caption>
+  </figcaption>
+  <div class="tbl tbl-wide" role="region" aria-labelledby="compare-caption" tabindex="0">
+    <table aria-labelledby="compare-caption">
     <thead>
       <tr>
         <td></td>
@@ -57,5 +58,6 @@ const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.c
         {apps.map((app) => <td>{app.rating}</td>)}
       </tr>
     </tbody>
-  </table>
-</div>
+    </table>
+  </div>
+</figure>

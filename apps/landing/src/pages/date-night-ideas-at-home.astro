@@ -1,0 +1,93 @@
+---
+import DocArticle from "../components/doc-article.astro";
+import Page from "../layouts/page.astro";
+import { details, homeByCost, homeIdeas, updated } from "../date-night-ideas";
+
+const faq = [
+  {
+    question: "What are good date night ideas at home?",
+    answer:
+      "Ones you make together rather than watch: a blanket fort cinema, cooking a dish from a random country, a pancake art battle, a spa night, or recreating your first date at home.",
+  },
+  {
+    question: "What are free date night ideas at home?",
+    answer:
+      "A childhood movie swap, karaoke love songs, an old photo night, a board game tournament, writing love letters to open in a year, or a slow dance in the kitchen. All cost nothing.",
+  },
+  {
+    question: "How do we pick a date night idea when we can't decide?",
+    answer:
+      "Swipe. In Ourio's Date night you each swipe these ideas on your own iPhone; when you both love one, it's a match, and you can plan it with a reminder.",
+  },
+  {
+    question: "Where do these ideas come from?",
+    answer:
+      "They are the at-home ideas of Date night in Ourio, a free couples app for iPhone. The app has 150 ideas for home, going out, outdoors and long distance.",
+  },
+];
+const topics = [
+  ...homeByCost.map((group) => ({ id: group.id, label: group.heading })),
+  { id: "pick", label: "Pick one together" },
+  { id: "questions", label: "Questions" },
+];
+const schema = [
+  {
+    "@type": "FAQPage",
+    mainEntity: faq.map((item) => ({
+      "@type": "Question",
+      name: item.question,
+      acceptedAnswer: { "@type": "Answer", text: item.answer },
+    })),
+  },
+];
+---
+
+<Page
+  title={`${homeIdeas.length} date night ideas at home: free, cozy and cheap`}
+  description={`${homeIdeas.length} date night ideas at home for couples, free and cheap: blanket fort cinema, cook a country, spa night, karaoke and more, with time and cost for each.`}
+  schema={schema}
+  bodyClass="site-doc"
+>
+  <DocArticle
+    eyebrow="Date ideas"
+    title="Date night ideas at home"
+    lead={`A good date night at home has one rule: make something together, don't just sit next to each other. Here are ${homeIdeas.length} ideas, from free ones that need nothing to a couple worth a splurge, each with how long it takes.`}
+    updated={updated}
+    topics={topics}
+  >
+    {
+      homeByCost.map((group) => (
+        <>
+          <h2 id={group.id}>{group.heading}</h2>
+          <p>{group.intro}</p>
+          <ol>
+            {group.ideas.map((idea) => (
+              <li>
+                <strong>{idea.title}.</strong> {idea.pitch}. <em>{details(idea)}</em>
+              </li>
+            ))}
+          </ol>
+        </>
+      ))
+    }
+
+    <h2 id="pick">Pick one together</h2>
+    <p>
+      These are the at-home ideas of Date night in Ourio, a free couples app for iPhone. You each swipe them on your own
+      phone; when you both love one, it's a match, and it goes in your plans with a reminder. There are ideas for going
+      out, outdoors and <a href="/long-distance-date-ideas/">long distance</a> too. See <a href="/features/date-night/"
+        >Date night in Ourio</a
+      >.
+    </p>
+
+    <h2 id="questions">Questions</h2>
+    {
+      faq.map((item) => (
+        <>
+          <h3>{item.question}</h3>
+          <p>{item.answer}</p>
+        </>
+      ))
+    }
+  </DocArticle>
+</Page>

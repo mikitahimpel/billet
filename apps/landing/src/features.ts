@@ -167,7 +167,12 @@ export const featureList: Feature[] = [
           "Yes. Ourio is free with no in-app purchases; even her treats and furniture are bought with coins you earn together.",
       },
     ],
-    related: ["widgets-and-notifications", "shop-and-coins", "love-streak", "free-couples-app"],
+    related: [
+      "widgets-and-notifications",
+      "shop-and-coins",
+      "love-streak",
+      "virtual-pet-app-for-couples",
+    ],
   },
   {
     slug: "lock-screen-drawings",
@@ -481,9 +486,9 @@ export const featureList: Feature[] = [
       },
     ],
     related: [
+      "date-night-ideas-at-home",
+      "long-distance-date-ideas",
       "movie-night",
-      "calendar-and-countdown",
-      "wishlists",
       "long-distance-relationship-app",
     ],
   },
@@ -1037,7 +1042,7 @@ export const featureList: Feature[] = [
         answer: "No. Ourio doesn't use your location at all.",
       },
     ],
-    related: ["lock-screen-drawings", "room-and-mochi", "calendar-and-countdown", "moments"],
+    related: ["lock-screen-drawings", "room-and-mochi", "moments", "best-couple-widget-apps"],
   },
 ];
 
@@ -1129,7 +1134,7 @@ export const longDistance: Feature = {
     "room-and-mochi",
     "games",
     "questions-to-ask-your-partner",
-    "date-night",
+    "long-distance-date-ideas",
     "calendar-and-countdown",
   ],
 };

@@ -42,13 +42,14 @@ export type App = {
 };
 
 const november13: Checked = { iso: "2026-11-13", label: "November 13, 2026" };
+export const november19: Checked = { iso: "2026-11-19", label: "November 19, 2026" };
 
 export const ourio: App = {
   name: "Ourio",
   what: "A shared room and cat for two, with drawings on your partner's Lock Screen, games and a planner",
   price: "Free. No subscription, no in-app purchases",
   android: false,
-  rating: "Not yet on the App Store",
+  rating: "New, no ratings yet",
   has: ["questions", "games", "widgets", "drawing", "pet", "calendar", "dates", "lists"],
   sources: [],
 };
@@ -175,6 +176,60 @@ export const apps: App[] = [
       "https://apps.apple.com/us/app/sumone-for-relationships/id1469506430",
       "https://play.google.com/store/apps/details?id=com.sumone",
     ],
+  },
+  {
+    name: "Pengu",
+    what: "A shared AI pet you raise with a partner or a close friend, inside the Friends app",
+    price:
+      "Free; Pengu Pass $4.99, $9.99 a month for one or $69.99 a year for partners, plus offers",
+    android: false,
+    rating: "4.8 (238k ratings)",
+    has: ["pet"],
+    sources: ["https://apps.apple.com/us/app/id6462927800", "https://penguapp.co"],
+    checked: november19,
+  },
+  {
+    name: "Evergreen",
+    what: "Daily questions, quizzes and expert lessons to grow your relationship",
+    price: "Free; Unlimited access $9.99 to $69.99 (the store page doesn't say per what period)",
+    android: true,
+    rating: "4.8 (55k ratings)",
+    has: ["questions", "games"],
+    sources: ["https://apps.apple.com/us/app/id1573360122", "https://evergreenapp.co"],
+    checked: november19,
+  },
+  {
+    name: "Flamme",
+    what: "Daily questions, quizzes, widgets and an AI relationship coach for couples",
+    price: "Free; Premium $6.99 a week, $12.99 a month or $44.49 to $44.99 a year",
+    android: true,
+    rating: "4.7 (418 ratings)",
+    has: ["questions", "games", "widgets", "calendar", "lists"],
+    sources: ["https://apps.apple.com/us/app/id1583601044", "https://flamme.app"],
+    checked: november19,
+  },
+  {
+    name: "Pokipet",
+    what: "A virtual cat or dog you raise in a group with friends, family or a partner",
+    price: "Free; Pet pass $9.99, coins and packs from $0.99",
+    android: true,
+    rating: "4.6 (13k ratings)",
+    has: ["games", "pet", "chat"],
+    sources: [
+      "https://apps.apple.com/us/app/id6443760470",
+      "https://play.google.com/store/apps/details?id=com.Moonbear.Pokipet",
+    ],
+    checked: november19,
+  },
+  {
+    name: "noteit",
+    what: "Live notes, pics and drawings from your partner or best friend on your Home Screen",
+    price: "Free; Diamond subscription $1.99 to $7.99, streak repairs $2.99 to $6.99",
+    android: false,
+    rating: "4.8 (99k ratings)",
+    has: ["widgets", "drawing"],
+    sources: ["https://apps.apple.com/us/app/id1570369625"],
+    checked: november19,
   },
 ];
 
@@ -375,6 +430,155 @@ export const alternatives: Alternative[] = [
         question: "Does Ourio have date ideas?",
         answer:
           "Yes. Date night has 150 ideas for home, going out, outdoors and long distance. You each swipe on your own phone, and when you both love one, it's a match.",
+      },
+    ],
+  },
+  {
+    slug: "between-alternative",
+    app: "Between",
+    title: "Between app alternative: a free couples app for iPhone · Ourio",
+    description:
+      "A Between alternative for iPhone: Ourio has a shared calendar, countdowns, Lock Screen drawings, games and a shared cat. Free, no ads, no subscription.",
+    summary:
+      "Ourio vs Between: a shared calendar and countdowns plus games and a cat, with no ads.",
+    h1: "A Between alternative that plays, not chats.",
+    lead: "Between is a private messenger for couples with a shared calendar and memories; it is free with ads, and Between Plus costs from $13.99 a year. Ourio is a free alternative for iPhone without ads: a shared calendar, days together and countdowns, plus drawings on your partner's Lock Screen, daily games and a cat you raise together. It has no chat: you keep talking where you already do.",
+    theyFit: [
+      "You want a separate, private chat just for the two of you; Ourio has no chat.",
+      "You want to keep years of photos and messages in one couples app.",
+      "One of you uses Android. Between runs on both; Ourio is iPhone-only for now.",
+    ],
+    oursFit: [
+      "You already text all day and want something to do together instead: games, a shared cat, date ideas.",
+      "You don't want ads or a subscription. Everything in Ourio is free for both of you.",
+      "You want your partner on your Lock Screen: their drawings, notes, mood and your days together.",
+    ],
+    questions: [
+      {
+        question: "Is there a free app like Between with no ads?",
+        answer:
+          "Yes. Ourio has a shared calendar, days together and countdowns, free for both partners with no ads, no subscription and no in-app purchases. It has no chat.",
+      },
+      {
+        question: "Does Ourio have a shared calendar like Between?",
+        answer:
+          "Yes. Ourio's calendar holds both your plans, anniversaries and countdowns, and the Lock Screen widget shows days together or the days to your next date.",
+      },
+      {
+        question: "Can I message my partner in Ourio?",
+        answer:
+          "Not as a chat. You can pin a note or a drawing to their Lock Screen, share your mood and send Moments, photos that arrive as polaroids.",
+      },
+    ],
+  },
+  {
+    slug: "agape-alternative",
+    app: "Agapé",
+    title: "Agapé alternative: daily couples questions as a free game · Ourio",
+    description:
+      "An Agapé alternative: Ourio turns daily couples questions into a guessing game, with a shared cat and Lock Screen drawings. Free, no subscription.",
+    summary: "Ourio vs Agapé: daily questions as a guessing game, free with no premium.",
+    h1: "An Agapé alternative where questions are a game.",
+    lead: "Agapé sends one personalized question a day to partners, friends and family; Premium costs from $19.99 a year. Ourio is a free alternative for couples on iPhone: each day one of you answers five questions about yourself, the other guesses, and the answers open together. Around it there is a shared cat, drawings on your partner's Lock Screen and a planner for two.",
+    theyFit: [
+      "You want open, written answers and longer reflections; Ourio's questions have four answers to pick from.",
+      "You want daily questions with friends or family too; Ourio pairs exactly two people.",
+      "One of you uses Android. Agapé runs on both; Ourio is iPhone-only for now.",
+    ],
+    oursFit: [
+      "You'd like daily questions to feel like a game: guess, score, see who knows who.",
+      "You don't want a subscription. Everything in Ourio is free for both of you.",
+      "You want more than one question: a cat to look after, Draw & guess, date ideas and shared lists.",
+    ],
+    questions: [
+      {
+        question: "Is there a free app like Agapé?",
+        answer:
+          "Yes. Ourio's Who knows who asks five questions a day from 150 and is free with no subscription. All 150 are on our list of questions to ask your partner.",
+      },
+      {
+        question: "How do Ourio's daily questions work?",
+        answer:
+          "Each day one of you answers five multiple-choice questions about yourself; the other guesses, and the answers open together once you have both played.",
+      },
+      {
+        question: "Does Ourio work for long distance?",
+        answer:
+          "Yes. Everything works across two iPhones anywhere: the daily game, drawings on each other's Lock Screens, the shared cat and a countdown to your next visit.",
+      },
+    ],
+  },
+  {
+    slug: "evergreen-alternative",
+    app: "Evergreen",
+    title: "Evergreen app alternative: a free, playful couples app · Ourio",
+    description:
+      "An Evergreen alternative: Ourio has daily questions, couples games, date ideas, a shared cat and Lock Screen drawings. Free, no subscription.",
+    summary: "Ourio vs Evergreen: daily questions and games for fun, free with no subscription.",
+    h1: "An Evergreen alternative that keeps it light.",
+    lead: "Evergreen is a relationship growth app: daily questions, quizzes and lessons from relationship experts, with unlimited access sold from $9.99 to $69.99. Ourio is a free alternative for iPhone that is about fun more than growth: a daily guessing game, Draw & guess, 150 date ideas you swipe together, a shared cat and drawings on your partner's Lock Screen.",
+    theyFit: [
+      "You want to work on your relationship: lessons on communication, conflict, trust and money.",
+      "You want to track your progress as a couple with check-ins.",
+      "One of you uses Android. Evergreen runs on both; Ourio is iPhone-only for now.",
+    ],
+    oursFit: [
+      "You want a few minutes of play a day rather than homework.",
+      "You don't want a subscription. Everything in Ourio is free for both of you.",
+      "You want to plan, too: date ideas, wishlists, shared lists, a calendar and countdowns.",
+    ],
+    questions: [
+      {
+        question: "Is there a free alternative to Evergreen?",
+        answer:
+          "Yes. Ourio has daily questions and couples games, free for both partners with no subscription. It has no expert lessons.",
+      },
+      {
+        question: "Does Ourio have a streak?",
+        answer:
+          "Yes. The love streak grows each day either of you does something together, and a broken streak of 3 days or more can be restored once every 30 days, at no cost.",
+      },
+      {
+        question: "Can we use Ourio and Evergreen together?",
+        answer:
+          "Yes. Evergreen for working on the relationship, Ourio for the small daily things: a doodle, the cat, tonight's date.",
+      },
+    ],
+  },
+  {
+    slug: "pengu-alternative",
+    app: "Pengu",
+    title: "Pengu alternative: a shared pet app for couples, free · Ourio",
+    description:
+      "A Pengu alternative for couples: raise one shared cat on two iPhones, send Lock Screen drawings and play daily games. Free, no subscription, no Pengu Pass.",
+    summary: "Ourio vs Pengu: a shared cat for two with nothing to buy.",
+    h1: "A Pengu alternative with a cat you share.",
+    lead: "Pengu, in the Friends app, is a shared AI pet you raise with a partner or a close friend; Pengu Pass costs from $4.99, or $69.99 a year for partners. Ourio is a free alternative made for couples: one cat, Mochi, that you both pet, feed and play with in a shared room, plus drawings on your partner's Lock Screen, games and a planner. Nothing is for sale.",
+    theyFit: [
+      "You want an AI pet that talks back and learns your routines.",
+      "You want to raise a pet with a friend or sibling, not a partner.",
+      "You want companions for focus and self-care too, as Friends has Bao and Mellow.",
+    ],
+    oursFit: [
+      "It's made for couples: a pair is exactly two people.",
+      "Nothing to buy: food, treats and furniture come from coins you earn together.",
+      "The pet is one part: Lock Screen drawings, games, date ideas, wishlists and countdowns are in the same app.",
+    ],
+    questions: [
+      {
+        question: "Is there a free couples pet app like Pengu?",
+        answer:
+          "Yes. In Ourio you raise one cat, Mochi, together on two iPhones, with no subscription, no pass and no in-app purchases.",
+      },
+      {
+        question: "Is Ourio's cat an AI?",
+        answer:
+          "No. Mochi doesn't chat. She lives in your shared room, reacts when either of you pets, feeds or plays with her, and shows up in your widgets.",
+      },
+      {
+        question: "Does the cat die if we forget her?",
+        answer:
+          "No. Mochi never gets sick, runs away or dies. Her needs go down slowly, and nothing is lost if you miss a day.",
       },
     ],
   },
