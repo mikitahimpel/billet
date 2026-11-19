@@ -349,6 +349,10 @@ export class PaymentsService extends Context.Service<
         }
         const transaction = yield* verifiedTransaction(data.signedTransactionInfo, false);
         const otid = transaction.originalTransactionId;
+        // `data.environment` is optional; the signed transaction always names its own.
+        if (!accepts(transaction.environment)) {
+          return yield* repository.recordNotification(record("environment-not-accepted", otid));
+        }
         const stored = yield* repository.findPurchase(otid);
         if (Option.isNone(stored)) {
           return yield* repository.recordNotification(record("unknown-transaction", otid));

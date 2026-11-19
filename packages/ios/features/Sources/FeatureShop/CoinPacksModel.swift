@@ -1,3 +1,4 @@
+import BilletKit
 import Foundation
 import Observation
 import Payments
@@ -8,38 +9,57 @@ import WidgetBridge
 @MainActor
 @Observable
 public final class CoinPacksModel {
-  enum Status: Equatable {
-    case idle
-    case buying(String)
-    /// The coins arrive once someone else approves, such as a parent's Ask to Buy.
-    case waiting
-    case bought(coins: Int)
-    case failed(String)
-  }
+  typealias Shelf = CoinShelfMachine.State
+  typealias Status = CoinPurchaseMachine.State
 
-  /// What the store has on sale: nothing yet, the packs, or nothing because it couldn't be reached.
-  enum Shelf: Equatable {
-    case loading
-    case ready([StampPack])
-    case unavailable
-  }
+  @ObservationIgnored private let payments: (any Payments)?
+  private let shelfStore: Store<CoinShelfMachine>
+  private let purchaseStore: Store<CoinPurchaseMachine>
 
-  private(set) var shelf: Shelf = .loading
-  private(set) var status: Status = .idle
+  var shelf: Shelf { shelfStore.state }
+  var status: Status { purchaseStore.state }
 
-  var packs: [StampPack] {
+  public var packs: [StampPack] {
     switch shelf {
     case .ready(let packs): packs
     case .loading, .unavailable: []
     }
   }
-  @ObservationIgnored private let payments: (any Payments)?
-  @ObservationIgnored private let credited: () async -> Void
 
-  /// `credited` runs after the server took a pack, to read the wallet again.
-  public init(payments: (any Payments)?, credited: @escaping () async -> Void) {
+  /// `credited` runs after the server took a pack or the ledger changed, to read the wallet again.
+  public init(payments: (any Payments)?, credited: @escaping @MainActor @Sendable () async -> Void)
+  {
     self.payments = payments
-    self.credited = credited
+    shelfStore = Store(initial: payments == nil ? .unavailable : .loading) { output in
+      switch output {
+      case .loadProducts:
+        guard let payments else { return .loadFailed }
+        do throws(PaymentsError) {
+          return .loaded(try await payments.products())
+        } catch {
+          return .loadFailed
+        }
+      }
+    }
+    purchaseStore = Store(initial: .idle) { output in
+      switch output {
+      case .purchase(let pack):
+        guard let payments else { return .failed(.unavailable) }
+        do throws(PaymentsError) {
+          return switch try await payments.purchase(pack) {
+          case .purchased(let credit): .purchased(coins: credit.stamps)
+          case .cancelled: .cancelled
+          case .pending: .pending
+          case .awaitingCredit: .awaitingCredit
+          }
+        } catch {
+          return .failed(error)
+        }
+      case .readWallet:
+        await credited()
+        return nil
+      }
+    }
   }
 
   /// The server's switch for selling coins (docs/payments.md).
@@ -58,19 +78,9 @@ public final class CoinPacksModel {
     return sorted.first { $0.stamps >= missing } ?? sorted.last
   }
 
-  func load() async {
-    guard let payments else {
-      shelf = .unavailable
-      return
-    }
-    if case .ready = shelf { return }
-    shelf = .loading
-    do throws(PaymentsError) {
-      let packs = try await payments.products()
-      shelf = packs.isEmpty ? .unavailable : .ready(packs)
-    } catch {
-      shelf = .unavailable
-    }
+  public func load() async {
+    shelfStore.send(.opened)
+    await shelfStore.settled()
   }
 
   /// A pack is on its way through the store; every buy waits for it.
@@ -78,23 +88,26 @@ public final class CoinPacksModel {
     if case .buying = status { true } else { false }
   }
 
-  func buy(_ pack: StampPack) async {
-    // One buy at a time: a second pack tapped meanwhile would race the first for `status`.
-    guard let payments, !isBuying else { return }
-    status = .buying(pack.id)
-    do throws(PaymentsError) {
-      switch try await payments.purchase(pack) {
-      case .purchased(let credit):
-        await credited()
-        status = .bought(coins: credit.stamps)
-      case .cancelled:
-        status = .idle
-      case .pending:
-        status = .waiting
+  public func buy(_ pack: StampPack) async {
+    // A second pack tapped meanwhile is refused by the machine; only an accepted buy is waited for.
+    guard !isBuying else { return purchaseStore.send(.buyTapped(pack)) }
+    purchaseStore.send(.buyTapped(pack))
+    await purchaseStore.settled()
+  }
+
+  /// Follows credits and refunds that arrive outside a purchase, for as long as the caller's task runs. A paid pack
+  /// the server hadn't taken yet is sent again first.
+  func follow() async {
+    guard let payments else { return }
+    let updates = payments.updates()
+    if case .delivering = status { await payments.settleUnfinished() }
+    for await update in updates {
+      switch update {
+      case .credited(let credit): purchaseStore.send(.credited(coins: credit.stamps))
+      case .ledgerChanged: purchaseStore.send(.ledgerChanged)
       }
-    } catch {
-      status = .failed(Self.message(error))
     }
+    await purchaseStore.settled()
   }
 
   nonisolated static func message(_ error: PaymentsError) -> String {

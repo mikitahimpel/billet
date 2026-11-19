@@ -71,7 +71,13 @@ public final class StoreKitPayments: Payments {
     }
     switch result {
     case .success(let verification):
-      return .purchased(try await credit(verification))
+      // Apple has charged by now, so a server that can't be reached is not a failed purchase: the
+      // transaction stays unfinished and is sent again.
+      do throws(PaymentsError) {
+        return .purchased(try await credit(verification))
+      } catch {
+        return .awaitingCredit
+      }
     case .userCancelled:
       return .cancelled
     case .pending:
@@ -82,10 +88,14 @@ public final class StoreKitPayments: Payments {
   }
 
   public func restore() async throws(PaymentsError) -> StampLedger {
-    for await result in Transaction.unfinished {
-      _ = try? await credit(result)
-    }
+    await settleUnfinished()
     return try await server.ledger()
+  }
+
+  public func settleUnfinished() async {
+    for await result in Transaction.unfinished {
+      await handle(update: result)
+    }
   }
 
   public func updates() -> AsyncStream<PaymentsUpdate> {

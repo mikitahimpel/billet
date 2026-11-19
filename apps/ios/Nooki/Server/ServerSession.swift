@@ -71,7 +71,7 @@ final class ServerSession {
     @ObservationIgnored var matches: (@MainActor (PickMatch) -> Void)?
 
     @ObservationIgnored private let backend: Backend
-    @ObservationIgnored let payments: any Payments
+    @ObservationIgnored let payments: (any Payments)?
 
     /// Where `CatLife` reads when this phone entered the partner's code.
     @ObservationIgnored private let defaults: UserDefaults

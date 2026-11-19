@@ -53,6 +53,9 @@ public final class MockPayments: Payments {
     try await server.ledger()
   }
 
+  /// The mock store finishes every purchase at once.
+  public func settleUnfinished() async {}
+
   public func updates() -> AsyncStream<PaymentsUpdate> {
     let (stream, continuation) = AsyncStream<PaymentsUpdate>.makeStream()
     let id = UUID()

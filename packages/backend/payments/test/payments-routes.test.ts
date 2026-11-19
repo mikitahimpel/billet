@@ -15,6 +15,7 @@ import { PaymentsRoutes } from "../src/payments-routes.ts";
 import { PaymentsService } from "../src/payments-service.ts";
 import { PaymentsSwitch } from "../src/payments-switch.ts";
 import {
+  bundleId,
   makeChain,
   makeXcodeChain,
   notificationPayload,
@@ -293,6 +294,32 @@ describe("purchases on dev", () => {
       await appleTransaction({ environment: "Production" }),
     );
     expect(production.status).toBe(400);
+  });
+
+  it("notes a refund in a refused environment named only by its transaction", async () => {
+    const id = "2000000977777777";
+    const sandbox = await appleTransaction({ transactionId: id, originalTransactionId: id });
+    expect((await buy(bearer("paired-dev-env"), sandbox)).status).toBe(200);
+    const production = await appleTransaction({
+      transactionId: id,
+      originalTransactionId: id,
+      environment: "Production",
+    });
+    const signedPayload = await signJws(
+      {
+        ...notificationPayload("REFUND", production),
+        data: { bundleId, signedTransactionInfo: production },
+      },
+      apple.chain,
+      apple.leafKey,
+    );
+    const response = await handler(post("/v1/appstore/notifications", { signedPayload }));
+    expect(response.status).toBe(200);
+    expect(app.memory.notifications().at(-1)?.outcome).toBe("environment-not-accepted");
+    const ledger = await Effect.runPromise(
+      app.memory.repository.ledger(owner("pair-paired-dev-env")),
+    );
+    expect(ledger.balance).toBe(100);
   });
 
   it("refuses Xcode's certificate on a transaction that claims the sandbox", async () => {

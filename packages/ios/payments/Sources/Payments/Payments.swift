@@ -11,6 +11,10 @@ public protocol Payments: Sendable {
   /// so nothing else is restored.
   func restore() async throws(PaymentsError) -> StampLedger
 
+  /// Sends transactions still unfinished, such as one paid while the server was out of reach, and
+  /// announces each credit on ``updates()``. Touches the network only when one is waiting.
+  func settleUnfinished() async
+
   /// Changes that arrive outside ``purchase(_:)``. Each subscriber gets its own stream.
   func updates() -> AsyncStream<PaymentsUpdate>
 }
@@ -40,6 +44,10 @@ public enum PurchaseResult: Hashable, Sendable {
   case cancelled
   /// Such as Ask to Buy. The credit comes later through ``Payments/updates()``.
   case pending
+  /// The store took the payment but the server hasn't credited it yet. The transaction stays
+  /// unfinished, so ``Payments/settleUnfinished()`` or the next launch sends it again, and the
+  /// credit comes through ``Payments/updates()``.
+  case awaitingCredit
 }
 
 public struct StampCredit: Hashable, Sendable {

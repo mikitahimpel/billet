@@ -39,7 +39,8 @@
           }
           if let packs, sellsPacks {
             PackStore(model: packs, fit: CoinPacksModel.fit(for: missing, in: packs.packs))
-            PlusHero(mockStore: state.storeIsMock, avatar: state.coatAvatarName)
+            // Plus isn't built: a StoreKit build offers nothing it can't sell yet.
+            if state.storeIsMock { PlusHero(avatar: state.coatAvatarName) }
           } else {
             EarnedOnly()
           }
@@ -50,6 +51,7 @@
       .accessibilityIdentifier("coinsSheet")
       .task { await state.shop.loadHistory() }
       .task { if sellsPacks { await packs?.load() } }
+      .task { if sellsPacks { await packs?.follow() } }
     }
 
     private var missing: Int { ask.retry.map { state.shop.shortBy($0.cost) } ?? 0 }

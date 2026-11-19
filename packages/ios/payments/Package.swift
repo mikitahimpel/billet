@@ -37,13 +37,20 @@ import PackageDescription
   }
 #endif
 
-// `mock` (the default) or `storekit`. The same variable the app target reads as a build setting
-// (docs/payments.md), so `BILLET_PAYMENTS=storekit xcodebuild ...` switches both.
+// `mock` (the default), `storekit` or `none`. The same variable the app target reads as a build
+// setting (docs/payments.md), so `BILLET_PAYMENTS=storekit xcodebuild ...` switches both.
 let paymentsMode =
   Context.environment["BILLET_PAYMENTS"].flatMap { $0.isEmpty ? nil : $0 } ?? "mock"
 precondition(
-  ["mock", "storekit"].contains(paymentsMode),
-  "BILLET_PAYMENTS must be mock or storekit, not \(paymentsMode)")
+  ["none", "mock", "storekit"].contains(paymentsMode),
+  "BILLET_PAYMENTS must be none, mock or storekit, not \(paymentsMode)")
+
+let liveStore: [Target.Dependency] =
+  switch paymentsMode {
+  case "storekit": ["Payments", "PaymentsStoreKit"]
+  case "mock": ["Payments", "PaymentsMock"]
+  default: ["Payments"]
+  }
 
 let targets = ["Payments", "PaymentsMock", "PaymentsStoreKit", "PaymentsLive"]
 
@@ -57,10 +64,8 @@ let package = Package(
     .target(name: "PaymentsStoreKit", dependencies: ["Payments"]),
     .target(
       name: "PaymentsLive",
-      dependencies: paymentsMode == "storekit"
-        ? ["Payments", "PaymentsStoreKit"] : ["Payments", "PaymentsMock"],
-      swiftSettings: paymentsMode == "storekit"
-        ? [.define("PAYMENTS_STOREKIT")] : [.define("PAYMENTS_MOCK")]
+      dependencies: liveStore,
+      swiftSettings: [.define("PAYMENTS_\(paymentsMode.uppercased())")]
     ),
     .testTarget(name: "PaymentsTests", dependencies: ["Payments", "PaymentsMock"]),
   ],
