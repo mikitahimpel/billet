@@ -73,13 +73,28 @@ const schema = [
           <p>
             <strong>Best for:</strong> {entry.bestFor}
           </p>
-          <ul>
-            <li>What it is: {entry.app.what}.</li>
-            <li>Price: {entry.app.price}.</li>
-            <li>Android: {entry.app.android ? "Yes" : "No, iPhone only"}.</li>
-            <li>App Store rating: {entry.app.rating}.</li>
-            <li>Lists: {entry.has.join(", ")}.</li>
-          </ul>
+          <dl class="facts">
+            <div>
+              <dt>What it is</dt>
+              <dd>{entry.app.what}</dd>
+            </div>
+            <div>
+              <dt>Price</dt>
+              <dd>{entry.app.price}</dd>
+            </div>
+            <div>
+              <dt>Android</dt>
+              <dd>{entry.app.android ? "Yes" : "No, iPhone only"}</dd>
+            </div>
+            <div>
+              <dt>App Store rating</dt>
+              <dd>{entry.app.rating}</dd>
+            </div>
+            <div>
+              <dt>Features</dt>
+              <dd>{entry.has.join(", ")}</dd>
+            </div>
+          </dl>
           {entry.app === ourio ? (
             <p>
               See <a href="/features/">every Ourio feature</a> or <a href="/how-it-works/">how pairing works</a>.
