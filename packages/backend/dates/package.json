@@ -6,6 +6,7 @@
   "sideEffects": false,
   "exports": {
     "./date-catalog": "./src/date-catalog.ts",
+    "./date-catalog.json": "./src/date-catalog.json",
     "./dates-routes": "./src/dates-routes.ts"
   },
   "scripts": {
