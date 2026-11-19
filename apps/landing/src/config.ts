@@ -1,10 +1,9 @@
-// note: placeholder until the App Store listing exists; every download CTA and the QR codes read it.
-export const appStoreUrl = "https://apps.apple.com/app/nooki";
+// Every download CTA reads it.
+export const appStoreUrl = "https://apps.apple.com/app/id6832707480";
 
-// note: placeholder until the App Store listing exists; set it to turn on Safari's Smart App Banner.
-export const appStoreId: string | null = null;
+// Turns on Safari's Smart App Banner; null puts every download button back to "Coming soon".
+export const appStoreId: string | null = "6832707480";
 
-// Until the listing is live, every download button says "Coming soon" and links nowhere, and the QR codes are hidden.
 export const appStoreLive = appStoreId !== null;
 
 // Canonical, Open Graph, sitemap, robots.txt, llms.txt and the Markdown twins all read it.
