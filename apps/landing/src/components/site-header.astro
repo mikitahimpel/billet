@@ -1,5 +1,6 @@
 ---
 import icon from "../assets/app-icon-192b.webp?url";
+import { appStoreLive, appStoreUrl } from "../config";
 
 interface Props {
   // The home page's header is fixed: the story's clear header row over the story, then a compact bar once the story
@@ -31,7 +32,17 @@ const links = [
       ))
     }
   </nav>
-  {home ? <a class="nav-soon" href="#get">Coming soon</a> : <span class="nav-soon">Coming soon</span>}
+  {
+    home ? (
+      <a class="nav-soon" href="#get">{appStoreLive ? "Get the app" : "Coming soon"}</a>
+    ) : appStoreLive ? (
+      <a class="nav-soon" href={appStoreUrl} data-umami-event="app_store_click" data-umami-event-where="header">
+        Get the app
+      </a>
+    ) : (
+      <span class="nav-soon">Coming soon</span>
+    )
+  }
   <details class="menu">
     <summary aria-label="Menu">
       <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 6h14M3 10h14M3 14h14"></path></svg>

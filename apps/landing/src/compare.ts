@@ -48,7 +48,7 @@ export const ourio: App = {
   what: "A shared room and cat for two, with drawings on your partner's Lock Screen, games and a planner",
   price: "Free. No subscription, no in-app purchases",
   android: false,
-  rating: "Not yet on the App Store",
+  rating: "New, no ratings yet",
   has: ["questions", "games", "widgets", "drawing", "pet", "calendar", "dates", "lists"],
   sources: [],
 };

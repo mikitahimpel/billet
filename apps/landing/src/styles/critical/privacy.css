@@ -219,6 +219,7 @@ h1 {
   color: var(--honey);
 }
 .nav-soon {
+  text-decoration: none;
   background: #f7e7d412;
   border-radius: 999px;
   flex: none;
