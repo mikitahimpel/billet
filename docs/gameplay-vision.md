@@ -174,3 +174,34 @@ What the category shares: a 1 to 5 minute daily joint ritual with a reciprocal r
 living thing that grows from joint activity; a dyadic streak; the home screen; a private archive
 that accumulates. What it has not solved: **the quiet partner** (the active one carries the pet, or
 the reveal never opens), content exhaustion, and punitive pressure (dying pets, paid repair).
+
+### Stage 1: audit, server side
+
+- **Every production push is a reaction to the partner** (`apns-payloads.ts`, `apns-lanes.ts`): a
+  note, a reaction, streak turn and streak lit, a Pick tonight match, Who knows who "your turn",
+  a riddle sent and ended. Nothing is scheduled: no cron (`alchemy.run.ts`), no "cat misses you",
+  no recap, no win-back. Moods, lists, gifts and the cat journal reach open sockets only. No quiet
+  hours or daily cap on pushes. So a pair where neither opens the app hears nothing from Ourio.
+- **The room already has one alarm per pair** (`pair-room-durable-object.ts` `scheduleAlarm`),
+  shared by deliveries and the demo bot: a scheduled per-pair event is a third time in it. The
+  room's day is the cat's UTC offset (`guess.ts` `roomOffsetOf`).
+- **A "drawing of the day" prototype exists** in the dev-only `DemoRoom` (`daily-drawing.ts`): a
+  prompt, the partner's drawing held back until you draw yours, an evening reminder from 19:00
+  with quiet hours 22:00 to 08:00, once a day. Never shipped to pairs.
+- **Coins have no room for a new daily reward.** `coin-pacing.test.ts` requires the second-dearest
+  piece (380) to take at least 28 full days: 380 / 13 = 29.2 today, 380 / 14 = 27.1. One more
+  capped coin a day fails it. Once-per-thing rewards (`EarnEvent` with no source) are outside the
+  daily maximum.
+- **Gameplay is invisible to the admin.** `pair_events` has `CatPlayed` with a game id and no
+  score; nothing for Who knows who, draw-guess, moments, moods, reactions, lists, a lit streak
+  day, session length or both partners present. The room's SQLite has all of it (`cat_entry`,
+  `guess_rounds`, `riddles`, `mood`, `reaction`) but no admin route reads a room. The only proxy is
+  the economy report's `earn.games` and `earn.other`.
+- **Experiment metrics are fixed**: `d7BothActive` and `widgetAdded` (secondary), `notesPerDay` and
+  `opensPerDay` (guardrails), all over a pair's first week (`admin-experiment-metrics.ts`). The
+  primary is the sentence in the entry's description.
+- **Age band is not stored for targeting.** Onboarding keeps the age bucket per account, but
+  `ageBand` in flag targeting is never filled, so no feature can be held from 13 to 17 by flag yet.
+- **Who knows who is the pattern to copy** for anything daily and two-sided: a round keyed by the
+  room day, a pure `decide`, hidden answers on the server, coins once per ref, a push when one
+  side finishes (`pair-room/src/guess.ts`).
