@@ -55,12 +55,18 @@ describe("Universal Links", () => {
   it("sends someone without Ourio to the App Store, and opens the app for someone who has it", async () => {
     expect(appStoreUrl).toBe("https://apps.apple.com/app/id6832707480");
     const page = (await respondAppLink("/i/K7QM4R2XHP")?.text()) ?? "";
-    expect(page).toContain(`<a class="primary" href="${appStoreUrl}">`);
+    expect(page).toContain(`<a class="primary" id="get" href="${appStoreUrl}">`);
     expect(page).toContain('href="ourio://invite/K7QM4R2XHP"');
     expect(page).toContain(
       '<meta name="apple-itunes-app" content="app-id=6832707480, app-argument=ourio://invite/K7QM4R2XHP">',
     );
     expect(page).toContain('<meta property="og:title" content="Join me in Ourio">');
+  });
+
+  it("copies the link before the App Store, for the app's first launch to find", async () => {
+    const page = (await respondAppLink("/i/K7QM4R2XHP")?.text()) ?? "";
+    expect(page).toContain('id="get"');
+    expect(page).toContain('writeText(location.origin + "/i/K7QM4R2XHP")');
   });
 
   it("keeps the page out of caches and search", () => {

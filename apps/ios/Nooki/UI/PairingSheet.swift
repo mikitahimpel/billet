@@ -1,5 +1,6 @@
 import FeatureShop
 import FeatureUs
+import FeatureOnboarding
 import FeaturePairing
 import SwiftUI
 import Design
@@ -28,7 +29,7 @@ struct PairingSheet: View {
         // Closing a sheet that is not paired yet gives up on the code it started.
         .onDisappear { if !isPaired { model.cancel() } }
         .interactiveDismissDisabled(isPaired)
-        .onAppear { if code.isEmpty { code = prefill } }
+        .onAppear { if code.isEmpty { code = InviteCode.cleaned(prefill) } }
         // The server already has a partner for this account; there is nothing to pair, so the sheet closes.
         .onChange(of: model.state) { _, state in
             guard case .choosing(failure: .alreadyPaired?, _) = state else { return }
@@ -87,16 +88,28 @@ struct PairingSheet: View {
             Text("I have their code")
                 .font(.ourioTitle)
                 .foregroundStyle(Ink.text)
-            Field("Code", text: $code, font: .system(.title2, design: .monospaced, weight: .semibold))
+            Field(
+                "K7QM4 R2XHP",
+                text: Binding { InviteCode.grouped(code) } set: { code = InviteCode.cleaned($0) },
+                font: .system(.title2, design: .monospaced, weight: .semibold)
+            )
                 .multilineTextAlignment(.center)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
+                // Latin letters and digits whatever keyboard the phone has open.
+                .keyboardType(.asciiCapable)
                 .focused($typing)
                 .submitLabel(.join)
                 .onSubmit(submit)
-            Button("Pair", action: submit)
-                .buttonStyle(SecondaryButtonStyle())
-            .disabled(code.trimmingCharacters(in: .whitespaces).isEmpty)
+                .accessibilityLabel("Invite code")
+            HStack(spacing: Space.s) {
+                PasteCapsuleButton(String.self) { texts in
+                    Task { @MainActor in code = InviteInput.pasted(texts.first ?? "") }
+                }
+                Button("Pair", action: submit)
+                    .buttonStyle(SecondaryButtonStyle())
+                    .disabled(code.isEmpty)
+            }
         }
     }
 
@@ -186,14 +199,7 @@ enum PairingCopy {
         "Join me in Ourio! \(InviteCode(code).link(on: server).absoluteString) or enter my code: \(code)"
     }
 
-    static func spaced(_ code: String) -> String {
-        var out = ""
-        for (index, character) in code.enumerated() {
-            if index > 0, index.isMultiple(of: 4) { out.append(" ") }
-            out.append(character)
-        }
-        return out
-    }
+    static func spaced(_ code: String) -> String { InviteCode.grouped(code) }
 
     /// "Expires in 24 h" while an hour or more is left, counted in whole hours rounded up; then minutes and seconds,
     /// "Expires in 9:41"; then that it has expired. `expiresAt` is epoch milliseconds.

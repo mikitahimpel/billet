@@ -9,8 +9,9 @@ import Wire
 @testable import Billet
 
 struct PairingCopyTests {
-    @Test func aCodeReadsInGroupsOfFour() {
-        #expect(PairingCopy.spaced("ABCDEFGH") == "ABCD EFGH")
+    @Test func aCodeReadsInGroupsOfFive() {
+        #expect(PairingCopy.spaced("K7QM4R2XHP") == "K7QM4 R2XHP")
+        #expect(PairingCopy.spaced("ABCDEFGH") == "ABCDE FGH")
         #expect(PairingCopy.spaced("ABC") == "ABC")
         #expect(PairingCopy.spaced("") == "")
     }
