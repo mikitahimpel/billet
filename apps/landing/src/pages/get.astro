@@ -249,16 +249,15 @@ const store = "x-safari-https://ourio.app/ios?from=tiktok";
     <script is:inline>
       // Every link here is the App Store, through Safari. The tap is counted by /ios (functions/ios.js) with a keepalive
       // request that outlives the page, and the link itself is left alone so the in-app browser sees a plain user tap.
-      // A page still in view a moment later means TikTok kept it, so the open-in-browser steps come up.
+      // The open-in-browser steps come up at once: TikTok shows its own error for a blocked link and keeps this page,
+      // and when Safari does open, the steps are simply left behind.
       const escape = document.getElementById("escape");
       escape.addEventListener("click", function () {
         escape.classList.remove("on");
       });
       document.addEventListener("click", function (e) {
         if (!(e.target instanceof Element && e.target.closest("a"))) return;
-        setTimeout(function () {
-          if (!document.hidden) escape.classList.add("on");
-        }, 900);
+        escape.classList.add("on");
         if (location.hostname !== "ourio.app") return;
         try {
           fetch("/ios", { method: "POST", keepalive: true });
