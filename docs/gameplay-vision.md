@@ -82,3 +82,50 @@ Everything below is from the code and docs only.
   (snippet). Rare visitors earned by play are outside these rules.
 - **Not found:** session length for any title; retention for any pet game but the Finch estimate;
   any data on two-person games.
+
+**Habits, streaks, dyads.** Tags: [A] RCT, meta-analysis or reported A/B test; [B] observational
+or company data; [C] practitioner or journalism.
+
+- **Easier streaks retain better.** Duolingo: one lesson keeps the streak, +3.3% D14 retention [A,
+  self-reported] ([blog](https://blog.duolingo.com/improving-the-streak)); a second streak freeze
+  +0.38% daily actives; a broken streak is "quite demotivating"
+  ([blog](https://blog.duolingo.com/how-duolingo-streak-builds-habit)).
+- **A broken streak lowers later engagement**, most when people blame themselves, less when it can
+  be repaired [A, lab] ([Silverman and Barasch](https://doi.org/10.1093/jcr/ucac029)). Goals with
+  "emergency reserves" are pursued longer [A]
+  ([Sharif and Shu](https://anderson-review.ucla.edu/emergency-reserves/)). A missed day does not
+  hurt habit formation; median 66 days to a habit [B]
+  ([Lally et al.](https://www.ucl.ac.uk/news/2009/aug/how-long-does-it-take-form-habit)).
+- **Shared streaks.** Duolingo: learners with a Friend Streak are 22% more likely to finish the
+  daily lesson, correlational [B] ([blog](https://blog.duolingo.com/product-lessons-friend-streak/)).
+  Friends Quests are weekly, cooperative, with an opt-out; no result published. **No study found
+  on blame when one person's miss breaks a pair's streak.**
+- **Rewards crowd out.** Rewards contingent on doing a thing undermine intrinsic motivation, d
+  about -0.3 to -0.4 over 128 experiments [A]
+  ([Deci, Koestner and Ryan](https://pubmed.ncbi.nlm.nih.gov/10589297/)). Paying coins per
+  affectionate act is the wrong lever.
+- **Progress.** Pre-stamped loyalty cards: 34% against 19% finish [A, field]
+  ([Nunes and Drèze](https://ideas.repec.org/a/oup/jconrs/v32y2006i4p504-512.html)); effort rises
+  near a goal. Peak-end rule holds over 174 effect sizes [A].
+- **Notifications.** A template seen recently works worse, so copy rotates: +0.5% DAU, +2% new-user
+  retention [A] ([Yancey and Settles](https://research.duolingo.com/papers/yancey.kdd20.pdf)).
+  Duolingo kept volume fixed on purpose ("protect the channel") [C]
+  ([Mazal](https://www.lennysnewsletter.com/p/how-duolingo-reignited-user-growth)). Widget users
+  retained "far better", no size given [B] ([blog](https://blog.duolingo.com/widget-feature)).
+- **What helps a couple.** A novel, arousing 7-minute joint task raised relationship quality more
+  than a mundane one [A, lab] ([Aron et al.](https://pubmed.ncbi.nlm.nih.gov/10707334/)); sharing
+  good news helps when the partner answers with enthusiasm [B]
+  ([Gable et al.](https://pubmed.ncbi.nlm.nih.gov/15301629/)); everyday gratitude predicts
+  next-day connection [B]; escalating mutual questions build closeness [A, lab, strangers]; a
+  ritual helps only when both see it as one [B]
+  ([Garcia-Rada et al.](https://journals.uchicago.edu/doi/10.1086/702761)). None tested in an app.
+- **Minors and regulators.** State suits against Snap name streaks
+  ([Pennsylvania AG](https://www.attorneygeneral.gov/?p=11047)). The EU's DSA minors guidelines
+  (2025, non-binding) ask that streaks and push be off by default for minors, per law-firm
+  summaries ([Hunton](https://www.hunton.com/privacy-and-information-security-law/european-commission-issues-guidelines-on-the-protection-of-minors));
+  not read verbatim. Measured harm from streaks in teens is small and cross-sectional [B]
+  ([Belgian survey](https://doi.org/10.1016/j.teler.2023.100087)). App Review: bought currency may
+  not expire; no promotional push without opt-in (3.1.1, 4.5.4, read).
+- **Benchmarks.** Adjust cross-vertical D1/D7/D30 about 26% / 13% / 7%
+  ([Adjust](https://www.adjust.com/blog/what-makes-a-good-retention-rate/)); GameAnalytics 2024
+  game medians 22.9% / 4.2% / 0.85% (D28).
