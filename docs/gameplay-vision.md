@@ -129,3 +129,48 @@ or company data; [C] practitioner or journalism.
 - **Benchmarks.** Adjust cross-vertical D1/D7/D30 about 26% / 13% / 7%
   ([Adjust](https://www.adjust.com/blog/what-makes-a-good-retention-rate/)); GameAnalytics 2024
   game medians 22.9% / 4.2% / 0.85% (D28).
+
+**Couples and close-friend widget apps.** No product here publishes a D1/D7/D30 curve. Review
+themes are from the reviews store pages show, so illustrative, not counted.
+
+- **SumOne** (Korea): one question a day at a time the couple picks; a pet that grows and hatches
+  from answered questions; soft currency for seasonal room decor. DAU about 550k (early 2023) to
+  1.3M (Aug 2024) on about 3M MAU, so DAU/MAU near 43% (our arithmetic)
+  ([MoneyToday](https://www.unicornfactory.co.kr/article/2024080909415022427)). Complaints: ads
+  after each answer, slow currency, weak questions after 200 entries
+  ([App Store](https://apps.apple.com/us/app/sumone-for-relationships/id1469506430)).
+- **Candle**: "1-minute daily rituals" from a rotating deck (question, quiz, photo prompt, game);
+  answers unlock after the partner responds; a shared pet whose mood shows the hours left on the
+  streak. 150k couples and DAU/MAU about 50% six months after launch; long-run retention unproven
+  ([TechCrunch](https://techcrunch.com/2025/09/24/these-yc-founders-pivoted-5-times-before-building-a-social-app-that-nabbed-300k-users-and-over-1m-arr-in-6-months)).
+  Sells "Streak Reignite" at $2.99; rated 18+.
+- **Paired, Agapé**: a daily question, the partner's answer hidden until you answer. Paired's
+  commissioned study: relationship quality up after three months, more with more use
+  ([Open University](https://university.open.ac.uk/research-projects/enduring-love/paired)).
+  Complaints: price, answers locked behind the paywall, reworded questions, "I don't see his dad
+  participating".
+- **Pengu** (co-parented pet, 15M users claimed): reviews complain of pings every couple of hours,
+  a pet "on the Verge of death", and "if they aren't doing what your pet needs it puts it all on
+  you" ([App Store](https://apps.apple.com/us/app/pengu-raise-virtual-ai-pets/id6462927800),
+  [TechCrunch](https://techcrunch.com/2025/09/10/born-maker-of-virtual-pet-pengu-raises-15m-to-launch-a-new-wave-of-social-ai-companions/)).
+- **Widgetable**: co-parented pets; care gated by ads, pets that run away, guilt letters; "the
+  co-parent doesn't even take care of them so that's more work for me"
+  ([reviews](https://justuseapp.com/en/app/1641107226/widgetable-lock-screen-widget/reviews)).
+- **NoteIt**: a drawing on the partner's widget, a gallery that grows, streaks added later. Top
+  complaint: streak alerts and "streak lost" messages nag; users want streaks switchable off
+  ([App Store](https://apps.apple.com/us/app/noteit-drawing-app/id1570369625)).
+- **Locket**: "Rollcall", a weekly Sunday photo dump driven by a Live Activity; "well over 25%" of
+  actives post one each week. Founder: "the biggest challenge to growth in the long run is
+  actually keeping the product fresh and exciting"
+  ([TechCrunch](https://techcrunch.com/2025/11/03/lockets-social-app-is-picking-up-steam-with-gen-alpha)).
+- **BeReal**: a reveal gate with nothing that accumulates; about 15M daily users in Oct 2022, about
+  6M by spring 2023 ([Wikipedia](https://en.wikipedia.org/wiki/BeReal)).
+- **Snapstreaks in teens**: of the 63% of 10 to 17 year olds who follow them, 85% feel closer to
+  people they care about, 45% feel pressured to use the app daily, 35% anxious, 16% have paid to
+  keep one (advocacy-funded poll,
+  [Heat Initiative](https://heatinitiative.org/wp-content/uploads/2026/05/SnapchatPolling_HeatInitiative_2026.pdf)).
+
+What the category shares: a 1 to 5 minute daily joint ritual with a reciprocal reveal; a shared
+living thing that grows from joint activity; a dyadic streak; the home screen; a private archive
+that accumulates. What it has not solved: **the quiet partner** (the active one carries the pet, or
+the reveal never opens), content exhaustion, and punitive pressure (dying pets, paid repair).
