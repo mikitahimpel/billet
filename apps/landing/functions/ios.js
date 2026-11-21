@@ -23,7 +23,9 @@ export function onRequest(context) {
     track({ click: true });
     return new Response(null, { status: 204 });
   }
-  if (request.method === "GET") track({ view: true, click: !tiktok });
+  // ?from=tiktok is the page's tap reopened in Safari: the view and the tap were counted inside TikTok already.
+  const escaped = url.searchParams.get("from") === "tiktok";
+  if (request.method === "GET") track(escaped ? { safari: true } : { view: true, click: !tiktok });
   if (tiktok) return env.ASSETS.fetch(new URL("/get/", url));
   return new Response(null, {
     status: 302,
@@ -31,7 +33,7 @@ export function onRequest(context) {
   });
 }
 
-async function count(request, url, { view = false, click = false }) {
+async function count(request, url, { view = false, click = false, safari = false }) {
   const ua = request.headers.get("user-agent") ?? "";
   const ip = request.headers.get("cf-connecting-ip") ?? "";
   // Umami would see only this Worker's address, so every visitor would share one session. A daily hash of the
@@ -53,6 +55,7 @@ async function count(request, url, { view = false, click = false }) {
     fetch(umami, { method: "POST", headers, body: JSON.stringify({ type: "event", payload }) });
   if (view) await send(base);
   if (click) await send({ ...base, name: "app_store_click", data: { where: "tiktok" } });
+  if (safari) await send({ ...base, name: "tiktok_to_safari" });
 }
 
 async function sha256(text) {
