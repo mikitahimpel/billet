@@ -205,3 +205,36 @@ the reveal never opens), content exhaustion, and punitive pressure (dying pets, 
 - **Who knows who is the pattern to copy** for anything daily and two-sided: a round keyed by the
   room day, a pure `decide`, hidden answers on the server, coins once per ref, a push when one
   side finishes (`pair-room/src/guess.ts`).
+
+### Stage 1: audit, the cat, Home and the games
+
+- **What a person can do in the room is small.** Tap the cat (a 2.5 s lean and a heart,
+  `CatDirector.petted`), tap the ball or basket, double-tap a spot to send her there, turn and zoom
+  the room, open the cat sheet for Feed, Play, Pet, Water, Brush, Treat. Each is seconds.
+- **The richer cat play is written and unused.** No app code calls `CatPlay` (wand, ball, yarn, the
+  tricks sit, wave, spin and high-five, the reaction to "your partner petted her"),
+  `CatTouchRouter`, `CatPetting` (rolling over under a long stroke), `CatNudge` (the "she is
+  hungry" nudge), `JointCatChoice` (choosing the cat together, both holding) or `LivePartnerView`
+  ("your partner is here"): each is referenced only in its own file and tests. The brain computes
+  learned tricks (`CatBrainFrame.tricks`) and nothing plays them. `CatUpbringing.habits` ("Loves
+  morning pets", "Brings you toys", "Knows high-five") has no screen.
+- **The level is a number.** Per phone, never synced (`Wallet.mirror` skips it), +3% a pet, +10% a
+  treat, games add nothing, no cap, nothing unlocks. It is on two widgets and the cat sheet.
+- **The four games do not change.** Feed: pour to a target of 25 to 60 g. Water: pour to a line.
+  Laser: five pounces, score always 100. Brush: stroke with the fur, score always 100. No
+  difficulty, best score, history or partner in any of them; the score is never shown. The 20th
+  play is the 1st.
+- **Neglect is gentle already.** Needs stop at 0.2; she sulks and ignores the first touch; after 3
+  quiet days she is aloof and comes round with care. Nothing owned is lost. The only thing that
+  breaks is the streak.
+- **The partner is nearly invisible in the room.** When they arrive the cat glances at the door for
+  3 s; when they pet her on their phone, nothing shows here. After 3 hours away one line shows for
+  6 s ("Leo fed Mochi yesterday at 8:15 PM"). `LifeState.missing` (she misses the partner who
+  cares less) is computed and never shown.
+- **Mood and Hug send no push.** A hug from the widget sets a "missing you" mood that uploads when
+  the sender next opens the app; the partner sees it only by looking.
+- **What rotates:** the featured set (3, weekly), 4 daily deals from 9 items, the daily gift (1 or 2
+  coins), the Who knows who round. Everything on Home is the same every day except what the cat
+  chooses to do.
+- **Local notifications:** the 20:00 streak reminder and date reminders. Its title is "Mochi misses
+  you tonight" with "before midnight to keep your N-day streak": loss-framed, and on by default.
