@@ -1,0 +1,219 @@
+---
+import { getImage } from "astro:assets";
+import { appStoreUrl } from "../config";
+
+import appIcon from "../assets/app-icon-192b.webp?url";
+import nunito from "../assets/fonts/nunito-latin.woff2?url";
+import bricolage from "../assets/fonts/bricolage-grotesque-latin.woff2?url";
+import roomSrc from "../assets/art/shared-room.webp";
+
+// The page the /ios short link shows inside TikTok (functions/ios.js), whose in-app browser won't leave for the App
+// Store on its own: one screen, and every tap on it is the App Store link. Standalone, so it loads only what it shows.
+const room = await getImage({ src: roomSrc, width: 800, format: "webp" });
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#0a0605" />
+    <title>Ourio: raise a cat together</title>
+    <link rel="icon" href="/favicon.png" />
+    <link rel="preload" as="image" href={room.src} fetchpriority="high" />
+    <link rel="preload" as="font" type="font/woff2" href={bricolage} crossorigin />
+    <style
+      is:inline
+      set:html={`
+      @font-face { font-family: Bricolage Grotesque; font-weight: 400 800; font-stretch: 75% 100%; font-display: swap; src: url(${bricolage}) format("woff2"); }
+      @font-face { font-family: Nunito; font-weight: 400 800; font-display: swap; src: url(${nunito}) format("woff2"); }
+    `}
+    />
+    <style>
+      :root {
+        --night: #0a0605;
+        --ink: #f7e7d4;
+        --ink-soft: rgba(247, 231, 212, 0.72);
+        --ink-faint: rgba(247, 231, 212, 0.45);
+        --honey: #ffcf7a;
+        --pink: #ff8fab;
+        color-scheme: dark;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--night);
+        color: var(--ink);
+        font: 17px/1.45 Nunito, system-ui, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        -webkit-tap-highlight-color: transparent;
+      }
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+      .screen {
+        display: flex;
+        flex-direction: column;
+        min-height: 100svh;
+        max-width: 480px;
+        margin: 0 auto;
+      }
+      /* The room fills whatever height the copy leaves, cropped from the bottom so Mochi stays in view. */
+      .shot {
+        position: relative;
+        flex: 1 1 auto;
+        min-height: 240px;
+        overflow: hidden;
+      }
+      .shot img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: 50% 45%;
+        animation: settle 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
+      }
+      .shot::after {
+        content: "";
+        position: absolute;
+        inset: auto 0 0;
+        height: 45%;
+        background: linear-gradient(to bottom, transparent, var(--night));
+      }
+      .copy {
+        position: relative;
+        margin-top: -64px;
+        padding: 0 22px calc(18px + env(safe-area-inset-bottom));
+        text-align: center;
+      }
+      .app {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        font-size: 15px;
+        color: var(--ink-soft);
+      }
+      .app img {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.5);
+      }
+      h1 {
+        margin: 12px 0 6px;
+        font: 800 clamp(32px, 9.5vw, 42px) / 1.02 "Bricolage Grotesque", Nunito, system-ui, sans-serif;
+        letter-spacing: -0.02em;
+      }
+      h1 em {
+        font-style: normal;
+        color: var(--honey);
+      }
+      .lead {
+        margin: 0 auto 18px;
+        max-width: 22em;
+        color: var(--ink-soft);
+      }
+      .get {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        width: 100%;
+        height: 60px;
+        border-radius: 16px;
+        background: #fff;
+        color: #000;
+        font-weight: 800;
+        font-size: 19px;
+        box-shadow: 0 10px 30px rgba(255, 207, 122, 0.25);
+        animation: nudge 2.6s ease-in-out 1.4s infinite;
+      }
+      .get:active {
+        transform: scale(0.97);
+      }
+      .get svg {
+        width: 20px;
+        height: 24px;
+        margin-top: -3px;
+      }
+      .facts {
+        margin: 12px 0 0;
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+      .facts b {
+        color: var(--pink);
+      }
+      .hint {
+        margin: 14px 0 0;
+        font-size: 13px;
+        color: var(--ink-faint);
+      }
+      @keyframes settle {
+        from {
+          transform: scale(1.06);
+          opacity: 0;
+        }
+      }
+      @keyframes nudge {
+        0%,
+        80%,
+        100% {
+          transform: scale(1);
+        }
+        88% {
+          transform: scale(1.04);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .shot img,
+        .get {
+          animation: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="screen">
+      <a class="shot" href={appStoreUrl} aria-hidden="true" tabindex="-1">
+        <img src={room.src} width={room.attributes.width} height={room.attributes.height} alt="" fetchpriority="high" />
+      </a>
+      <div class="copy">
+        <a class="app" href={appStoreUrl} tabindex="-1">
+          <img src={appIcon} width="40" height="40" alt="" />
+          Ourio for iPhone
+        </a>
+        <h1>Raise a cat <em>together.</em></h1>
+        <p class="lead">Pet Mochi, send a note or a drawing, and it lands on your partner's Lock Screen.</p>
+        <a class="get" href={appStoreUrl}>
+          <svg viewBox="0 0 17 20" aria-hidden="true">
+            <path
+              fill="currentColor"
+              d="M14.1 10.6c0-2.5 2-3.7 2.1-3.8-1.2-1.7-3-1.9-3.6-2-1.5-.2-3 .9-3.8.9-.8 0-2-.9-3.3-.9C3.8 4.9 2.2 5.9 1.3 7.4c-1.8 3.2-.5 7.9 1.3 10.5.9 1.3 1.9 2.7 3.2 2.6 1.3-.1 1.8-.8 3.3-.8s2 .8 3.3.8c1.4 0 2.3-1.3 3.1-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.8-1.1-2.8-4.3ZM11.6 3.2c.7-.9 1.2-2 1.1-3.2-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.1 1.1.1 2.3-.6 3-1.5Z"
+            ></path>
+          </svg>
+          Get it free on the App Store
+        </a>
+        <p class="facts"><b>Free</b> · No ads · Your partner joins with one code</p>
+        <p class="hint">Not opening? Tap ··· at the top, then Open in browser.</p>
+      </div>
+    </main>
+    <script is:inline>
+      // Every link here is the App Store. The tap is counted by /ios (functions/ios.js) with a keepalive request that
+      // outlives the page, and the link itself is left alone so the in-app browser sees a plain user tap.
+      document.addEventListener("click", function (e) {
+        if (!(e.target instanceof Element && e.target.closest("a"))) return;
+        if (location.hostname !== "ourio.app") return;
+        try {
+          fetch("/ios", { method: "POST", keepalive: true });
+        } catch {}
+      });
+    </script>
+  </body>
+</html>
