@@ -1,0 +1,34 @@
+---
+---
+
+{/* Self-hosted Umami: no cookies, no IP stored; counts only on ourio.app, not on pages.dev previews.
+    umami-filter.js drops headless renders and must run first (defer keeps the order). */}
+<script is:inline defer src="/umami-filter.js"></script>
+<script is:inline defer src="https://stats.itsnexis.com/s.js" data-website-id="602fa9cd-5bb9-4de9-bc6d-bcdcce04c264" data-domains="ourio.app" data-before-send="umamiBeforeSend" data-auto-pageview="false"></script>
+{/* GA4 in its own Ourio account (G-L3WKKDKMSB). Consent Mode v2 with no cookie box: ads are always off; analytics
+    cookies are off in the EEA, UK and Switzerland and under Global Privacy Control, where GA4 gets cookieless pings.
+    Links that carry data-umami-event (App Store buttons) send the same event to GA4. */}
+<script is:inline>
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function () { dataLayer.push(arguments); };
+  (function () {
+    const ads = { ad_storage: 'denied', ad_user_data: 'denied', ad_personalization: 'denied' };
+    if (navigator.globalPrivacyControl) gtag('consent', 'default', { ...ads, analytics_storage: 'denied' });
+    else {
+      gtag('consent', 'default', { ...ads, analytics_storage: 'granted' });
+      gtag('consent', 'default', { ...ads, analytics_storage: 'denied', region: ['AT', 'BE', 'BG', 'HR', 'CY', 'CZ', 'DK', 'EE', 'FI', 'FR', 'DE', 'GR', 'HU', 'IE', 'IT', 'LV', 'LT', 'LU', 'MT', 'NL', 'PL', 'PT', 'RO', 'SK', 'SI', 'ES', 'SE', 'IS', 'LI', 'NO', 'GB', 'CH'] });
+    }
+    gtag('js', new Date());
+    // pages.dev previews and local builds stay out of the property.
+    if (location.hostname !== 'ourio.app') return;
+    gtag('config', 'G-L3WKKDKMSB');
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=G-L3WKKDKMSB';
+    document.head.appendChild(s);
+    document.addEventListener('click', function (e) {
+      const a = e.target instanceof Element && e.target.closest('[data-umami-event]');
+      if (a) gtag('event', a.dataset.umamiEvent, { where: a.dataset.umamiEventWhere || location.pathname, transport_type: 'beacon' });
+    });
+  })();
+</script>
