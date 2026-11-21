@@ -1,18 +1,33 @@
 #!/bin/sh
 #   PROTON_PASS_AGENT_REASON="<why>" pp run --env-file .env.pass.agents -- scripts/admin-read.sh flags
-# Routes: overview, experiments, flags, flag-history[?key=&limit=], pairs/<pair id>, status,
+# Routes: overview[?days=], retention[?variant=&version=], funnel?steps=&window=&unit=[&range=&split=],
+# funnels, trends?event=&metric=&interval=&range=&split=[&key=], features[?split=], experiments, flags,
+# flag-history[?key=&limit=], onboarding, shop-items, shop-history[?limit=], pairs/<pair id>, status,
 # status-history[?limit=], purchases[?limit=], economy[?range=&hold=]. Read-only; see docs/admin.md#agent-api.
+# A build's `+` in a query is written %2B.
 set -eu
 
 usage() {
-  echo "usage: admin-read.sh overview|experiments|flags|flag-history[?query]|status|status-history[?query]|purchases[?query]|economy[?query]|pairs/<pair id>" >&2
+  echo "usage: admin-read.sh overview[?query]|retention[?query]|funnel?query|funnels|trends?query|features[?query]|experiments|flags|flag-history[?query]|onboarding|shop-items|shop-history[?query]|status|status-history[?query]|purchases[?query]|economy[?query]|pairs/<pair id>" >&2
   exit 2
 }
 
 [ $# -eq 1 ] || usage
 route=$1
 case "$route" in
-  overview | experiments | flags | status) ;;
+  experiments | flags | status | funnels | onboarding | shop-items) ;;
+  overview | overview\?*)
+    printf '%s' "$route" | grep -Eq '^overview(\?days=(7|30|90))?$' || usage
+    ;;
+  retention | retention\?* | features | features\?*)
+    printf '%s' "$route" | grep -Eq '^(retention|features)(\?[A-Za-z0-9_=&.%-]*)?$' || usage
+    ;;
+  funnel\?* | trends\?*)
+    printf '%s' "$route" | grep -Eq '^(funnel|trends)\?[A-Za-z0-9_=&.,%-]+$' || usage
+    ;;
+  shop-history | shop-history\?*)
+    printf '%s' "$route" | grep -Eq '^shop-history(\?limit=[0-9]{1,3})?$' || usage
+    ;;
   purchases | purchases\?*)
     printf '%s' "$route" | grep -Eq '^purchases(\?limit=[0-9]{1,4})?$' || usage
     ;;
