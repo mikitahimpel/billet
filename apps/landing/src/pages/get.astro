@@ -1,6 +1,5 @@
 ---
 import { getImage } from "astro:assets";
-import { appStoreUrl } from "../config";
 
 import appIcon from "../assets/app-icon-192b.webp?url";
 import nunito from "../assets/fonts/nunito-latin.woff2?url";
@@ -10,6 +9,10 @@ import roomSrc from "../assets/art/shared-room.webp";
 // The page the /ios short link shows inside TikTok (functions/ios.js), whose in-app browser won't leave for the App
 // Store on its own: one screen, and every tap on it is the App Store link. Standalone, so it loads only what it shows.
 const room = await getImage({ src: roomSrc, width: 800, format: "webp" });
+// TikTok refuses App Store links outright ("Action can't be completed"), so the tap asks iOS (17+) to open this link in
+// Safari instead, where /ios is the usual 302 to the listing. If TikTok blocks that too, the page stays in view and
+// the script shows how to open it in the browser by hand.
+const store = "x-safari-https://ourio.app/ios?from=tiktok";
 ---
 
 <!doctype html>
@@ -155,6 +158,38 @@ const room = await getImage({ src: roomSrc, width: 800, format: "webp" });
         font-size: 13px;
         color: var(--ink-faint);
       }
+      .escape {
+        position: fixed;
+        inset: 0;
+        display: none;
+        flex-direction: column;
+        align-items: flex-end;
+        padding: 14px 18px;
+        background: rgba(10, 6, 5, 0.88);
+        text-align: right;
+        z-index: 1;
+      }
+      .escape.on {
+        display: flex;
+      }
+      .escape svg {
+        width: 72px;
+        height: 96px;
+        margin-right: 2px;
+        color: var(--honey);
+      }
+      .escape p {
+        margin: 8px 0 0;
+        font: 800 26px/1.2 "Bricolage Grotesque", Nunito, system-ui, sans-serif;
+      }
+      .escape p b {
+        color: var(--honey);
+      }
+      .escape small {
+        margin-top: 10px;
+        font-size: 15px;
+        color: var(--ink-soft);
+      }
       @keyframes settle {
         from {
           transform: scale(1.06);
@@ -181,17 +216,17 @@ const room = await getImage({ src: roomSrc, width: 800, format: "webp" });
   </head>
   <body>
     <main class="screen">
-      <a class="shot" href={appStoreUrl} aria-hidden="true" tabindex="-1">
+      <a class="shot" href={store} aria-hidden="true" tabindex="-1">
         <img src={room.src} width={room.attributes.width} height={room.attributes.height} alt="" fetchpriority="high" />
       </a>
       <div class="copy">
-        <a class="app" href={appStoreUrl} tabindex="-1">
+        <a class="app" href={store} tabindex="-1">
           <img src={appIcon} width="40" height="40" alt="" />
           Ourio for iPhone
         </a>
         <h1>Raise a cat <em>together.</em></h1>
         <p class="lead">Your notes and doodles show up on your partner's Home and Lock Screen widgets. Plus shared lists, date ideas and games.</p>
-        <a class="get" href={appStoreUrl}>
+        <a class="get" href={store}>
           <svg viewBox="0 0 17 20" aria-hidden="true">
             <path
               fill="currentColor"
@@ -204,11 +239,26 @@ const room = await getImage({ src: roomSrc, width: 800, format: "webp" });
         <p class="hint">Not opening? Tap ··· at the top, then Open in browser.</p>
       </div>
     </main>
+    <div class="escape" id="escape" role="dialog" aria-label="Open in browser">
+      <svg viewBox="0 0 72 96" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 92C14 50 30 22 58 8M58 8 38 10M58 8 54 28"></path>
+      </svg>
+      <p>Tap <b>···</b> up here,<br />then <b>Open in browser</b></p>
+      <small>TikTok won't open the App Store itself. Safari will.</small>
+    </div>
     <script is:inline>
-      // Every link here is the App Store. The tap is counted by /ios (functions/ios.js) with a keepalive request that
-      // outlives the page, and the link itself is left alone so the in-app browser sees a plain user tap.
+      // Every link here is the App Store, through Safari. The tap is counted by /ios (functions/ios.js) with a keepalive
+      // request that outlives the page, and the link itself is left alone so the in-app browser sees a plain user tap.
+      // A page still in view a moment later means TikTok kept it, so the open-in-browser steps come up.
+      const escape = document.getElementById("escape");
+      escape.addEventListener("click", function () {
+        escape.classList.remove("on");
+      });
       document.addEventListener("click", function (e) {
         if (!(e.target instanceof Element && e.target.closest("a"))) return;
+        setTimeout(function () {
+          if (!document.hidden) escape.classList.add("on");
+        }, 900);
         if (location.hostname !== "ourio.app") return;
         try {
           fetch("/ios", { method: "POST", keepalive: true });
