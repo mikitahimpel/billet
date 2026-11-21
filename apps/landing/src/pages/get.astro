@@ -81,6 +81,39 @@ const store = "x-safari-https://ourio.app/ios?from=tiktok";
         object-position: 50% 45%;
         animation: settle 1.2s cubic-bezier(0.16, 1, 0.3, 1) both;
       }
+      .out {
+        position: fixed;
+        top: 0;
+        right: 0;
+        left: 0;
+        z-index: 1;
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-end;
+        gap: 6px;
+        margin: 0;
+        padding: 10px 14px 18px;
+        background: linear-gradient(to bottom, rgba(10, 6, 5, 0.85), transparent);
+        font-weight: 800;
+        font-size: 16px;
+        pointer-events: none;
+      }
+      .out b {
+        color: var(--honey);
+      }
+      .out svg {
+        flex: none;
+        width: 30px;
+        height: 36px;
+        margin-top: -6px;
+        color: var(--honey);
+        animation: point 1.6s ease-in-out infinite;
+      }
+      @keyframes point {
+        50% {
+          transform: translate(3px, -4px);
+        }
+      }
       .shot::after {
         content: "";
         position: absolute;
@@ -153,11 +186,6 @@ const store = "x-safari-https://ourio.app/ios?from=tiktok";
       .facts b {
         color: var(--pink);
       }
-      .hint {
-        margin: 14px 0 0;
-        font-size: 13px;
-        color: var(--ink-faint);
-      }
       .escape {
         position: fixed;
         inset: 0;
@@ -208,6 +236,7 @@ const store = "x-safari-https://ourio.app/ios?from=tiktok";
       }
       @media (prefers-reduced-motion: reduce) {
         .shot img,
+        .out svg,
         .get {
           animation: none;
         }
@@ -216,6 +245,14 @@ const store = "x-safari-https://ourio.app/ios?from=tiktok";
   </head>
   <body>
     <main class="screen">
+      {/* TikTok blocks App Store links before this page's script sees the tap, so the way out is shown from the start,
+          pointing at TikTok's own ··· menu in the top right corner. */}
+      <p class="out">
+        Tap <b>···</b> above, then <b>Open in browser</b>
+        <svg viewBox="0 0 40 48" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M6 44C8 24 18 12 34 4M34 4 20 5M34 4 31 18"></path>
+        </svg>
+      </p>
       <a class="shot" href={store} aria-hidden="true" tabindex="-1">
         <img src={room.src} width={room.attributes.width} height={room.attributes.height} alt="" fetchpriority="high" />
       </a>
@@ -236,7 +273,6 @@ const store = "x-safari-https://ourio.app/ios?from=tiktok";
           Get it free on the App Store
         </a>
         <p class="facts"><b>Free</b> · No ads · Your partner joins with one code</p>
-        <p class="hint">Not opening? Tap ··· at the top, then Open in browser.</p>
       </div>
     </main>
     <div class="escape" id="escape" role="dialog" aria-label="Open in browser">
