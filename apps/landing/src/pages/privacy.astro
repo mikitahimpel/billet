@@ -4,7 +4,7 @@ import Page from "../layouts/page.astro";
 import { supportEmail } from "../site";
 
 // Follows docs/legal/privacy-policy.md, the release policy written from what the code collects. Change both together.
-const updated = { iso: "2026-11-15", label: "November 15, 2026" };
+const updated = { iso: "2026-11-21", label: "November 21, 2026" };
 const topics = [
   { id: "summary", label: "In short" },
   { id: "what", label: "What the app handles" },
@@ -12,6 +12,7 @@ const topics = [
   { id: "device", label: "Your data on your device" },
   { id: "delete", label: "Unpairing and deleting your account" },
   { id: "children", label: "Children" },
+  { id: "website", label: "This website: analytics and cookies" },
   { id: "changes", label: "Changes" },
 ];
 ---
@@ -25,7 +26,7 @@ const topics = [
   <DocArticle
     eyebrow="Privacy"
     title="Ourio privacy policy"
-    lead="Ourio is a private iPhone app for two people. It stores what you make for each other so it reaches your partner, and nothing it doesn't need. It has no ads, no third-party analytics or tracking, and never uses your drawings or photos to train AI."
+    lead="Ourio is a private iPhone app for two people. It stores what you make for each other so it reaches your partner, and nothing it doesn't need. The app has no ads, no third-party analytics or tracking, and never uses your drawings or photos to train AI. This website's own analytics are described below."
     updated={updated}
     topics={topics}
   >
@@ -42,7 +43,7 @@ const topics = [
       <tbody>
         <tr><td>Do you know my name or email?</td><td>No. Your account is anonymous. If you choose to link your Apple ID, we keep only Apple's private identifier for you: we ask for no name or email address, and keep none.</td></tr>
         <tr><td>Who sees what I send?</td><td>Only your partner and you.</td></tr>
-        <tr><td>Ads or tracking?</td><td>None. No third-party analytics.</td></tr>
+        <tr><td>Ads or tracking?</td><td>None in the app, and no third-party analytics there. This website counts visits; see <a href="#website">below</a>.</td></tr>
         <tr><td>Do you train AI on my content?</td><td>No.</td></tr>
         <tr><td>Contacts or location?</td><td>Never asked for.</td></tr>
         <tr><td>Can I delete everything?</td><td>Yes: Settings › Delete account. A report sent to us about a partner is kept until you ask us to delete it.</td></tr>
@@ -125,11 +126,6 @@ const topics = [
     </ul>
     <p>
       Notifications are sent through Apple Push Notification service. Ourio has no in-app purchases. We don't sell your data or use it for advertising.
-      This website (not the app) counts page views with self-hosted Umami at stats.itsnexis.com: no cookies, and IP addresses are not stored.
-      The website also uses Google Analytics to see where visitors come from and which pages lead to the App Store. Advertising
-      features are off. In the EEA, the UK and Switzerland, and in any browser that sends Global Privacy Control, it sets no
-      cookies and receives only cookieless pings; elsewhere it sets its analytics cookies (<code>_ga</code>, <code>_ga_*</code>).
-      Google keeps the data for 14 months. The app itself sends nothing to Google Analytics.
     </p>
 
     <h2 id="device">Your data on your device</h2>
@@ -160,6 +156,30 @@ const topics = [
       The app asks your age range on first launch. If you are under 13, the app stops there, your answer is never sent and
       no account data is kept for you.
     </p>
+
+    <h2 id="website">This website: analytics and cookies</h2>
+    <p>This section is about ourio.app only. The app sends nothing to the services below.</p>
+    <ul>
+      <li>
+        <strong>Umami</strong>, which we host ourselves at stats.itsnexis.com, counts page views, the page you came from and
+        clicks on the App Store buttons. It sets no cookies and does not store your IP address.
+      </li>
+      <li>
+        <strong>Google Analytics</strong> shows us where visitors come from and which pages lead to the App Store. It sets
+        the cookies <code>_ga</code> and <code>_ga_*</code>, which keep a random visitor ID for up to two years. Advertising
+        features, Google signals and data sharing with Google are off, and Google keeps the data for 14 months.
+      </li>
+      <li>
+        We don't load Google Analytics at all for visitors whose browser is set to a time zone in the European Economic
+        Area, the United Kingdom or Switzerland, or whose browser sends Global Privacy Control. Those visits are counted by
+        Umami alone, and no cookie is set.
+      </li>
+      <li>
+        To turn both off in your browser, open any page with <code>?notrack=1</code> at the end of its address
+        (<code>?notrack=0</code> turns them back on). Blocking cookies or scripts in your browser works too; the site works
+        the same either way.
+      </li>
+    </ul>
 
     <h2 id="changes">Changes</h2>
     <p>We will say here when this policy changes, and change the date above.</p>
