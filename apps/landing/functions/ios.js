@@ -1,31 +1,37 @@
-// The short link in the TikTok profile (ourio.app/ios). A 302 straight to the App Store listing: TikTok's in-app
-// browser blocks a page that sends itself there by script, so there is no page to see. The visit is counted from here
-// instead, as an Umami page view and app_store_click, sent after the response so it adds no wait.
+// The short link in the TikTok profile (ourio.app/ios). TikTok's in-app browser won't leave for the App Store on its
+// own, by script or by redirect, so it gets the one-screen page at /get/ whose every tap is the App Store link; every
+// other browser gets a 302 straight to the listing. Visits are counted from here, as Umami events sent after the
+// response so they add no wait: the page view on GET, app_store_click on the redirect or on the page's tap (a POST).
 
 import { appStoreUrl } from "../src/config.ts";
 
 const umami = "https://stats.itsnexis.com/api/e";
 const website = "602fa9cd-5bb9-4de9-bc6d-bcdcce04c264";
 const tiktokTags = "utm_source=tiktok&utm_medium=social&utm_campaign=profile";
-// ?notrack=1 skips the count: the owner's localStorage opt-out never reaches a server.
+const inTikTok = /musical_ly|BytedanceWebview|TikTok/i;
 
 export function onRequest(context) {
-  const { request } = context;
+  const { request, env } = context;
   const url = new URL(request.url);
-  if (
-    url.hostname === "ourio.app" &&
-    request.method === "GET" &&
-    url.searchParams.get("notrack") !== "1"
-  ) {
-    context.waitUntil(count(request, url).catch(() => {}));
+  const tiktok = inTikTok.test(request.headers.get("user-agent") ?? "");
+  // ?notrack=1 skips the count: the owner's localStorage opt-out never reaches a server.
+  const counted = url.hostname === "ourio.app" && url.searchParams.get("notrack") !== "1";
+  const track = (events) => {
+    if (counted) context.waitUntil(count(request, url, events).catch(() => {}));
+  };
+  if (request.method === "POST") {
+    track({ click: true });
+    return new Response(null, { status: 204 });
   }
+  if (request.method === "GET") track({ view: true, click: !tiktok });
+  if (tiktok) return env.ASSETS.fetch(new URL("/get/", url));
   return new Response(null, {
     status: 302,
     headers: { location: appStoreUrl, "cache-control": "no-store" },
   });
 }
 
-async function count(request, url) {
+async function count(request, url, { view = false, click = false }) {
   const ua = request.headers.get("user-agent") ?? "";
   const ip = request.headers.get("cf-connecting-ip") ?? "";
   // Umami would see only this Worker's address, so every visitor would share one session. A daily hash of the
@@ -45,8 +51,8 @@ async function count(request, url) {
   const headers = { "content-type": "application/json", "user-agent": ua };
   const send = (payload) =>
     fetch(umami, { method: "POST", headers, body: JSON.stringify({ type: "event", payload }) });
-  await send(base);
-  await send({ ...base, name: "app_store_click", data: { where: "tiktok" } });
+  if (view) await send(base);
+  if (click) await send({ ...base, name: "app_store_click", data: { where: "tiktok" } });
 }
 
 async function sha256(text) {
