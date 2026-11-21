@@ -90,7 +90,7 @@ def check_archive_errors(info: dict[str, str], env: dict[str, str], about: str) 
         subprocess.run(["plutil", "-create", "xml1", plist], check=True)
         for key, value in info.items():
             subprocess.run(["plutil", "-insert", key, "-string", value, plist], check=True)
-        run_env = {k: v for k, v in os.environ.items() if k not in ("EXPECT_LABS", "API_HOST")}
+        run_env = {k: v for k, v in os.environ.items() if k not in ("EXPECT_LABS", "EXPECT_PAYMENTS", "API_HOST")}
         run_env.update(env)
         out = subprocess.run(
             [CHECK_ARCHIVE, os.path.join(tmp, "a.xcarchive"), "1"], env=run_env, capture_output=True, text=True
@@ -114,6 +114,25 @@ class CheckArchiveLabsTests(unittest.TestCase):
 
     def test_an_unknown_expectation_fails(self):
         self.assertEqual(len(self.labs_errors("NO", "maybe")), 1)
+
+
+@unittest.skipUnless(sys.platform == "darwin", "PlistBuddy and codesign are macOS tools")
+class CheckArchivePaymentsTests(unittest.TestCase):
+    def store_errors(self, in_app: str, expect: str | None) -> list[str]:
+        env = {} if expect is None else {"EXPECT_PAYMENTS": expect}
+        return check_archive_errors({"BilletPayments": in_app}, env, "store")
+
+    def test_builds_sell_nothing_unless_asked(self):
+        self.assertEqual(self.store_errors("none", None), [])
+        self.assertEqual(len(self.store_errors("storekit", None)), 1)
+
+    def test_storekit_builds_must_carry_storekit(self):
+        self.assertEqual(self.store_errors("storekit", "storekit"), [])
+        self.assertEqual(len(self.store_errors("none", "storekit")), 1)
+
+    def test_the_mock_store_never_passes(self):
+        self.assertEqual(len(self.store_errors("mock", None)), 1)
+        self.assertEqual(len(self.store_errors("mock", "mock")), 1)
 
 
 @unittest.skipUnless(sys.platform == "darwin", "PlistBuddy and codesign are macOS tools")

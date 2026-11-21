@@ -59,8 +59,9 @@ for the APNs sandbox in Debug and for production otherwise (`DrawingSync.swift`)
 
 - **Mock store.** `BILLET_PAYMENTS` defaults to `mock` for local builds: the mock store credits
   coins without money on dev, and like StoreKit it sells only while `payments` is `on`. The
-  TestFlight workflow always builds with `BILLET_PAYMENTS=storekit`, and `check-archive.sh` fails
-  any other store.
+  TestFlight workflow builds with `BILLET_PAYMENTS=none` (no store linked) unless the run's
+  `payments` input asks for `storekit`, and `check-archive.sh` fails a store other than the one
+  asked for, and the mock always.
 - **`XCTestConfigurationFilePath`** in `OurioApp.swift` only detects a test host; no behaviour
   for users.
 
@@ -84,7 +85,8 @@ test path (demo rooms) needs a migration and a deploy that this docs PR must not
 
 Fail the upload when any of these is true:
 
-1. The build was not made with `BILLET_PAYMENTS=storekit` (checked by `check-archive.sh`).
+1. The build's store is not the one the run asked for (`none` by default, `storekit` on request),
+   or it is the mock (checked by `check-archive.sh`).
 2. The Labs section (checked by `check-archive.sh`) or the `-perf.script` hooks (`check-archive.sh`, #515) are still compiled into
    Release.
 3. `registry` has a flag whose status is `running` or whose `default` differs from the table

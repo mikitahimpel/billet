@@ -494,7 +494,11 @@ struct HomeView: View {
             }
             partnerSync?.send(.cameToFront)
             refreshRooms()
-            if !launching { reportOpened(state.room) }
+            if !launching {
+                reportOpened(state.room)
+                // A pack paid while the server was out of reach; at launch `Transaction.updates` sends it already.
+                if let payments = session?.payments { Task { await payments.settleUnfinished() } }
+            }
         case .background:
             state.didEnterBackground()
             partnerSync?.send(.wentAway)

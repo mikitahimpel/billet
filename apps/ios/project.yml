@@ -11,9 +11,9 @@ settings:
     SWIFT_APPROACHABLE_CONCURRENCY: YES
     TARGETED_DEVICE_FAMILY: "1"
     MARKETING_VERSION: "1.0.0"
-    # Which store sells coin packs: "mock" (the default: fake store, the dev server credits) or "storekit". Set it
-    # in the ENVIRONMENT, not as an xcodebuild argument: Package.swift reads the same variable to link only that
-    # store (docs/payments.md).
+    # Which store sells coin packs: "mock" (the default: fake store, the dev server credits), "storekit", or "none"
+    # (no store linked, nothing sold). Set it in the ENVIRONMENT, not as an xcodebuild argument: Package.swift reads
+    # the same variable to link only that store (docs/payments.md).
     BILLET_PAYMENTS_MODE: $(BILLET_PAYMENTS:default=mock)
     # Whether Settings > Labs and Testing are compiled into a Release build: "NO" unless BILLET_LABS=YES is in the
     # environment. A Debug build always has them. The TestFlight workflow never sets it, because the binary it
@@ -81,7 +81,7 @@ targets:
           UIColorName: LaunchBackground
         # The billet server's host, from the BILLET_API_HOST environment variable at build time (see Server/Backend).
         BilletAPIHost: $(BILLET_API_HOST)
-        # What the build carries, for check-archive.sh: the store (mock or storekit) and Labs (YES or NO).
+        # What the build carries, for check-archive.sh: the store (none, mock or storekit) and Labs (YES or NO).
         BilletPayments: $(BILLET_PAYMENTS_MODE)
         BilletLabs: $(BILLET_LABS_MODE)
         # The invite step scans the partner's QR code (FeatureOnboarding/InviteScanner).
@@ -324,6 +324,8 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.ourio.app.tests
         GENERATE_INFOPLIST_FILE: YES
         SWIFT_DEFAULT_ACTOR_ISOLATION: MainActor
+        # The store tests compile only against the store the app was built with.
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: $(inherited) PAYMENTS_$(BILLET_PAYMENTS_MODE:upper)
   OurioUITests:
     type: bundle.ui-testing
     platform: iOS
@@ -346,6 +348,8 @@ schemes:
           script: '"$SRCROOT/scripts/trim-compilation-cache.sh"'
     run:
       config: Debug
+      # Local StoreKit testing when the app is run from Xcode in a storekit build; no App Store Connect needed.
+      storeKitConfiguration: Ourio.storekit
     test:
       config: Debug
       targets: [OurioTests, OurioWidgetsTests, OurioUITests]
