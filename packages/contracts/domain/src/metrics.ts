@@ -5,6 +5,8 @@ import { Schema } from "effect";
 export const ClientEventName = Schema.Literals([
   /** At most one per launch. */
   "AppOpened",
+  /** The app left the front. detail: how long it had been there, one of four ranges. */
+  "SessionEnded",
   /** Reported once per widget kind. */
   "WidgetAdded",
   "OpeningWatched",
@@ -92,6 +94,8 @@ export interface ClientEventRule {
 
 export const clientEventRules: { readonly [Name in ClientEventName]: ClientEventRule } = {
   AppOpened: { detail: "none" },
+  /** Never the seconds. `from-1m` is one to three minutes, `from-3m` three to ten. */
+  SessionEnded: { detail: ["under-1m", "from-1m", "from-3m", "from-10m"], required: true },
   WidgetAdded: { detail: "id" },
   OpeningWatched: { detail: "none" },
   OpeningSkipped: { detail: "none" },

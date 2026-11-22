@@ -23,6 +23,7 @@ struct OurioApp: App {
     /// Nil in a build without a server, which has no account to report to.
     @State private var events: EventQueue?
     @Environment(\.scenePhase) private var scenePhase
+    @State private var sessions = SessionMeter()
 
     init() {
         LaunchSignposts.event("app init")
@@ -150,8 +151,10 @@ struct OurioApp: App {
                     }
                     .onChange(of: onboarding.isFinished, initial: true) { hints.onboardingFinished(onboarding.isFinished) }
                     // Sent as the app comes to the front and as it leaves, besides a few seconds after each event.
-                    .onChange(of: scenePhase) { _, phase in
-                        guard phase != .inactive, let events else { return }
+                    .onChange(of: scenePhase, initial: true) { _, phase in
+                        guard let events else { return }
+                        for event in sessions.moved(to: SessionMeter.Phase(phase), at: .now) { events.record(event) }
+                        guard phase != .inactive else { return }
                         Task { await events.flush() }
                     }
             }
@@ -207,5 +210,16 @@ private struct PairWatch: Equatable {
         paired = session?.isPaired ?? false
         inviting = session?.pairing.isWaiting ?? false
         self.active = active
+    }
+}
+
+extension SessionMeter.Phase {
+    fileprivate init(_ phase: ScenePhase) {
+        switch phase {
+        case .active: self = .front
+        case .inactive: self = .aside
+        case .background: self = .away
+        @unknown default: self = .aside
+        }
     }
 }

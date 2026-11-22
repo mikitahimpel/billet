@@ -4,6 +4,8 @@
 public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   /// At most one per launch.
   case appOpened = "AppOpened"
+  /// The app left the front; the detail is a ``SessionLength``.
+  case sessionEnded = "SessionEnded"
   /// Once per widget kind.
   case widgetAdded = "WidgetAdded"
   case openingWatched = "OpeningWatched"
@@ -75,6 +77,27 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case caseSolved = "CaseSolved"
 }
 
+/// How long the app stayed in front, as the only four answers that leave the phone.
+public enum SessionLength: String, CaseIterable, Hashable, Sendable {
+  case underOneMinute = "under-1m"
+  case oneToThreeMinutes = "from-1m"
+  case threeToTenMinutes = "from-3m"
+  case tenMinutesOrMore = "from-10m"
+
+  public init(_ time: Duration) {
+    self =
+      if time < .seconds(60) {
+        .underOneMinute
+      } else if time < .seconds(180) {
+        .oneToThreeMinutes
+      } else if time < .seconds(600) {
+        .threeToTenMinutes
+      } else {
+        .tenMinutesOrMore
+      }
+  }
+}
+
 public struct ClientEventRule: Hashable, Sendable {
   public enum Detail: Hashable, Sendable {
     case none
@@ -119,6 +142,8 @@ extension ClientEventName {
       ClientEventRule(detail: .oneOf(["room", "city"]), required: true)
     case .widgetButtonTapped:
       ClientEventRule(detail: .oneOf(["pet", "treat"]), required: true)
+    case .sessionEnded:
+      ClientEventRule(detail: .oneOf(SessionLength.allCases.map(\.rawValue)), required: true)
     case .signInPromptAnswered:
       ClientEventRule(detail: .oneOf(["accepted", "dismissed"]), required: true)
     }
