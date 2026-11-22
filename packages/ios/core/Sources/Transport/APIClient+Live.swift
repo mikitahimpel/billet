@@ -261,6 +261,14 @@ extension APIClient {
           try await json(Routes.swipePickTonight, signed: true, body: body),
           as: PickTonightResponse.self)
       },
+      story: { () async throws(TransportError) in
+        try await http.perform(
+          try await request(Routes.getStory, signed: true), as: StoryResponse.self)
+      },
+      markStory: { (body) async throws(TransportError) in
+        try await http.perform(
+          try await json(Routes.markStory, signed: true, body: body), as: StoryResponse.self)
+      },
       guess: { () async throws(TransportError) in
         try await http.perform(
           try await request(Routes.getGuess, signed: true), as: GuessResponse.self)

@@ -148,6 +148,8 @@ import { ChangeListRequest, ListsResponse } from "@billet/contracts-http-api/lis
 import { TitleDetails, TitleSearchResponse } from "@billet/contracts-http-api/titles";
 import { PickMatch, PickTitle } from "@billet/contracts-domain/pick-tonight";
 import { PickSwipeRequest, PickTonightResponse } from "@billet/contracts-http-api/pick-tonight";
+import { StoryMarkRequest, StoryResponse } from "@billet/contracts-http-api/story";
+import { StoryId, StoryMark } from "@billet/contracts-domain/story";
 import {
   GuessQuestion,
   GuessQuestionId,
@@ -197,6 +199,8 @@ const reviewCode = Schema.decodeUnknownSync(ReviewCode)("ABCD2345EFGHJKLMNPQRSTU
 const experimentKey = Schema.decodeUnknownSync(ExperimentKey)("home-direction");
 const otherExperimentKey = Schema.decodeUnknownSync(ExperimentKey)("invite-card");
 const variantId = Schema.decodeUnknownSync(VariantId)("window-seat");
+const storyId = Schema.decodeUnknownSync(StoryId);
+const storyEpisode = storyId("fish-plush");
 const otherVariantId = Schema.decodeUnknownSync(VariantId)("control");
 const idempotencyKey = Schema.decodeUnknownSync(IdempotencyKey)(
   "6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
@@ -985,6 +989,41 @@ export const catalog: ReadonlyArray<Fixture> = [
       posterPath: "/evHCf9GuBDc42KvW9DRhY7pKx11.jpg",
     },
     "without-poster": { title: pickItem, choice: "want", name: "Past Lives" },
+  }),
+  fixture("StoryMark", StoryMark, {
+    found: {
+      episode: storyEpisode,
+      kind: "found",
+      ref: storyId("empty-basket"),
+      at: 1_700_000_300_000,
+    },
+    named: {
+      episode: storyEpisode,
+      kind: "named",
+      ref: storyId("crow"),
+      at: 1_700_000_310_000,
+    },
+  }),
+  fixture("StoryResponse", StoryResponse, {
+    default: {
+      mine: [
+        {
+          episode: storyEpisode,
+          kind: "found",
+          ref: storyId("empty-basket"),
+          at: 1_700_000_300_000,
+        },
+        { episode: storyEpisode, kind: "named", ref: storyId("crow"), at: 1_700_000_310_000 },
+      ],
+      partner: [
+        { episode: storyEpisode, kind: "found", ref: storyId("sill"), at: 1_700_000_305_000 },
+      ],
+    },
+    empty: { mine: [], partner: [] },
+  }),
+  fixture("StoryMarkRequest", StoryMarkRequest, {
+    found: { episode: storyEpisode, kind: "found", ref: storyId("empty-basket") },
+    named: { episode: storyEpisode, kind: "named", ref: storyId("crow") },
   }),
   fixture("GuessQuestion", GuessQuestion, { default: guessQuestion }),
   fixture("GuessCatalogResponse", GuessCatalogResponse, {

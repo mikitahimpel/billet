@@ -53,6 +53,8 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `TipShown` | the tip's id | | Which hints after the onboarding are seen? A pair in the `hints` holdout reports the hint it would have had as `<id>-hold`. |
 | `TipDismissed` | the tip's id | | Which hints are closed without trying them? |
 | `TipAction` | the tip's id | | Which hints lead to the thing they point at? Only within 24 hours of the show. |
+| `ClueFound` | the beat's id (`empty-basket`) | | How far do pairs get in a story episode? Reported once per clue found, in the `story` experiment. |
+| `CaseSolved` | the episode's id (`fish-plush`) | | How many pairs reach the end of an episode? |
 | `AccountDeleted` (server) | none | | How many leave? Written to Analytics Engine only: the account's own counts are deleted with it. |
 
 The opening's cinematic is covered by `OpeningWatched` and `OpeningSkipped`.

@@ -31,7 +31,9 @@
     "./lists-routes": "./src/lists-routes.ts",
     "./lists-service": "./src/lists-service.ts",
     "./pick-tonight-routes": "./src/pick-tonight-routes.ts",
-    "./pick-tonight-service": "./src/pick-tonight-service.ts"
+    "./pick-tonight-service": "./src/pick-tonight-service.ts",
+    "./story-routes": "./src/story-routes.ts",
+    "./story-service": "./src/story-service.ts"
   },
   "scripts": {
     "lint": "oxlint .",

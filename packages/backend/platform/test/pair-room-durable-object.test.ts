@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
+import { StoryId } from "@billet/contracts-domain/story";
 import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
 import { freeInk, InkId } from "@billet/contracts-domain/inks";
@@ -209,6 +210,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_streak_marks"),
       expect.stringContaining("_placement_room"),
       expect.stringContaining("_owned_postage"),
+      expect.stringContaining("_story_marks"),
     ]);
   });
 
@@ -741,6 +743,43 @@ describe("PairRoom realtime across eviction", () => {
     expect(await room.pickTonight(bob, { _tag: "View" })).toMatchObject({
       _tag: "Done",
       view: { swipes: [], partnerPicked: 0, matches: [] },
+    });
+  });
+
+  const storyId = Schema.decodeUnknownSync(StoryId);
+  it("keeps story marks in SQLite, holds the partner's named suspect back until the caller names one, and forgets them with the pair", async () => {
+    const room = await openRoom();
+    const mark = (kind: "found" | "named", ref: string) =>
+      ({
+        _tag: "Mark",
+        episode: storyId("fish-plush"),
+        kind,
+        ref: storyId(ref),
+      }) as const;
+
+    await room.story(alice, mark("found", "empty-basket"));
+    await room.story(alice, mark("named", "crow"));
+    await evictDurableObject(room);
+
+    const waiting = await room.story(bob, { _tag: "View" });
+    expect(waiting).toMatchObject({
+      _tag: "Done",
+      view: { mine: [], partner: [{ kind: "found", ref: "empty-basket" }] },
+    });
+    const both = await room.story(bob, mark("named", "snail"));
+    expect(both).toMatchObject({
+      _tag: "Done",
+      view: { mine: [{ ref: "snail" }], partner: [{ ref: "empty-basket" }, { ref: "crow" }] },
+    });
+    expect(await room.story(mallory, { _tag: "View" })).toEqual({
+      _tag: "Refused",
+      reason: "NotOpen",
+    });
+
+    await room.forgetMember(alice);
+    expect(await room.story(bob, { _tag: "View" })).toMatchObject({
+      _tag: "Done",
+      view: { mine: [], partner: [] },
     });
   });
 

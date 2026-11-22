@@ -24,6 +24,7 @@ import m0022 from './20261111135147_stowed_piece/migration.sql';
 import m0023 from './20261111191535_streak_marks/migration.sql';
 import m0024 from './20261112182251_placement_room/migration.sql';
 import m0025 from './20261115001758_owned_postage/migration.sql';
+import m0026 from './20261122171758_story_marks/migration.sql';
 
   export default {
     migrations: {
@@ -52,7 +53,8 @@ import m0025 from './20261115001758_owned_postage/migration.sql';
 "20261111135147_stowed_piece": m0022,
 "20261111191535_streak_marks": m0023,
 "20261112182251_placement_room": m0024,
-"20261115001758_owned_postage": m0025
+"20261115001758_owned_postage": m0025,
+"20261122171758_story_marks": m0026
 }
   }
   

@@ -71,7 +71,8 @@ import Testing
     let keys = Set(Experiments.all.map(\.key))
     #expect(
       keys == [
-        "room-lighting", "window-view", "home-layout", "rooms", "room-shell", "hints", "mischief",
+        "room-lighting", "window-view", "home-layout", "rooms", "room-shell", "hints", "story",
+        "mischief",
       ])
   }
 

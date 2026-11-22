@@ -400,3 +400,18 @@ export const riddleSeries = sqliteTable(
   },
   (table) => [check("riddle_series_single_row", sql`${table.id} = 1`)],
 );
+
+// The story: what each member found and named, by episode. `ref` is a beat id for `found` and a
+// suspect id for `named`; ids and times only. A member's `named` mark is one per episode (the rules
+// keep it), and the partner's stays hidden until the caller has one.
+export const storyMarks = sqliteTable(
+  "story_marks",
+  {
+    member: text("member").notNull(),
+    episode: text("episode").notNull(),
+    kind: text("kind").notNull(),
+    ref: text("ref").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.member, table.episode, table.kind, table.ref] })],
+);

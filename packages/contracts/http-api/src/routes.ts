@@ -120,6 +120,10 @@ export const routes = {
   getPickTonight: route("GET", "/v1/pick-tonight"),
   /** One Pick tonight swipe; answers the session after it, with the match it made. */
   swipePickTonight: route("POST", "/v1/pick-tonight/swipes"),
+  /** The pair's story marks as the caller sees them: see `StoryResponse`. */
+  getStory: route("GET", "/v1/story"),
+  /** One story mark; answers the marks after it. */
+  markStory: route("POST", "/v1/story/marks"),
   /** Today's Who knows who round as the caller sees it: see `GuessResponse`. */
   getGuess: route("GET", "/v1/guess"),
   /** Locks one of the caller's answers in today's round; answers the round after it. */

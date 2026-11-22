@@ -25,6 +25,7 @@ import {
   PickTonightStore,
   pickKeyOf,
 } from "@billet/backend-pair-room/pick-tonight";
+import { type StoryRow, StoryRoom, StoryStore } from "@billet/backend-pair-room/story";
 import {
   GuessDeck,
   type GuessAnswerRow,
@@ -205,6 +206,15 @@ const makeRoom = () => {
       }),
     forget: Effect.sync(() => void (swipes = [])),
   });
+  let storyRows: Array<StoryRow> = [];
+  const storyStore = Layer.succeed(StoryStore, {
+    all: Effect.sync(() => storyRows),
+    put: (row) =>
+      Effect.sync(() => {
+        storyRows = [...storyRows, row];
+      }),
+    forget: Effect.sync(() => void (storyRows = [])),
+  });
   let rounds: Array<GuessRoundRow> = [];
   let answers: Array<GuessAnswerRow> = [];
   let weeks: ReadonlyArray<GuessWeekRow> = [];
@@ -269,7 +279,8 @@ const makeRoom = () => {
   const pick = Effect.runSync(
     PickTonightRoom.make.pipe(Effect.provide(Layer.merge(store, pickStore))),
   );
-  return { ...room, gifts, pick, guess, riddle };
+  const story = Effect.runSync(StoryRoom.make.pipe(Effect.provide(Layer.merge(store, storyStore))));
+  return { ...room, gifts, pick, story, guess, riddle };
 };
 
 /** Memory-backed dependencies for the given couples. `pairs` is `[pairId, first, second]`. */
@@ -381,6 +392,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     streak: (pairId) => roomOf(pairId).streak,
     gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
     pickTonight: (pairId, by, command) => roomOf(pairId).pick.run(by, command),
+    story: (pairId, by, command) => roomOf(pairId).story.run(by, command),
     riddle: (pairId, by, command) =>
       roomOf(pairId)
         .riddle.run(by, command)

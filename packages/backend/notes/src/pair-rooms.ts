@@ -31,6 +31,7 @@ import type { GiftCommand, GiftsResult } from "@billet/backend-pair-room/gifts";
 import type { PickTonightCommand, PickTonightResult } from "@billet/backend-pair-room/pick-tonight";
 import type { GuessCommand, GuessResult } from "@billet/backend-pair-room/guess";
 import type { RiddleCommand, RiddleResult } from "@billet/backend-pair-room/riddle";
+import type { StoryCommand, StoryResult } from "@billet/backend-pair-room/story";
 import type { ListsResult } from "@billet/backend-pair-room/lists";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import type { RoomJoin } from "@billet/backend-pair-room/room-command";
@@ -229,6 +230,12 @@ export class PairRooms extends Context.Service<
       by: UserId,
       command: GuessCommand,
     ) => Effect.Effect<GuessResult, NotesUnavailable>;
+    /** Runs one story command for `by`: see `StoryRoom`. */
+    readonly story: (
+      pairId: PairId,
+      by: UserId,
+      command: StoryCommand,
+    ) => Effect.Effect<StoryResult, NotesUnavailable>;
     /** The pair's lists for `by`, after `request` when there is one. */
     readonly lists: (
       pairId: PairId,
