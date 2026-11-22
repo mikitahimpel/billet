@@ -220,6 +220,27 @@ export const featureList: Feature[] = [
         picture: { kind: "lock", line: "A new drawing on your lock screen" },
       },
       {
+        id: "widget-setup",
+        heading: "Add the Drawing widget to your Lock Screen",
+        body: [
+          "Each of you does this once, on your own iPhone. After that every drawing your partner sends shows up by itself.",
+        ],
+        bullets: [
+          "Touch and hold the Lock Screen, then tap Customize and choose Lock Screen.",
+          "Tap the widget area under the clock and pick Ourio.",
+          "Choose Drawing and tap Done.",
+          "For a bigger drawing, touch and hold the Home Screen, tap Edit, then Add Widget, and pick Ourio's Drawing widget in small, medium or large.",
+        ],
+      },
+      {
+        id: "draw-back",
+        heading: "One drawing at a time, always the newest",
+        body: [
+          "The widget shows the latest drawing from your partner on the wallpaper it was drawn on, so it looks like their Lock Screen. A new drawing replaces the old one.",
+          "Tap the widget and Ourio opens straight on the canvas, so you can draw one back in a few seconds. It works the same across a room or across an ocean, which is why long-distance couples use it as a morning or goodnight ritual.",
+        ],
+      },
+      {
         id: "inks",
         heading: "Seven inks",
         body: ["Graphite is free. The others belong to the two of you once bought with coins:"],
@@ -256,6 +277,26 @@ export const featureList: Feature[] = [
       {
         question: "Can we draw at the same time?",
         answer: "Yes. When you both have the canvas open, you see each other's strokes live.",
+      },
+      {
+        question: "Is the lock screen drawing app free?",
+        answer:
+          "Yes. Ourio is free with no ads, and drawing with the Graphite ink costs nothing. Other ink colors are bought with coins you earn in the app.",
+      },
+      {
+        question: "Does my partner need Ourio too?",
+        answer:
+          "Yes. You both install Ourio and pair once with a code. Drawings only go to the partner you paired with.",
+      },
+      {
+        question: "How do I put the drawing widget on my Lock Screen?",
+        answer:
+          "Touch and hold the Lock Screen, tap Customize, tap the widget area under the clock, choose Ourio and then Drawing. It can also go on the Home Screen in small, medium or large.",
+      },
+      {
+        question: "Can I draw back from the widget?",
+        answer:
+          "Yes. Tap the Drawing widget and Ourio opens on the canvas, ready to send one back.",
       },
       {
         question: "Does it work on Android?",
