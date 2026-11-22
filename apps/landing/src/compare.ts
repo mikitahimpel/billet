@@ -252,7 +252,7 @@ export const alternatives: Alternative[] = [
   {
     slug: "paired-alternative",
     app: "Paired",
-    title: "Paired alternative: a free couples app with no subscription · Ourio",
+    title: "Paired alternative: free, no subscription · Ourio",
     description:
       "Looking for an app like Paired? Ourio is a free iPhone couples app with daily questions, games, a shared cat and Lock Screen drawings. No subscription.",
     summary: "Ourio vs Paired: daily questions and games without a subscription.",
@@ -289,7 +289,7 @@ export const alternatives: Alternative[] = [
   {
     slug: "locket-widget-alternative",
     app: "Locket Widget",
-    title: "Locket Widget alternative for couples: Lock Screen drawings · Ourio",
+    title: "Locket Widget alternative for couples · Ourio",
     description:
       "A Locket Widget alternative for couples: Ourio sends drawings and notes to your partner's Lock Screen and Home Screen widgets. Free, no subscription.",
     summary: "Ourio vs Locket Widget: drawings and notes on your partner's Lock Screen, for two.",
@@ -325,7 +325,7 @@ export const alternatives: Alternative[] = [
   {
     slug: "widgetable-alternative",
     app: "Widgetable",
-    title: "Widgetable alternative for couples: a shared pet and widgets · Ourio",
+    title: "Widgetable alternative for couples: shared pet · Ourio",
     description:
       "A Widgetable alternative for couples: raise one shared cat, send Lock Screen drawings, add mood and countdown widgets. No subscription, no paid pets or food.",
     summary: "Ourio vs Widgetable: a shared pet and widgets with nothing for sale.",

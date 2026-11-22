@@ -176,7 +176,7 @@ export const featureList: Feature[] = [
   },
   {
     slug: "lock-screen-drawings",
-    title: "Lock screen drawing app for couples: draw on your partner's iPhone",
+    title: "Lock screen drawing app for couples: draw on your partner's phone",
     description:
       "Draw on a canvas shaped like your partner's Lock Screen. Ourio sends it to their iPhone with a notification and shows it in their Lock Screen widget.",
     eyebrow: "Lock Screen drawings",
@@ -444,7 +444,7 @@ export const featureList: Feature[] = [
   },
   {
     slug: "date-night",
-    title: "Date night ideas app for couples: swipe together, match, plan · Ourio",
+    title: "Date night ideas app for couples: swipe and match · Ourio",
     description:
       "150 date ideas you each swipe on your own iPhone. When you both love one, it's a match: plan it, get reminders, rate it. For home, out and long distance.",
     eyebrow: "Date night",
@@ -933,7 +933,7 @@ export const featureList: Feature[] = [
   },
   {
     slug: "shop-and-coins",
-    title: "Shop and coins: decorate your room with coins earned together · Ourio",
+    title: "Shop and coins: decorate your room together · Ourio",
     description:
       "In Ourio every coin is earned together: caring for Mochi, notes, photos, dates and games. Spend them on furniture, decor, inks and toys. Nothing is for sale.",
     eyebrow: "Shop and coins",
@@ -1000,7 +1000,7 @@ export const featureList: Feature[] = [
   },
   {
     slug: "widgets-and-notifications",
-    title: "Couple widget for iPhone: Lock Screen and Home Screen widgets · Ourio",
+    title: "Couple widget for iPhone: Lock Screen and Home Screen",
     description:
       "Couple widgets for iPhone: your shared cat, your partner's latest drawing and note, days together, mood and countdowns on your Home Screen and Lock Screen.",
     eyebrow: "Couple widgets",
@@ -1090,7 +1090,7 @@ export const featureList: Feature[] = [
 // The page for long-distance couples: a use case, not a feature, so it lives at the site root.
 export const longDistance: Feature = {
   slug: "long-distance-relationship-app",
-  title: "Long distance relationship app for iPhone: stay close daily · Ourio",
+  title: "Long distance relationship app for iPhone · Ourio",
   description:
     "A free long distance relationship app for two iPhones: draw on each other's Lock Screen, raise a shared cat, play daily games and count down to your next visit.",
   eyebrow: "Long distance",
@@ -1183,7 +1183,7 @@ export const longDistance: Feature = {
 // For "free couples app" and "couples app with no subscription": a use case, at the site root.
 export const freeApp: Feature = {
   slug: "free-couples-app",
-  title: "Free couples app with no subscription and no in-app purchases · Ourio",
+  title: "Free couples app with no subscription or in-app purchases",
   description:
     "Ourio is a free couples app for iPhone: no subscription, no in-app purchases, no ads. Every feature is free for both partners, from the shared cat to widgets.",
   eyebrow: "Free, no subscription",
