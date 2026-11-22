@@ -14,6 +14,7 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 
 | Event | Detail | Value | The question it answers |
 | --- | --- | --- | --- |
+| `SessionEnded` | `under-1m`, `from-1m` (one to three minutes), `from-3m` (three to ten) or `from-10m` | | How long do people stay? Reported when the app leaves the front, with the range the stay fell in and never the seconds. A stay the system ends while the app is in front is not counted. |
 | `CatPetted` | none | | Do people touch the cat, and how often? |
 | `CatFed` | `treat` (the day's shared treat) or `food` | | Is the daily treat a habit? Do people feed beyond it? |
 | `CatPlayed` | the toy's id, when there is one | | Which games are played? |

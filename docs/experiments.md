@@ -174,7 +174,7 @@ is ignored, so nothing needs cleaning up.
   never the raw answer. Add a typed accessor like it for each new experiment.
 - **Build and system.** Every request carries `X-Billet-App-Version` and `X-Billet-OS`
   (`ClientInfo` in `Transport`), so events and flags can be read by version.
-- **Counting.** `EventReporter` queues the app's events (`AppOpened` once per launch, `WidgetAdded`
+- **Counting.** `EventReporter` queues the app's events (`AppOpened` once per launch, `SessionEnded` each time it leaves the front, `WidgetAdded`
   once, found with `WidgetCenter`) in a small file of names, sends them to `POST /v1/events`
   (at most 20 at a time), and keeps whatever could not be sent for the next time. `OpeningWatched`
   and `OpeningSkipped` are accepted by the server but have no producer yet: the opening lives in the
@@ -202,6 +202,7 @@ list in `packages/contracts/domain/src/metrics.ts`:
 | `PairClaimed` | server | pairing succeeded, once for each partner |
 | `NoteSent` | server | a note was stored (a retried send counts once) |
 | `AppOpened` | app, `POST /v1/events` | the app came to the front, at most once per launch |
+| `SessionEnded` | app, `POST /v1/events` | the app left the front; the detail is how long it was there, one of four ranges ([analytics.md](analytics.md#the-events)) |
 | `WidgetAdded` | app | this phone has a billet widget; reported once |
 | `OpeningWatched`, `OpeningSkipped` | app | how the opening ended |
 | the product events | app | what people do with the cat, the room, the shop, the streak, the widget and the profile: see [analytics.md](analytics.md) |
