@@ -14,8 +14,8 @@ final class WhoKnowsModel {
     }
 
     /// What the room pays once both partners finish a round, and for each right guess (`rewardForEarn` on the server).
-    nonisolated static let roundCoins = 10
-    nonisolated static let hitCoins = 2
+    nonisolated static let roundCoins = EarnAmount.roundPlayed
+    nonisolated static let hitCoins = EarnAmount.guessHit
 
     private(set) var catalog: [Int: GuessQuestion]
 

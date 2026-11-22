@@ -119,7 +119,7 @@ public struct ShopOffers {
     ]
   }
 
-  /// Gift coins are 20, 30 or 40; one day in four it's a small item instead.
+  /// Gift coins as the server rotates them (`giftCoins` in `shop.ts`); one day in ten it's a small item instead.
   static let giftCoins = [1, 2]
   static let giftItems = ["mouse", "yarn", "monstera"]
 
