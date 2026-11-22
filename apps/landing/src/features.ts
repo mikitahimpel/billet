@@ -304,7 +304,7 @@ export const featureList: Feature[] = [
           "No. Ourio is iPhone-only for now, so both of you need an iPhone on iOS 18 or later.",
       },
     ],
-    related: ["widgets-and-notifications", "moments", "games", "long-distance-relationship-app"],
+    related: ["widgets-and-notifications", "moments", "games", "best-couple-widget-apps"],
   },
   {
     slug: "moments",
@@ -1251,7 +1251,7 @@ export const freeApp: Feature = {
       answer: "No. Ourio has no ads and no third-party tracking.",
     },
   ],
-  related: ["shop-and-coins", "room-and-mochi", "games", "date-night", "widgets-and-notifications"],
+  related: ["shop-and-coins", "room-and-mochi", "games", "date-night", "best-couples-apps"],
 };
 
 // The hub's card for each feature: its picture and a longer line than the page's description.
