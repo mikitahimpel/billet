@@ -1,4 +1,5 @@
 import Foundation
+import MischiefInterface
 import Wire
 
 /// What one Inbox row says: an SF Symbol and a short line, written on the phone from the item's
@@ -71,6 +72,15 @@ public struct InboxLine: Equatable {
     case .plantWatered(let plant):
       let name = plant.map { (names.title($0) ?? Self.readable($0)).lowercased() } ?? "plant"
       self.init(symbol: "drop.fill", text: "\(who) watered the \(name)")
+    case .mouseHidden:
+      let text =
+        item.actor == .me
+        ? "You hid the mouse for \(names.partner)" : "\(who) hid the mouse for you"
+      self.init(symbol: "sparkle.magnifyingglass", text: text)
+    case .mouseFound(let spot, _, let seconds):
+      let place = MischiefSpot(rawValue: spot)?.phrase ?? "somewhere"
+      let took = MischiefTime.spoken(seconds: seconds)
+      self.init(symbol: "party.popper.fill", text: "\(who) found the mouse \(place) in \(took)")
     case .catAdopted(let name):
       self.init(symbol: "heart.fill", text: "\(who) adopted \(name)")
     case .catRenamed(let name):

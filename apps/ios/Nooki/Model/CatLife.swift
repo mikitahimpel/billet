@@ -72,6 +72,10 @@ final class CatLife: CatEventSource {
     private var saved: Saved
     private var client: CatEventsClient?
     private var observers: [(CatLifeChange) -> Bool] = []
+    /// Called with every journal entry the room gives, whether or not it moves her needs.
+    var onEntry: ((CatEntry) -> Void)?
+    /// Called when the pair changes, and what the journal held no longer belongs to this phone.
+    var onReset: (() -> Void)?
     private var lastPetSent: Date?
     private var syncing = false
     private var flushing = false
@@ -148,12 +152,16 @@ final class CatLife: CatEventSource {
         send(RecordCatEventRequest(id: IdempotencyKey(id.uuidString), event: event))
     }
 
-    /// What a game recorded: each event goes to the room as it is, and moves her here at once as its kind.
-    func record(_ events: [CatEvent]) {
-        for event in events {
+    /// What a game recorded: each event goes to the room as it is, and moves her here at once as its kind. Returns the
+    /// id each went under.
+    @discardableResult
+    func record(_ events: [CatEvent]) -> [IdempotencyKey] {
+        events.map { event in
             let id = UUID()
             if let kind = Self.kind(of: event) { append(LifeEvent(id: id, kind: kind, by: me, at: .now)) }
-            send(RecordCatEventRequest(id: IdempotencyKey(id.uuidString), event: event))
+            let key = IdempotencyKey(id.uuidString)
+            send(RecordCatEventRequest(id: key, event: event))
+            return key
         }
     }
 
@@ -183,6 +191,7 @@ final class CatLife: CatEventSource {
                           partner: pair?.partner, outbox: isPaired ? [] : saved.outbox)
             save()
             notify(.reset)
+            onReset?()
         }
         await sync()
     }
@@ -312,6 +321,7 @@ final class CatLife: CatEventSource {
         var fresh: [LifeEvent] = []
         for entry in entries {
             saved.lastSeq = max(saved.lastSeq, entry.seq)
+            onEntry?(entry)
             guard let event = Self.lifeEvent(entry) else { continue }
             if let index = saved.events.firstIndex(where: { $0.id == event.id }) {
                 saved.events[index] = event
@@ -351,11 +361,11 @@ final class CatLife: CatEventSource {
         switch event {
         case .fed: .feed
         case .petted: .pet
-        case .played, .gamePlayed: .play
+        case .played, .gamePlayed, .mouseFound: .play
         case .noteShared: .note
         case .slept: .sleep
         case .shooed: .shoo
-        case .watered: nil
+        case .watered, .mouseHidden: nil
         }
     }
 

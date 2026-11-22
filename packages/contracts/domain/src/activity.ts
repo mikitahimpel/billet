@@ -1,5 +1,5 @@
 import { Schema } from "effect";
-import { CatGameId, CatName } from "./cat.ts";
+import { CatGameId, CatName, MouseSpotId } from "./cat.ts";
 import { EpochMillis, NoteId } from "./ids.ts";
 import { ListId, ListItemText, ListKind, ListTitle } from "./list.ts";
 import { Mood } from "./mood.ts";
@@ -41,6 +41,13 @@ export const ActivityEvent = Schema.TaggedUnion({
   },
   CatSlept: {},
   CatShooed: {},
+  /** The hider's line is shown only to the finder, by the app, never in the Inbox. */
+  MouseHidden: { spot: MouseSpotId },
+  MouseFound: {
+    spot: MouseSpotId,
+    tries: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+    seconds: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
+  },
   /** `plant` is absent for the one plant by the window that came before plants had ids. */
   PlantWatered: { plant: Schema.optionalKey(ActivityPlantId) },
   CatAdopted: { name: CatName },

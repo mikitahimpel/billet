@@ -12,7 +12,7 @@ source turns the row into its item:
 
 | Source | Item | Written by |
 | --- | --- | --- |
-| Cat journal entry (except `NoteShared`) | `CatFed`, `CatPetted`, `CatPlayed`, `CatGamePlayed`, `CatSlept`, `CatShooed`, `PlantWatered` | the room, with the `CatEntry` |
+| Cat journal entry (except `NoteShared`) | `CatFed`, `CatPetted`, `CatPlayed`, `CatGamePlayed`, `CatSlept`, `CatShooed`, `MouseHidden`, `MouseFound`, `PlantWatered` | the room, with the `CatEntry` |
 | Adopting or renaming the cat | `CatAdopted`, `CatRenamed` | the room, with the profile |
 | A note | `NoteSent` | the room, with the note |
 | A shop buy, the daily gift, a set bonus | `Purchased`, `GiftClaimed`, `BonusEarned` | the room, with the wallet's coin row (billet-pay) |
@@ -33,6 +33,7 @@ ActivityActor  = Me | Partner | Cat | Store        // relative to the caller
 ActivityEvent  =
   | CatFed { grams } | CatPetted | CatPlayed | CatGamePlayed { game, score, won }
   | CatSlept | CatShooed | PlantWatered { plant? }
+  | MouseHidden { spot } | MouseFound { spot, tries, seconds }   // never the hider's line
   | CatAdopted { name } | CatRenamed { name }
   | NoteSent { note, kind: "Drawing" | "Photo" | "Text" }
   | Purchased { offer?, items: ShopItemId[], coins } | GiftClaimed { coins }

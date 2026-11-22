@@ -23,6 +23,7 @@ const nudgesOf = (event: CatEvent): ReadonlyArray<Nudge> => {
     case "NoteShared":
       return [["cuddly", temperHigh, 0.01]];
     case "Played":
+    case "MouseFound":
       return [
         ["curious", temperHigh, 0.01],
         ["lazy", temperLow, 0.02],
@@ -40,6 +41,8 @@ const nudgesOf = (event: CatEvent): ReadonlyArray<Nudge> => {
       return [["lazy", temperHigh, 0.01]];
     case "Shooed":
       return [["cuddly", temperLow, 0.02]];
+    case "MouseHidden":
+      return [];
   }
 };
 

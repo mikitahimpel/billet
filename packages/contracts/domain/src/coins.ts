@@ -67,8 +67,12 @@ export const rewardFor = (event: CatEvent): { source: EarnSource; coins: number 
         source: "games",
         coins: event.game === drawGuessGame ? event.score : event.won ? 3 : 1,
       };
+    // Inside the games cap, so the day's budget is unchanged.
+    case "MouseFound":
+      return { source: "games", coins: 2 };
     case "Slept":
     case "Shooed":
+    case "MouseHidden":
       return undefined;
   }
 };

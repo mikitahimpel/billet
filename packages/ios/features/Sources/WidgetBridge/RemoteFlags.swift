@@ -68,8 +68,11 @@ public enum Experiments {
   /// Whether the pair gets the mysteries told in the room (`StoryVariant`).
   public static let story = Experiment(key: "story", choices: StoryVariant.self)
 
+  /// Whether the pair can hide the toy mouse for each other (`docs/mischief.md`). Off, nothing of it shows.
+  public static let mischief = Experiment(key: "mischief", variants: ["off", "on"])
+
   public static let all: [Experiment] = [
-    roomLighting, windowView, homeLayout, rooms, roomShell, hints, story,
+    roomLighting, windowView, homeLayout, rooms, roomShell, hints, story, mischief,
   ]
 }
 

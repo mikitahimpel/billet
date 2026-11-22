@@ -1,4 +1,5 @@
 import FeatureGames
+import FeatureMischief
 import FeatureShop
 import GamesInterface
 import MomentsInterface
@@ -18,6 +19,9 @@ struct PetButton: View {
     /// Starts one of the mini-games, once the sheet is down.
     var onPlay: (MiniGame) -> Void
     @State private var showsSheet = false
+    /// Hide & seek opens once her sheet is down: a sheet cannot present over the one that is leaving.
+    @State private var opensMischief = false
+    @State private var showsMischief = false
     /// Bumped when a need starts to want something, so its ring pulses once.
     @State private var asks = 0
     @Environment(Hints.self) private var hints
@@ -96,12 +100,20 @@ struct PetButton: View {
             showsSheet = true
             state.showsPetSheet = false
         }
-        .sheet(isPresented: $showsSheet) {
-            PetSheet(state: state, needs: needs) { game in
+        .sheet(isPresented: $showsSheet, onDismiss: {
+            guard opensMischief else { return }
+            opensMischief = false
+            showsMischief = true
+        }) {
+            PetSheet(state: state, needs: needs, onPlay: { game in
                 showsSheet = false
                 onPlay(game)
-            }
+            }, onMischief: {
+                opensMischief = true
+                showsSheet = false
+            })
         }
+        .sheet(isPresented: $showsMischief) { MischiefSheet(state: state) }
     }
 }
 
@@ -110,6 +122,7 @@ private struct PetSheet: View {
     let state: HomeState
     var needs: () -> PetNeedsSource?
     var onPlay: (MiniGame) -> Void
+    var onMischief: () -> Void
     @State private var short = false
     /// What she said to the care she turned down, for a few seconds.
     @State private var turnedDown: String?
@@ -219,6 +232,11 @@ private struct PetSheet: View {
                 .buttonStyle(PillButtonStyle())
                 .accessibilityLabel("Treat, \(ShopModel.treatPrice) coins")
                 .accessibilityHint("Fills \(state.petName) up more than a pet")
+                if state.mischiefOn {
+                    PillButton("Hide & seek", symbol: "sparkle.magnifyingglass", action: onMischief)
+                        .accessibilityHint("Hide the toy mouse for \(state.profile.name(of: state.otherPartner)), or look for theirs")
+                        .accessibilityIdentifier("mischiefPill")
+                }
             }
             if let turnedDown {
                 Text(turnedDown)

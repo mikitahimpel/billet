@@ -50,6 +50,9 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case pickTonightMatched = "PickTonightMatched"
   case pickTonightPlanned = "PickTonightPlanned"
 
+  case mouseHidden = "MouseHidden"
+  case mouseFound = "MouseFound"
+
   case profileOpened = "ProfileOpened"
   case signInPromptShown = "SignInPromptShown"
   case signInPromptAnswered = "SignInPromptAnswered"
@@ -96,7 +99,7 @@ extension ClientEventName {
     switch self {
     case .appOpened, .openingWatched, .openingSkipped, .catPetted, .catCalled, .decoratingOpened,
       .shopOpened, .streakOpened, .profileOpened, .signInPromptShown, .ageGateStopped,
-      .pickTonightOpened, .pickTonightMatched, .pickTonightPlanned:
+      .pickTonightOpened, .pickTonightMatched, .pickTonightPlanned, .mouseHidden, .mouseFound:
       ClientEventRule(detail: .none)
     case .widgetAdded, .catPlayed, .roomCustomised:
       ClientEventRule(detail: .id)

@@ -318,7 +318,7 @@ final class DioramaScene: CatRoom {
     // MARK: - Furniture
 
     /// Center of the donut bed on the floor.
-    private let bedCenter: SIMD3<Float> = [0.06, 0.014, -0.04]
+    let bedCenter: SIMD3<Float> = [0.06, 0.014, -0.04]
     /// Mochi sits about as tall as the nightstand, on the bed's cushion; Mochi.ply itself is 0.26 m tall.
     private let catScale: Float = 0.68
 

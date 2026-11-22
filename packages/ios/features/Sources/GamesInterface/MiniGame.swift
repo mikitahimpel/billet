@@ -85,7 +85,8 @@ public struct GameResult: Equatable, Sendable {
       switch event {
       case .gamePlayed(_, _, let won): sum + (won ? 3 : 1)
       case .fed, .petted, .played, .watered: sum + 1
-      case .noteShared, .slept, .shooed: sum
+      case .mouseFound: sum + 2
+      case .noteShared, .slept, .shooed, .mouseHidden: sum
       }
     }
   }

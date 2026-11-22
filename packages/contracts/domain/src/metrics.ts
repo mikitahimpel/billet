@@ -53,6 +53,9 @@ export const ClientEventName = Schema.Literals([
   "PickTonightMatched",
   "PickTonightPlanned",
 
+  "MouseHidden",
+  "MouseFound",
+
   "ProfileOpened",
   "SignInPromptShown",
   "SignInPromptAnswered",
@@ -120,6 +123,8 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   PickTonightOpened: { detail: "none" },
   PickTonightMatched: { detail: "none" },
   PickTonightPlanned: { detail: "none" },
+  MouseHidden: { detail: "none" },
+  MouseFound: { detail: "none" },
   ProfileOpened: { detail: "none" },
   SignInPromptShown: { detail: "none" },
   SignInPromptAnswered: { detail: ["accepted", "dismissed"], required: true },

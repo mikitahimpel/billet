@@ -72,6 +72,28 @@ export const drawGuessGame = Schema.decodeSync(CatGameId)("draw-guess");
 /** Grams. */
 export const catMealMaxGrams = 500;
 
+/** A `NookiSpot` raw value of the app, such as `windowSeat`. The app knows which exist. */
+export const MouseSpotId = Schema.String.check(Schema.isPattern(/^[a-z][A-Za-z0-9]{0,23}$/)).pipe(
+  Schema.brand("MouseSpotId"),
+);
+export type MouseSpotId = typeof MouseSpotId.Type;
+
+/** Unicode scalars. */
+export const mouseLineMaxScalars = 40;
+
+/** The few words the hider tucks in with the toy mouse. */
+export const MouseLine = Schema.String.check(
+  Schema.makeFilter(
+    (line) =>
+      (line.length > 0 &&
+        line === line.trim() &&
+        [...line].length <= mouseLineMaxScalars &&
+        !controlCharacter.test(line)) ||
+      `expected a trimmed line of 1 to ${mouseLineMaxScalars} characters, without control characters`,
+  ),
+).pipe(Schema.brand("MouseLine"));
+export type MouseLine = typeof MouseLine.Type;
+
 /** `NoteShared` is written by the room when a note is stored, never sent by a client: one entry
  * per note, filling Loved for both partners. */
 export const CatEvent = Schema.TaggedUnion({
@@ -89,6 +111,15 @@ export const CatEvent = Schema.TaggedUnion({
   },
   Slept: {},
   Shooed: {},
+  /** Pays nothing. */
+  MouseHidden: { spot: MouseSpotId, line: Schema.optionalKey(MouseLine) },
+  /** `hidden` is the id of the hide entry; `seconds` is the hunt's length. */
+  MouseFound: {
+    hidden: IdempotencyKey,
+    spot: MouseSpotId,
+    tries: Schema.Int.check(Schema.isBetween({ minimum: 1, maximum: 99 })),
+    seconds: Schema.Int.check(Schema.isBetween({ minimum: 0, maximum: 86_400 })),
+  },
 });
 export type CatEvent = typeof CatEvent.Type;
 

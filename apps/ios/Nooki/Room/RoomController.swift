@@ -2,6 +2,7 @@ import DecorInterface
 import FeatureGames
 import GamesInterface
 import Observation
+import MischiefInterface
 import Pet
 import RealityKit
 import RoomInterface
@@ -19,7 +20,7 @@ import Wire
 @Observable
 final class RoomController: RoomControlling, CatStatusProviding {
     let events: AsyncStream<RoomEvent>
-    @ObservationIgnored private let emit: AsyncStream<RoomEvent>.Continuation
+    @ObservationIgnored let emit: AsyncStream<RoomEvent>.Continuation
 
     private(set) var status = CatStatus()
     /// The label of the animation Play all is showing, while it plays.
@@ -40,6 +41,8 @@ final class RoomController: RoomControlling, CatStatusProviding {
     @ObservationIgnored let catLife: CatLife
     @ObservationIgnored let probe = RoomProbe()
     @ObservationIgnored private var publishedNeeds: CatNeedsGlance?
+    /// The spots last told to the shell, so it hears only a change.
+    @ObservationIgnored var spotsTold = MischiefSpotMap()
 
     @ObservationIgnored private let usesStandIn: Bool
     @ObservationIgnored private let ownLoop: Bool
@@ -421,6 +424,7 @@ final class RoomController: RoomControlling, CatStatusProviding {
     }
 
     func refreshStatus() {
+        tellMischiefSpots()
         let director = current?.director
         let next = CatStatus(rounding: director?.needs, mind: director?.mind, about: director?.about)
         if next != status { status = next }

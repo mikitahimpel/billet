@@ -72,6 +72,7 @@ import Testing
     #expect(
       keys == [
         "room-lighting", "window-view", "home-layout", "rooms", "room-shell", "hints", "story",
+        "mischief",
       ])
   }
 

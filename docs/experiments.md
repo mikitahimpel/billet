@@ -120,6 +120,10 @@ all its weight on today's standard value, so starting one changes nothing until 
 | `home-layout` | Home | `classic`, `immersive`, `living-window`, `night-and-day` |
 | `room-shell` | Room shell | `live` (default), `baked` ([baked-shell.md](baked-shell.md)) |
 
+### `mischief`: hide and seek with the toy mouse
+
+A `flag`, in `draft`, variants `off` (the default) and `on`. On, the care sheet offers Mischief ([mischief.md](mischief.md)). Nothing else about the pair's app changes. The phone reads it as `Experiments.mischief`.
+
 ### `rooms`: one room or two for new pairs
 
 An experiment, in `draft` until the owner starts it. Variants: `both` (the default and the control:
