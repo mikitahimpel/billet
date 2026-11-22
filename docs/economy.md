@@ -28,6 +28,7 @@ the targets below.
 | A moment | 2 | in the same `earn.notes` cap |
 | A game won / lost | 3 / 1 | 4 a day (`earn.games`) |
 | Draw & guess: a solve (each hint takes 1, floor 1) / a give-up | 3 / 1 | in the same `earn.games` cap |
+| Mischief: finding the hidden mouse (hiding pays nothing) | 2 | in the same `earn.games` cap, so the day's budget is unchanged |
 | Ticking off a list item | 1 | 1 a day (`earn.lists`) |
 | A wish received / a date matched / a date rated | 5 / 2 / 6 | once per thing, no daily cap (`earn.other`) |
 | A guess hit / a round played in Who knows who | 1 / 2 | once per thing (`earn.other`) |

@@ -499,6 +499,15 @@ const catEvents = {
   "game-played": { _tag: "GamePlayed", game: "laser", score: 7, won: true },
   slept: { _tag: "Slept" },
   shooed: { _tag: "Shooed" },
+  "mouse-hidden": { _tag: "MouseHidden", spot: "windowSeat", line: "under the rug, obviously" },
+  "mouse-hidden-no-line": { _tag: "MouseHidden", spot: "basket" },
+  "mouse-found": {
+    _tag: "MouseFound",
+    hidden: "00000000-0000-4000-8000-000000000009",
+    spot: "windowSeat",
+    tries: 3,
+    seconds: 74,
+  },
 } as const;
 const catEvent = (name: keyof typeof catEvents): CatEvent =>
   Schema.decodeUnknownSync(CatEvent)(catEvents[name]);
@@ -546,6 +555,8 @@ const activityEvents = {
   "cat-game-played": { _tag: "CatGamePlayed", game: "laser", score: 7, won: true },
   "cat-slept": { _tag: "CatSlept" },
   "cat-shooed": { _tag: "CatShooed" },
+  "mouse-hidden": { _tag: "MouseHidden", spot: "windowSeat" },
+  "mouse-found": { _tag: "MouseFound", spot: "windowSeat", tries: 3, seconds: 74 },
   "plant-watered": { _tag: "PlantWatered", plant: "monstera" },
   "plant-watered-by-the-window": { _tag: "PlantWatered" },
   "cat-adopted": { _tag: "CatAdopted", name: "Mochi" },

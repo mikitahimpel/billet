@@ -71,6 +71,7 @@ describe("earning coins", () => {
     [{ _tag: "GamePlayed", game: yarn, score: 0, won: false }, 1],
     [{ _tag: "NoteShared", note: "note-1", kind: "Photo" }, 2],
     [{ _tag: "NoteShared", note: "note-1", kind: "Text" }, 1],
+    [{ _tag: "MouseFound", hidden: uuid(50), spot: "basket", tries: 2, seconds: 30 }, 2],
   ] as const)("%o earns %i", (event, coins) => {
     expect(coinsOf(accept(withCat, care(1, event as CatEvent))).map((e) => e.amount)).toEqual([
       coins,
@@ -81,6 +82,33 @@ describe("earning coins", () => {
     const decision = accept(withCat, care(1, { _tag: "Slept" }));
     expect(coinsOf(decision)).toEqual([]);
     expect(decision.state.wallet.balance).toBe(0);
+  });
+
+  it("pays nothing for hiding the mouse", () => {
+    const decision = accept(
+      withCat,
+      care(1, { _tag: "MouseHidden", spot: "basket", line: "good luck" } as CatEvent),
+    );
+    expect(coinsOf(decision)).toEqual([]);
+    expect(decision.state.wallet.balance).toBe(0);
+  });
+
+  it("counts a found mouse in the games cap with the other games", () => {
+    const found = (n: number) =>
+      care(n, {
+        _tag: "MouseFound",
+        hidden: uuid(90 + n),
+        spot: "sofa",
+        tries: 1,
+        seconds: 5,
+      } as CatEvent);
+    const room = after([
+      care(1, { _tag: "GamePlayed", game: yarn, score: 1, won: true }),
+      found(2),
+    ]);
+    // 3 from the game, then the mouse's 2 is cut to the 1 left.
+    expect(room.wallet.games).toBe(dailyEarnCaps.games);
+    expect(coinsOf(accept(room, found(3)))).toEqual([]);
   });
 
   it("stops at the day's cap, and cuts the entry that crosses it", () => {

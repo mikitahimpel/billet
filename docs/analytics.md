@@ -42,6 +42,8 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `PickTonightOpened` | none | | How many Pick tonight sessions a week? |
 | `PickTonightMatched` | none | | How many matches per session? |
 | `PickTonightPlanned` | none | | How many matches become tonight's date? |
+| `MouseHidden` | none | | How many mice are hidden a week? (Never the spot or the line.) |
+| `MouseFound` | none | | How many hidden mice are found? |
 | `ProfileOpened` | none | | Is the profile ("Us") visited? |
 | `SignInPromptShown` | none | | How often is Sign in with Apple offered? |
 | `SignInPromptAnswered` | `accepted` or `dismissed` | | And taken up? |

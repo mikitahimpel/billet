@@ -1,6 +1,7 @@
 import DecorInterface
 import Foundation
 import GamesInterface
+import MischiefInterface
 import Pet
 
 /// What happened in the room that the rest of the app acts on. The room writes to no store itself.
@@ -17,6 +18,8 @@ public enum RoomEvent: Equatable, Sendable {
   case partnerCared([LifeEvent])
   /// A touch while the pieces are being arranged.
   case decor(DecorGesture)
+  /// Where the cat's spots are in the living room, sent when a piece changes them. Hiding and hunting read it.
+  case spotsKnown(MischiefSpotMap)
 }
 
 /// What the player did to the pieces in the room. A drag reports the snapped spot each time it
@@ -44,6 +47,8 @@ public protocol RoomControlling: AnyObject {
   func endGame()
   /// Plays every animation in turn, naming each.
   func playAll()
+  /// The cat's answer to a look for the hidden mouse.
+  func mischief(_ hint: MischiefHint)
 }
 
 /// The cat as the screens outside the room see her: coarse, and changed at most once a second.

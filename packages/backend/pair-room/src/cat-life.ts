@@ -49,6 +49,7 @@ export const lifeKindOf = (event: CatEvent): LifeKind | undefined => {
       return "pet";
     case "Played":
     case "GamePlayed":
+    case "MouseFound":
       return "play";
     case "NoteShared":
       return "note";
@@ -57,6 +58,7 @@ export const lifeKindOf = (event: CatEvent): LifeKind | undefined => {
     case "Shooed":
       return "shoo";
     case "Watered":
+    case "MouseHidden":
       return undefined;
   }
 };
