@@ -160,7 +160,7 @@ struct WhoKnowsTests {
         model.revealed(round: room.round.id, reveal: reveal, score: score)
         #expect(model.phase == .revealed)
         #expect(model.hits == 3)
-        #expect(model.coinsEarned == 16)
+        #expect(model.coinsEarned == 5)
         #expect(model.score == score)
 
         // A read that left before the reveal can't hide it again.

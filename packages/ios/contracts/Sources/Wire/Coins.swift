@@ -199,4 +199,12 @@ public enum EarnAmount {
   public static let moment = 2
   public static let note = 1
   public static let dateMatched = 2
+  public static let dateRated = 6
+  public static let wishReceived = 5
+  public static let listTicked = 1
+  public static let roundPlayed = 2
+  public static let guessHit = 1
+
+  /// What finishing a collection pays, once, by its id (`collections` in `shop.ts`).
+  public static let collectionBonus: [String: Int] = ["cozy-autumn": 40, "mochis-corner": 25]
 }

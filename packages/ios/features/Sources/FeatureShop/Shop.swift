@@ -1,4 +1,5 @@
 import Foundation
+import Wire
 
 public enum ShopCategory: String, CaseIterable, Identifiable, Sendable {
   case today, furniture, decor, mochi, room, inks, notes
@@ -101,15 +102,17 @@ public enum Catalog {
     ]
   }
 
+  private static func bonus(_ id: String) -> Int { EarnAmount.collectionBonus[id] ?? 0 }
+
   static func collections(cat: String) -> [ShopCollection] {
     [
       ShopCollection(
         id: "cozy-autumn", name: "Cozy Autumn",
-        itemIDs: ["lamp", "lantern", "armchair", "rug", "teatable", "print", "monstera"], bonus: 150
-      ),
+        itemIDs: ["lamp", "lantern", "armchair", "rug", "teatable", "print", "monstera"],
+        bonus: Self.bonus("cozy-autumn")),
       ShopCollection(
         id: "mochis-corner", name: "\(cat)'s Corner",
-        itemIDs: ["yarn", "mouse", "tower", "donutbed"], bonus: 100),
+        itemIDs: ["yarn", "mouse", "tower", "donutbed"], bonus: Self.bonus("mochis-corner")),
     ]
   }
 

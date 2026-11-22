@@ -471,7 +471,7 @@ private final class FakeCare: CatTending {
       server.sync(bonus: { (_) async throws(TransportError) in
         ClaimBonusResponse(
           entry: CoinEntry(
-            id: "bonus:\(cornerID)", kind: .bonus, amount: 100, ref: cornerID, at: 0),
+            id: "bonus:\(cornerID)", kind: .bonus, amount: 25, ref: cornerID, at: 0),
           shop: room(500, items: items, bonuses: [cornerID]))
       }))
 
