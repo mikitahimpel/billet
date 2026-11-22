@@ -1,25 +1,29 @@
 # Gameplay vision
 
-How to make Ourio a place a couple wants to be in every day. A proposal, 2026-11-22: nothing here is
-built. Sources and the code read for it are in [Evidence](#evidence).
+How to make Ourio a place a couple wants to open and stay in. A proposal, second round,
+2026-11-22: nothing here is built. Sources and the code read for it are in [Evidence](#evidence).
 
-**The short version.** Ourio has many features and no shared daily ritual. Each partner tends the
-cat alone, the other is nearly invisible in the room, nothing two people made accumulates anywhere
-but the coin balance, and the one loop with real pull (a hidden answer that opens when both have
-played) sits three taps deep in the Us tab. Three changes would alter how the app feels:
+**The short version.** Ourio is a beautiful room where very little happens. The cat has a rich
+inner life that nobody can play with, the games are the same on the twentieth play, and nothing
+surprises. The first round of this document answered with a daily ritual; the owner's verdict was
+that a daily task is a chore, and that the goal is time people *want* to spend. So this round is
+about a world worth lingering in. Eight concepts; the three that are the most fun:
 
-1. **Today's envelope**: one small thing a day that both do and that opens only when both have,
-   brought by the cat, on Home.
-2. **The room remembers you two**: what the partner did is acted out in the room, and a hug arrives.
-3. **A kinder streak**: a count that never resets, a week with rest days, no blame.
+1. **Mischief.** Hide the toy mouse somewhere in the room for the other to find, with the cat
+   giving it away. Move one thing and see if they notice. The room becomes a board the two play on.
+2. **The secret life of the cat.** Small mysteries told over days in the room itself, where each
+   partner finds a different half of every clue.
+3. **Cat school and the show.** Teach tricks, each partner their own; string them into routines;
+   earn ribbons. The games get depth and the cat gets to be funny.
 
-The first slice is 1 in its smallest form plus the hug from 2, behind a remote flag
-([section 4](#4-first-slice-two-weeks)).
+Each has a first slice of one to three weeks ([section 4](#4-first-slices)). Nothing in them
+expires, nags or sells.
 
 **Limit of this document.** No real usage numbers were read. The admin agent API has no service
 token yet (Proton Pass has no `cloudflare-agents` item in vault `Ourio`), so every statement about
 today's app is from the code. [Section 6](#6-the-numbers-to-read-first) lists the reads that
-confirm or overturn it, and which decision each one moves.
+confirm or overturn it. "Fun" below is a design judgment, argued from what comparable games do;
+no study ranks these concepts.
 
 ## 1. The app today, as loops
 
@@ -107,374 +111,260 @@ pays):
 **What cannot be measured today.** `pair_events` has no event for a Who knows who or draw-guess
 round, a moment, a mood, a reaction, a lit streak day, session length or both partners present.
 `CatPlayed` carries a game id and no score. The room's SQLite holds all of it and no admin route
-reads a room. Any gameplay work starts by adding a few events ([section 4](#4-first-slice-two-weeks)).
+reads a room, and nothing measures how long a session lasts. Any gameplay work starts by adding a
+few events ([section 4](#4-first-slices)).
 
 ## 2. The fantasy and the promise
 
-**Ourio is a small home that belongs to two people and a cat, and the cat carries things between
-them.** The promise: *when I open Ourio, something of you is here.* Not a feed and not a pet to
-keep alive. A room where the other person has been, shown by the one who lives in it. The cat is
-the messenger and the witness: the cat brings what the partner left, remembers what the two did,
-and grows up shaped by both.
+**Ourio is a tiny world with one cat in it, and the two of you are the only people who know what
+goes on there.** The promise: *something has happened since you last looked, and some of it was
+your partner's doing.* The cat is a character with a life: habits, moods, a past, friends at the
+window, things it gets up to at night. The room is a place you both play in, hide things in, dress
+up and build out. What you do there alone is found by the other; what you do together is kept.
 
-**What the two do every day** (one to three minutes each, in no fixed order):
+**What the two actually do**, when they feel like it and never because a counter says so:
 
-1. **Open today's envelope.** One small thing the cat holds for both: five questions about one of
-   you, a doodle on a prompt, a photo of something. Do your half. It opens when the other has done
-   theirs.
-2. **Find what the other left.** The cat shows it: the note on the wall, the spot they sent the cat
-   to, the hug being carried over.
-3. **Leave something.** A pet, a hug, a note. Seconds.
+- **Look around.** What is the cat up to? What moved? Who was at the window? Is there a clue?
+- **Play a turn.** Hide something, find something, teach a trick, add to a doodle chain.
+- **Leave a trace.** Something the other will discover later, and laugh at.
+- **Keep what was found.** A souvenir on the shelf, a ribbon on the wall, a page of the story.
 
-Everything else (the shop, decorating, lists, dates) is the home around this, used when wanted.
+The measure of success is not a daily checkmark. It is whether a person opens the app *with
+nothing to do* and stays to watch, hunt and tinker.
 
-Why this and not "more game": the products that hold couples daily share a 1 to 5 minute joint
-ritual with a reciprocal reveal (Candle and SumOne both sit near 43 to 50% DAU/MAU), and the
-relationship research points the same way: an answerable bid, a novel thing done together,
-escalating mutual questions ([Evidence](#evidence)). The products that people leave do so over a
-partner who went quiet, repeated content and punishment. Ourio already has the parts; they are not
-arranged into a day.
+Three things the rest depends on, because they are what makes a place feel alive:
 
-## 3. The ideas
+- **Surprise that is earned, never sold.** What turns up is uncertain; that it costs nothing is not.
+- **Nothing expires.** A story waits, a hidden mouse waits, a season comes round again.
+- **Alone feeds together.** Almost everything can be done solo, and almost everything done solo
+  leaves something for the partner.
 
-Twenty-one candidates were scored; seven survive. Impact and cost are judgments (impact 1 to 5 on
-"both partners still here in week 4"; cost in weeks for one engineer with the existing code);
-evidence is how well the mechanism is supported outside Ourio.
+## 3. The concepts
 
-| # | Idea | Impact | Cost | Evidence | Measurable now | Main risk |
+Eight concepts, then the three picked. Scores are judgments: fun, linger (does it hold a person in
+the room) and pair (does solo play feed the other) from 1 to 5; cost in weeks for one engineer,
+content and art named apart.
+
+| # | Concept | Fun | Linger | Pair | Cost of a first slice | Cost to run |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | Today's envelope | 5 | 2 to 3 (v1), 6 for all formats | strong as a pattern, causal effect unproven | after 3 new events | the quiet partner |
-| 2 | The room remembers you two | 4 | 2 | moderate | hug yes; the rest by proxy | notification volume |
-| 3 | A kinder streak | 3 | 1 to 2 | strong (A/B, lab) | yes | a short-term dip in opens |
-| 4 | Our cat's book | 4 (months 2+) | 5 to 6, plus art | moderate | after 2 events | content cost, chore feel |
-| 5 | The Sunday letter | 3 | 3 | moderate | yes | a scheduled push |
-| 6 | Seasons in the room | 2 to 3 | 2 a season, art exists | moderate | yes (shop events) | scarcity pressure |
-| 7 | Games for two hands | 3 | 6+ | lab only | after 1 event | cost, realtime |
+| A | **Mischief**: hide and seek, spot what moved, pranks | 5 | 4 | 5 | 1.5 weeks | none: the pair is the content |
+| B | **The secret life of the cat**: mysteries in episodes, split clues | 5 | 5 | 5 | 3 weeks | an episode every 2 to 3 weeks |
+| C | **Cat school and the show**: tricks, routines, ribbons, game depth | 4 | 4 | 4 | 2 weeks | a show theme a month |
+| D | **Cat watch**: a field guide to what the cat does, photographed | 4 | 5 | 3 | 1.5 weeks | none for months: the brain is the content |
+| E | **Party box**: doodle telephone, don't wake the cat, caption this | 5 | 3 | 5 | 2 weeks | prompts |
+| F | **Out the window**: expeditions, souvenirs, a cabinet | 3 | 3 | 4 | 2 weeks, 40 small pictures | finds each season |
+| G | **The neighbours**: visitors with their own stories | 4 | 4 | 3 | 3 weeks, character art | characters |
+| H | **The sill garden, then the street**: a slow thing built together | 3 | 4 | 5 | 3 weeks, plant art | little |
 
-Cut, with the reason: paid or wagered streak repair (banned by principle), a pet that can die or
-run away (the same), a league or board between couples (comparison between relationships), a
-friends layer or visits to other pairs' rooms (changes what the product is), gacha mementos for
-coins (random paid rewards, minors), an energy or timer system (chore), chat (already owned by
-every messenger), an AI that talks as the cat (cost, trust, minors), location sharing (privacy
-promise), a daily quests list (a to-do list is not a home), a second pet (splits the bond), more Us
-utilities (the tab is already the widest), a level-up coin shower (the pacing test has no room), a
-"nudge your partner" button (nagging by proxy).
+**Picked by fun: A, B, C.** D is the cheapest way to make people linger and should follow at once;
+E is as funny as A but needs both to answer in the same day more often; F, G and H are the long
+game, and B is the door into all three (an episode's ending is how a neighbour arrives, a souvenir
+is found, a seed is given).
 
-### 1. Today's envelope
+### A. Mischief
 
-**The loop.** Each room day the cat holds one envelope for the pair. Each partner does their half
-in about a minute. When both have, it opens for both at once, with the cat watching. What opened is
-kept in the book (idea 4). Tomorrow there is another, of another kind.
+**The fantasy.** The room is where you two mess with each other.
 
-- **Formats, rotated by the room so both phones agree:** *Know me* (today's Who knows who round, as
-  built); *Draw it* (a prompt, each draws, both drawings shown side by side: the dev
-  `daily-drawing.ts` rules); *Show me* (a photo prompt: "your view right now"); *This or that* (three
-  quick picks each, see where you match); later *Sealed* (a note that opens on a date the pair
-  picks).
-- **Where it is.** On Home, in the scene, not in a tab: the cat sits with the envelope, as the cat
-  already carries a note to the wall (`CarryNote`). One line in the scene's label glass says the
-  state: "Today: draw a cloud that looks like someone" / "Your half is in. Waiting for Leo" /
-  "Open it together". No new header control. Tapping opens one `BilletSheet`, one primary action.
-- **The quiet partner.** An envelope does not die at midnight. It waits two more days ("Yesterday's
-  is still here"), then goes into the book half-filled, with the active partner's half kept. The
-  active partner always gets the cat's reaction and their own page. Nobody is shown as the one who
-  did not answer; the only push is the existing "your partner did their half" one, once.
-- **Solo, before pairing.** The same envelope with the cat as the other half (a paw print for an
-  answer), so the first day has a ritual, and pairing upgrades it.
+- **Hide and seek.** I hide the toy mouse: behind the armchair, in the box, under the rug, on the
+  bookcase. Any spot the cat can reach is a hiding place (`catSpots`, and `placedSpots` adds one
+  for every piece the pair stood in the room). I can tuck a line with it ("you looked under the rug
+  first, didn't you"). You open the room and hunt by turning and zooming. The cat knows where it
+  is and is bad at keeping secrets: ears up and a glance back as the camera gets warm, a sniff at
+  the right piece (`perkUp`, `glanceBack`, `sniffObject` exist). Found: the cat pounces, the line
+  opens, your time is kept. Your turn to hide.
+- **Spot what moved.** I move or turn one piece in a "sneaky" mode. You get three taps to say
+  which. It uses the pair's own room and the decorating that exists.
+- **Pranks, later.** The cat waits in the box and jumps out when you open the app. A bow or a tiny
+  hat left on the cat for you to discover. A doodle on the mirror.
 
-**Why it grips.** A reciprocal reveal turns "open the app" into "see what they said". It is a bid
-the partner can visibly answer, a new small thing done together each day, and questions that deepen
-over time: the three daily behaviours the relationship literature supports. Rotation answers the
-category's main complaint (repeated questions) and Locket's founder's ("keeping the product fresh").
-The archive answers BeReal's fate: a reveal with nothing that accumulates did not hold.
+**Why it is fun.** Hiding is authorship: the hider imagines the other looking. Seeking is a small
+hunt with a living hint. It is the one concept here that needs no content from us, cannot run out,
+and is different in every room. Every piece of furniture bought becomes a hiding place, so
+decorating gains a use without anything being sold on Home. A novel, playful thing done together
+is what the couple research supports ([Evidence](#evidence)).
 
-**Needs.**
+**The quiet partner.** A hidden mouse waits. After three days the cat "finds" it and leaves it by
+the door with the line; the hider can hide again. Nobody is counted.
 
-- *Server:* a `today` descriptor in the room (day, format, each member's state), following
-  `guess.ts`: a round keyed by the room day, a pure `decide`, the other half hidden by the server
-  until both are in. Know me reuses `GuessRoom`; Draw it ports `daily-drawing.ts` into `PairRoom`.
-  One push kind reused ("your partner did their half").
-- *App:* one `FeatureToday` module with a `Machine` (`waiting`, `mine(format)`, `theirs`, `ready`,
-  `opened`); a `RoomHost` input for "the cat holds the envelope" and a `RoomEvent` for the tap, so
-  the room stays sealed; one sheet per format, mostly existing screens (`WhoKnowsScreen`, the draw
-  canvas).
-- *Content:* 150 more Know me questions and 60 prompts per other format before the second month;
-  the deck is the running cost of this idea.
-- *Art:* the envelope prop and one cat pose.
+**Needs.** *Server:* one small piece of room state (who hid what where, the line, when found),
+shaped like a riddle (`riddle.ts`); the push that exists for riddles ("your partner hid something").
+*App:* `FeatureMischief`; a `RoomHost` input for "hunting" and the spot, events out for taps on
+pieces, so the room stays sealed. *Art:* none for the first slice; the mouse is a model.
 
-**Measure.** New events `TodayOpened`, `TodayDone` and server-recorded `TodayRevealed`, each with
-the format id as detail. Funnel `PairClaimed → TodayDone → TodayRevealed` per pair, split by the
-`today` experiment. Primary: both partners active on day 7 (`d7BothActive`). Guardrails:
-`notesPerDay`, `opensPerDay`.
+**Risks.** The line is user text between two paired people: 40 characters, report and block as for
+notes. More furniture means more hiding places; that is a reason to decorate, not an advantage
+over anyone. A hunt must be winnable in a minute: the cat's hint gets plainer with time.
 
-**Risks.**
+### B. The secret life of the cat
 
-- *Obligation.* A daily thing for two can become a duty one partner polices. Hence no expiry at
-  midnight, no blame, and it does not gate the streak: any act still lights the day.
-- *Coins.* Know me already pays up to 7 a day (2 a round, 1 a hit) outside the daily maximum that
-  `coin-pacing.test.ts` checks. If most pairs play daily, a full day is 20 coins, not 13, and the
-  second-dearest piece takes 19 days, not 29. Before rollout: put the ritual's coins under the
-  `games` cap, or pay per week. The ritual's own reward is the reveal and the page, not coins:
-  rewards contingent on an act undermine the wish to do it (d about -0.3 to -0.4 over 128
-  experiments), and here the act is affection.
-- *Minors.* Prompts stay in the existing safe register (no spicy deck). A photo prompt is user
-  content between two paired people, already covered by report and block.
+**The fantasy.** The cat has a life you only catch the edges of, and you two are the detectives.
 
-### 2. The room remembers you two
+- **An episode is a small mystery in five beats.** "The fish plush is gone." "Who leaves a button on
+  the sill every morning?" "The radio was on when nobody was home."
+- **A beat is something changed in the room.** Paw prints to the window. The yarn basket tipped
+  over. A feather on the rug. You find it by looking; finding it is the play.
+- **Each partner gets a different half.** My phone shows the feather; yours shows the torn corner
+  of a letter. Neither solves it alone, so you have to tell each other, in the app or over dinner.
+- **The case board.** Clues pin to the corkboard that Moments already has (`BoardRoomScene`: a desk,
+  a cork wall, the cat sitting on the desk). Each of you names a suspect from three; the guesses
+  stay hidden until both are in (the rule `guess.ts` already keeps).
+- **The ending plays in the room.** The crow comes to the window; the cat trades the plush for a
+  shiny button. The button is yours to keep, and the crow now knows where you live (G).
+- **Letters.** Between episodes a pen pal writes to the cat; a letter comes in pieces over days and
+  hints at the next case.
 
-**The loop.** I do something small; the room shows it to you when you come, through the cat; you
-answer in one tap; I see that next time. Home answers the question every return visit asks: what
-happened here since I left?
+**Pace.** The next beat appears on the room day after the last one was found by both. Nothing is
+lost by waiting: a pair that looks once a week gets the same story more slowly. Finished episodes
+can be reread from the board.
 
-- **A hug that arrives.** Hug (widget, control, cat sheet) sends at once, as a push in the
-  partner's name with the cat carrying a heart; opening it lands on Home, where the cat brings it
-  over, and "Hug back" is one tap. Today it uploads when the sender next opens the app and never
-  pushes.
-- **Homecoming.** After time away, instead of one line for 6 s: the cat comes to the front, and what
-  waits is shown in order (the hug, the note carried to the wall, "Leo played laser at 8", what the
-  cat did alone from `CatDiary`). Ten seconds, skippable by touching anything.
-- **Live traces.** While both are in the app: the "partner petted" reaction and "your partner is
-  here" (`CatPlay.partnerPetted`, `LivePartnerView`, both written). Pet together and the cat rolls
-  over (`CatPetting`).
-- **Missing the one who is away.** `LifeState.missing` shown as behaviour (sitting by the door),
-  told only to the partner who is present, never as a reproach to the absent one.
+**Why it is fun.** Curiosity is a pull that needs no reward attached; the room becomes worth
+searching every time it is opened, which is lingering by design. Split clues make the story a
+thing the two talk about. Animal Crossing's designers call the core of it "always new discoveries";
+Neko Atsume and Finch both make what happened while you were away the reason to come back.
 
-**Why it grips.** A partner-originated signal is the trigger people do not mute; the hug is a bid
-that takes one tap to send and one to answer (Finch's one-tap "Good Vibes", Widgetable's "Miss U").
-Absence becomes something to come back to, the mechanism behind Neko Atsume and Finch's evening
-return. It makes the 3D room a social place instead of a diorama, which almost no competitor has
-(one other 3D room among the 56 apps in [aso-research.md](aso-research.md)).
+**Needs.** *Content:* an episode is five beats, ten clue halves, three suspects, an ending and a
+souvenir; a written format so they can be produced steadily (one every two to three weeks; six
+make a season with a thread through it). *Server:* the episode's state in the room (beat, who
+found what, guesses), beats served by id from a catalogue like the question deck. *App:*
+`FeatureStory`; clues as room inputs (a prop at a spot, a flat mark on the floor or wall); the
+board's case section; ending as existing cat steps (`watchWindow`, `chatter`, `bringToy`,
+`dashToDoor`) plus one illustrated card. *Art:* props come from the 55 bundled models (box, chest,
+radio, fish plush, yarn basket, mirror); marks and letter scraps are flat pictures.
 
-**Needs.** *Server:* one push kind (`hug`, alert lane, collapsed per sender per hour, at most 6 a
-day per sender, none in the receiver's 22:00 to 08:00); moods already reach the room. *App:* wire
-the unused `Pet` code into `CatDirector` through `RoomControlling`; a homecoming sequence in the
-room fed by the journal the app already fetches. *Art:* a heart prop; rolling over uses the brain's
-clips or is cut.
+**Risks.** *Content is a treadmill.* If episodes stop, the world goes quiet again; the format must
+be cheap enough to keep up, and D and A must carry the weeks between. *Too hard or too easy:* three
+suspects and a cat that leads you to an unfound clue after a while. *One partner far ahead:* the
+story moves at the pace of the slower one; the faster one has A, C and D meanwhile.
 
-**Measure.** `HugSent`, `HugReturned` (new); share of hugs returned within a day; `AppOpened` per
-person per day; `NoteOpened` already exists. Feature usage: share of active pairs with a hug in 7
-days.
+### C. Cat school and the show
 
-**Risks.** *Volume:* a hug is the app's first push that costs nothing to send, so the cap and quiet
-hours are part of the feature, not a later fix. *Uneven pairs:* ten hugs to none returned is a sad
-screen; show what was sent as "left for Leo", never a tally of unanswered ones. *Surveillance:*
-"Leo was here at 02:14" reads as tracking; homecoming says what was done for the cat and for you,
-with soft times ("this morning"), never a log of opens.
+**The fantasy.** You two are raising a small, proud, unreliable performer.
 
-### 3. A kinder streak
+- **Tricks.** Sit, wave, spin and high-five are written and unused (`CatPlay`); clips exist for
+  roll over, jump up, beg, fetch and boop (`CatAction`: `rollOver`, `jumpUp`, `reachUp`, `carry`,
+  `headbutt`). Each is taught in a short game of its own: lead with a treat along a path, tap in
+  time, hold still.
+- **Stars, and comedy.** A trick has one to three stars. At one star the cat does it sometimes; the
+  rest of the time the cat flops, washes a paw or walks off. How it fails follows the personality
+  the brain already has: a lazy cat needs bribing, a bold one adds a pounce.
+- **Each partner is a teacher.** The cat learns wave from you and spin from Leo, and answers only
+  its teacher until the third star. So a full routine needs both.
+- **Routines.** String three to five tricks, try it, send the take to the other: it replays in their
+  room, flubs included.
+- **The show.** Each month a theme ("Lazy Sunday", "The circus is in town") and three judges with
+  tastes (one loves spins, one only cares that nobody falls over). Enter one routine; get a ribbon
+  to hang in the room. The pair's class rises (Kitten, Alley, Parlour, Grand) and never falls.
+  There is no other couple anywhere in it.
+- **Depth for the old games.** Laser gets courses that run through the pair's own furniture (through
+  the tunnel, over the armchair) and best times; feed gets recipes; each keeps a best and shows
+  the partner's.
 
-**The loop.** Unchanged in its core: a day counts when both did something. What changes is what
-is shown and what a miss costs.
+**Why it is fun.** Mastery with a visible curve is what the four games lack; a creature that
+half-obeys is funnier than one that obeys. Ribbons and classes give months of progress that money
+cannot shorten. It replaces `Lv.` with something that means something.
 
-- **The headline is days you both showed up**, a count that never falls. The current run is second.
-- **A week is seven dots** and a full week is five of them. Two rest days a week are built in and
-  free; either partner's rest covers both. The 30-day restore becomes unnecessary.
-- **No who.** The card says "today is waiting" until both acted, never whose turn it is, except to
-  the person themselves ("your half is in").
-- **The reminder** becomes an invitation ("Mochi saved today's envelope for you two"), not "before
-  midnight to keep your streak". It is a switch that starts **off for 13 to 17** and on for adults.
+**Needs.** *App:* wire `CatPlay` into `CatDirector`; a teaching game per trick; routine record and
+replay as a list of steps, not video. *Server:* stars per trick and teacher, routines, ribbons in
+the room. *Art:* ribbons; judges as three small portraits.
 
-**Why.** The best-evidenced move in this document. Duolingo's easier streak raised D14 retention
-3.3%; an intact streak raises later engagement and a broken one lowers it, most when people blame
-themselves and less when it can be repaired; goals with "emergency reserves" are pursued longer; a
-missed day does not hurt habit formation. In a pair the one who missed is identifiable, which is
-exactly the condition that makes a break worse (inference: no study of paired streaks was found).
-NoteIt's top review complaint is streak nagging; state suits against Snap name streaks; the EU's
-guidelines on minors ask for streaks and pushes off by default.
+**Risks.** Teaching games must not be a grind: a star is five good minutes, not fifty repeats.
+"Rank" must stay a class the pair grows into, never a place in a list.
 
-**Needs.** *Server:* `LoveStreak` gains `shown` (a total) and a week of marks; `recordStreakDay`
-and the reward table keep their tests, with milestone coins moved to showed-up totals. *App:*
-`StreakCard`, the streak widgets, `StreakNudge` copy and default. The phone must keep the age
-answer it gave in onboarding (to check: today only the under-13 stop is read on the phone).
+### The other five, briefly
 
-**Measure.** Experiment `streak-style` (`classic`, `gentle`), new pairs. Primary: both partners
-active on day 14 from the retention grid (first-week metrics are too early for a streak). Also
-`StreakOpened`, and a new `ReminderSwitched` event (`on` or `off`).
+- **D. Cat watch.** The brain names about fifty things the cat does (`CatBrainStates`: `zoomies`,
+  `chaseTail`, `knockOff`, `sitInCardigan`, `chatter`, `bask`, `sulk`, `waitByDoor`). A camera
+  button and a field guide: catch each one on film. Some happen only at dusk, in a sunbeam, when
+  both of you are in, when a new piece arrives, when dinner is late. Photos go to a shared album;
+  the partner captions them. It rewards exactly the thing the owner wants people to do: watch the
+  room. *First slice:* shutter, 24 entries, the album.
+- **E. Party box.** *Doodle telephone:* I draw, you caption it, I draw your caption, you caption
+  that; the strip opens at the end. *Don't wake the cat:* take turns stacking things on the
+  sleeping cat. *Caption this:* one photo of the cat, two captions, the cat picks. *First slice:*
+  doodle telephone on the canvas and riddle plumbing that exist.
+- **F. Out the window.** The cat goes out at night and comes back with something. The two pack the
+  satchel, one thing each, and the pairing decides where the cat goes (the 15 window views are the
+  places). Souvenirs fill a cabinet; a postcard comes back. *First slice:* satchel, three places,
+  40 finds as small pictures.
+- **G. The neighbours.** A crow who trades, a kitten at the window, a snail who brings the post.
+  What stands in the room draws them; each has a few scenes and leaves things. If one is at the
+  window now, you can call your partner in. *First slice:* the crow, arriving through an episode.
+- **H. The sill garden, then the street.** Three pots on the sill; seeds grow over days; your flower
+  next to mine makes a hybrid neither had. Later the street the bedroom window already paints
+  (`TownPicture`: seeded houses whose windows light at dusk) fills in: a bakery opens after your
+  twentieth dinner, a bookshop after the first season. *First slice:* three pots, six seeds.
 
-**Risks.** A softer streak may lower daily opens for a few weeks among pairs who were held by fear
-of loss; that is the trade being made, and day-14 and day-30 retention decide it, not opens.
+### What stays from the first round
 
-### 4. Our cat's book
+Groundwork, cheap, and the kind rules in practice:
 
-**The loop.** Things the two do become pages. The book replaces `Lv.` with something shared,
-kept by the room, that never goes down and cannot be bought.
+- **A hug that arrives.** Today a hug uploads when the sender next opens the app and sends no push.
+- **The partner shown in the room.** The cat's reaction when the partner pets (`partnerPetted`),
+  "your partner is here" (`LivePartnerView`): both written, both unused.
+- **A kinder streak.** A count of days you both showed up that never falls, rest days in the week,
+  no "whose turn", the 20:00 reminder reworded and off for 13 to 17. The best-evidenced change in
+  the first round ([Evidence](#evidence)); it is not gameplay, and it removes the one thing in
+  Ourio that punishes.
 
-- **Bond, not level.** One shared measure fed by what both did (an opened envelope counts most, a
-  hug returned, a game, care), shown as chapters ("Kitten days", "Knows your voices"…), not a bar
-  to grind. At chapters the cat learns what the brain already models: coming when called,
-  high-five, bringing toys (`CatLearnedTrick`, `CatPlay`), and the pair can then ask for it in the
-  room.
-- **Habits, told.** "Loves morning pets", "Waits for dinner at eight" (`CatUpbringing.habits`,
-  `mealHour`, `petHour`): true facts about this pair's cat, appearing as they become true.
-- **Finds.** Now and then, after an envelope opened or a few days away, the cat has a small
-  object: a button, a feather, a ticket stub. Some depend on what stands in the room (a fish from
-  the lantern, a leaf from the monstera) or the season. They sit on a shelf and in the book. About
-  60 to start; never sold, never random for coins.
-- **Our pages.** Each opened envelope (both drawings, the round's best miss), each milestone day
-  (100 days together), each first (first note, first match). "A year ago today" is a page turning
-  itself.
+Dropped: the daily envelope. Who knows who stays where it is.
 
-**Why it grips.** It gives months of visible progress that money cannot shorten, which the
-economy forbids coins to be. It uses endowed progress and the goal gradient without a currency
-(34% against 19% completion in the classic field study). Collections of earned, unsold finds are
-the Neko Atsume loop and sit outside every loot-box rule. A private archive is the one retention
-mechanism in the category that also raises what the pair would lose by leaving, without a penalty.
-It also answers the partner who cares less: bond is shared, so one person's care still grows the
-cat both of them have.
-
-**Needs.** *Server:* book state in the room (bond total, chapters, finds, pages as references to
-notes and rounds, not copies); find rules as a pure function of the room day and the pair's seed,
-like the daily deals. *App:* `FeatureBook`, opened from the cat sheet (replacing the level bar) and
-from the shelf in the room; tricks wired into the room. *Art:* about 60 small objects (2D, clay
-style like the `RowIcon` tiles), chapter illustrations. *Migration:* each phone's `Lv.` converts
-once into starting bond, taking the higher of the two.
-
-**Measure.** `BookOpened`, `FindCollected` (new); retention grid at day 30 and 60 split by an
-experiment; `TrickDone` already exists.
-
-**Risks.** *Chore:* the moment bond has a daily quota it is a job; no per-day targets and no
-decay. *Content:* 60 objects and 12 chapters are the floor; plan a batch each season (idea 6).
-*Random finds* must stay unpaid and unpurchasable forever, or the age-rating answer "no loot boxes"
-stops being true.
-
-### 5. The Sunday letter
-
-**The loop.** On Sunday evening the cat leaves a letter for both: what you two did this week
-(envelopes opened, the drawing both liked, who knew whom better, the cat's favourite spot), one
-thing from the book a month or a year ago, and one small choice for the week ahead.
-
-- **The stake becomes real and kind.** The week's Who knows who winner picks from three date ideas
-  for the other to plan; it lands in Dates as a plan, with the existing reminders. No loser
-  wording.
-- **A share card** of the week (the cat and two numbers, no content) for those who want one.
-
-**Why.** A weekly beat gives a quiet week a clean restart (the fresh-start effect) and ends each
-week on a high point (the peak-end rule, 174 effect sizes). Locket's weekly "Rollcall" is posted by
-over a quarter of its actives. It is the one place where the app speaks first, once a week.
-
-**Needs.** *Server:* a third time in the room's existing alarm (`scheduleAlarm`); weekly aggregates
-from tables the room has; one push a week at most, **opt-in**, never to a pair with no activity
-that week (a letter about nothing is a guilt trip). Dates must sync first (today swipes and plans
-live on one phone), which is its own piece of work. *App:* one sheet.
-
-**Measure.** `LetterOpened` (new); `PickTonightPlanned` and a new `DatePlanned`; week-over-week
-return in the retention grid ("either active" on day 7, 14, 30).
-
-**Risks.** The first scheduled push Ourio would send. App Review 4.5.4 and the minors guidance
-both point to opt-in; so it is.
-
-### 6. Seasons in the room
-
-**The loop.** Every six to eight weeks the room's world turns: a set of pieces from the 43 unsold
-models, a window view and weather (the `window-view` flag lists 15), a handful of finds for the
-book, a themed week of envelopes.
-
-**Why.** Content freshness is the long-run problem every source names. It is also the sink the
-economy needs before packs are sold: a pair at the cap owns everything in about 8 months, and one
-that buys a pack much sooner.
-
-**Needs.** *Art:* almost none new for the first three seasons. *Server:* catalogue rows with
-`ShopSale` windows (the D1 schema has them); the shop reads the catalogue route instead of its
-hard-coded list. Selling stays in the Shop; the room only shows what the pair owns.
-
-**Measure.** `ShopOpened`, `ShopItemBought`, the economy report's hoarding share and median
-balance.
-
-**Risks.** "Leaves on the 30th" is scarcity pressure. Seasonal pieces come back every year and the
-shop says so; no countdown on Home; nothing seasonal is pack-only.
-
-### 7. Games for two hands
-
-**The loop.** First, cheaply: each solo game shows the pair, not a rival ("Together you have served
-41 dinners. Leo's last pour was 1 g off"), gets a best result and a harder mark as the pair
-improves. Then one game that needs both at once: one moves the laser, the other pets to steady the
-cat; or a drawing made on one canvas in turns (`LiveRoom` exists).
-
-**Why.** A novel, mildly exciting joint task raised relationship quality more than a mundane one
-in the lab; competence needs a curve, and the games have none.
-
-**Needs.** The cheap half: a room-kept best per game and two more difficulty steps each, one week.
-The live game: presence, pacing and a scene, six weeks, and the live-strokes tail latency (#326)
-is not solved.
-
-**Measure.** `CatPlayed` gains a result detail; games per active pair per week.
-
-**Risks.** Cost against return. Pairs are rarely in the app together; build the turn-based half
-first and the live one only if co-presence (measurable after idea 2) is common.
-
-### The ideas against the hard cases
+### The concepts against the hard cases
 
 | Case | What happens |
 | --- | --- |
-| One partner goes quiet for a week | The cat stays well on one person's care. Envelopes wait two days, then keep the active partner's half. The week has rest days; the showed-up count stays. No push names the quiet partner. On return: homecoming, not a list of what was missed. |
-| Uneven pair (one plays daily, one weekly) | Bond is shared, so the cat grows for both. Hugs sent are "left for them", not a tally. The Sunday letter talks about "you two". |
-| A partner leaves or deletes the account | Say so (`partnerLeft` is stored and never shown). The cat, the room and the book stay with the one who remains, as kept purchases already do; solo envelopes continue; a new pairing continues the book as a new chapter. |
-| A breakup | Unpair already exists. The book can be put away (hidden, not deleted) and exported as pictures. |
-| 13 to 17 | No loss-framed copy anywhere. Streak reminder and the Sunday push start off. Hug cap and quiet hours for all. No random paid item. Flag targeting by age does not work yet (`ageBand` is never filled), so the age-dependent defaults are decided on the phone. |
-| Economy | No idea adds a daily coin. The pacing test has no room (380 / 14 = 27.1 days against a floor of 28). Rewards are the reveal, the page and the cat. Idea 1 needs the Know me coins moved under a cap first. |
-| Design system | Home gains no control: state is one line in the scene's label glass and the cat's pose. Each new surface is one `BilletSheet` with one `PrimaryButton`. Lines about the cat are `CatPhrase`s. The room stays sealed: new inputs through `RoomHost(input:)`, taps out through `RoomEvent`. |
-| "Home is not a shop" | Nothing here sells on Home. Seasons sell in the Shop only. |
+| One partner goes quiet | A hidden mouse and a story beat wait. After three days the cat turns the mouse up. The active partner still has tricks to teach, the field guide and the room to watch. Nobody is named as late. |
+| Uneven pair | Solo play is whole: teaching, watching, hunting what the cat left. It all lands in shared state the other finds later. |
+| A partner leaves | Say so (`partnerLeft` is stored and never shown). The cat, tricks, ribbons, souvenirs and the story so far stay; split clues fall back to whole ones. |
+| 13 to 17 | No timers, no expiry, no loss copy. No random item is ever sold. Text the pair writes (a hidden line, a caption) is short and covered by report and block. No ranking against anyone. |
+| Economy | Nothing here pays a daily coin; the pacing test has no room for one (380 / 14 = 27.1 days against a floor of 28). Rewards are souvenirs, ribbons and story. Later sinks: cat bows and hats, show props, seeds, all in the Shop and all cosmetic. |
+| Design system | Home gains at most one control (the camera, in D). State is the cat's behaviour and one line in the scene's label glass. Each new surface is one `BilletSheet` with one `PrimaryButton`. Lines about the cat are `CatPhrase`s. The room stays sealed: inputs through `RoomHost(input:)`, taps out through `RoomEvent`. |
+| "Home is not a shop" | Nothing sells on Home. |
 | App Review 2.5.19 | Every variant ships complete; the server only picks among them. |
 
-## 4. First slice: two weeks
+## 4. First slices
 
-**"Today on Home" and a hug that arrives**, behind the remote experiment `today` (`off`, `on`;
-default `off`; `draft` until the owner starts it; new pairs only through `pairedSince`).
+Three slices, each behind its own remote flag (`off`, `on`; default `off`; `draft` until the owner
+starts it), in this order. Each can ship alone.
 
-**In.**
+**Before any of them: a way to see time.** Nothing today measures a session. Add `SessionEnded`
+with a closed detail (`under-1m`, `1-3m`, `3-10m`, `over-10m`), listed in `ClientEventName`,
+`analytics.md` and `privacy.md`. Without it the goal of this document cannot be judged. Fix the
+two coin-display bugs in the same change.
 
-1. The envelope on Home with two formats that need no new game logic on the server: *Know me*
-   (today's Who knows who round) on one day, *Draw it* on the next, built on draw-guess as it is:
-   each partner draws one of three offered words, each guesses the other's. The room serves which
-   day it is.
-2. The scene line and the cat holding the envelope; one sheet; the states `mine`, `theirs`,
-   `ready`, `opened`.
-3. Hug sends at once with a push, the cat brings it, "Hug back" (cap 6 a day, quiet hours).
-4. Events: `TodayOpened`, `TodayDone`, `TodayRevealed` (server), `HugSent`, `HugReturned`, each
-   added to `ClientEventName`, `analytics.md` and `privacy.md`.
-5. The two coin-display bugs, and Know me's coins moved under the `games` cap.
+| | 1. Hide and seek (`mischief`) | 2. First tricks (`cat-school`) | 3. Episode one (`story`) |
+| --- | --- | --- | --- |
+| Time | 1.5 weeks | 2 weeks | 3 weeks |
+| In | hide the mouse at any cat spot with a line; hunt with the cat's hint; time kept; turns | four tricks from `CatPlay`, a teaching game each, stars shared by the pair, a routine of three replayed to the partner | "The fish plush is gone": five beats, split clues, the case on the board, three suspects, an ending card, one souvenir |
+| Out | spot what moved, pranks | the show, ribbons, game courses | letters, neighbours, a second episode |
+| New events | `MouseHidden`, `MouseFound` | `TrickTaught` (trick id), `RoutineSent`; `TrickDone` exists | `ClueFound` (beat id), `CaseSolved` |
+| Works if | in pairs that hid once, a median of 3 or more hides a week in weeks 2 to 4 | half of the pairs that taught one trick reach a second star within two weeks | 60% of pairs that found beat one reach the ending |
+| Kill if | under 1 hide a week in weeks 2 to 4, or under half of hidden mice found within three days | under 20% teach a second trick | under 30% reach the ending, or median days per beat over 4 |
 
-**Out.** New formats, the two-day wait, solo envelopes, the book, any streak change.
+The thresholds are starting points set by judgment, to be moved once a baseline exists. For all
+three the shared question is time: the share of sessions of three minutes or more, `on` against
+`off`, and `opensPerDay` and `notesPerDay` as guardrails. With few pairs, read the within-arm
+numbers above and talk to couples; do not call a winner under 100 pairs an arm (`experiments.md`).
 
-**Rough plan.** Days 1 to 3: `today` in the room and its route, the hug push, events. Days 4 to 8:
-`FeatureToday`, the sheet, the room input and pose. Days 9 to 10: Simulator walk on SE and Pro Max,
-the transition table tests, review notes for both variants.
-
-**Success metric.** Primary: both partners active on day 7 (`d7BothActive`), `on` against `off`.
-Because the number of pairs is unknown and probably small (a gap under 13 points needs more than
-200 pairs an arm, `experiments.md`), the working measure is inside the `on` arm: **on what share of
-pair-days in the first week did both partners finish the envelope**. Target: 35% or more (Candle
-reports about 50% DAU/MAU with "active" defined as a finished card; a new feature inside an
-existing app should clear about two thirds of that).
-
-**Kill criterion.** After 100 `on` pairs have reached day 7 (or six weeks, whichever is first), any
-one of:
-
-- both-finished on fewer than 15% of first-week pair-days;
-- `notesPerDay` worse than `off` with the interval excluding zero (the envelope ate the notes);
-- partner reports per 100 pairs higher in `on` (the owner reads Reports; agents cannot).
-
-The hug is judged apart: fewer than one hug in five returned within a day means it is noise, not a
-bid, and the push goes while the envelope stays.
-
-Killed means the flag's kill switch, then removing the variant in the next release.
+Why this order: the first needs no content and tells us in two weeks whether the pair will play
+*with each other* in the room. The second reuses written code and gives solo play. The third is
+the most captivating and the only one with a content pipeline; it should start being written while
+the first two are built.
 
 ## 5. What not to build
 
-- **Anything that punishes absence.** A cat that sickens, runs away or dies; a streak that costs
-  coins to repair; "last chance" copy. The category's worst reviews and its legal exposure are
-  both here.
-- **Coins for affection.** No coin per hug, per envelope, per day in a row. The pacing test has no
-  room and the research says it would make the act worth less.
-- **Random rewards for coins or money.** No gacha, mystery boxes or paid finds, ever.
-- **Comparison between couples.** No leagues, public profiles, visits or "top pairs".
-- **More features in Us.** The tab is already the widest; the gap is a day, not another tool.
-- **A chat.** The pair has one. Notes are small on purpose.
-- **Scheduled pushes from the app, beyond one opt-in letter a week.** No "Mochi is hungry" push
-  (`CatNudge` stays unscheduled): Pengu's and Widgetable's reviews show where that leads.
-- **Home as a store.** No prices, offers or "new in the shop" in the scene.
-- **A second currency, energy, timers that a purchase skips.**
-- **A live co-op game first.** It is the most expensive idea with the least evidence of use.
+- **A daily task for two.** The owner's verdict on the first round, and right: a thing that must be
+  done is not a thing people linger in.
+- **Anything that punishes absence.** A cat that sickens or runs away, a story beat that expires, a
+  streak that costs coins to repair, "last chance" copy.
+- **Sold surprise.** No gacha, mystery box or paid find, and no rare item behind a pack.
+- **Coins for affection or for showing up.** The pacing test has no room and it cheapens the act.
+- **Comparison between couples.** Classes and ribbons are the pair's own; no lists, no visits.
+- **Scheduled nagging.** No "Mochi is hungry" push (`CatNudge` stays unscheduled). A push is
+  something the partner did.
+- **Home as a store.** No prices or offers in the scene.
+- **A chat, more tools in Us, a second currency, energy, skip-timers.**
+- **A live two-player action game first.** Turn-based play gives the laugh without both being in the
+  app at once.
 
 ## 6. The numbers to read first
 
@@ -484,12 +374,12 @@ names the decision it moves.
 | Read | Route | It decides |
 | --- | --- | --- |
 | How many pairs, and how fast they form | `overview?days=30` (`totals.pairs`, `stats.newPairs`) | whether an experiment can ever reach 100 pairs an arm, or the slice is judged inside one arm |
-| Where pairs are lost before day 2 | `overview` `funnel` (signed in → paired → first note → second day), `onboarding` | if most loss is before pairing, the solo envelope moves into the first slice |
-| D1, D3, D7, D14, D30 both-active and either-active | `retention` | "either" far above "both" means the quiet partner is the problem (ideas 1, 2, 4 as designed); both low together means the first week is |
-| What active pairs touch | `features` | if `CatPetted` is near universal and `ShopOpened` is not, Home is the place for the ritual (as assumed) |
-| Is the streak looked at | `trends?event=StreakOpened&metric=pairs&interval=week&range=90&split=none` | priority of idea 3 |
-| Do widgets carry the app | `funnel?steps=PairClaimed,WidgetAdded,NoteOpened&window=7d&unit=pair&range=90` | how much of idea 2 should live on the widget |
-| Cap hit rates, median balance against prices, hoarding share | `economy?range=30&hold=14` | a `games` cap hit near 0 means games are barely played (idea 7 down); `earn.other` shows how many play Who knows who (idea 1's base rate); a median balance never reaching 45 means the faucet is too slow for seasons |
+| Where pairs are lost before day 2 | `overview` `funnel` (signed in → paired → first note → second day), `onboarding` | if most loss is before pairing, solo play (C, D) goes first and A waits |
+| D1, D3, D7, D14, D30 both-active and either-active | `retention` | "either" far above "both" means one partner carries the pair, so solo play that feeds the other (C, D) matters most; both low together means the first week has too little to do |
+| What active pairs touch | `features` | if `CatPetted` is near universal and `ShopOpened` is not, Home is where play belongs (as assumed); `DecoratingOpened` shows how many pairs have a room worth hiding things in (A) |
+| Is the streak looked at | `trends?event=StreakOpened&metric=pairs&interval=week&range=90&split=none` | priority of the kinder streak |
+| Do widgets carry the app | `funnel?steps=PairClaimed,WidgetAdded,NoteOpened&window=7d&unit=pair&range=90` | whether a hunt or a clue should also show on the widget |
+| Cap hit rates, median balance against prices, hoarding share | `economy?range=30&hold=14` | a `games` cap hit near 0 means the four games are barely played, so C must replace them, not extend them; `earn.other` shows how many play Who knows who (the base rate for any two-sided game, A and E); the median balance against prices says whether cat hats and show props can be sinks |
 | Notes per pair per day | `overview` (`notesPerPairPerDay`) | the guardrail's baseline |
 
 The room-only facts (rounds finished by both, riddles solved, moods) have no route. Until the new
@@ -501,17 +391,15 @@ One or two at a time; pairs are few (`experiments.md`).
 
 | Order | Key | Kind | Variants | Primary metric | Decide when |
 | --- | --- | --- | --- | --- | --- |
-| 0 | none | | events, the two coin bugs, the token, a two-week baseline | | before anything starts |
-| 1 | `today` | experiment | `off`, `on` | both active on day 7; inside `on`, both-finished share of pair-days | 100 `on` pairs at day 7, or 6 weeks |
-| 2 | `streak-style` | experiment | `classic`, `gentle` | both active on day 14 | 100 pairs an arm at day 14; starts after 1 is decided |
-| 3 | `book` | flag, then experiment | `off`, `on` | both active on day 30 | needs 8 weeks; ship to all if 1 held and guardrails are flat |
-| 4 | `sunday-letter` | flag | `off`, `on` | either active on day 14 and 30 | rolled out by exposure, watched on the retention grid |
+| 0 | none | | `SessionEnded`, the two coin bugs, the token, a two-week baseline | | before anything starts |
+| 1 | `mischief` | experiment | `off`, `on` | share of sessions of 3 minutes or more; inside `on`, hides a week | 100 `on` pairs at day 28, or 6 weeks |
+| 2 | `cat-school` | experiment | `off`, `on` | the same; inside `on`, pairs reaching a second star | starts when 1 is decided |
+| 3 | `story` | experiment | `off`, `on` | both active on day 14; inside `on`, pairs reaching the ending | after 2; needs episode two written |
+| 4 | `streak-style` | experiment | `classic`, `gentle` | both active on day 14 | any gap in the queue |
 
-Rules that hold for all: a `flag` or `experiment` entry in `registry` and in Swift before any pair
-sees it; every variant complete and described in the review notes; new pairs only, so no pair has
-its app change under it; one primary metric written in the description; no stopping early on a
-good day; with fewer than 100 pairs an arm, read direction and talk to couples, do not declare a
-winner.
+Rules that hold for all: an entry in `registry` and in Swift before any pair sees it; every variant
+complete and described in the review notes; new pairs only, so no pair has its app change under
+it; one primary metric written in the description; no stopping early on a good day.
 
 ## Evidence
 
