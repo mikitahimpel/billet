@@ -63,6 +63,7 @@ import {
 } from "@billet/backend-pair-room/riddle";
 import { type RiddleRow, riddleView } from "@billet/backend-pair-room/riddle-rules";
 import { RiddleId } from "@billet/contracts-domain/riddle";
+import { StoryRoom, type StoryCommand, type StoryResult } from "@billet/backend-pair-room/story";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import { EconomyTapLive } from "./economy-sink-live.ts";
 import { PairRoomLive } from "./pair-room-runtime.ts";
@@ -490,6 +491,20 @@ export class PairRoom extends DurableObject {
         });
       }
     }
+  }
+
+  /** Runs one story command for `by`. Nothing is pushed: the partner's phone asks. */
+  async story(by: UserId, command: StoryCommand): Promise<StoryResult> {
+    return await (
+      await this.runtime
+    ).runPromise(
+      StoryRoom.use((story) => story.run(by, command)).pipe(
+        Effect.withSpan(`PairRoom.story.${command._tag}`, {
+          root: true,
+          attributes: this.spanAttributes,
+        }),
+      ),
+    );
   }
 
   /**
@@ -1083,6 +1098,7 @@ export class PairRoom extends DurableObject {
     const forgotten = await this.run((room) => room.forgetAuthor(user), "PairRoom.forgetMember");
     await (await this.runtime).runPromise(GiftsRoom.use((gifts) => gifts.forget));
     await (await this.runtime).runPromise(PickTonightRoom.use((pick) => pick.forget));
+    await (await this.runtime).runPromise(StoryRoom.use((story) => story.forget));
     await (await this.runtime).runPromise(GuessRoom.use((guess) => guess.forget));
     await (await this.runtime).runPromise(RiddleRoom.use((riddles) => riddles.forget));
     await this.run((room) => room.forgetLists, "PairRoom.forgetLists");

@@ -67,6 +67,11 @@ export const ClientEventName = Schema.Literals([
   "TipShown",
   "TipDismissed",
   "TipAction",
+
+  /** detail: the beat id (`empty-basket`). */
+  "ClueFound",
+  /** detail: the episode id (`fish-plush`). */
+  "CaseSolved",
 ]);
 export type ClientEventName = typeof ClientEventName.Type;
 
@@ -125,6 +130,8 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   TipShown: { detail: "id", required: true },
   TipDismissed: { detail: "id", required: true },
   TipAction: { detail: "id", required: true },
+  ClueFound: { detail: "id", required: true },
+  CaseSolved: { detail: "id", required: true },
 };
 
 /** Undefined when the event keeps its name's rule. */

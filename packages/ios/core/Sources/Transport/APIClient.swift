@@ -109,6 +109,10 @@ public struct APIClient: Sendable {
   /// One Pick tonight swipe; answers the session after it, with the match it made.
   public var swipePickTonight:
     @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse
+  /// The pair's story marks as this user sees it. `.api(.notFound)` while unpaired.
+  public var story: @Sendable () async throws(TransportError) -> StoryResponse
+  /// One story mark; answers the marks after it. `.api(.invalidRequest)` past the limit.
+  public var markStory: @Sendable (StoryMarkRequest) async throws(TransportError) -> StoryResponse
   /// Today's Who knows who round as this user sees it. `.api(.notFound)` while unpaired.
   public var guess: @Sendable () async throws(TransportError) -> GuessResponse
   /// Locks one answer of today's round; answers the round after it. `.api(.invalidRequest)` for
@@ -298,6 +302,13 @@ public struct APIClient: Sendable {
       @escaping @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse = {
         (_) async throws(TransportError) in throw .network("offline")
       },
+    story: @escaping @Sendable () async throws(TransportError) -> StoryResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    markStory:
+      @escaping @Sendable (StoryMarkRequest) async throws(TransportError) -> StoryResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
     guess: @escaping @Sendable () async throws(TransportError) -> GuessResponse = {
       () async throws(TransportError) in throw .network("offline")
     },
@@ -402,6 +413,8 @@ public struct APIClient: Sendable {
     self.titleRecommendations = titleRecommendations
     self.pickTonight = pickTonight
     self.swipePickTonight = swipePickTonight
+    self.story = story
+    self.markStory = markStory
     self.guess = guess
     self.answerGuess = answerGuess
     self.guessCatalog = guessCatalog

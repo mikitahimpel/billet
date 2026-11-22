@@ -1,0 +1,127 @@
+{
+  "id": "fish-plush",
+  "title": "The fish plush is gone",
+  "opening": "{cat} had exactly one fish plush. Now {cat} has none. Nobody saw anything, and {cat} is not talking. Look around the room, each of you. You won't see the same things.",
+  "beats": [
+    {
+      "id": "empty-basket",
+      "title": "The empty basket",
+      "place": "By the sofa",
+      "halves": [
+        {
+          "symbol": "tray",
+          "text": "The basket by the sofa is empty. In the cushion there's a dent shaped exactly like a fish."
+        },
+        {
+          "symbol": "pawprint.fill",
+          "text": "Small paw prints leave the basket and head for the window. They are very sure of themselves."
+        }
+      ],
+      "together": "The plush went toward the window. Nobody carries a plush to a window by accident."
+    },
+    {
+      "id": "sill",
+      "title": "The windowsill",
+      "place": "At the window",
+      "halves": [
+        {
+          "symbol": "bird.fill",
+          "text": "One black feather on the sill. Glossy, smug, and much too big for a sparrow."
+        },
+        {
+          "symbol": "hand.tap.fill",
+          "text": "Three thin scratches on the outside of the glass, as if someone knocked with a very small, very rude knuckle."
+        }
+      ],
+      "together": "A big black bird has been at this window, and not for the first time."
+    },
+    {
+      "id": "letter",
+      "title": "The torn letter",
+      "place": "Under the rug",
+      "halves": [
+        {
+          "symbol": "envelope.fill",
+          "text": "Under the rug, the top half of a letter: \"Dear {cat}, I have the shi…\""
+        },
+        {
+          "symbol": "envelope.open.fill",
+          "text": "In a fold of the curtain, the bottom half: \"…ny thing you wanted. Dusk, at the sill. Bring the fish.\""
+        }
+      ],
+      "together": "\"Dear {cat}, I have the shiny thing you wanted. Dusk, at the sill. Bring the fish.\" So {cat} wasn't robbed. {cat} was invited."
+    },
+    {
+      "id": "stash",
+      "title": "The stash",
+      "place": "Behind the armchair",
+      "halves": [
+        {
+          "symbol": "sparkles",
+          "text": "Behind the armchair, a tidy heap: a bottle cap, a scrap of foil, one earring. Somebody has been collecting."
+        },
+        {
+          "symbol": "arrow.up.right",
+          "text": "The heap has a sign made of lint. It points at the sill. Under it, a tiny drawing of a fish. It's good, actually."
+        }
+      ],
+      "together": "{cat} has been saving shiny things for a deal. The fish was the big offer."
+    },
+    {
+      "id": "dusk",
+      "title": "Dusk",
+      "place": "At the window, at dusk",
+      "halves": [
+        {
+          "symbol": "moon.stars.fill",
+          "text": "At dusk the window goes dark in the shape of a bird. It tilts its head. It looks at {cat}. {cat} looks at the ceiling."
+        },
+        {
+          "symbol": "eye.fill",
+          "text": "On the sill, something small and round catches the last of the light. It wasn't there this morning."
+        }
+      ],
+      "together": "The visitor came at dusk, as written. And {cat} ended up with something round and shiny."
+    }
+  ],
+  "ask": "Who has the fish plush now?",
+  "suspects": [
+    {
+      "id": "vacuum",
+      "name": "The vacuum",
+      "blurb": "Loud, greedy, lives in a cupboard. Has never once been to the windowsill."
+    },
+    {
+      "id": "crow",
+      "name": "The crow",
+      "blurb": "Black feathers, shiny habits, writes letters. Very sure of itself."
+    },
+    {
+      "id": "draft",
+      "name": "The draft",
+      "blurb": "Gets blamed for everything. Has never been seen holding anything."
+    }
+  ],
+  "culprit": "crow",
+  "ending": {
+    "title": "A fair trade",
+    "lines": [
+      "The crow lands on the sill at dusk, right on time.",
+      "{cat} carries the fish plush over with great ceremony.",
+      "The crow looks at the plush. The crow looks at {cat}. The crow, who has never been generous, lets a round shiny button drop.",
+      "{cat} has what {cat} wanted. The crow has a fish. Nobody is sorry.",
+      "The crow now knows exactly where you live. It will be back."
+    ],
+    "verdicts": {
+      "both": "You both said the crow. Case closed.",
+      "one": "One of you said the crow and one didn't. Comparing notes is most of the game.",
+      "none": "Not the crow, this time. The crow doesn't mind, and neither does {cat}."
+    }
+  },
+  "souvenir": {
+    "id": "shiny-button",
+    "name": "The shiny button",
+    "note": "Traded fair and square. It lives on your board now.",
+    "symbol": "circle.circle.fill"
+  }
+}

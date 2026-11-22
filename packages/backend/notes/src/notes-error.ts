@@ -11,6 +11,9 @@ export class NotesNotFound extends Data.TaggedError("NotesNotFound") {}
 /** The bytes aren't a PNG, or a compact rendition is over budget. */
 export class InvalidNote extends Data.TaggedError("InvalidNote") {}
 
+/** A member holds as many story marks as the room keeps; a bad request, not a retry. */
+export class InvalidStory extends Data.TaggedError("InvalidStory") {}
+
 /** A text note in an ink colour the pair has not bought. */
 export class InkNotOwned extends Data.TaggedError("InkNotOwned")<{ readonly ink: InkId }> {}
 

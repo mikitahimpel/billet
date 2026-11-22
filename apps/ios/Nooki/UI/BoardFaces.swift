@@ -1,4 +1,6 @@
+import FeatureStory
 import MomentsInterface
+import StoryInterface
 import WidgetInterface
 import WidgetUI
 import SwiftUI
@@ -14,9 +16,10 @@ enum BoardFaces {
         let cards = (state.notes.notes.map { (date: $0.date, card: Card.note($0)) }
             + state.moments.pinned.map { (date: $0.date, card: Card.photo($0)) })
             .sorted { $0.date > $1.date }
-            .prefix(BoardRoomScene.slots)
+            .prefix(BoardRoomScene.slots - CasePin.count(state.story.state))
 
-        var pins: [BoardPin] = []
+        var pins: [BoardPin] = CasePin.pins(state.story.state, cat: state.petName,
+                                            partner: state.profile.name(of: state.otherPartner))
         for (_, card) in cards {
             switch card {
             case .note(let note):
@@ -53,7 +56,7 @@ enum BoardFaces {
     }
 
     static func key(state: HomeState, paired: Bool) -> [String] {
-        state.notes.notes.prefix(BoardRoomScene.slots).map {
+        CasePin.key(state.story.state) + state.notes.notes.prefix(BoardRoomScene.slots - CasePin.count(state.story.state)).map {
             let unsent = UnsentMark.shows($0.unsent, paired: paired) ? " unsent" : ""
             return "\($0.id)\(unsent) \(state.profile.name(of: $0.author))"
         }

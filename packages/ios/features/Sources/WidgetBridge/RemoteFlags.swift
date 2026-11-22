@@ -65,8 +65,11 @@ public enum Experiments {
   /// Whether the pair sees the hints after the onboarding: `hold` is the holdout, 10% of pairs.
   public static let hints = Experiment(key: "hints", variants: ["show", "hold"])
 
+  /// Whether the pair gets the mysteries told in the room (`StoryVariant`).
+  public static let story = Experiment(key: "story", choices: StoryVariant.self)
+
   public static let all: [Experiment] = [
-    roomLighting, windowView, homeLayout, rooms, roomShell, hints,
+    roomLighting, windowView, homeLayout, rooms, roomShell, hints, story,
   ]
 }
 

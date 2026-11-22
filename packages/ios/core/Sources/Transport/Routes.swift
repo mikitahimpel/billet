@@ -75,6 +75,9 @@ public enum Routes {
   /// The pair's Pick tonight session; a swipe answers the session after it.
   public static let getPickTonight = Route(.get, "/v1/pick-tonight")
   public static let swipePickTonight = Route(.post, "/v1/pick-tonight/swipes")
+  /// The pair's story marks; a mark answers the marks after it.
+  public static let getStory = Route(.get, "/v1/story")
+  public static let markStory = Route(.post, "/v1/story/marks")
   /// An answer answers the round after it. The catalog needs no session.
   public static let getGuess = Route(.get, "/v1/guess")
   public static let answerGuess = Route(.post, "/v1/guess/answers")

@@ -230,6 +230,18 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     killed: false,
   },
   {
+    key: "story",
+    kind: "experiment",
+    description:
+      'Whether a pair gets the Secret life of the cat: off, or on (the episode "The fish plush is gone", told in five beats with a different half of each clue for each partner, pinned on the corkboard). ' +
+      "Primary metric: both partners active on day 14; inside on, the pairs that reach the ending. Set Paired since to the start, so only new pairs enter.",
+    variants: { off: 1, on: 1 },
+    default: "off",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
+  {
     key: "home-layout",
     kind: "flag",
     description: "How Home is laid out around the room (Labs > Home).",
