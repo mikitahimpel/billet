@@ -184,6 +184,17 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     killed: false,
   },
   {
+    key: "mischief",
+    kind: "flag",
+    description:
+      "Whether the pair can play Mischief: hide the toy mouse at a spot in the room for the partner to find, with the cat's hints (docs/mischief.md).",
+    variants: { off: 1, on: 0 },
+    default: "off",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
+  {
     key: "pick-tonight",
     kind: "flag",
     description: "Whether To watch offers Pick tonight, the swipe deck that finds a film for both.",

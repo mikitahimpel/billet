@@ -45,6 +45,8 @@ CatEvent =
   | { _tag: "GamePlayed", game: CatGameId, score: int ≥ 0, won: boolean }
   | { _tag: "Slept" }
   | { _tag: "Shooed" }
+  | { _tag: "MouseHidden", spot: MouseSpotId, line?: MouseLine }   // pays nothing, fills no need
+  | { _tag: "MouseFound", hidden: id, spot: MouseSpotId, tries: 1…99, seconds: 0…86400 }
 ```
 
 - `id` is a UUID the phone makes once and repeats on retry. The room stores one entry per id and
@@ -53,8 +55,8 @@ CatEvent =
   offline sends later and gets the later time; `LifeLog.merge` already lets the room's copy win.
 - A note sent and received is one entry, `NoteShared`, appended by the room in the same commit as
   the note. It fills Loved for both partners, as Swift's `.note` does.
-- Mapping to Swift `LifeEvent.Kind`: `Fed`→`feed`, `Petted`→`pet`, `Played` and
-  `GamePlayed`→`play`, `NoteShared`→`note`, `Slept`→`sleep`, `Shooed`→`shoo`. `Watered` has no
+- Mapping to Swift `LifeEvent.Kind`: `Fed`→`feed`, `Petted`→`pet`, `Played`,
+  `GamePlayed` and `MouseFound`→`play`; `MouseHidden` has no kind, `NoteShared`→`note`, `Slept`→`sleep`, `Shooed`→`shoo`. `Watered` has no
   Swift kind yet; an older build skips it (`LifeLog` is lenient).
 
 ## Needs
@@ -91,6 +93,8 @@ Each entry moves them a small step toward a target, `v ← v + r·(target − v)
 | Watered | → 0.9 at 0.005 | | |
 | Slept | | → 0.9 at 0.01 | |
 | Shooed | | | → 0.1 at 0.02 |
+| MouseFound | → 0.9 at 0.01 | → 0.1 at 0.02 | |
+| MouseHidden | | | |
 
 A day or more with no entry before this one pulls `cuddly` toward 0.1 at 0.02 per whole day
 missed, up to a week: a neglected cat warms up again only with care. About fifty pets move

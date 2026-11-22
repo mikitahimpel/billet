@@ -12,6 +12,10 @@ public enum CatEvent: Codable, Hashable, Sendable {
   case gamePlayed(game: String, score: Int, won: Bool)
   case slept
   case shooed
+  /// `spot` matches `[a-z][A-Za-z0-9]{0,23}`, such as `catBed`; `line` is 1 to 40 characters.
+  case mouseHidden(spot: String, line: String?)
+  /// `hidden` is the id of the hide entry that was found.
+  case mouseFound(hidden: IdempotencyKey, spot: String, tries: Int, seconds: Int)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -21,6 +25,11 @@ public enum CatEvent: Codable, Hashable, Sendable {
     case game
     case score
     case won
+    case spot
+    case line
+    case hidden
+    case tries
+    case seconds
   }
 
   public init(from decoder: any Decoder) throws {
@@ -48,6 +57,16 @@ public enum CatEvent: Codable, Hashable, Sendable {
       self = .slept
     case "Shooed":
       self = .shooed
+    case "MouseHidden":
+      self = .mouseHidden(
+        spot: try container.decode(String.self, forKey: .spot),
+        line: try container.decodeOptionalKey(String.self, forKey: .line))
+    case "MouseFound":
+      self = .mouseFound(
+        hidden: try container.decode(IdempotencyKey.self, forKey: .hidden),
+        spot: try container.decode(String.self, forKey: .spot),
+        tries: try container.decode(Int.self, forKey: .tries),
+        seconds: try container.decode(Int.self, forKey: .seconds))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -79,6 +98,16 @@ public enum CatEvent: Codable, Hashable, Sendable {
       try container.encode("Slept", forKey: .tag)
     case .shooed:
       try container.encode("Shooed", forKey: .tag)
+    case .mouseHidden(let spot, let line):
+      try container.encode("MouseHidden", forKey: .tag)
+      try container.encode(spot, forKey: .spot)
+      try container.encodeIfPresent(line, forKey: .line)
+    case .mouseFound(let hidden, let spot, let tries, let seconds):
+      try container.encode("MouseFound", forKey: .tag)
+      try container.encode(hidden, forKey: .hidden)
+      try container.encode(spot, forKey: .spot)
+      try container.encode(tries, forKey: .tries)
+      try container.encode(seconds, forKey: .seconds)
     }
   }
 }

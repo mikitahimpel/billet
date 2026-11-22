@@ -4,6 +4,7 @@ import DecorInterface
 import FeatureDecor
 import FeatureGames
 import FeatureInbox
+import FeatureMischief
 import MomentsInterface
 import ServerSync
 import WidgetInterface
@@ -116,6 +117,7 @@ struct HomeView: View {
         }
         .task {
             if let item = UserDefaults.standard.string(forKey: "decorate") { state.decor.send(.opened(item: item == "closet" ? nil : item)) }
+            state.mischief.hint = { [room] in room.mischief($0) }
             room.load()
             for await event in room.events { handle(event) }
         }
@@ -424,6 +426,10 @@ struct HomeView: View {
 
     private var petControls: some View {
         VStack(alignment: .leading, spacing: Space.m) {
+            if state.mischiefOn, state.mischief.isHunting, state.room.scene == .home {
+                HuntStrip(state: state)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
             if let homecoming {
                 HomecomingLabel(line: homecoming)
                     .transition(.opacity)
@@ -658,6 +664,7 @@ struct HomeView: View {
         case .pinOpened(let id): state.openedPin = PinRoute(id: id)
         case .drawAsked: state.composingNote = .draw
         case .careAsked: state.showsPetSheet = true
+        case .spotsKnown(let map): state.mischief.roomSpots(map)
         case .partnerCared(let care):
             withAnimation(Motion.spring(0.3)) {
                 homecoming = HomecomingLine(

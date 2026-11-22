@@ -26,6 +26,9 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
   case streakReached(days: Int)
   /// The partner added `count` items to one list within ten minutes; `text` is the latest.
   case listItemAdded(list: IdempotencyKey, kind: ListKind, title: String, count: Int, text: String)
+  /// `spot` is a cat spot id such as `basket`; the line the hider tucked in stays between the two phones.
+  case mouseHidden(spot: String)
+  case mouseFound(spot: String, tries: Int, seconds: Int)
 
   private enum CodingKeys: String, CodingKey {
     case tag = "_tag"
@@ -49,6 +52,9 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
     case title
     case count
     case text
+    case spot
+    case tries
+    case seconds
   }
 
   public init(from decoder: any Decoder) throws {
@@ -116,6 +122,13 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
         title: try container.decode(String.self, forKey: .title),
         count: try container.decode(Int.self, forKey: .count),
         text: try container.decode(String.self, forKey: .text))
+    case "MouseHidden":
+      self = .mouseHidden(spot: try container.decode(String.self, forKey: .spot))
+    case "MouseFound":
+      self = .mouseFound(
+        spot: try container.decode(String.self, forKey: .spot),
+        tries: try container.decode(Int.self, forKey: .tries),
+        seconds: try container.decode(Int.self, forKey: .seconds))
     default:
       throw DecodingError.dataCorruptedError(
         forKey: .tag, in: container, debugDescription: "unknown _tag \(tag)")
@@ -193,6 +206,14 @@ public enum ActivityEvent: Codable, Hashable, Sendable {
       try container.encode(title, forKey: .title)
       try container.encode(count, forKey: .count)
       try container.encode(text, forKey: .text)
+    case .mouseHidden(let spot):
+      try container.encode("MouseHidden", forKey: .tag)
+      try container.encode(spot, forKey: .spot)
+    case .mouseFound(let spot, let tries, let seconds):
+      try container.encode("MouseFound", forKey: .tag)
+      try container.encode(spot, forKey: .spot)
+      try container.encode(tries, forKey: .tries)
+      try container.encode(seconds, forKey: .seconds)
     }
   }
 }

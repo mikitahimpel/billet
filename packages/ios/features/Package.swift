@@ -74,6 +74,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("RoomInterfaceTests", ["RoomInterface", "Pet"]),
   ("FeatureInboxTests", ["Design", "FeatureInbox", "Transport", "Wire"]),
   ("FeatureMoodTests", ["FeatureMood", "MoodInterface", "Transport", "Wire"]),
+  ("FeatureMischiefTests", ["FeatureMischief", "MischiefInterface", "Wire"]),
   ("ProfileInterfaceTests", ["ProfileInterface", "Pet"]),
   ("DecorInterfaceTests", ["DecorInterface"]),
   ("UsInterfaceTests", ["UsInterface", "Persistence", "Wire"]),
@@ -124,11 +125,16 @@ let games: Target = .target(
   dependencies: dependencies(["GamesInterface", "BilletKit", "Pet", "Transport", "Wire"]))
 
 let inbox: Target = .target(
-  name: "FeatureInbox", dependencies: dependencies(["BilletKit", "Design", "Transport", "Wire"]))
+  name: "FeatureInbox",
+  dependencies: dependencies(["BilletKit", "Design", "MischiefInterface", "Transport", "Wire"]))
 let decorInterface: Target = .target(name: "DecorInterface", dependencies: dependencies(["Pet"]))
 let decor: Target = .target(
   name: "FeatureDecor",
   dependencies: dependencies(["DecorInterface", "BilletKit", "Persistence", "Transport", "Wire"]))
+let mischiefInterface: Target = .target(name: "MischiefInterface")
+let mischief: Target = .target(
+  name: "FeatureMischief",
+  dependencies: dependencies(["MischiefInterface", "BilletKit", "Wire"]))
 let moodInterface: Target = .target(name: "MoodInterface", dependencies: dependencies(["Wire"]))
 let profileInterface: Target = .target(
   name: "ProfileInterface", dependencies: dependencies(["Persistence", "Pet"]))
@@ -199,7 +205,9 @@ let gamesInterface: Target = .target(
   name: "GamesInterface", dependencies: dependencies(["Pet", "Wire"]))
 let roomInterface: Target = .target(
   name: "RoomInterface",
-  dependencies: dependencies(["GamesInterface", "DecorInterface", "Pet", "BilletKit"]))
+  dependencies: dependencies([
+    "GamesInterface", "DecorInterface", "MischiefInterface", "Pet", "BilletKit",
+  ]))
 
 let products =
   features + [
@@ -207,7 +215,8 @@ let products =
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
-    "DecorInterface", "FeatureDecor", "FeatureUs", "ServerSync",
+    "DecorInterface", "FeatureDecor", "FeatureUs", "ServerSync", "MischiefInterface",
+    "FeatureMischief",
   ]
 
 let package = Package(
@@ -226,7 +235,7 @@ let package = Package(
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
       mood, drawInterface, profileInterface, usInterface, momentsInterface, widgetInterface,
       widgetUI,
-      decorInterface, decor, us, onboarding, serverSync,
+      decorInterface, decor, us, onboarding, serverSync, mischiefInterface, mischief,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
     + [usTests, shopTests, onboardingTests, serverSyncTests],

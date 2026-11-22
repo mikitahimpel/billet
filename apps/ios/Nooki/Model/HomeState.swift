@@ -5,6 +5,7 @@ import FeatureUs
 import DecorInterface
 import FeatureDecor
 import FeatureGames
+import FeatureMischief
 import FeatureMood
 import MomentsInterface
 import MoodInterface
@@ -20,6 +21,7 @@ import SwiftUI
 import Transport
 import Design
 import UsInterface
+import WidgetBridge
 import WidgetKit
 
 enum HomeTab: CaseIterable {
@@ -72,6 +74,7 @@ struct HomeStores {
     let decor: DecorStore
     let decorSync: DecorSync
     let events: EventReporter
+    let mischief: MischiefModel
 
     static func live(events: EventReporter) -> HomeStores {
         #if DEBUG
@@ -85,6 +88,7 @@ struct HomeStores {
         let care = CatCare(wallet: wallet, streak: streak, events: events)
         let shop = ShopModel(wallet: wallet, couple: profile, care: care, events: events) { CatProfile.name() }
         let us = UsStore { shop.earn($0) }
+        let mischief = MischiefModel.live(profile: profile, events: events)
         let members: GiftsModel.Members = { profile.couple.pair.map { (profile.couple.viewer, $0.users) } }
         let decorSync = DecorSync()
         let decor = DecorStore.decor(
@@ -106,7 +110,7 @@ struct HomeStores {
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
             journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
-            decor: decor, decorSync: decorSync, events: events)
+            decor: decor, decorSync: decorSync, events: events, mischief: mischief)
     }
 }
 
@@ -221,8 +225,16 @@ final class HomeState {
     let journal: Journal
     @ObservationIgnored private let wallet: WalletStore
     @ObservationIgnored let events: EventReporter
+    /// Hide and seek with the toy mouse; see docs/mischief.md.
+    let mischief: MischiefModel
+
+    /// The `mischief` flag is on for this pair, and there is a partner to play with.
+    var mischiefOn: Bool {
+        rooms.remote.variant(of: Experiments.mischief) == "on" && profile.couple.catPair != nil
+    }
 
     init(stores: HomeStores) {
+        mischief = stores.mischief
         profile = stores.profile
         us = stores.us
         partnerMoods = stores.partnerMoods

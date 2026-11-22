@@ -328,6 +328,45 @@ private let profile = Wire.CatProfile(
         #expect(life.events.count == 3)
     }
 
+    @Test func theToyMouseTravelsTheJournalAndMovesHerOnlyWhenItIsFound() async {
+        let room = FakeCatRoom(profile: profile)
+        let life = life()
+        var heard: [CatEntry] = []
+        life.onEntry = { heard.append($0) }
+        await life.connect(room.client, pair: pair)
+
+        life.received(room.partner(.mouseHidden(spot: "basket", line: "behind you")))
+        #expect(life.events.isEmpty)
+        life.received(room.partner(.mouseFound(hidden: .make(), spot: "basket", tries: 2, seconds: 30)))
+        #expect(life.events.map(\.kind) == [.play])
+        #expect(heard.count == 2)
+    }
+
+    @Test func aHideIsSentUnderTheIdItIsReturned() async {
+        let room = FakeCatRoom(profile: profile)
+        let life = life()
+        await life.connect(room.client, pair: pair)
+
+        let ids = life.record([.mouseHidden(spot: "sofa", line: nil)])
+        await settle()
+
+        #expect(ids.count == 1)
+        #expect(room.state.withLock { $0.records }.map(\.id) == ids)
+        #expect(life.events.isEmpty)
+    }
+
+    @Test func aNewPairTellsTheMiceToGo() async {
+        let room = FakeCatRoom(profile: profile)
+        let life = life()
+        var resets = 0
+        life.onReset = { resets += 1 }
+        await life.connect(room.client, pair: pair)
+        await life.connect(room.client, pair: pair)
+        #expect(resets == 1)
+        await life.connect(room.client, pair: CatPair(me: "user-me", partner: "user-else"))
+        #expect(resets == 2)
+    }
+
     @Test func whatHappenedOfflineWaitsAndGoesOnTheNextSync() async {
         let room = FakeCatRoom(profile: profile)
         let life = life()
@@ -477,7 +516,7 @@ private let profile = Wire.CatProfile(
             switch event {
             case .catPetted: return told
             case .partnerCared(let care): told.append(care.map(\.kind))
-            case .pinOpened, .drawAsked, .careAsked, .decor: continue
+            case .pinOpened, .drawAsked, .careAsked, .decor, .spotsKnown: continue
             }
         }
         return told

@@ -1,5 +1,6 @@
 import Foundation
 import Design
+import MischiefInterface
 import Observation
 import Pet
 import simd
@@ -97,6 +98,8 @@ final class CatDirector {
     @ObservationIgnored private var holdUntil = 0.0
     /// Until then her head turns toward the room's back, where the partner would come in.
     @ObservationIgnored private var glanceUntil = 0.0
+    /// While the partner's mouse is hunted, where her head points to give it away.
+    @ObservationIgnored private var tellTale: (spot: NookiSpot, until: Double)?
     @ObservationIgnored private var nextThink = 0.0
     @ObservationIgnored private var clock = CatClock(now: Date.now.timeIntervalSince1970)
     @ObservationIgnored private var observatory = CatObservatory()
@@ -176,6 +179,52 @@ final class CatDirector {
         holdUntil = Date.now.timeIntervalSince1970 + 60
         lastEvent = "sent to \(spot.rawValue)"
         if spot == .ball || spot == .basket { source.record(.play) }
+    }
+
+    // MARK: - The toy mouse
+
+    /// The seeker looked somewhere for the mouse she knows the place of. Cold looks get a yawn and a turned head, warm ones
+    /// ears and a glance, hot ones a sniff, and after a few misses she walks to it and sits by it.
+    func mischief(_ hint: MischiefHint) {
+        let now = Date.now.timeIntervalSince1970
+        switch hint {
+        case .away:
+            walker.behavior.perform(.yawn)
+            glanceUntil = now + 3
+            lastEvent = "mouse: cold"
+        case .curious:
+            walker.behavior.perform(.flick)
+            lastEvent = "mouse: cool"
+        case .turns(let spot):
+            walker.behavior.perform(.listen)
+            tell(spot, until: now + 5)
+            lastEvent = "mouse: warm"
+        case .sniffs(let spot):
+            walker.behavior.perform(.twitch)
+            tell(spot, until: now + 5)
+            visit(spot, for: 20)
+            lastEvent = "mouse: hot"
+        case .leads(let spot):
+            tell(spot, until: now + 30)
+            visit(spot, for: 40)
+            lastEvent = "mouse: led to it"
+        case .pounces(let spot):
+            visit(spot, for: 20)
+            walker.hop()
+            lastEvent = "mouse: found"
+        }
+    }
+
+    private func tell(_ spot: MischiefSpot, until: Double) {
+        guard let spot = NookiSpot(rawValue: spot.rawValue) else { return }
+        tellTale = (spot, until)
+    }
+
+    private func visit(_ spot: MischiefSpot, for seconds: Double) {
+        guard let spot = NookiSpot(rawValue: spot.rawValue) else { return }
+        guard spot == .home || spots[spot] != nil else { return }
+        holdUntil = Date.now.timeIntervalSince1970 + seconds
+        walker.go(to: spot == .home ? nil : spots[spot])
     }
 
     private func receive(_ event: LifeEvent) {
@@ -388,7 +437,8 @@ final class CatDirector {
     /// Her head's heading for `look`, relative to her body and within what her neck turns.
     private func focus() -> Float? {
         let target: SIMD3<Float>
-        let look = Date.now.timeIntervalSince1970 < glanceUntil ? NookiLook.away : look
+        let now = Date.now.timeIntervalSince1970
+        let look = now < glanceUntil ? NookiLook.away : tellTale.flatMap { now < $0.until ? NookiLook.spot($0.spot) : nil } ?? look
         switch look {
         case .around: return nil
         case .camera, .away:

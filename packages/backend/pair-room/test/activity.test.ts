@@ -33,6 +33,25 @@ describe("activity rows", () => {
     ).toBeUndefined();
   });
 
+  it("makes items for hiding and finding the mouse, without the line", () => {
+    expect(
+      activityForCatEntry(entry(4, { _tag: "MouseHidden", spot: "windowSeat", line: "psst" })),
+    ).toMatchObject({
+      doer: { _tag: "Member", user: alice },
+      event: { _tag: "MouseHidden", spot: "windowSeat" },
+      target: { _tag: "Cat" },
+    });
+    const found = activityForCatEntry(
+      entry(
+        5,
+        { _tag: "MouseFound", hidden: uuid(4), spot: "windowSeat", tries: 3, seconds: 74 },
+        bob,
+      ),
+    );
+    expect(found?.event).toEqual({ _tag: "MouseFound", spot: "windowSeat", tries: 3, seconds: 74 });
+    expect(found?.doer).toEqual({ _tag: "Member", user: bob });
+  });
+
   it("opens a photo in Moments and a text note as itself", () => {
     expect(activityForNote(photoFrom(bob)).target).toEqual({ _tag: "Moments", note: "note-1" });
     expect(activityForNote(photoFrom(bob)).event).toEqual({

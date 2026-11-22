@@ -69,6 +69,19 @@ export const activityForCatEntry = (entry: CatEntry): ActivityRow | undefined =>
       return { ...base, ...cat, event: { _tag: "CatSlept" } };
     case "Shooed":
       return { ...base, ...cat, event: { _tag: "CatShooed" } };
+    case "MouseHidden":
+      return { ...base, ...cat, event: { _tag: "MouseHidden", spot: event.spot } };
+    case "MouseFound":
+      return {
+        ...base,
+        ...cat,
+        event: {
+          _tag: "MouseFound",
+          spot: event.spot,
+          tries: event.tries,
+          seconds: event.seconds,
+        },
+      };
     // The one plant by the window has no id yet; plants with ids bring their own target.
     case "Watered":
       return { ...base, event: { _tag: "PlantWatered" } };
