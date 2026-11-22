@@ -5,6 +5,7 @@ import EndCard from "../../components/end-card.astro";
 import PairPhones from "../../components/pair-phones.astro";
 import StoreButton from "../../components/store-button.astro";
 import { alternatives, apps, checked, ourio, type Alternative } from "../../compare";
+import { roundups } from "../../roundups";
 import Page from "../../layouts/page.astro";
 
 export const getStaticPaths = (() =>
@@ -94,6 +95,13 @@ const fits = [
               , or the <a href={`/compare/${alternative.slug}/`}>{alternative.app} alternative</a>
             </>
           ))
+      }. Roundups by use: {
+        roundups.map((roundup, i) => (
+          <>
+            {i > 0 && ", "}
+            <a href={`/${roundup.slug}/`}>{roundup.label.toLowerCase()}</a>
+          </>
+        ))
       }. Sources: {
         other.sources.map((url, i) => (
           <>

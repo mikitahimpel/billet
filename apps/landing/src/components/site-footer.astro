@@ -13,7 +13,15 @@ const groups = [
       ...features.filter((link) => !planner.some((slug) => link.path === `/features/${slug}/`)),
     ],
   },
-  { title: "Planner", links: planner.map(feature) },
+  {
+    title: "Planner",
+    links: [
+      ...planner.map(feature),
+      page("/date-night-ideas-at-home/"),
+      page("/long-distance-date-ideas/"),
+      page("/questions-to-ask-your-partner/"),
+    ],
+  },
   {
     title: "Compare",
     links: [

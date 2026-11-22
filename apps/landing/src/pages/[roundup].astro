@@ -124,6 +124,16 @@ const schema = [
         </>
       ))
     }
-    <p>Every app side by side, feature by feature: <a href="/compare/">couples apps compared</a>.</p>
+    <p>
+      Every app side by side, feature by feature: <a href="/compare/">couples apps compared</a>{
+        roundups
+          .filter((other) => other.slug !== page.slug)
+          .map((other) => (
+            <>
+              , or <a href={`/${other.slug}/`}>{other.label}</a>
+            </>
+          ))
+      }.
+    </p>
   </DocArticle>
 </Page>
