@@ -20,6 +20,7 @@
     "./note": "./src/note.ts",
     "./postage": "./src/postage.ts",
     "./pick-tonight": "./src/pick-tonight.ts",
+    "./story": "./src/story.ts",
     "./delivery-lane": "./src/delivery-lane.ts",
     "./push-token": "./src/push-token.ts",
     "./coin-packs": "./src/coin-packs.ts",

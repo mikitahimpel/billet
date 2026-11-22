@@ -77,6 +77,8 @@ let tests: [(name: String, dependencies: [String])] = [
   ("ProfileInterfaceTests", ["ProfileInterface", "Pet"]),
   ("DecorInterfaceTests", ["DecorInterface"]),
   ("UsInterfaceTests", ["UsInterface", "Persistence", "Wire"]),
+  ("StoryInterfaceTests", ["StoryInterface"]),
+  ("FeatureStoryTests", ["FeatureStory", "StoryInterface", "BilletKit", "Transport", "Wire"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Transport", "Wire"]),
 ]
 
@@ -201,8 +203,16 @@ let roomInterface: Target = .target(
   name: "RoomInterface",
   dependencies: dependencies(["GamesInterface", "DecorInterface", "Pet", "BilletKit"]))
 
+// Episodes are data: JSON files in Resources, checked by `EpisodeCatalogTests`.
+let storyInterface: Target = .target(
+  name: "StoryInterface", resources: [.process("Resources")])
+let story: Target = .target(
+  name: "FeatureStory",
+  dependencies: dependencies(["StoryInterface", "BilletKit", "Transport", "Wire"]))
+
 let products =
   features + [
+    "StoryInterface", "FeatureStory",
     "FeatureOnboarding",
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
@@ -226,7 +236,7 @@ let package = Package(
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
       mood, drawInterface, profileInterface, usInterface, momentsInterface, widgetInterface,
       widgetUI,
-      decorInterface, decor, us, onboarding, serverSync,
+      decorInterface, decor, us, onboarding, serverSync, storyInterface, story,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
     + [usTests, shopTests, onboardingTests, serverSyncTests],

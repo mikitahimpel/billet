@@ -79,6 +79,8 @@ import Testing
       "titleRecommendations": Routes.titleRecommendations,
       "getPickTonight": Routes.getPickTonight,
       "swipePickTonight": Routes.swipePickTonight,
+      "getStory": Routes.getStory,
+      "markStory": Routes.markStory,
       "getGuess": Routes.getGuess,
       "answerGuess": Routes.answerGuess,
       "getGuessCatalog": Routes.getGuessCatalog,

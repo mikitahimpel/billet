@@ -130,6 +130,15 @@ compare notes per pair, and `RoomOpened` (which room came on screen) in the funn
 by `rooms`. On the phone it is `RoomsVariant` in `WidgetBridge`; an unknown or missing value means
 `both`.
 
+### `story`: the secret life of the cat
+
+An experiment, in `draft` until the owner starts it. Variants: `off` (the default and the control) and
+`on` (a mystery episode, "The fish plush is gone", in five beats; each partner gets a different half of
+every clue and the case is pinned on the corkboard). Set `pairedSince` to the start, so only new pairs
+enter. Primary metric: both partners active on day 14; inside `on`, the pairs that reach the ending
+(`ClueFound` and `CaseSolved`). The server keeps only ids and times (`story_marks`), so a new episode
+needs an app release and no server change.
+
 ### `hints`: the hints holdout
 
 An experiment, in `draft` until the owner starts it. Variants: `show` (the default, weight 9) and `hold`

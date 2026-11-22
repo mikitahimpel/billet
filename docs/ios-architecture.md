@@ -39,6 +39,7 @@ packages/ios/features          BilletFeatures, one pair of targets per feature
 ├── FeatureDecor     DecorInterface       placing owned pieces in the room: grid, fit rules, the cat's way, the machine
 ├── FeatureDraw      DrawInterface        the lock-screen canvas, inks, drawing sync (FeatureCanvas today)
 ├── FeatureProfile   ProfileInterface     the couple, settings, variants, erase
+├── FeatureStory     StoryInterface       the secret-life mysteries: episodes as data, the case machine (docs/secret-life.md)
 ├── FeatureOnboarding, FeaturePairing     as today, with OnboardingInterface
 ├── RoomInterface                         RoomInput, RoomEvent, RoomControlling, CatStatus (no scene code)
 ├── ServerSync                            the room's clients and syncs over Foundation (no feature)

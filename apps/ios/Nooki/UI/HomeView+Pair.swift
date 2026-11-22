@@ -88,6 +88,7 @@ extension HomeView {
         await session.inbox.refreshCount()
         await session.textSync(notes: state.notes, partner: state.otherPartner)?.receive()
         await session.drawGuess.load()
+        state.story.send(.refresh)
         await state.shop.refresh()
         await pullPairProfile(session: session, state: state)
         switch kind {

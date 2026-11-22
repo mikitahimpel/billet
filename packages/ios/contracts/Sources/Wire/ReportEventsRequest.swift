@@ -65,6 +65,11 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case tipDismissed = "TipDismissed"
   /// The hint's thing was done, or its button tapped.
   case tipAction = "TipAction"
+
+  /// A story clue was found; the detail is the beat id.
+  case clueFound = "ClueFound"
+  /// A story case was solved; the detail is the episode id.
+  case caseSolved = "CaseSolved"
 }
 
 public struct ClientEventRule: Hashable, Sendable {
@@ -98,7 +103,7 @@ extension ClientEventName {
     case .trickDone, .catChosen, .temperamentShown, .roomItemPlaced, .roomItemMoved,
       .roomItemPutAway, .shopItemViewed, .shopOfferViewed, .streakMilestoneSeen,
       .onboardingStepViewed, .onboardingStepAnswered, .onboardingStepSkipped, .tipShown,
-      .tipDismissed, .tipAction:
+      .tipDismissed, .tipAction, .clueFound, .caseSolved:
       ClientEventRule(detail: .id, required: true)
     case .shopItemBought, .shopBundleBought, .shopPurchaseUndone, .shopDailyGiftClaimed,
       .shopGiftSent:

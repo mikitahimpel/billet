@@ -1,6 +1,8 @@
 import Wire
 import FeatureOnboarding
 import FeatureShop
+import FeatureStory
+import StoryInterface
 import FeatureUs
 import DecorInterface
 import FeatureDecor
@@ -71,6 +73,8 @@ struct HomeStores {
     let journal: Journal
     let decor: DecorStore
     let decorSync: DecorSync
+    let story: CaseStore
+    let storyLink: StoryLink
     let events: EventReporter
 
     static func live(events: EventReporter) -> HomeStores {
@@ -98,6 +102,13 @@ struct HomeStores {
                 },
                 share: { [weak decorSync] in decorSync?.push($0) }, events: events))
         decorSync.store = decor
+        let storyLink = StoryLink()
+        let story = CaseStore.story(
+            StoryServices(
+                client: StoryClient(
+                    fetch: { await storyLink.client.fetch() },
+                    mark: { await storyLink.client.mark($0, $1, $2) }),
+                events: events))
         #if DEBUG
         LandingDemo.seed(profile: profile, wallet: wallet, moments: moments, us: us)
         #endif
@@ -106,7 +117,7 @@ struct HomeStores {
             moments: moments, notes: notes, rooms: RoomsChoice(), care: care, shop: shop,
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
             journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
-            decor: decor, decorSync: decorSync, events: events)
+            decor: decor, decorSync: decorSync, story: story, storyLink: storyLink, events: events)
     }
 }
 
@@ -216,6 +227,8 @@ final class HomeState {
     let shop: ShopModel
     let decor: DecorStore
     let decorSync: DecorSync
+    let story: CaseStore
+    let storyLink: StoryLink
     let gifts: GiftsModel
     let lists: ListsModel
     let journal: Journal
@@ -237,6 +250,8 @@ final class HomeState {
         journal = stores.journal
         decor = stores.decor
         decorSync = stores.decorSync
+        story = stores.story
+        storyLink = stores.storyLink
         wallet = stores.wallet
         events = stores.events
         #if DEBUG

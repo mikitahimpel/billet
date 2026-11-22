@@ -1,0 +1,24 @@
+{
+  "mine": [
+    {
+      "at": 1700000300000,
+      "episode": "fish-plush",
+      "kind": "found",
+      "ref": "empty-basket"
+    },
+    {
+      "at": 1700000310000,
+      "episode": "fish-plush",
+      "kind": "named",
+      "ref": "crow"
+    }
+  ],
+  "partner": [
+    {
+      "at": 1700000305000,
+      "episode": "fish-plush",
+      "kind": "found",
+      "ref": "sill"
+    }
+  ]
+}

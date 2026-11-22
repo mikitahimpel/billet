@@ -1,4 +1,6 @@
 import FeatureShop
+import FeatureStory
+import StoryInterface
 import FeatureUs
 import DecorInterface
 import FeatureDecor
@@ -201,6 +203,10 @@ struct HomeView: View {
 
     private func presenting(_ content: some View) -> some View {
         content
+        .sheet(isPresented: caseOpen) {
+            CaseSheet(store: state.story, cat: state.petName, partner: state.profile.name(of: state.otherPartner))
+        }
+        .task(id: storyKey) { followStory() }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
         }
@@ -642,6 +648,25 @@ struct HomeView: View {
             lights: BedroomLights.lamps(lightsChoice, at: lightsClock), lightsFade: !reduceMotion)
     }
 
+    /// The two accounts of the pair while it has the mysteries; empty otherwise.
+    private var storyKey: [String] {
+        let couple = state.profile.couple
+        guard session?.isPaired == true, StoryVariant.resolved(remote: state.rooms.remote).isOn,
+              let users = couple.pair?.users, let mine = users[couple.viewer], let theirs = users[couple.other] else { return [] }
+        return [mine, theirs]
+    }
+
+    private func followStory() {
+        state.storyLink.client = session.map { .live($0.api) } ?? .offline
+        state.story.send(.disabled)
+        guard let mine = storyKey.first, let theirs = storyKey.last, let episode = EpisodeCatalog.all.first else { return }
+        state.story.send(.enabled(episode, Side(viewer: mine, partner: theirs)))
+    }
+
+    private var caseOpen: Binding<Bool> {
+        Binding { state.story.state.isOpen } set: { if !$0 { state.story.send(.dismissed) } }
+    }
+
     private var arranging: Bool { state.decor.state.isArranging }
 
     private var roomDecor: RoomDecor {
@@ -655,7 +680,8 @@ struct HomeView: View {
         switch event {
         case .decor(let gesture): handleDecor(gesture)
         case .catPetted: withAnimation(Motion.spring(0.4)) { state.care.pet() }
-        case .pinOpened(let id): state.openedPin = PinRoute(id: id)
+        case .pinOpened(let id):
+            if CasePin.owns(id) { state.story.send(.opened) } else { state.openedPin = PinRoute(id: id) }
         case .drawAsked: state.composingNote = .draw
         case .careAsked: state.showsPetSheet = true
         case .partnerCared(let care):

@@ -7,9 +7,11 @@ import { GiftsRoom } from "@billet/backend-pair-room/gifts";
 import { GuessDeck, GuessRoom } from "@billet/backend-pair-room/guess";
 import { PickTonightRoom } from "@billet/backend-pair-room/pick-tonight";
 import { RiddleRoom } from "@billet/backend-pair-room/riddle";
+import { StoryRoom } from "@billet/backend-pair-room/story";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import { SqliteGiftsStore } from "./pair-room-gifts-store.ts";
 import { SqliteGuessStore } from "./pair-room-guess-store.ts";
+import { SqliteStoryStore } from "./pair-room-story-store.ts";
 import { SqlitePickTonightStore } from "./pair-room-pick-tonight-store.ts";
 import { SqliteRiddleStore } from "./pair-room-riddle-store.ts";
 import { RoomDb, SqliteRoomStore } from "./pair-room-sqlite-store.ts";
@@ -29,8 +31,18 @@ const CatalogDeck = Layer.succeed(GuessDeck, {
  */
 export const PairRoomLive = (
   economy: Layer.Layer<EconomyTap>,
-): Layer.Layer<RoomService | GiftsRoom | PickTonightRoom | GuessRoom | RiddleRoom, never, RoomDb> =>
-  Layer.mergeAll(GiftsRoom.layer, PickTonightRoom.layer, GuessRoom.layer, RiddleRoom.layer).pipe(
+): Layer.Layer<
+  RoomService | GiftsRoom | PickTonightRoom | StoryRoom | GuessRoom | RiddleRoom,
+  never,
+  RoomDb
+> =>
+  Layer.mergeAll(
+    GiftsRoom.layer,
+    PickTonightRoom.layer,
+    StoryRoom.layer,
+    GuessRoom.layer,
+    RiddleRoom.layer,
+  ).pipe(
     Layer.provideMerge(RoomService.layer),
     Layer.provide(
       Layer.mergeAll(
@@ -38,6 +50,7 @@ export const PairRoomLive = (
         SqliteRoomStore,
         SqliteGiftsStore,
         SqlitePickTonightStore,
+        SqliteStoryStore,
         SqliteGuessStore,
         SqliteRiddleStore,
         RandomNoteIds,

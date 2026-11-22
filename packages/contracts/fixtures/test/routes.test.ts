@@ -163,6 +163,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/status",
       },
+      "getStory": {
+        "method": "GET",
+        "path": "/v1/story",
+      },
       "getStreak": {
         "method": "GET",
         "path": "/v1/streak",
@@ -210,6 +214,10 @@ it("pins the routes that clients call", () => {
       "markGiftReceived": {
         "method": "PUT",
         "path": "/v1/gifts/received",
+      },
+      "markStory": {
+        "method": "POST",
+        "path": "/v1/story/marks",
       },
       "mockPurchase": {
         "method": "POST",

@@ -269,3 +269,12 @@ export const StoredRiddleSeries = Schema.Struct({
   series: Schema.Int,
   best: Schema.Int,
 });
+
+/** What a `story_marks` row holds. */
+export const StoredStoryMark = Schema.Struct({
+  member: Schema.String,
+  episode: Schema.String,
+  kind: Schema.String,
+  ref: Schema.String,
+  at: Schema.Int,
+});
