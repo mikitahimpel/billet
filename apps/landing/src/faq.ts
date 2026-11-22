@@ -14,7 +14,7 @@ export const questions: Question[] = [
     home: true,
     question: "What is Ourio?",
     answer:
-      "Ourio is a free iPhone app for couples. You share one cozy room and a cat named Mochi. When you pet her, draw, leave a note or send a photo, it shows up on your partner's iPhone, often right on their Lock Screen through a widget.",
+      "Ourio is a free couples app for iPhone, for long-distance couples and couples who live together. You share one cozy room and a cat named Mochi. When you pet her, draw, leave a note or send a photo, it shows up on your partner's iPhone, often right on their Lock Screen through a widget. It also has two games, 150 date ideas, wishlists, shared lists and a calendar.",
   },
   {
     topic: "Basics",
@@ -36,6 +36,13 @@ export const questions: Question[] = [
     question: "Is it a chat app?",
     answer:
       "No. Ourio has no chat and no feed. You do small things for Mochi and for each other, and they arrive quietly.",
+  },
+  {
+    topic: "Basics",
+    home: true,
+    question: "How is Ourio different from Paired or Between?",
+    answer:
+      "Paired is built around daily questions and coaching, with Paired Premium from $39.99 a year; Between is a private chat with a shared calendar. Ourio has no chat and no subscription: a shared room and cat, drawings on each other's Lock Screens, a daily guessing game, Draw & guess and a planner for dates.",
   },
 
   {

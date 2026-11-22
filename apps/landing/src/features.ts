@@ -262,6 +262,45 @@ export const featureList: Feature[] = [
           "For something to keep, write a note. Type, or turn the pen on and draw; pick a paper color and add a stamp and seal. It goes up on Mochi's board in the room, your partner is notified, and the Note widget shows their latest note on your Lock Screen. Each note earns 5 coins.",
         ],
       },
+      {
+        id: "other-apps",
+        heading: "Other apps that draw on your partner's Lock Screen",
+        body: [
+          "A few apps put drawings or photos on someone else's screen. Some are only for drawing, some are for friends rather than a partner:",
+        ],
+        table: {
+          caption:
+            "Lock Screen and Home Screen drawing apps, from their App Store pages and websites, checked November 22, 2026",
+          head: ["App", "How it works", "Price on the App Store"],
+          rows: [
+            [
+              "Ourio",
+              "Drawings and notes to your partner's Lock Screen and Home Screen widgets, seven inks, a shared cat",
+              "Free",
+            ],
+            [
+              "Tuyo",
+              "Doodles on their Lock Screen, live drawing in the Dynamic Island, streaks",
+              "Free; Tuyo+ from $2.50 a month or $29.99 a year",
+            ],
+            [
+              "Lovly",
+              "One shared canvas that shows up on your partner's Lock Screen",
+              "Free; Lovly+ $4.99 a month, $20.99 to $29.99 a year or $49.99 to $89.99 lifetime",
+            ],
+            [
+              "noteit",
+              "Live notes, pictures and drawings from a partner or best friend on your Home Screen",
+              "Free; Diamond $1.99 to $7.99",
+            ],
+            [
+              "Locket Widget",
+              "Live photos from your best friends on your Home Screen",
+              "Free; Locket Gold from $1.99",
+            ],
+          ],
+        },
+      },
     ],
     questions: [
       {
@@ -302,6 +341,11 @@ export const featureList: Feature[] = [
         question: "Does it work on Android?",
         answer:
           "No. Ourio is iPhone-only for now, so both of you need an iPhone on iOS 18 or later.",
+      },
+      {
+        question: "What app lets you draw on your partner's Lock Screen?",
+        answer:
+          "Ourio, Tuyo and Lovly all put a drawing on your partner's Lock Screen. Ourio is free with no subscription and adds notes, a shared cat and games; Tuyo and Lovly focus on drawing and have paid tiers.",
       },
     ],
     related: ["widgets-and-notifications", "moments", "games", "best-couple-widget-apps"],
@@ -507,6 +551,40 @@ export const featureList: Feature[] = [
           "Planning something? Mark a date as a surprise and leave a hint. Your partner sees that something is coming, not what.",
         ],
       },
+      {
+        id: "other-apps",
+        heading: "Other date night apps",
+        body: [
+          "Date apps split into planners that book a place nearby and decks of ideas you pick from together. Ourio is the second kind, and doesn't use your location:",
+        ],
+        table: {
+          caption:
+            "Date night apps for couples, from their App Store pages, checked November 22, 2026",
+          head: ["App", "How it works", "Price on the App Store"],
+          rows: [
+            [
+              "Ourio",
+              "150 ideas you each swipe on your own iPhone; matches you can plan, get reminded about and rate",
+              "Free",
+            ],
+            [
+              "Tink",
+              "You sit together and in a few minutes get a plan at a real place nearby, ready to book",
+              "Free to download",
+            ],
+            [
+              "DateMore",
+              "Date ideas tailored to both partners",
+              "Free; Premium $9.99 a week or a month, $39.99 a year",
+            ],
+            [
+              "Almanac",
+              "A 24-date bucket list; you each swipe ideas on your own phone and each date done fills a square of the year",
+              "Free to download; Almanac $34.99",
+            ],
+          ],
+        },
+      },
     ],
     gallery: "dates",
     questions: [
@@ -524,6 +602,11 @@ export const featureList: Feature[] = [
         question: "Are there date ideas for long-distance couples?",
         answer:
           "Yes, 15 of them, like a synced movie night, cooking the same recipe or a same-sky walk.",
+      },
+      {
+        question: "What's the best app for picking a date night?",
+        answer:
+          "If you want a booked plan at a place nearby, Tink does that. If you want to pick together from a deck of ideas for home, going out and long distance, Ourio has 150 you each swipe, free.",
       },
     ],
     related: [
@@ -602,6 +685,49 @@ export const featureList: Feature[] = [
           "When you tap I'll get this, the wish is yours to buy; your partner sees only “someone is planning a surprise”, never what. When it arrives, “Got it ♥” moves it to the gifted list, and the one who got the gift earns 20 coins for the pair.",
         ],
       },
+      {
+        id: "partner-sees",
+        heading: "What your partner sees",
+        body: [
+          "Your partner sees your list as you wrote it: each wish with its link, picture, price, details and occasion, the most-wanted ones marked, and your “What I love” card. They can claim any wish with I'll get this.",
+          "What nobody sees is the gift planned for them. When your partner claims one of your wishes, your list shows only that someone is planning a surprise. You find out what it was when it arrives and you tap “Got it ♥”.",
+        ],
+      },
+      {
+        id: "other-apps",
+        heading: "Other wishlist apps for couples",
+        body: [
+          "Most wishlist apps are built for families or groups. If you want one list for the whole family, Giftster is the long-running choice. For two people, here is how they compare:",
+        ],
+        table: {
+          caption:
+            "Wishlist apps, from their App Store pages and websites, checked November 22, 2026",
+          head: ["App", "How it works", "Price on the App Store"],
+          rows: [
+            [
+              "Ourio",
+              "One list each, for two people; secret claim with I'll get this; a “What I love” card; add from Safari",
+              "Free",
+            ],
+            [
+              "GiftBox",
+              "A couples wishlist; your partner claims gifts in secret and you never see the reservations",
+              "Free; Premium $0.99 or $4.99 lifetime",
+            ],
+            [
+              "Lovit",
+              "A shared wishlist for couples; your partner browses it to pick a surprise",
+              "Free; Premium $1.99 a week to $44.99 a year",
+            ],
+            ["Giftster", "Wish lists for family groups, with what's already claimed", "Free"],
+            [
+              "Parella",
+              "A couples app with a calendar, chat, games and a wishlist with secret reservations",
+              "Free",
+            ],
+          ],
+        },
+      },
     ],
     questions: [
       {
@@ -617,6 +743,16 @@ export const featureList: Feature[] = [
         question: "Is it only for two people?",
         answer:
           "Yes. Ourio pairs exactly two people, so your wishlists are seen by your partner and nobody else.",
+      },
+      {
+        question: "What's the best wishlist app for couples?",
+        answer:
+          "For two people, Ourio, GiftBox, Lovit and Parella are made for couples, and Ourio, GiftBox and Parella keep a claimed gift secret; Giftster suits a whole family. Ourio adds a “What I love” card for sizes, coffee order and allergies, and it is free.",
+      },
+      {
+        question: "Will I know when my partner claims something from my list?",
+        answer:
+          "You'll see that someone is planning a surprise, never which wish. You learn what it was when it arrives.",
       },
     ],
     related: ["calendar-and-countdown", "shared-lists", "date-night", "us"],
@@ -708,6 +844,21 @@ export const featureList: Feature[] = [
     ],
     sections: [
       {
+        id: "how-matching",
+        heading: "How a match works",
+        body: [
+          "Every card is one movie or show, with its poster. Swipe Want to if you'd watch it tonight, Not tonight to pass, or Seen it if you've already watched it. Only Want to counts: when you both swipe Want to on the same card within 24 hours, Pick tonight calls it a match and tells your partner which title won.",
+          "You don't have to swipe at the same moment. One of you can go through the deck on the train home and the other after dinner; the match lands when the second Want to does.",
+        ],
+      },
+      {
+        id: "deck",
+        heading: "Where the cards come from",
+        body: [
+          "The deck mixes titles from your shared To watch list with suggestions: movies and shows like the ones on your list, from The Movie Database. Add more to the list and the suggestions follow your taste.",
+        ],
+      },
+      {
         id: "to-watch",
         heading: "A shared To watch list",
         body: [
@@ -721,6 +872,49 @@ export const featureList: Feature[] = [
           "Pick tonight keeps only each partner's latest swipe on each title for 24 hours. Suggestions come from The Movie Database by title numbers only, never with your account.",
         ],
       },
+      {
+        id: "where-to-watch",
+        heading: "Where to watch it",
+        body: [
+          "Each title shows where it streams in the US, and where you can rent or buy it, from The Movie Database's watch provider data. Ourio doesn't play anything itself: once you match, open the streaming app you already pay for and press play.",
+        ],
+      },
+      {
+        id: "apart",
+        heading: "On the couch or a time zone apart",
+        body: [
+          "Pick tonight works the same in one living room or in two cities. Long-distance couples swipe apart, match, then start the movie at the same time with a call on. A synced movie night is one of the 15 long-distance ideas in Date night.",
+        ],
+      },
+      {
+        id: "other-apps",
+        heading: "Other apps that pick a movie for two",
+        body: [
+          "If a movie picker is all you need, there are apps that do only that. Pick tonight comes inside a couples app, next to date ideas, games and the shared To watch list.",
+        ],
+        table: {
+          caption:
+            "Movie picker apps for couples, from their App Store pages, checked November 22, 2026",
+          head: ["App", "How it works", "Price on the App Store"],
+          rows: [
+            [
+              "Ourio, Pick tonight",
+              "Swipe titles on your own iPhone; two Want to on the same title is a match",
+              "Free",
+            ],
+            [
+              "Matched",
+              "Swipe movies; you match when you both swipe right, then stream on Netflix or Hulu",
+              "Free; Matched Premium $2.99 a month or $19.99 a year",
+            ],
+            [
+              "ReelMatch",
+              "Watch trailers one at a time, swipe to like or skip, keep a Liked list",
+              "Free; paid plans from $1.99, lifetime $44.99",
+            ],
+          ],
+        },
+      },
     ],
     questions: [
       {
@@ -732,6 +926,25 @@ export const featureList: Feature[] = [
         question: "Can we use it when we're long distance?",
         answer:
           "Yes. Swipe apart, then press play at the same time; a synced movie night is one of the long-distance date ideas.",
+      },
+      {
+        question: "How does Pick tonight decide on a movie?",
+        answer:
+          "It doesn't decide for you. The first title you both swipe Want to on within 24 hours is the match, and your partner gets a notification naming it.",
+      },
+      {
+        question: "Does it show which streaming service has the movie?",
+        answer:
+          "Yes. Each title lists where it streams in the US and where to rent or buy it, from The Movie Database.",
+      },
+      {
+        question: "Is Pick tonight free?",
+        answer: "Yes. It is part of Ourio, which is free to download for both of you.",
+      },
+      {
+        question: "How is Ourio different from Matched?",
+        answer:
+          "Matched is a movie app with Matched Premium at $2.99 a month or $19.99 a year. Ourio's Pick tonight is one part of a free couples app that also has date ideas, games, wishlists and a shared cat.",
       },
     ],
     related: ["date-night", "shared-lists", "us", "games"],
@@ -902,6 +1115,37 @@ export const featureList: Feature[] = [
         ],
         picture: { kind: "lock", line: "Your partner drew you a riddle. 6 letters." },
       },
+      {
+        id: "other-apps",
+        heading: "Other couples game and question apps",
+        body: [
+          "Most couples apps with questions charge for a subscription. Here is what the best-known ones offer and cost:",
+        ],
+        table: {
+          caption:
+            "Couples question and game apps, from their App Store pages, checked November 22, 2026",
+          head: ["App", "How it works", "Price on the App Store"],
+          rows: [
+            ["Ourio", "Who knows who, five questions a day; Draw & guess; both turn-based", "Free"],
+            [
+              "Paired",
+              "Daily questions, quizzes and guided journeys, about five minutes a day",
+              "Free; Paired Premium from $39.99 a year or $14.99 a month",
+            ],
+            ["Agapé", "One personalized question a day", "Free; Premium from $19.99 a year"],
+            [
+              "Couply",
+              "Quizzes, games and an AI relationship assistant",
+              "Free; Couply Premium $9.49 to $70.99",
+            ],
+            [
+              "Cozy Couples",
+              "Daily questions, games, mood sharing and a virtual pet",
+              "Free; Cozy Couples Plus $4.99 to $39.99",
+            ],
+          ],
+        },
+      },
     ],
     questions: [
       {
@@ -921,6 +1165,11 @@ export const featureList: Feature[] = [
       {
         question: "Do the games work for long-distance couples?",
         answer: "Yes. Everything happens over the internet between your two iPhones.",
+      },
+      {
+        question: "What are good couples game apps like Paired?",
+        answer:
+          "Agapé, Couply and Cozy Couples have daily questions and games with a paid tier. Ourio has a daily guessing game and Draw & guess, free. See our Paired alternatives page for prices side by side.",
       },
     ],
     related: [

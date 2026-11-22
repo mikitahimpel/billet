@@ -43,6 +43,7 @@ export type App = {
 
 const november13: Checked = { iso: "2026-11-13", label: "November 13, 2026" };
 export const november19: Checked = { iso: "2026-11-19", label: "November 19, 2026" };
+export const november22: Checked = { iso: "2026-11-22", label: "November 22, 2026" };
 
 export const ourio: App = {
   name: "Ourio",
@@ -231,6 +232,50 @@ export const apps: App[] = [
     sources: ["https://apps.apple.com/us/app/id1570369625"],
     checked: november19,
   },
+  {
+    name: "Cozy Couples",
+    what: "Mood sharing, love notes, daily questions, games and a virtual cat or dog in a home you decorate",
+    price: "Free; Cozy Couples Plus $4.99 to $39.99, stars and streak repairs from $1.99",
+    android: true,
+    rating: "4.8 (47k ratings)",
+    has: ["questions", "games", "pet", "calendar"],
+    sources: ["https://apps.apple.com/us/app/id6463766369", "https://www.cozycouples.co"],
+    checked: november22,
+  },
+];
+
+// Apps a compare page names beside its main rival that aren't couples apps, so the /compare/ table leaves them out.
+export const nearby: App[] = [
+  {
+    name: "Getwid",
+    what: "Design a widget, a photo, words, a doodle or a countdown, and send it to a friend's Home Screen",
+    price: "Free; the store page lists no in-app purchases",
+    android: false,
+    rating: "5.0 (2 ratings)",
+    has: ["widgets", "drawing", "calendar"],
+    sources: ["https://apps.apple.com/us/app/id6761107656", "https://getwid.app"],
+    checked: november22,
+  },
+  {
+    name: "PebWorld",
+    what: "A tiny companion for one person that grows its own memories and habits",
+    price: "Free",
+    android: false,
+    rating: "4.8 (5 ratings)",
+    has: ["pet"],
+    sources: ["https://apps.apple.com/us/app/id6770403164"],
+    checked: november22,
+  },
+  {
+    name: "Gottman Card Decks",
+    what: "Questions, statements and ideas from The Gottman Institute's couples workshop card decks",
+    price: "Free",
+    android: true,
+    rating: "4.8 (1.7k ratings)",
+    has: ["questions"],
+    sources: ["https://apps.apple.com/us/app/id1292398843", "https://www.gottman.com"],
+    checked: november22,
+  },
 ];
 
 export type Alternative = {
@@ -246,21 +291,24 @@ export type Alternative = {
   theyFit: string[];
   oursFit: string[];
   questions: { question: string; answer: string }[];
+  // More apps for the side-by-side table, by name from `apps` or `nearby`.
+  others?: string[];
 };
 
 export const alternatives: Alternative[] = [
   {
     slug: "paired-alternative",
     app: "Paired",
-    title: "Paired alternative: free, no subscription · Ourio",
+    others: ["Agapé", "Lovewick", "Flamme", "Gottman Card Decks"],
+    title: "Paired alternatives: Ourio, Agapé, Lovewick, Flamme, Gottman",
     description:
-      "Looking for an app like Paired? Ourio is a free iPhone couples app with daily questions, games, a shared cat and Lock Screen drawings. No subscription.",
-    summary: "Ourio vs Paired: daily questions and games without a subscription.",
-    h1: "A Paired alternative that's free and playful.",
-    lead: "Paired is a daily questions app with quizzes and guided journeys; Paired Premium costs from $39.99 a year. Ourio is a free alternative for iPhone with no subscription: five daily questions in Who knows who, Draw & guess, a shared cat, drawings on your partner's Lock Screen and a planner for two.",
+      "Paired alternatives side by side: Ourio (free), Agapé, Lovewick, Flamme and Gottman Card Decks, with prices, features and ratings from the App Store.",
+    summary: "Paired alternatives compared: Ourio, Agapé, Lovewick, Flamme and Gottman Card Decks.",
+    h1: "Paired alternatives, free and paid, side by side.",
+    lead: "The best Paired alternative depends on what you used Paired for. For one question a day, Agapé (Premium from $19.99 a year) or Lovewick (Plus $29.99 a year). For free research-based prompts, Gottman Card Decks. For quizzes with an AI coach, Flamme. For games, a shared cat and Lock Screen drawings with no subscription, Ourio.",
     theyFit: [
       "You want relationship coaching: Paired has guided journeys and topics to work through.",
-      "One of you uses Android. Paired runs on both; Ourio is iPhone-only for now.",
+      "One of you uses Android. Paired, Agapé, Lovewick, Flamme and Gottman Card Decks run on both; Ourio is iPhone-only for now.",
       "You want deep conversation prompts every day rather than a playful quiz.",
     ],
     oursFit: [
@@ -270,9 +318,19 @@ export const alternatives: Alternative[] = [
     ],
     questions: [
       {
+        question: "What are the best Paired alternatives?",
+        answer:
+          "Agapé and Lovewick for one question a day, Gottman Card Decks for free prompts from The Gottman Institute, Flamme for quizzes with an AI coach, and Ourio for free games, a shared cat and Lock Screen drawings.",
+      },
+      {
         question: "Is there a free app like Paired?",
         answer:
-          "Yes. Ourio has daily questions (Who knows who, five a day) and games for couples, free with no subscription. It is lighter and more playful than Paired's coaching.",
+          "Yes. Gottman Card Decks is free, and Ourio has daily questions (Who knows who, five a day) and games for couples, free with no subscription. Agapé, Lovewick and Flamme are free to download with a paid tier.",
+      },
+      {
+        question: "How much do Paired alternatives cost?",
+        answer:
+          "Paired Premium is from $39.99 a year. Agapé Premium is from $19.99 a year, Lovewick Plus $29.99 a year, Flamme Premium $44.49 to $44.99 a year. Gottman Card Decks and Ourio are free.",
       },
       {
         question: "Does Ourio have daily questions like Paired?",
@@ -289,12 +347,13 @@ export const alternatives: Alternative[] = [
   {
     slug: "locket-widget-alternative",
     app: "Locket Widget",
+    others: ["Cozy Couples", "Widgetable", "Couple Joy"],
     title: "Locket Widget alternative for couples · Ourio",
     description:
       "A Locket Widget alternative for couples: Ourio sends drawings and notes to your partner's Lock Screen and Home Screen widgets. Free, no subscription.",
     summary: "Ourio vs Locket Widget: drawings and notes on your partner's Lock Screen, for two.",
     h1: "A Locket alternative made for two.",
-    lead: "Locket Widget puts live photos from your best friends on your Home Screen. Ourio is a widget app made for couples: your partner's drawings and notes arrive on your Lock Screen, and widgets show your shared cat, their mood, days together and your next date. Free, with no subscription.",
+    lead: "Locket Widget puts live photos from your best friends on your Home Screen. Ourio is a widget app made for couples: your partner's drawings and notes arrive on your Lock Screen, and widgets show your shared cat, their mood, days together and your next date. Free, with no subscription. Other couple widget apps: Couple Joy and Widgetable have widgets and daily questions; Cozy Couples has mood sharing, love notes and a virtual pet.",
     theyFit: [
       "You want to share photos with a group of close friends, not one partner.",
       "You want a quick camera-first app; Locket is built around snapping a photo.",
@@ -312,6 +371,11 @@ export const alternatives: Alternative[] = [
           "Yes. Ourio's Drawing and Note widgets show your partner's latest drawing or note on your Lock Screen or Home Screen, and Moments keeps your photos as polaroids.",
       },
       {
+        question: "What are the alternatives to Locket for couples?",
+        answer:
+          "Ourio for drawings and notes on your partner's Lock Screen and a shared cat, Couple Joy for widgets with mood and distance, Widgetable for widgets and pets with friends and a partner, and Cozy Couples for mood, love notes and a virtual pet. Prices are in the table above.",
+      },
+      {
         question: "Can I send photos to my partner's widget with Ourio?",
         answer:
           "Use a photo as the background of a Lock Screen drawing, or show one of your Moments in the Block widget on the Home Screen.",
@@ -325,12 +389,13 @@ export const alternatives: Alternative[] = [
   {
     slug: "widgetable-alternative",
     app: "Widgetable",
+    others: ["Getwid", "PebWorld"],
     title: "Widgetable alternative for couples: shared pet · Ourio",
     description:
       "A Widgetable alternative for couples: raise one shared cat, send Lock Screen drawings, add mood and countdown widgets. No subscription, no paid pets or food.",
     summary: "Ourio vs Widgetable: a shared pet and widgets with nothing for sale.",
     h1: "A Widgetable alternative without the paywall.",
-    lead: "Widgetable has shared widgets, doodles and pets for friends and couples; Widgetable Premium costs $19.99 a year, and pet eggs and food are sold too. Ourio is a free alternative for couples: one shared cat, Lock Screen drawings, mood, notes and countdown widgets, with no subscription and nothing for sale.",
+    lead: "Widgetable has shared widgets, doodles and pets for friends and couples; Widgetable Premium costs $19.99 a year, and pet eggs and food are sold too. Ourio is a free alternative for couples: one shared cat, Lock Screen drawings, mood, notes and countdown widgets, with no subscription and nothing for sale. Getwid sends a widget you design to a friend's Home Screen; PebWorld is a tiny companion for one person.",
     theyFit: [
       "You want widgets with friends as well as a partner.",
       "You want many widget styles and pets to collect.",
@@ -346,6 +411,11 @@ export const alternatives: Alternative[] = [
         question: "Is there a free couples pet app like Widgetable?",
         answer:
           "Yes. In Ourio you raise one cat, Mochi, together on two iPhones, with no subscription and no paid food or pets.",
+      },
+      {
+        question: "What are other apps like Widgetable?",
+        answer:
+          "Getwid lets you design a widget and send it to a friend's Home Screen, free. PebWorld is a pet that grows its own memories, for one person. Ourio is for two: one shared cat, Lock Screen drawings and countdowns, free.",
       },
       {
         question: "Does Ourio have a distance widget?",
