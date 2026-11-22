@@ -238,3 +238,32 @@ the reveal never opens), content exhaustion, and punitive pressure (dying pets, 
   chooses to do.
 - **Local notifications:** the 20:00 streak reminder and date reminders. Its title is "Mochi misses
   you tonight" with "before midnight to keep your N-day streak": loss-framed, and on by default.
+
+### Stage 1: audit, notes, Moments, Us, Shop, widgets
+
+- **Nothing suggests what to send.** The note composer's only prompt is "Write a note…"; the draw
+  canvas shows a clock. `DailyPrompt` (14 questions, 14 doodle prompts) is in `WidgetBridge` and no
+  screen of the shipped composer shows it. A note has no reply and no reaction (reactions are for
+  the partner's photos only, `decide.ts`); the partner widget's "Tap to reply" opens the Inbox.
+- **Nothing comes back.** Moments is a feed and a six-slot wall. No "on this day", album, timeline
+  or recap. Days-together milestones (100, 200, 365…) are calendar rows; nothing marks the day.
+- **Dates are single-phone.** Date swipes, matches, plans and ratings, and calendar events, are in
+  the phone's `UsStore`; only Pick tonight swipes reach the server
+  (`/v1/pick-tonight/swipes`). Paired, "has N left to swipe" counts this phone's data.
+- **The games' stake is a line of text.** Who knows who's "Loser plans Friday's date" opens Dates
+  and nothing else; the room keeps weekly points (`guess_weeks`) that nothing uses.
+- **Two displays promise more coins than the server pays.** Who knows who shows 10 a round and 2 a
+  hit (`WhoKnowsModel.roundCoins`, `hitCoins`); the server pays 2 and 1 (`coins.ts`). Collection
+  cards show 150 and 100 (`Shop.swift`); the server pays 40 and 25 (`shop.ts`). Bugs to fix
+  whatever else is decided.
+- **The catalogue is small against the art that exists.** 26 one-time unlocks for about 3,225 coins
+  (10 pieces 2,175; 6 inks 450; 10 stamps and seals 600), about 8 months at the cap of 13 a day.
+  `Resources/Shop` bundles 55 models; 12 are sold.
+- **Written, unreachable:** a shop gift to the partner (`buy(_:asGift:)`, "arrive wrapped and the
+  partner unwraps them"), the shop wishlist, ten Labs ideas with no code behind them (`onThisDay`,
+  `sealedNote`, `sundayPost`, `advent`, `wrappedDelivery`…), walls and floors (`RoomStyle`).
+- **The partner leaving is silent.** `partnerLeft` is stored by `ServerSession` and no view reads
+  it; the person lands on "Waiting for your partner".
+- **Solo before pairing:** notes queue, Moments and lists work, the shop has no wallet, both games
+  say "Pair up to play". The demo partner is dev only.
+- **Widgets act late.** Pet, Feed and Hug from a widget run when the app next opens.
