@@ -160,7 +160,8 @@ public enum RaidMachine: Machine {
       (.running, .started), (.running, .watch), (.running, .replayTick), (.running, .replayEnded),
       (.running, .again),
       (.finished, .chose), (.finished, .tapped), (.finished, .removed), (.finished, .handedOver),
-      (.finished, .started), (.finished, .tick), (.finished, .replayTick), (.finished, .replayEnded),
+      (.finished, .started), (.finished, .tick), (.finished, .replayTick),
+      (.finished, .replayEnded),
       (.replaying, .chose), (.replaying, .tapped), (.replaying, .removed),
       (.replaying, .handedOver), (.replaying, .started), (.replaying, .tick), (.replaying, .watch):
       return (state, [])

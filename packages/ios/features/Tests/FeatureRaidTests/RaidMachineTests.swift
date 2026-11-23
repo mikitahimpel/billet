@@ -49,7 +49,11 @@ private func step(_ state: RaidMachine.State, _ events: RaidMachine.Event...) ->
 
   @Test func aDefenceCanBeTakenBack() {
     let set = step(draft(), .chose(.box), .tapped(RaidPoint(x: 0, z: 0)), .removed(1))
-    #expect(set == draft { $0.tool = .box; $0.nextID = 2 })
+    let emptied = draft {
+      $0.tool = .box
+      $0.nextID = 2
+    }
+    #expect(set == emptied)
   }
 
   @Test func aLevelWithAProblemIsNotHandedOver() {

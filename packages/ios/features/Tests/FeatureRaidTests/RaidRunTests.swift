@@ -43,7 +43,8 @@ private func head(for target: RaidPoint, within: Double = 0.03) -> (RaidRun) -> 
       defences: [
         RaidDefence(id: 1, kind: .cucumber, at: RaidPoint(x: 0, z: 0)),
         RaidDefence(id: 2, kind: .box, at: RaidPoint(x: 0.15, z: 0.05)),
-        RaidDefence(id: 3, kind: .vacuum(to: RaidPoint(x: -0.1, z: 0.3)), at: RaidPoint(x: -0.1, z: -0.3)),
+        RaidDefence(
+          id: 3, kind: .vacuum(to: RaidPoint(x: -0.1, z: 0.3)), at: RaidPoint(x: -0.1, z: -0.3)),
       ])
     var live = RaidRun(board: empty, level: level)
     var inputs: [RaidInput] = []
@@ -196,7 +197,8 @@ private func head(for target: RaidPoint, within: Double = 0.03) -> (RaidRun) -> 
 @Suite struct RaidLevelTests {
   @Test func aLevelIsRefusedForWhatWouldMakeItUnfair() {
     let sofa = RaidPiece(
-      id: "sofa", title: "Sofa", centre: RaidPoint(x: 0, z: 0.3), halfX: 0.1, halfZ: 0.1, height: 0.2)
+      id: "sofa", title: "Sofa", centre: RaidPoint(x: 0, z: 0.3), halfX: 0.1, halfZ: 0.1,
+      height: 0.2)
     let room = RaidBoard(pieces: [sofa], start: RaidPoint(x: -0.4, z: 0))
     let jar = RaidPoint(x: 0.3, z: 0)
     #expect(RaidLevel(jar: RaidPoint(x: -0.3, z: 0)).problem(on: room) == .jarTooNearStart)

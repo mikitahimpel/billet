@@ -17,7 +17,8 @@ public struct RaidRun: Equatable, Sendable {
 
   /// What happened in a tick that the screen may want to mark with a sound or a haptic.
   public enum Happening: Equatable, Sendable {
-    case jumped, landed, startled, boxed, rode, squeaked, caught, sniffed(found: Int), got, timeUp
+    case jumped, landed, startled, boxed, rode, squeaked, caught, got, timeUp
+    case sniffed(found: Int)
   }
 
   public let board: RaidBoard
@@ -239,9 +240,11 @@ public struct RaidRun: Equatable, Sendable {
   private mutating func land(at point: RaidPoint) {
     cat = point
     on = board.top(at: point)?.id
-    if on == nil, let wall = board.pieces.first(where: {
-      !$0.isLow && $0.contains(point, margin: RaidRules.catRadius)
-    }) {
+    if on == nil,
+      let wall = board.pieces.first(where: {
+        !$0.isLow && $0.contains(point, margin: RaidRules.catRadius)
+      })
+    {
       // She came down against a piece's side, not on its top: she ends up on it.
       on = wall.id
       cat = RaidPoint(
@@ -266,7 +269,8 @@ public struct RaidRun: Equatable, Sendable {
     let distance = box.at.distance(to: cat)
     guard distance > 1e-9 else { return nil }
     let pace = RaidRules.boxPullSpeed / Double(RaidRules.tickRate)
-    return RaidPoint(x: (box.at.x - cat.x) / distance * pace, z: (box.at.z - cat.z) / distance * pace)
+    return RaidPoint(
+      x: (box.at.x - cat.x) / distance * pace, z: (box.at.z - cat.z) / distance * pace)
   }
 
   /// What the floor does to her where she now stands. `speed` is how fast she got here, in metres a second.
