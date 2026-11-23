@@ -7,10 +7,12 @@ import { GiftsRoom } from "@billet/backend-pair-room/gifts";
 import { GuessDeck, GuessRoom } from "@billet/backend-pair-room/guess";
 import { PickTonightRoom } from "@billet/backend-pair-room/pick-tonight";
 import { RiddleRoom } from "@billet/backend-pair-room/riddle";
+import { SchoolRoom } from "@billet/backend-pair-room/school";
 import { StoryRoom } from "@billet/backend-pair-room/story";
 import { RoomService } from "@billet/backend-pair-room/room-service";
 import { SqliteGiftsStore } from "./pair-room-gifts-store.ts";
 import { SqliteGuessStore } from "./pair-room-guess-store.ts";
+import { SqliteSchoolStore } from "./pair-room-school-store.ts";
 import { SqliteStoryStore } from "./pair-room-story-store.ts";
 import { SqlitePickTonightStore } from "./pair-room-pick-tonight-store.ts";
 import { SqliteRiddleStore } from "./pair-room-riddle-store.ts";
@@ -32,7 +34,7 @@ const CatalogDeck = Layer.succeed(GuessDeck, {
 export const PairRoomLive = (
   economy: Layer.Layer<EconomyTap>,
 ): Layer.Layer<
-  RoomService | GiftsRoom | PickTonightRoom | StoryRoom | GuessRoom | RiddleRoom,
+  RoomService | GiftsRoom | PickTonightRoom | StoryRoom | SchoolRoom | GuessRoom | RiddleRoom,
   never,
   RoomDb
 > =>
@@ -40,6 +42,7 @@ export const PairRoomLive = (
     GiftsRoom.layer,
     PickTonightRoom.layer,
     StoryRoom.layer,
+    SchoolRoom.layer,
     GuessRoom.layer,
     RiddleRoom.layer,
   ).pipe(
@@ -51,6 +54,7 @@ export const PairRoomLive = (
         SqliteGiftsStore,
         SqlitePickTonightStore,
         SqliteStoryStore,
+        SqliteSchoolStore,
         SqliteGuessStore,
         SqliteRiddleStore,
         RandomNoteIds,

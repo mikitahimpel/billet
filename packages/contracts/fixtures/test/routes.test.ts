@@ -147,6 +147,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/riddles",
       },
+      "getSchool": {
+        "method": "GET",
+        "path": "/v1/school",
+      },
       "getShop": {
         "method": "GET",
         "path": "/v1/shop",
@@ -295,6 +299,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/riddles",
       },
+      "sendRoutine": {
+        "method": "POST",
+        "path": "/v1/school/routines",
+      },
       "setDisplayName": {
         "method": "PUT",
         "path": "/v1/me",
@@ -322,6 +330,10 @@ it("pins the routes that clients call", () => {
       "swipePickTonight": {
         "method": "POST",
         "path": "/v1/pick-tonight/swipes",
+      },
+      "teachTrick": {
+        "method": "POST",
+        "path": "/v1/school/lessons",
       },
       "titleRecommendations": {
         "method": "GET",

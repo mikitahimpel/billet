@@ -32,6 +32,8 @@
     "./lists-service": "./src/lists-service.ts",
     "./pick-tonight-routes": "./src/pick-tonight-routes.ts",
     "./pick-tonight-service": "./src/pick-tonight-service.ts",
+    "./school-routes": "./src/school-routes.ts",
+    "./school-service": "./src/school-service.ts",
     "./story-routes": "./src/story-routes.ts",
     "./story-service": "./src/story-service.ts"
   },

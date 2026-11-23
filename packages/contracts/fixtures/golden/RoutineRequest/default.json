@@ -1,0 +1,16 @@
+{
+  "steps": [
+    {
+      "landed": true,
+      "trick": "sit"
+    },
+    {
+      "landed": false,
+      "trick": "spin"
+    },
+    {
+      "landed": true,
+      "trick": "high-five"
+    }
+  ]
+}

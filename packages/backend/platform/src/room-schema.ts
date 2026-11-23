@@ -415,3 +415,20 @@ export const storyMarks = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.member, table.episode, table.kind, table.ref] })],
 );
+
+// The cat school: one row per trick the pair's cat knows. `by` taught the first star and stays;
+// `stars` only rises (the rules keep it).
+export const schoolTricks = sqliteTable("school_tricks", {
+  trick: text("trick").primaryKey(),
+  stars: integer("stars").notNull(),
+  by: text("by").notNull(),
+  at: integer("at").notNull(),
+});
+
+// The last routine each member sent, replaced by the next. `steps` is JSON: the tricks asked for,
+// in order, and whether each landed.
+export const schoolRoutines = sqliteTable("school_routines", {
+  member: text("member").primaryKey(),
+  steps: text("steps").notNull(),
+  at: integer("at").notNull(),
+});

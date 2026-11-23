@@ -16,6 +16,7 @@
     "./lists": "./src/lists.ts",
     "./note-id-source": "./src/note-id-source.ts",
     "./pick-tonight": "./src/pick-tonight.ts",
+    "./school": "./src/school.ts",
     "./story": "./src/story.ts",
     "./riddle": "./src/riddle.ts",
     "./riddle-rules": "./src/riddle-rules.ts",
