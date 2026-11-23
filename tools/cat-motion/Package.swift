@@ -4,7 +4,7 @@ import PackageDescription
 // Sources/CatMotion/Cat holds links to the app's own cat files (apps/ios/Nooki/Scene), so the harness
 // runs the code the phone runs; everything else here stands in for the app around them.
 let package = Package(
-  name: "cat-motion",
+  name: "CatMotion",
   platforms: [.macOS(.v15)],
   dependencies: [
     .package(path: "../../packages/ios/pet"),
