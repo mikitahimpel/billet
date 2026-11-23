@@ -43,6 +43,9 @@ final class Gait {
         let stride: SIMD3<Float>
         var anchor: SIMD3<Float>?
         var from = SIMD3<Float>.zero
+        /// Where the swing is headed, following its touchdown spot smoothly: when she stops or turns mid-swing the
+        /// spot jumps, and the paw must not.
+        var aim = SIMD3<Float>.zero
         var swinging = false
         var done = true
     }
@@ -130,10 +133,14 @@ final class Gait {
             if u >= Self.duty && !legs[i].swinging {
                 legs[i].swinging = true
                 legs[i].from = legs[i].anchor ?? .zero
+                legs[i].aim = touchdown(legs[i], 0)
             } else if u < Self.duty && legs[i].swinging {
                 legs[i].swinging = false
-                legs[i].anchor = touchdown(legs[i], 1)
+                legs[i].anchor = legs[i].aim
                 if !moving { legs[i].done = true }
+            } else if legs[i].swinging {
+                let w = (u - Self.duty) / (1 - Self.duty)
+                legs[i].aim += (touchdown(legs[i], w) - legs[i].aim) * (1 - exp(-dt * 20))
             }
         }
     }
@@ -150,7 +157,7 @@ final class Gait {
         guard leg.swinging else { return frame.toModel(leg.anchor ?? frame.toRoom(leg.rest)) }
         let u = (phase + leg.offset).truncatingRemainder(dividingBy: 1)
         let w = (u - Self.duty) / (1 - Self.duty)
-        let target = touchdown(leg, w)
+        let target = leg.aim
         let step = simd_distance(leg.from, target) / frame.scale
         var out = frame.toModel(simd_mix(leg.from, target, SIMD3(repeating: w * w * (3 - 2 * w))))
         // A short settling step barely clears the floor.

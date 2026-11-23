@@ -163,7 +163,15 @@ final class CatWalker {
         let duration: Float
         let run: (_ u: Float) -> Void
         var time: Float = 0
+        /// A step with no set length: called with the frame's seconds until it says it is done.
+        var open: ((_ dt: Float) -> Bool)?
+        /// Where a walk along the floor is headed, for the step before it to round the corner into it.
+        var target: SIMD3<Float>?
     }
+
+    // Room units from a corner of her path where she starts to turn into the next leg, less than the margin her
+    // routes keep from the furniture (Occupancy.clearance).
+    private static let cornerCut: Float = 0.03
 
     /// How quickly she gets about; a game sets her eager pace and gives her usual one back after.
     var pace = CatPace.usual
@@ -224,6 +232,8 @@ final class CatWalker {
     private var tailPush = SIMD3<Float>.zero
     private var seatAmount: Float = 1
     private var change: Change?
+    /// Her speed along the floor and her turning as she walks, carried from one leg into the next.
+    private var travel: (speed: Float, turn: Float) = (0, 0)
     private var squash: (value: Float, speed: Float, goal: Float, shown: Float) = (0, 0, 0, 0)
     private var lean: (value: Float, speed: Float, goal: Float) = (0, 0, 0)
     private var breath = Breath()
@@ -394,6 +404,7 @@ final class CatWalker {
     /// Back on her bed at once, sitting, with whatever she was doing dropped.
     func snapHome() {
         steps = []
+        travel = (0, 0)
         away = nil
         lying = false
         rest = .sit
@@ -542,9 +553,15 @@ final class CatWalker {
         if !steps.isEmpty {
             steps[0].time += dt
             let step = steps[0]
-            let u = min(step.time / step.duration, 1)
-            step.run(u)
-            if u >= 1 { steps.removeFirst() }
+            let done: Bool
+            if let open = step.open {
+                done = open(dt)
+            } else {
+                let u = min(step.time / step.duration, 1)
+                step.run(u)
+                done = u >= 1
+            }
+            if done { steps.removeFirst() }
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
         }
         advanceChange(dt)
@@ -791,9 +808,18 @@ final class CatWalker {
         steps.append(Step(duration: duration, run: run))
     }
 
+    private func add(until done: @escaping (Float) -> Bool, toward target: SIMD3<Float>? = nil) {
+        steps.append(Step(duration: .infinity, run: { _ in }, open: done, target: target))
+    }
+
+    /// A jump she turns to and sizes up from where she stands; a walk she steers into as she goes.
     private func leg(_ from: SIMD3<Float>, _ to: SIMD3<Float>, _ move: Waypoint.Move) {
-        turn(facing(to.x - from.x, to.z - from.z))
-        if move == .jump { jump(from, to) } else { walk(from, to) }
+        if move == .jump {
+            turn(facing(to.x - from.x, to.z - from.z))
+            jump(from, to)
+        } else {
+            walk(from, to)
+        }
     }
 
     /// Two quick pats with both fore paws, chest rising a little with each.
@@ -821,14 +847,20 @@ final class CatWalker {
             lean.goal = Posture.swapLean
             squash.goal = Self.swapSquash * smoothstep(u, 0.4, 1)
         }
-        var started = false
-        add(pace.standUp) { [unowned self] _ in
-            guard !started else { return }
-            started = true
-            fade(0)
-            squash.goal = 0
-            lean.goal = 0
-            change = Change(from: .sit, to: .stand, order: .rising, duration: pace.standUp)
+        var time: Float?
+        add { [unowned self] dt in
+            guard let t = time else {
+                time = dt
+                fade(0)
+                squash.goal = 0
+                lean.goal = 0
+                change = Change(from: .sit, to: .stand, order: .rising, duration: pace.standUp)
+                return false
+            }
+            time = t + dt
+            // Setting off on foot she takes her first steps while her rump is still coming up.
+            let walksNext = steps.count > 1 && steps[1].target != nil
+            return t + dt >= pace.standUp * (walksNext ? 0.6 : 1)
         }
     }
 
@@ -882,40 +914,92 @@ final class CatWalker {
         }
     }
 
-    /// Turns on the spot with small steps at her pace's rate, the head ahead of the body.
+    /// Turns on the spot at her pace's rate, the head ahead of the body, with small steps unless the turn is slight.
     private func turn(_ target: Float) {
-        let end = shortest(planYaw, target)
-        let angle = abs(end - planYaw)
-        planYaw = end
-        guard angle >= 0.05 else { return }
-        var start: Float?
-        add(0.15 + angle / pace.turnRate) { [unowned self] u in
-            let from = start ?? yaw
-            start = from
-            let to = shortest(from, target)
-            yaw = lerp(from, to, ease(u))
-            lead = min(max(0.8 * (to - yaw), -0.45), 0.45)
-            stepping = true
+        planYaw = shortest(planYaw, target)
+        var plan: (from: Float, to: Float, duration: Float, time: Float)?
+        add { [unowned self] dt in
+            var p = plan ?? (yaw, shortest(yaw, target), 0, 0)
+            let angle = abs(p.to - p.from)
+            guard angle >= 0.01 else { return true }
+            if plan == nil { p.duration = 0.15 + angle / pace.turnRate }
+            p.time += dt
+            plan = p
+            let u = min(p.time / p.duration, 1)
+            yaw = lerp(p.from, p.to, ease(u))
+            lead = min(max(0.8 * (p.to - yaw), -0.45), 0.45)
+            stepping = angle > 0.2
+            return u >= 1
         }
     }
 
-    /// Picks up speed over her first stride and loses it over the last, smoothly both ways.
+    /// Walks to `to`, steering: she looks where she is going before she turns, turns as she walks, slower the
+    /// further she has to come round, rounds the corner into a next leg instead of stopping at it, and comes to a
+    /// stop at the last one over about a stride. Her pace wanders a little as she goes.
     private func walk(_ from: SIMD3<Float>, _ to: SIMD3<Float>) {
-        let distance = simd_distance(from, to)
-        guard distance > 0 else { return }
-        let rampTime = pace.rampTime
-        let speed = min(pace.walkSpeed, distance / rampTime)
-        let duration = distance / speed + rampTime
-        // Distance covered `t` seconds into a ramp from standing to full speed.
-        func ramp(_ t: Float) -> Float { speed * rampTime * (pow(t / rampTime, 3) - pow(t / rampTime, 4) / 2) }
-        add(duration) { [unowned self] u in
-            let t = u * duration
-            var along = ramp(rampTime) + speed * (t - rampTime)
-            if t < rampTime { along = ramp(t) } else if t > duration - rampTime { along = distance - ramp(duration - t) }
-            group.position = simd_mix(from, to, SIMD3(repeating: along / distance))
-            stepping = true
+        let length = simd_distance(SIMD2(from.x, from.z), SIMD2(to.x, to.z))
+        guard simd_distance(from, to) > 0 else { return }
+        planYaw = facing(to.x - from.x, to.z - from.z)
+        var looked: Float?
+        var time: Float = 0
+        add(until: { [unowned self] dt in
+            let here = group.position
+            let ahead = SIMD2(to.x - here.x, to.z - here.z)
+            let left = simd_length(ahead)
+            let next = steps.count > 1 ? steps[1].target : nil
+            time += dt
+            // A walk that cannot end (she was moved, or the numbers went wrong) ends where it was going.
+            guard length > 1e-4, time < 6 + 4 * length / pace.walkSpeed else {
+                group.position = to
+                travel = (0, 0)
+                return true
+            }
+            if next != nil, left < Self.cornerCut { return true }
+            let heading = left > 0.012 ? facing(ahead.x, ahead.y) : yaw
+            let error = shortest(yaw, heading) - yaw
+            lead = min(max(0.7 * error, -0.45), 0.45)
             gaze = -0.15
-        }
+            // From standing, facing well away from where she is going, her head goes there first.
+            if looked == nil { looked = travel.speed < 1e-3 && abs(error) > 0.5 ? 0 : 1 }
+            if let l = looked, l < 0.28 {
+                looked = l + dt
+                return false
+            }
+            stepping = true
+
+            let cruise = pace.walkSpeed * (1 + 0.08 * noise(self.time * 0.35, 21))
+            let facingIt = max(cos(error), 0)
+            var goal = cruise * (0.2 + 0.8 * facingIt * facingIt)
+            // No faster than lets her come round to the point at her turning rate.
+            goal = min(goal, pace.turnRate * left / max(2 * abs(sin(error)), 0.2))
+            let gain = pace.walkSpeed / pace.rampTime
+            if let next {
+                // Into a corner she slows by how sharp it is.
+                let after = shortest(heading, facing(next.x - to.x, next.z - to.z)) - heading
+                let through = cruise * (0.3 + 0.7 * pow(max(cos(after / 2), 0), 2))
+                goal = min(goal, sqrt(through * through + 2 * gain * max(left - Self.cornerCut, 0)))
+            } else {
+                // Never so slow that she creeps up on the point without reaching it.
+                goal = max(min(goal, sqrt(2 * gain * left)), 0.015)
+            }
+            travel.speed += min(max(goal - travel.speed, -2 * gain * dt), gain * dt)
+            let turnGoal = min(max(3.5 * error, -pace.turnRate), pace.turnRate)
+            travel.turn += (turnGoal - travel.turn) * (1 - exp(-dt * 6))
+            yaw += travel.turn * dt
+
+            let stride = travel.speed * dt
+            guard next != nil || stride < left else {
+                group.position = to
+                travel = (0, 0)
+                return true
+            }
+            // Over the last centimetre she goes straight for the point, so she ends on it.
+            let along = left > 0.012 ? SIMD2(-sin(yaw), -cos(yaw)) : ahead / left
+            var at = here + SIMD3(along.x, 0, along.y) * stride
+            at.y = to.y + (from.y - to.y) * min(simd_distance(SIMD2(at.x, at.z), SIMD2(to.x, to.z)) / length, 1)
+            group.position = at
+            return false
+        }, toward: to)
     }
 
     /// Blends the posture along `keys`, (seconds, posture) in order, at `t` seconds.
