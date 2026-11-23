@@ -1,43 +1,175 @@
 # Gameplay: the cat and the home
 
-Game mechanics around the cat and the room the two of you keep: caring and watching, upkeep and
-small repairs, renovating, arranging, the home while you are away, things that take two. A
-proposal, 2026-11-23: nothing here is built. It continues the gameplay vision (PR #1010,
-`docs/gameplay-vision.md` on its branch) and does not redo what that started: Mischief
-([mischief.md](mischief.md)), the secret life ([secret-life.md](secret-life.md)), Cat school and
-`SessionEnded`.
+Game mechanics around the cat and the room the two of you keep: a game played in the room, then
+caring and watching, upkeep and small repairs, renovating, arranging, the home while you are away,
+things that take two. A proposal, 2026-11-23: nothing here is built. It continues the gameplay
+vision (PR #1010, `docs/gameplay-vision.md` on its branch) and does not redo what that started:
+Mischief ([mischief.md](mischief.md)), the secret life ([secret-life.md](secret-life.md)), Cat
+school and `SessionEnded`.
 
-**The short version.** Today the home is a backdrop: a pair can place up to eight bought pieces,
-and after that the room never asks for anything, never changes by itself and remembers nothing.
-29 mechanics below make it a place that is lived in. The five to build first, picked for fun
-against cost:
+**Round two.** The owner's verdict on the first round of this document was "not interesting at
+all", and it was right: the five mechanics it put first (a reel of the cat's day, straightening a
+chair, a photo book) are decoration. Nothing in them can be done well or badly, nobody can be
+outwitted and nothing is funny. They were picked for being cheap and kind. This round puts a
+game first.
 
-| # | Mechanic | The fun | First slice | Room code touched |
-| --- | --- | --- | --- | --- |
-| 1 | **While you were out** | Come home and see what the cat got up to, then watch her show you | 1.5 weeks | no |
-| 2 | **Little messes** | The cat leaves a piece askew; one press puts it straight | 2 weeks | no |
-| 3 | **The cat's requests** | She wants a nap in the sun; arrange the room so she gets it, and she uses it | 2 weeks | no |
-| 4 | **Parcels** | What you buy arrives in a box, a gift arrives wrapped, the cat keeps the box | 1.5 weeks | little |
-| 5 | **The home book** | A portrait of the room every month, and the story of how it got this way | 2 weeks | little |
+**The short version: Night raid.** A game for two, played on the pair's own room. One of you is
+the **keeper**: you put the treat jar somewhere and set three defences round it. The other is
+the **cat**: you get one run of 45 seconds to reach the jar and knock it off, steering her
+yourself, past a robot vacuum, a cucumber you did not see and a cardboard box she cannot resist.
+Then the keeper watches the replay, and you swap. Every piece of furniture you own is terrain, so
+every room is a different level, and the two of you make the levels for each other.
 
-They are one loop, not five features ([section 5](#5-one-loop)): the cat lives in the room every
-day (1), her life disturbs it a little (2), she asks for changes (3), new things arrive as events
-(4), and the home keeps the record (5). The best mechanic for two people, **Flat-pack for two**,
-is sixth only because it costs three weeks.
-
-**The rule that decides everything in this document.** Upkeep is a toy, never a debt. A mess never
-grows, a plant never dies, a repair never becomes urgent, and no screen says who did more.
-Chore apps show what happens otherwise ([Evidence](#evidence)).
+- First step: a playable prototype in two weeks, drawn from above, with no Room code and no
+  server ([First slices of the game](#first-slices-of-the-game)). Whether steering a cat past
+  traps is fun is found with thumbs, not in a document.
+- It pays no new coins, sells nothing, has no timer outside the run itself and no text.
+- The 29 quieter mechanics of round one stay below from [section 4](#4-the-mechanics) as a
+  catalogue. Three of them become better with the game: parcels (a new piece is new terrain),
+  the cat's requests and the reel.
 
 **Limits of this document.**
 
 - No usage numbers were read; there is no admin token. Every statement about today's app is from
-  the code and docs. Above all, nobody knows how many pairs decorate at all (`DecoratingOpened`,
-  `RoomItemPlaced`), and four of the top five lean on the room being used. Read that first
+  the code and docs. Nobody knows how many pairs decorate at all (`DecoratingOpened`,
+  `RoomItemPlaced`), or how many play the two-sided games that exist
   ([section 7](#7-numbers-to-read-first)).
 - "Fun" is a design judgment. The research found no experiment or controlled study for any
-  mechanic here; the strongest sources are designers' own accounts and two observational studies.
+  mechanic here.
 - Estimates are for one engineer who knows the app, without art unless art is named.
+
+## The game: Night raid
+
+### Why this one
+
+The app has no game in which one partner can outwit the other. Who knows who and Draw and guess
+are about knowing each other; Mischief is one hidden thing among eleven spots. Night raid has the
+three things those lack:
+
+- **Authorship.** The keeper builds a level and imagines the other falling for it. Levels made by
+  one player for another never run out, and they are personal: "you always go round the left of
+  the sofa".
+- **Skill.** The run is played with the thumb, in real time. It can go well or badly, and the
+  same level can be run better.
+- **Comedy that belongs to the cat.** She is the one who jumps a metre backwards from a cucumber
+  and sits in the box with the jar in sight. Losing is funny, which is what lets two people who
+  like each other play against each other.
+
+It also gives the room a purpose that decorating alone never had. A bookcase is a way up; a rug
+is where a squeaky board hides; moving the armchair changes tomorrow's level.
+
+### A round
+
+1. **The keeper sets up** (a minute or two, whenever they like). The room is shown from above on
+   its own grid, with the furniture where the pair has stood it. The keeper puts the jar on the
+   floor or on top of a piece, then chooses three defences from those the pair has, and places
+   them. The keeper can test-run their own level against a ghost of the cat's usual route.
+2. **The cat runs** (45 seconds, once, whenever they like). The partner sees the room and the
+   jar, and the defences that cannot be hidden. They steer: she runs towards the finger, a flick
+   jumps onto or off furniture, holding still makes her crouch and creep. Reaching the jar and
+   holding a paw on it for a second tips it over, with the look back over the shoulder.
+3. **The replay.** The run is kept as the list of the thumb's moves, so it replays exactly. The
+   keeper watches where it went wrong or right; both can watch it again later.
+4. **Swap.** The one who ran is now the keeper.
+
+A run ends as **got it** (with the time) or **kept** (with how close she came). There is no
+partial score to argue over.
+
+### The defences
+
+Eight to start; a pair begins with four and the others arrive by playing, one after every few
+rounds, never for coins.
+
+| Defence | Seen by the cat | What it does | The joke |
+| --- | --- | --- | --- |
+| Robot vacuum | yes | Runs a loop the keeper draws. Touch it and she rides it to the far end of the loop | She looks pleased about it |
+| Cardboard box | yes | Within two cells she is pulled in. Steering hard away for a second breaks free; otherwise she sits in it for 4 seconds | If I fits |
+| Cucumber | no | Within one cell she leaps three cells straight back | The oldest cat video there is |
+| Squeaky board | no | The lamp comes on for 3 seconds. Move while it is lit and she is carried back to the start | Statues, with a cat |
+| Sunbeam | yes | She slows to a stroll while in it, and stops if the thumb lets go | She is only resting her eyes |
+| Laser dot | yes | Pulls her steering towards it while in range | She knows it is not real. She does not care |
+| Baby gate | yes | Blocks a gap on the floor. It can be jumped only from furniture | |
+| Bowl of cream | yes | A second, easier prize. Take it and the run ends as "kept", happily | The keeper's bribe |
+
+The cat has three **sniffs**: a tap with two fingers shows hidden defences within three cells for
+a moment. So the hidden ones are a risk to be managed, not a coin toss.
+
+**The cat is your cat.** Her temperament ([cat-brain.md](cat-brain.md)) changes the run a little,
+and both of you know it: a Clown is quicker and the box pulls harder; a Sleepyhead is slow to
+leave a sunbeam; a Diva will not cross the vacuum's wake; an Explorer has a fourth sniff; a
+Cuddler slows near the lamp when it lights. The keeper builds for the cat they both know.
+
+### Guard the jar: the two of you against her
+
+The same board with the roles changed, for when there is no partner to play against, or for
+playing on the same side. Each of you places two defences in the evening. At night the cat makes
+the run herself: a small planner over the same rules, driven by her temperament and the brain's
+seed, so both phones see the same raid. In the morning there is a replay. If she got the jar she
+is asleep beside it and insufferable for the day; nothing is lost. Her raids get cleverer as
+your defences do.
+
+This is the part a pair of one can play, and it makes "what happened while I was away" a story
+with a plot. It is optional every night: with no defences set she simply has the treat.
+
+### What it is built from
+
+| Need | State today | So |
+| --- | --- | --- |
+| The room as a board | The layout is a grid of 5 cm cells with a footprint and a height for every piece (`DecorLayout`, `DecorCatalog`), shared by both phones | The board is derived from what exists; no level editor to write |
+| A cat that can be steered anywhere | **No.** In the room she walks fixed routes from her resting spot to a dozen named spots (`CatWalker.Destination`) | The game cannot be played with the real cat in the real room yet |
+| Things that can be knocked, lit or moved | **No.** Nothing in the room has a state | The same |
+| A separate stage for a game | Yes: the four care games run on their own tabletop stage (`GameStage`, `TabletopRoom`) | The raid is played on a stage of its own: the room from above, in a drawn style, with a small top-down cat |
+| A turn between two partners, with a push | Yes: riddles (`riddle.ts`, "Your partner drew you a riddle") | A level and a run are two small records in the pair's room |
+| A deterministic replay | The brain already works this way (dice from seed and time) | The run is simulated in fixed steps from the thumb's log; the model imports only Foundation and is tested on the PC |
+
+The honest cost is the second and third rows. The dream is the real cat in the real room, and it
+needs free movement and props with state, which is the largest piece of Room work there is. The
+game does not wait for it: it is played from above, and the replay in the real room comes later.
+
+### The kind rules, applied
+
+- **Nothing expires.** A level waits for its run, a run for its replay. The 45 seconds are the
+  game, not an appointment: the clock starts when the runner starts.
+- **No nag.** One push for a turn, as riddles have ("Leo set a raid"), and none after. Guard the
+  jar sends nothing.
+- **Winning and losing.** Inside the pair this is the fun, and the app keeps it light: it keeps
+  each level's result and the best run per room, and no running total of who is ahead. Nothing
+  compares one couple with another.
+- **13 to 17.** No text and no drawing; the only thing sent is a level and a run.
+- **Coins.** A run pays from the existing `games` source inside its cap of 4 a day (3 for "got
+  it", 1 for "kept", as a game won or lost), so the day's budget does not move and the pacing
+  test passes unchanged. Setting a level pays nothing. Defences are earned by playing. Nothing is
+  sold; later a skin for the jar or the vacuum could be a sink **(coins)**.
+- **Home is not a shop.** The game is entered from the care sheet, like Hide and seek.
+
+### First slices of the game
+
+| | 0. Prototype (`raid`, Labs only) | 1. For two | 2. Guard the jar | 3. In the room |
+| --- | --- | --- | --- | --- |
+| Time | 2 weeks | 3 weeks | 2 weeks | open: needs Room work |
+| In | The board from the pair's layout; the run with steering, jump and creep; four defences (vacuum, box, cucumber, squeaky board); setting a level; replay; both roles on one phone | Levels and runs through the pair's room, the turn push, eight defences with unlocks, temperament, the flag `raid` | The cat's own night raid, her planner, the morning replay | The replay, then the run, with the real cat |
+| Out | Server, art beyond flat shapes, temperament | The cat's own raids | | |
+| Decides | Is steering her past traps fun for five minutes, and is building a trap for someone fun | Do pairs take turns | Does it bring a person back alone | |
+
+- **Works if** (slice 1): among pairs that finished one round, a median of three rounds a week
+  in weeks 2 to 4, and 60% of levels set are run within three days.
+- **Kill if:** under one round a week, or under 40% of levels are ever run. Kill slice 0 with no
+  ceremony if the owner and one other pair put it down after a few minutes.
+- **Events:** `RaidSet`, `RaidRun` (detail: `got` or `kept`), `RaidReplayed`.
+
+### Risks
+
+- **It may not be fun in the hand.** A small board and a thumb can feel fiddly. That is the whole
+  reason slice 0 exists and is cheap.
+- **From above it is not the room people love.** The stage needs a look of its own, a paper
+  cut-out of the pair's room, so it reads as a board game of their home and not as a debug view.
+- **Dominant levels.** A jar walled in by furniture cannot be allowed: the keeper's level must be
+  winnable, checked by the same planner the cat uses in Guard the jar, before it can be sent.
+- **One partner much better.** The keeper's test-run and the sniffs help the weaker one; Guard the
+  jar puts them on the same side.
+- **Overlap.** Mischief is the gentle game on the same room; the raid is the lively one. Cat
+  school's laser courses also run through furniture: agree with that agent which owns "a route
+  through the room".
 
 ## 1. What exists
 
@@ -186,7 +318,7 @@ found by touch, and rolls over under a long stroke.
 
 **4. Little messes.** After a wild hour the cat leaves a piece askew: an armchair turned 45°,
 the rug slid a cell, a paw print beside it. Press and hold, it slides home with a click and a
-haptic, and she looks faintly offended. *(Top 5.)*
+haptic, and she looks faintly offended. *(Round one's five.)*
 
 - Pair: solo feeding the pair. Either partner straightens it for both.
 - Cost: 2 weeks, no art, no Room change: the nudge is a display layout handed to `RoomInput.decor`,
@@ -262,7 +394,7 @@ cat's words, as a card you can keep.
 
 **11. The cat's requests.** She wants a nap in the sun, a lookout, a clear runway for zoomies, a
 place to hide. Each is a loose brief for the room; meet it and she uses what you made, at once
-and from then on. *(Top 5.)*
+and from then on. *(Round one's five.)*
 
 - Pair: solo feeding the pair; the layout is shared, so one arranges and both get the payoff.
 - Cost: 2 weeks: briefs as data (like episodes), a checker over the layout that needs only
@@ -273,7 +405,7 @@ and from then on. *(Top 5.)*
 
 **12. Parcels.** What you buy arrives as a box by the door. Open it and the piece comes out in
 your hands, ready to place; the box stays, and the cat moves in. A gift for your partner arrives
-wrapped, with a tag. *(Top 5.)*
+wrapped, with a tag. *(Round one's five.)*
 
 - Pair: solo, and the gift is the pair.
 - Cost: 1.5 weeks. `buy(_:asGift:)` and `ShopGiftSent` exist; the box model is bundled and the cat
@@ -303,7 +435,7 @@ room wipes to the new one, once.
 
 **15. While you were out.** Coming back after hours, a small reel of what happened: she slept on
 your side, chased the yarn at dusk, your partner fed her at nine. Tap a moment and she walks
-there and does it again for you. *(Top 5.)*
+there and does it again for you. *(Round one's five.)*
 
 - Pair: solo feeding the pair; the partner's deeds are in the reel.
 - Cost: 1.5 weeks. The diary, the day story, the homecoming and "send her to a spot" all exist.
@@ -393,7 +525,7 @@ the post; a faded square where the print used to hang.
 
 **24. The home book.** A portrait of the room is taken each month on the cat's day. The book is
 those portraits as a flip-book, with what happened between them: the piece that arrived, the
-case solved, the request met. *(Top 5.)*
+case solved, the request met. *(Round one's five.)*
 
 - Pair: solo feeding the pair.
 - Cost: 2 weeks: an offscreen picture of the room, kept on the phone and in the pair's storage,
@@ -489,7 +621,9 @@ Weeks for a first slice; "Room" is whether the sealed Room code must change.
 
 ## 5. One loop
 
-The five picked are the five that need the least and connect the most. Together they are the
+Round one's five (while you were out, little messes, the cat's requests, parcels, the home book)
+were picked for needing the least and connecting the most; they are a backdrop to the game above,
+not a reason to open the app. Together they are the
 loop the brief asks for, a home that slowly changes with the cat's life:
 
 | Rhythm | What happens | Mechanic |
@@ -522,6 +656,8 @@ and they must look different (askew with a paw print, against neatly moved). A s
 ending can arrive as a parcel. A trick learned at Cat school is a book entry.
 
 ## 6. First slices
+
+Of round one's five. The game's own slices are [above](#first-slices-of-the-game).
 
 Each behind its own remote flag (`off`, `on`; default `off`; `draft`), each shippable alone, in
 this order. The measure they share is time: the share of sessions of three minutes or more
