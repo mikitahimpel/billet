@@ -7,7 +7,7 @@
 #
 # Builds wait for the Mac to be quiet (1-minute load under BILLET_MAX_LOAD, 40) and take the shared build lock, one
 # build at a time across worktrees, so it never runs under another lock helper. The Simulator is
-# BILLET_TEST_SIMULATOR; the app's DerivedData is deleted after.
+# BILLET_TEST_SIMULATOR, by default the first available iPhone; the app's DerivedData is deleted after.
 #
 # With Warmbuild running on this Mac (`warmbuild start` in the repository), the app build reads what CI compiled on main
 # through its xcconfig. Without it, the build maps this checkout and its DerivedData to fixed names, so the compilation
@@ -24,7 +24,8 @@ esac
 
 root=$(git rev-parse --show-toplevel)
 cd "$root"
-simulator=${BILLET_TEST_SIMULATOR:-862C3666-D41C-406C-B0AE-843DA78898F2}
+simulator=${BILLET_TEST_SIMULATOR:-$(xcrun simctl list devices available | sed -n 's/^ *iPhone [^(]*(\([0-9A-F-]\{36\}\)).*/\1/p' | head -1)}
+[[ -n $simulator ]] || { print -u2 'no iPhone Simulator available; set BILLET_TEST_SIMULATOR'; exit 1 }
 max_load=${BILLET_MAX_LOAD:-40}
 lock=$HOME/.billet-manager/build.lock
 mkdir -p "${lock:h}"
