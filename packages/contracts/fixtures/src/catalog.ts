@@ -148,7 +148,9 @@ import { ChangeListRequest, ListsResponse } from "@billet/contracts-http-api/lis
 import { TitleDetails, TitleSearchResponse } from "@billet/contracts-http-api/titles";
 import { PickMatch, PickTitle } from "@billet/contracts-domain/pick-tonight";
 import { PickSwipeRequest, PickTonightResponse } from "@billet/contracts-http-api/pick-tonight";
+import { LessonRequest, RoutineRequest, SchoolResponse } from "@billet/contracts-http-api/school";
 import { StoryMarkRequest, StoryResponse } from "@billet/contracts-http-api/story";
+import { TrickId } from "@billet/contracts-domain/school";
 import { StoryId, StoryMark } from "@billet/contracts-domain/story";
 import {
   GuessQuestion,
@@ -199,6 +201,12 @@ const reviewCode = Schema.decodeUnknownSync(ReviewCode)("ABCD2345EFGHJKLMNPQRSTU
 const experimentKey = Schema.decodeUnknownSync(ExperimentKey)("home-direction");
 const otherExperimentKey = Schema.decodeUnknownSync(ExperimentKey)("invite-card");
 const variantId = Schema.decodeUnknownSync(VariantId)("window-seat");
+const trickId = Schema.decodeUnknownSync(TrickId);
+const routineSteps = [
+  { trick: trickId("sit"), landed: true },
+  { trick: trickId("spin"), landed: false },
+  { trick: trickId("high-five"), landed: true },
+];
 const storyId = Schema.decodeUnknownSync(StoryId);
 const storyEpisode = storyId("fish-plush");
 const otherVariantId = Schema.decodeUnknownSync(VariantId)("control");
@@ -1020,6 +1028,24 @@ export const catalog: ReadonlyArray<Fixture> = [
       ],
     },
     empty: { mine: [], partner: [] },
+  }),
+  fixture("SchoolResponse", SchoolResponse, {
+    default: {
+      tricks: [
+        { trick: trickId("sit"), stars: 3, by: alice, at: 1_700_000_300_000 },
+        { trick: trickId("spin"), stars: 1, by: bob, at: 1_700_000_310_000 },
+        { trick: trickId("high-five"), stars: 2, by: alice, at: 1_700_000_320_000 },
+      ],
+      mine: { steps: routineSteps, at: 1_700_000_330_000 },
+      partner: { steps: routineSteps.toReversed(), at: 1_700_000_340_000 },
+    },
+    empty: { tricks: [] },
+  }),
+  fixture("LessonRequest", LessonRequest, {
+    default: { trick: trickId("spin"), stars: 2 },
+  }),
+  fixture("RoutineRequest", RoutineRequest, {
+    default: { steps: routineSteps },
   }),
   fixture("StoryMarkRequest", StoryMarkRequest, {
     found: { episode: storyEpisode, kind: "found", ref: storyId("empty-basket") },

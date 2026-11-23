@@ -278,3 +278,18 @@ export const StoredStoryMark = Schema.Struct({
   ref: Schema.String,
   at: Schema.Int,
 });
+
+/** What a `school_tricks` row holds. */
+export const StoredSchoolTrick = Schema.Struct({
+  trick: Schema.String,
+  stars: Schema.Int,
+  by: Schema.String,
+  at: Schema.Int,
+});
+
+/** What a `school_routines` row holds. `steps` is JSON. */
+export const StoredSchoolRoutine = Schema.Struct({
+  member: Schema.String,
+  steps: Schema.String,
+  at: Schema.Int,
+});

@@ -120,6 +120,12 @@ export const routes = {
   getPickTonight: route("GET", "/v1/pick-tonight"),
   /** One Pick tonight swipe; answers the session after it, with the match it made. */
   swipePickTonight: route("POST", "/v1/pick-tonight/swipes"),
+  /** What the pair's cat knows and each partner's last routine: see `SchoolResponse`. */
+  getSchool: route("GET", "/v1/school"),
+  /** One lesson passed; answers the school after it. */
+  teachTrick: route("POST", "/v1/school/lessons"),
+  /** The caller's routine, replacing their last; answers the school after it. */
+  sendRoutine: route("POST", "/v1/school/routines"),
   /** The pair's story marks as the caller sees them: see `StoryResponse`. */
   getStory: route("GET", "/v1/story"),
   /** One story mark; answers the marks after it. */

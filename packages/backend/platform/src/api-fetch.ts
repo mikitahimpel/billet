@@ -34,6 +34,8 @@ import { GuessRoutes } from "@billet/backend-notes/guess-routes";
 import { GuessService } from "@billet/backend-notes/guess-service";
 import { RiddleRoutes } from "@billet/backend-notes/riddle-routes";
 import { RiddleService } from "@billet/backend-notes/riddle-service";
+import { SchoolRoutes } from "@billet/backend-notes/school-routes";
+import { SchoolService } from "@billet/backend-notes/school-service";
 import { StoryRoutes } from "@billet/backend-notes/story-routes";
 import { StoryService } from "@billet/backend-notes/story-service";
 import { ReactionRoutes } from "@billet/backend-notes/reaction-routes";
@@ -118,6 +120,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     ListsRoutes,
     PickTonightRoutes,
     StoryRoutes,
+    SchoolRoutes,
     GuessRoutes,
     RiddleRoutes,
     TitlesRoutes,
@@ -153,6 +156,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         ListsService.layer,
         PickTonightService.layer,
         StoryService.layer,
+        SchoolService.layer,
         GuessService.layer,
         RiddleService.layer,
         TitleCatalog.layer.pipe(

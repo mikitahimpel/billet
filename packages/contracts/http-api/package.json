@@ -33,6 +33,7 @@
     "./activity": "./src/activity.ts",
     "./pair": "./src/pair.ts",
     "./pick-tonight": "./src/pick-tonight.ts",
+    "./school": "./src/school.ts",
     "./story": "./src/story.ts",
     "./reaction": "./src/reaction.ts",
     "./shop": "./src/shop.ts"

@@ -1,6 +1,7 @@
 import { env } from "cloudflare:workers";
 import { evictDurableObject, runInDurableObject } from "cloudflare:test";
 import { Schema } from "effect";
+import { TrickId } from "@billet/contracts-domain/school";
 import { StoryId } from "@billet/contracts-domain/story";
 import { describe, expect, it, vi } from "vitest";
 import { IdempotencyKey, MediaKey, UserId } from "@billet/contracts-domain/ids";
@@ -211,6 +212,7 @@ describe("PairRoom storage", () => {
       expect.stringContaining("_placement_room"),
       expect.stringContaining("_owned_postage"),
       expect.stringContaining("_story_marks"),
+      expect.stringContaining("_school"),
     ]);
   });
 
@@ -780,6 +782,38 @@ describe("PairRoom realtime across eviction", () => {
     expect(await room.story(bob, { _tag: "View" })).toMatchObject({
       _tag: "Done",
       view: { mine: [], partner: [] },
+    });
+  });
+
+  const trick = Schema.decodeUnknownSync(TrickId);
+  it("keeps the school in SQLite: stars rise one at a time for both, a routine reaches the partner, and all goes with the pair", async () => {
+    const room = await openRoom();
+    await room.school(alice, { _tag: "Lesson", trick: trick("spin"), stars: 1 });
+    await room.school(bob, { _tag: "Lesson", trick: trick("spin"), stars: 2 });
+    const steps = ["spin", "spin", "spin"].map((id) => ({
+      trick: trick(id),
+      landed: id === "spin",
+    }));
+    await room.school(alice, { _tag: "Routine", steps });
+    await evictDurableObject(room);
+
+    expect(await room.school(bob, { _tag: "View" })).toMatchObject({
+      _tag: "Done",
+      view: { tricks: [{ trick: "spin", stars: 2, by: alice }], partner: { steps } },
+    });
+    expect(await room.school(bob, { _tag: "Lesson", trick: trick("sit"), stars: 2 })).toEqual({
+      _tag: "Refused",
+      reason: "Invalid",
+    });
+    expect(await room.school(mallory, { _tag: "View" })).toEqual({
+      _tag: "Refused",
+      reason: "NotOpen",
+    });
+
+    await room.forgetMember(alice);
+    expect(await room.school(bob, { _tag: "View" })).toEqual({
+      _tag: "Done",
+      view: { tricks: [] },
     });
   });
 

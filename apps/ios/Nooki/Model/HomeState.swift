@@ -8,6 +8,7 @@ import DecorInterface
 import FeatureDecor
 import FeatureGames
 import FeatureMischief
+import FeatureSchool
 import FeatureMood
 import MomentsInterface
 import MoodInterface
@@ -79,6 +80,8 @@ struct HomeStores {
     let storyLink: StoryLink
     let events: EventReporter
     let mischief: MischiefModel
+    let school: SchoolStore
+    let schoolLink: SchoolLink
 
     static func live(events: EventReporter) -> HomeStores {
         #if DEBUG
@@ -113,6 +116,14 @@ struct HomeStores {
                     fetch: { await storyLink.client.fetch() },
                     mark: { await storyLink.client.mark($0, $1, $2) }),
                 events: events))
+        let schoolLink = SchoolLink()
+        let school = SchoolStore.school(
+            SchoolServices(
+                client: SchoolClient(
+                    fetch: { await schoolLink.client.fetch() },
+                    teach: { await schoolLink.client.teach($0, $1) },
+                    send: { await schoolLink.client.send($0) }),
+                stage: schoolLink.stage, events: events))
         #if DEBUG
         LandingDemo.seed(profile: profile, wallet: wallet, moments: moments, us: us)
         #endif
@@ -122,7 +133,7 @@ struct HomeStores {
             gifts: GiftsModel(us: us, members: members), lists: ListsModel(us: us, members: members),
             journal: Journal(moments: moments, notes: notes, streak: streak, couple: profile) { shop.earn($0) },
             decor: decor, decorSync: decorSync, story: story, storyLink: storyLink, events: events,
-            mischief: mischief)
+            mischief: mischief, school: school, schoolLink: schoolLink)
     }
 }
 
@@ -242,6 +253,15 @@ final class HomeState {
     /// Hide and seek with the toy mouse; see docs/mischief.md.
     let mischief: MischiefModel
 
+    /// The cat school; see docs/cat-school.md.
+    let school: SchoolStore
+    let schoolLink: SchoolLink
+
+    /// The `cat-school` flag is on for this pair, and there is a partner to teach the cat with.
+    var schoolOn: Bool {
+        rooms.remote.variant(of: Experiments.catSchool) == "on" && profile.couple.catPair != nil
+    }
+
     /// The `mischief` flag is on for this pair, and there is a partner to play with.
     var mischiefOn: Bool {
         rooms.remote.variant(of: Experiments.mischief) == "on" && profile.couple.catPair != nil
@@ -249,6 +269,8 @@ final class HomeState {
 
     init(stores: HomeStores) {
         mischief = stores.mischief
+        school = stores.school
+        schoolLink = stores.schoolLink
         profile = stores.profile
         us = stores.us
         partnerMoods = stores.partnerMoods

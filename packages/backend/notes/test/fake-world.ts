@@ -25,6 +25,7 @@ import {
   PickTonightStore,
   pickKeyOf,
 } from "@billet/backend-pair-room/pick-tonight";
+import { type SchoolRows, SchoolRoom, SchoolStore } from "@billet/backend-pair-room/school";
 import { type StoryRow, StoryRoom, StoryStore } from "@billet/backend-pair-room/story";
 import {
   GuessDeck,
@@ -215,6 +216,21 @@ const makeRoom = () => {
       }),
     forget: Effect.sync(() => void (storyRows = [])),
   });
+  let schoolRows: SchoolRows = { tricks: [], routines: [] };
+  const schoolStore = Layer.succeed(SchoolStore, {
+    all: Effect.sync(() => schoolRows),
+    putTrick: (row) =>
+      Effect.sync(() => {
+        const tricks = [...schoolRows.tricks.filter((kept) => kept.trick !== row.trick), row];
+        schoolRows = { ...schoolRows, tricks };
+      }),
+    putRoutine: (row) =>
+      Effect.sync(() => {
+        const routines = [...schoolRows.routines.filter((kept) => kept.member !== row.member), row];
+        schoolRows = { ...schoolRows, routines };
+      }),
+    forget: Effect.sync(() => void (schoolRows = { tricks: [], routines: [] })),
+  });
   let rounds: Array<GuessRoundRow> = [];
   let answers: Array<GuessAnswerRow> = [];
   let weeks: ReadonlyArray<GuessWeekRow> = [];
@@ -280,7 +296,10 @@ const makeRoom = () => {
     PickTonightRoom.make.pipe(Effect.provide(Layer.merge(store, pickStore))),
   );
   const story = Effect.runSync(StoryRoom.make.pipe(Effect.provide(Layer.merge(store, storyStore))));
-  return { ...room, gifts, pick, story, guess, riddle };
+  const school = Effect.runSync(
+    SchoolRoom.make.pipe(Effect.provide(Layer.merge(store, schoolStore))),
+  );
+  return { ...room, gifts, pick, story, school, guess, riddle };
 };
 
 /** Memory-backed dependencies for the given couples. `pairs` is `[pairId, first, second]`. */
@@ -392,6 +411,7 @@ export const makeWorld = (pairs: ReadonlyArray<readonly [PairId, UserId, UserId]
     streak: (pairId) => roomOf(pairId).streak,
     gifts: (pairId, by, command) => roomOf(pairId).gifts.run(by, command),
     pickTonight: (pairId, by, command) => roomOf(pairId).pick.run(by, command),
+    school: (pairId, by, command) => roomOf(pairId).school.run(by, command),
     story: (pairId, by, command) => roomOf(pairId).story.run(by, command),
     riddle: (pairId, by, command) =>
       roomOf(pairId)

@@ -71,8 +71,11 @@ public enum Experiments {
   /// Whether the pair can hide the toy mouse for each other (`docs/mischief.md`). Off, nothing of it shows.
   public static let mischief = Experiment(key: "mischief", variants: ["off", "on"])
 
+  /// Whether the pair can teach the cat tricks (`docs/cat-school.md`). Off, nothing of it shows.
+  public static let catSchool = Experiment(key: "cat-school", variants: ["off", "on"])
+
   public static let all: [Experiment] = [
-    roomLighting, windowView, homeLayout, rooms, roomShell, hints, story, mischief,
+    roomLighting, windowView, homeLayout, rooms, roomShell, hints, story, mischief, catSchool,
   ]
 }
 

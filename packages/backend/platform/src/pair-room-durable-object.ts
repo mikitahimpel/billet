@@ -63,6 +63,11 @@ import {
 } from "@billet/backend-pair-room/riddle";
 import { type RiddleRow, riddleView } from "@billet/backend-pair-room/riddle-rules";
 import { RiddleId } from "@billet/contracts-domain/riddle";
+import {
+  SchoolRoom,
+  type SchoolCommand,
+  type SchoolResult,
+} from "@billet/backend-pair-room/school";
 import { StoryRoom, type StoryCommand, type StoryResult } from "@billet/backend-pair-room/story";
 import type { ChangeListRequest } from "@billet/contracts-http-api/lists";
 import { EconomyTapLive } from "./economy-sink-live.ts";
@@ -491,6 +496,20 @@ export class PairRoom extends DurableObject {
         });
       }
     }
+  }
+
+  /** Runs one school command for `by`. Nothing is pushed: the partner's phone asks. */
+  async school(by: UserId, command: SchoolCommand): Promise<SchoolResult> {
+    return await (
+      await this.runtime
+    ).runPromise(
+      SchoolRoom.use((school) => school.run(by, command)).pipe(
+        Effect.withSpan(`PairRoom.school.${command._tag}`, {
+          root: true,
+          attributes: this.spanAttributes,
+        }),
+      ),
+    );
   }
 
   /** Runs one story command for `by`. Nothing is pushed: the partner's phone asks. */
@@ -1099,6 +1118,7 @@ export class PairRoom extends DurableObject {
     await (await this.runtime).runPromise(GiftsRoom.use((gifts) => gifts.forget));
     await (await this.runtime).runPromise(PickTonightRoom.use((pick) => pick.forget));
     await (await this.runtime).runPromise(StoryRoom.use((story) => story.forget));
+    await (await this.runtime).runPromise(SchoolRoom.use((school) => school.forget));
     await (await this.runtime).runPromise(GuessRoom.use((guess) => guess.forget));
     await (await this.runtime).runPromise(RiddleRoom.use((riddles) => riddles.forget));
     await this.run((room) => room.forgetLists, "PairRoom.forgetLists");

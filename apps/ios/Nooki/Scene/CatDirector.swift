@@ -2,6 +2,7 @@ import Foundation
 import Design
 import MischiefInterface
 import Observation
+import SchoolInterface
 import Pet
 import simd
 
@@ -213,6 +214,22 @@ final class CatDirector {
             walker.hop()
             lastEvent = "mouse: found"
         }
+    }
+
+    /// A trick asked for at the school, or what she does instead. Her own plans wait while she does it.
+    func school(_ move: SchoolMove) {
+        holdUntil = max(holdUntil, Date.now.timeIntervalSince1970 + 4)
+        switch move {
+        case .trick(.spin): walker.spin()
+        case .trick(.jump): walker.hop()
+        case .trick(.highFive): walker.pats()
+        case .trick(.bow): walker.crouch()
+        case .flub(.yawn): walker.behavior.perform(.yawn)
+        case .flub(.groom): walker.behavior.perform(.groom)
+        case .flub(.tilt): walker.behavior.perform(.tilt)
+        case .flub(.shake): walker.behavior.perform(.shake)
+        }
+        lastEvent = "school: \(move)"
     }
 
     private func tell(_ spot: MischiefSpot, until: Double) {

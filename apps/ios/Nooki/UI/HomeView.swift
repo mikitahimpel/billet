@@ -7,6 +7,7 @@ import FeatureDecor
 import FeatureGames
 import FeatureInbox
 import FeatureMischief
+import FeatureSchool
 import MomentsInterface
 import ServerSync
 import WidgetInterface
@@ -120,6 +121,7 @@ struct HomeView: View {
         .task {
             if let item = UserDefaults.standard.string(forKey: "decorate") { state.decor.send(.opened(item: item == "closet" ? nil : item)) }
             state.mischief.hint = { [room] in room.mischief($0) }
+            state.schoolLink.stage.perform = { [room] in room.school($0) }
             room.load()
             for await event in room.events { handle(event) }
         }
@@ -209,6 +211,12 @@ struct HomeView: View {
             CaseSheet(store: state.story, cat: state.petName, partner: state.profile.name(of: state.otherPartner))
         }
         .task(id: storyKey) { followStory() }
+        .sheet(isPresented: schoolOpen) {
+            SchoolSheet(
+                store: state.school, cat: state.petName, partner: state.profile.name(of: state.otherPartner),
+                viewer: state.profile.couple.pair?.users[state.profile.couple.viewer])
+        }
+        .task(id: schoolKey) { followSchool() }
         .sheet(item: $state.composingNote) { mode in
             NoteComposer(state: state, mode: mode)
         }
@@ -667,6 +675,23 @@ struct HomeView: View {
         state.story.send(.disabled)
         guard let mine = storyKey.first, let theirs = storyKey.last, let episode = EpisodeCatalog.all.first else { return }
         state.story.send(.enabled(episode, Side(viewer: mine, partner: theirs)))
+    }
+
+    /// Whether this pair has the school, and whose session reaches it.
+    private var schoolKey: [String] {
+        guard session?.isPaired == true, state.schoolOn, let users = state.profile.couple.pair?.users else { return [] }
+        return users.values.sorted()
+    }
+
+    private func followSchool() {
+        state.schoolLink.client = session.map { .live($0.api) } ?? .offline
+        state.school.send(.disabled)
+        guard !schoolKey.isEmpty else { return }
+        state.school.send(.enabled)
+    }
+
+    private var schoolOpen: Binding<Bool> {
+        Binding { state.school.state.isOpen } set: { if !$0 { state.school.send(.dismissed) } }
     }
 
     private var caseOpen: Binding<Bool> {

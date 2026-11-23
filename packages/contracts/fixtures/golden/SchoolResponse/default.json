@@ -1,0 +1,56 @@
+{
+  "mine": {
+    "at": 1700000330000,
+    "steps": [
+      {
+        "landed": true,
+        "trick": "sit"
+      },
+      {
+        "landed": false,
+        "trick": "spin"
+      },
+      {
+        "landed": true,
+        "trick": "high-five"
+      }
+    ]
+  },
+  "partner": {
+    "at": 1700000340000,
+    "steps": [
+      {
+        "landed": true,
+        "trick": "high-five"
+      },
+      {
+        "landed": false,
+        "trick": "spin"
+      },
+      {
+        "landed": true,
+        "trick": "sit"
+      }
+    ]
+  },
+  "tricks": [
+    {
+      "at": 1700000300000,
+      "by": "user-alice",
+      "stars": 3,
+      "trick": "sit"
+    },
+    {
+      "at": 1700000310000,
+      "by": "user-bob",
+      "stars": 1,
+      "trick": "spin"
+    },
+    {
+      "at": 1700000320000,
+      "by": "user-alice",
+      "stars": 2,
+      "trick": "high-five"
+    }
+  ]
+}

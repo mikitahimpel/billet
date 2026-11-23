@@ -22,6 +22,8 @@ struct PetButton: View {
     /// Hide & seek opens once her sheet is down: a sheet cannot present over the one that is leaving.
     @State private var opensMischief = false
     @State private var showsMischief = false
+    /// The school opens once her sheet is down, for the same reason.
+    @State private var opensSchool = false
     /// Bumped when a need starts to want something, so its ring pulses once.
     @State private var asks = 0
     @Environment(Hints.self) private var hints
@@ -101,6 +103,10 @@ struct PetButton: View {
             state.showsPetSheet = false
         }
         .sheet(isPresented: $showsSheet, onDismiss: {
+            if opensSchool {
+                opensSchool = false
+                state.school.send(.opened)
+            }
             guard opensMischief else { return }
             opensMischief = false
             showsMischief = true
@@ -110,6 +116,9 @@ struct PetButton: View {
                 onPlay(game)
             }, onMischief: {
                 opensMischief = true
+                showsSheet = false
+            }, onSchool: {
+                opensSchool = true
                 showsSheet = false
             })
         }
@@ -123,6 +132,7 @@ private struct PetSheet: View {
     var needs: () -> PetNeedsSource?
     var onPlay: (MiniGame) -> Void
     var onMischief: () -> Void
+    var onSchool: () -> Void
     @State private var short = false
     /// What she said to the care she turned down, for a few seconds.
     @State private var turnedDown: String?
@@ -236,6 +246,11 @@ private struct PetSheet: View {
                     PillButton("Hide & seek", symbol: "sparkle.magnifyingglass", action: onMischief)
                         .accessibilityHint("Hide the toy mouse for \(state.profile.name(of: state.otherPartner)), or look for theirs")
                         .accessibilityIdentifier("mischiefPill")
+                }
+                if state.schoolOn {
+                    PillButton("Tricks", symbol: "graduationcap", action: onSchool)
+                        .accessibilityHint("Teach \(state.petName) a trick, or ask for one")
+                        .accessibilityIdentifier("schoolPill")
                 }
             }
             if let turnedDown {

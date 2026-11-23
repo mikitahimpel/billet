@@ -75,6 +75,10 @@ public enum Routes {
   /// The pair's Pick tonight session; a swipe answers the session after it.
   public static let getPickTonight = Route(.get, "/v1/pick-tonight")
   public static let swipePickTonight = Route(.post, "/v1/pick-tonight/swipes")
+  /// The cat school; a lesson or a routine answers the school after it.
+  public static let getSchool = Route(.get, "/v1/school")
+  public static let teachTrick = Route(.post, "/v1/school/lessons")
+  public static let sendRoutine = Route(.post, "/v1/school/routines")
   /// The pair's story marks; a mark answers the marks after it.
   public static let getStory = Route(.get, "/v1/story")
   public static let markStory = Route(.post, "/v1/story/marks")
