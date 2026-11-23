@@ -64,6 +64,9 @@ final class CatWalker {
     struct Posture {
         var lift: Float = 0, back: Float = 0, pitch: Float = 0, bend: Float = 0, headPitch: Float = 0, seat: Float = 0
         var fore = SIMD2<Float>.zero, hind = SIMD2<Float>.zero
+        /// Moves the left and the right hind paw back by its own amount on top of `hind`, model units: while she
+        /// changes posture they step to their new place one after the other.
+        var hindSplit = SIMD2<Float>.zero
         var tail: [Float] = [0, 0, 0]
         /// Swings each tail joint to her left, radians.
         var sway: [Float] = [0, 0, 0]
@@ -77,10 +80,15 @@ final class CatWalker {
                 return acos(min(max((cs + cl + cs * cl - 1) / 2, -1), 1))
             }
         }
-        // Rump down on folded hind legs, chest up on straight fore legs, tail lying behind her: the seated splat's
-        // silhouette, with the head exactly where the seated splat has it, for the swap between the two.
-        static let sit = Posture(lift: -0.005, back: -0.005, pitch: 0.5, bend: -0.7, headPitch: 0, seat: 1, hind: [0, -0.035],
-                                 tail: [-0.8, -0.5, -0.4])
+        // Rump down with the hind paws drawn in under her, chest up on straight fore legs, tail round her left side:
+        // of the standing splat's upright postures the one whose outline lies closest on the seated splat's from the
+        // sides, front, back and above (tools/cat-motion, `fit`), both leaning forward by `swapLean`, with the head
+        // exactly where the seated splat has it, for the swap between the two.
+        static let sit = Posture(lift: -0.0194, back: -0.0288, pitch: 0.75, bend: -0.7, headPitch: 0, seat: 1,
+                                 fore: [-0.006, -0.005], hind: [0.02, -0.12], tail: [-0.3, -0.7, -0.3], sway: [0.9, 0.95, 1.1])
+        /// Radians both splats lean forward about the floor where one takes over from the other: sitting, a cat
+        /// leans over her fore paws before she gets up and comes back upright after she sits down.
+        static let swapLean: Float = 0.16
         // Lying with her paws tucked under her and the tail along her side.
         static let loaf = Posture(lift: -0.065, bend: 0.05, headPitch: 0.05, fore: [0, 0.035], hind: [0, -0.03],
                                   tail: [-0.9, -0.7, -0.6], sway: [0.7, 0.6, 0.6])
@@ -93,10 +101,63 @@ final class CatWalker {
             Posture(lift: lerp(a.lift, b.lift, t), back: lerp(a.back, b.back, t), pitch: lerp(a.pitch, b.pitch, t),
                     bend: lerp(a.bend, b.bend, t), headPitch: lerp(a.headPitch, b.headPitch, t), seat: lerp(a.seat, b.seat, t),
                     fore: simd_mix(a.fore, b.fore, SIMD2(repeating: t)), hind: simd_mix(a.hind, b.hind, SIMD2(repeating: t)),
+                    hindSplit: simd_mix(a.hindSplit, b.hindSplit, SIMD2(repeating: t)),
                     tail: zip(a.tail, b.tail).map { lerp($0, $1, t) },
                     sway: zip(a.sway, b.sway).map { lerp($0, $1, t) })
         }
+
+        /// When each part of her moves within a change of posture, as shares of its time: a cat does not morph from
+        /// one pose to the next, her parts go in turn and overlap.
+        struct Order {
+            var pitch, lift, bend, back, head, tail, fore, hindLeft, hindRight: ClosedRange<Float>
+
+            // Up from sitting: the chest and head go forward first, the hind legs push the rump up (most of the push
+            // in the first half), the hind paws step back out from under her one after the other, the tail comes up
+            // last.
+            static let rising = Order(pitch: 0.05...0.7, lift: 0...0.75, bend: 0.08...0.8, back: 0...0.65, head: 0...0.5,
+                                      tail: 0.25...1, fore: 0.1...0.6, hindLeft: 0.3...0.62, hindRight: 0.56...0.9)
+            // Down to sitting: the hind paws step in under her, the rump goes down onto them, the chest comes up, the
+            // head settles and the tail comes round last.
+            static let sitting = Order(pitch: 0.2...0.85, lift: 0.15...0.9, bend: 0.25...0.95, back: 0.1...0.75,
+                                       head: 0.35...0.9, tail: 0.4...1, fore: 0.3...0.7, hindLeft: 0...0.3,
+                                       hindRight: 0.22...0.52)
+
+            func share(_ range: ClosedRange<Float>, _ u: Float) -> Float {
+                min(max((u - range.lowerBound) / (range.upperBound - range.lowerBound), 0), 1)
+            }
+        }
+
+        /// `u` of the way from `a` to `b` in time, each part as far as `order` has it by then.
+        static func blend(_ a: Posture, _ b: Posture, _ u: Float, _ order: Order) -> Posture {
+            guard u < 1 else { return b }
+            func at(_ range: ClosedRange<Float>) -> Float { ease(order.share(range, u)) }
+            let (tail, head, fore) = (at(order.tail), at(order.head), at(order.fore))
+            let reach = b.hind.y + b.hindSplit - a.hind.y - a.hindSplit
+            return Posture(lift: lerp(a.lift, b.lift, at(order.lift)), back: lerp(a.back, b.back, at(order.back)),
+                           pitch: lerp(a.pitch, b.pitch, at(order.pitch)), bend: lerp(a.bend, b.bend, at(order.bend)),
+                           headPitch: lerp(a.headPitch, b.headPitch, head), seat: lerp(a.seat, b.seat, head),
+                           fore: simd_mix(a.fore, b.fore, SIMD2(repeating: fore)),
+                           hind: [lerp(a.hind.x, b.hind.x, at(order.lift)), a.hind.y],
+                           hindSplit: a.hindSplit + reach * SIMD2(at(order.hindLeft), at(order.hindRight)),
+                           tail: zip(a.tail, b.tail).map { lerp($0, $1, tail) },
+                           sway: zip(a.sway, b.sway).map { lerp($0, $1, tail) })
+        }
     }
+
+    /// A change of posture under way. It runs beside the steps, so the next one may start before she is all the way
+    /// there.
+    private struct Change {
+        let from, to: Posture
+        let order: Posture.Order
+        let duration: Float
+        var time: Float = 0
+    }
+
+    // Model units a hind paw clears the floor by as it steps to its new place under her.
+    private static let pawStep: Float = 0.007
+    // How far she squashes down into a swap of her splats, as a share of her height; the body that takes over comes
+    // back up from it, so the cut falls inside one move.
+    private static let swapSquash: Float = 0.035
 
     private struct Step {
         let duration: Float
@@ -162,6 +223,9 @@ final class CatWalker {
     private var tailTrack: [(at: SIMD3<Float>, dt: Float)] = []
     private var tailPush = SIMD3<Float>.zero
     private var seatAmount: Float = 1
+    private var change: Change?
+    private var squash: (value: Float, speed: Float, goal: Float, shown: Float) = (0, 0, 0, 0)
+    private var lean: (value: Float, speed: Float, goal: Float) = (0, 0, 0)
     private var breath = Breath()
     private var effort: Float = 0
     private var lying = false
@@ -335,6 +399,10 @@ final class CatWalker {
         rest = .sit
         posture = .sit
         stepping = false
+        change = nil
+        tread = .zero
+        squash.goal = 0
+        lean.goal = 0
         group.position = home
         yaw = homeYaw
         planYaw = homeYaw
@@ -479,6 +547,7 @@ final class CatWalker {
             if u >= 1 { steps.removeFirst() }
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
         }
+        advanceChange(dt)
         // Tired she lies down to doze, and gets up again once rested.
         if !directed && !moving && !lying && behavior.drowse > 0.7 && behavior.mood.energy < 0.3 { lieDown() }
         else if !directed && !moving && lying && behavior.mood.energy > 0.5 { getUp() }
@@ -499,6 +568,44 @@ final class CatWalker {
         resting += ((moving ? 0 : 1) - resting) * (1 - exp(-dt * 4))
         pose(dt)
         updateSeat(headPitch: standing.pose.headPitch - posture.headPitch)
+        updateSquash(dt)
+    }
+
+    private func advanceChange(_ dt: Float) {
+        guard var c = change else { return }
+        c.time += dt
+        let u = min(c.time / c.duration, 1)
+        posture = .blend(c.from, c.to, u, c.order)
+        // Each hind paw lifts while it is on its way.
+        func lift(_ range: ClosedRange<Float>) -> Float { Self.pawStep * sin(c.order.share(range, u) * .pi) }
+        let steps = c.from.hind.y + c.from.hindSplit != c.to.hind.y + c.to.hindSplit
+        tread = steps ? [lift(c.order.hindLeft), lift(c.order.hindRight)] : .zero
+        change = u < 1 ? c : nil
+    }
+
+    /// The squash eases to its goal as a lightly damped spring, so she bounces once coming out of it. A still cat
+    /// writes no scale.
+    private func updateSquash(_ dt: Float) {
+        let n = max(1, Int((dt * 120).rounded(.up)))
+        let h = dt / Float(n)
+        if lean.goal != 0 || lean.value != 0 || lean.speed != 0 {
+            for _ in 0..<n {
+                lean.speed += (11 * 11 * (lean.goal - lean.value) - 2 * 0.8 * 11 * lean.speed) * h
+                lean.value += lean.speed * h
+            }
+            if lean.goal == 0, abs(lean.value) < 5e-4, abs(lean.speed) < 5e-3 { (lean.value, lean.speed) = (0, 0) }
+        }
+        guard squash.goal != 0 || squash.value != 0 || squash.speed != 0 else { return }
+        for _ in 0..<n {
+            squash.speed += (20 * 20 * (squash.goal - squash.value) - 2 * 0.5 * 20 * squash.speed) * h
+            squash.value += squash.speed * h
+        }
+        if squash.goal == 0, abs(squash.value) < 5e-4, abs(squash.speed) < 5e-3 { (squash.value, squash.speed) = (0, 0) }
+        guard squash.value != squash.shown else { return }
+        squash.shown = squash.value
+        let scale = SIMD3<Float>(1 + squash.value / 2, 1 - squash.value, 1 + squash.value / 2)
+        standing.entity?.scale = scale
+        seated.entity?.scale = scale
     }
 
     /// 1 shows the seated cat, 0 the standing one, cutting from one to the other halfway: their collars, bells and paws
@@ -555,7 +662,7 @@ final class CatWalker {
             let offset = leg.fore ? s.fore : s.hind
             var foot = gait.foot(i)
             foot.y += offset.x + (leg.name == "leftHind" ? tread.x : leg.name == "rightHind" ? tread.y : 0)
-            foot.z += offset.y
+            foot.z += offset.y + (leg.name == "leftHind" ? s.hindSplit.x : leg.name == "rightHind" ? s.hindSplit.y : 0)
             p.feet[i] = foot
         }
         // The tail rides high on the move and waves slowly, each joint a little later than the one before; on top of
@@ -656,7 +763,7 @@ final class CatWalker {
         let chestYaw = b.chestYaw * r
         // The head keeps looking where it did, the chest having turned under it.
         p.headYaw -= chestYaw
-        let lean = Pose.about(floor, .x(-b.forward * r) * .z(b.lean * r))
+        let lean = Pose.about(floor, .x(-b.forward * r - self.lean.value) * .z(b.lean * r))
         p.chestMove = lean.under(Pose.about(spine, .y(chestYaw)))
         p.chestMove.t += breathChest * breath.value
         p.hipsMove = lean.under(Pose.about(spine, .y(0.3 * chestYaw)))
@@ -709,8 +816,20 @@ final class CatWalker {
             add(0.9) { [unowned self] u in posture = .blend(.loaf, .stand, ease(u)) }
             return
         }
-        add(0.05) { [unowned self] u in fade(1 - u) }
-        add(pace.standUp) { [unowned self] u in posture = .blend(.sit, .stand, ease(u)) }
+        // She gathers herself on the seated splat, and the standing one takes over at the bottom of it.
+        add(0.3) { [unowned self] u in
+            lean.goal = Posture.swapLean
+            squash.goal = Self.swapSquash * smoothstep(u, 0.4, 1)
+        }
+        var started = false
+        add(pace.standUp) { [unowned self] _ in
+            guard !started else { return }
+            started = true
+            fade(0)
+            squash.goal = 0
+            lean.goal = 0
+            change = Change(from: .sit, to: .stand, order: .rising, duration: pace.standUp)
+        }
     }
 
     /// A front stretch before setting off: fore paws reach forward, chest goes down and rump up with the tail raised,
@@ -746,8 +865,21 @@ final class CatWalker {
     }
 
     private func sitDown() {
-        add(pace.sitDown) { [unowned self] u in posture = .blend(.stand, .sit, ease(u)) }
-        add(0.05) { [unowned self] u in fade(u) }
+        var started = false
+        add(pace.sitDown) { [unowned self] u in
+            if !started {
+                started = true
+                change = Change(from: posture, to: .sit, order: .sitting, duration: pace.sitDown)
+            }
+            // Her rump meets the floor in a squash, and the seated splat takes over at the bottom of it.
+            lean.goal = Posture.swapLean * smoothstep(u, 0.3, 0.8)
+            squash.goal = Self.swapSquash * smoothstep(u, 0.82, 1)
+            if u >= 1 {
+                fade(1)
+                squash.goal = 0
+                lean.goal = 0
+            }
+        }
     }
 
     /// Turns on the spot with small steps at her pace's rate, the head ahead of the body.

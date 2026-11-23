@@ -24,6 +24,43 @@ let dt: Float = 1 / 60
 let roomDirection = SIMD3<Float>(1, 0.82, 1)
 let sideZoom: Float = 1150
 
+if label == "report" {
+  // Works the numbers out again from the samples a run left.
+  for name in arguments.dropFirst() {
+    let folder = out.deletingLastPathComponent().appending(path: name)
+    for scenario in Scenario.all {
+      guard let data = try? Data(contentsOf: folder.appending(path: "\(scenario.name).json")) else { continue }
+      let report = Metrics(samples: try JSONDecoder().decode([Sample].self, from: data), dt: 1 / 60).report(scenario.name)
+      try report.write(to: folder.appending(path: "\(scenario.name).txt"), atomically: true, encoding: .utf8)
+      print(report)
+    }
+  }
+  exit(0)
+}
+
+if label == "poses" {
+  // cat-motion poses "<15 numbers>" ...: each candidate's standing body beside the seated one.
+  let stage = try Stage(resources: resources, at: .zero, yaw: 0, lyingBodies: false)
+  let fit = SwapFit(stage: stage, renderer: renderer)
+  let candidates = arguments.dropFirst().map { SwapFit.Candidate(values: $0.split(separator: " ").compactMap { Float($0) }) }
+  fit.gallery(candidates, to: out.appending(path: "gallery.png"))
+  exit(0)
+}
+
+if label == "fit" {
+  let stage = try Stage(resources: resources, at: .zero, yaw: 0, lyingBodies: false)
+  let fit = SwapFit(stage: stage, renderer: renderer)
+  fit.picture(.sit, to: out.appending(path: "sit.png"))
+  // cat-motion fit ["<15 numbers to start from>" [index of a value to hold ...]]
+  var start = SwapFit.Candidate.sit
+  if arguments.count > 1 { start.values = arguments[1].split(separator: " ").compactMap { Float($0) } }
+  let held = Set(arguments.dropFirst(2).compactMap { Int($0) })
+  let (best, least) = fit.search(from: start, holding: held)
+  fit.picture(best, to: out.appending(path: "best.png"))
+  print("best \(least):", zip(SwapFit.Candidate.names, best.values).map { "\($0)=\($1)" }.joined(separator: " "))
+  exit(0)
+}
+
 func drawFloor(_ context: CGContext, camera: Camera, scenario: Scenario, floor: Float, side: Bool) {
   context.setFillColor(CGColor(red: 0.93, green: 0.9, blue: 0.85, alpha: 1))
   context.fill(CGRect(origin: .zero, size: panel))

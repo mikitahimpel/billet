@@ -19,6 +19,8 @@ struct Sample: Codable {
   /// The body's posture as the standing rig holds it.
   var lift: Float, pitch: Float, roll: Float, bend: Float, headPitch: Float, headYaw: Float, tail: Float
   var paws: [Paw]
+  /// How far behind the body's origin the hind paws are, model units.
+  var hindReach: Float = 0
   /// Share of the side view's silhouette that changed since the frame before: pixels covered in one
   /// of the two only, over pixels covered in either.
   var silhouetteChange: Float = 0
@@ -51,6 +53,13 @@ struct Sample: Codable {
         at: [world.x, world.y, world.z], planted: standing && p.feet[i].y < leg.paw.y + 0.0015, upper: upper,
         lower: lower)
     }
+    hindReach = Self.hindReach(stage)
+  }
+
+  static func hindReach(_ stage: Stage) -> Float {
+    let rig = stage.standing
+    let hind = rig.legs.indices.filter { !rig.legs[$0].fore }
+    return hind.reduce(Float(0)) { $0 + rig.pose.feet[$1].z } / Float(max(hind.count, 1))
   }
 
   static func change(_ a: [UInt8], _ b: [UInt8]) -> Float {
@@ -107,10 +116,8 @@ struct Metrics {
       ("lift", { $0.lift }, 0.003), ("pitch", { $0.pitch }, 0.03), ("bend", { $0.bend }, 0.03),
       ("headPitch", { $0.headPitch }, 0.03), ("tail", { $0.tail }, 0.05),
     ]
-    for (i, name) in ["hindL", "foreL", "hindR", "foreR"].enumerated() where i < (samples.first?.paws.count ?? 0) {
-      all.append(("\(name).upper", { $0.paws[i].upper }, 0.05))
-      all.append(("\(name).lower", { $0.paws[i].lower }, 0.05))
-    }
+    // The hind paws' place under her, in model units along her length, apart from the gait's steps.
+    if (samples.first?.paws.count ?? 0) > 0 { all.append(("hindPaws", { $0.hindReach }, 0.004)) }
     return all
   }
 
