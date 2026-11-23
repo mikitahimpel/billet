@@ -11,8 +11,15 @@ splats only from iOS 27.
 
 ```sh
 tools/cat-motion/run.sh <label> [scenario ...]   # all scenarios without names
-tools/cat-motion/compare.sh <before> <after>     # side-by-side movies and the numbers of both
+tools/cat-motion/compare.sh <before> <after>     # stacked movies and the numbers of both
+tools/cat-motion/run.sh report <label> ...       # the numbers again from the samples a run left
+tools/cat-motion/run.sh fit ["<start>" [held index ...]]   # search for the swap posture
+tools/cat-motion/run.sh poses "<15 numbers>" ... # candidates' standing body beside the seated one
 ```
+
+`fit` searches the standing rig's postures for the one whose outline lies closest on the seated
+splat's from six sides (`Fit.swift`); `CatWalker.Posture.sit` and `swapLean` come from it, with the
+pitch held upright, since the closest outline overall is a flat crouch that does not read as sitting.
 
 Each scenario leaves `<scenario>.mp4` (room view left, side view following her right, 60 fps),
 `<scenario>.json` (a sample per frame) and `<scenario>.txt` (the numbers) in
