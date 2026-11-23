@@ -35,6 +35,7 @@ packages/ios/features          BilletFeatures, one pair of targets per feature
 ├── FeatureUs        UsInterface          lists, wishlist, calendar, dates, Pick tonight, gifts
 ├── FeatureMood      MoodInterface        check-ins and the mood sync
 ├── FeatureMischief  MischiefInterface    hide and seek with the toy mouse (docs/mischief.md)
+├── FeatureSchool    SchoolInterface      tricks, stars and routines (docs/cat-school.md)
 ├── FeatureInbox     InboxInterface       the activity Inbox
 ├── FeatureGames     GamesInterface       Who knows who, Draw & guess, the mini-games' rules
 ├── FeatureDecor     DecorInterface       placing owned pieces in the room: grid, fit rules, the cat's way, the machine

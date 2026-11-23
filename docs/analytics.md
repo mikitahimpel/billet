@@ -19,7 +19,9 @@ server records itself, are in [experiments.md](experiments.md#metrics).
 | `CatFed` | `treat` (the day's shared treat) or `food` | | Is the daily treat a habit? Do people feed beyond it? |
 | `CatPlayed` | the toy's id, when there is one | | Which games are played? |
 | `CatCalled` | none | | Do people call the cat over? |
-| `TrickDone` | the trick's id | | Do the learned tricks get used? |
+| `TrickDone` | the trick's id | | Do the learned tricks get used? Reported when the cat does a trick it was asked for at the school. |
+| `TrickTaught` | the trick's id (`high-five`) | | Which tricks are taught, and how far? Reported for each star the room takes, in the `cat-school` flag. |
+| `RoutineSent` | none | | Do pairs send each other routines? |
 | `CatChosen` | the cat's id from the picker | | Which cats do people choose? |
 | `TemperamentShown` | the temperament's id | | Do people see their cat's temperament, and which ones come up? |
 | `NoteOpened` | `widget` or `app` | | Are notes read from the widget or inside the app? (Drawing and sending a note are counted by the server as `NoteSent`.) |
