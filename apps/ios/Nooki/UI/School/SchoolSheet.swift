@@ -121,7 +121,7 @@ private struct Stars: View {
         HStack(spacing: Space.xxs) {
             ForEach(1...TrickSkill.maxStars, id: \.self) { star in
                 Image(systemName: star <= count ? "star.fill" : "star")
-                    .foregroundStyle(star <= count ? Ink.honey : Ink.textTertiary)
+                    .foregroundStyle(star <= count ? Color.honey : Ink.textTertiary)
             }
         }
         .font(.ourioCallout)

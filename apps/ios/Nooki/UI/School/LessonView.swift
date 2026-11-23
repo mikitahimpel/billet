@@ -68,7 +68,7 @@ private struct CueBar: View {
                     context.fill(track, with: .color(Ink.well))
                     for (index, window) in round.windows.enumerated() {
                         let lit = CGRect(x: size.width * window.lowerBound, y: 0, width: size.width * (window.upperBound - window.lowerBound), height: size.height)
-                        context.fill(Path(lit), with: .color(index < taps ? Ink.honeyDeep : Ink.sage))
+                        context.fill(Path(lit), with: .color(index < taps ? Color.honeyDeep : Color.sage))
                     }
                     let mark = CGRect(x: size.width * at - size.height / 4, y: 0, width: size.height / 2, height: size.height)
                     context.fill(Path(ellipseIn: mark), with: .color(Ink.text))
