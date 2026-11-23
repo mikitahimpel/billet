@@ -1,0 +1,1 @@
+../../../../../apps/ios/Nooki/Scene/CatRig.swift
