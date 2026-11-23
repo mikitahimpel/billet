@@ -184,6 +184,17 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     killed: false,
   },
   {
+    key: "cat-school",
+    kind: "flag",
+    description:
+      "Whether the pair can teach the cat tricks, ask for them and send each other routines (docs/cat-school.md).",
+    variants: { off: 1, on: 0 },
+    default: "off",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
+  {
     key: "mischief",
     kind: "flag",
     description:

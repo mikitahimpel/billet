@@ -2,6 +2,7 @@ import DecorInterface
 import Foundation
 import GamesInterface
 import MischiefInterface
+import SchoolInterface
 import Pet
 
 /// What happened in the room that the rest of the app acts on. The room writes to no store itself.
@@ -49,6 +50,8 @@ public protocol RoomControlling: AnyObject {
   func playAll()
   /// The cat's answer to a look for the hidden mouse.
   func mischief(_ hint: MischiefHint)
+  /// The cat does a trick it was asked for, or the thing it does instead.
+  func school(_ move: SchoolMove)
 }
 
 /// The cat as the screens outside the room see her: coarse, and changed at most once a second.

@@ -73,6 +73,7 @@ import Testing
       keys == [
         "room-lighting", "window-view", "home-layout", "rooms", "room-shell", "hints", "story",
         "mischief",
+        "cat-school",
       ])
   }
 
