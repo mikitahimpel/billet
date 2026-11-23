@@ -80,6 +80,7 @@ let tests: [(name: String, dependencies: [String])] = [
   ("UsInterfaceTests", ["UsInterface", "Persistence", "Wire"]),
   ("SchoolInterfaceTests", ["SchoolInterface"]),
   ("FeatureSchoolTests", ["FeatureSchool", "SchoolInterface", "BilletKit", "Transport", "Wire"]),
+  ("FeatureRaidTests", ["FeatureRaid", "RaidInterface", "DecorInterface", "BilletKit"]),
   ("StoryInterfaceTests", ["StoryInterface"]),
   ("FeatureStoryTests", ["FeatureStory", "StoryInterface", "BilletKit", "Transport", "Wire"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Transport", "Wire"]),
@@ -214,6 +215,10 @@ let roomInterface: Target = .target(
     "BilletKit",
   ]))
 
+let raidInterface: Target = .target(name: "RaidInterface")
+let raid: Target = .target(
+  name: "FeatureRaid",
+  dependencies: dependencies(["RaidInterface", "DecorInterface", "BilletKit"]))
 let schoolInterface: Target = .target(name: "SchoolInterface")
 let school: Target = .target(
   name: "FeatureSchool",
@@ -234,7 +239,7 @@ let products =
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
     "DecorInterface", "FeatureDecor", "FeatureUs", "ServerSync", "MischiefInterface",
-    "FeatureMischief",
+    "FeatureMischief", "RaidInterface", "FeatureRaid",
   ]
 
 let package = Package(
@@ -255,7 +260,7 @@ let package = Package(
       widgetUI,
       decorInterface, decor, us, onboarding, serverSync, storyInterface, story, schoolInterface,
       school, mischiefInterface,
-      mischief,
+      mischief, raidInterface, raid,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
     + [usTests, shopTests, onboardingTests, serverSyncTests],
