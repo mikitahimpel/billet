@@ -56,9 +56,33 @@ private func step(_ state: RaidMachine.State, _ events: RaidMachine.Event...) ->
     #expect(set == emptied)
   }
 
-  @Test func aLevelWithAProblemIsNotHandedOver() {
-    let unfair = step(draft(), .tapped(RaidPoint(x: -0.35, z: 0)))
-    #expect(step(unfair, .handedOver) == unfair)
+  @Test func aTapThatWouldBeUnfairPutsNothingDownAndSaysWhy() {
+    let nearStart = RaidPoint(x: -0.35, z: 0)
+    #expect(step(draft(), .tapped(nearStart)) == draft { $0.refused = .jarTooNearStart })
+    let box = step(draft(), .chose(.box), .tapped(nearStart))
+    let refused = draft {
+      $0.tool = .box
+      $0.refused = .defenceNearStart(1)
+    }
+    #expect(box == refused)
+    let end = step(draft(), .chose(.vacuum), .tapped(RaidPoint(x: 0, z: 0)), .tapped(nearStart))
+    let waiting = draft {
+      $0.tool = .vacuumEnd(from: RaidPoint(x: 0, z: 0))
+      $0.refused = .defenceNearStart(1)
+    }
+    #expect(end == waiting)
+    #expect(step(box, .tapped(RaidPoint(x: 0, z: 0))) != refused)
+  }
+
+  @Test func aFourthDefenceIsRefused() {
+    let taps = (0..<4).map { RaidMachine.Event.tapped(RaidPoint(x: 0.1 * Double($0), z: 0.3)) }
+    let full = taps.reduce(step(draft(), .chose(.box))) { step($0, $1) }
+    guard case .setting(let draft) = full else { return }
+    #expect(draft.defences.count == 3)
+    #expect(draft.refused == .tooManyDefences)
+  }
+
+  @Test func aLevelWithoutAJarIsNotHandedOver() {
     #expect(step(draft(), .handedOver) == draft())
   }
 

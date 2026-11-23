@@ -69,6 +69,10 @@ struct RaidBoardCanvas: View {
                     let tone = piece.isLow ? 0.18 : 0.3 + min(piece.height, 0.4)
                     context.fill(path, with: .color(Ink.textSecondary.opacity(tone)))
                     context.stroke(path, with: .color(Ink.separator), lineWidth: 1)
+                    if !piece.isLow {
+                        context.draw(Text(piece.title).font(.ourioMicro).foregroundStyle(Ink.text),
+                                     in: rect.insetBy(dx: Space.xxs, dy: Space.xxs))
+                    }
                 }
             }
 

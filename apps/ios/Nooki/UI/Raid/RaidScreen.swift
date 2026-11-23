@@ -90,10 +90,17 @@ struct RaidScreen: View {
                 tool("Box", "shippingbox.fill", .box, draft)
                 tool("Cucumber", "leaf.fill", .cucumber, draft)
                 tool("Squeaky board", "speaker.wave.2.fill", .squeakyBoard, draft)
+                if let last = draft.defences.last {
+                    FilterChip("Undo", symbol: "arrow.uturn.backward", isSelected: false) {
+                        store.send(.removed(last.id))
+                    }
+                    .accessibilityIdentifier("raidUndo")
+                }
             }
             Text(hint(draft))
                 .font(.ourioCaption)
-                .foregroundStyle(draft.problem == nil ? Ink.textSecondary : Ink.destructive)
+                .foregroundStyle(draft.refused == nil ? Ink.textSecondary : Ink.destructive)
+                .lineLimit(2, reservesSpace: true)
         }
     }
 
@@ -109,11 +116,11 @@ struct RaidScreen: View {
     }
 
     private func hint(_ draft: RaidMachine.Draft) -> String {
-        switch draft.problem {
-        case .jarTooNearStart: return "The jar is too near where \(cat) starts (the small dot)."
-        case .defenceNearStart: return "A defence is too near where \(cat) starts."
+        switch draft.refused {
+        case .jarTooNearStart: return "Too near where \(cat) starts (the small dot). Further away."
+        case .defenceNearStart: return "Too near where \(cat) starts (the small dot)."
         case .defenceOnFurniture: return "A defence has to stand on the floor."
-        case .tooManyDefences: return "Three defences at most."
+        case .tooManyDefences: return "Three defences at most. Undo takes the last one back."
         case nil: break
         }
         switch draft.tool {
@@ -246,18 +253,12 @@ struct RaidScreen: View {
 
     @ViewBuilder private var secondary: some View {
         switch store.state {
-        case .setting(let draft):
-            if let last = draft.defences.last {
-                SecondaryButton("Take the last one back", symbol: "arrow.uturn.backward") {
-                    store.send(.removed(last.id))
-                }
-            }
         case .finished:
             SecondaryButton("Swap and play again", symbol: "arrow.triangle.2.circlepath") { store.send(.again) }
                 .accessibilityIdentifier("raidAgain")
         case .replaying:
             SecondaryButton("Skip", symbol: "forward.end.fill") { store.send(.replayEnded) }
-        case .handover, .running:
+        case .setting, .handover, .running:
             EmptyView()
         }
     }

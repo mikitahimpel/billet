@@ -20,6 +20,8 @@ public enum RaidMachine: Machine {
     public var tool: Tool = .jar
     /// Rounds finished on this board since the screen opened.
     public var round = 0
+    /// Why the last tap put nothing down; nil once a tap does.
+    public var refused: RaidLevel.Problem?
     var nextID = 1
 
     public init(board: RaidBoard) { self.board = board }
@@ -85,6 +87,7 @@ public enum RaidMachine: Machine {
   public static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
     switch (state, event) {
     case (.setting(var draft), .chose(let tool)):
+      draft.refused = nil
       draft.tool = tool
       return (.setting(draft), [])
 
@@ -92,7 +95,8 @@ public enum RaidMachine: Machine {
       let place = draft.board.clamped(point)
       switch draft.tool {
       case .jar:
-        draft.jar = place
+        draft.refused = RaidLevel(jar: place).problem(on: draft.board)
+        if draft.refused == nil { draft.jar = place }
       case .box:
         add(.box, at: place, to: &draft)
       case .cucumber:
@@ -100,14 +104,16 @@ public enum RaidMachine: Machine {
       case .squeakyBoard:
         add(.squeakyBoard, at: place, to: &draft)
       case .vacuum:
-        if draft.hasRoom { draft.tool = .vacuumEnd(from: place) }
+        draft.refused = problem(with: .vacuum(to: place), at: place, in: draft)
+        if draft.refused == nil { draft.tool = .vacuumEnd(from: place) }
       case .vacuumEnd(let from):
         add(.vacuum(to: place), at: from, to: &draft)
-        draft.tool = .vacuum
+        if draft.refused == nil { draft.tool = .vacuum }
       }
       return (.setting(draft), [])
 
     case (.setting(var draft), .removed(let id)):
+      draft.refused = nil
       draft.defences.removeAll { $0.id == id }
       return (.setting(draft), [])
 
@@ -174,8 +180,20 @@ public enum RaidMachine: Machine {
     return draft
   }
 
+  /// What is wrong with one more defence of `kind` at `point`, whatever else the level holds.
+  private static func problem(
+    with kind: RaidDefence.Kind, at point: RaidPoint, in draft: Draft
+  ) -> RaidLevel.Problem? {
+    guard draft.hasRoom else { return .tooManyDefences }
+    let far = RaidPoint(x: draft.board.start.x + 2 * RaidRules.reach, z: draft.board.start.z)
+    let alone = RaidLevel(
+      jar: far, defences: [RaidDefence(id: draft.nextID, kind: kind, at: point)])
+    return alone.problem(on: draft.board)
+  }
+
   private static func add(_ kind: RaidDefence.Kind, at point: RaidPoint, to draft: inout Draft) {
-    guard draft.hasRoom else { return }
+    draft.refused = problem(with: kind, at: point, in: draft)
+    guard draft.refused == nil else { return }
     draft.defences.append(RaidDefence(id: draft.nextID, kind: kind, at: point))
     draft.nextID += 1
   }
