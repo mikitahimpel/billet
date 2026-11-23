@@ -78,6 +78,8 @@ let tests: [(name: String, dependencies: [String])] = [
   ("ProfileInterfaceTests", ["ProfileInterface", "Pet"]),
   ("DecorInterfaceTests", ["DecorInterface"]),
   ("UsInterfaceTests", ["UsInterface", "Persistence", "Wire"]),
+  ("SchoolInterfaceTests", ["SchoolInterface"]),
+  ("FeatureSchoolTests", ["FeatureSchool", "SchoolInterface", "BilletKit", "Transport", "Wire"]),
   ("StoryInterfaceTests", ["StoryInterface"]),
   ("FeatureStoryTests", ["FeatureStory", "StoryInterface", "BilletKit", "Transport", "Wire"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Transport", "Wire"]),
@@ -211,6 +213,11 @@ let roomInterface: Target = .target(
     "GamesInterface", "DecorInterface", "MischiefInterface", "Pet", "BilletKit",
   ]))
 
+let schoolInterface: Target = .target(name: "SchoolInterface")
+let school: Target = .target(
+  name: "FeatureSchool",
+  dependencies: dependencies(["SchoolInterface", "BilletKit", "Transport", "Wire"]))
+
 // Episodes are data: JSON files in Resources, checked by `EpisodeCatalogTests`.
 let storyInterface: Target = .target(
   name: "StoryInterface", resources: [.process("Resources")])
@@ -220,7 +227,7 @@ let story: Target = .target(
 
 let products =
   features + [
-    "StoryInterface", "FeatureStory",
+    "StoryInterface", "FeatureStory", "SchoolInterface", "FeatureSchool",
     "FeatureOnboarding",
     "WidgetBridge", "FeatureGames", "GamesInterface", "RoomInterface", "ShopInterface",
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
@@ -245,7 +252,8 @@ let package = Package(
       widgetBridge, games, gamesInterface, roomInterface, shopInterface, shop, inbox, moodInterface,
       mood, drawInterface, profileInterface, usInterface, momentsInterface, widgetInterface,
       widgetUI,
-      decorInterface, decor, us, onboarding, serverSync, storyInterface, story, mischiefInterface,
+      decorInterface, decor, us, onboarding, serverSync, storyInterface, story, schoolInterface,
+      school, mischiefInterface,
       mischief,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }

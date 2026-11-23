@@ -109,6 +109,13 @@ public struct APIClient: Sendable {
   /// One Pick tonight swipe; answers the session after it, with the match it made.
   public var swipePickTonight:
     @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse
+  /// What the pair's cat knows and each partner's last routine. `.api(.notFound)` while unpaired.
+  public var school: @Sendable () async throws(TransportError) -> SchoolResponse
+  /// One lesson passed; answers the school after it. `.api(.invalidRequest)` for a skipped star.
+  public var teachTrick: @Sendable (LessonRequest) async throws(TransportError) -> SchoolResponse
+  /// This user's routine; answers the school after it. `.api(.invalidRequest)` for a trick the
+  /// cat does not know.
+  public var sendRoutine: @Sendable (RoutineRequest) async throws(TransportError) -> SchoolResponse
   /// The pair's story marks as this user sees it. `.api(.notFound)` while unpaired.
   public var story: @Sendable () async throws(TransportError) -> StoryResponse
   /// One story mark; answers the marks after it. `.api(.invalidRequest)` past the limit.
@@ -302,6 +309,17 @@ public struct APIClient: Sendable {
       @escaping @Sendable (PickSwipeRequest) async throws(TransportError) -> PickTonightResponse = {
         (_) async throws(TransportError) in throw .network("offline")
       },
+    school: @escaping @Sendable () async throws(TransportError) -> SchoolResponse = {
+      () async throws(TransportError) in throw .network("offline")
+    },
+    teachTrick:
+      @escaping @Sendable (LessonRequest) async throws(TransportError) -> SchoolResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
+    sendRoutine:
+      @escaping @Sendable (RoutineRequest) async throws(TransportError) -> SchoolResponse = {
+        (_) async throws(TransportError) in throw .network("offline")
+      },
     story: @escaping @Sendable () async throws(TransportError) -> StoryResponse = {
       () async throws(TransportError) in throw .network("offline")
     },
@@ -413,6 +431,9 @@ public struct APIClient: Sendable {
     self.titleRecommendations = titleRecommendations
     self.pickTonight = pickTonight
     self.swipePickTonight = swipePickTonight
+    self.school = school
+    self.teachTrick = teachTrick
+    self.sendRoutine = sendRoutine
     self.story = story
     self.markStory = markStory
     self.guess = guess

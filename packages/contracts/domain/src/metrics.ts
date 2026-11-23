@@ -16,6 +16,10 @@ export const ClientEventName = Schema.Literals([
   "CatPlayed",
   "CatCalled",
   "TrickDone",
+  /** A lesson earned a star. detail: the trick id (`high-five`). */
+  "TrickTaught",
+  /** A routine went to the partner. */
+  "RoutineSent",
   "CatChosen",
   "TemperamentShown",
 
@@ -100,6 +104,8 @@ export const clientEventRules: { readonly [Name in ClientEventName]: ClientEvent
   CatPlayed: { detail: "id" },
   CatCalled: { detail: "none" },
   TrickDone: { detail: "id", required: true },
+  TrickTaught: { detail: "id", required: true },
+  RoutineSent: { detail: "none" },
   CatChosen: { detail: "id", required: true },
   TemperamentShown: { detail: "id", required: true },
   NoteOpened: { detail: ["widget", "app"], required: true },

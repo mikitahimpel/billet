@@ -14,6 +14,9 @@ public enum ClientEventName: String, Codable, Hashable, Sendable, CaseIterable {
   case catPlayed = "CatPlayed"
   case catCalled = "CatCalled"
   case trickDone = "TrickDone"
+  /// A lesson earned a star; the detail is the trick id.
+  case trickTaught = "TrickTaught"
+  case routineSent = "RoutineSent"
   case catChosen = "CatChosen"
   case temperamentShown = "TemperamentShown"
 
@@ -99,11 +102,12 @@ extension ClientEventName {
     switch self {
     case .appOpened, .openingWatched, .openingSkipped, .catPetted, .catCalled, .decoratingOpened,
       .shopOpened, .streakOpened, .profileOpened, .signInPromptShown, .ageGateStopped,
-      .pickTonightOpened, .pickTonightMatched, .pickTonightPlanned, .mouseHidden, .mouseFound:
+      .pickTonightOpened, .pickTonightMatched, .pickTonightPlanned, .mouseHidden, .mouseFound,
+      .routineSent:
       ClientEventRule(detail: .none)
     case .widgetAdded, .catPlayed, .roomCustomised:
       ClientEventRule(detail: .id)
-    case .trickDone, .catChosen, .temperamentShown, .roomItemPlaced, .roomItemMoved,
+    case .trickDone, .trickTaught, .catChosen, .temperamentShown, .roomItemPlaced, .roomItemMoved,
       .roomItemPutAway, .shopItemViewed, .shopOfferViewed, .streakMilestoneSeen,
       .onboardingStepViewed, .onboardingStepAnswered, .onboardingStepSkipped, .tipShown,
       .tipDismissed, .tipAction, .clueFound, .caseSolved:
