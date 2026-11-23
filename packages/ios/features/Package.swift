@@ -210,7 +210,8 @@ let gamesInterface: Target = .target(
 let roomInterface: Target = .target(
   name: "RoomInterface",
   dependencies: dependencies([
-    "GamesInterface", "DecorInterface", "MischiefInterface", "Pet", "BilletKit",
+    "GamesInterface", "DecorInterface", "MischiefInterface", "SchoolInterface", "Pet",
+    "BilletKit",
   ]))
 
 let schoolInterface: Target = .target(name: "SchoolInterface")

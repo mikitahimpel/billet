@@ -2,8 +2,8 @@ import DecorInterface
 import Foundation
 import GamesInterface
 import MischiefInterface
-import SchoolInterface
 import Pet
+import SchoolInterface
 
 /// What happened in the room that the rest of the app acts on. The room writes to no store itself.
 public enum RoomEvent: Equatable, Sendable {
