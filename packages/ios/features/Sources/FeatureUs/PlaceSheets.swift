@@ -5,6 +5,7 @@
   import SwiftUI
   import Design
   import UsInterface
+  import Wire
 
   /// Adds a country, searched in the phone's language and in English, or a city or place, then its country.
   struct AddPlaceSheet: View {
@@ -271,9 +272,9 @@
       HStack(spacing: Space.xs) {
         if item.isCountry, !been, let code = item.country, !countries.contains(code) {
           Text("Your \(ordinal) country together ·")
-          Text("+1 coin").foregroundStyle(Color.honey)
+          Text("+\(EarnAmount.listTicked) coin").foregroundStyle(Color.honey)
         } else if !been {
-          Text("+1 coin").foregroundStyle(Color.honey)
+          Text("+\(EarnAmount.listTicked) coin").foregroundStyle(Color.honey)
         } else if let done = item.done {
           Text("Ticked \(done.formatted(.dateTime.day().month().year()))")
         }

@@ -140,6 +140,12 @@ describe("events route", () => {
     ["a detail on a name that takes none", { events: [{ name: "CatPetted", detail: "tabby" }] }],
     ["a missing detail where one is needed", { events: [{ name: "CatChosen" }] }],
     ["a detail outside the closed list", { events: [{ name: "NoteOpened", detail: "email" }] }],
+    ["a session's seconds", { events: [{ name: "SessionEnded", detail: "42s" }] }],
+    [
+      "a session with a value",
+      { events: [{ name: "SessionEnded", detail: "from-1m", value: 95 }] },
+    ],
+    ["a session without its range", { events: [{ name: "SessionEnded" }] }],
     ["a detail that is free text", { events: [{ name: "CatChosen", detail: "my cat Tom" }] }],
     ["an over-long detail", { events: [{ name: "CatChosen", detail: "a".repeat(41) }] }],
     [
@@ -153,6 +159,13 @@ describe("events route", () => {
     expect((await post(body, "ana")).status).toBe(400);
     expect(metrics.rows.size).toBe(before);
   });
+
+  it.each(["under-1m", "from-1m", "from-3m", "from-10m"])(
+    "takes a session of %s",
+    async (detail) => {
+      expect((await post({ events: [{ name: "SessionEnded", detail }] }, "ana")).status).toBe(204);
+    },
+  );
 
   it("counts detailed events like bare ones, and their details apart from the person", async () => {
     const response = await post(

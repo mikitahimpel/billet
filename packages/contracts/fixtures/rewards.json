@@ -1,0 +1,16 @@
+{
+  "earn": {
+    "moment": 2,
+    "note": 1,
+    "dateMatched": 2,
+    "dateRated": 6,
+    "wishReceived": 5,
+    "listTicked": 1,
+    "roundPlayed": 2,
+    "guessHit": 1
+  },
+  "collections": {
+    "cozy-autumn": 40,
+    "mochis-corner": 25
+  }
+}
