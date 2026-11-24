@@ -4,18 +4,19 @@ import Testing
 struct CatPostureTests {
     typealias Posture = CatWalker.Posture
 
-    @Test(arguments: [Posture.Order.rising, .sitting])
-    func anOrderedChangeStartsAndEndsOnItsPostures(_ order: Posture.Order) {
-        let start = Posture.blend(.stand, .sit, 0, order)
-        #expect(start.lift == Posture.stand.lift)
-        #expect(start.pitch == Posture.stand.pitch)
-        #expect(start.hind.y + start.hindSplit == SIMD2(repeating: Posture.stand.hind.y))
-        let end = Posture.blend(.stand, .sit, 1, order)
-        #expect(end.lift == Posture.sit.lift)
-        #expect(end.pitch == Posture.sit.pitch)
-        #expect(end.hind == Posture.sit.hind)
-        #expect(end.hindSplit == .zero)
-        #expect(end.tail == Posture.sit.tail)
+    @Test func anOrderedChangeStartsAndEndsOnItsPostures() {
+        for order in [Posture.Order.rising, .sitting] {
+            let start = Posture.blend(.stand, .sit, 0, order)
+            #expect(start.lift == Posture.stand.lift)
+            #expect(start.pitch == Posture.stand.pitch)
+            #expect(start.hind.y + start.hindSplit == SIMD2(repeating: Posture.stand.hind.y))
+            let end = Posture.blend(.stand, .sit, 1, order)
+            #expect(end.lift == Posture.sit.lift)
+            #expect(end.pitch == Posture.sit.pitch)
+            #expect(end.hind == Posture.sit.hind)
+            #expect(end.hindSplit == .zero)
+            #expect(end.tail == Posture.sit.tail)
+        }
     }
 
     @Test func sittingDownTheHindPawsStepInOneAfterTheOtherBeforeTheRumpIsDown() {
