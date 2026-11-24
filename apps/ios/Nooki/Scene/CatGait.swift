@@ -1,6 +1,21 @@
 import Foundation
 import simd
 
+/// A value following a goal that may jump, critically damped at `rate` (1/s), so neither it nor its speed ever
+/// jumps; exact for any `dt`.
+struct Glide {
+    var value: Float
+    var speed: Float = 0
+
+    mutating func follow(_ goal: Float, rate: Float, _ dt: Float) {
+        let off = value - goal
+        let pull = speed + rate * off
+        let decay = exp(-rate * dt)
+        value = goal + (off + pull * dt) * decay
+        speed = (speed - rate * pull * dt) * decay
+    }
+}
+
 /// Where the body stands in the room: `at` its origin and `yaw` about +Y, `scale` room units per model unit, and
 /// `velocity` (room units/s) and `yawRate` (rad/s) to tell where it will be a moment later.
 struct BodyFrame {
@@ -51,7 +66,8 @@ final class Gait {
     }
 
     /// 0 standing, 1 walking; eased so the body's rocking starts and stops softly.
-    private(set) var amount: Float = 0
+    var amount: Float { rocking.value }
+    private var rocking = Glide(value: 0)
     private var phase: Float = 0
     private var period: Float
     private let basePeriod: Float
@@ -122,7 +138,7 @@ final class Gait {
             }
         }
         let active = legs.contains { !$0.done }
-        amount += ((moving ? 1 : 0) - amount) * (1 - exp(-dt * 6))
+        rocking.follow(moving ? 1 : 0, rate: 10, dt)
         period = basePeriod * min(max(sqrt(speed / max(pace, 1e-3)), 0.8), 1.6)
         if active { phase = (phase + dt / period).truncatingRemainder(dividingBy: 1) }
         self.frame = frame

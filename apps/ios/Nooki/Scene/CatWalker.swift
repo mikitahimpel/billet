@@ -6,6 +6,8 @@ import simd
 
 private func lerp(_ a: Float, _ b: Float, _ t: Float) -> Float { a + (b - a) * t }
 private func ease(_ t: Float) -> Float { t * t * (3 - 2 * t) }
+/// Like `ease`, and with no acceleration at either end.
+private func glide(_ t: Float) -> Float { t * t * t * (t * (6 * t - 15) + 10) }
 private func shortest(_ a: Float, _ b: Float) -> Float { a + atan2(sin(b - a), cos(b - a)) }
 private func facing(_ dx: Float, _ dz: Float) -> Float { atan2(-dx, -dz) }
 
@@ -130,7 +132,7 @@ final class CatWalker {
         /// `u` of the way from `a` to `b` in time, each part as far as `order` has it by then.
         static func blend(_ a: Posture, _ b: Posture, _ u: Float, _ order: Order) -> Posture {
             guard u < 1 else { return b }
-            func at(_ range: ClosedRange<Float>) -> Float { ease(order.share(range, u)) }
+            func at(_ range: ClosedRange<Float>) -> Float { glide(order.share(range, u)) }
             let (tail, head, fore) = (at(order.tail), at(order.head), at(order.fore))
             let reach = b.hind.y + b.hindSplit - a.hind.y - a.hindSplit
             return Posture(lift: lerp(a.lift, b.lift, at(order.lift)), back: lerp(a.back, b.back, at(order.back)),
@@ -215,12 +217,13 @@ final class CatWalker {
     private var wait: Float
     private var time: Float = 0
     private var posture = Posture.sit
-    private var resting: Float = 1
-    private var lookPitch: Float = 0
+    private var rested = Glide(value: 1)
+    private var resting: Float { min(max(rested.value, 0), 1) }
+    private var lookPitch = Glide(value: 0)
     private var gaze: Float = 0
     /// How far the head turns ahead of the body round a turn, and how far it has got.
     private var lead: Float = 0
-    private var lookYaw: Float = 0
+    private var lookYaw = Glide(value: 0)
     private var stepping = false
     private var free = false
     private var wiggle: Float = 0
@@ -233,7 +236,7 @@ final class CatWalker {
     private var seatAmount: Float = 1
     private var change: Change?
     /// Her speed along the floor and her turning as she walks, carried from one leg into the next.
-    private var travel: (speed: Float, turn: Float) = (0, 0)
+    private var travel: (speed: Float, turn: Glide) = (0, Glide(value: 0))
     private var squash: (value: Float, speed: Float, goal: Float, shown: Float) = (0, 0, 0, 0)
     private var lean: (value: Float, speed: Float, goal: Float) = (0, 0, 0)
     private var breath = Breath()
@@ -404,7 +407,7 @@ final class CatWalker {
     /// Back on her bed at once, sitting, with whatever she was doing dropped.
     func snapHome() {
         steps = []
-        travel = (0, 0)
+        travel = (0, Glide(value: 0))
         away = nil
         lying = false
         rest = .sit
@@ -562,6 +565,11 @@ final class CatWalker {
                 done = u >= 1
             }
             if done { steps.removeFirst() }
+            // A step that ends by handing over to the next has not moved her this frame; the next one does.
+            if done, step.open != nil, let next = steps.first?.open {
+                steps[0].time += dt
+                if next(dt) { steps.removeFirst() }
+            }
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
         }
         advanceChange(dt)
@@ -582,7 +590,7 @@ final class CatWalker {
         frame.yaw = yaw
         last = (group.position, yaw)
         behavior.update(dt, eyes: standing.eyes)
-        resting += ((moving ? 0 : 1) - resting) * (1 - exp(-dt * 4))
+        rested.follow(moving ? 0 : 1, rate: 7, dt)
         pose(dt)
         updateSeat(headPitch: standing.pose.headPitch - posture.headPitch)
         updateSquash(dt)
@@ -659,11 +667,11 @@ final class CatWalker {
         p.wiggle = wiggle
         p.headSeat = s.seat
         // Walking she watches the floor ahead.
-        lookPitch += (gaze - lookPitch) * (1 - exp(-dt * 4))
+        lookPitch.follow(gaze, rate: 7, dt)
         // Turning, the head goes first and the body comes round after it.
-        lookYaw += (lead - lookYaw) * (1 - exp(-dt * 12))
-        p.headPitch = s.headPitch + lerp(lookPitch, b.pitch, r)
-        p.headYaw = lerp(0.12 * noise(time * 0.5, 8) + lookYaw, b.yaw, r)
+        lookYaw.follow(lead, rate: 16, dt)
+        p.headPitch = s.headPitch + lerp(lookPitch.value, b.pitch, r)
+        p.headYaw = lerp(0.12 * noise(time * 0.5, 8) + lookYaw.value, b.yaw, r)
         p.headRoll = b.roll * r
         steadyHead(&p, dt, g)
         settle(&p, dt, r)
@@ -951,7 +959,7 @@ final class CatWalker {
             // A walk that cannot end (she was moved, or the numbers went wrong) ends where it was going.
             guard length > 1e-4, time < 6 + 4 * length / pace.walkSpeed else {
                 group.position = to
-                travel = (0, 0)
+                travel = (0, Glide(value: 0))
                 return true
             }
             if next != nil, left < Self.cornerCut { return true }
@@ -984,13 +992,13 @@ final class CatWalker {
             }
             travel.speed += min(max(goal - travel.speed, -2 * gain * dt), gain * dt)
             let turnGoal = min(max(3.5 * error, -pace.turnRate), pace.turnRate)
-            travel.turn += (turnGoal - travel.turn) * (1 - exp(-dt * 6))
-            yaw += travel.turn * dt
+            travel.turn.follow(turnGoal, rate: 11, dt)
+            yaw += travel.turn.value * dt
 
             let stride = travel.speed * dt
             guard next != nil || stride < left else {
                 group.position = to
-                travel = (0, 0)
+                travel = (0, Glide(value: 0))
                 return true
             }
             // Over the last centimetre she goes straight for the point, so she ends on it.
