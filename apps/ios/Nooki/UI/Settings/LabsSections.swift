@@ -84,6 +84,18 @@ struct LabsSections: View {
             .buttonStyle(PressScaleStyle())
         }
 
+        GroupedSection(header: "Labs · Games",
+                       footer: "Night raid, a prototype for two on one phone: one hides the treat jar and sets defences "
+                           + "on your own living room, the other steers the cat at it.") {
+            NavigationLink {
+                RaidScreen(layout: state.decor.state.layout, cat: CatProfile.name())
+            } label: {
+                Row("Night raid", symbol: "moon.stars.fill", tint: UsTint.lilac.color) { RowChevron() }
+            }
+            .buttonStyle(PressScaleStyle())
+            .accessibilityIdentifier("labsNightRaid")
+        }
+
         GroupedSection(header: "Labs · Cat",
                        footer: state.pronouns.say(.brainFooter(name: CatProfile.name()))) {
             ToggleRow("Cat brain", symbol: "brain", tint: UsTint.lilac.color, isOn: $catBrain)
