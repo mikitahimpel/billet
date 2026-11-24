@@ -40,6 +40,11 @@ enum OurioPerf {
     /// Once, at launch.
     static func start(state: HomeState, hud: @escaping (HUDArm) -> Void,
                       sheetGround: @escaping (SheetGroundStyle) -> Void, selectRoom: @escaping (RoomKind) -> Void) {
+        // `-perf.room living|bedroom`: Home opens on that room, for a run on a phone with both.
+        if state.rooms.variant.hasRoomChoice, let name = UserDefaults.standard.string(forKey: "perf.room"),
+           let kind = state.rooms.variant.kinds.first(where: { $0.title.lowercased().hasPrefix(name) }) {
+            selectRoom(kind)
+        }
         guard ScenePerf.isOn else { return }
         setHUD = hud
         seedMoments(state.moments)
