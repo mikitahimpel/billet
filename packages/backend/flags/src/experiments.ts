@@ -183,6 +183,18 @@ export const registry: ReadonlyArray<Experiment> = defineExperiments([
     status: "draft",
     killed: false,
   },
+  // Off: every `/v1/plus*` route answers 404 and the app shows no Plus row or card
+  // (docs/subscription.md). Accounts that said they are 13 to 17 never get Plus, flag or not.
+  {
+    key: "plus",
+    kind: "flag",
+    description: "Whether Ourio Plus, the pair's monthly parcel, is offered and sold.",
+    variants: { off: 1, on: 0 },
+    default: "off",
+    exposure: 100,
+    status: "draft",
+    killed: false,
+  },
   {
     key: "cat-school",
     kind: "flag",

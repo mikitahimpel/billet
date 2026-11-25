@@ -18,6 +18,8 @@ export const PairWalletLive: Layer.Layer<PairWallet, never, NotesService> = Laye
       balance: (pairId) => notes.walletBalance(pairId).pipe(Effect.mapError(asPayments)),
       enter: (pairId, credit) =>
         notes.creditPurchase(pairId, credit).pipe(Effect.mapError(asPayments)),
+      shop: (pairId) => notes.pairShop(pairId).pipe(Effect.mapError(asPayments)),
+      grant: (pairId, piece) => notes.grantPiece(pairId, piece).pipe(Effect.mapError(asPayments)),
     });
   }),
 );

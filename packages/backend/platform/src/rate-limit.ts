@@ -52,6 +52,8 @@ export const groupOf = (pathname: string): LimitedGroup | undefined => {
   if (pathname === "/v1/events") return "events";
   if (pathname === "/v1/onboarding/answers") return "onboarding";
   if (pathname === "/v1/purchases" || pathname === "/v1/purchases/mock") return "purchases";
+  // A signed transaction to verify, or a parcel to open: as costly as a purchase.
+  if (pathname.startsWith("/v1/plus/")) return "purchases";
   if (pathname === "/v1/media" || pathname.startsWith("/v1/media/")) return "media";
   if (pathname.startsWith("/v1/titles/")) return "titles";
   if (isInviteLinkPath(pathname)) return "links";

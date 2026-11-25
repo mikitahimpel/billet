@@ -23,6 +23,7 @@ public enum PairingFailure: Equatable, Sendable {
       .api(.inkNotOwned), .api(.postageNotOwned), .api(.notEnoughCoins), .api(.alreadyOwned),
       .api(.collectionIncomplete), .api(.giftTaken), .api(.bonusTaken), .api(.catNotAdopted),
       .api(.streakNotRestorable), .api(.priceChanged), .api(.layoutRefused),
+      .api(.subscriptionTaken), .api(.parcelOpened),
       .network,
       .status, .maintenance,
       .encoding,

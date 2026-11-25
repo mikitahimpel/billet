@@ -463,6 +463,61 @@ export const appStoreNotifications = sqliteTable(
   (table) => [index("app_store_notifications_received_at_index").on(table.receivedAt)],
 );
 
+// Ourio Plus. A subscription is bound to the account that paid (`user_id`), not to a pair, so it
+// follows that person through an unpairing; not a foreign key, so the record outlives the account
+// for accounting. No Apple account, receipt or card is kept.
+export const plusSubscriptions = sqliteTable(
+  "plus_subscriptions",
+  {
+    originalTransactionId: text("original_transaction_id").primaryKey(),
+    userId: text("user_id").notNull(),
+    productId: text("product_id").notNull(),
+    environment: text("environment").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    autoRenew: integer("auto_renew", { mode: "boolean" }).notNull(),
+    graceUntil: integer("grace_until"),
+    revokedAt: integer("revoked_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("plus_subscriptions_user_id_index").on(table.userId)],
+);
+
+// One row per paid period (the first purchase and each renewal). Parcels are derived from these.
+export const plusPeriods = sqliteTable(
+  "plus_periods",
+  {
+    transactionId: text("transaction_id").primaryKey(),
+    originalTransactionId: text("original_transaction_id").notNull(),
+    userId: text("user_id").notNull(),
+    productId: text("product_id").notNull(),
+    purchasedAt: integer("purchased_at").notNull(),
+    expiresAt: integer("expires_at").notNull(),
+    revokedAt: integer("revoked_at"),
+  },
+  (table) => [index("plus_periods_user_id_index").on(table.userId)],
+);
+
+// A parcel once opened, by its id (`parcel:<transactionId>[:<n>]`), so each opens once.
+export const plusParcels = sqliteTable(
+  "plus_parcels",
+  {
+    id: text("id").primaryKey(),
+    payer: text("payer").notNull(),
+    transactionId: text("transaction_id").notNull(),
+    pairId: text("pair_id").notNull(),
+    offer: text("offer").notNull(),
+    price: integer("price").notNull(),
+    openedBy: text("opened_by").notNull(),
+    openedAt: integer("opened_at").notNull(),
+    status: text("status").notNull(),
+  },
+  (table) => [
+    index("plus_parcels_payer_index").on(table.payer),
+    index("plus_parcels_transaction_id_index").on(table.transactionId),
+  ],
+);
+
 // `option_ids` is a JSON array so the admin counts picks without reading `text`, the one typed
 // column. A save keeps the row with the later `answered_at`.
 export const onboardingAnswers = sqliteTable(

@@ -80,7 +80,7 @@ nonisolated enum LabsCoinsMachine: Machine {
         case .api(.unauthorized), .api(.invalidPurchase), .api(.invalidRequest), .api(.invalidInvite),
              .api(.alreadyPaired), .api(.appleIdInUse), .api(.inkNotOwned), .api(.postageNotOwned), .api(.notEnoughCoins),
              .api(.alreadyOwned), .api(.collectionIncomplete), .api(.giftTaken), .api(.bonusTaken),
-             .api(.catNotAdopted), .api(.streakNotRestorable), .api(.priceChanged), .api(.layoutRefused), .encoding, .decoding:
+             .api(.catNotAdopted), .api(.streakNotRestorable), .api(.subscriptionTaken), .api(.parcelOpened), .api(.priceChanged), .api(.layoutRefused), .encoding, .decoding:
             .refused
         }
     }

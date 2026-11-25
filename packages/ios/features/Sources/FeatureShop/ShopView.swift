@@ -17,6 +17,8 @@
     /// The ink the Shop was opened at, ringed on the Inks shelf for a moment.
     @State private var highlightedInk: String?
     @State private var scrolling = ShopScrolling()
+    @State private var showsPlus = false
+    @Environment(PlusModel.self) private var plus: PlusModel?
 
     public var body: some View {
       ScrollViewReader { reader in
@@ -105,6 +107,15 @@
 
     @ViewBuilder private var today: some View {
       let now = Date.now
+      if let plus, plus.entry != .hidden {
+        GroupedSection {
+          PlusRow(entry: plus.entry) { showsPlus = true }
+        }
+        .padding(.horizontal, Space.l)
+        .sheet(isPresented: $showsPlus) {
+          PlusSheet(model: plus, shop: state.shop, petName: state.petName)
+        }
+      }
       FeaturedCard(state: state, offer: state.shop.offers.featured(on: now)) {
         sheetSet = SetChoice(pieces: $0)
       }

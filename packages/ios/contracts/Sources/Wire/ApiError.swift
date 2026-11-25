@@ -13,6 +13,10 @@ public enum ApiError: Codable, Hashable, Sendable {
   case postageNotOwned(postage: PostageId)
   case notEnoughCoins(needed: Int, have: Int)
   case alreadyOwned(itemId: String)
+  /// The App Store subscription is bound to another Ourio account, which keeps it.
+  case subscriptionTaken
+  /// The parcel was opened already, as something else.
+  case parcelOpened
   case collectionIncomplete(collection: String)
   case giftTaken(day: String)
   case bonusTaken(collection: String)
@@ -60,6 +64,8 @@ public enum ApiError: Codable, Hashable, Sendable {
         have: try container.decode(Int.self, forKey: .have))
     case "AlreadyOwned":
       self = .alreadyOwned(itemId: try container.decode(String.self, forKey: .itemId))
+    case "SubscriptionTaken": self = .subscriptionTaken
+    case "ParcelOpened": self = .parcelOpened
     case "CollectionIncomplete":
       self = .collectionIncomplete(
         collection: try container.decode(String.self, forKey: .collection))
@@ -101,6 +107,8 @@ public enum ApiError: Codable, Hashable, Sendable {
     case .alreadyOwned(let itemId):
       try container.encode("AlreadyOwned", forKey: .tag)
       try container.encode(itemId, forKey: .itemId)
+    case .subscriptionTaken: try container.encode("SubscriptionTaken", forKey: .tag)
+    case .parcelOpened: try container.encode("ParcelOpened", forKey: .tag)
     case .collectionIncomplete(let collection):
       try container.encode("CollectionIncomplete", forKey: .tag)
       try container.encode(collection, forKey: .collection)

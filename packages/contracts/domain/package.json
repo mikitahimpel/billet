@@ -33,7 +33,8 @@
     "./riddle-words": "./src/riddle-words.ts",
     "./shop": "./src/shop.ts",
     "./streak": "./src/streak.ts",
-    "./shop-catalog": "./src/shop-catalog.ts"
+    "./shop-catalog": "./src/shop-catalog.ts",
+    "./plus": "./src/plus.ts"
   },
   "scripts": {
     "lint": "oxlint .",

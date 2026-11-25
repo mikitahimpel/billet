@@ -12,11 +12,16 @@ public final class StoreKitPayments: Payments {
   }
 
   private let catalog: StampPackCatalog
+  private let plusCatalog: PlusCatalog
   private let server: PaymentsServer
   private let state = Mutex(State())
 
-  public init(catalog: StampPackCatalog = .standard, server: PaymentsServer) {
+  public init(
+    catalog: StampPackCatalog = .standard, plusCatalog: PlusCatalog = .standard,
+    server: PaymentsServer
+  ) {
     self.catalog = catalog
+    self.plusCatalog = plusCatalog
     self.server = server
   }
 
@@ -108,8 +113,107 @@ public final class StoreKitPayments: Payments {
     return stream
   }
 
+  public func plusOffers() async throws(PaymentsError) -> [PlusOffer] {
+    let products: [Product]
+    do {
+      products = try await Product.products(for: plusCatalog.productIDs)
+    } catch {
+      throw .unavailable
+    }
+    return plusCatalog.plans.compactMap { definition in
+      guard let product = products.first(where: { $0.id == definition.id }) else { return nil }
+      return PlusOffer(
+        id: product.id, plan: definition.plan, displayName: product.displayName,
+        displayPrice: product.displayPrice)
+    }
+  }
+
+  public func subscribe(_ offer: PlusOffer) async throws(PaymentsError) -> SubscribeResult {
+    guard plusCatalog.definition(offer.id) != nil else { throw .unknownProduct(offer.id) }
+    guard AppStore.canMakePayments else { throw .notAllowed }
+    let result: Product.PurchaseResult
+    do {
+      guard let product = try await Product.products(for: [offer.id]).first else {
+        throw PaymentsError.unknownProduct(offer.id)
+      }
+      result = try await product.purchase()
+    } catch let error as PaymentsError {
+      throw error
+    } catch StoreKitError.userCancelled {
+      return .cancelled
+    } catch {
+      throw Self.mapped(error)
+    }
+    switch result {
+    case .success(let verification):
+      // Apple has charged: a server out of reach is not a failed purchase, the transaction stays
+      // unfinished and is sent again. Only a subscription bound to someone else is final.
+      do throws(PaymentsError) {
+        try await bindPlus(verification)
+        return .subscribed
+      } catch .subscriptionTaken {
+        throw .subscriptionTaken
+      } catch {
+        return .awaitingServer
+      }
+    case .userCancelled:
+      return .cancelled
+    case .pending:
+      return .pending
+    @unknown default:
+      throw .failed("The App Store answered a purchase result this build does not know.")
+    }
+  }
+
+  public func restorePlus() async throws(PaymentsError) {
+    do {
+      try await AppStore.sync()
+    } catch StoreKitError.userCancelled {
+      return
+    } catch {
+      throw Self.mapped(error)
+    }
+    for await result in Transaction.currentEntitlements {
+      guard plusCatalog.definition(result.unsafePayloadValue.productID) != nil else { continue }
+      try await bindPlus(result)
+    }
+    publish(.plusChanged)
+  }
+
+  /// The server learns of renewals and refunds from Apple too; this only makes it sooner.
+  private func bindPlus(_ result: VerificationResult<Transaction>) async throws(PaymentsError) {
+    if case .unverified = result { throw .rejected }
+    let transaction = result.unsafePayloadValue
+    let renewal = await renewalInfo(of: transaction)
+    do throws(PaymentsError) {
+      try await server.subscribe(result.jwsRepresentation, renewal)
+    } catch .subscriptionTaken {
+      // Another Ourio account keeps it; sending it again would never change that.
+      await transaction.finish()
+      throw .subscriptionTaken
+    }
+    await transaction.finish()
+  }
+
+  private func renewalInfo(of transaction: Transaction) async -> String? {
+    guard let group = transaction.subscriptionGroupID,
+      let statuses = try? await Product.SubscriptionInfo.status(for: group)
+    else { return nil }
+    return statuses.first { status in
+      status.transaction.unsafePayloadValue.originalID == transaction.originalID
+    }?.renewalInfo.jwsRepresentation
+  }
+
   private func handle(update result: VerificationResult<Transaction>) async {
     let transaction = result.unsafePayloadValue
+    if plusCatalog.definition(transaction.productID) != nil {
+      if transaction.revocationDate != nil {
+        await transaction.finish()
+      } else {
+        do throws(PaymentsError) { try await bindPlus(result) } catch { return }
+      }
+      return publish(.plusChanged)
+    }
     guard catalog.definition(transaction.productID) != nil else { return }
     if transaction.revocationDate != nil {
       // The server learns of a refund from Apple; the device only follows its ledger.

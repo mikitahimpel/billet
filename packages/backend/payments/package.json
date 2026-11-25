@@ -14,10 +14,17 @@
     "./payments-routes": "./src/payments-routes.ts",
     "./payments-service": "./src/payments-service.ts",
     "./payments-switch": "./src/payments-switch.ts",
+    "./plus-gate": "./src/plus-gate.ts",
+    "./plus-repository": "./src/plus-repository.ts",
+    "./plus-routes": "./src/plus-routes.ts",
+    "./plus-rules": "./src/plus-rules.ts",
+    "./plus-service": "./src/plus-service.ts",
     "./x509": "./src/x509.ts",
     "./test/app-store-signer": "./test/app-store-signer.ts",
     "./test/in-memory-payments-repository": "./test/in-memory-payments-repository.ts",
-    "./test/payments-repository-contract": "./test/payments-repository-contract.ts"
+    "./test/payments-repository-contract": "./test/payments-repository-contract.ts",
+    "./test/in-memory-plus-repository": "./test/in-memory-plus-repository.ts",
+    "./test/plus-repository-contract": "./test/plus-repository-contract.ts"
   },
   "scripts": {
     "lint": "oxlint .",

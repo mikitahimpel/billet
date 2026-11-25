@@ -112,6 +112,10 @@ import Testing
       "getDemoPartner": Routes.getDemoPartner,
       "removeDemoPartner": Routes.removeDemoPartner,
       "getPurchases": Routes.getPurchases,
+      "getPlus": Routes.getPlus,
+      "subscribePlus": Routes.subscribePlus,
+      "mockPlus": Routes.mockPlus,
+      "openParcel": Routes.openParcel,
       "appStoreNotifications": Routes.appStoreNotifications,
     ]
     #expect(contract == mirrored)

@@ -21,5 +21,25 @@
       "displayName": "1,200 coins",
       "description": "A chest of coins for the shop."
     }
-  ]
+  ],
+  "plus": {
+    "group": "Ourio Plus",
+    "parcelPriceCeiling": 320,
+    "plans": [
+      {
+        "id": "com.ourio.app.plus.monthly",
+        "plan": "monthly",
+        "price": "3.99",
+        "displayName": "Ourio Plus",
+        "description": "A parcel every month for the two of you."
+      },
+      {
+        "id": "com.ourio.app.plus.yearly",
+        "plan": "yearly",
+        "price": "29.99",
+        "displayName": "Ourio Plus, yearly",
+        "description": "A parcel every month for a year, for the two of you."
+      }
+    ]
+  }
 }

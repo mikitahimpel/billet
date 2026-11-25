@@ -105,6 +105,7 @@ public final class CoinPacksModel {
       switch update {
       case .credited(let credit): purchaseStore.send(.credited(coins: credit.stamps))
       case .ledgerChanged: purchaseStore.send(.ledgerChanged)
+      case .plusChanged: break
       }
     }
     await purchaseStore.settled()
@@ -114,7 +115,8 @@ public final class CoinPacksModel {
     switch error {
     case .notAllowed: "Purchases are turned off on this iPhone."
     case .unavailable: "Couldn't reach the store. Nothing was charged; try again."
-    case .rejected, .failed, .unknownProduct: "That didn't go through. Nothing was charged."
+    case .rejected, .failed, .unknownProduct, .subscriptionTaken:
+      "That didn't go through. Nothing was charged."
     }
   }
 }

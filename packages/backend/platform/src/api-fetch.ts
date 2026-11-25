@@ -50,6 +50,8 @@ import { PairingRoutes } from "@billet/backend-pairing/pairing-routes";
 import { PairingService } from "@billet/backend-pairing/pairing-service";
 import { PaymentsConfig, settingsForStage } from "@billet/backend-payments/payments-config";
 import { PaymentsRoutes } from "@billet/backend-payments/payments-routes";
+import { PlusRoutes } from "@billet/backend-payments/plus-routes";
+import { PlusService } from "@billet/backend-payments/plus-service";
 import { PaymentsService } from "@billet/backend-payments/payments-service";
 import { ReviewRoutes } from "@billet/backend-review/review-routes";
 import { ReviewService } from "@billet/backend-review/review-service";
@@ -85,6 +87,8 @@ import { PairingRepositoryLive } from "./pairing-repository-live.ts";
 import { ReviewRepositoryLive } from "./review-repository-live.ts";
 import { PaymentsRepositoryLive } from "./payments-repository-live.ts";
 import { PaymentsSwitchLive } from "./payments-switch-live.ts";
+import { PlusGateLive } from "./plus-gate-live.ts";
+import { PlusRepositoryLive } from "./plus-repository-live.ts";
 import { PairWalletLive } from "./pair-wallet-live.ts";
 import { respondPlaceholder } from "./placeholder-fetch.ts";
 import { withRequestSpan } from "./observability.ts";
@@ -130,6 +134,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
     GuessCatalogRoutes,
     MetricsRoutes,
     PaymentsRoutes,
+    PlusRoutes,
     OnboardingRoutes,
   ).pipe(
     Layer.provide(
@@ -171,8 +176,11 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         PairVariantsLive,
         ServiceStatus.with(status),
         PaymentsService.layer.pipe(
+          Layer.provideMerge(PlusService.layer),
           Layer.provide(PairWalletLive.pipe(Layer.provide(NotesService.layer))),
         ),
+        // Plus is off until the `plus` flag says `on`, except on dev; never for a declared minor.
+        PlusGateLive.pipe(Layer.provide(FlagsService.layer)),
         // Buying coins is off until the `payments` flag says `on` for the pair, except on dev.
         PaymentsSwitchLive.pipe(Layer.provide(FlagsService.layer)),
         payments,
@@ -190,6 +198,7 @@ const apiRoutes = (env: WorkerEnv, experiments: ReadonlyArray<Experiment>, statu
         AppleTokenRevokerLive(signInWithAppleKeyOf(env)),
         PairingRepositoryLive(env.DB),
         PaymentsRepositoryLive(env.DB),
+        PlusRepositoryLive(env.DB),
         payments,
         FlagsRepositoryLive(env.DB),
         FlagConfigRepositoryLive(env.DB, caches.default),

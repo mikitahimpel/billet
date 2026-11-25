@@ -27,6 +27,10 @@ export const ApiError = Schema.TaggedUnion({
     have: Schema.Int.check(Schema.isGreaterThanOrEqualTo(0)),
   },
   AlreadyOwned: { itemId: Schema.String },
+  /** This App Store subscription is bound to another Ourio account. It stays with that one. */
+  SubscriptionTaken: {},
+  /** The parcel was already opened as something else. */
+  ParcelOpened: {},
   /** A piece the pair does not own, does not fit where it was put, or is not placed that way. */
   LayoutRefused: {
     reason: Schema.Literals([

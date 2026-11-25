@@ -1384,6 +1384,7 @@ describe("routes from the contracts", () => {
   // These exist only on the dev stage; the payments and demo partner tests check the others.
   const devOnly = new Set([
     "mockPurchase",
+    "mockPlus",
     "createDemoPartner",
     "getDemoPartner",
     "removeDemoPartner",

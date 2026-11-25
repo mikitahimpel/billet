@@ -15,7 +15,10 @@ private final class FakeServer: Sendable {
       mock: { (product, transaction, kind) async throws(PaymentsError) in
         self.mock(product, transaction, kind)
       },
-      ledger: { () async throws(PaymentsError) in self.ledger })
+      ledger: { () async throws(PaymentsError) in self.ledger },
+      mockPlus: { (plan, transaction, kind) async throws(PaymentsError) in
+        self.calls.withLock { $0.append("plus \(kind.rawValue) \(plan.rawValue) \(transaction)") }
+      })
   }
 
   var ledger: StampLedger {
@@ -136,5 +139,35 @@ private final class FakeServer: Sendable {
     await #expect(throws: PaymentsError.unknownProduct("com.example.nope")) {
       try await mock.purchase(pack)
     }
+  }
+
+  @Test func plusSellsBothPlansMonthlyFirst() async throws {
+    let offers = try await payments(.succeed, server: FakeServer()).plusOffers()
+    #expect(offers.map(\.plan) == [.monthly, .yearly])
+    #expect(offers.map(\.displayPrice) == ["$3.99", "$29.99"])
+    #expect(PlusCatalog.standard.parcelPriceCeiling == 320)
+  }
+
+  @Test func aPlusSubscriptionGoesToTheServerAndLabsChangesIt() async throws {
+    let server = FakeServer()
+    let mock = payments(.succeed, server: server)
+    #expect(try await mock.changePlus(.renew) == false)
+    let monthly = try await mock.plusOffers()[0]
+    #expect(try await mock.subscribe(monthly) == .subscribed)
+    #expect(try await mock.changePlus(.refund))
+    #expect(
+      server.calls.withLock { $0 } == ["plus subscribe monthly t1", "plus refund monthly t1"])
+  }
+
+  @Test func aPlusAskToBuySubscribesWhenApproved() async throws {
+    let server = FakeServer()
+    let mock = payments(.pending, server: server)
+    let updates = mock.updates()
+    #expect(try await mock.subscribe(try await mock.plusOffers()[1]) == .pending)
+    #expect(server.calls.withLock { $0 }.isEmpty)
+    try await mock.approvePending()
+    var iterator = updates.makeAsyncIterator()
+    #expect(await iterator.next() == .plusChanged)
+    #expect(server.calls.withLock { $0 } == ["plus subscribe yearly t1"])
   }
 }

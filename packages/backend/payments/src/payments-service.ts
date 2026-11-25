@@ -15,6 +15,7 @@ import { verifySignedData } from "./app-store-signed-data.ts";
 import { InvalidPurchase, PaymentsNotFound, PaymentsUnavailable } from "./payments-error.ts";
 import { PaymentsConfig } from "./payments-config.ts";
 import { PairWallet } from "./pair-wallet.ts";
+import { PlusService } from "./plus-service.ts";
 import {
   CoinOwner,
   entryIds,
@@ -47,6 +48,7 @@ const Notification = Schema.Struct({
       bundleId: Schema.optional(Schema.String),
       environment: Schema.optional(Schema.String),
       signedTransactionInfo: Schema.optional(Schema.String),
+      signedRenewalInfo: Schema.optional(Schema.String),
     }),
   ),
 });
@@ -103,11 +105,17 @@ export class PaymentsService extends Context.Service<
   static readonly layer: Layer.Layer<
     PaymentsService,
     never,
-    PaymentsRepository | PaymentsConfig | PairingRepository | PairWallet | Signature.Signature
+    | PaymentsRepository
+    | PaymentsConfig
+    | PairingRepository
+    | PairWallet
+    | PlusService
+    | Signature.Signature
   > = Layer.effect(
     PaymentsService,
     Effect.gen(function* () {
       const repository = yield* PaymentsRepository;
+      const plus = yield* PlusService;
       const pairing = yield* PairingRepository;
       const wallet = yield* PairWallet;
       const config = yield* PaymentsConfig;
@@ -338,6 +346,21 @@ export class PaymentsService extends Context.Service<
         }
 
         const type = decoded.notificationType;
+        // A subscription's notification goes to Plus; coins never see it.
+        if (data?.signedTransactionInfo !== undefined) {
+          const { payload } = yield* verified(data.signedTransactionInfo, false);
+          const handled = yield* plus.notification(
+            type,
+            decoded.subtype,
+            payload,
+            data.signedRenewalInfo,
+          );
+          if (handled !== undefined) {
+            return yield* repository.recordNotification(
+              record(handled.outcome, handled.originalTransactionId),
+            );
+          }
+        }
         const reverses = type === "REFUND" || type === "REVOKE";
         if (!reverses && type !== "REFUND_REVERSED") {
           return yield* repository.recordNotification(

@@ -26,6 +26,11 @@ import {
   StoredPurchase,
   StoredPurchaseEntry,
 } from "@billet/backend-payments/payments-repository";
+import {
+  StoredParcel,
+  StoredPeriod,
+  StoredSubscription,
+} from "@billet/backend-payments/plus-repository";
 import { EconomyDayRow, EconomyPairDayRow } from "@billet/backend-admin/admin-economy";
 import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
@@ -61,6 +66,9 @@ import {
   shopItemChanges,
   shopItems,
   purchases,
+  plusParcels,
+  plusPeriods,
+  plusSubscriptions,
   pushTokens,
   rateLimits,
   coinLedger,
@@ -193,6 +201,9 @@ const checked = [
   ["kept_items", keptItems, StoredKeptItem],
   ["partner_reports", partnerReports, StoredPartnerReport],
   ["purchases", purchases, StoredPurchase],
+  ["plus_subscriptions", plusSubscriptions, StoredSubscription],
+  ["plus_periods", plusPeriods, StoredPeriod],
+  ["plus_parcels", plusParcels, StoredParcel],
   ["shop_items", shopItems, ShopItemRow],
   ["shop_item_changes", shopItemChanges, ShopChangeRow],
   ["push_tokens", pushTokens, StoredPushToken],

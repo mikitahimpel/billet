@@ -105,7 +105,9 @@ const decodeEarnRef = Schema.decodeSync(EarnRef);
  */
 export type PurchaseCredit =
   | {
-      readonly kind: "purchase";
+      /** A `refund` with `coins` takes them back, as a refunded month takes an opened parcel's
+       * price. */
+      readonly kind: "purchase" | "refund";
       readonly id: CoinEntryId;
       readonly ref: string;
       readonly coins: number;

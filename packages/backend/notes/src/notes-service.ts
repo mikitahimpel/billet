@@ -4,6 +4,7 @@ import { MediaKey, type UserId } from "@billet/contracts-domain/ids";
 import type { CompactStrokes } from "@billet/contracts-domain/ink";
 import type { Note } from "@billet/contracts-domain/note";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { ParcelOffer } from "@billet/contracts-domain/plus";
 import type { CoinEntry, CoinEntryId } from "@billet/contracts-domain/coins";
 import { type GiftReward, RoomItemId } from "@billet/contracts-domain/shop";
 import type {
@@ -168,6 +169,15 @@ export class NotesService extends Context.Service<
       { readonly balance: number; readonly coins: number },
       NotesNotFound | NotesUnavailable
     >;
+    /** What a pair owns, asked by pair, as payments does for a parcel. */
+    readonly pairShop: (
+      pairId: PairId,
+    ) => Effect.Effect<ShopResponse, NotesNotFound | NotesUnavailable>;
+    /** Gives the pair one piece for no coins, as a Plus parcel does. Safe to repeat. */
+    readonly grantPiece: (
+      pairId: PairId,
+      piece: ParcelOffer,
+    ) => Effect.Effect<ShopResponse, NotesNotFound | NotesUnavailable>;
     readonly history: (
       userId: UserId,
       afterSeq: number,
@@ -611,6 +621,31 @@ export class NotesService extends Context.Service<
         return { balance: decision.state.wallet.balance, coins: Math.abs(entry.amount) };
       });
 
+      const pairShop = Effect.fn("NotesService.pairShop")(function* (pairId: PairId) {
+        return yield* openedRead(pairId, () => rooms.shop(pairId));
+      });
+
+      const grantPiece = Effect.fn("NotesService.grantPiece")(function* (
+        pairId: PairId,
+        piece: ParcelOffer,
+      ) {
+        const grant = () => {
+          switch (piece._tag) {
+            case "Ink":
+              return rooms.grantInks(pairId, [piece.ink]);
+            case "Item":
+              return rooms.grantItems(pairId, [piece.item]);
+            case "Postage":
+              return rooms.grantPostage(pairId, [piece.postage]);
+          }
+        };
+        const decision = yield* inOpenRoom(pairId, grant);
+        if (decision._tag === "Rejected") {
+          return yield* Effect.fail(new NotesUnavailable({ reason: "room-refused-grant" }));
+        }
+        return shopOf(decision.state);
+      });
+
       return NotesService.of({
         uploadImage,
         readImage,
@@ -627,6 +662,8 @@ export class NotesService extends Context.Service<
         earn,
         walletBalance,
         creditPurchase,
+        pairShop,
+        grantPiece,
         history,
       });
     }),

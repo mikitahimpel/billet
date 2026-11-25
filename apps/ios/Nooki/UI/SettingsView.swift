@@ -1,4 +1,5 @@
 import FeatureOnboarding
+import FeatureShop
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -23,6 +24,8 @@ struct SettingsView: View {
     @AppStorage(AppSettings.streakNudgeKey, store: StreakNudge.settings) private var streakNudge = true
     @AppStorage(Hints.resetKey) private var hintsReset = false
     @State private var confirmingErase = false
+    @State private var showsPlus = false
+    @Environment(PlusModel.self) private var plus: PlusModel?
 
     private var version: String {
         let info = Bundle.main.infoDictionary
@@ -63,6 +66,15 @@ struct SettingsView: View {
                     Row("Widget gallery", symbol: "rectangle.on.rectangle", tint: UsTint.honey.color) { RowChevron() }
                 }
                 .buttonStyle(PressScaleStyle())
+            }
+
+            if let plus, plus.entry != .hidden {
+                GroupedSection(header: "Ourio Plus") {
+                    PlusRow(entry: plus.entry) { showsPlus = true }
+                }
+                .sheet(isPresented: $showsPlus) {
+                    PlusSheet(model: plus, shop: state.shop, petName: state.petName)
+                }
             }
 
             GroupedSection(header: "Reminders",

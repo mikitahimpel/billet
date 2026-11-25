@@ -139,6 +139,10 @@ it("pins the routes that clients call", () => {
         "method": "GET",
         "path": "/v1/pick-tonight",
       },
+      "getPlus": {
+        "method": "GET",
+        "path": "/v1/plus",
+      },
       "getPurchases": {
         "method": "GET",
         "path": "/v1/purchases",
@@ -223,6 +227,10 @@ it("pins the routes that clients call", () => {
         "method": "POST",
         "path": "/v1/story/marks",
       },
+      "mockPlus": {
+        "method": "POST",
+        "path": "/v1/plus/mock",
+      },
       "mockPurchase": {
         "method": "POST",
         "path": "/v1/purchases/mock",
@@ -230,6 +238,10 @@ it("pins the routes that clients call", () => {
       "openGift": {
         "method": "POST",
         "path": "/v1/shop/gift",
+      },
+      "openParcel": {
+        "method": "POST",
+        "path": "/v1/plus/parcels/open",
       },
       "placeOrder": {
         "method": "POST",
@@ -326,6 +338,10 @@ it("pins the routes that clients call", () => {
       "socket": {
         "method": "GET",
         "path": "/v1/socket",
+      },
+      "subscribePlus": {
+        "method": "POST",
+        "path": "/v1/plus/subscribe",
       },
       "swipePickTonight": {
         "method": "POST",

@@ -173,6 +173,9 @@ nonisolated private struct GalleryStore: Payments {
     func restore() async throws(PaymentsError) -> StampLedger { .empty }
     func settleUnfinished() async {}
     func updates() -> AsyncStream<PaymentsUpdate> { AsyncStream { $0.finish() } }
+    func plusOffers() async throws(PaymentsError) -> [PlusOffer] { PlusCatalog.standard.plans.map(PlusCatalog.standard.offer) }
+    func subscribe(_ offer: PlusOffer) async throws(PaymentsError) -> SubscribeResult { .awaitingServer }
+    func restorePlus() async throws(PaymentsError) {}
 }
 
 /// A pair the server sells coins to, in a StoreKit build.
