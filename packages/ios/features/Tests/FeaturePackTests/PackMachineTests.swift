@@ -3,7 +3,7 @@ import Testing
 
 @testable import FeaturePack
 
-private typealias M = PackMachine
+typealias M = PackMachine
 
 private func shape(_ cells: [(Int, Int)]) -> PackShape {
   PackShape(cells.map { PackCell(x: $0.0, y: $0.1) })
