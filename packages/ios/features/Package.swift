@@ -81,6 +81,8 @@ let tests: [(name: String, dependencies: [String])] = [
   ("SchoolInterfaceTests", ["SchoolInterface"]),
   ("FeatureSchoolTests", ["FeatureSchool", "SchoolInterface", "BilletKit", "Transport", "Wire"]),
   ("FeatureRaidTests", ["FeatureRaid", "RaidInterface", "DecorInterface", "BilletKit"]),
+  ("FoldInterfaceTests", ["FoldInterface", "Wire"]),
+  ("FeatureFoldTests", ["FeatureFold", "FoldInterface", "BilletKit", "Wire"]),
   ("PackInterfaceTests", ["PackInterface"]),
   ("FeaturePackTests", ["FeaturePack", "PackInterface", "BilletKit"]),
   ("StoryInterfaceTests", ["StoryInterface"]),
@@ -221,6 +223,10 @@ let raidInterface: Target = .target(name: "RaidInterface")
 let raid: Target = .target(
   name: "FeatureRaid",
   dependencies: dependencies(["RaidInterface", "DecorInterface", "BilletKit"]))
+let foldInterface: Target = .target(
+  name: "FoldInterface", dependencies: dependencies(["BilletKit", "Wire"]))
+let fold: Target = .target(
+  name: "FeatureFold", dependencies: dependencies(["FoldInterface", "BilletKit", "Wire"]))
 let packInterface: Target = .target(
   name: "PackInterface", dependencies: dependencies(["BilletKit"]))
 let pack: Target = .target(
@@ -245,7 +251,8 @@ let products =
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
     "DecorInterface", "FeatureDecor", "FeatureUs", "ServerSync", "MischiefInterface",
-    "FeatureMischief", "RaidInterface", "FeatureRaid", "PackInterface", "FeaturePack",
+    "FeatureMischief", "RaidInterface", "FeatureRaid", "FoldInterface", "FeatureFold",
+    "PackInterface", "FeaturePack",
   ]
 
 let package = Package(
@@ -266,7 +273,7 @@ let package = Package(
       widgetUI,
       decorInterface, decor, us, onboarding, serverSync, storyInterface, story, schoolInterface,
       school, mischiefInterface,
-      mischief, raidInterface, raid, packInterface, pack,
+      mischief, raidInterface, raid, foldInterface, fold, packInterface, pack,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
     + [usTests, shopTests, onboardingTests, serverSyncTests],
