@@ -1,5 +1,5 @@
 #!/bin/bash
-# Checks a Release archive before TestFlight: bundle IDs (the app and its three extensions), version 1.0.0, build number, team 2666YPBJTB signing;
+# Checks a Release archive before TestFlight: bundle IDs (the app and its three extensions), version 1.1.0, build number, team 2666YPBJTB signing;
 # API_HOST is the app's BilletAPIHost; the store as EXPECT_PAYMENTS says (none unless the run asked for storekit), never
 # the mock store; Labs as EXPECT_LABS says (NO unless the run asked for a Labs build); no -perf.script hooks (OurioPerf,
 # ScenePerf).
@@ -8,7 +8,7 @@ set -euo pipefail
 
 archive=${1:?usage: check-archive.sh <path.xcarchive> <build-number>}
 build=${2:?usage: check-archive.sh <path.xcarchive> <build-number>}
-version=1.0.0
+version=1.1.0
 team=2666YPBJTB
 expect_labs=${EXPECT_LABS:-NO}
 expect_payments=${EXPECT_PAYMENTS:-none}
