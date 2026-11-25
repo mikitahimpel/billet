@@ -83,6 +83,8 @@ let tests: [(name: String, dependencies: [String])] = [
   ("FeatureRaidTests", ["FeatureRaid", "RaidInterface", "DecorInterface", "BilletKit"]),
   ("FoldInterfaceTests", ["FoldInterface", "Wire"]),
   ("FeatureFoldTests", ["FeatureFold", "FoldInterface", "BilletKit", "Wire"]),
+  ("PackInterfaceTests", ["PackInterface"]),
+  ("FeaturePackTests", ["FeaturePack", "PackInterface", "BilletKit"]),
   ("StoryInterfaceTests", ["StoryInterface"]),
   ("FeatureStoryTests", ["FeatureStory", "StoryInterface", "BilletKit", "Transport", "Wire"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Transport", "Wire"]),
@@ -225,6 +227,10 @@ let foldInterface: Target = .target(
   name: "FoldInterface", dependencies: dependencies(["BilletKit", "Wire"]))
 let fold: Target = .target(
   name: "FeatureFold", dependencies: dependencies(["FoldInterface", "BilletKit", "Wire"]))
+let packInterface: Target = .target(
+  name: "PackInterface", dependencies: dependencies(["BilletKit"]))
+let pack: Target = .target(
+  name: "FeaturePack", dependencies: dependencies(["PackInterface", "BilletKit"]))
 let schoolInterface: Target = .target(name: "SchoolInterface")
 let school: Target = .target(
   name: "FeatureSchool",
@@ -246,6 +252,7 @@ let products =
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
     "DecorInterface", "FeatureDecor", "FeatureUs", "ServerSync", "MischiefInterface",
     "FeatureMischief", "RaidInterface", "FeatureRaid", "FoldInterface", "FeatureFold",
+    "PackInterface", "FeaturePack",
   ]
 
 let package = Package(
@@ -266,7 +273,7 @@ let package = Package(
       widgetUI,
       decorInterface, decor, us, onboarding, serverSync, storyInterface, story, schoolInterface,
       school, mischiefInterface,
-      mischief, raidInterface, raid, foldInterface, fold,
+      mischief, raidInterface, raid, foldInterface, fold, packInterface, pack,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
     + [usTests, shopTests, onboardingTests, serverSyncTests],
