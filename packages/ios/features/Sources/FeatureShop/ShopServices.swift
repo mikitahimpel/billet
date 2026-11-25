@@ -207,6 +207,7 @@ nonisolated extension ShopError {
       .api(.alreadyPaired), .api(.appleIdInUse), .api(.invalidPurchase), .api(.inkNotOwned),
       .api(.postageNotOwned),
       .api(.catNotAdopted), .api(.priceChanged), .api(.layoutRefused), .api(.streakNotRestorable),
+      .api(.subscriptionTaken), .api(.parcelOpened),
       .network, .status,
       .maintenance, .encoding, .decoding:
       self = .unavailable

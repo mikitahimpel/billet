@@ -1,4 +1,6 @@
+import FeatureOnboarding
 import FeatureShop
+import Persistence
 import FeatureStory
 import StoryInterface
 import FeatureUs
@@ -50,6 +52,14 @@ struct HomeView: View {
     /// Nil without a server to buy packs through.
     @State private var coinPacks: CoinPacksModel?
     @State private var coinsShown: CoinsAsk?
+    /// Nil without a server: then Plus has no row anywhere.
+    @State private var plus: PlusModel?
+    @State private var showsPlus = false
+    /// The one card about Plus, on screen at most once on this phone.
+    @State private var plusWelcomeShown = false
+    /// Read once from `plusWelcomeStore`: the card hasn't been on screen yet.
+    @State private var plusWelcome: PlusWelcome?
+    @AppStorage(OnboardingFlow.doneKey) private var onboarded = false
     /// What the partner did while this phone was away, shown a few seconds after coming back.
     @State private var homecoming: HomecomingLine?
     /// The header and the tab bar as a perf run wants them drawn; glass, as shipped, otherwise.
@@ -256,6 +266,26 @@ struct HomeView: View {
         }
         .task { await DrawingSync.watchLiveActivities() }
         .task { loadCoinPacks() }
+        .task(id: session?.isPaired) {
+            loadPlus()
+            plus?.reload()
+            await plus?.follow()
+        }
+        .task { plusWelcome = Self.plusWelcomeStore.load() }
+        .onChange(of: offersPlusWelcome) { _, offered in
+            guard offered else { return }
+            let shown = PlusWelcome(shownAt: .now)
+            Self.plusWelcomeStore.save(shown)
+            plusWelcome = shown
+            withAnimation(Motion.fade(0.3)) { plusWelcomeShown = true }
+        }
+        .onChange(of: state.tab) { _, tab in
+            if tab != .world { plusWelcomeShown = false }
+        }
+        .sheet(isPresented: $showsPlus) {
+            if let plus { PlusSheet(model: plus, shop: state.shop, petName: state.petName) }
+        }
+        .environment(plus)
         .task(id: session?.isPaired) { await followPair() }
         .onChange(of: session?.isPaired, initial: true) { _, paired in
             partnerSync?.send(paired == true ? .paired : .unpaired)
@@ -448,6 +478,15 @@ struct HomeView: View {
                 HomecomingLabel(line: homecoming)
                     .transition(.opacity)
             }
+            if plusWelcomeShown {
+                PlusWelcomeCard {
+                    plusWelcomeShown = false
+                    showsPlus = true
+                } dismiss: {
+                    withAnimation(Motion.fade(0.3)) { plusWelcomeShown = false }
+                }
+                .transition(.opacity)
+            }
             HStack(alignment: .bottom) {
                 PetButton(state: state, needs: { room }) { game in
                     state.care.played(game)
@@ -528,6 +567,25 @@ struct HomeView: View {
     }
 
     /// Its own method: inline in `body`, the closure tips the Release type-checker over its time limit on Xcode 26.
+    private static let plusWelcomeStore = PlusWelcomeStore.storage(
+        (try? AppGroupStorage.appGroup(identifier: AppGroupStorage.billetIdentifier))
+            ?? .directory(URL.applicationSupportDirectory.appending(path: "Plus")),
+        now: { .now })
+
+    private func loadPlus() {
+        guard plus == nil, let session else { return }
+        let shop = state.shop
+        plus = PlusModel(payments: session.payments, client: .live(session.purchases)) { shop.received($0) }
+    }
+
+    /// After onboarding, on the World, with the pair together and nothing from the partner waiting.
+    private var offersPlusWelcome: Bool {
+        guard let plus, let plusWelcome, !launching, state.tab == .world, homecoming == nil else { return false }
+        return plusWelcome.shows(
+            onboarded: onboarded, paired: session?.isPaired == true,
+            partnerWaiting: (session?.inbox.unread ?? 0) > 0, entry: plus.entry)
+    }
+
     private func loadCoinPacks() {
         guard coinPacks == nil, let payments = session?.payments else { return }
         let shop = state.shop

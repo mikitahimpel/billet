@@ -1,7 +1,8 @@
 # Subscription and paywall
 
-How Ourio could sell a subscription, and where a paywall may and may not stand. A proposal,
-2026-11-25: nothing here is built, and no code changes with it. It sits beside
+How Ourio sells a subscription, and where a paywall may and may not stand. Proposed and built
+2026-11-25 behind the `plus` flag (off); [As built](#as-built) says where the build differs from
+the proposal below. It sits beside
 [payments.md](payments.md) (the coin packs, built, flag off) and [economy.md](economy.md) (the
 policy for coins).
 
@@ -61,6 +62,46 @@ Why this and not a list of premium features:
   rules below still hold but apply to nobody.
 - Facts dated after mid-2026 were read from Apple's and regulators' pages on 2026-11-25 by a
   research pass, not checked a second time. Each is in [Evidence](#evidence) with how it was read.
+
+## As built
+
+Shipped in one review with the coin packs, both behind flags that stay `off` until the owner turns
+them on ([release-flags.md](release-flags.md)). Server and routes: [payments.md](payments.md#ourio-plus).
+
+- **Products:** `com.ourio.app.plus.monthly` $3.99 a month and `com.ourio.app.plus.yearly` $29.99
+  a year, group "Ourio Plus", no trial or introductory offer, Family Sharing off
+  (`@billet/contracts-domain/plus`, `apps/ios/Ourio.storekit`, `coin-packs.json`; a sync test fails
+  when they disagree).
+- **Parcel ceiling: 320 coins, inclusive** (`parcelPriceCeiling`, tested on both sides). The Shop's
+  room pieces cost 45 to 540; the two dearest, the Donut Bed (380) and the Cat Tower (540), are
+  out, so a parcel is never a way round the pieces a pair saves up for longest, and everything up
+  to the Armchair (320) is in. Free inks and starter pieces are never offered: they are owned
+  already. Change the constant and the test together when the Shop's prices move.
+- **Declared 13-17:** coin packs are sold to them; Plus is not. The server answers every
+  `/v1/plus` route with a 404 for an account whose onboarding answer is `age-13-17`, on every
+  stage, so the app hides the Shop row, the Settings row and the card, and a purchase or a grant
+  cannot be made. An adult whose partner is a declared 13-17 may still subscribe; the partner sees
+  no Plus anywhere, but the pieces chosen land in their shared room. **(owner to decide whether
+  that is acceptable or the adult should be refused too.)**
+- **Entries:** the Shop row (top of Today), the Settings row, and one card on Home after
+  onboarding: on the World tab, over the pet controls, only when the pair is together, nothing
+  from the partner is unread, no homecoming line shows and Plus is on offer. It is on screen at
+  most once per phone (App Group `plus-welcome.json`), dismissible, and opens the sheet only on a
+  tap. This is the owner's call over the "nothing on Home" rule of the proposal below.
+
+Where the build differs from the proposal:
+
+| Proposal | Built | Why |
+| --- | --- | --- |
+| `POST /v1/purchases` branches on the transaction type | separate `/v1/plus/*` routes | the flag, the age gate and the answer type differ; the coin path is untouched |
+| `PlusState` with `paidBy` | `Active`/`Ending`/`Grace` for the payer, `Shared` for the partner | the partner never learns of a cancel, grace or refund |
+| `ShopResponse` and `ShopChanged` carry Plus | `GET /v1/plus`, and `OpenParcelResponse` returns both | no change to the shop frame both phones read |
+| `parcel_grants` written by a daily Cron | parcels derived from paid periods; only opened ones stored | nothing depends on a job running; ids are stable |
+| a zero-amount `parcel` ledger entry | the open is stored in `plus_parcels`, the grant goes through the room | the minted line is not touched either way |
+| `appAccountToken` binds the account | the first account to send a transaction keeps it; others get `SubscriptionTaken` | no token yet: add it with the In-App Purchase key |
+| Inbox items for a parcel and for the partner's Plus | not built | the Shop and Settings rows show waiting parcels |
+| Delete account warns a subscriber | built: the footer, the confirmation and a Manage subscription link | |
+| Refund of an opened parcel's period | owed in coins (`refund:<parcelId>`), the piece stays | as packs; **(owner: check against "nothing earned is taken away")** |
 
 ## 1. Audit
 

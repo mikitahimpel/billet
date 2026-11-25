@@ -51,7 +51,8 @@ extension StreakRemote {
   static func answer(to error: TransportError) -> Answer {
     switch error {
     case .network, .status, .maintenance, .api(.unavailable), .api(.unauthorized): .offline
-    case .decoding, .encoding, .api(.streakNotRestorable), .api(.notFound), .api(.invalidRequest),
+    case .decoding, .encoding, .api(.streakNotRestorable), .api(.notFound),
+      .api(.subscriptionTaken), .api(.parcelOpened), .api(.invalidRequest),
       .api(.invalidInvite), .api(.alreadyPaired), .api(.appleIdInUse), .api(.invalidPurchase),
       .api(.inkNotOwned), .api(.postageNotOwned),
       .api(.notEnoughCoins), .api(.alreadyOwned), .api(.collectionIncomplete), .api(.giftTaken),

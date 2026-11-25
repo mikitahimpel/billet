@@ -39,8 +39,6 @@
           }
           if let packs, sellsPacks {
             PackStore(model: packs, fit: CoinPacksModel.fit(for: missing, in: packs.packs))
-            // Plus isn't built: a StoreKit build offers nothing it can't sell yet.
-            if state.storeIsMock { PlusHero(avatar: state.coatAvatarName) }
           } else {
             EarnedOnly()
           }

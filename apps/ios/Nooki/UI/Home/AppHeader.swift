@@ -10,7 +10,6 @@ struct AppHeader<Below: View>: View {
     @State private var pairing = false
     @State private var checkingIn = false
     @State private var pairedAlready = false
-    @AppStorage(PlusPass.key) private var plus = false
     @Environment(ServerSession.self) private var session: ServerSession?
 
     var body: some View {
@@ -29,7 +28,7 @@ struct AppHeader<Below: View>: View {
                         .accessibilityHint("Shows your coins, how to get more and where they went")
                         .accessibilityIdentifier("coins")
 
-                    CoupleButton(state: state, plus: plus) { state.showsProfile = true }
+                    CoupleButton(state: state) { state.showsProfile = true }
                 }
                 .frame(height: Size.control)
                 below

@@ -17,6 +17,17 @@ public protocol Payments: Sendable {
 
   /// Changes that arrive outside ``purchase(_:)``. Each subscriber gets its own stream.
   func updates() -> AsyncStream<PaymentsUpdate>
+
+  /// Ourio Plus's plans, monthly first, priced in the buyer's currency.
+  func plusOffers() async throws(PaymentsError) -> [PlusOffer]
+
+  /// Returns once the store has answered and, when it took the payment, once the server bound
+  /// the subscription to this account.
+  func subscribe(_ offer: PlusOffer) async throws(PaymentsError) -> SubscribeResult
+
+  /// Asks the store for this Apple Account's Plus and sends what it finds to the server. A
+  /// subscription bound to another Ourio account throws ``PaymentsError/subscriptionTaken``.
+  func restorePlus() async throws(PaymentsError)
 }
 
 public struct StampPack: Hashable, Sendable, Identifiable {
@@ -77,6 +88,9 @@ public enum PaymentsUpdate: Hashable, Sendable {
   case credited(StampCredit)
   /// Such as after a refund: merge it.
   case ledgerChanged(StampLedger)
+  /// A Plus transaction reached the server outside ``Payments/subscribe(_:)``: a renewal, an
+  /// approved Ask to Buy, a refund. Read the pair's Plus again.
+  case plusChanged
 }
 
 public enum PaymentsError: Error, Hashable, Sendable {
@@ -88,4 +102,6 @@ public enum PaymentsError: Error, Hashable, Sendable {
   /// The server refused the transaction's signature, bundle or product.
   case rejected
   case unknownProduct(String)
+  /// This Apple Account's Plus is bound to another Ourio account, which keeps it.
+  case subscriptionTaken
 }

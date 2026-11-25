@@ -1,6 +1,7 @@
 import AuthenticationServices
 import Design
 import FeatureOnboarding
+import FeatureShop
 import MomentsInterface
 import WidgetInterface
 import WidgetUI
@@ -17,6 +18,7 @@ struct PartnerAndAccountSections: View {
 
     @Environment(\.startOver) private var startOver
     @Environment(\.authorizationController) private var authorizationController
+    @Environment(PlusModel.self) private var plus: PlusModel?
     @State private var confirming: Action?
     @State private var reporting = false
     @State private var working: Busy?
@@ -47,7 +49,13 @@ struct PartnerAndAccountSections: View {
                 }
             }
             GroupedSection(header: "Delete account",
-                           footer: "Removes your account and what you sent from the server, and takes this phone back to the start.") {
+                           footer: "Removes your account and what you sent from the server, and takes this phone back to the start."
+                               + (paysForPlus ? " Apple keeps billing Ourio Plus until you cancel it in Manage subscription." : "")) {
+                if paysForPlus {
+                    Link(destination: PlusLinks.manage) {
+                        Row("Manage subscription", symbol: "shippingbox.fill", tint: .honey) { RowChevron() }
+                    }
+                }
                 button("Delete account", busy: .deleteAccount, symbol: "person.crop.circle.badge.minus", tint: .coral, destructive: true) {
                     confirming = .deleteAccount
                 }
@@ -121,7 +129,13 @@ struct PartnerAndAccountSections: View {
             "Your account and what you sent are deleted from the server, your partner is unpaired, and "
                 + "everything on this phone is erased. If you signed in with Apple, Apple asks you once more, "
                 + "and Ourio's access to your Apple ID ends. This can't be undone."
+                + (paysForPlus ? " Deleting doesn't cancel Ourio Plus: Apple bills it until you cancel." : "")
         }
+    }
+
+    /// The caller's own subscription, which Apple bills whether or not the account is there.
+    private var paysForPlus: Bool {
+        if case .mine = plus?.state { true } else { false }
     }
 
     private static func busy(for action: Action) -> Busy {

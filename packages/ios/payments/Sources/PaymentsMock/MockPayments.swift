@@ -8,10 +8,13 @@ public final class MockPayments: Payments {
   private struct State {
     var subscribers: [UUID: AsyncStream<PaymentsUpdate>.Continuation] = [:]
     var pending: [String: StampPack] = [:]
+    var pendingPlus: [String: PlusOffer] = [:]
     var lastPurchase: (transactionID: String, productID: String)?
+    var plus: (transactionID: String, plan: PlusCatalog.Plan)?
   }
 
   private let catalog: StampPackCatalog
+  private let plusCatalog: PlusCatalog
   private let server: PaymentsServer
   private let switches: MockSwitches
   private let makeID: @Sendable () -> String
@@ -19,11 +22,13 @@ public final class MockPayments: Payments {
 
   public init(
     catalog: StampPackCatalog = .standard,
+    plusCatalog: PlusCatalog = .standard,
     server: PaymentsServer,
     switches: MockSwitches,
     makeID: @escaping @Sendable () -> String = { "mock-\(UUID().uuidString.lowercased())" }
   ) {
     self.catalog = catalog
+    self.plusCatalog = plusCatalog
     self.server = server
     self.switches = switches
     self.makeID = makeID
@@ -66,7 +71,44 @@ public final class MockPayments: Payments {
     return stream
   }
 
-  public var pendingCount: Int { state.withLock { $0.pending.count } }
+  public func plusOffers() async throws(PaymentsError) -> [PlusOffer] {
+    plusCatalog.plans.map(plusCatalog.offer)
+  }
+
+  public func subscribe(_ offer: PlusOffer) async throws(PaymentsError) -> SubscribeResult {
+    guard plusCatalog.definition(offer.id) != nil else { throw .unknownProduct(offer.id) }
+    switch switches.outcome {
+    case .succeed:
+      try await bindPlus(offer, transactionID: makeID())
+      return .subscribed
+    case .cancel:
+      return .cancelled
+    case .fail:
+      throw .failed("The mock store failed this purchase (Labs → Payments).")
+    case .pending:
+      let id = makeID()
+      state.withLock { $0.pendingPlus[id] = offer }
+      return .pending
+    }
+  }
+
+  /// The mock store has no Apple Account: what this phone subscribed to since launch is all.
+  public func restorePlus() async throws(PaymentsError) {
+    publish(.plusChanged)
+  }
+
+  /// What Apple would do next to the Plus bought since launch; false when there is none.
+  @discardableResult
+  public func changePlus(_ kind: PaymentsServer.MockPlusKind) async throws(PaymentsError) -> Bool {
+    guard let plus = state.withLock({ $0.plus }) else { return false }
+    try await server.mockPlus(plus.plan, plus.transactionID, kind)
+    publish(.plusChanged)
+    return true
+  }
+
+  public var pendingCount: Int {
+    state.withLock { $0.pending.count + $0.pendingPlus.count }
+  }
 
   /// Each is credited and announced on ``updates()``.
   public func approvePending() async throws(PaymentsError) {
@@ -79,10 +121,22 @@ public final class MockPayments: Payments {
       let credit = try await credit(pack, transactionID: id)
       publish(.credited(credit))
     }
+    let waitingPlus = state.withLock {
+      let waiting = $0.pendingPlus
+      $0.pendingPlus = [:]
+      return waiting
+    }
+    for (id, offer) in waitingPlus.sorted(by: { $0.key < $1.key }) {
+      try await bindPlus(offer, transactionID: id)
+      publish(.plusChanged)
+    }
   }
 
   public func declinePending() {
-    state.withLock { $0.pending = [:] }
+    state.withLock {
+      $0.pending = [:]
+      $0.pendingPlus = [:]
+    }
   }
 
   /// Refunds on the server, as Apple would, and announces the new ledger.
@@ -101,6 +155,11 @@ public final class MockPayments: Payments {
     let answer = try await server.mock(pack.id, transactionID, .purchase)
     state.withLock { $0.lastPurchase = (transactionID, pack.id) }
     return answer.credit
+  }
+
+  private func bindPlus(_ offer: PlusOffer, transactionID: String) async throws(PaymentsError) {
+    try await server.mockPlus(offer.plan, transactionID, .subscribe)
+    state.withLock { $0.plus = (transactionID, offer.plan) }
   }
 
   private func publish(_ update: PaymentsUpdate) {

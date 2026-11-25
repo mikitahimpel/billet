@@ -349,6 +349,48 @@ with that outcome.
 App Store Server API with a signed key (an in-app purchase key from App Store Connect), which does
 not exist yet, so the server records the request and Apple decides without the answer.
 
+### Ourio Plus
+
+The subscription ([subscription.md](subscription.md)) lives beside the packs in the same package
+(`plus-*.ts`) and the same notifications route, behind its own flag `plus` (`off`, `draft`). Off
+for the caller, or the caller a declared 13-17 (onboarding answer `age-13-17`, any stage), every
+`/v1/plus` route is a 404 before the body is read. Dev ignores the flag, not the age.
+
+| Route | Caller | Answer |
+| --- | --- | --- |
+| `GET /v1/plus` | session | `PlusResponse` |
+| `POST /v1/plus/subscribe` `{signedTransaction, signedRenewalInfo?}` | session | `PlusResponse` |
+| `POST /v1/plus/mock` `{plan, transactionId, kind}` | session; **dev only** | `PlusResponse` |
+| `POST /v1/plus/parcels/open` `{parcel, offer}` | session, paired | `OpenParcelResponse` `{plus, shop}` |
+
+- The subscription is bound to the **account** that first sent it (D1 `plus_subscriptions`, one row
+  per `originalTransactionId`); a second account sending it is `409 SubscriptionTaken`. A pair has
+  Plus while either member has one that is active, ending or in its 16-day grace period. The
+  partner sees `Shared`, with no plan or dates, so a cancel, a failed payment or a refund is never
+  shown to them.
+- Each paid period is a row of `plus_periods`. Parcels are derived from them, never scheduled: a
+  month brings `parcel:<transactionId>`, a year `parcel:<transactionId>:<1..12>` one a month from
+  the purchase date. Only an opened parcel is stored (`plus_parcels`), so a parcel nobody opened
+  costs nothing and waits for ever.
+- Opening grants one piece through the room's grants (`GrantItems`, `GrantInks`, `GrantPostage`),
+  at no coins and no ledger entry. The piece must be on sale, not free, at most
+  `parcelPriceCeiling` (320 coins) and not owned: `400 InvalidRequest` or `409 AlreadyOwned`
+  otherwise. The same parcel with the same offer again answers as before; with another offer it is
+  `409 ParcelOpened`.
+- Notifications: a signed transaction of a Plus product goes to the Plus path. `SUBSCRIBED`,
+  `DID_RENEW`, `DID_CHANGE_RENEWAL_STATUS`, `DID_FAIL_TO_RENEW` (grace), `GRACE_PERIOD_EXPIRED`,
+  `EXPIRED` update the row and the period from the transaction and `signedRenewalInfo`. `REFUND` and
+  `REVOKE` end the period: its parcels not opened go, and an opened one is owed in coins
+  (`refund:<parcelId>`, the piece's price, below 0 if spent, as a pack). `REFUND_REVERSED` gives the
+  coins back (`restore:<parcelId>`). Every outcome is recorded as `plus-<type>`; a subscription the
+  server never saw is recorded only.
+- `/v1/plus/*` shares the purchases rate-limit group (30 a minute per address).
+- The app: `Payments.plusOffers()`, `subscribe(_:)`, `restorePlus()`; StoreKit sends a Plus
+  transaction to `/v1/plus/subscribe` and finishes it only once the server took it (or bound it to
+  someone else). Renewals arriving through `Transaction.updates` go the same way. `PlusMachine` and
+  `ParcelMachine` in `FeatureShop` drive the sheet; Labs → Payments (mock) adds renew, cancel, fail,
+  expire and refund.
+
 ### Owner steps before real purchases
 
 The full checklist is `~/.billet-manager/pet-concept/payments/OWNER-TODO.md` (outside the repo).

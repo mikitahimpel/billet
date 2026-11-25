@@ -225,6 +225,10 @@ nonisolated private struct FakePayments: Payments {
     if let feed { feed.settled += 1 }
   }
 
+  func plusOffers() async throws(PaymentsError) -> [PlusOffer] { [] }
+  func subscribe(_ offer: PlusOffer) async throws(PaymentsError) -> SubscribeResult { .cancelled }
+  func restorePlus() async throws(PaymentsError) {}
+
   func updates() -> AsyncStream<PaymentsUpdate> {
     guard let feed else { return AsyncStream { $0.finish() } }
     return AsyncStream { continuation in

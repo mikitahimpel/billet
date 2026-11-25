@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { coinPacks } from "@billet/contracts-domain/coin-packs";
-import { plusGroup, plusProducts } from "@billet/contracts-domain/plus";
+import { parcelPriceCeiling, plusGroup, plusProducts } from "@billet/contracts-domain/plus";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
@@ -16,6 +16,16 @@ const AppPacks = Schema.Struct({
   packs: Schema.Array(
     Schema.Struct({ id: Schema.String, coins: Schema.Int, price: Schema.String }),
   ),
+});
+
+const AppPlus = Schema.Struct({
+  plus: Schema.Struct({
+    group: Schema.String,
+    parcelPriceCeiling: Schema.Int,
+    plans: Schema.Array(
+      Schema.Struct({ id: Schema.String, plan: Schema.String, price: Schema.String }),
+    ),
+  }),
 });
 
 const StoreKitConfiguration = Schema.Struct({
@@ -68,6 +78,17 @@ describe("the coin packs everywhere", () => {
 });
 
 describe("Ourio Plus everywhere", () => {
+  it("the app's coin-packs.json sells both plans, monthly first, with the server's ceiling", () => {
+    const { plus } = Schema.decodeUnknownSync(AppPlus)(
+      readJson("packages/ios/payments/Sources/Payments/Resources/coin-packs.json"),
+    );
+    expect(plus.group).toBe(plusGroup);
+    expect(plus.parcelPriceCeiling).toBe(parcelPriceCeiling);
+    expect(plus.plans.map(({ id, plan, price }) => ({ id, plan, price }))).toEqual(
+      plusProducts.map(({ id, plan, price }) => ({ id, plan, price })),
+    );
+  });
+
   it("Ourio.storekit has one Plus group with both plans, no trial and no Family Sharing", () => {
     const { subscriptionGroups } = Schema.decodeUnknownSync(StoreKitConfiguration)(
       readJson("apps/ios/Ourio.storekit"),

@@ -85,7 +85,6 @@ struct CoinPillAnchor: PreferenceKey {
 /// Not glass themselves, so the photos stay sharp.
 struct CoupleButton: View {
     let state: HomeState
-    let plus: Bool
     var action: () -> Void
 
     var body: some View {
@@ -95,9 +94,6 @@ struct CoupleButton: View {
                 Monogram(partner: state.partners.1, profile: state.profile, size: Size.control, onGlass: true)
             }
             .overlay(alignment: .bottom) { badge(symbol: "heart.fill").offset(y: 4) }
-            .overlay(alignment: .topTrailing) {
-                if plus { badge(symbol: "crown.fill").offset(x: 4, y: -4) }
-            }
             .frame(height: Size.control)
             .contentShape(.capsule)
         }

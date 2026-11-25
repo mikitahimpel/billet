@@ -12,6 +12,7 @@ by `GET /v1/flags`; a variant the app lacks is ignored.
 | Key | Kind | Default | Release |
 | --- | --- | --- | --- |
 | `payments` | flag | `off` | **Keep, fixed `off`.** No coin purchases in the first release. Never start it before payments ship (`docs/payments.md`). |
+| `plus` | flag | `off` | **Keep, fixed `off`.** Ourio Plus, the monthly parcel ([subscription.md](subscription.md)). Off, every `/v1/plus` route is a 404 and the app shows no Plus row or card. Turn on together with `payments` for the review that ships packs and Plus. Dev ignores it; a declared 13-17 account gets the 404 on every stage. |
 | `pick-tonight` | flag | `on` | **Keep as a kill switch, fixed `on`.** It is a shipped feature with a safe off. |
 | `cat-school` | flag | `off` | **Owner.** Tricks, stars and routines (`docs/cat-school.md`). Leave `draft`/`off` until the owner starts it. |
 | `mischief` | flag | `off` | **Owner.** Hide and seek with the toy mouse (`docs/mischief.md`). Leave `draft`/`off` until the owner starts it. |

@@ -45,6 +45,36 @@ nonisolated extension PaymentsServer {
         } catch {
           throw mapped(error)
         }
+      },
+      subscribe: { (transaction, renewal) async throws(PaymentsError) in
+        do throws(TransportError) {
+          _ = try await client.subscribePlus(
+            SubscribeRequest(signedTransaction: transaction, signedRenewalInfo: renewal))
+        } catch {
+          throw mapped(error)
+        }
+      },
+      mockPlus: { (plan, transaction, kind) async throws(PaymentsError) in
+        let wirePlan: PlusPlan =
+          switch plan {
+          case .monthly: .monthly
+          case .yearly: .yearly
+          }
+        let wireKind: MockPlusRequest.Kind =
+          switch kind {
+          case .subscribe: .subscribe
+          case .renew: .renew
+          case .cancel: .cancel
+          case .fail: .fail
+          case .expire: .expire
+          case .refund: .refund
+          }
+        do throws(TransportError) {
+          _ = try await client.mockPlus(
+            MockPlusRequest(plan: wirePlan, transactionId: transaction, kind: wireKind))
+        } catch {
+          throw mapped(error)
+        }
       })
   }
 
@@ -57,13 +87,14 @@ nonisolated extension PaymentsServer {
   public static func mapped(_ error: TransportError) -> PaymentsError {
     switch error {
     case .api(.invalidPurchase), .api(.invalidRequest): .rejected
+    case .api(.subscriptionTaken): .subscriptionTaken
     case .api(.unauthorized), .api(.notFound), .api(.unavailable), .network, .status, .maintenance:
       .unavailable
     case .api(.invalidInvite), .api(.alreadyPaired), .api(.appleIdInUse), .api(.inkNotOwned),
       .api(.postageNotOwned),
       .api(.notEnoughCoins), .api(.alreadyOwned), .api(.collectionIncomplete), .api(.giftTaken),
       .api(.bonusTaken), .api(.catNotAdopted), .api(.streakNotRestorable), .api(.priceChanged),
-      .api(.layoutRefused), .encoding,
+      .api(.layoutRefused), .api(.parcelOpened), .encoding,
       .decoding:
       .failed("The server answered something unexpected.")
     }

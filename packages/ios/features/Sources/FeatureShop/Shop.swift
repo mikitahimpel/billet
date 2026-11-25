@@ -40,7 +40,6 @@ public struct ShopItem: Identifiable, Hashable {
   /// Mood chip the item nudges when it's in the room, e.g. a toy makes Mochi more curious.
   var mood: String? = nil
   var rarity: ShopRarity = .common
-  var isPlus = false
   var isNew = false
 
   public var thumbnail: String { "Item_\(id)" }
@@ -85,8 +84,7 @@ public enum Catalog {
         blurb: "Squeaks a little. \(cat) pretends not to care.", mood: "Curious", rarity: .common),
       ShopItem(
         id: "tower", name: "Cat Tower", price: 540, category: .mochi,
-        blurb: "Two floors, one nap spot at the very top.", mood: "Happy", rarity: .legendary,
-        isPlus: true),
+        blurb: "Two floors, one nap spot at the very top.", mood: "Happy", rarity: .legendary),
       ShopItem(
         id: "print", name: "Sunset Print", price: 120, category: .decor,
         blurb: "The sky from your first evening walk.", rarity: .rare),
@@ -98,7 +96,7 @@ public enum Catalog {
         blurb: "Sprinkles included, calories not.", mood: "Rested", rarity: .epic),
       ShopItem(
         id: "lantern", name: "Paper Lantern", price: 150, category: .room,
-        blurb: "Hangs by the window and hums with light.", rarity: .legendary, isPlus: true),
+        blurb: "Hangs by the window and hums with light.", rarity: .legendary),
     ]
   }
 

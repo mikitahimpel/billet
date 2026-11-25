@@ -25,6 +25,13 @@ purchases (coins are earned in the app; buying them is off in the first release,
 **Purchases** when `payments` is turned on), financial info, health, sensitive info, crash data
 (Apple's own reports only; the app adds no diagnostics SDK).
 
+**When `payments` or `plus` is turned on**, add **Purchases > Purchase History** (App
+Functionality, linked to the user, no tracking): the coin packs a pair bought and, for Ourio Plus,
+the paying account, plan, Apple transaction ids, period dates, renewal, grace and refund state, and
+the parcels opened. Add `NSPrivacyCollectedDataTypePurchaseHistory` to
+`apps/ios/Nooki/PrivacyInfo.xcprivacy` in the same change. Not done yet: both flags are off for the
+first release; the owner decides when the release that turns them on is submitted.
+
 ## Manifests
 
 `apps/ios/Nooki/PrivacyInfo.xcprivacy` declares the types above and these required-reason APIs:

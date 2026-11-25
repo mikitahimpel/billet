@@ -121,6 +121,12 @@ public enum Routes {
   /// Dev server only: unpairs the caller from their bot partner and deletes it.
   public static let removeDemoPartner = Route(.delete, "/v1/dev/demo-partner")
   public static let getPurchases = Route(.get, "/v1/purchases")
+  /// The pair's Ourio Plus. A 404 on every Plus route: not offered to this account.
+  public static let getPlus = Route(.get, "/v1/plus")
+  public static let subscribePlus = Route(.post, "/v1/plus/subscribe")
+  /// Dev server only: what Apple would do to a mock store's Plus.
+  public static let mockPlus = Route(.post, "/v1/plus/mock")
+  public static let openParcel = Route(.post, "/v1/plus/parcels/open")
   /// Called by Apple, never by the app. Mirrored so the contract test covers every route.
   public static let appStoreNotifications = Route(.post, "/v1/appstore/notifications")
 

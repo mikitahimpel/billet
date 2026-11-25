@@ -1,3 +1,4 @@
+import Payments
 import SwiftUI
 
 public struct MockPaymentsLabsView: View {
@@ -30,6 +31,15 @@ public struct MockPaymentsLabsView: View {
         run {
           let refunded = try await payments.refundLast()
           message = refunded ? "Refunded." : "Nothing bought since launch."
+        }
+      }
+      ForEach(PaymentsServer.MockPlusKind.allCases.filter { $0 != .subscribe }, id: \.self) {
+        kind in
+        Button("Ourio Plus: \(kind.rawValue)") {
+          run {
+            let changed = try await payments.changePlus(kind)
+            message = changed ? "Plus: \(kind.rawValue)." : "No Plus bought since launch."
+          }
         }
       }
       if let message { Text(message).font(.footnote).foregroundStyle(.secondary) }
