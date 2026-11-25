@@ -15,6 +15,10 @@ extension AppSettings {
     static let followMochiKey = "labs.followMochi"
     static let catBrainKey = "labs.catBrain"
 
+    /// Labs: her sitting and standing bodies dissolve into each other; off, one replaces the other in a frame.
+    static let softSwapKey = "labs.softSwap"
+    static var softSwap: Bool { UserDefaults.standard.bool(forKey: softSwapKey) }
+
     static var catBrain: Bool { UserDefaults.standard.object(forKey: catBrainKey) as? Bool ?? true }
 }
 

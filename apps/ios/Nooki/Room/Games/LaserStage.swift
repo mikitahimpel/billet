@@ -145,26 +145,30 @@ final class LaserStage: GameStage {
                 dot.isEnabled = false
                 deck.cheer(big: true)
                 deck.result = GameResult(game: .laser, score: 100, pounces: laser.pounces)
-            } else if let cue = laser.cue(cat: SIMD2(Double(at.x), Double(at.z))) {
-                switch cue {
-                case .chase(let p): run(to: p, from: at, pounce: false)
-                case .pounce(let p): run(to: p, from: at, pounce: true)
-                }
+            } else if case .pounce(let p) = laser.cue(cat: SIMD2(Double(at.x), Double(at.z))) {
+                chases += 1
+                pouncing = true
+                walker.pounce(on: stop(by: p, from: at), id: "laser")
+            }
+        }
+        // She is after the dot wherever it goes, on the run too; within a stride of it she waits for it to rest.
+        if deck.result == nil, !pouncing, let p = laser.dot {
+            let gap = simd_distance(SIMD2(Float(p.x), Float(p.y)), SIMD2(at.x, at.z))
+            if gap > (walker.moving ? 0.35 : 0.5) * spots.length {
+                chases += 1
+                walker.chase(stop(by: p, from: at), id: "laser")
             }
         }
         deck.show(laser.play, "Played")
     }
 
-    /// Runs her to the dot, stopping short of it so her fore paws land on it; a pounce ends in paw pats.
-    private func run(to p: SIMD2<Double>, from at: SIMD3<Float>, pounce: Bool) {
+    /// Where she stands by the dot at `p`, coming from `at`: short of it, so her fore paws land on it.
+    private func stop(by p: SIMD2<Double>, from at: SIMD3<Float>) -> SIMD3<Float> {
         let target = SIMD3(Float(p.x), surface(p.x, p.y), Float(p.y))
         let gap = simd_distance(target, at)
         let short = min(0.3 * spots.length, gap * 0.9)
         let stop = gap > 0.001 ? target + (at - target) / gap * short : target
-        chases += 1
-        pouncing = pounce
-        room.send(to: [stop.x, surface(Double(stop.x), Double(stop.z)), stop.z], facing: GameSpots.yaw(from: at, to: target),
-                  id: "laser-\(chases)", play: pounce)
+        return [stop.x, surface(Double(stop.x), Double(stop.z)), stop.z]
     }
 
     func tearDown() {
