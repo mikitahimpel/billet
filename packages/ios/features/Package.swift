@@ -81,6 +81,8 @@ let tests: [(name: String, dependencies: [String])] = [
   ("SchoolInterfaceTests", ["SchoolInterface"]),
   ("FeatureSchoolTests", ["FeatureSchool", "SchoolInterface", "BilletKit", "Transport", "Wire"]),
   ("FeatureRaidTests", ["FeatureRaid", "RaidInterface", "DecorInterface", "BilletKit"]),
+  ("PackInterfaceTests", ["PackInterface"]),
+  ("FeaturePackTests", ["FeaturePack", "PackInterface", "BilletKit"]),
   ("StoryInterfaceTests", ["StoryInterface"]),
   ("FeatureStoryTests", ["FeatureStory", "StoryInterface", "BilletKit", "Transport", "Wire"]),
   ("FeatureDecorTests", ["FeatureDecor", "DecorInterface", "Persistence", "Transport", "Wire"]),
@@ -219,6 +221,10 @@ let raidInterface: Target = .target(name: "RaidInterface")
 let raid: Target = .target(
   name: "FeatureRaid",
   dependencies: dependencies(["RaidInterface", "DecorInterface", "BilletKit"]))
+let packInterface: Target = .target(
+  name: "PackInterface", dependencies: dependencies(["BilletKit"]))
+let pack: Target = .target(
+  name: "FeaturePack", dependencies: dependencies(["PackInterface", "BilletKit"]))
 let schoolInterface: Target = .target(name: "SchoolInterface")
 let school: Target = .target(
   name: "FeatureSchool",
@@ -239,7 +245,7 @@ let products =
     "FeatureShop", "FeatureInbox", "MoodInterface", "FeatureMood", "DrawInterface",
     "ProfileInterface", "UsInterface", "MomentsInterface", "WidgetInterface", "WidgetUI",
     "DecorInterface", "FeatureDecor", "FeatureUs", "ServerSync", "MischiefInterface",
-    "FeatureMischief", "RaidInterface", "FeatureRaid",
+    "FeatureMischief", "RaidInterface", "FeatureRaid", "PackInterface", "FeaturePack",
   ]
 
 let package = Package(
@@ -260,7 +266,7 @@ let package = Package(
       widgetUI,
       decorInterface, decor, us, onboarding, serverSync, storyInterface, story, schoolInterface,
       school, mischiefInterface,
-      mischief, raidInterface, raid,
+      mischief, raidInterface, raid, packInterface, pack,
     ]
     + tests.map { .testTarget(name: $0.name, dependencies: dependencies($0.dependencies)) }
     + [usTests, shopTests, onboardingTests, serverSyncTests],

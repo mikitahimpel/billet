@@ -85,8 +85,9 @@ struct LabsSections: View {
         }
 
         GroupedSection(header: "Labs · Games",
-                       footer: "Night raid, a prototype for two on one phone: one hides the treat jar and sets defences "
-                           + "on your own living room, the other steers the cat at it.") {
+                       footer: "Prototypes for two on one phone. Night raid: one hides the treat jar and sets "
+                           + "defences on your own living room, the other steers the cat at it. Pack for two: one "
+                           + "suitcase, three things each, and only the names of the other's.") {
             NavigationLink {
                 RaidScreen(layout: state.decor.state.layout, cat: CatProfile.name())
             } label: {
@@ -94,6 +95,13 @@ struct LabsSections: View {
             }
             .buttonStyle(PressScaleStyle())
             .accessibilityIdentifier("labsNightRaid")
+            NavigationLink {
+                PackScreen(cat: CatProfile.name(), seed: UInt64(Date.now.timeIntervalSinceReferenceDate))
+            } label: {
+                Row("Pack for two", symbol: "suitcase.fill", tint: UsTint.honey.color) { RowChevron() }
+            }
+            .buttonStyle(PressScaleStyle())
+            .accessibilityIdentifier("labsPack")
         }
 
         GroupedSection(header: "Labs · Cat",
