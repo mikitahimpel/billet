@@ -91,7 +91,7 @@ struct PackScreen: View {
         case .tooTight: return "\(cat) sniffs and looks doubtful: packed like this, something will not fit."
         case nil: break
         }
-        if turn.held != nil { return "Tap a square of the suitcase to lay it down. Its top-left square lands there." }
+        if turn.held != nil { return "Tap a square of the suitcase and it lies down over it, if there is a way." }
         switch turn.packer {
         case .first:
             let names = turn.unseen.map { PackLook.title($0, cat: cat) }.formatted(.list(type: .and))

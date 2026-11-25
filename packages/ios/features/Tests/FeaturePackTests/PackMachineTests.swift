@@ -60,16 +60,34 @@ private func cell(_ x: Int, _ y: Int) -> PackCell { PackCell(x: x, y: y) }
     #expect(turn(next)?.suitcase.covered.keys.sorted() == [cell(3, 0), cell(3, 1), cell(3, 2)])
   }
 
+  @Test func aPieceLiesDownOverTheTappedSquareAnyWayItCan() {
+    // The bar cannot start on the third square of four, so it lies with its second square there.
+    let next = step(packing(.first), .picked(1), .tapped(cell(2, 0)))
+    #expect(turn(next)?.suitcase.placed[1] == PackPlacement(at: cell(1, 0), turns: 0))
+    let last = step(packing(.first), .picked(1), .tapped(cell(3, 1)))
+    #expect(turn(last)?.suitcase.placed[1] == PackPlacement(at: cell(1, 1), turns: 0))
+  }
+
   @Test func aPieceThatWillNotGoStaysInTheHandAndSaysWhy() {
-    let (next, outputs) = M.transition(step(packing(.first), .picked(1)), .tapped(cell(2, 0)))
-    #expect(turn(next)?.held == M.Held(id: 1, turns: 0))
+    // Stood on end, the bar is taller than the suitcase.
+    let (next, outputs) = M.transition(
+      step(packing(.first), .picked(1), .turned), .tapped(cell(2, 0)))
+    #expect(turn(next)?.held == M.Held(id: 1, turns: 1))
     #expect(turn(next)?.refused == .sticksOut)
     #expect(turn(next)?.suitcase.placed.isEmpty == true)
     #expect(outputs == [.felt(.refused)])
   }
 
+  @Test func aPieceIsNotLaidOnAnother() {
+    let placed = packing(.second) { $0.put(mine, PackPlacement(at: cell(0, 0), turns: 0)) }
+    let next = step(placed, .picked(2), .tapped(cell(3, 0)))
+    #expect(turn(next)?.refused == .onTop(of: 1))
+    #expect(turn(next)?.held?.id == 2)
+  }
+
   @Test func theReasonGoesWhenThePieceIsTurnedOrPutBack() {
-    let refused = step(packing(.first), .picked(1), .tapped(cell(2, 0)))
+    let refused = step(packing(.first), .picked(1), .turned, .tapped(cell(2, 0)))
+    #expect(turn(refused)?.refused == .sticksOut)
     #expect(turn(step(refused, .turned))?.refused == nil)
     #expect(turn(step(refused, .dropped))?.refused == nil)
     #expect(turn(step(refused, .dropped))?.held == nil)

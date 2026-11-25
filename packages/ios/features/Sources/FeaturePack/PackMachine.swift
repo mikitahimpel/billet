@@ -156,10 +156,20 @@ public enum PackMachine: Machine {
         turn.nose = nil
         return (.packing(turn), [])
       }
-      let anchor = piece.shape.turned(held.turns).anchor
-      let placement = PackPlacement(
-        at: PackCell(x: cell.x - anchor.x, y: cell.y - anchor.y), turns: held.turns)
-      turn.refused = turn.suitcase.put(piece, placement)
+      // The piece lies down over the tapped square any way it can: each of its squares is tried on it, in
+      // reading order, so a tap never has to find the one square that happens to be the corner.
+      let squares = piece.shape.turned(held.turns).cells
+      let ways = squares.map {
+        PackPlacement(at: PackCell(x: cell.x - $0.x, y: cell.y - $0.y), turns: held.turns)
+      }
+      if let way = ways.first(where: { turn.suitcase.problem(putting: piece, $0) == nil }) {
+        turn.suitcase.put(piece, way)
+        turn.refused = nil
+      } else {
+        // Say what lies in the way when something does; sticking out is the reason only when nothing else is.
+        let problems = ways.compactMap { turn.suitcase.problem(putting: piece, $0) }
+        turn.refused = problems.first { $0 != .sticksOut } ?? .sticksOut
+      }
       guard turn.refused == nil else { return (.packing(turn), [.felt(.refused)]) }
       turn.held = nil
       turn.nose = nil
