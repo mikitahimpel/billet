@@ -234,6 +234,9 @@ final class CatWalker {
     private var tailTrack: [(at: SIMD3<Float>, dt: Float)] = []
     private var tailPush = SIMD3<Float>.zero
     private var seatAmount: Float = 1
+    /// Seconds her sitting and standing bodies take to dissolve into each other; 0 cuts in one frame.
+    var dissolve: Float = 0
+    private var mixing: (time: Float, seated: Bool)?
     private var change: Change?
     /// Her speed along the floor and her turning as she walks, carried from one leg into the next.
     private var travel: (speed: Float, turn: Glide) = (0, Glide(value: 0))
@@ -573,6 +576,7 @@ final class CatWalker {
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
         }
         advanceChange(dt)
+        advanceMix(dt)
         // Tired she lies down to doze, and gets up again once rested.
         if !directed && !moving && !lying && behavior.drowse > 0.7 && behavior.mood.energy < 0.3 { lieDown() }
         else if !directed && !moving && lying && behavior.mood.energy > 0.5 { getUp() }
@@ -636,12 +640,38 @@ final class CatWalker {
     /// 1 shows the seated cat, 0 the standing one, cutting from one to the other halfway: their collars, bells and paws
     /// sit a little apart, so any frame showing both shows two of each.
     private func fade(_ amount: Float) {
+        if mixing != nil {
+            mixing = nil
+            seated.entity?.components.remove(OpacityComponent.self)
+            standing.entity?.components.remove(OpacityComponent.self)
+        }
         seatAmount = amount
         let resting = amount > 0.5
         let body = bodies[rest] == nil ? nil : rest
         seated.entity?.isEnabled = resting && body == nil
         for (pose, rig) in bodies { rig.entity?.isEnabled = resting && body == pose }
         standing.entity?.isEnabled = !resting
+    }
+
+    /// Shows her sitting body or her standing one in place of the other: at once, or over `dissolve` with the new
+    /// one coming in over the old before the old goes, so she is never seen through.
+    private func swap(seated on: Bool) {
+        fade(on ? 1 : 0)
+        guard dissolve > 0, bodies[rest] == nil else { return }
+        mixing = (0, on)
+        advanceMix(0)
+    }
+
+    private func advanceMix(_ dt: Float) {
+        guard var m = mixing else { return }
+        m.time += dt
+        let u = min(m.time / dissolve, 1)
+        guard u < 1 else { return fade(seatAmount) }
+        mixing = m
+        let (new, old) = m.seated ? (seated, standing) : (standing, seated)
+        old.entity?.isEnabled = true
+        new.entity?.components.set(OpacityComponent(opacity: min(1, 2 * u)))
+        old.entity?.components.set(OpacityComponent(opacity: min(1, 2 - 2 * u)))
     }
 
     /// Shows whichever of her two splats this walker last showed; the rigs are shared with other rooms' walkers.
@@ -704,7 +734,7 @@ final class CatWalker {
         }
         standing.pose = p
         // Hidden, the standing skeleton still poses: the seated head and the tail's swing follow it.
-        standing.update(skinning: seatAmount <= 0.5)
+        standing.update(skinning: seatAmount <= 0.5 || mixing != nil)
         tailPush = tailForce(dt)
     }
 
@@ -739,7 +769,7 @@ final class CatWalker {
         seated.pose = p
         // The seated splat only needs skinning while it shows.
         let body = bodies[rest]
-        if seatAmount > 0.5 && body == nil { seated.update() }
+        if (seatAmount > 0.5 || mixing != nil) && body == nil { seated.update() }
         if let body { poseBody(body, like: p) }
     }
 
@@ -859,7 +889,7 @@ final class CatWalker {
         add { [unowned self] dt in
             guard let t = time else {
                 time = dt
-                fade(0)
+                swap(seated: false)
                 squash.goal = 0
                 lean.goal = 0
                 change = Change(from: .sit, to: .stand, order: .rising, duration: pace.standUp)
@@ -915,7 +945,7 @@ final class CatWalker {
             lean.goal = Posture.swapLean * smoothstep(u, 0.3, 0.8)
             squash.goal = Self.swapSquash * smoothstep(u, 0.82, 1)
             if u >= 1 {
-                fade(1)
+                swap(seated: true)
                 squash.goal = 0
                 lean.goal = 0
             }

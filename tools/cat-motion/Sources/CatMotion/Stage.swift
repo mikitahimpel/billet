@@ -38,6 +38,10 @@ final class Stage {
       wandering: false)
     // The brain drives her on a phone: no trips, naps, yawns or washing of her own.
     walker.directed = true
+    // CAT_DISSOLVE=<seconds> tries her bodies dissolving into each other in place of the cut.
+    if let seconds = ProcessInfo.processInfo.environment["CAT_DISSOLVE"].flatMap(Float.init) {
+      walker.dissolve = seconds
+    }
     walker.show()
   }
 
@@ -51,6 +55,14 @@ final class Stage {
     rigs.compactMap { name, rig in
       guard let entity = rig.entity, entity.isEnabled, let body = SplatLoader.drawn[name] else { return nil }
       return (body, toWorld(entity))
+    }
+  }
+
+  /// How opaque each body on show is, in the order of `shown`.
+  var opacities: [Float] {
+    rigs.compactMap { name, rig in
+      guard let entity = rig.entity, entity.isEnabled, SplatLoader.drawn[name] != nil else { return nil }
+      return entity.components[OpacityComponent.self]?.opacity ?? 1
     }
   }
 

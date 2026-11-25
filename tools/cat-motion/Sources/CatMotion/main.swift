@@ -123,8 +123,16 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
     let at = stage.group.position
     let side = Camera(target: [at.x, at.y + 0.1, at.z], from: [0, 0, 1], pixelsPerUnit: sideZoom)
     let bodies = stage.shown
-    let roomImage = renderer.draw(bodies, camera: room)
-    let sideImage = renderer.draw(bodies, camera: side)
+    // Dissolving, each body is a layer of its own, the opaque one under the other.
+    let layers = zip(bodies, stage.opacities).sorted { $0.1 > $1.1 }
+    let mixed = layers.contains { $0.1 < 1 }
+    func picture(_ camera: Camera) -> [(CGImage, Float)] {
+      if !mixed { return renderer.draw(bodies, camera: camera).map { [($0, Float(1))] } ?? [] }
+      return layers.compactMap { layer in renderer.draw([layer.0], camera: camera).map { ($0, layer.1) } }
+    }
+    let sideImages = picture(side)
+    let roomImages = picture(room)
+    if mixed { _ = renderer.draw(bodies, camera: side) }
     let mask = renderer.lastAlpha
     var sample = Sample(time: time, action: action, stage: stage)
     sample.silhouetteChange = Sample.change(lastMask, mask)
@@ -132,10 +140,18 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
     samples.append(sample)
     recorder.add { context in
       drawFloor(context, camera: room, scenario: scenario, floor: stage.floor, side: false)
-      if let roomImage { context.draw(roomImage, in: CGRect(origin: .zero, size: panel)) }
+      for (image, opacity) in roomImages {
+        context.setAlpha(CGFloat(opacity))
+        context.draw(image, in: CGRect(origin: .zero, size: panel))
+      }
+      context.setAlpha(1)
       context.translateBy(x: panel.width, y: 0)
       drawFloor(context, camera: side, scenario: scenario, floor: at.y, side: true)
-      if let sideImage { context.draw(sideImage, in: CGRect(origin: .zero, size: panel)) }
+      for (image, opacity) in sideImages {
+        context.setAlpha(CGFloat(opacity))
+        context.draw(image, in: CGRect(origin: .zero, size: panel))
+      }
+      context.setAlpha(1)
       context.translateBy(x: -panel.width, y: 0)
       context.setFillColor(CGColor(gray: 0.3, alpha: 1))
       context.fill(CGRect(x: panel.width - 1, y: 0, width: 2, height: panel.height))

@@ -293,6 +293,7 @@ class CatRoom {
             let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, bodies: Self.bodies,
                                    scale: scale, rests: rests, route: route, wandering: wandering)
             walker.keepOut = catKeepOut
+            walker.dissolve = AppSettings.softSwap ? 0.2 : 0
             walker.needsBody = { Self.needBody($0) }
             Self.rooms.add(self)
             walker.avoid = avoid
