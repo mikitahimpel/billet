@@ -156,6 +156,14 @@ export const routes = {
   removeDemoPartner: route("DELETE", "/v1/dev/demo-partner"),
   /** The pair's bought coins: the balance and every ledger entry. */
   getPurchases: route("GET", "/v1/purchases"),
+  /** The pair's Ourio Plus and its parcels waiting to be opened. */
+  getPlus: route("GET", "/v1/plus"),
+  /** Binds a verified Plus subscription to the caller, who pays for the pair. */
+  subscribePlus: route("POST", "/v1/plus/subscribe"),
+  /** The dev stage only: what Apple would do to a Plus subscription. Elsewhere a 404. */
+  mockPlus: route("POST", "/v1/plus/mock"),
+  /** Opens a waiting parcel as one piece from the Shop, for no coins. */
+  openParcel: route("POST", "/v1/plus/parcels/open"),
   /** App Store Server Notifications V2 (refunds and the like). Apple calls it; no session. */
   appStoreNotifications: route("POST", "/v1/appstore/notifications"),
 } as const satisfies Record<string, Route>;

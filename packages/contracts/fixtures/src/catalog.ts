@@ -22,6 +22,15 @@ import { CompactStrokes, Stroke } from "@billet/contracts-domain/ink";
 import { freeInk, Ink, InkId, inkOf, inks } from "@billet/contracts-domain/inks";
 import { Note } from "@billet/contracts-domain/note";
 import { PairId } from "@billet/contracts-domain/pair-id";
+import { ParcelId, ParcelOffer } from "@billet/contracts-domain/plus";
+import {
+  MockPlusRequest,
+  OpenParcelRequest,
+  OpenParcelResponse,
+  PlusResponse,
+  PlusState,
+  SubscribeRequest,
+} from "@billet/contracts-http-api/plus";
 import { PushToken } from "@billet/contracts-domain/push-token";
 import { AccountResponse, DeleteAccountRequest } from "@billet/contracts-http-api/account";
 import { ApiError } from "@billet/contracts-http-api/api-error";
@@ -886,6 +895,8 @@ const listCommands = {
   "want-item": { _tag: "WantItem", key: listKey, list: groceriesId, item: milkId, wants: true },
 } as const;
 
+const parcelId = Schema.decodeSync(ParcelId)("parcel:2000000812345678");
+
 export const catalog: ReadonlyArray<Fixture> = [
   fixture("PairId", PairId, { default: pairId }),
   fixture("CompactStrokes", CompactStrokes, { default: compact }),
@@ -1293,6 +1304,8 @@ export const catalog: ReadonlyArray<Fixture> = [
     "cat-not-adopted": ApiError.cases.CatNotAdopted.make({}),
     "streak-not-restorable": ApiError.cases.StreakNotRestorable.make({}),
     "price-changed": ApiError.cases.PriceChanged.make({ price: 560 }),
+    "subscription-taken": ApiError.cases.SubscriptionTaken.make({}),
+    "parcel-opened": ApiError.cases.ParcelOpened.make({}),
   }),
   fixture("CoinEntry", CoinEntry, {
     default: earnEntry,
@@ -1537,6 +1550,57 @@ export const catalog: ReadonlyArray<Fixture> = [
       productId: "com.ourio.app.coins.100",
       transactionId: "mock-6f1c2d3e-4a5b-4c6d-8e7f-0a1b2c3d4e5f",
       kind: "refund",
+    },
+  }),
+  fixture("PlusState", PlusState, {
+    none: PlusState.cases.None.make({}),
+    active: PlusState.cases.Active.make({ plan: "monthly", renewsOn: "2026-12-12T09:00:00.000Z" }),
+    ending: PlusState.cases.Ending.make({ plan: "yearly", until: "2027-11-12T09:00:00.000Z" }),
+    grace: PlusState.cases.Grace.make({ plan: "monthly" }),
+    shared: PlusState.cases.Shared.make({}),
+    ended: PlusState.cases.Ended.make({}),
+  }),
+  fixture("ParcelOffer", ParcelOffer, {
+    item: ParcelOffer.cases.Item.make({ item: yarn }),
+    ink: ParcelOffer.cases.Ink.make({ ink: rose }),
+    postage: ParcelOffer.cases.Postage.make({ postage: "seal-rose" }),
+  }),
+  fixture("PlusResponse", PlusResponse, {
+    default: {
+      state: { _tag: "Active", plan: "monthly", renewsOn: "2026-12-12T09:00:00.000Z" },
+      parcels: [{ id: parcelId, arrived: "2026-11-12T09:00:00.000Z" }],
+      opened: 3,
+      nextParcel: "2026-12-12T09:00:00.000Z",
+      bothPay: false,
+      choicesLeft: 21,
+    },
+    partner: {
+      state: { _tag: "Shared" },
+      parcels: [],
+      opened: 4,
+      bothPay: false,
+      choicesLeft: 20,
+    },
+    none: { state: { _tag: "None" }, parcels: [], opened: 0, bothPay: false, choicesLeft: 24 },
+  }),
+  fixture("SubscribeRequest", SubscribeRequest, {
+    default: { signedTransaction: "eyJhbGciOiJFUzI1NiJ9.e30.c2ln" },
+    renewal: {
+      signedTransaction: "eyJhbGciOiJFUzI1NiJ9.e30.c2ln",
+      signedRenewalInfo: "eyJhbGciOiJFUzI1NiJ9.e30.cmVu",
+    },
+  }),
+  fixture("MockPlusRequest", MockPlusRequest, {
+    default: { plan: "monthly", transactionId: "mock-plus-1", kind: "subscribe" },
+    refund: { plan: "yearly", transactionId: "mock-plus-2", kind: "refund" },
+  }),
+  fixture("OpenParcelRequest", OpenParcelRequest, {
+    default: { parcel: parcelId, offer: { _tag: "Item", item: yarn } },
+  }),
+  fixture("OpenParcelResponse", OpenParcelResponse, {
+    default: {
+      plus: { state: { _tag: "Shared" }, parcels: [], opened: 1, bothPay: false, choicesLeft: 23 },
+      shop: { balance: 65, inks: [freeInk], items: [lamp, rug, yarn], wishlist: [], bonuses: [] },
     },
   }),
   fixture("PurchaseResponse", PurchaseResponse, {

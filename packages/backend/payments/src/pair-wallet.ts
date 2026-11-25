@@ -1,5 +1,7 @@
 import { Context, type Effect } from "effect";
 import type { PairId } from "@billet/contracts-domain/pair-id";
+import type { ParcelOffer } from "@billet/contracts-domain/plus";
+import type { ShopResponse } from "@billet/contracts-http-api/shop";
 import type { PurchaseCredit } from "@billet/backend-pair-room/room-service";
 import type { PaymentsNotFound, PaymentsUnavailable } from "./payments-error.ts";
 
@@ -23,5 +25,14 @@ export class PairWallet extends Context.Service<
       pairId: PairId,
       credit: PurchaseCredit,
     ) => Effect.Effect<WalletChange, PaymentsNotFound | PaymentsUnavailable>;
+    /** What the pair owns, for a parcel's choice. */
+    readonly shop: (
+      pairId: PairId,
+    ) => Effect.Effect<ShopResponse, PaymentsNotFound | PaymentsUnavailable>;
+    /** Gives the pair a parcel's piece for no coins. Safe to repeat. */
+    readonly grant: (
+      pairId: PairId,
+      piece: ParcelOffer,
+    ) => Effect.Effect<ShopResponse, PaymentsNotFound | PaymentsUnavailable>;
   }
 >()("@billet/backend-payments/PairWallet") {}

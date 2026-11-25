@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { Schema } from "effect";
 import { describe, expect, it } from "vitest";
 import { coinPacks } from "@billet/contracts-domain/coin-packs";
+import { plusGroup, plusProducts } from "@billet/contracts-domain/plus";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 
@@ -20,6 +21,21 @@ const AppPacks = Schema.Struct({
 const StoreKitConfiguration = Schema.Struct({
   products: Schema.Array(
     Schema.Struct({ productID: Schema.String, displayPrice: Schema.String, type: Schema.String }),
+  ),
+  subscriptionGroups: Schema.Array(
+    Schema.Struct({
+      name: Schema.String,
+      subscriptions: Schema.Array(
+        Schema.Struct({
+          productID: Schema.String,
+          displayPrice: Schema.String,
+          type: Schema.String,
+          recurringSubscriptionPeriod: Schema.String,
+          familyShareable: Schema.Boolean,
+          introductoryOffer: Schema.Null,
+        }),
+      ),
+    }),
   ),
 });
 
@@ -48,5 +64,36 @@ describe("the coin packs everywhere", () => {
         .map(({ productID, displayPrice, type }) => ({ id: productID, price: displayPrice, type }))
         .toSorted((a, b) => a.id.localeCompare(b.id)),
     ).toEqual(canonical.map(({ id, price }) => ({ id, price, type: "Consumable" })));
+  });
+});
+
+describe("Ourio Plus everywhere", () => {
+  it("Ourio.storekit has one Plus group with both plans, no trial and no Family Sharing", () => {
+    const { subscriptionGroups } = Schema.decodeUnknownSync(StoreKitConfiguration)(
+      readJson("apps/ios/Ourio.storekit"),
+    );
+    expect(subscriptionGroups.map(({ name }) => name)).toEqual([plusGroup]);
+    const subscriptions = subscriptionGroups.flatMap((group) => group.subscriptions);
+    expect(
+      subscriptions
+        .map(({ productID, displayPrice, type, recurringSubscriptionPeriod, familyShareable }) => ({
+          id: productID,
+          price: displayPrice,
+          type,
+          period: recurringSubscriptionPeriod,
+          familyShareable,
+        }))
+        .toSorted((a, b) => a.id.localeCompare(b.id)),
+    ).toEqual(
+      plusProducts
+        .map(({ id, price, plan }) => ({
+          id,
+          price,
+          type: "RecurringSubscription",
+          period: plan === "monthly" ? "P1M" : "P1Y",
+          familyShareable: false,
+        }))
+        .toSorted((a, b) => a.id.localeCompare(b.id)),
+    );
   });
 });

@@ -1,0 +1,9 @@
+{
+  "bothPay": false,
+  "choicesLeft": 20,
+  "opened": 4,
+  "parcels": [],
+  "state": {
+    "_tag": "Shared"
+  }
+}

@@ -14,6 +14,8 @@ import { PaymentsRepository, CoinOwner } from "../src/payments-repository.ts";
 import { PaymentsRoutes } from "../src/payments-routes.ts";
 import { PaymentsService } from "../src/payments-service.ts";
 import { PaymentsSwitch } from "../src/payments-switch.ts";
+import { PlusRepository } from "../src/plus-repository.ts";
+import { PlusService } from "../src/plus-service.ts";
 import {
   bundleId,
   makeChain,
@@ -24,6 +26,7 @@ import {
 } from "./app-store-signer.ts";
 import { makeInMemoryPairWallet } from "./in-memory-pair-wallet.ts";
 import { makeInMemoryPaymentsRepository } from "./in-memory-payments-repository.ts";
+import { makeInMemoryPlusRepository } from "./in-memory-plus-repository.ts";
 
 // Callers are `<user>` bearer tokens; users whose name starts with `paired` are in the pair
 // `pair-<user>`, everyone else has no partner.
@@ -79,10 +82,18 @@ const setup = (stage: string, payments: Layer.Layer<PaymentsSwitch> = PaymentsSw
   const config = PaymentsConfig.with(settingsForStage(stage, [apple.root]));
   const app = HttpRouter.toWebHandler(
     PaymentsRoutes.pipe(
-      Layer.provide(Layer.mergeAll(FakeAuth, PaymentsService.layer, payments, config)),
+      Layer.provide(
+        Layer.mergeAll(
+          FakeAuth,
+          PaymentsService.layer.pipe(Layer.provideMerge(PlusService.layer)),
+          payments,
+          config,
+        ),
+      ),
       Layer.provide(
         Layer.mergeAll(
           Layer.succeed(PaymentsRepository, memory.repository),
+          Layer.succeed(PlusRepository, makeInMemoryPlusRepository()),
           Layer.succeed(PairWallet, rooms.wallet),
           FakePairing,
           config,

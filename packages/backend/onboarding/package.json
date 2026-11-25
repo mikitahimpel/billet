@@ -5,6 +5,7 @@
   "type": "module",
   "sideEffects": false,
   "exports": {
+    "./age-band": "./src/age-band.ts",
     "./answer-check": "./src/answer-check.ts",
     "./catalogue": "./src/catalogue.ts",
     "./onboarding-error": "./src/onboarding-error.ts",

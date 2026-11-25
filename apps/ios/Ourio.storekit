@@ -57,7 +57,59 @@
     "_storefront": "USA",
     "_storeKitErrors": []
   },
-  "subscriptionGroups": [],
+  "subscriptionGroups": [
+    {
+      "id": "6700000010",
+      "localizations": [],
+      "name": "Ourio Plus",
+      "subscriptions": [
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "3.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6700000011",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "A parcel every month for the two of you: choose one thing in the Shop to keep.",
+              "displayName": "Ourio Plus",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.ourio.app.plus.monthly",
+          "recurringSubscriptionPeriod": "P1M",
+          "referenceName": "Ourio Plus Monthly",
+          "subscriptionGroupID": "6700000010",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        },
+        {
+          "adHocOffers": [],
+          "codeOffers": [],
+          "displayPrice": "29.99",
+          "familyShareable": false,
+          "groupNumber": 1,
+          "internalID": "6700000012",
+          "introductoryOffer": null,
+          "localizations": [
+            {
+              "description": "A parcel every month for a year, for the two of you: choose one thing in the Shop each month to keep.",
+              "displayName": "Ourio Plus, yearly",
+              "locale": "en_US"
+            }
+          ],
+          "productID": "com.ourio.app.plus.yearly",
+          "recurringSubscriptionPeriod": "P1Y",
+          "referenceName": "Ourio Plus Yearly",
+          "subscriptionGroupID": "6700000010",
+          "type": "RecurringSubscription",
+          "winbackOffers": []
+        }
+      ]
+    }
+  ],
   "version": {
     "major": 4,
     "minor": 0

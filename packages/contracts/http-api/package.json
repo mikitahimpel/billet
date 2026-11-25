@@ -24,6 +24,7 @@
     "./titles": "./src/titles.ts",
     "./mood": "./src/mood.ts",
     "./note": "./src/note.ts",
+    "./plus": "./src/plus.ts",
     "./purchase": "./src/purchase.ts",
     "./routes": "./src/routes.ts",
     "./safety": "./src/safety.ts",

@@ -1,0 +1,17 @@
+{
+  "bothPay": false,
+  "choicesLeft": 21,
+  "nextParcel": "2026-12-12T09:00:00.000Z",
+  "opened": 3,
+  "parcels": [
+    {
+      "arrived": "2026-11-12T09:00:00.000Z",
+      "id": "parcel:2000000812345678"
+    }
+  ],
+  "state": {
+    "_tag": "Active",
+    "plan": "monthly",
+    "renewsOn": "2026-12-12T09:00:00.000Z"
+  }
+}

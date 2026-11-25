@@ -1,0 +1,24 @@
+{
+  "plus": {
+    "bothPay": false,
+    "choicesLeft": 23,
+    "opened": 1,
+    "parcels": [],
+    "state": {
+      "_tag": "Shared"
+    }
+  },
+  "shop": {
+    "balance": 65,
+    "bonuses": [],
+    "inks": [
+      "ink-graphite"
+    ],
+    "items": [
+      "lamp",
+      "rug",
+      "yarn"
+    ],
+    "wishlist": []
+  }
+}
