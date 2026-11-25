@@ -169,6 +169,8 @@ final class CatWalker {
         var open: ((_ dt: Float) -> Bool)?
         /// Where a walk along the floor is headed, for the step before it to round the corner into it.
         var target: SIMD3<Float>?
+        /// Part of a chase, dropped when what she chases moves.
+        var chase = false
     }
 
     // Room units from a corner of her path where she starts to turn into the next leg, less than the margin her
@@ -410,6 +412,7 @@ final class CatWalker {
     /// Back on her bed at once, sitting, with whatever she was doing dropped.
     func snapHome() {
         steps = []
+        chased = nil
         travel = (0, Glide(value: 0))
         away = nil
         lying = false
@@ -454,6 +457,7 @@ final class CatWalker {
     /// floor and crosses it, instead of going back to her resting spot first.
     func go(to destination: Destination?, stretch: Bool = false) {
         guard !moving, destination?.id != away?.id else { return }
+        chased = nil
         planYaw = yaw
         behavior.stir(0.2)
         leaveBody()
@@ -475,6 +479,51 @@ final class CatWalker {
         turn(destination?.rest ?? homeYaw)
         sitDown()
         away = destination
+    }
+
+    /// Where what she chases was when she last planned her way to it, and how long she has stood there since.
+    private var chased: (point: SIMD3<Float>, idle: Float)?
+    /// How much faster than her walk she runs after something far off.
+    private static let dash: Float = 1.7
+
+    /// Runs her after `point` on the floor from wherever she is, and again whenever it has moved: she takes the new
+    /// way without stopping, runs while it is far and slows closing in, and stays on her feet when she gets there,
+    /// sitting down only once it has kept still a while. Ignored while she does anything but chase.
+    func chase(_ point: SIMD3<Float>, id: String) {
+        if moving {
+            guard steps.contains(where: \.chase) else { return }
+            if let chased, simd_distance(chased.point, point) < 0.03 { return }
+            steps.removeAll(where: \.chase)
+        } else {
+            planYaw = yaw
+            behavior.stir(0.2)
+            leaveBody()
+            standUp()
+        }
+        chased = (point, 0)
+        var from = group.position
+        for corner in detour(from, point) + [point] {
+            walk(from, corner, chase: true)
+            from = corner
+        }
+        away = Destination(id: id, path: [Waypoint(at: point, move: .jump)], rest: yaw)
+    }
+
+    /// Springs onto `point` from where she stands, with the crouch and wiggle of a jump, and pats what she landed
+    /// on; from a paw's reach she only pats. Only while she is still.
+    func pounce(on point: SIMD3<Float>, id: String) {
+        guard !moving else { return }
+        let here = group.position
+        planYaw = yaw
+        leaveBody()
+        standUp()
+        if simd_distance(here, point) > 0.05 {
+            turn(facing(point.x - here.x, point.z - here.z))
+            jump(here, point)
+        }
+        pat()
+        chased = (point, 0)
+        away = Destination(id: id, path: [Waypoint(at: point, move: .jump)], rest: yaw)
     }
 
     /// Height below which a waypoint counts as standing on the floor.
@@ -574,6 +623,11 @@ final class CatWalker {
                 if next(dt) { steps.removeFirst() }
             }
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
+        }
+        if !moving, let c = chased {
+            // What she chased has kept still long enough: she sits down by it.
+            chased = c.idle + dt < 1.2 ? (c.point, c.idle + dt) : nil
+            if chased == nil { sitDown() }
         }
         advanceChange(dt)
         advanceMix(dt)
@@ -846,8 +900,8 @@ final class CatWalker {
         steps.append(Step(duration: duration, run: run))
     }
 
-    private func add(until done: @escaping (Float) -> Bool, toward target: SIMD3<Float>? = nil) {
-        steps.append(Step(duration: .infinity, run: { _ in }, open: done, target: target))
+    private func add(until done: @escaping (Float) -> Bool, toward target: SIMD3<Float>? = nil, chase: Bool = false) {
+        steps.append(Step(duration: .infinity, run: { _ in }, open: done, target: target, chase: chase))
     }
 
     /// A jump she turns to and sizes up from where she stands; a walk she steers into as she goes.
@@ -880,6 +934,7 @@ final class CatWalker {
             add(0.9) { [unowned self] u in posture = .blend(.loaf, .stand, ease(u)) }
             return
         }
+        guard seatAmount > 0.5 else { return }
         // She gathers herself on the seated splat, and the standing one takes over at the bottom of it.
         add(0.3) { [unowned self] u in
             lean.goal = Posture.swapLean
@@ -974,7 +1029,7 @@ final class CatWalker {
     /// Walks to `to`, steering: she looks where she is going before she turns, turns as she walks, slower the
     /// further she has to come round, rounds the corner into a next leg instead of stopping at it, and comes to a
     /// stop at the last one over about a stride. Her pace wanders a little as she goes.
-    private func walk(_ from: SIMD3<Float>, _ to: SIMD3<Float>) {
+    private func walk(_ from: SIMD3<Float>, _ to: SIMD3<Float>, chase: Bool = false) {
         let length = simd_distance(SIMD2(from.x, from.z), SIMD2(to.x, to.z))
         guard simd_distance(from, to) > 0 else { return }
         planYaw = facing(to.x - from.x, to.z - from.z)
@@ -998,19 +1053,22 @@ final class CatWalker {
             lead = min(max(0.7 * error, -0.45), 0.45)
             gaze = -0.15
             // From standing, facing well away from where she is going, her head goes there first.
-            if looked == nil { looked = travel.speed < 1e-3 && abs(error) > 0.5 ? 0 : 1 }
+            if looked == nil { looked = !chase && travel.speed < 1e-3 && abs(error) > 0.5 ? 0 : 1 }
             if let l = looked, l < 0.28 {
                 looked = l + dt
                 return false
             }
             stepping = true
 
-            let cruise = pace.walkSpeed * (1 + 0.08 * noise(self.time * 0.35, 21))
+            // Chasing she runs while there is far to go, and is back at a walk a stride or two from the end.
+            let rest = chase ? left + self.steps.dropFirst().reduce(0) { $0 + ($1.chase ? 0.1 : 0) } : 0
+            let hurry = lerp(1, Self.dash, smoothstep(rest, 0.08, 0.3))
+            let cruise = pace.walkSpeed * hurry * (1 + 0.08 * noise(self.time * 0.35, 21))
             let facingIt = max(cos(error), 0)
             var goal = cruise * (0.2 + 0.8 * facingIt * facingIt)
             // No faster than lets her come round to the point at her turning rate.
             goal = min(goal, pace.turnRate * left / max(2 * abs(sin(error)), 0.2))
-            let gain = pace.walkSpeed / pace.rampTime
+            let gain = pace.walkSpeed * hurry / pace.rampTime
             if let next {
                 // Into a corner she slows by how sharp it is.
                 let after = shortest(heading, facing(next.x - to.x, next.z - to.z)) - heading
@@ -1037,7 +1095,7 @@ final class CatWalker {
             at.y = to.y + (from.y - to.y) * min(simd_distance(SIMD2(at.x, at.z), SIMD2(to.x, to.z)) / length, 1)
             group.position = at
             return false
-        }, toward: to)
+        }, toward: to, chase: chase)
     }
 
     /// Blends the posture along `keys`, (seconds, posture) in order, at `t` seconds.

@@ -66,6 +66,9 @@ final class Stage {
     }
   }
 
+  /// Where the laser dot is, for the picture.
+  var dot: SIMD3<Float>?
+
   var shownName: String { shown.first?.body.name ?? "none" }
 
   /// Model space of the standing splat to the room.

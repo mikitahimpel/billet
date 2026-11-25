@@ -48,6 +48,10 @@ class CatRoom {
     private var squashGate = ChangeGate<SIMD3<Float>>()
     private var catModel = Entity()
     private(set) var walker: CatWalker?
+    /// Her sitting and standing bodies dissolve into each other instead of one replacing the other in a frame.
+    var softSwap = false {
+        didSet { walker?.dissolve = softSwap ? 0.2 : 0 }
+    }
     private var watch = CatWatch()
     private(set) var director: CatDirector?
     /// The pair's journal once paired; `RoomController` connects it.
@@ -293,7 +297,7 @@ class CatRoom {
             let walker = CatWalker(group: catGroup, standing: mochi.standing, seated: mochi.seated, bodies: Self.bodies,
                                    scale: scale, rests: rests, route: route, wandering: wandering)
             walker.keepOut = catKeepOut
-            walker.dissolve = AppSettings.softSwap ? 0.2 : 0
+            walker.dissolve = softSwap ? 0.2 : 0
             walker.needsBody = { Self.needBody($0) }
             Self.rooms.add(self)
             walker.avoid = avoid

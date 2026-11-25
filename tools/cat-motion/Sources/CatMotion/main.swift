@@ -140,6 +140,17 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
     samples.append(sample)
     recorder.add { context in
       drawFloor(context, camera: room, scenario: scenario, floor: stage.floor, side: false)
+      if let dot = stage.dot {
+        let at = room.project(dot, in: panel)
+        context.setFillColor(CGColor(red: 0.95, green: 0.1, blue: 0.1, alpha: 1))
+        context.fillEllipse(in: CGRect(x: at.x - 5, y: at.y - 3, width: 10, height: 6))
+        if let keepOut = stage.walker.keepOut {
+          let c = room.project([keepOut.center.x, stage.floor, keepOut.center.y], in: panel)
+          let r = CGFloat(keepOut.radius * 0.7 * scenario.zoom)
+          context.setFillColor(CGColor(gray: 0.55, alpha: 0.6))
+          context.fillEllipse(in: CGRect(x: c.x - r, y: c.y - r * 0.55, width: 2 * r, height: 1.1 * r))
+        }
+      }
       for (image, opacity) in roomImages {
         context.setAlpha(CGFloat(opacity))
         context.draw(image, in: CGRect(origin: .zero, size: panel))
@@ -170,6 +181,11 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
       run(stage)
     case .wait(let seconds):
       for _ in 0..<Int((seconds / dt).rounded()) { frame() }
+    case .each(let seconds, let run):
+      for index in 0..<Int((seconds / dt).rounded()) {
+        run(stage, Float(index) * dt)
+        frame()
+      }
     case .untilStill:
       var frames = 0
       while frames < 12 || stage.walker.moving, frames < 60 * 60 {
