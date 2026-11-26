@@ -370,7 +370,9 @@ final class CatDirector {
 
     /// Gives her an attention of her own or takes it away, as the Labs switch stands, and keeps it told of what
     /// stands in the room and of how curious a cat she is. The seed takes the clock in, so no two visits play alike.
+    /// The Labs switch for her bodies dissolving into each other is read here too.
     private func liven(at real: Double) {
+        walker.dissolve = AppSettings.softSwap ? 0.2 : 0
         walker.liven(seed: lively() ? source.seed ^ UInt64(max(real, 0)) : nil)
         guard walker.lively else { return }
         walker.interests = spots.compactMap { spot, destination in
