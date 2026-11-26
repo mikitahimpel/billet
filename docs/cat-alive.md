@@ -60,8 +60,9 @@ again. Sent somewhere, she stood up the frame she was told to.
   (yawn, wash, pet, blinks, the tail's wave, a finger) is as it was, scaled down by her stillness.
 - `CatWalker`: before a trip she looks at where she is going for 0.55–1.2 s (`CatPace.regard`),
   then gets up; arrived, she looks about for 0.9–1.8 s (`survey`) before she turns to sit; on the move her head
-  and ears take the same attention within a narrower neck. The eager pace of the games does
-  neither.
+  and ears take the same attention within a narrower neck. On a trip of several legs she stops at
+  a corner about one time in three for a look of at most 1.1 s and goes on. The eager pace of the
+  games does none of it.
 - `CatDirector` tells her what stands in the room (her spots, weighted) and how curious she is,
   and reads the switch four times a second.
 
@@ -94,5 +95,5 @@ and per errand the time and head travel before she stirs and between her last st
 
 - More idle acts to choose from (stretch, knead, loaf variants).
 - The tail as a mood barometer: carried high on a greeting, low on a stalk, lashing when cross.
-- Gaits by intent (stroll, trot, stalk), and pauses mid-walk with a paw lifted.
+- Gaits by intent (stroll, trot, stalk), and a paw held up in a stop mid-walk.
 - Turning her seat toward something that stays behind her.

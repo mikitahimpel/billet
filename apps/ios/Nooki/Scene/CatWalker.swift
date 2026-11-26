@@ -229,6 +229,10 @@ final class CatWalker {
     private var stepping = false
     /// Set by a step in which she has not stirred yet: she still rests as she was.
     private var lingering = false
+    /// She has stopped for a look once on this trip already.
+    private var paused = false
+    /// Room units of floor in the legs queued for this trip so far.
+    private var walked: Float = 0
     private var free = false
     private var wiggle: Float = 0
     private var tread = SIMD2<Float>.zero
@@ -498,6 +502,8 @@ final class CatWalker {
         planYaw = yaw
         behavior.stir(0.2)
         leaveBody()
+        paused = false
+        walked = 0
         if lively { regard(destination?.path.last?.at ?? home) }
         standUp()
         if stretch { self.stretch() }
@@ -541,13 +547,13 @@ final class CatWalker {
     }
 
     /// Arrived, she stands and looks about before she turns to sit.
-    private func survey() {
+    private func survey(atMost seconds: Float = .infinity) {
         var left: Float?
         add(until: { [unowned self] dt in
             guard pace.surveys else { return true }
             lingering = true
             behavior.lose(.destination)
-            let l = left ?? behavior.survey()
+            let l = left ?? min(behavior.survey(), seconds)
             left = l - dt
             return l - dt <= 0
         })
@@ -989,6 +995,13 @@ final class CatWalker {
             turn(facing(to.x - from.x, to.z - from.z))
             jump(from, to)
         } else {
+            // Now and then, at a corner with a stretch behind her, she stops on her feet for a look at something
+            // and goes on; never where she arrives, which has its own look about.
+            if lively, pace.surveys, walked > 0.25, !paused, behavior.draw(0...1) < 0.35 {
+                paused = true
+                survey(atMost: 1.1)
+            }
+            walked += simd_distance(from, to)
             walk(from, to)
         }
     }
