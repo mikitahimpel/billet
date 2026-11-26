@@ -20,6 +20,11 @@ extension AppSettings {
     static var softSwap: Bool { UserDefaults.standard.bool(forKey: softSwapKey) }
 
     static var catBrain: Bool { UserDefaults.standard.object(forKey: catBrainKey) as? Bool ?? true }
+
+    /// Labs: she has an attention of her own, in place of glances drawn at random: she looks at what is around her
+    /// and at where she is about to go, an ear goes to a sound before her head, and she looks about on arriving.
+    static let livelyCatKey = "labs.livelyCat"
+    static var livelyCat: Bool { UserDefaults.standard.bool(forKey: livelyCatKey) }
 }
 
 /// Labs' window on Mochi's brain: the owner's state and the brain's own stack, her four needs, where she is and in

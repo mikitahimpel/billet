@@ -23,6 +23,8 @@ struct Scenario {
   let yaw: Float
   var lyingBodies = true
   var boxes: [Box] = []
+  /// What stands in the room for her to look at.
+  var interests: [(id: String, at: SIMD3<Float>, weight: Float)] = []
   /// What the room view looks at, and how many pixels a room unit takes in it.
   let focus: SIMD3<Float>
   var zoom: Float = 520
@@ -51,6 +53,15 @@ extension Scenario {
   }
 
   private static let length: Float = 0.2
+
+  private static let room: [(id: String, at: SIMD3<Float>, weight: Float)] = [
+    ("sill", [-0.5, 0.45, -0.6], 0.5), ("ball", [0.35, 0.02, 0.4], 0.3), ("bowl", [-0.45, 0, 0.35], 0.3),
+  ]
+
+  /// Where whoever watches is after turning the room by `angle` about her.
+  private static func orbit(_ angle: Float) -> SIMD3<Float> {
+    simd_quatf(angle: angle, axis: [0, 1, 0]).act([1, 0.82, 1])
+  }
 
   /// The laser game's rule for her, as `LaserStage` has it; `chasing` off is the rule it had before, a trip to
   /// the dot each time she is free and it is far.
@@ -150,6 +161,30 @@ extension Scenario {
         .wait(1.5),
         .act("loaf") { $0.walker.settle(.loaf) }, .untilStill, .wait(2),
         .act("sit") { $0.walker.settle(.sit) }, .untilStill, .wait(1.5),
+      ]),
+    // A minute and a half of her sitting alone, with what the app would bring her: the partner
+    // coming in, whoever watches moving round her twice, a pet.
+    Scenario(
+      name: "idle", home: [0, 0, 0], yaw: facing(1, 0.4), interests: room, focus: [0, 0.08, 0],
+      cues: [
+        .wait(20),
+        .act("partner") { $0.walker.behavior.perform(.listen) }, .wait(12),
+        .each(1.5) { stage, t in stage.viewer = orbit(t / 1.5 * 1.2) },
+        .wait(10),
+        .each(1.5) { stage, t in stage.viewer = orbit(1.2 - t / 1.5 * 1.2) },
+        .wait(12),
+        .act("pet") { $0.walker.pet() }, .wait(30),
+      ]),
+    // Sent across the room and back, as the brain sends her: what she does before she gets up and
+    // after she arrives.
+    Scenario(
+      name: "errand", home: [0.2, 0, -0.15], yaw: facing(1, 0.4), interests: room, focus: [0, 0.08, 0],
+      cues: [
+        .wait(4),
+        go("to the rug", [.init(at: [-0.25, 0, 0.2])], rest: facing(0.6, 1)),
+        .untilStill, .wait(5),
+        .act("home") { $0.walker.go(to: nil) },
+        .untilStill, .wait(4),
       ]),
     Scenario(
       name: "pats", home: [0, 0, 0], yaw: east, focus: [0, 0.08, 0],

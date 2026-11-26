@@ -109,8 +109,10 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
   let stage = try Stage(
     resources: resources, at: scenario.home, yaw: scenario.yaw, lyingBodies: scenario.lyingBodies)
   let room = Camera(target: scenario.focus, from: roomDirection, pixelsPerUnit: scenario.zoom)
-  stage.walker.watch(simd_quatf.y(-scenario.yaw).act(roomDirection * 3) / Stage.scale)
-  let recorder = try Recorder(
+  stage.walker.interests = scenario.interests
+  // CAT_NUMBERS=1 draws nothing: samples and the report only, in seconds instead of minutes.
+  let numbersOnly = ProcessInfo.processInfo.environment["CAT_NUMBERS"] != nil
+  let recorder = numbersOnly ? nil : try Recorder(
     url: out.appending(path: "\(scenario.name).mp4"), size: CGSize(width: panel.width * 2, height: panel.height))
   var samples: [Sample] = []
   var time: Float = 0
@@ -118,8 +120,14 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
   var lastMask: [UInt8] = []
 
   func frame() {
+    // The room's camera stays where it is while she turns under it, unless a cue moved it.
+    stage.watch(from: stage.viewer ?? roomDirection)
     stage.walker.update(dt)
     time += dt
+    guard let recorder else {
+      samples.append(Sample(time: time, action: action, stage: stage))
+      return
+    }
     let at = stage.group.position
     let side = Camera(target: [at.x, at.y + 0.1, at.z], from: [0, 0, 1], pixelsPerUnit: sideZoom)
     let bodies = stage.shown
@@ -195,7 +203,7 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
       action = "rest"
     }
   }
-  await recorder.finish()
+  await recorder?.finish()
   try JSONEncoder().encode(samples).write(to: out.appending(path: "\(scenario.name).json"))
   let report = Metrics(samples: samples, dt: dt).report(scenario.name)
   try report.write(to: out.appending(path: "\(scenario.name).txt"), atomically: true, encoding: .utf8)

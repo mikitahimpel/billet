@@ -17,6 +17,10 @@ tools/cat-motion/run.sh fit ["<start>" [held index ...]]   # search for the swap
 tools/cat-motion/run.sh poses "<15 numbers>" ... # candidates' standing body beside the seated one
 ```
 
+`CAT_LIVELY=<seed>` gives her the attention of the Labs switch Lively cat (docs/cat-alive.md), the same
+for the same seed; `CAT_NUMBERS=1` draws nothing and leaves only the samples and the report, in
+seconds.
+
 `fit` searches the standing rig's postures for the one whose outline lies closest on the seated
 splat's from six sides (`Fit.swift`); `CatWalker.Posture.sit` and `swapLean` come from it, with the
 pitch held upright, since the closest outline overall is a flat crouch that does not read as sitting.
@@ -35,6 +39,13 @@ Each scenario leaves `<scenario>.mp4` (room view left, side view following her r
   beside what changes in the frames around it.
 - **Pose change**: for a change of posture in place, how far apart in time her parts pass half way
   (0 ms is one synchronous morph), and the largest overshoot.
+- **Head turns at rest**, the **holds** between them, how many **an ear led**, and how often an ear
+  moves with the head still.
+- **Head held still**: the share of her rest the head does not move for half a second or more, and
+  in how many of those holds an ear or the tail's tip does.
+- **Errand, before and after**: seconds from being sent to her body stirring, and from her last step
+  to sitting, with how far the head turned meanwhile.
+- **Walking**: quick head moves on the way, and how far the ears swing.
 
 ## What it cannot show
 

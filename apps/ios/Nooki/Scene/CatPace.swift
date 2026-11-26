@@ -20,9 +20,14 @@ struct CatPace: Equatable {
     var wiggleRate: Float
     /// Scales her time in the air and the landing.
     var flight: Float
+    /// How long she looks at where she is going before she gets up for it, when she has a mind to.
+    var regard: ClosedRange<Float> = 0...0
+    /// Whether she looks about on arriving before she sits.
+    var surveys = false
 
     static let usual = CatPace(walkSpeed: 0.14, rampTime: 0.6, turnRate: 2.5, standUp: 1.2, sitDown: 1.4, gather: 0.35,
-                               wiggle: 0.4...0.8, poise: 0.12, wiggleRate: 4.5, flight: 1)
+                               wiggle: 0.4...0.8, poise: 0.12, wiggleRate: 4.5, flight: 1, regard: 0.55...1.2,
+                               surveys: true)
     /// Chasing a dot or waiting on a bowl: up and down at once, a quick wiggle and a snappy spring.
     static let eager = CatPace(walkSpeed: 0.2, rampTime: 0.4, turnRate: 4.5, standUp: 0.7, sitDown: 0.85, gather: 0.2,
                                wiggle: 0.15...0.3, poise: 0.08, wiggleRate: 8, flight: 0.75)

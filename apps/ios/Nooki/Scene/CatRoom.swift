@@ -49,7 +49,7 @@ class CatRoom {
     private var catModel = Entity()
     private(set) var walker: CatWalker?
     /// Her sitting and standing bodies dissolve into each other instead of one replacing the other in a frame.
-    var softSwap = false {
+    var softSwap = AppSettings.softSwap {
         didSet { walker?.dissolve = softSwap ? 0.2 : 0 }
     }
     private var watch = CatWatch()
