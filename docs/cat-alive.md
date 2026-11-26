@@ -51,14 +51,15 @@ again. Sent somewhere, she stood up the frame she was told to.
 - `CatNoticing`: feeds the machine. It keeps how used she is to each source (each meeting takes
   35 % of what is left, forgotten over 90 s), an arousal that rises with what she notices and
   settles in 15 s, and when nothing happens chooses her next look from what stands in the room,
-  weighted, with the last two looked at a quarter as likely. Gaps are log-normal about 3 s. It is
-  seeded: the same seed and calls give the same cat.
+  weighted, with the last two looked at a quarter as likely. Gaps are log-normal about 5 s,
+  shorter the more awake she is and longer when drowsy, and now and then one look follows another
+  at once. It is seeded: the same seed and calls give the same cat.
 - `CatRegard` is what it asks of the body each frame: head, each ear, how much the chest follows,
   a lean, how still she holds, how quick the head is, the tail tip's twitch, a blink.
 - `CatBehavior` takes the regard in place of its random glances, sounds and checks. The rest of it
   (yawn, wash, pet, blinks, the tail's wave, a finger) is as it was, scaled down by her stillness.
 - `CatWalker`: before a trip she looks at where she is going for 0.55–1.2 s (`CatPace.regard`),
-  then gets up; arrived, she looks about (`survey`) before she turns to sit; on the move her head
+  then gets up; arrived, she looks about for 0.9–1.8 s (`survey`) before she turns to sit; on the move her head
   and ears take the same attention within a narrower neck. The eager pace of the games does
   neither.
 - `CatDirector` tells her what stands in the room (her spots, weighted) and how curious she is,
