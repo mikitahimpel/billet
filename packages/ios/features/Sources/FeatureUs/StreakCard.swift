@@ -17,89 +17,129 @@ struct StreakCard: View {
   var body: some View {
     // Ticks each minute so the midnight rollover shows while the tab is open.
     TimelineView(.periodic(from: .now, by: 60)) { context in
-      content(now: context.date)
+      StreakHero(
+        copy: StreakCopy(
+          streak: store.streak, on: context.date, daysTogether: daysTogether, partner: partner,
+          cat: CatProfile.name()),
+        restorable: store.streak.count,
+        restore: { Task { await store.restore() } }
+      ) {
+        #if canImport(UIKit)
+          PairToPlayButton(fullWidth: true)
+        #endif
+      }
     }
   }
+}
 
-  private func content(now: Date) -> some View {
-    let streak = store.streak
-    let status = streak.status(on: now)
-    let days = streak.current(on: now)
-    let next = streak.milestone(on: now).next
-    let turn = streak.turn(on: now)
-    let flame: Flame.State = status == .done ? .lit : turn == nil ? .unlit : .half
+/// The hero for one moment of the streak. The ring keeps its place at the trailing edge in every state, so pairing
+/// swaps the wait for the number beside it and moves nothing else. `invite` is the way to pair, shown while unpaired.
+public struct StreakHero<Invite: View>: View {
+  let copy: StreakCopy
+  let restorable: Int
+  let restore: () -> Void
+  let invite: Invite
+  @Environment(\.dynamicTypeSize) private var typeSize
 
-    return Card(warm: true) {
+  /// - Parameter restorable: The days a restore would bring back.
+  public init(
+    copy: StreakCopy, restorable: Int, restore: @escaping () -> Void,
+    @ViewBuilder invite: () -> Invite
+  ) {
+    self.copy = copy
+    self.restorable = restorable
+    self.restore = restore
+    self.invite = invite()
+  }
+
+  public var body: some View {
+    Card(warm: true) {
       VStack(alignment: .leading, spacing: Space.m) {
-        // Side by side while "days together" keeps its line; the ring goes under it at the largest sizes.
-        ViewThatFits(in: .horizontal) {
-          HStack(alignment: .center, spacing: Space.m) {
-            together
-            Spacer(minLength: 0)
-            ring(days: days, flame: flame, next: next)
+        VStack(alignment: .leading, spacing: Space.m) {
+          if let days = copy.daysTogether {
+            // Side by side while "days together" keeps its line; the ring goes under it at the largest sizes.
+            ViewThatFits(in: .horizontal) {
+              beside { together(days) }
+              stacked { together(days) }
+            }
+          } else if typeSize.isAccessibilitySize {
+            stacked { waiting }
+          } else {
+            // Copy wraps, so it has no width of its own for ViewThatFits to try: the text size decides.
+            beside { waiting }
           }
-          VStack(alignment: .leading, spacing: Space.m) {
-            together
-            ring(days: days, flame: flame, next: next)
+          if let line = copy.line {
+            // Its lead words in full ink, the rest quieter.
+            (Text(line.lead).font(.ourioCallout.weight(.semibold)).foregroundStyle(Ink.text)
+              + Text(line.rest).font(.ourioCallout).foregroundStyle(Ink.textSecondary))
+              .fixedSize(horizontal: false, vertical: true)
           }
         }
-        line(status, turn: turn, days: days, next: next)
-          .fixedSize(horizontal: false, vertical: true)
-        if status == .restorable {
-          Button {
-            Task { await store.restore() }
-          } label: {
-            Label("Restore \(streak.count)-day streak", systemImage: "arrow.counterclockwise")
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(copy.spoken)
+        if copy.status == .restorable {
+          Button(action: restore) {
+            Label("Restore \(restorable)-day streak", systemImage: "arrow.counterclockwise")
               .frame(maxWidth: .infinity)
           }
           .buttonStyle(PrimaryButtonStyle())
         }
-        #if canImport(UIKit)
-          if daysTogether == nil {
-            PairToPlayButton()
-          }
-        #endif
+        if !copy.isPaired {
+          invite
+        }
       }
     }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(label(days: days, turn: turn, next: next))
-    .animation(Motion.spring(0.3), value: days)
+    .animation(Motion.spring(0.3), value: copy.days)
   }
 
-  @ViewBuilder private var together: some View {
-    if let daysTogether {
-      VStack(alignment: .leading, spacing: 0) {
-        Text(daysTogether, format: .number)
-          .font(.ourioHeroDigits)
-          .foregroundStyle(Ink.text)
-          .dynamicTypeSize(...DynamicTypeSize.accessibility2)
-        Text(daysTogether == 1 ? "day together" : "days together")
-          .font(.ourioHeadline)
-          .foregroundStyle(Ink.textSecondary)
-      }
-    } else {
-      VStack(alignment: .leading, spacing: Space.xs) {
-        Text(Couple.waitingLine)
-          .font(.ourioTitle)
-          .foregroundStyle(Ink.text)
-          .fixedSize(horizontal: false, vertical: true)
-        Text("Your days together start when they join.")
-          .font(.ourioCallout)
-          .foregroundStyle(Ink.textSecondary)
-          .fixedSize(horizontal: false, vertical: true)
-      }
+  private func beside(@ViewBuilder _ lead: () -> some View) -> some View {
+    HStack(alignment: .center, spacing: Space.m) {
+      lead().frame(maxWidth: .infinity, alignment: .leading)
+      ring
     }
   }
 
-  private func ring(days: Int, flame: Flame.State, next: Int?) -> some View {
+  private func stacked(@ViewBuilder _ lead: () -> some View) -> some View {
+    VStack(alignment: .leading, spacing: Space.m) {
+      lead()
+      ring.frame(maxWidth: .infinity)
+    }
+  }
+
+  private func together(_ days: Int) -> some View {
+    VStack(alignment: .leading, spacing: 0) {
+      Text(days, format: .number)
+        .font(.ourioHeroDigits)
+        .foregroundStyle(Ink.text)
+        .dynamicTypeSize(...DynamicTypeSize.accessibility2)
+      Text(days == 1 ? "day together" : "days together")
+        .font(.ourioHeadline)
+        .foregroundStyle(Ink.textSecondary)
+    }
+  }
+
+  private var waiting: some View {
+    VStack(alignment: .leading, spacing: Space.xs) {
+      Text(Couple.waitingLine)
+        .font(.ourioTitle)
+        .foregroundStyle(Ink.text)
+        .fixedSize(horizontal: false, vertical: true)
+      Text("Your days together start when they join.")
+        .font(.ourioCallout)
+        .foregroundStyle(Ink.textSecondary)
+        .fixedSize(horizontal: false, vertical: true)
+    }
+  }
+
+  private var ring: some View {
     VStack(spacing: Space.xs) {
       ProgressRing(
-        value: next.map { Double(days) / Double($0) } ?? 1,
+        value: copy.next.map { Double(copy.days) / Double($0) } ?? 1,
         tint: Color(light: .honeyDeep, dark: .honeyBright)
       ) {
         VStack(spacing: 0) {
-          Flame(days: days, state: flame)
-          Text(days, format: .number)
+          Flame(days: copy.days, state: flame)
+          Text(copy.days, format: .number)
             .font(.ourioTitleDigits)
             .foregroundStyle(Ink.text)
             .contentTransition(.numericText())
@@ -113,54 +153,9 @@ struct StreakCard: View {
     }
   }
 
-  /// Its lead words in full ink, the rest quieter.
-  private func line(_ status: LoveStreak.Status, turn: LoveStreak.Turn?, days: Int, next: Int?)
-    -> Text
-  {
-    let (lead, rest) = words(status, turn: turn, days: days, next: next)
-    return Text(lead).font(.ourioCallout.weight(.semibold)).foregroundStyle(Ink.text)
-      + Text(rest).font(.ourioCallout).foregroundStyle(Ink.textSecondary)
-  }
-
-  private func words(_ status: LoveStreak.Status, turn: LoveStreak.Turn?, days: Int, next: Int?)
-    -> (lead: String, rest: String)
-  {
-    switch turn {
-    case .yours:
-      return (
-        "\(partner) did their part.", " Your turn: pet \(CatProfile.name()) or leave a note."
-      )
-    case .partners:
-      return ("You did your part.", " The flame lights when \(partner) does theirs.")
-    case nil: break
-    }
-    switch status {
-    case .done:
-      return ("Day \(days) is in.", next.map { " Badge at day \($0)." } ?? " See you tomorrow.")
-    case .atRisk: return ("Keep it going.", " You both do one small thing today.")
-    case .restorable: return ("You missed a day.", " You can bring the flame back once a month.")
-    case .cold: return ("Light the flame", " together today.")
-    }
-  }
-
-  private func label(days: Int, turn: LoveStreak.Turn?, next: Int?) -> String {
-    let together =
-      switch daysTogether {
-      case nil: Couple.waitingLine
-      case 1?: "1 day together"
-      case let days?: "\(days) days together"
-      }
-    let streak = days == 1 ? "1-day streak" : "\(days)-day streak"
-    let waiting =
-      switch turn {
-      case .yours: " \(partner) did their part, your turn."
-      case .partners: " Waiting for \(partner)."
-      case nil: ""
-      }
-    guard let next else { return "\(together). \(streak).\(waiting)" }
-    let left = next - days
-    return
-      "\(together). \(streak), \(left) \(left == 1 ? "day" : "days") to the \(next)-day badge.\(waiting)"
+  private var flame: Flame.State {
+    if copy.status == .done { return .lit }
+    return copy.turn == nil ? .unlit : .half
   }
 }
 

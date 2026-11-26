@@ -3,6 +3,7 @@ import Design
 import Pet
 import RoomInterface
 import SwiftUI
+import UsInterface
 import WidgetUI
 @testable import Billet
 
@@ -23,6 +24,7 @@ enum GalleryPage: String, CaseIterable, Sendable {
     case grid
     case callout
     case screen
+    case streak
 
     @MainActor @ViewBuilder var view: some View {
         VStack(alignment: .leading, spacing: Space.l) {
@@ -42,9 +44,30 @@ enum GalleryPage: String, CaseIterable, Sendable {
             case .grid: Self.gridPage
             case .callout: Self.calloutPage
             case .screen: Self.screenPage
+            case .streak: Self.streakPage
             }
         }
         .padding(.horizontal, Space.gutter)
+    }
+
+    /// The Us hero: waiting for the partner with its invitation, then paired with no streak, a day that waits for
+    /// this phone's part, and a missed day.
+    @MainActor @ViewBuilder private static var streakPage: some View {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let day = { (offset: Int) in calendar.date(byAdding: .day, value: offset, to: today) ?? today }
+        let hero = { (streak: LoveStreak, together: Int?) in
+            StreakHero(
+                copy: StreakCopy(streak: streak, on: .now, daysTogether: together, partner: "Alex", cat: "Mochi"),
+                restorable: streak.count, restore: {}
+            ) {
+                PrimaryButton("Pair with your partner", symbol: "heart.fill") {}
+            }
+        }
+        hero(LoveStreak(), nil)
+        hero(LoveStreak(), 128)
+        hero(LoveStreak(count: 6, lastDay: day(-1), best: 6, partner: [today]), 128)
+        hero(LoveStreak(count: 5, lastDay: day(-2), best: 5), 1204)
     }
 
     @MainActor @ViewBuilder private static var buttonsPage: some View {

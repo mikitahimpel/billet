@@ -111,6 +111,46 @@ final class TabBarTouchTests: XCTestCase {
         }
     }
 
+    /// Scrolled to its end, a tab's last content stands clear of the tab bar; at rest the page runs under it.
+    @MainActor
+    func testTheLastContentClearsTheTabBar() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
+        app.launch()
+        let bar = app.otherElements["tabbar"]
+        XCTAssertTrue(bar.buttons["Us"].waitForExistence(timeout: 60))
+        Thread.sleep(forTimeInterval: 8)
+
+        bar.buttons["Us"].tap()
+        let last = app.buttons.matching(NSPredicate(format: "label BEGINSWITH %@", "Places to go")).firstMatch
+        XCTAssertTrue(last.waitForExistence(timeout: 10), "Us should end with its lists")
+        let scroll = try XCTUnwrap(app.scrollViews.allElementsBoundByIndex.max { $0.frame.height < $1.frame.height })
+        for _ in 0..<4 { scroll.swipeUp(velocity: .fast) }
+        Thread.sleep(forTimeInterval: 1)
+        XCTAssertLessThanOrEqual(last.frame.maxY, bar.frame.minY, "the last list should end above the tab bar")
+        XCTAssertTrue(last.isHittable, "the last list should take a tap")
+    }
+
+    /// The bar is one view under every tab: it keeps its place, and the page a tap lands on is selected at once.
+    @MainActor
+    func testTheBarKeepsItsPlaceOnEveryTab() throws {
+        let app = XCUIApplication()
+        app.launchArguments += ["-onboardingDone", "YES", "-uitestNoRoom", "YES", "-uitestStill", "YES", "-uitestNoHints", "YES"]
+        app.launch()
+        let bar = app.otherElements["tabbar"]
+        XCTAssertTrue(bar.buttons["World"].waitForExistence(timeout: 60))
+        Thread.sleep(forTimeInterval: 8)
+
+        let home = bar.frame
+        let add = app.buttons["Add"].frame
+        for tab in ["Moments", "Shop", "Us", "World", "Us", "Moments"] {
+            bar.buttons[tab].tap()
+            XCTAssertTrue(bar.buttons[tab].isSelected, "\(tab) should be selected by the tap")
+            XCTAssertEqual(bar.frame, home, "the tab bar should not move on \(tab)")
+            XCTAssertEqual(app.buttons["Add"].frame, add, "the + should not move on \(tab)")
+        }
+    }
+
     /// The header is the same on every tab: the Inbox top-left, the coins top-right with the couple's avatars in the
     /// corner to their right, each in the same place.
     @MainActor

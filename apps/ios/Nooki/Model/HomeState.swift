@@ -27,7 +27,7 @@ import UsInterface
 import WidgetBridge
 import WidgetKit
 
-enum HomeTab: CaseIterable {
+nonisolated enum HomeTab: CaseIterable, Sendable {
     case world, moments, shop, us
 }
 
