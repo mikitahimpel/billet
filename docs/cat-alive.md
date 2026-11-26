@@ -65,6 +65,13 @@ again. Sent somewhere, she stood up the frame she was told to.
 - `CatDirector` tells her what stands in the room (her spots, weighted) and how curious she is,
   and reads the switch four times a second.
 
+- `CatFidgeting` chooses her small acts (an ear flick, a flick or curl of the tail's tip, a slow
+  blink, a head tilt, a shake, a yawn, a wash, a shift of weight, a sigh) in place of a timer each:
+  weighted by how awake, sleepy and content she is, each with a least rest before it comes again,
+  the last two a fifth as likely, none while something holds her still, and one soon after she lets
+  go of a stare. Having just sat down she most often sighs: a deep breath, lids lowering as it goes
+  out. When the brain directs her it keeps the larger acts (yawn, wash, shake, tilt) for itself.
+
 What catches her eye today: whoever watches (on first sight, and when the camera moves more than
 0.3 rad about her within 2 s), the room's spots, the partner arriving, where the brain has her
 look, where she is about to go, and noises of her own.
@@ -85,8 +92,7 @@ and per errand the time and head travel before she stirs and between her last st
 
 ## Next
 
-- Idle acts chosen with memory (wash, stretch, knead, loaf variants) instead of separate timers,
-  and a settle after sitting (a sigh, a slow blink).
+- More idle acts to choose from (stretch, knead, loaf variants).
 - The tail as a mood barometer: carried high on a greeting, low on a stalk, lashing when cross.
 - Gaits by intent (stroll, trot, stalk), and pauses mid-walk with a paw lifted.
 - Turning her seat toward something that stays behind her.

@@ -298,6 +298,7 @@ final class CatWalker {
     func liven(seed: UInt64?) {
         guard (seed != nil) != lively else { return }
         behavior.noticing = seed.map(CatNoticing.init)
+        behavior.fidgeting = seed.map(CatFidgeting.init)
     }
 
     /// `point` in the room as her attention takes it: radians from straight ahead of her body, and above her eyes.
@@ -694,6 +695,7 @@ final class CatWalker {
                 steps[0].time += dt
                 if next(dt) { steps.removeFirst() }
             }
+            if steps.isEmpty, lively, !lying { behavior.settle() }
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
         }
         if !moving, let c = chased {
@@ -951,7 +953,7 @@ final class CatWalker {
         p.headYaw -= chestYaw
         let lean = Pose.about(floor, .x(-b.forward * r - self.lean.value) * .z(b.lean * r))
         p.chestMove = lean.under(Pose.about(spine, .y(chestYaw)))
-        p.chestMove.t += breathChest * breath.value
+        p.chestMove.t += breathChest * (breath.value + 1.8 * behavior.sigh)
         p.hipsMove = lean.under(Pose.about(spine, .y(0.3 * chestYaw)))
         p.hipsMove.t += breathHips * breath.value
     }

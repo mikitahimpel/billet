@@ -129,6 +129,12 @@ final class CatBehavior {
     var curious: Float = 0.5
     private var regard = CatRegard()
     private var still: Float = 0
+    /// Chooses her small acts in place of their separate timers, when she has an attention.
+    var fidgeting: CatFidgeting?
+    private var settled: Float = -100
+    private var sighStart: Float = -100
+    /// How far into a sigh's deep breath she is, 0 to 1.
+    private(set) var sigh: Float = 0
     /// Where whoever watches was from her when she last took note, and when.
     private var seen: (yaw: Float, time: Float)?
     private(set) var drowse: Float = 0
@@ -296,6 +302,36 @@ final class CatBehavior {
         return true
     }
 
+    /// She has just sat or lain down: a sigh or a slow blink is likely next.
+    func settle() {
+        settled = time
+    }
+
+    /// Her next small act, when one is due and she is left alone and not held still by something.
+    private func fidget(_ noticing: CatNoticing?, alone: Bool) {
+        guard var fidgeting, let noticing else { return }
+        let t = time
+        let mood = CatFidgeting.Mood(
+            arousal: noticing.arousal, drowse: Double(drowse), contentment: Double(mood.contentment),
+            stillness: alone ? Double(still) : 1, settling: t - settled < 2.5, directed: directed)
+        let chosen = moving ? nil : fidgeting.advance(to: Double(t), mood)
+        self.fidgeting = fidgeting
+        guard let chosen else { return }
+        let side: Float = draw(0...1) < 0.5 ? -1 : 1
+        switch chosen {
+        case .earFlick: twitch = (t, side < 0, draw(0...1) < 0.25)
+        case .tailFlick: flick = (t, false, side)
+        case .tailCurl: flick = (t, true, side)
+        case .slowBlink: slowBlink = t
+        case .tilt: gesture = (.tilt, t, side)
+        case .shake: gesture = (.shake, t, side)
+        case .yawn: yawnStart = t
+        case .sigh: sighStart = t
+        case .shift: shift = (draw(-0.025...0.025), draw(-0.01...0.02))
+        case .groom: groom = (t, draw(3...5.5), side)
+        }
+    }
+
     /// `eyes`: the model-space point between her eyes as posed last frame.
     func update(_ dt: Float, eyes: SIMD3<Float>) {
         time += dt
@@ -304,6 +340,11 @@ final class CatBehavior {
         let near: Float = lookTarget != nil && t - lastPointer < 2 ? 1 : 0
 
         let attends = attend(eyes)
+        let fidgets = attends && fidgeting != nil
+        if fidgets { fidget(noticing, alone: near == 0 && left > 4) }
+        // A sigh: a deep breath in over a second, held a moment, let out slowly with the head sinking a little.
+        let sighing = t - sighStart
+        sigh = min(smoothstep(sighing, 0, 1), 1 - smoothstep(sighing, 1.3, 2.6))
         // Idle glances: every few seconds a new direction, sometimes with a curious head tilt; livelier, she glances
         // more often and wider.
         if !attends, t > nextGlance {
@@ -364,7 +405,7 @@ final class CatBehavior {
         }
 
         // Yawn: the head tips back and over with the ears folding, then comes back; tired, she yawns more.
-        if t > nextYawn {
+        if !fidgets, t > nextYawn {
             if left > 4 && !directed { yawnStart = t }
             nextYawn = t + random(40, 90) * lerp(0.6, 1.4, mood.energy)
         }
@@ -385,12 +426,13 @@ final class CatBehavior {
 
         // Every 10-20 s she settles her weight a little differently, leaning to a side or forward, and holds it; her chest
         // turns a little after her head.
-        if t > nextShift, still < 0.3 {
+        if !fidgets, t > nextShift, still < 0.3 {
             shift = (random(-0.025, 0.025), random(-0.01, 0.02))
             nextShift = t + random(10, 20)
         }
         target.lean = shift.lean
-        target.forward = shift.forward + Float(regard.lean)
+        let sinking = 0.006 * smoothstep(t - sighStart, 1.3, 2.2) * sigh
+        target.forward = shift.forward + Float(regard.lean) - sinking
         target.chestYaw = (0.13 + Float(regard.chest)) * state.yaw
 
         // Petting: lean into the hand, ears back, tail tip up, for about two seconds.
@@ -398,7 +440,7 @@ final class CatBehavior {
 
         // Grooming: every minute or so, awake and left alone, she washes her chest in short licks, head down and to a
         // side, eyes half shut.
-        if t > nextGroom {
+        if !fidgets, t > nextGroom {
             if left > 8 && drowse < 0.3 && !directed { groom = (t, random(3, 5.5), Bool.random() ? -1 : 1) }
             nextGroom = t + random(40, 90)
         }
@@ -428,7 +470,7 @@ final class CatBehavior {
         mood.contentment = min(max(mood.contentment + dt * (0.25 * petting + (0.4 - mood.contentment) / 120), 0), 1)
 
         // Ear twitches: one ear, quick flick out and back; more of them when she is curious.
-        if t > nextTwitch {
+        if !fidgets, t > nextTwitch {
             twitch = (t, Bool.random(), Float.random(in: 0..<1) < 0.25)
             nextTwitch = t + random(2.5, 6.5) * (1.3 - 0.6 * mood.interest)
         }
@@ -478,13 +520,14 @@ final class CatBehavior {
             nextSlowBlink = t + random(6, 12)
         }
         if p > 2.2 && p - dt <= 2.2 { slowBlink = t }
-        if t > nextContentBlink {
+        if !fidgets, t > nextContentBlink {
             if mood.contentment > 0.6 && near == 0 { slowBlink = t }
             nextContentBlink = t + random(8, 18)
         }
         let slow = min(smoothstep(t - slowBlink, 0, 0.5), 1 - smoothstep(t - slowBlink, 1.1, 1.8))
         let lid = max(0.55 * petting, 0.85 * slow, 0.9 * yawn, drowse * (0.6 + 0.1 * noise(t * 0.3, 3)), asleep,
-                      0.5 * washing, 0.15 * mood.contentment * (1 - mood.interest) * (1 - still))
+                      0.5 * washing, 0.45 * sigh * smoothstep(t - sighStart, 1, 1.6),
+                      0.15 * mood.contentment * (1 - mood.interest) * (1 - still))
         target.lidLeft = lid
         target.lidRight = lid * (1 - 0.08 * drowse)
 
@@ -500,7 +543,7 @@ final class CatBehavior {
             target.tailSway[i] = (0.04 + 0.08 * share) * swing * wave
             target.tailLift[i] = 0.25 * share * share * (tipUp + 1.2 * petting)
         }
-        if t > nextFlick {
+        if !fidgets, t > nextFlick {
             if left > 12, still < 0.5 { flick = (t, Float.random(in: 0..<1) < 0.35, Bool.random() ? -1 : 1) }
             nextFlick = t + random(9, 20)
         }
