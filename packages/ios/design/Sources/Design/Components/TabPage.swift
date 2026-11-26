@@ -29,6 +29,23 @@ public struct TabPage<Content: View>: View {
   }
 }
 
+/// A bar's place in a safe area bar, for a bar drawn over the pages rather than set into each. Over
+/// a page that scrolls it is nearly clear, not clear: the system draws its soft scroll edge only
+/// under a bar that draws something.
+public struct BarPlace: View {
+  let height: CGFloat
+  let softens: Bool
+
+  public init(height: CGFloat, softens: Bool = true) {
+    self.height = height
+    self.softens = softens
+  }
+
+  public var body: some View {
+    Ink.screen.opacity(softens ? 0.02 : 0).frame(height: height).accessibilityHidden(true)
+  }
+}
+
 extension View {
   /// The vertical insets of a tab root's content, for one that lays out its own scroll view (the Shop's).
   public func tabContentInsets() -> some View {

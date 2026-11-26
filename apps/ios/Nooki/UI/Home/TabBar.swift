@@ -1,3 +1,4 @@
+import BilletKit
 import FeatureUs
 import MomentsInterface
 import WidgetInterface
@@ -12,13 +13,16 @@ import enum Wire.EarnAmount
 struct TabBar: View {
     let state: HomeState
     /// The finger on the bar, as `TabScrubLayer` reads it: the tab under it is the one shown.
-    let scrub: TabScrub
+    let touch: Store<TabBarMachine>
     /// The capsule's frame in `HomeView.space`, where the layer that takes its touches lies over it.
     @Binding var capsule: CGRect
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static let tabs = HomeTab.allCases
     static let inset: CGFloat = 6
+    private static let slot: CGFloat = 54
+    /// The bar's height, which Home keeps clear under every tab's page.
+    static let height = slot + inset * 2
 
     /// The tabs only navigate; adding lives in its own button beside them, as iOS 26 places search.
     var body: some View {
@@ -57,15 +61,15 @@ struct TabBar: View {
             }
         }
         // A light tap rather than the selection tick, which is too faint to feel through a switch of the whole page.
-        .haptic(.tap, trigger: scrub.hovered ?? state.tab)
+        .haptic(.tap, trigger: touch.state.hovered ?? state.tab)
     }
 
     /// One pill for the whole row, moved to the selected slot by an offset, so no view comes or goes inside the glass.
-    /// It slides while the finger is on the bar; a switch from elsewhere (a link, VoiceOver) moves it at once.
+    /// It glides to the tab the finger lands on; a switch from elsewhere (a link, VoiceOver) moves it at once.
     private var pill: some View {
         GeometryReader { row in
             let slot = row.size.width / CGFloat(Self.tabs.count)
-            let selected = scrub.hovered ?? state.tab
+            let selected = touch.state.hovered ?? state.tab
             Capsule()
                 .fill(Ink.glassSelection)
                 .overlay { Capsule().strokeBorder(Ink.selectionRim, lineWidth: 1) }
@@ -76,7 +80,7 @@ struct TabBar: View {
     }
 
     private func item(_ tab: HomeTab) -> some View {
-        let shown = (scrub.hovered ?? state.tab) == tab
+        let shown = (touch.state.hovered ?? state.tab) == tab
         let dusk = Look.current == .dusk
         return VStack(spacing: 3) {
             Image(systemName: dusk ? tab.symbol(filled: shown) : tab.symbol)
@@ -90,8 +94,8 @@ struct TabBar: View {
         .dynamicTypeSize(...DynamicTypeSize.xLarge)
         .foregroundStyle(shown ? Ink.glassGlyph : Ink.glassGlyphSecondary)
         .frame(maxWidth: .infinity)
-        .frame(height: 54)
-        .scaleEffect(scrub.hovered == tab ? 1.06 : 1)
+        .frame(height: Self.slot)
+        .scaleEffect(touch.state.hovered == tab ? 1.06 : 1)
         // The drag on the bar does the switching; VoiceOver and the UI tests get each tab as a button.
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(tab.title)
@@ -103,15 +107,14 @@ struct TabBar: View {
     }
 }
 
-/// The bar's touches, as a layer over the capsule in the shell's own coordinate space rather than a gesture of the
-/// bar's. Like the system tab bar: the tab switches the moment the finger lands on it, or slides onto it, and lifting
-/// the finger changes nothing more. A tap lasts about a tenth of a second; a switch that waited for its end would come
-/// that late after the pill. The switch re-hosts the bar under the new page's scroll view, which cancels a gesture of
-/// the bar's own in the middle of the slide; this layer stays where it is. Should its gesture still be cancelled, the
-/// pressed state resets and the slide ends where it is, with the finger's tab already shown.
+/// The bar's touches, as a layer over the capsule rather than a gesture of the bar's, so the glass under it never takes
+/// part in a touch. Like the system tab bar: the tab switches the moment the finger lands on it, or slides onto it,
+/// and lifting the finger changes nothing more. A tap lasts about a tenth of a second; a switch that waited for its
+/// end would come that late after the pill. Should the gesture be cancelled, the pressed state resets and the slide
+/// ends where it is, with the finger's tab already shown.
 struct TabScrubLayer: View {
     let state: HomeState
-    @Binding var scrub: TabScrub
+    let touch: Store<TabBarMachine>
     let capsule: CGRect
     @GestureState private var pressing = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -134,16 +137,17 @@ struct TabScrubLayer: View {
     }
 
     private func land(_ x: CGFloat) {
-        guard let move = scrub.finger(on: tab(at: x), shown: state.tab) else { return }
-        withAnimation(follow) { scrub = move.scrub }
+        let tab = tab(at: x)
+        guard touch.state.hovered != tab else { return }
+        withAnimation(follow) { touch.send(.landed(tab)) }
         // Outside `withAnimation`: a switch animated as a whole would also fade the room and redraw the glass every
         // frame.
-        if let shows = move.shows { state.tab = shows }
+        if state.tab != tab { state.tab = tab }
     }
 
     private func lift() {
-        guard scrub.hovered != nil else { return }
-        withAnimation(follow) { scrub = scrub.lifted() }
+        guard touch.state.hovered != nil else { return }
+        withAnimation(follow) { touch.send(.lifted) }
     }
 
     /// The tab whose slot holds `x`, measured from the capsule's leading edge; past the ends it is the first or last.

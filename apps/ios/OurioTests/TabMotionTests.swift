@@ -36,33 +36,31 @@ struct TabMotionTests {
     }
 }
 
-/// The page switches when the finger lands on its tab, not when the finger lifts.
-struct TabScrubTests {
-    @Test func landingOnAnotherTabShowsItAtOnce() {
-        let move = TabScrub().finger(on: .shop, shown: .world)
-        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .shop), shows: .shop))
+/// The finger on the bar: every state against every event, the rejected pair included.
+struct TabBarMachineTests {
+    typealias Machine = TabBarMachine
+
+    @Test(arguments: HomeTab.allCases)
+    func landingHoversTheTabUnderTheFinger(tab: HomeTab) {
+        #expect(Machine.transition(.idle, .landed(tab)) == (.touched(tab), []))
     }
 
-    @Test func landingOnTheShownTabOnlyHoversIt() {
-        let move = TabScrub().finger(on: .world, shown: .world)
-        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .world), shows: nil))
+    @Test(arguments: HomeTab.allCases, HomeTab.allCases)
+    func slidingOntoASlotHoversIt(from: HomeTab, to: HomeTab) {
+        #expect(Machine.transition(.touched(from), .landed(to)) == (.touched(to), []))
     }
 
-    @Test func movingWithinTheSlotIsNotAMove() {
-        #expect(TabScrub(hovered: .shop).finger(on: .shop, shown: .shop) == nil)
+    @Test(arguments: HomeTab.allCases)
+    func liftingEndsTheHover(tab: HomeTab) {
+        #expect(Machine.transition(.touched(tab), .lifted) == (.idle, []))
     }
 
-    @Test func slidingOntoTheNextTabShowsIt() {
-        let move = TabScrub(hovered: .moments).finger(on: .shop, shown: .moments)
-        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .shop), shows: .shop))
+    @Test func aSecondLiftChangesNothing() {
+        #expect(Machine.transition(.idle, .lifted) == (.idle, []))
     }
 
-    @Test func slidingBackOntoTheShownTabShowsNothingNew() {
-        let move = TabScrub(hovered: .shop).finger(on: .us, shown: .us)
-        #expect(move == TabScrub.Move(scrub: TabScrub(hovered: .us), shows: nil))
-    }
-
-    @Test func liftingClearsTheHoverAndSwitchesNothing() {
-        #expect(TabScrub(hovered: .us).lifted() == TabScrub())
+    @Test func onlyATouchedBarHovers() {
+        #expect(Machine.State.idle.hovered == nil)
+        #expect(HomeTab.allCases.compactMap { Machine.State.touched($0).hovered } == HomeTab.allCases)
     }
 }

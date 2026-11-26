@@ -1,3 +1,4 @@
+import BilletKit
 import FeatureOnboarding
 import FeatureShop
 import Persistence
@@ -35,7 +36,7 @@ struct HomeView: View {
     /// The top of the pet and Decorate row over the tab bar, global, while it shows; the card keeps clear of it too.
     @State private var petControlsTop: CGFloat?
     /// The finger on the tab bar, and the bar's capsule in `space`, where `TabScrubLayer` takes its touches.
-    @State private var scrub = TabScrub()
+    @State private var tabTouch = Store<TabBarMachine>(initial: .idle) { _ in nil }
     @State private var tabCapsule = CGRect.zero
     /// The splash is still drawn while it fades out after `launching` ends, though it takes no touches by then.
     @State private var splashDrawn = true
@@ -45,8 +46,8 @@ struct HomeView: View {
     @State private var roomLive = true
     /// Counts the World coming on screen; a return's task acts only while it is still the latest one.
     @State private var worldShows = 0
-    /// The World as it was when a tab switch left it, fading out under the page coming in.
-    @State private var worldLeaving: UIView?
+    /// The screen as the tab just left showed it, fading out over the page coming in.
+    @State private var pageLeaving: UIView?
     /// A room switch is under way; another waits for it.
     @State private var switchingRoom = false
     /// Nil without a server to buy packs through.
@@ -174,10 +175,6 @@ struct HomeView: View {
             if old, !new, !(showsBoard && !roomCovered) {
                 worldSnapshot =
                     Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
-                // A second copy: one view can't be on screen twice, and a quick return shows the first again.
-                if state.tab != .world, worldSnapshot != nil {
-                    worldLeaving = Self.keyWindow?.snapshotView(afterScreenUpdates: false)
-                }
             }
             if new { worldShows += 1 }
             if new, room.hasHome, worldSnapshot != nil {
@@ -194,11 +191,12 @@ struct HomeView: View {
             }
         }
         .onChange(of: state.tab) { _, tab in
+            // Still the old tab's frame: the new page is on screen with the next one. Not while something is
+            // presented, a hint's popover say: the snapshot would show it a second time.
+            pageLeaving = Hints.keyWindowIsPresenting() ? nil : Self.keyWindow?.snapshotView(afterScreenUpdates: false)
             tabClock.began(tab.title)
             OurioPerf.tabShown(tab)
             if tab == .world { room.perfShown(state.room) }
-            // A fade cut short by a quick return never comes back over a later switch.
-            if tab == .world { worldLeaving = nil }
             if tab != .world, hasRoomChoice { prepareRooms() }
         }
         // Pets from the widget and the control reach Mochi when the app comes back.
@@ -329,15 +327,6 @@ struct HomeView: View {
                     .transition(.opacity)
             }
 
-            // The room goes at once when the World is left; its last frame fades with the rest of the World.
-            if state.tab != .world, let worldLeaving {
-                LeavingSnapshot(view: worldLeaving) {
-                    if self.worldLeaving === worldLeaving { self.worldLeaving = nil }
-                }
-                .ignoresSafeArea()
-                .allowsHitTesting(false)
-            }
-
             Group {
                 switch state.tab {
                 case .shop:
@@ -352,10 +341,20 @@ struct HomeView: View {
                 }
             }
             .perfLab(perfLab)
-            // Tab to tab, the new page is all there in its first frame, as with the system's tab bar: a fade in
-            // would show it half drawn for its first tenth of a second. The header and the tab bar stay put.
+            // Tab to tab, the new page is all there in its first frame: a fade in would show it half drawn for its
+            // first tenth of a second. The cross-fade is the old screen's last frame fading out over it, under the
+            // header and the tab bar, which stay put.
             .transition(.identity)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            .overlay {
+                if let pageLeaving {
+                    LeavingSnapshot(view: pageLeaving) {
+                        if self.pageLeaving === pageLeaving { self.pageLeaving = nil }
+                    }
+                    .ignoresSafeArea()
+                    .allowsHitTesting(false)
+                }
+            }
             // The same header, in the same place, on every tab, and the tab bar: bars over the tab, so its scroll
             // view runs full-bleed under both and only its content is inset.
             .bars(fades: !showsRoom, softEdges: perfLab.isOn(.scrollEdges)) {
@@ -379,17 +378,26 @@ struct HomeView: View {
                     .environment(\.glassRendering, barGlass)
                 }
             } bottom: {
-                if hud != .hidden {
-                    TabBar(state: state, scrub: scrub, capsule: $tabCapsule)
-                        .opacity(arranging ? 0 : 1)
-                        .allowsHitTesting(!arranging)
-                        .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
-                        .padding(.horizontal, Space.l)
-                        .environment(\.glassRendering, barGlass)
-                }
+                // The bar's place only. A page's scroll view takes its bars into itself, so a bar set here is built
+                // anew with every page, and a pill on its way to the new tab would start again where it ends.
+                if hud != .hidden { BarPlace(height: TabBar.height, softens: !showsRoom) }
             }
             .modifier(QuietFade(store: quiet, chrome: quietChrome))
             .opacity(room.game == nil ? 1 : 0)
+
+            // One bar for every tab, over the place the pages keep clear for it.
+            if hud != .hidden {
+                TabBar(state: state, touch: tabTouch, capsule: $tabCapsule)
+                    .opacity(arranging ? 0 : 1)
+                    .allowsHitTesting(!arranging)
+                    .onGeometryChange(for: CGFloat.self, of: { $0.frame(in: .global).minY }) { tabBarTop = $0 }
+                    .padding(.horizontal, Space.l)
+                    .environment(\.glassRendering, barGlass)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxHeight: .infinity, alignment: .bottom)
+                    .modifier(QuietFade(store: quiet, chrome: quietChrome))
+                    .opacity(room.game == nil ? 1 : 0)
+            }
 
             // Over the chrome: while a game is played nothing else of Home shows.
             RoomGameLayer(controller: room)
@@ -404,7 +412,7 @@ struct HomeView: View {
         // The tab bar's touches, over it and outside its glass, so a switch under the bar never cuts a slide short.
         .overlay(alignment: .topLeading) {
             if hud != .hidden, room.game == nil, !arranging {
-                TabScrubLayer(state: state, scrub: $scrub, capsule: tabCapsule)
+                TabScrubLayer(state: state, touch: tabTouch, capsule: tabCapsule)
                     .modifier(QuietFade(store: quiet, chrome: quietChrome))
             }
         }

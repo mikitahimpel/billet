@@ -1,3 +1,4 @@
+import BilletKit
 import CoreGraphics
 
 /// A tab as the tab bar shows it, in `allCases` order, left to right, each in an equal slot.
@@ -41,27 +42,40 @@ extension HomeTab {
     }
 }
 
-/// The finger on the tab bar, as a value. The tab under it is shown the moment it lands or slides there, and
-/// lifting it changes nothing more, so a tap's page comes with the pill and not a tap's length after it.
-struct TabScrub: Equatable {
-    /// The tab under the finger; nil while the bar is not touched.
-    var hovered: HomeTab?
+/// The finger on the tab bar. The tab under it is shown the moment it lands or slides there, and lifting it changes
+/// nothing more, so a tap's page comes with the pill and not a tap's length after it. Only the bar reads the store,
+/// so a touch on it never runs Home's body.
+nonisolated enum TabBarMachine: Machine {
+    enum State: Equatable, Sendable {
+        case idle
+        /// The tab under the finger.
+        case touched(HomeTab)
 
-    struct Move: Equatable {
-        let scrub: TabScrub
-        /// The tab to show, when it isn't the shown one yet.
-        let shows: HomeTab?
+        var hovered: HomeTab? {
+            switch self {
+            case .idle: nil
+            case .touched(let tab): tab
+            }
+        }
     }
 
-    init(hovered: HomeTab? = nil) {
-        self.hovered = hovered
+    enum Event: Equatable, Sendable {
+        /// The finger is on this tab's slot: it landed there, or slid onto it.
+        case landed(HomeTab)
+        case lifted
     }
 
-    /// The finger lands on, or slides onto, `tab` while `shown` is on screen; nil while it stays in the same slot.
-    func finger(on tab: HomeTab, shown: HomeTab) -> Move? {
-        guard tab != hovered else { return nil }
-        return Move(scrub: TabScrub(hovered: tab), shows: tab == shown ? nil : tab)
-    }
+    enum Output: Equatable, Sendable {}
 
-    func lifted() -> TabScrub { TabScrub() }
+    static func transition(_ state: State, _ event: Event) -> (State, [Output]) {
+        switch (state, event) {
+        case (.idle, .landed(let tab)), (.touched, .landed(let tab)):
+            return (.touched(tab), [])
+        case (.touched, .lifted):
+            return (.idle, [])
+        // A gesture that was cancelled ends twice: by its state resetting and by its own end.
+        case (.idle, .lifted):
+            return (state, [])
+        }
+    }
 }
