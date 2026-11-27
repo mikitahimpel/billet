@@ -116,15 +116,6 @@ jobs:
       # Remote compilation cache. It exports XCODE_XCCONFIG_FILE, which outranks BILLET_COMPILATION_CACHE; if it
       # cannot start, the build runs without it. On a pull request it also picks the unit tests the change can reach
       # (WARMBUILD_ONLY_TESTING); main runs them all and catches what a pull request skipped.
-      - uses: warmbuild/action@f4dd60414f3520bd4ac30f05470f4f40b4dcfbd7 # v1.13.1
-        id: warmbuild
-        with:
-          select-tests: true
-          select-tests-scheme: Billet
-          select-tests-ignore: |
-            ^lint/
-            ^scripts/
-
       - name: Metal Toolchain
         run: .github/scripts/metal-toolchain.sh
 
@@ -196,15 +187,6 @@ jobs:
       # Leaves out the test targets whose built products already passed (on main, or earlier in this pull request),
       # and adds test selection's arguments; WARMBUILD_ONLY_TESTING holds the result. `full-tests` or
       # "[warmbuild full tests]" in a commit message or the pull request runs every target.
-      - uses: warmbuild/action/test-cache@f4dd60414f3520bd4ac30f05470f4f40b4dcfbd7 # v1.13.1
-        id: tests
-        if: steps.warmbuild.outputs.tests != 'none'
-        with:
-          derived-data: ${{ runner.temp }}/app-tests
-          destination: id=${{ env.TEST_SIMULATOR }}
-          args: ${{ github.event_name == 'pull_request' && '-skip-testing:OurioUITests' || '' }}
-          cache-tests: ${{ inputs.full-tests != true }}
-
       - name: App tests (Simulator)
         if: steps.warmbuild.outputs.tests != 'none' && steps.tests.outputs.tests != 'none'
         # A hung UI test must not hold a runner for an hour; each test is also capped below. The UI tests on main
@@ -216,7 +198,9 @@ jobs:
           set -o pipefail
           status=0
           # Unquoted on purpose: one word per -only-testing/-skip-testing argument.
-          skip=(${WARMBUILD_ONLY_TESTING:-})
+          # Measurement without Warmbuild: what the test-cache step passed on pull requests.
+          skip=()
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then skip=(-skip-testing:OurioUITests); fi
           stamp() { perl -MTime::HiRes=time -ne 'BEGIN { $| = 1 } printf "%7.1f %s", time - $ENV{STEP_START}, $_'; }
           export STEP_START
           started=$(date +%s)
