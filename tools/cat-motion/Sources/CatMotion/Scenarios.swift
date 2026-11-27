@@ -186,6 +186,22 @@ extension Scenario {
         .act("home") { $0.walker.go(to: nil) },
         .untilStill, .wait(4),
       ]),
+    // On her feet when the partner comes in, and petted as she stands there: what her tail says.
+    Scenario(
+      name: "greeting", home: [0.25, 0, -0.15], yaw: facing(1, 0.4), interests: room, focus: [0, 0.08, 0],
+      cues: [
+        .wait(3),
+        go("across", [.init(at: [-0.3, 0, 0.2])], rest: facing(0.6, 1)),
+        .wait(3.2),
+        .act("partner") {
+          $0.walker.behavior.notice(.partner, .heard, bearing: 2, salience: 1, hold: 2.5)
+        },
+        .untilStill, .wait(6),
+        go("near", [.init(at: [-0.1, 0, 0.1])], rest: facing(1, 0.4)),
+        .wait(2.4),
+        .act("pet") { $0.walker.pet() },
+        .untilStill, .wait(4),
+      ]),
     Scenario(
       name: "pats", home: [0, 0, 0], yaw: east, focus: [0, 0.08, 0],
       cues: [

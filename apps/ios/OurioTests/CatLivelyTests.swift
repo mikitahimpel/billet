@@ -52,6 +52,26 @@ struct CatLivelyTests {
         #expect((base.max() ?? 0) - (base.min() ?? 0) < 0.03)
     }
 
+    @Test func thePartnerComingInBringsHerTailUpAndItComesDownAgain() {
+        let cat = cat()
+        cat.tail = CatTail()
+        _ = run(cat, 1)
+        #expect(abs(cat.tailRaise) < 0.05)
+        cat.notice(.partner, .heard, bearing: -1.3, salience: 0.9, hold: 2)
+        let greeting = run(cat, 1.5)
+        #expect(cat.tailRaise > 0.9)
+        #expect((greeting.last?.tailLift[2] ?? 0) > 0.2)
+        _ = run(cat, 9)
+        #expect(cat.tailRaise < 0.1)
+    }
+
+    @Test func withoutATailOfHerOwnItIsCarriedAsHerPostureHasIt() {
+        let cat = cat()
+        cat.notice(.partner, .heard, bearing: -1.3, salience: 0.9, hold: 2)
+        _ = run(cat, 1.5)
+        #expect(cat.tailRaise == 0)
+    }
+
     @Test func theSameSeedPlaysTheSameLooks() {
         func looks(_ seed: UInt64) -> [Float] {
             let cat = cat(seed: seed)

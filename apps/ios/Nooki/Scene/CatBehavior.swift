@@ -131,6 +131,10 @@ final class CatBehavior {
     private var still: Float = 0
     /// Chooses her small acts in place of their separate timers, when she has an attention.
     var fidgeting: CatFidgeting?
+    /// Carries her tail by her mood; nil leaves it as her posture has it.
+    var tail: CatTail?
+    /// From -1, the tail held low, to 1, straight up: for the body she stands in, which has the whole tail to lift.
+    private(set) var tailRaise: Float = 0
     private var settled: Float = -100
     private var sighStart: Float = -100
     /// How far into a sigh's deep breath she is, 0 to 1.
@@ -300,6 +304,17 @@ final class CatBehavior {
             to: Double(t), .init(moving: moving, drowse: Double(drowse), curious: Double(curious)))
         self.noticing = noticing
         return true
+    }
+
+    /// How her mood carries the tail this frame.
+    private func carry(_ dt: Float, petted: Bool) -> CatTailCarriage {
+        guard var tail, let noticing else { return .easy }
+        let carriage = tail.advance(by: Double(dt), .init(
+            source: petted ? .touch : regard.source, stillness: Double(still), arousal: noticing.arousal,
+            contentment: Double(mood.contentment), drowse: Double(drowse), moving: moving,
+            ahead: abs(regard.headYaw) < 0.5))
+        self.tail = tail
+        return carriage
     }
 
     /// She has just sat or lain down: a sigh or a slow blink is likely next.
@@ -534,14 +549,17 @@ final class CatBehavior {
         // Tail: a wave runs from the base to the tip, each joint a little later and wider than the last, its pace and
         // size wandering; calmer when she is content, quicker when curious, the tip twitching then. Now and then the tip
         // lifts, and it stays up while petted. Left alone, she flicks the tip sideways or curls it up for a while.
-        tailPhase += dt * 0.9 * (1 + 0.35 * noise(t * 0.15, 4)) * (1 + 0.5 * mood.interest)
-        let swing = (1.3 - 0.6 * mood.contentment) * (1 + 0.3 * noise(t * 0.2, 5)) * loose
+        let carried = carry(dt, petted: petting > 0.3)
+        tailRaise = Float(carried.raise)
+        tailPhase += dt * 0.9 * (1 + 0.35 * noise(t * 0.15, 4)) * (1 + 0.5 * mood.interest) * Float(carried.pace)
+        let swing = (1.3 - 0.6 * mood.contentment) * (1 + 0.3 * noise(t * 0.2, 5)) * loose * Float(carried.swing)
         let tipUp = pow(max(0, noise(t * 0.35, 6)), 3)
         for i in 0..<tailCount {
             let share = Float(i) / Float(max(tailCount - 1, 1))
             let wave = sin(tailPhase - Float(i) * 0.7) + 0.3 * sin(tailPhase * 2.6 - Float(i))
             target.tailSway[i] = (0.04 + 0.08 * share) * swing * wave
-            target.tailLift[i] = 0.25 * share * share * (tipUp + 1.2 * petting)
+                + 0.1 * Float(carried.quiver) * sin(t * 26 + Float(i))
+            target.tailLift[i] = 0.25 * share * share * (tipUp + 1.2 * petting + 1.5 * Float(carried.hook))
         }
         if !fidgets, t > nextFlick {
             if left > 12, still < 0.5 { flick = (t, Float.random(in: 0..<1) < 0.35, Bool.random() ? -1 : 1) }

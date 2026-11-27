@@ -303,6 +303,7 @@ final class CatWalker {
         guard (seed != nil) != lively else { return }
         behavior.noticing = seed.map(CatNoticing.init)
         behavior.fidgeting = seed.map(CatFidgeting.init)
+        behavior.tail = seed.map { _ in CatTail() }
     }
 
     /// `point` in the room as her attention takes it: radians from straight ahead of her body, and above her eyes.
@@ -863,12 +864,15 @@ final class CatWalker {
         // that it swings with the body's turns, starts and landings.
         tailSpring.update(dt, tailPush)
         let tipLift = r * Posture.tipLiftShare(lift: s.lift)
+        // Her mood carries the whole tail only while she stands tall: sitting, it lies round her on the floor.
+        let raise = behavior.tailRaise * (1 - smoothstep(-s.lift, 0.008, 0.019))
         for i in p.tail.indices {
             let spring = tailSpring.joints[min(i, tailSpring.joints.count - 1)]
             let fi = Float(i)
             p.tail[i].sway = s.sway[min(i, s.sway.count - 1)]
                 + lerp((0.06 + 0.05 * fi) * sin(time * 1.6 - fi * 0.8), b.tailSway[i], r)
             p.tail[i].lift = s.tail[min(i, s.tail.count - 1)] + 0.1 * gait.amount + b.tailLift[i] * tipLift + spring.lift
+                + raise * (i == 0 ? 0.7 : i == 1 ? 0.35 : 0.1)
             p.tail[i].lean = spring.lean
         }
         standing.pose = p

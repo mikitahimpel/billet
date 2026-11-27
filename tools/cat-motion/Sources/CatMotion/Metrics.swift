@@ -283,6 +283,14 @@ struct Metrics {
       line2("errand at \(f(start.time, 1)) s, after", "\(f(Float(seated - lastStep) * dt)) s from her last step to seated, head through \(f((about.max() ?? 0) - (about.min() ?? 0))) rad meanwhile")
     }
 
+    // On her feet: how the tail is carried, as the base joint's lift.
+    let afoot = samples.filter { $0.shown == "MochiStanding" && $0.lift > -0.017 }
+    if afoot.count > 60 {
+      let lifts = afoot.map(\.tail)
+      let up = Float(lifts.filter { $0 > 0.5 }.count) / Float(lifts.count)
+      line2("tail on her feet", "base lifted \(f(lifts.min() ?? 0))–\(f(lifts.max() ?? 0)) rad, carried up \(f(100 * up, 0)) % of the time")
+    }
+
     // On the move: the head apart from where she steers, and the ears.
     let travelling = samples.indices.filter { speed[$0] > 5e-3 }
     if travelling.count > 60 {

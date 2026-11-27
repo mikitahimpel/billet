@@ -73,6 +73,14 @@ again. Sent somewhere, she stood up the frame she was told to.
   go of a stare. Having just sat down she most often sighs: a deep breath, lids lowering as it goes
   out. When the brain directs her it keeps the larger acts (yawn, wash, shake, tilt) for itself.
 
+- `CatTail` carries her tail by her mood, before anything else moves it. Greeting (whoever pets
+  her, the partner coming in, whoever watches when she walks their way or has just noticed them):
+  up within a third of a second with the tip hooked over and a tremble that dies in a second, kept
+  up 2.5 s after the look ends, down three times slower than it rose. Something that has her whole
+  attention: held low and nearly still, the tip left to twitch. Half asleep: slack and slow. On
+  her feet the whole tail is carried (`CatBehavior.tailRaise`); sitting, it lies round her and
+  only the tip hooks. `CatDirector.partnerArrived` now tells her it is the partner, not a noise.
+
 What catches her eye today: whoever watches (on first sight, and when the camera moves more than
 0.3 rad about her within 2 s), the room's spots, the partner arriving, where the brain has her
 look, where she is about to go, and noises of her own.
@@ -89,11 +97,15 @@ tools/cat-motion/compare.sh off on
 her twice and a pet; `errand` sends her across the room and home. The report's attention lines:
 head turns a minute and their peak speed, the holds between them, how many turns an ear led, how
 much of her rest the head is held still and whether an ear or the tail tip moves in those holds,
-and per errand the time and head travel before she stirs and between her last step and sitting.
+and per errand the time and head travel before she stirs and between her last step and sitting. The
+tail line gives the base joint's lift while she is on her feet and the share of that time it is
+carried up; the `greeting` scenario has the partner come in while she walks and a pet as she
+stands.
 
 ## Next
 
 - More idle acts to choose from (stretch, knead, loaf variants).
-- The tail as a mood barometer: carried high on a greeting, low on a stalk, lashing when cross.
+- The tail lashing when she is cross. It needs something in the app that makes her cross (petted
+  too long, teased with a finger), which is a decision about the product first.
 - Gaits by intent (stroll, trot, stalk), and a paw held up in a stop mid-walk.
 - Turning her seat toward something that stays behind her.

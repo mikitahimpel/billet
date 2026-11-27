@@ -173,7 +173,11 @@ final class CatDirector {
 
     /// The partner opened the app on their phone: her ears go up and she looks toward the door for a moment.
     func partnerArrived() {
-        walker.behavior.perform(.listen)
+        if walker.lively {
+            walker.behavior.notice(.partner, .heard, bearing: Bool.random() ? -2 : 2, salience: 1, hold: 2.5)
+        } else {
+            walker.behavior.perform(.listen)
+        }
         glanceUntil = Date.now.timeIntervalSince1970 + 3
         lastEvent = "partner here"
         analytics.coupleEvent("partnerHere")
