@@ -1,4 +1,5 @@
 import Foundation
+import Pet
 import simd
 
 private func random(_ low: Float, _ high: Float) -> Float { .random(in: low..<high) }
@@ -54,6 +55,8 @@ private func spring(_ value: inout Float, _ speed: inout Float, _ goal: Float, _
 /// narrowed, looks up and slow-blinks after it, and gets drowsy when tired. Her ears are springs that lag her head.
 /// A mood drives all of it: `energy` drains at rest and makes her drowsy when low, `interest` rises with anything going
 /// on and makes her quick and alert, `contentment` grows with pets and softens her eyes and tail.
+/// Given a `noticing`, where she looks is no longer drawn at random: her attention picks it from what is around her
+/// and what happens, an ear goes to a sound before her head does, and she holds still while she listens or stares.
 final class CatBehavior {
     private struct Sound {
         let start: Float
@@ -116,6 +119,28 @@ final class CatBehavior {
     private var sleepy: Float = 0
     /// A heading for her glances to favour, relative to her body, or nil to look about freely.
     var focus: Float?
+    /// Her attention, when she has one in place of the random glances, sounds and checks on whoever watches.
+    var noticing: CatNoticing?
+    /// What stands around her that she may look at, bearings from her body as they are now.
+    var ambient: [CatStimulus] = []
+    /// Set by whoever moves her: on her feet, her looks are shorter and narrower.
+    var moving = false
+    /// Her curious trait, 0 to 1.
+    var curious: Float = 0.5
+    private var regard = CatRegard()
+    private var still: Float = 0
+    /// Chooses her small acts in place of their separate timers, when she has an attention.
+    var fidgeting: CatFidgeting?
+    /// Carries her tail by her mood; nil leaves it as her posture has it.
+    var tail: CatTail?
+    /// From -1, the tail held low, to 1, straight up: for the body she stands in, which has the whole tail to lift.
+    private(set) var tailRaise: Float = 0
+    private var settled: Float = -100
+    private var sighStart: Float = -100
+    /// How far into a sigh's deep breath she is, 0 to 1.
+    private(set) var sigh: Float = 0
+    /// Where whoever watches was from her when she last took note, and when.
+    private var seen: (yaw: Float, time: Float)?
     private(set) var drowse: Float = 0
     private(set) var blink: Float = 0
     private(set) var state: Values
@@ -144,6 +169,33 @@ final class CatBehavior {
         stir(0.25)
     }
 
+    /// Something for her attention, `bearing` and `elevation` radians from straight ahead of her body. Without a
+    /// `noticing` nothing happens.
+    func notice(_ source: CatStimulus.Source, _ sense: CatStimulus.Sense, bearing: Float, elevation: Float = 0,
+                salience: Float, hold: Float) {
+        noticing?.notice(CatStimulus(source, sense, bearing: Double(bearing), elevation: Double(elevation),
+                                     salience: Double(salience), hold: Double(hold)), now: Double(time))
+    }
+
+    /// It is gone, and she lets go of it if she was on it.
+    func lose(_ source: CatStimulus.Source) {
+        noticing?.lose(source, now: Double(time))
+    }
+
+    /// A look about, as on arriving somewhere; returns the seconds it takes.
+    func survey() -> Float {
+        Float(noticing?.survey(now: Double(time)) ?? 0)
+    }
+
+    /// A number in `range` from her own seeded dice when she has them, so the same seed plays the same.
+    func draw(_ range: ClosedRange<Float>) -> Float {
+        guard range.lowerBound < range.upperBound else { return range.lowerBound }
+        guard var dice = noticing else { return .random(in: range) }
+        let value = dice.draw(in: Double(range.lowerBound)...Double(range.upperBound))
+        noticing = dice
+        return Float(value)
+    }
+
     /// Wakes her up by `amount` of her energy.
     func stir(_ amount: Float) {
         mood.energy = min(1, mood.energy + amount)
@@ -170,7 +222,9 @@ final class CatBehavior {
         let t = time
         switch act {
         case .twitch: twitch = (t, Bool.random(), false)
-        case .listen: sound = Sound(start: t, yaw: Bool.random() ? -2 : 2, length: 1.6, look: true)
+        case .listen:
+            sound = Sound(start: t, yaw: Bool.random() ? -2 : 2, length: 1.6, look: true)
+            notice(.noise, .heard, bearing: draw(0...1) < 0.5 ? -2 : 2, salience: 1, hold: 1.6)
         case .slowBlink: slowBlink = t
         case .yawn: yawnStart = t
         case .flick: flick = (t, false, Bool.random() ? -1 : 1)
@@ -220,6 +274,79 @@ final class CatBehavior {
         return (atan2(-d.x, -d.z), atan2(d.y, hypot(d.x, d.z)))
     }
 
+    /// Steps her attention, if she has one, and says whether it chooses where she looks. She may look at whoever
+    /// watches and at what the brain has her mind, and a watcher who moves round her catches her eye.
+    private func attend(_ eyes: SIMD3<Float>) -> Bool {
+        guard var noticing else {
+            regard = CatRegard()
+            return false
+        }
+        let t = time
+        var places = ambient
+        if let viewer {
+            let at = toward(viewer, from: eyes)
+            places.append(CatStimulus(.viewer, .seen, bearing: Double(at.yaw), elevation: Double(at.pitch),
+                                      salience: Double(0.4 + 0.3 * mood.contentment), hold: 2.2))
+            noticing.track(.viewer, bearing: Double(at.yaw), elevation: Double(at.pitch))
+            let moved = seen.map { abs(atan2(sin(at.yaw - $0.yaw), cos(at.yaw - $0.yaw))) > 0.3 } ?? true
+            if moved, !moving {
+                noticing.notice(CatStimulus(.viewer, .seen, bearing: Double(at.yaw), elevation: Double(at.pitch),
+                                            salience: seen == nil ? 0.8 : 0.6, hold: 2), now: Double(t))
+            }
+            // Only a move made within a couple of seconds counts, and never her own turning as she walks.
+            if moved || moving || t - (seen?.time ?? t) > 2 { seen = (at.yaw, t) }
+        }
+        if let focus {
+            places.append(CatStimulus(.place("focus"), .seen, bearing: Double(focus), salience: 1.4, hold: 3.5))
+        }
+        noticing.places = places
+        regard = noticing.advance(
+            to: Double(t), .init(moving: moving, drowse: Double(drowse), curious: Double(curious)))
+        self.noticing = noticing
+        return true
+    }
+
+    /// How her mood carries the tail this frame.
+    private func carry(_ dt: Float, petted: Bool) -> CatTailCarriage {
+        guard var tail, let noticing else { return .easy }
+        let carriage = tail.advance(by: Double(dt), .init(
+            source: petted ? .touch : regard.source, stillness: Double(still), arousal: noticing.arousal,
+            contentment: Double(mood.contentment), drowse: Double(drowse), moving: moving,
+            ahead: abs(regard.headYaw) < 0.5))
+        self.tail = tail
+        return carriage
+    }
+
+    /// She has just sat or lain down: a sigh or a slow blink is likely next.
+    func settle() {
+        settled = time
+    }
+
+    /// Her next small act, when one is due and she is left alone and not held still by something.
+    private func fidget(_ noticing: CatNoticing?, alone: Bool) {
+        guard var fidgeting, let noticing else { return }
+        let t = time
+        let mood = CatFidgeting.Mood(
+            arousal: noticing.arousal, drowse: Double(drowse), contentment: Double(mood.contentment),
+            stillness: alone ? Double(still) : 1, settling: t - settled < 2.5, directed: directed)
+        let chosen = moving ? nil : fidgeting.advance(to: Double(t), mood)
+        self.fidgeting = fidgeting
+        guard let chosen else { return }
+        let side: Float = draw(0...1) < 0.5 ? -1 : 1
+        switch chosen {
+        case .earFlick: twitch = (t, side < 0, draw(0...1) < 0.25)
+        case .tailFlick: flick = (t, false, side)
+        case .tailCurl: flick = (t, true, side)
+        case .slowBlink: slowBlink = t
+        case .tilt: gesture = (.tilt, t, side)
+        case .shake: gesture = (.shake, t, side)
+        case .yawn: yawnStart = t
+        case .sigh: sighStart = t
+        case .shift: shift = (draw(-0.025...0.025), draw(-0.01...0.02))
+        case .groom: groom = (t, draw(3...5.5), side)
+        }
+    }
+
     /// `eyes`: the model-space point between her eyes as posed last frame.
     func update(_ dt: Float, eyes: SIMD3<Float>) {
         time += dt
@@ -227,31 +354,38 @@ final class CatBehavior {
         let left = t - max(lastPointer, petStart)
         let near: Float = lookTarget != nil && t - lastPointer < 2 ? 1 : 0
 
+        let attends = attend(eyes)
+        let fidgets = attends && fidgeting != nil
+        if fidgets { fidget(noticing, alone: near == 0 && left > 4) }
+        // A sigh: a deep breath in over a second, held a moment, let out slowly with the head sinking a little.
+        let sighing = t - sighStart
+        sigh = min(smoothstep(sighing, 0, 1), 1 - smoothstep(sighing, 1.3, 2.6))
         // Idle glances: every few seconds a new direction, sometimes with a curious head tilt; livelier, she glances
         // more often and wider.
-        if t > nextGlance {
+        if !attends, t > nextGlance {
             let reach = 0.6 + 0.6 * mood.energy
             let toward = focus.flatMap { Float.random(in: 0..<1) < 0.7 ? $0 + random(-0.12, 0.12) : nil }
             glance = (toward ?? random(-0.45, 0.45) * reach, random(-0.075, 0.175),
                       Float.random(in: 0..<1) < 0.3 ? random(-0.25, 0.25) : 0)
             nextGlance = t + random(2, 5) * lerp(1.8, 0.8, mood.energy) * (1 - 0.4 * mood.interest)
         }
-        var (yaw, pitch, roll) = glance
+        var (yaw, pitch, roll) = attends
+            ? (Float(regard.headYaw), Float(regard.headPitch), Float(regard.headRoll)) : glance
 
         // A sound off to one side or behind: the ear on that side swivels to it, and now and then she looks.
-        if t > nextSound {
+        if !attends, t > nextSound {
             sound = Sound(start: t, yaw: random(-2.5, 2.5), length: random(0.8, 1.8), look: Float.random(in: 0..<1) < 0.3)
             if sound?.look == true { stir(0.08) }
             nextSound = t + random(6, 16)
         }
-        let heard = sound.map { sqrt(bump(t, $0.start, $0.length)) } ?? 0
-        if let sound, sound.look, t > sound.start + 0.25, t < sound.start + sound.length + 0.8 {
+        let heard = attends ? 0 : sound.map { sqrt(bump(t, $0.start, $0.length)) } ?? 0
+        if !attends, let sound, sound.look, t > sound.start + 0.25, t < sound.start + sound.length + 0.8 {
             (yaw, pitch, roll) = (sound.yaw, 0, 0)
         }
 
         // Now and then she checks on whoever watches, more often when curious, and slow-blinks at them when content;
         // right after a pet she looks up at them.
-        if t > nextCheck {
+        if !attends, t > nextCheck {
             if viewer != nil && Float.random(in: 0..<1) < 0.3 + 0.5 * mood.interest {
                 check = (t, random(1.2, 2.6))
                 if mood.contentment > 0.55 { slowBlink = t + 0.5 }
@@ -259,8 +393,9 @@ final class CatBehavior {
             nextCheck = t + random(6, 14)
         }
         let p = t - petStart
-        let checking: Float = check.map { t < $0.start + $0.length } == true ? 1 : 0
-        if let viewer, checking > 0 || (p > 0.4 && p < 3.6) {
+        let checking: Float = attends ? (regard.source == .viewer ? 1 : 0)
+            : check.map { t < $0.start + $0.length } == true ? 1 : 0
+        if let viewer, !attends && checking > 0 || (p > 0.4 && p < 3.6) {
             let at = toward(viewer, from: eyes)
             if abs(at.yaw) < 1.2 { (yaw, pitch, roll) = (at.yaw, at.pitch, 0) }
         }
@@ -271,16 +406,21 @@ final class CatBehavior {
         // The neck turns only so far before the blend band shears.
         yaw = min(max(yaw, -0.6), 0.6)
         pitch = min(max(pitch, -0.25), 0.3)
+        // Frozen she holds everything but her ears and the tip of her tail.
+        let stillness = Float(regard.stillness) * (1 - near)
+        still += (stillness - still) * (1 - exp(-dt * (stillness > still ? 12 : 2.5)))
+        let loose = 1 - 0.85 * still
 
         // The eyes are on (yaw, pitch) at once; the head re-aims once they are far enough off it or have rested there,
         // in smaller steps while following a finger.
         let off = hypot(yaw - aim.yaw, pitch - aim.pitch)
-        if off > (near > 0 ? 0.06 : 0.12) || (off > 0.03 && t - aim.time > 0.5) {
+        let steps = off > (near > 0 ? 0.06 : 0.12) || (off > 0.03 && t - aim.time > 0.5)
+        if attends && near == 0 ? off > 0.01 : steps {
             aim = (yaw, pitch, t, yaw - aim.yaw)
         }
 
         // Yawn: the head tips back and over with the ears folding, then comes back; tired, she yawns more.
-        if t > nextYawn {
+        if !fidgets, t > nextYawn {
             if left > 4 && !directed { yawnStart = t }
             nextYawn = t + random(40, 90) * lerp(0.6, 1.4, mood.energy)
         }
@@ -301,20 +441,21 @@ final class CatBehavior {
 
         // Every 10-20 s she settles her weight a little differently, leaning to a side or forward, and holds it; her chest
         // turns a little after her head.
-        if t > nextShift {
+        if !fidgets, t > nextShift, still < 0.3 {
             shift = (random(-0.025, 0.025), random(-0.01, 0.02))
             nextShift = t + random(10, 20)
         }
         target.lean = shift.lean
-        target.forward = shift.forward
-        target.chestYaw = 0.13 * state.yaw
+        let sinking = 0.006 * smoothstep(t - sighStart, 1.3, 2.2) * sigh
+        target.forward = shift.forward + Float(regard.lean) - sinking
+        target.chestYaw = (0.13 + Float(regard.chest)) * state.yaw
 
         // Petting: lean into the hand, ears back, tail tip up, for about two seconds.
         let petting = p < 2 ? sin(min(p / 0.3, 1) * .pi / 2) * (1 - smoothstep(p, 1.5, 2)) : 0
 
         // Grooming: every minute or so, awake and left alone, she washes her chest in short licks, head down and to a
         // side, eyes half shut.
-        if t > nextGroom {
+        if !fidgets, t > nextGroom {
             if left > 8 && drowse < 0.3 && !directed { groom = (t, random(3, 5.5), Bool.random() ? -1 : 1) }
             nextGroom = t + random(40, 90)
         }
@@ -325,9 +466,9 @@ final class CatBehavior {
         let free = (1 - petting) * (1 - yawn) * (1 - washing)
         let behind = smoothstep(abs(sound?.yaw ?? 0), 1.2, 2.2)
         // Holding still, the head still drifts a hair.
-        target.yaw = aim.yaw * free * (1 - asleep) + 0.45 * side * washing + 0.012 * noise(t * 0.7, 1)
+        target.yaw = aim.yaw * free * (1 - asleep) + 0.45 * side * washing + 0.012 * loose * noise(t * 0.7, 1)
         target.pitch = aim.pitch * free * (1 - asleep) + 0.12 * petting + 0.3 * yawn - 0.12 * drowse - 0.18 * asleep
-            + washing * (0.07 * lick - 0.45) + 0.01 * noise(t * 0.7, 2)
+            + washing * (0.07 * lick - 0.45) + 0.01 * loose * noise(t * 0.7, 2)
         target.roll = roll * free + 0.32 * petting * sin(p * 3) + 0.2 * yawn + 0.2 * side * washing
         target.earsBack = 0.5 * petting + 0.35 * yawn + 0.25 * heard * behind + 0.15 * washing
         let move = gestureOffsets(t)
@@ -338,12 +479,13 @@ final class CatBehavior {
 
         // Interest jumps with anything going on and fades over several seconds; contentment grows with pets and slowly
         // settles back.
-        let lure = max(near, heard, 0.6 * petting, 0.5 * checking)
+        let caught: Float = attends && regard.source != nil ? 0.6 * Float(regard.alert) : 0
+        let lure = max(near, heard, 0.6 * petting, 0.5 * checking, caught)
         mood.interest += (lure - mood.interest) * (1 - exp(-dt * (lure > mood.interest ? 3 : 1 / 8)))
         mood.contentment = min(max(mood.contentment + dt * (0.25 * petting + (0.4 - mood.contentment) / 120), 0), 1)
 
         // Ear twitches: one ear, quick flick out and back; more of them when she is curious.
-        if t > nextTwitch {
+        if !fidgets, t > nextTwitch {
             twitch = (t, Bool.random(), Float.random(in: 0..<1) < 0.25)
             nextTwitch = t + random(2.5, 6.5) * (1.3 - 0.6 * mood.interest)
         }
@@ -371,11 +513,16 @@ final class CatBehavior {
                 - 0.15 * mood.interest + 0.1 * mood.contentment
         }
         target.earTurnLeft = swivel(10, towards: sound.map { $0.yaw < 0 } ?? false)
+            + Float(regard.earLeft) * (1 - near)
         target.earTurnRight = swivel(11, towards: sound.map { $0.yaw >= 0 } ?? false)
+            + Float(regard.earRight) * (1 - near)
 
         // Eyes: quick blinks, sometimes doubled, fewer when curious; half shut while petted or washing; a slow blink back
         // at someone who has lingered a few seconds, after a pet, and now and then when content; heavy lids when drowsy,
         // soft ones when content, and shut through a yawn.
+        if regard.blink { blinks.append(t) }
+        // Staring she does not blink.
+        if still > 0.6, regard.source != nil { nextBlink = max(nextBlink, t + 0.4) }
         if t > nextBlink || (aim.time == t && abs(aim.turn) > 0.35) {
             blinks.append(t)
             if Float.random(in: 0..<1) < 0.2 { blinks.append(t + 0.3) }
@@ -388,35 +535,44 @@ final class CatBehavior {
             nextSlowBlink = t + random(6, 12)
         }
         if p > 2.2 && p - dt <= 2.2 { slowBlink = t }
-        if t > nextContentBlink {
+        if !fidgets, t > nextContentBlink {
             if mood.contentment > 0.6 && near == 0 { slowBlink = t }
             nextContentBlink = t + random(8, 18)
         }
         let slow = min(smoothstep(t - slowBlink, 0, 0.5), 1 - smoothstep(t - slowBlink, 1.1, 1.8))
         let lid = max(0.55 * petting, 0.85 * slow, 0.9 * yawn, drowse * (0.6 + 0.1 * noise(t * 0.3, 3)), asleep,
-                      0.5 * washing, 0.15 * mood.contentment * (1 - mood.interest))
+                      0.5 * washing, 0.45 * sigh * smoothstep(t - sighStart, 1, 1.6),
+                      0.15 * mood.contentment * (1 - mood.interest) * (1 - still))
         target.lidLeft = lid
         target.lidRight = lid * (1 - 0.08 * drowse)
 
         // Tail: a wave runs from the base to the tip, each joint a little later and wider than the last, its pace and
         // size wandering; calmer when she is content, quicker when curious, the tip twitching then. Now and then the tip
         // lifts, and it stays up while petted. Left alone, she flicks the tip sideways or curls it up for a while.
-        tailPhase += dt * 0.9 * (1 + 0.35 * noise(t * 0.15, 4)) * (1 + 0.5 * mood.interest)
-        let swing = (1.3 - 0.6 * mood.contentment) * (1 + 0.3 * noise(t * 0.2, 5))
+        let carried = carry(dt, petted: petting > 0.3)
+        tailRaise = Float(carried.raise)
+        tailPhase += dt * 0.9 * (1 + 0.35 * noise(t * 0.15, 4)) * (1 + 0.5 * mood.interest) * Float(carried.pace)
+        let swing = (1.3 - 0.6 * mood.contentment) * (1 + 0.3 * noise(t * 0.2, 5)) * loose * Float(carried.swing)
         let tipUp = pow(max(0, noise(t * 0.35, 6)), 3)
         for i in 0..<tailCount {
             let share = Float(i) / Float(max(tailCount - 1, 1))
             let wave = sin(tailPhase - Float(i) * 0.7) + 0.3 * sin(tailPhase * 2.6 - Float(i))
             target.tailSway[i] = (0.04 + 0.08 * share) * swing * wave
-            target.tailLift[i] = 0.25 * share * share * (tipUp + 1.2 * petting)
+                + 0.1 * Float(carried.quiver) * sin(t * 26 + Float(i))
+            target.tailLift[i] = 0.25 * share * share * (tipUp + 1.2 * petting + 1.5 * Float(carried.hook))
         }
-        if t > nextFlick {
-            if left > 12 { flick = (t, Float.random(in: 0..<1) < 0.35, Bool.random() ? -1 : 1) }
+        if !fidgets, t > nextFlick {
+            if left > 12, still < 0.5 { flick = (t, Float.random(in: 0..<1) < 0.35, Bool.random() ? -1 : 1) }
             nextFlick = t + random(9, 20)
         }
         let last = tailCount - 1
         if last >= 0 { target.tailSway[last] += 0.12 * mood.interest * noise(t * 2.5, 7) }
         if last >= 0 { target.tailSway[last] += move.tip }
+        // Staring, only the tip of her tail gives her away, in short bursts.
+        if last >= 0 {
+            let burst = max(0, 1.6 * noise(t * 0.9, 9) - 0.2)
+            target.tailSway[last] += 0.9 * Float(regard.tailTip) * burst * sin(t * 11)
+        }
         if let flick, last >= 0 {
             if flick.curl { target.tailLift[last] += 0.5 * bump(t, flick.start, 3) }
             else { target.tailSway[last] += 0.5 * flick.side * bump(t, flick.start, 0.35) }
@@ -424,8 +580,13 @@ final class CatBehavior {
 
         // The head snaps after the eyes as a lightly damped spring, overshooting a little before it holds; the ears are
         // looser springs still. The rest eases, tail lifts quicker, the body's weight slowly.
-        spring(&state.yaw, &speed.yaw, target.yaw, 11, 0.6, dt)
-        spring(&state.pitch, &speed.pitch, target.pitch, 11, 0.6, dt)
+        // A start turns the head quicker than a lazy look.
+        let snap = max(Float(regard.snap), near, petting)
+        // A yawn, a wash or a gesture moves the head at its own pace.
+        let acting = yawn > 0 || washing > 0 || gesture.map { t - $0.start < 4 } == true
+        let (quick, damping): (Float, Float) = attends && !acting ? (4.5 + 10 * snap, 0.9 - 0.3 * snap) : (11, 0.6)
+        spring(&state.yaw, &speed.yaw, target.yaw, quick, damping, dt)
+        spring(&state.pitch, &speed.pitch, target.pitch, quick, damping, dt)
         spring(&state.earLeft, &speed.earLeft, target.earLeft, 20, 0.35, dt)
         spring(&state.earRight, &speed.earRight, target.earRight, 20, 0.35, dt)
         spring(&state.earsBack, &speed.earsBack, target.earsBack, 20, 0.35, dt)

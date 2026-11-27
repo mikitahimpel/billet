@@ -227,6 +227,12 @@ final class CatWalker {
     private var lead: Float = 0
     private var lookYaw = Glide(value: 0)
     private var stepping = false
+    /// Set by a step in which she has not stirred yet: she still rests as she was.
+    private var lingering = false
+    /// She has stopped for a look once on this trip already.
+    private var paused = false
+    /// Room units of floor in the legs queued for this trip so far.
+    private var walked: Float = 0
     private var free = false
     private var wiggle: Float = 0
     private var tread = SIMD2<Float>.zero
@@ -238,6 +244,12 @@ final class CatWalker {
     private var seatAmount: Float = 1
     /// Seconds her sitting and standing bodies take to dissolve into each other; 0 cuts in one frame.
     var dissolve: Float = 0
+    /// Whether she has an attention of her own (`liven`): she looks at where she is going before she gets up,
+    /// looks about on arriving, and her head and ears stay alive on the move.
+    var lively: Bool { behavior.noticing != nil }
+    /// What stands in the room that she may look at: where, in room units, and how much she cares for it.
+    var interests: [(id: String, at: SIMD3<Float>, weight: Float)] = []
+    private var nextInterests: Float = 0
     private var mixing: (time: Float, seated: Bool)?
     private var change: Change?
     /// Her speed along the floor and her turning as she walks, carried from one leg into the next.
@@ -285,6 +297,36 @@ final class CatWalker {
     }
 
     var moving: Bool { !steps.isEmpty }
+
+    /// Gives her an attention that plays the same for the same `seed`, or takes it away with nil.
+    func liven(seed: UInt64?) {
+        guard (seed != nil) != lively else { return }
+        behavior.noticing = seed.map(CatNoticing.init)
+        behavior.fidgeting = seed.map(CatFidgeting.init)
+        behavior.tail = seed.map { _ in CatTail() }
+    }
+
+    /// `point` in the room as her attention takes it: radians from straight ahead of her body, and above her eyes.
+    private func bearing(to point: SIMD3<Float>) -> (bearing: Float, elevation: Float) {
+        let d = point - group.position
+        let turn = facing(d.x, d.z) - yaw
+        let eyes = standing.eyes.y * scale
+        return (atan2(sin(turn), cos(turn)), atan2(d.y - eyes, max(hypot(d.x, d.z), 1e-3)))
+    }
+
+    /// Her interests as they lie from her now, a few times a second.
+    private func updateInterests(_ dt: Float) {
+        nextInterests -= dt
+        guard lively, nextInterests <= 0 else { return }
+        nextInterests = 0.25
+        behavior.ambient = interests.compactMap { interest in
+            // What she stands on or beside is not something to look across the room at.
+            guard simd_distance(interest.at, group.position) > 0.12 else { return nil }
+            let at = bearing(to: interest.at)
+            return CatStimulus(.place(interest.id), .seen, bearing: Double(at.bearing), elevation: Double(at.elevation),
+                               salience: Double(interest.weight), hold: 3)
+        }
+    }
     var canTrip: Bool { main != nil }
     /// The destination she is at or on her way to, nil at home.
     var place: String? { away?.id }
@@ -461,6 +503,9 @@ final class CatWalker {
         planYaw = yaw
         behavior.stir(0.2)
         leaveBody()
+        paused = false
+        walked = 0
+        if lively { regard(destination?.path.last?.at ?? home) }
         standUp()
         if stretch { self.stretch() }
         let points = [Waypoint(at: home)] + (away?.path ?? [])
@@ -476,9 +521,43 @@ final class CatWalker {
             retrace(points, downTo: 0)
             if let destination { follow(destination, from: 0, at: home) }
         }
+        if lively { survey() }
         turn(destination?.rest ?? homeYaw)
         sitDown()
         away = destination
+    }
+
+    /// Before she gets up to go somewhere she looks at it: ears, then head, a lean toward it. Somewhere behind
+    /// her the head turns as far as it goes and the body comes round once she is up.
+    private func regard(_ point: SIMD3<Float>) {
+        var left: Float?
+        add(until: { [unowned self] dt in
+            lingering = true
+            guard let l = left else {
+                let seconds = behavior.draw(pace.regard)
+                guard seconds > 0 else { return true }
+                let at = bearing(to: point)
+                behavior.notice(.destination, .own, bearing: at.bearing, elevation: at.elevation, salience: 0.85,
+                                hold: seconds + 2)
+                left = seconds
+                return false
+            }
+            left = l - dt
+            return l - dt <= 0
+        })
+    }
+
+    /// Arrived, she stands and looks about before she turns to sit.
+    private func survey(atMost seconds: Float = .infinity) {
+        var left: Float?
+        add(until: { [unowned self] dt in
+            guard pace.surveys else { return true }
+            lingering = true
+            behavior.lose(.destination)
+            let l = left ?? min(behavior.survey(), seconds)
+            left = l - dt
+            return l - dt <= 0
+        })
     }
 
     /// Where what she chases was when she last planned her way to it, and how long she has stood there since.
@@ -602,6 +681,7 @@ final class CatWalker {
             }
         }
         stepping = false
+        lingering = false
         free = false
         gaze = 0
         lead = 0
@@ -622,6 +702,7 @@ final class CatWalker {
                 steps[0].time += dt
                 if next(dt) { steps.removeFirst() }
             }
+            if steps.isEmpty, lively, !lying { behavior.settle() }
             if steps.isEmpty { wait = Float.random(in: 10..<22) * lerp(1.6, 0.6, behavior.mood.energy) }
         }
         if !moving, let c = chased {
@@ -636,6 +717,8 @@ final class CatWalker {
         else if !directed && !moving && lying && behavior.mood.energy > 0.5 { getUp() }
         takeOver()
         behavior.napping = lying || rest != .sit
+        behavior.moving = moving && !lingering
+        updateInterests(dt)
         // Walking winds her a little, jumping more; resting she gets her breath back over half a minute or so.
         let winding: Float = free ? 0.6 : stepping ? 0.1 : 0
         effort = winding > 0 ? min(1, effort + winding * dt) : effort * exp(-dt / 12)
@@ -648,7 +731,7 @@ final class CatWalker {
         frame.yaw = yaw
         last = (group.position, yaw)
         behavior.update(dt, eyes: standing.eyes)
-        rested.follow(moving ? 0 : 1, rate: 7, dt)
+        rested.follow(moving && !lingering ? 0 : 1, rate: 7, dt)
         pose(dt)
         updateSeat(headPitch: standing.pose.headPitch - posture.headPitch)
         updateSquash(dt)
@@ -754,17 +837,20 @@ final class CatWalker {
         lookPitch.follow(gaze, rate: 7, dt)
         // Turning, the head goes first and the body comes round after it.
         lookYaw.follow(lead, rate: 16, dt)
-        p.headPitch = s.headPitch + lerp(lookPitch.value, b.pitch, r)
-        p.headYaw = lerp(0.12 * noise(time * 0.5, 8) + lookYaw.value, b.yaw, r)
-        p.headRoll = b.roll * r
+        // With an attention of her own she still looks at things on the move, within what the neck turns.
+        let live: Float = lively ? 1 : 0
+        let ahead = (lively ? 0.04 : 0.12) * noise(time * 0.5, 8) + lookYaw.value
+        p.headPitch = s.headPitch + lerp(lookPitch.value + 0.6 * live * b.pitch, b.pitch, r)
+        p.headYaw = lerp(min(max(ahead + live * b.yaw, -0.6), 0.6), b.yaw, r)
+        p.headRoll = b.roll * max(r, 0.6 * live)
         steadyHead(&p, dt, g)
         settle(&p, dt, r)
-        p.earLeft = b.earLeft * r
-        p.earRight = b.earRight * r
+        p.earLeft = b.earLeft * max(r, live)
+        p.earRight = b.earRight * max(r, live)
         p.earsBack = b.earsBack * r
         // On the move the ears point ahead; the eyes blink whatever she does, but droop only at rest.
-        p.earTurnLeft = lerp(-0.1, b.earTurnLeft, r)
-        p.earTurnRight = lerp(-0.1, b.earTurnRight, r)
+        p.earTurnLeft = lerp(-0.1 + live * b.earTurnLeft, b.earTurnLeft, r)
+        p.earTurnRight = lerp(-0.1 + live * b.earTurnRight, b.earTurnRight, r)
         p.lidLeft = max(behavior.blink, b.lidLeft * r)
         p.lidRight = max(behavior.blink, b.lidRight * r)
         for (i, leg) in standing.legs.enumerated() {
@@ -778,12 +864,15 @@ final class CatWalker {
         // that it swings with the body's turns, starts and landings.
         tailSpring.update(dt, tailPush)
         let tipLift = r * Posture.tipLiftShare(lift: s.lift)
+        // Her mood carries the whole tail only while she stands tall: sitting, it lies round her on the floor.
+        let raise = behavior.tailRaise * (1 - smoothstep(-s.lift, 0.008, 0.019))
         for i in p.tail.indices {
             let spring = tailSpring.joints[min(i, tailSpring.joints.count - 1)]
             let fi = Float(i)
             p.tail[i].sway = s.sway[min(i, s.sway.count - 1)]
                 + lerp((0.06 + 0.05 * fi) * sin(time * 1.6 - fi * 0.8), b.tailSway[i], r)
             p.tail[i].lift = s.tail[min(i, s.tail.count - 1)] + 0.1 * gait.amount + b.tailLift[i] * tipLift + spring.lift
+                + raise * (i == 0 ? 0.7 : i == 1 ? 0.35 : 0.1)
             p.tail[i].lean = spring.lean
         }
         standing.pose = p
@@ -874,7 +963,7 @@ final class CatWalker {
         p.headYaw -= chestYaw
         let lean = Pose.about(floor, .x(-b.forward * r - self.lean.value) * .z(b.lean * r))
         p.chestMove = lean.under(Pose.about(spine, .y(chestYaw)))
-        p.chestMove.t += breathChest * breath.value
+        p.chestMove.t += breathChest * (breath.value + 1.8 * behavior.sigh)
         p.hipsMove = lean.under(Pose.about(spine, .y(0.3 * chestYaw)))
         p.hipsMove.t += breathHips * breath.value
     }
@@ -910,6 +999,13 @@ final class CatWalker {
             turn(facing(to.x - from.x, to.z - from.z))
             jump(from, to)
         } else {
+            // Now and then, at a corner with a stretch behind her, she stops on her feet for a look at something
+            // and goes on; never where she arrives, which has its own look about.
+            if lively, pace.surveys, walked > 0.25, !paused, behavior.draw(0...1) < 0.35 {
+                paused = true
+                survey(atMost: 1.1)
+            }
+            walked += simd_distance(from, to)
             walk(from, to)
         }
     }
@@ -951,6 +1047,8 @@ final class CatWalker {
                 return false
             }
             time = t + dt
+            // On her feet her head goes where she walks.
+            if t + dt > 0.5 * pace.standUp { behavior.lose(.destination) }
             // Setting off on foot she takes her first steps while her rump is still coming up.
             let walksNext = steps.count > 1 && steps[1].target != nil
             return t + dt >= pace.standUp * (walksNext ? 0.6 : 1)

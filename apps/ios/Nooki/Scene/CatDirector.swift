@@ -109,10 +109,14 @@ final class CatDirector {
     @ObservationIgnored private var tour: (start: Double, petted: Set<Double>)?
     /// Whether the brain drives her; read a few times a second, so the Labs switch takes effect at once.
     @ObservationIgnored private let enabled: () -> Bool
+    /// Whether she has an attention of her own; read as often as `enabled`.
+    @ObservationIgnored private let lively: () -> Bool
 
     init(walker: CatWalker, spots: [NookiSpot: CatWalker.Destination], source: CatEventSource,
          analytics: CatAnalytics, defaults: UserDefaults = .standard,
-         enabled: @escaping () -> Bool = { AppSettings.catBrain }, cameraDirection: @escaping () -> SIMD3<Float>) {
+         enabled: @escaping () -> Bool = { AppSettings.catBrain },
+         lively: @escaping () -> Bool = { AppSettings.livelyCat }, cameraDirection: @escaping () -> SIMD3<Float>) {
+        self.lively = lively
         self.walker = walker
         self.spots = spots
         self.source = source
@@ -169,7 +173,11 @@ final class CatDirector {
 
     /// The partner opened the app on their phone: her ears go up and she looks toward the door for a moment.
     func partnerArrived() {
-        walker.behavior.perform(.listen)
+        if walker.lively {
+            walker.behavior.notice(.partner, .heard, bearing: Bool.random() ? -2 : 2, salience: 1, hold: 2.5)
+        } else {
+            walker.behavior.perform(.listen)
+        }
         glanceUntil = Date.now.timeIntervalSince1970 + 3
         lastEvent = "partner here"
         analytics.coupleEvent("partnerHere")
@@ -358,9 +366,33 @@ final class CatDirector {
         if runner.live != nil, real >= liveUntil { runner.live = nil }
         guard real >= nextThink else { return }
         nextThink = real + Self.thinkEvery
+        liven(at: real)
         guard drive(enabled()) else { return }
         think(clock.sim(at: real))
         if walker.directed { walker.behavior.focus = focus() }
+    }
+
+    /// Gives her an attention of her own or takes it away, as the Labs switch stands, and keeps it told of what
+    /// stands in the room and of how curious a cat she is. The seed takes the clock in, so no two visits play alike.
+    /// The Labs switch for her bodies dissolving into each other is read here too.
+    private func liven(at real: Double) {
+        walker.dissolve = AppSettings.softSwap ? 0.2 : 0
+        walker.liven(seed: lively() ? source.seed ^ UInt64(max(real, 0)) : nil)
+        guard walker.lively else { return }
+        walker.interests = spots.compactMap { spot, destination in
+            destination.path.last.map { (spot.rawValue, $0.at, Self.interest(in: spot)) }
+        }
+        walker.behavior.curious = Float(runner.brain.personality.curious)
+    }
+
+    /// How much she cares to look at each place from across the room.
+    private static func interest(in spot: NookiSpot) -> Float {
+        switch spot {
+        case .sill, .windowSeat: 0.5
+        case .bowl: 0.35
+        case .ball, .basket, .tree, .post: 0.3
+        case .home, .front, .sofa, .catBed, .crate: 0.2
+        }
     }
 
     /// Hands her to the brain or back to its original timers, sitting and wide awake. Returns whether the brain drives.

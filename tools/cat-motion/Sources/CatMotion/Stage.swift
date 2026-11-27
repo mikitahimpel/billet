@@ -42,7 +42,16 @@ final class Stage {
     if let seconds = ProcessInfo.processInfo.environment["CAT_DISSOLVE"].flatMap(Float.init) {
       walker.dissolve = seconds
     }
+    // CAT_LIVELY=<seed> gives her an attention of her own, as the Labs switch does.
+    if let seed = ProcessInfo.processInfo.environment["CAT_LIVELY"].flatMap(UInt64.init) {
+      walker.liven(seed: seed)
+    }
     walker.show()
+  }
+
+  /// Whoever watches her moves to `direction` from her, in the room.
+  func watch(from direction: SIMD3<Float>) {
+    walker.watch(simd_quatf.y(-walker.heading).act(direction * 3) / Self.scale)
   }
 
   var rigs: [(name: String, rig: CatRig)] {
@@ -68,6 +77,8 @@ final class Stage {
 
   /// Where the laser dot is, for the picture.
   var dot: SIMD3<Float>?
+  /// Where a cue put whoever watches, as a direction from her; nil where the room view looks from.
+  var viewer: SIMD3<Float>?
 
   var shownName: String { shown.first?.body.name ?? "none" }
 

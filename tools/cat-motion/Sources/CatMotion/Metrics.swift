@@ -25,6 +25,18 @@ struct Sample: Codable {
   /// of the two only, over pixels covered in either.
   var silhouetteChange: Float = 0
 
+  /// Her head's small parts and the tail's tip, as the standing rig holds them.
+  struct Face: Codable {
+    var roll: Float
+    var earTurn: SIMD2<Float>
+    var earFlick: SIMD2<Float>
+    var lid: Float
+    var tailTip: Float
+    /// The chest's turn under the head; the rig's head yaw is from the chest.
+    var chestYaw: Float
+  }
+  var face: Face?
+
   init(time: Float, action: String, stage: Stage) {
     self.time = time
     self.action = action
@@ -54,6 +66,10 @@ struct Sample: Codable {
         lower: lower)
     }
     hindReach = Self.hindReach(stage)
+    face = Face(
+      roll: p.headRoll, earTurn: [p.earTurnLeft, p.earTurnRight], earFlick: [p.earLeft, p.earRight],
+      lid: max(p.lidLeft, p.lidRight), tailTip: p.tail.last?.sway ?? 0,
+      chestYaw: 2 * atan2(p.chestMove.q.imag.y, p.chestMove.q.real))
   }
 
   static func hindReach(_ stage: Stage) -> Float {
@@ -207,6 +223,85 @@ struct Metrics {
       guard let first = halves.min(by: { $0.1 < $1.1 }), let last = halves.max(by: { $0.1 < $1.1 }) else { continue }
       line("pose change \(f(a.time))-\(f(b.time)) s", "\(halves.count) parts half way within \(f((last.1 - first.1) * 1000, 0)) ms of each other (first \(first.0), last \(last.0)); overshoot \(f(100 * over, 0)) %; pitch jerk \(f(jerk, 0)) rad/s3")
     }
+    lines += attention(line: { key, value in
+      "  " + key.padding(toLength: 34, withPad: " ", startingAt: 0) + value
+    })
     return lines.joined(separator: "\n")
+  }
+
+  /// How she attends: turns of the head and what leads them, how still she holds between, what she
+  /// does before she sets off and after she arrives, and how much of her is alive on the move.
+  private func attention(line: (String, String) -> String) -> [String] {
+    guard samples.allSatisfy({ $0.face != nil }) else { return [] }
+    func f(_ x: Float, _ digits: Int = 2) -> String { String(format: "%.\(digits)f", x) }
+    var lines: [String] = []
+    let speed = [0] + zip(samples, samples.dropFirst()).map { simd_distance($0.at, $1.at) / dt }
+    let head = zip(rate { $0.headYaw + ($0.face?.chestYaw ?? 0) }, rate { $0.headPitch }).map { hypot($0, $1) }
+    let ears = zip(rate { $0.face?.earTurn.x ?? 0 }, rate { $0.face?.earTurn.y ?? 0 }).map { max(abs($0), abs($1)) }
+    let tip = rate { $0.face?.tailTip ?? 0 }.map(abs)
+
+    // At rest: turns of the head, the holds between them, and whether an ear went first.
+    let resting = samples.indices.filter { !samples[$0].moving }
+    if resting.count > 600 {
+      let turns = runs(least: 3, bridging: 4) { !samples[$0].moving && head[$0] > 0.5 }.filter { run in
+        hypot(
+          samples[run.upperBound - 1].headYaw - samples[run.lowerBound].headYaw,
+          samples[run.upperBound - 1].headPitch - samples[run.lowerBound].headPitch) > 0.1
+      }
+      let minutes = Float(resting.count) * dt / 60
+      let peak = turns.map { run in run.map { head[$0] }.max() ?? 0 }
+      line2("head turns at rest", "\(f(Float(turns.count) / minutes, 1)) a minute, peak speed \(f(peak.min() ?? 0, 1))–\(f(peak.max() ?? 0, 1)) rad/s")
+      let holds = zip(turns, turns.dropFirst()).map { Float($1.lowerBound - $0.upperBound) * dt }.sorted()
+      if !holds.isEmpty {
+        line2("holds between turns", "median \(f(holds[holds.count / 2], 1)) s, shortest \(f(holds[0], 1)) s, longest \(f(holds[holds.count - 1], 1)) s")
+      }
+      let led = turns.filter { run in
+        let before = max(run.lowerBound - 24, 0)..<max(run.lowerBound - 2, 0)
+        return before.contains { ears[$0] > 1.5 } && before.allSatisfy { head[$0] < 0.5 }
+      }
+      line2("turns an ear led", "\(led.count) of \(turns.count)")
+      let alone = runs(least: 2, bridging: 6) { i in
+        !samples[i].moving && ears[i] > 1.5 && (max(i - 6, 0)...min(i + 6, samples.count - 1)).allSatisfy { head[$0] < 0.3 }
+      }
+      line2("ear moves with the head still", "\(f(Float(alone.count) / minutes, 1)) a minute")
+      // Stock still but for the ears and the tail's tip.
+      let frozen = runs(least: 30) { !samples[$0].moving && head[$0] < 0.04 }
+      let twitching = frozen.filter { run in run.contains { tip[$0] > 0.6 || ears[$0] > 0.8 } }
+      line2("head held still 0.5 s or more", "\(f(100 * Float(frozen.reduce(0) { $0 + $1.count }) / Float(resting.count), 0)) % of her rest, in \(frozen.count) holds; an ear or the tail's tip moves in \(twitching.count) of them")
+    }
+
+    // Each errand: what she does before her body stirs, and between her last step and sitting.
+    for run in runs(least: 30, { samples[$0].moving }) where run.contains(where: { speed[$0] > 5e-3 }) {
+      let start = samples[run.lowerBound]
+      let stir = run.first { samples[$0].shown != start.shown || speed[$0] > 1e-3 } ?? run.lowerBound
+      func heading(_ sample: Sample) -> Float { sample.headYaw + (sample.face?.chestYaw ?? 0) }
+      let looked = (run.lowerBound..<stir).map { abs(heading(samples[$0]) - heading(start)) }.max() ?? 0
+      line2("errand at \(f(start.time, 1)) s, before", "\(f(Float(stir - run.lowerBound) * dt)) s from being sent to stirring, head turned \(f(looked)) rad meanwhile")
+      let lastStep = run.last { speed[$0] > 5e-3 } ?? run.upperBound - 1
+      let seated = (lastStep..<run.upperBound).first { samples[$0].shown != samples[lastStep].shown } ?? run.upperBound - 1
+      let about = (lastStep..<seated).map { heading(samples[$0]) }
+      line2("errand at \(f(start.time, 1)) s, after", "\(f(Float(seated - lastStep) * dt)) s from her last step to seated, head through \(f((about.max() ?? 0) - (about.min() ?? 0))) rad meanwhile")
+    }
+
+    // On her feet: how the tail is carried, as the base joint's lift.
+    let afoot = samples.filter { $0.shown == "MochiStanding" && $0.lift > -0.017 }
+    if afoot.count > 60 {
+      let lifts = afoot.map(\.tail)
+      let up = Float(lifts.filter { $0 > 0.5 }.count) / Float(lifts.count)
+      line2("tail on her feet", "base lifted \(f(lifts.min() ?? 0))–\(f(lifts.max() ?? 0)) rad, carried up \(f(100 * up, 0)) % of the time")
+    }
+
+    // On the move: the head apart from where she steers, and the ears.
+    let travelling = samples.indices.filter { speed[$0] > 5e-3 }
+    if travelling.count > 60 {
+      let turns = runs(least: 3, bridging: 4) { speed[$0] > 5e-3 && head[$0] > 0.5 }
+      let earRange = [\Sample.Face.earTurn.x, \Sample.Face.earTurn.y].map { path -> Float in
+        let values = travelling.compactMap { samples[$0].face?[keyPath: path] }
+        return (values.max() ?? 0) - (values.min() ?? 0)
+      }
+      line2("walking", "\(turns.count) quick head moves in \(f(Float(travelling.count) * dt, 1)) s, ears through \(f(earRange.max() ?? 0)) rad")
+    }
+    func line2(_ key: String, _ value: String) { lines.append(line(key, value)) }
+    return lines
   }
 }
