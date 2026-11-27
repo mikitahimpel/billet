@@ -75,3 +75,5 @@ private struct InboxAvatar: View {
         }
     }
 }
+
+// The sheet opens from the header Inbox button; it holds no state of its own.
