@@ -457,25 +457,20 @@ final class CatWalker {
     /// floor and crosses it, instead of going back to her resting spot first.
     func go(to destination: Destination?, stretch: Bool = false) {
         guard !moving, destination?.id != away?.id else { return }
+        // With no way there she stays where she is, rather than walk through what stands in the way.
+        guard let legs = plan(to: destination) else {
+            wait = max(wait, 5)
+            return
+        }
         chased = nil
         planYaw = yaw
         behavior.stir(0.2)
         leaveBody()
         standUp()
         if stretch { self.stretch() }
-        let points = [Waypoint(at: home)] + (away?.path ?? [])
-        if let destination, away != nil, let exit = floorExit(points), let entry = floorEntry(destination.path) {
-            retrace(points, downTo: exit)
-            var from = points[exit].at
-            for corner in detour(from, destination.path[entry].at) + [destination.path[entry].at] {
-                leg(from, corner, .walk)
-                from = corner
-            }
-            follow(destination, from: entry + 1, at: from)
-        } else {
-            retrace(points, downTo: 0)
-            if let destination { follow(destination, from: 0, at: home) }
-        }
+        for leg in legs { self.leg(leg.from, leg.to, leg.move) }
+        if let arrive = destination?.arrive { add(0.01) { _ in arrive() } }
+        if destination?.play == true { pat() }
         turn(destination?.rest ?? homeYaw)
         sitDown()
         away = destination
@@ -493,6 +488,10 @@ final class CatWalker {
         if moving {
             guard steps.contains(where: \.chase) else { return }
             if let chased, simd_distance(chased.point, point) < 0.03 { return }
+        }
+        // With no way round to it she keeps to what she was doing.
+        guard let corners = detour(group.position, point) else { return }
+        if moving {
             steps.removeAll(where: \.chase)
         } else {
             planYaw = yaw
@@ -502,7 +501,7 @@ final class CatWalker {
         }
         chased = (point, 0)
         var from = group.position
-        for corner in detour(from, point) + [point] {
+        for corner in corners + [point] {
             walk(from, corner, chase: true)
             from = corner
         }
@@ -533,33 +532,63 @@ final class CatWalker {
     /// What the player has stood on the floor: walks between destinations take the route around it.
     var avoid: Occupancy?
 
+    private struct Leg {
+        let from, to: SIMD3<Float>
+        let move: Waypoint.Move
+    }
+
+    /// Every leg of the way to `destination`, or home with nil, from where she is: from one destination to another
+    /// only down to the floor and across it. Nil when what stands on the floor leaves her no way.
+    private func plan(to destination: Destination?) -> [Leg]? {
+        let points = [Waypoint(at: home)] + (away?.path ?? [])
+        if let destination, away != nil, let exit = floorExit(points), let entry = floorEntry(destination.path) {
+            let join = destination.path[entry].at
+            guard let down = retrace(points, downTo: exit), let across = floorLegs(from: points[exit].at, to: join),
+                let on = follow(destination, from: entry + 1, at: join)
+            else { return nil }
+            return down + across + on
+        }
+        guard let back = retrace(points, downTo: 0) else { return nil }
+        guard let destination else { return back }
+        return follow(destination, from: 0, at: home).map { back + $0 }
+    }
+
     /// Back along the way she came, each leg crossed the way it was reached, until she stands on `points[index]`.
-    private func retrace(_ points: [Waypoint], downTo index: Int) {
+    private func retrace(_ points: [Waypoint], downTo index: Int) -> [Leg]? {
+        var way: [Leg] = []
         for i in stride(from: points.count - 1, to: index, by: -1) {
-            walk(from: points[i].at, to: points[i - 1].at, points[i].move)
+            guard let next = legs(from: points[i].at, to: points[i - 1].at, points[i].move) else { return nil }
+            way += next
         }
+        return way
     }
 
-    /// One leg, a walk along the floor going round what the player stood in the way (found when she sets off).
-    private func walk(from: SIMD3<Float>, to: SIMD3<Float>, _ move: Waypoint.Move) {
+    /// One leg; a walk along the floor goes round what the player stood in the way (found when she sets off).
+    private func legs(from: SIMD3<Float>, to: SIMD3<Float>, _ move: Waypoint.Move) -> [Leg]? {
         guard move == .walk, avoid != nil, from.y < floorTop, to.y < floorTop else {
-            return leg(from, to, move)
+            return [Leg(from: from, to: to, move: move)]
         }
+        return floorLegs(from: from, to: to)
+    }
+
+    private func floorLegs(from: SIMD3<Float>, to: SIMD3<Float>) -> [Leg]? {
+        guard let corners = detour(from, to) else { return nil }
         var at = from
-        for corner in detour(from, to) + [to] {
-            leg(at, corner, .walk)
-            at = corner
+        return (corners + [to]).map { corner in
+            defer { at = corner }
+            return Leg(from: at, to: corner, move: .walk)
         }
     }
 
-    private func follow(_ destination: Destination, from index: Int, at start: SIMD3<Float>) {
+    private func follow(_ destination: Destination, from index: Int, at start: SIMD3<Float>) -> [Leg]? {
+        var way: [Leg] = []
         var from = start
         for point in destination.path[index...] {
-            walk(from: from, to: point.at, point.move)
+            guard let next = legs(from: from, to: point.at, point.move) else { return nil }
+            way += next
             from = point.at
         }
-        if let arrive = destination.arrive { add(0.01) { _ in arrive() } }
-        if destination.play { pat() }
+        return way
     }
 
     /// The last floor point on the way out to where she is: as far as she needs to come back.
@@ -567,19 +596,23 @@ final class CatWalker {
         points.indices.dropFirst().last { points[$0].at.y < floorTop }
     }
 
-    /// The floor point a destination's path is joined at: the one its last jump takes off from, else its first.
+    /// The floor point a destination's path is joined at: the one its last jump takes off from, else its last on
+    /// the floor.
     private func floorEntry(_ path: [Waypoint]) -> Int? {
         let takeoff = path.indices.dropLast().last { path[$0].at.y < floorTop && path[$0 + 1].move == .jump }
-        return takeoff ?? (path.first.map { $0.at.y < floorTop } == true ? 0 : nil)
+        return takeoff ?? path.indices.last { path[$0].at.y < floorTop }
     }
 
-    /// Corners around `keepOut` when the straight walk from `a` to `b` would cross it, always on its front (+z)
-    /// side, where the floor is open; each new leg is checked again once.
-    private func detour(_ a: SIMD3<Float>, _ b: SIMD3<Float>, depth: Int = 2) -> [SIMD3<Float>] {
-        if let avoid {
-            let route = avoid.route(from: (Double(a.x), Double(a.z)), to: (Double(b.x), Double(b.z)))
-            return (route ?? []).map { SIMD3(Float($0.x), a.y, Float($0.z)) }
-        }
+    /// Corners of the walk from `a` to `b` round what stands on the floor, nil when that leaves no way. With no
+    /// floor plan, corners around `keepOut` when the straight walk would cross it, always on its front (+z) side,
+    /// where the floor is open; each new leg is checked again once.
+    private func detour(_ a: SIMD3<Float>, _ b: SIMD3<Float>) -> [SIMD3<Float>]? {
+        guard let avoid else { return around(a, b) }
+        return avoid.route(from: (Double(a.x), Double(a.z)), to: (Double(b.x), Double(b.z)))?
+            .map { SIMD3(Float($0.x), a.y, Float($0.z)) }
+    }
+
+    private func around(_ a: SIMD3<Float>, _ b: SIMD3<Float>, depth: Int = 2) -> [SIMD3<Float>] {
         guard let keepOut, depth > 0 else { return [] }
         let a2 = SIMD2(a.x, a.z), d = SIMD2(b.x, b.z) - a2
         let t = simd_clamp(simd_dot(keepOut.center - a2, d) / max(simd_length_squared(d), 1e-6), 0, 1)
@@ -588,7 +621,7 @@ final class CatWalker {
         if side.y < 0 || simd_length(side) < 1e-4 { side.y = abs(side.y) + 0.05 }
         let flat = keepOut.center + simd_normalize(side) * keepOut.radius * 1.45
         let corner = SIMD3(flat.x, a.y, flat.y)
-        return detour(a, corner, depth: depth - 1) + [corner] + detour(corner, b, depth: depth - 1)
+        return around(a, corner, depth: depth - 1) + [corner] + around(corner, b, depth: depth - 1)
     }
 
     func update(_ dt: Float) {

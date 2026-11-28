@@ -24,6 +24,10 @@ struct Sample: Codable {
   /// Share of the side view's silhouette that changed since the frame before: pixels covered in one
   /// of the two only, over pixels covered in either.
   var silhouetteChange: Float = 0
+  /// How deep her body is inside a piece of furniture while she is on the floor, room units.
+  var inside: Float = 0
+  /// The piece she is deepest inside, if any.
+  var insideOf = ""
 
   init(time: Float, action: String, stage: Stage) {
     self.time = time
@@ -141,6 +145,14 @@ struct Metrics {
         if speed[i] < 1e-3 && abs(yawRate[i]) < 0.02 { slideStill += d }
         worst = max(worst, d / dt)
       }
+    }
+    for piece in Set(samples.map(\.insideOf)).subtracting([""]).sorted() {
+      let hers = samples.filter { $0.insideOf == piece }
+      let moving = hers.filter(\.moving).map(\.inside).max() ?? 0
+      line(
+        "inside \(piece)",
+        "deepest \(f((hers.map(\.inside).max() ?? 0) * 1000, 0)) mm (\(f(moving * 1000, 0)) mm on the move), "
+          + "\(f(Float(hers.filter { $0.inside > 0.005 }.count) * dt)) s deeper than 5 mm")
     }
     line("stance paw slide, total", "\(f(slide * 1000, 1)) mm (of it standing in place \(f(slideStill * 1000, 1)) mm)")
     line("stance paw slide, peak speed", "\(f(worst * 1000, 1)) mm/s")

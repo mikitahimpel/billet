@@ -91,6 +91,18 @@ func drawFloor(_ context: CGContext, camera: Camera, scenario: Scenario, floor: 
   }
   context.setStrokeColor(CGColor(red: 0.5, green: 0.38, blue: 0.3, alpha: 1))
   context.setLineWidth(2)
+  for piece in side ? [] : scenario.layout?.footprints ?? [] {
+    let corners: [SIMD2<Float>] = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map { piece.center + $0 * piece.half }
+    for y in [floor, floor + piece.height] {
+      let ring = corners.map { camera.project([$0.x, y, $0.y], in: panel) }
+      context.addLines(between: ring + [ring[0]])
+    }
+    for corner in corners {
+      context.move(to: camera.project([corner.x, floor, corner.y], in: panel))
+      context.addLine(to: camera.project([corner.x, floor + piece.height, corner.y], in: panel))
+    }
+    context.strokePath()
+  }
   for box in scenario.boxes {
     let h = box.half
     let corners: [SIMD3<Float>] = [[-h, 0, -h], [h, 0, -h], [h, 0, h], [-h, 0, h]]
@@ -112,6 +124,8 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
   stage.walker.watch(simd_quatf.y(-scenario.yaw).act(roomDirection * 3) / Stage.scale)
   let recorder = try Recorder(
     url: out.appending(path: "\(scenario.name).mp4"), size: CGSize(width: panel.width * 2, height: panel.height))
+  let footprints = scenario.layout?.footprints ?? []
+  stage.walker.avoid = scenario.layout?.occupancy()
   var samples: [Sample] = []
   var time: Float = 0
   var action = "sit"
@@ -136,6 +150,15 @@ for scenario in Scenario.all where wanted.isEmpty || wanted.contains(scenario.na
     let mask = renderer.lastAlpha
     var sample = Sample(time: time, action: action, stage: stage)
     sample.silhouetteChange = Sample.change(lastMask, mask)
+    if at.y < stage.floor + 0.02 {
+      for point in Stage.outline {
+        let world = stage.modelToWorld * SIMD4(point.x, 0, point.y, 1)
+        for piece in footprints where piece.depth(of: [world.x, world.z]) > sample.inside {
+          sample.inside = piece.depth(of: [world.x, world.z])
+          sample.insideOf = piece.item
+        }
+      }
+    }
     lastMask = mask
     samples.append(sample)
     recorder.add { context in

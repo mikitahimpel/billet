@@ -9,6 +9,13 @@ final class Stage {
   /// What the app's Bedroom draws her at.
   static let scale: Float = 0.68
 
+  /// Points round her standing body on the floor, model units, x across and z along (her nose at -z): the nose,
+  /// the cheeks, the shoulders, the flanks and the rump, a little inside her fur.
+  static let outline: [SIMD2<Float>] = [
+    [0, -0.17], [-0.04, -0.13], [0.04, -0.13], [-0.05, -0.06], [0.05, -0.06], [-0.05, 0.02], [0.05, 0.02],
+    [-0.045, 0.08], [0.045, 0.08], [0, 0.1],
+  ]
+
   let group = Entity()
   let walker: CatWalker
   let standing: CatRig

@@ -122,15 +122,15 @@ final class DioramaScene: CatRoom {
 
     override func tapped(_ entity: Entity) {
         guard !isShowcasing else { return }
-        if entity === ball, !cutOff.contains(.ball) { send(to: ballVisit) }
-        if entity === basket, !cutOff.contains(.basket) { send(to: basketVisit) }
+        if entity === ball, isOpen(.ball) { send(to: ballVisit) }
+        if entity === basket, isOpen(.basket) { send(to: basketVisit) }
     }
 
     override func doubleTapped(_ entity: Entity) {
         if let photo = entity.children.first(where: { $0.name == Self.photoName }) { return focus(on: photo) }
         guard !isShowcasing, let walker else { return }
         if entity === tree, let treeVisit, !cutOff.contains(.tree) { send(to: treeVisit) }
-        if entity === sill, !cutOff.contains(.sill) { send(to: sillVisit) }
+        if entity === sill, isOpen(.sill) { send(to: sillVisit) }
         if entity === bed { send(to: nil) }
     }
 
@@ -144,6 +144,10 @@ final class DioramaScene: CatRoom {
 
     /// Visits a piece the player stood in the room has cut off; she does not go there.
     var cutOff: Set<NookiSpot> = []
+    /// Visits with no floor left to stand on beside their piece.
+    private var noStop: Set<NookiSpot> = []
+
+    private func isOpen(_ spot: NookiSpot) -> Bool { !cutOff.contains(spot) && !noStop.contains(spot) }
 
     /// Places she can use at the pieces the player stood in the room.
     var placedSpots: [NookiSpot: CatWalker.Destination] = [:] {
@@ -153,9 +157,9 @@ final class DioramaScene: CatRoom {
     override var catSpots: [NookiSpot: CatWalker.Destination] {
         var spots: [NookiSpot: CatWalker.Destination] = [:]
         spots[.tree] = treeVisit
-        if !cutOff.contains(.sill) { spots[.sill] = sillVisit }
-        if !cutOff.contains(.ball) { spots[.ball] = ballVisit }
-        if !cutOff.contains(.basket) { spots[.basket] = basketVisit }
+        if isOpen(.sill) { spots[.sill] = sillVisit }
+        if isOpen(.ball) { spots[.ball] = ballVisit }
+        if isOpen(.basket) { spots[.basket] = basketVisit }
         spots.merge(placedSpots) { current, _ in current }
         return spots
     }
@@ -448,37 +452,39 @@ final class DioramaScene: CatRoom {
         let floor: Float = 0.023
         let from: SIMD3<Float> = [Float(spawn.x), floor, Float(spawn.z)]
 
-        /// A floor stop she can stand on: where a piece the player moved stands on it, the free floor beside it, so she
-        /// walks to the piece and never into it. Nil when no floor is near.
-        func standing(_ point: SIMD3<Float>, beside piece: String) -> SIMD3<Float>? {
-            next.standing(near: (Double(point.x), Double(point.z)), beside: piece)
-                .map { [Float($0.x), point.y, Float($0.z)] }
+        func stop(_ visit: String, height: Float = floor) -> SIMD3<Float>? {
+            next.visitStop(visit).map { [Float($0.x), height, Float($0.z)] }
         }
 
-        func walk(to id: String, _ home: SIMD3<Float>, yaw extra: Float = 0) -> (SIMD3<Float>, Float)? {
-            guard let frame = PieceFrame(id, in: next) else { return nil }
-            guard let point = standing(frame.map(home), beside: id) else { return nil }
-            return (point, atan2(-(point.x - from.x), -(point.z - from.z)))
-        }
-
-        if let (to, rest) = walk(to: "base-rug", [-0.1, floor, 0.26]) {
+        var missing: Set<NookiSpot> = []
+        if let to = stop("ball") {
+            // A pounce from beside her bed while the ball lies near with nothing between; else she walks up to it.
+            let pounces = next.canHop(from: spawn, to: (Double(to.x), Double(to.z)))
             ballVisit = .init(
-                id: "ball", path: [.init(at: from, move: .jump), .init(at: to, move: .jump)], rest: rest, play: true,
+                id: "ball", path: [.init(at: from, move: .jump), .init(at: to, move: pounces ? .jump : .walk)],
+                rest: atan2(-(to.x - from.x), -(to.z - from.z)), play: true,
                 arrive: { [unowned self] in bounce(toyBall, spins: true) })
+        } else {
+            missing.insert(.ball)
         }
-        if let (to, _) = walk(to: "base-basket", [0.27, 0.014, 0.26]) {
+        if let to = stop("basket", height: 0.014) {
             basketVisit = .init(
                 id: "basket", path: [.init(at: from, move: .jump), .init(at: to)], rest: atan2(-1, -1), play: true,
                 arrive: { [unowned self] in bounce(yarn, spins: false) })
+        } else {
+            missing.insert(.basket)
         }
-        if let seat = PieceFrame("base-windowseat", in: next), let stop = standing(seat.map([-0.24, floor, 0.04]), beside: "base-windowseat") {
+        if let seat = PieceFrame("base-windowseat", in: next), let stop = stop("sill") {
             sillVisit = .init(
                 id: "sill",
                 path: [
                     .init(at: from, move: .jump), .init(at: stop),
                     .init(at: seat.map([-0.38, 0.295, 0.01]), move: .jump),
                 ], rest: Self.restYaw + seat.yaw)
+        } else {
+            missing.insert(.sill)
         }
+        noStop = missing
 
         if let tree = PieceFrame("base-cattree", in: next), let approach = next.anchors().first {
             let top = tree.map([0.36, 0.396, -0.36])

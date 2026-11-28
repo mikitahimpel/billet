@@ -25,8 +25,15 @@ Each scenario leaves `<scenario>.mp4` (room view left, side view following her r
 `<scenario>.json` (a sample per frame) and `<scenario>.txt` (the numbers) in
 `~/Library/Caches/cat-motion/<label>/`. Scenarios are in `Scenarios.swift`.
 
+Scenarios with a `layout` play in the Home room as the player arranged it (`DecorLayout`): she goes round its
+pieces by the room's own floor plan, the picture has each piece's floor space as a box, and the report says how
+deep her body got into one.
+
 ## The numbers
 
+- **Inside a piece**: in a furnished scenario, how deep points round her standing body (nose, cheeks, shoulders,
+  flanks, rump) are inside a piece's floor space while she is on the floor, and for how long. Her own bed and a
+  basket she reaches into count too, so read it piece by piece.
 - **Stance paw slide**: how far paws that are on the floor travel along it, in room units / 1000.
 - **Dead still inside a move**: time she is frozen while the walker still has steps queued.
 - **Full stops within an errand**: times she stops and sets off again before she is done.
