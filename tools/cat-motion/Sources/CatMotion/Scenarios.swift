@@ -1,3 +1,4 @@
+import DecorInterface
 import Foundation
 import simd
 
@@ -23,6 +24,8 @@ struct Scenario {
   let yaw: Float
   var lyingBodies = true
   var boxes: [Box] = []
+  /// The room's pieces as the player stood them: she goes round them, and the picture and the numbers have them.
+  var layout: DecorLayout?
   /// What the room view looks at, and how many pixels a room unit takes in it.
   let focus: SIMD3<Float>
   var zoom: Float = 520
@@ -30,6 +33,36 @@ struct Scenario {
 }
 
 private func facing(_ dx: Float, _ dz: Float) -> Float { atan2(-dx, -dz) }
+
+/// A piece's floor space, for the picture and to tell when she is inside it.
+struct Footprint {
+  let item: String
+  let center: SIMD2<Float>
+  let half: SIMD2<Float>
+  let height: Float
+
+  /// How deep `point` is inside, in room units; 0 outside.
+  func depth(of point: SIMD2<Float>) -> Float {
+    let inside = half - simd_abs(point - center)
+    return max(0, min(inside.x, inside.y))
+  }
+}
+
+extension DecorLayout {
+  /// What stands on the Home room's floor, rugs left out.
+  var footprints: [Footprint] {
+    allPlacements(in: .home).compactMap { placement in
+      guard placement.surface == .floor, let item = DecorItem.item(shopID: placement.item), !item.isFlat else {
+        return nil
+      }
+      let size = DecorLayout.footprint(of: item, eighthTurns: placement.eighthTurns)
+      return Footprint(
+        item: item.id,
+        center: [Float(DecorGrid.metres(placement.u)), Float(DecorGrid.metres(placement.v))],
+        half: [Float(size.width / 2), Float(size.depth / 2)], height: Float(item.height))
+    }
+  }
+}
 private let east = facing(1, 0)
 
 extension Scenario {
@@ -93,7 +126,78 @@ extension Scenario {
       ])
   }
 
+  private static let floor: Float = 0.023
+
+  private static func floored(_ point: Occupancy.Point) -> SIMD3<Float> { [Float(point.x), floor, Float(point.z)] }
+
+  /// The Home room as the player arranged it, her bed left out: she starts on the floor beside where it stands, goes
+  /// where `way` leads, on to the open floor nearest `far` and back.
+  private static func room(
+    _ name: String, _ layout: DecorLayout, far: SIMD2<Float>, way: (path: [CatWalker.Waypoint], rest: Float)
+  ) -> Scenario {
+    let open = layout.occupancy().nearestFree(to: (Double(far.x), Double(far.y))) ?? (0, 0.45)
+    return Scenario(
+      name: name, home: floored(layout.spawnSpot()), yaw: facing(0, 1), layout: layout, focus: [0, 0.12, 0],
+      zoom: 400,
+      cues: [
+        .wait(1),
+        go("to the piece", way.path, rest: way.rest),
+        .untilStill, .wait(1.5),
+        go("past it", [.init(at: floored(open))], rest: facing(0, 1)),
+        .untilStill, .wait(1),
+        .act("home") { $0.walker.go(to: nil) },
+        .untilStill, .wait(1),
+      ])
+  }
+
+  /// To the floor beside the piece she uses for `use`, and up onto it when it is a seat, as the room plans it.
+  private static func way(to use: CatUse, in layout: DecorLayout) -> (path: [CatWalker.Waypoint], rest: Float) {
+    guard let plan = layout.catSpots().first(where: { $0.use == use }), let placement = layout.placement(of: plan.item)
+    else { return ([], 0) }
+    var path = [CatWalker.Waypoint(at: floored(plan.approach))]
+    if let top = plan.top {
+      path.append(.init(at: [Float(top.point.x), 0.014 + Float(top.height), Float(top.point.z)], move: .jump))
+    }
+    let toPiece = facing(
+      Float(DecorGrid.metres(placement.u) - plan.approach.x), Float(DecorGrid.metres(placement.v) - plan.approach.z))
+    return (path, toPiece)
+  }
+
+  /// To the ball on the rug: a pounce from beside her bed while it lies near with nothing between, else a walk.
+  private static func wayToTheBall(in layout: DecorLayout) -> (path: [CatWalker.Waypoint], rest: Float) {
+    guard let ball = layout.visitStop("ball") else { return ([], 0) }
+    let spawn = layout.spawnSpot()
+    let pounces = layout.canHop(from: spawn, to: ball)
+    return (
+      [.init(at: floored(ball), move: pounces ? .jump : .walk)],
+      facing(Float(ball.x - spawn.x), Float(ball.z - spawn.z))
+    )
+  }
+
+  /// To the floor beside the cat tree and up onto its top.
+  private static func wayUpTheTree(in layout: DecorLayout) -> (path: [CatWalker.Waypoint], rest: Float) {
+    guard let foot = layout.anchors().first, let tree = layout.placement(of: "base-cattree") else { return ([], 0) }
+    let top: SIMD3<Float> = [Float(DecorGrid.metres(tree.u)), 0.396, Float(DecorGrid.metres(tree.v))]
+    return ([.init(at: floored(foot)), .init(at: top, move: .jump)], 0.75 + .pi)
+  }
+
+  private static func placed(_ item: String, u: Int, v: Int, eighthTurns: Int = 0) -> DecorLayout {
+    DecorLayout().putting(Placement(item: item, surface: .floor, u: u, v: v, eighthTurns: eighthTurns))
+  }
+
   static let all: [Scenario] = [
+    room("tree", DecorLayout(), far: [-0.2, 0.35], way: wayUpTheTree(in: DecorLayout())),
+    room(
+      "post", placed("scratchpost", u: -1, v: 7), far: [-0.3, 0.3],
+      way: way(to: .post, in: placed("scratchpost", u: -1, v: 7))),
+    room(
+      "post-turned", placed("scratchpost", u: -2, v: 6, eighthTurns: 1), far: [0.3, 0.1],
+      way: way(to: .post, in: placed("scratchpost", u: -2, v: 6, eighthTurns: 1))),
+    room(
+      "ball-past-the-tree", placed("base-cattree", u: -1, v: 5, eighthTurns: 6), far: [0.3, 0.1],
+      way: wayToTheBall(in: placed("base-cattree", u: -1, v: 5, eighthTurns: 6))),
+    room(
+      "armchair", placed("armchair", u: -1, v: 6), far: [0.3, 0.1], way: way(to: .sofa, in: placed("armchair", u: -1, v: 6))),
     laser("laser", chasing: true),
     laser("laser-trips", chasing: false),
     Scenario(

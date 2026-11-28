@@ -11,14 +11,27 @@ public struct Occupancy: Equatable, Sendable {
   static let side = 2 * reach + 1
   /// How far past a piece's edge she keeps, so she does not brush it.
   static let clearance = 0.04
+  /// From the middle of her to her side, in metres: a floor stop nearer a piece than this has her standing in it.
+  public static let shoulder = 0.045
+  /// How far her nose is ahead of where she stands, in metres: nearer than this to a piece she faces, her head is
+  /// in it.
+  public static let noseReach = 0.12
+  /// The longest walk, in metres, taken straight across a piece's margin: out of a stop beside a piece, or into one.
+  static let marginStep = 3.2 * DecorGrid.step
+  /// How many times dearer a step into a piece's margin is than one over open floor, so a way keeps to the open
+  /// floor wherever there is one.
+  static let marginCost = 4.0
 
   private var blocked: [Bool]
   /// Share of the floor the pieces themselves leave open, without the margin she keeps.
   public let bareShare: Double
   /// The cells a piece itself covers, without the margin she keeps.
   private let covered: [Bool]
+  /// The pieces themselves.
+  private let spans: [Span]
 
   init(spans: [Span]) {
+    self.spans = spans
     blocked = Array(repeating: false, count: Self.side * Self.side)
     var covered = Array(repeating: false, count: Self.side * Self.side)
     for span in spans {
@@ -121,27 +134,98 @@ public struct Occupancy: Equatable, Sendable {
 
   /// The way from `from` to `to` as corners to walk to, around what is blocked; nil when there is none.
   /// An empty list is a straight walk. Meant to be asked when she sets off, not every frame.
+  ///
+  /// No leg of it passes through a piece. It keeps the margin too wherever the floor lets it: a stop beside a piece
+  /// lies in that piece's margin, so the way out of one and into one crosses the margin, by the shortest way to
+  /// open floor.
   public func route(from: Point, to: Point) -> [Point]? {
-    guard
-      let start = nearestFree(to: from).map({ (DecorGrid.cell($0.x), DecorGrid.cell($0.z)) }),
-      let goal = nearestFree(to: to).map({ (DecorGrid.cell($0.x), DecorGrid.cell($0.z)) })
-    else { return nil }
     if clear(from: from, to: to) { return [] }
-    guard let cells = search(from: start, to: goal) else { return nil }
+    guard let start = openCell(by: from), let goal = openCell(by: to),
+      let cells = search(from: start, to: goal)
+    else { return nil }
     var corners: [Point] = []
     var anchor = from
     var index = 0
     while index < cells.count {
       var next = index
       for ahead in index..<cells.count
-      where clear(from: anchor, to: cells[ahead]) { next = ahead }
+      where walkable(from: anchor, to: cells[ahead]) { next = ahead }
       let corner = cells[next]
-      if next == cells.count - 1 && clear(from: anchor, to: to) { break }
+      if next == cells.count - 1 && walkable(from: anchor, to: to) { break }
       corners.append(corner)
       anchor = corner
       index = next + 1
     }
     return corners
+  }
+
+  /// Whether a straight walk passes through a piece itself, as against its margin. Touching its edge is not through.
+  /// With `margin`, whether it passes within that many metres of one.
+  public func crossesPiece(from a: Point, to b: Point, within margin: Double = 0) -> Bool {
+    spans.contains { $0.isCrossed(from: a, to: b, margin: margin) }
+  }
+
+  /// Whether a straight line passes through a piece other than `own`.
+  func crossesPiece(from a: Point, to b: Point, otherThan own: Span) -> Bool {
+    spans.contains { $0 != own && $0.isCrossed(from: a, to: b) }
+  }
+
+  /// Metres from `point` to the nearest piece's edge; 0 on a piece.
+  public func distanceToPiece(from point: Point) -> Double {
+    spans.map { span in
+      hypot(max(abs(point.x - span.x) - span.halfX, 0), max(abs(point.z - span.z) - span.halfZ, 0))
+    }.min() ?? .infinity
+  }
+
+  /// A straight walk she may take: over open floor, or a short one across a margin that an end of it lies in.
+  private func walkable(from a: Point, to b: Point) -> Bool {
+    if clear(from: a, to: b) { return true }
+    guard isBlocked(at: a) || isBlocked(at: b) else { return false }
+    return hypot(b.x - a.x, b.z - a.z) <= Self.marginStep && !crossesPiece(from: a, to: b)
+  }
+
+  private func isCovered(u: Int, v: Int) -> Bool { !Self.inside(u, v) || covered[Self.index(u, v)] }
+
+  /// Whether she fits in a cell of a piece's margin: the piece nearest it and the next nearest, a wall counted as
+  /// one, leave her width between them. Beside one piece she brushes it; between two too close she is in both.
+  private func hasRoom(u: Int, v: Int) -> Bool {
+    let x = DecorGrid.metres(u)
+    let z = DecorGrid.metres(v)
+    let wall = 0.5
+    var nearest = [wall - abs(x), wall - abs(z)]
+    nearest += spans.map { span in
+      hypot(max(abs(x - span.x) - span.halfX, 0), max(abs(z - span.z) - span.halfZ, 0))
+    }
+    nearest.sort()
+    return nearest[0] + nearest[1] >= 2 * Self.shoulder
+  }
+
+  /// The cell a way to or from `point` starts in: its own while no piece covers that and the step to its middle
+  /// crosses none, else the nearest such. From on a piece every step off it is through it, and the way starts on
+  /// the open floor nearest.
+  private func openCell(by point: Point) -> (Int, Int)? {
+    if distanceToPiece(from: point) == 0 {
+      return nearestFree(to: point).map { (DecorGrid.cell($0.x), DecorGrid.cell($0.z)) }
+    }
+    let u0 = DecorGrid.cell(point.x)
+    let v0 = DecorGrid.cell(point.z)
+    for ring in 0...(2 * Self.reach) {
+      var best: (u: Int, v: Int)?
+      var bestDistance = Double.infinity
+      for v in (v0 - ring)...(v0 + ring) {
+        for u in (u0 - ring)...(u0 + ring) where max(abs(u - u0), abs(v - v0)) == ring {
+          let middle = (DecorGrid.metres(u), DecorGrid.metres(v))
+          guard !isCovered(u: u, v: v), !crossesPiece(from: point, to: middle) else { continue }
+          let d = hypot(middle.0 - point.x, middle.1 - point.z)
+          if d < bestDistance {
+            best = (u, v)
+            bestDistance = d
+          }
+        }
+      }
+      if let best { return best }
+    }
+    return nil
   }
 
   /// Whether a straight walk crosses no blocked cell.
@@ -187,13 +271,20 @@ public struct Occupancy: Equatable, Sendable {
         for dv in -1...1 where (du, dv) != (0, 0) {
           let nu = node.u + du
           let nv = node.v + dv
-          guard !isBlocked(u: nu, v: nv) else { continue }
-          if du != 0 && dv != 0
+          guard !isCovered(u: nu, v: nv) else { continue }
+          let inMargin = isBlocked(u: nu, v: nv)
+          if inMargin, (nu, nv) != goal, !hasRoom(u: nu, v: nv) { continue }
+          if inMargin || isBlocked(u: node.u, v: node.v) {
+            let here = (DecorGrid.metres(node.u), DecorGrid.metres(node.v))
+            let there = (DecorGrid.metres(nu), DecorGrid.metres(nv))
+            if crossesPiece(from: here, to: there) { continue }
+          } else if du != 0 && dv != 0
             && (isBlocked(u: node.u + du, v: node.v) || isBlocked(u: node.u, v: node.v + dv))
           {
             continue
           }
-          let cost = node.cost + (du != 0 && dv != 0 ? 1.4142 : 1)
+          let step = du != 0 && dv != 0 ? 1.4142 : 1
+          let cost = node.cost + (inMargin ? Self.marginCost * step : step)
           let key = Self.index(nu, nv)
           guard cost < (best[key] ?? .infinity) else { continue }
           best[key] = cost

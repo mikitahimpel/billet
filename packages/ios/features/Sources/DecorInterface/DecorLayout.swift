@@ -128,6 +128,35 @@ struct Span: Equatable {
   func overlaps(_ other: Span) -> Bool {
     abs(x - other.x) < halfX + other.halfX - 0.001 && abs(z - other.z) < halfZ + other.halfZ - 0.001
   }
+
+  /// The point of it nearest `point`.
+  func nearest(to point: (x: Double, z: Double)) -> (x: Double, z: Double) {
+    (min(max(point.x, x - halfX), x + halfX), min(max(point.z, z - halfZ), z + halfZ))
+  }
+
+  /// Whether the straight line from `a` to `b` passes through it. Along an edge, or touching one, is not through.
+  /// With `margin`, whether it passes within that many metres of it, measured along x and z.
+  func isCrossed(
+    from a: (x: Double, z: Double), to b: (x: Double, z: Double), margin: Double = 0
+  ) -> Bool {
+    let skin = 0.001
+    var enter = 0.0
+    var leave = 1.0
+    for (start, delta, middle, half) in [
+      (a.x, b.x - a.x, x, halfX + margin - skin), (a.z, b.z - a.z, z, halfZ + margin - skin),
+    ] {
+      guard half > 0 else { return false }
+      if abs(delta) < 1e-12 {
+        if abs(start - middle) >= half { return false }
+        continue
+      }
+      let one = (middle - half - start) / delta
+      let other = (middle + half - start) / delta
+      enter = max(enter, min(one, other))
+      leave = min(leave, max(one, other))
+    }
+    return enter < leave
+  }
 }
 
 /// What the player placed, and what they put back on purpose. A shop piece in neither is new: owned and
@@ -267,38 +296,111 @@ public struct DecorLayout: Codable, Equatable, Sendable {
     point(of: room.spawnFollow) ?? restSpawn(in: room) ?? room.spawn
   }
 
-  /// Where she steps down from her bed, as a floor point no piece stands on.
+  /// Where she steps down from her bed, as a floor point no piece stands on. Nothing stands between her seat and
+  /// it, nor right ahead of her as she lands, wherever the floor near her bed leaves such a point; a crowded floor
+  /// gives the best it has.
   public func spawnSpot(in room: DecorRoom = .home) -> Occupancy.Point {
     let point = spawn(in: room)
-    return standing(near: point, beside: room.spawnFollow.piece, in: room, slack: 0.3) ?? point
+    let rest = catHome(in: room)
+    let piece = rest?.item ?? room.spawnFollow.piece
+    let near = 0.3
+    let anywhereBeside = 0.5
+    let tries: [(hop: Hop?, slack: Double)] = [
+      (rest.map { Hop(seat: $0.seat, noseRoom: true) }, near),
+      (rest.map { Hop(seat: $0.seat, noseRoom: true) }, anywhereBeside),
+      (rest.map { Hop(seat: $0.seat, noseRoom: false) }, near),
+      (rest.map { Hop(seat: $0.seat, noseRoom: false) }, anywhereBeside),
+      (nil, near),
+    ]
+    // Everywhere she goes is judged open from the floor nearest the room's spawn, so she steps down on its side.
+    let floor = occupancy(in: room).nearestFree(to: point)
+    for attempt in tries {
+      let spot = standing(
+        near: point, beside: piece, hop: attempt.hop, reaching: floor, in: room,
+        slack: attempt.slack)
+      if let spot { return spot }
+    }
+    return point
+  }
+
+  /// The hop down to a floor stop from where she sits on its piece.
+  struct Hop {
+    let seat: Occupancy.Point
+    /// She lands facing the way she hopped: whether the floor her head is over then must be clear too.
+    let noseRoom: Bool
+  }
+
+  /// Where she stands for the visit `name`, the floor beside its piece; nil while the piece is stored or no floor
+  /// is near.
+  public func visitStop(_ name: String, in room: DecorRoom = .home) -> Occupancy.Point? {
+    guard let follow = room.visitFollows[name], let stop = point(of: follow) else { return nil }
+    return standing(near: stop, beside: follow.piece, in: room)
+  }
+
+  /// The longest hop along the floor, in metres: further than this she walks.
+  public static let longestHop = 0.3
+
+  /// Whether she can hop straight from `from` to `to` on the floor: near enough, and nothing standing
+  /// between.
+  public func canHop(
+    from: Occupancy.Point, to: Occupancy.Point, in room: DecorRoom = .home
+  ) -> Bool {
+    hypot(to.x - from.x, to.z - from.z) <= Self.longestHop
+      && !occupancy(in: room).crossesPiece(from: from, to: to)
   }
 
   /// A floor point she can stand on at `point`: itself while no piece stands on it and no other piece's margin
-  /// holds it, else the nearest such cell. `piece` is the piece the stop belongs to, whose own margin is the point
-  /// of the stop: she stands beside it, never in it. Nil when none is within `slack` metres.
+  /// holds it, else the nearest such cell with room for her beside every piece. `piece` is the piece the stop
+  /// belongs to, whose own margin is the point of the stop: she stands beside it, never in it. Nil when none is
+  /// within `slack` metres.
   public func standing(
     near point: Occupancy.Point, beside piece: String? = nil, in room: DecorRoom = .home,
     slack: Double = 0.15
   ) -> Occupancy.Point? {
+    standing(near: point, beside: piece, hop: nil, reaching: nil, in: room, slack: slack)
+  }
+
+  /// With `hop`, a stop that no other piece stands between her seat and; with `floor`, one she can walk to that
+  /// point from.
+  func standing(
+    near point: Occupancy.Point, beside piece: String?, hop: Hop?, reaching floor: Occupancy.Point?,
+    in room: DecorRoom, slack: Double
+  ) -> Occupancy.Point? {
     let full = occupancy(in: room)
     let others = piece.map { storing($0).occupancy(in: room) } ?? full
-    func fits(_ p: Occupancy.Point) -> Bool { !others.isBlocked(at: p) && !full.isSolid(at: p) }
+    func fits(_ p: Occupancy.Point) -> Bool {
+      guard !others.isBlocked(at: p), !full.isSolid(at: p) else { return false }
+      if let hop {
+        guard hypot(p.x - hop.seat.x, p.z - hop.seat.z) <= Self.longestJumpUp else { return false }
+        var landing = p
+        if hop.noseRoom {
+          let length = max(hypot(p.x - hop.seat.x, p.z - hop.seat.z), 0.001)
+          let ahead = 1 + Occupancy.noseReach / length
+          landing = (
+            hop.seat.x + (p.x - hop.seat.x) * ahead, hop.seat.z + (p.z - hop.seat.z) * ahead
+          )
+        }
+        let margin = hop.noseRoom ? Occupancy.shoulder : 0
+        if others.crossesPiece(from: hop.seat, to: landing, within: margin) { return false }
+      }
+      return floor.map { full.route(from: p, to: $0) != nil } ?? true
+    }
     if fits(point) { return point }
     let reach = Int((slack / DecorGrid.step).rounded(.up)) + 1
     let u0 = DecorGrid.cell(point.x)
     let v0 = DecorGrid.cell(point.z)
-    var best: (point: Occupancy.Point, distance: Double)?
+    var near: [(point: Occupancy.Point, distance: Double)] = []
     for v in (v0 - reach)...(v0 + reach) {
       for u in (u0 - reach)...(u0 + reach) {
         let candidate = (DecorGrid.metres(u), DecorGrid.metres(v))
         let distance = hypot(candidate.0 - point.x, candidate.1 - point.z)
-        guard distance <= slack, fits(candidate), distance < (best?.distance ?? .infinity) else {
-          continue
-        }
-        best = (candidate, distance)
+        if distance <= slack { near.append((candidate, distance)) }
       }
     }
-    return best?.point
+    near.sort { $0.distance < $1.distance }
+    return near.first {
+      full.distanceToPiece(from: $0.point) >= Occupancy.shoulder && fits($0.point)
+    }?.point
   }
 
   /// The piece she rests on and where she steps down from it.

@@ -24,10 +24,13 @@ extension RoomController {
         for (name, spot) in [("ball", NookiSpot.ball), ("basket", .basket), ("sill", .sill)]
         where !next.layout.canVisit(name) { cut.insert(spot) }
         if cut != home.cutOff { home.cutOff = cut }
-        let places = Self.cat(places: next.layout, occupancy: occupancy)
-        if Set(places.keys) != Set(home.placedSpots.keys) || places.values.map(\.id) != home.placedSpots.values.map(\.id) {
-            home.placedSpots = places
+        let places = Self.cat(places: next.layout)
+        // A piece that only moved keeps its spot's name: the way to it is what changed.
+        let moved = places.contains { spot, place in
+            guard let old = home.placedSpots[spot] else { return true }
+            return old.id != place.id || old.path.map(\.at) != place.path.map(\.at) || old.rest != place.rest
         }
+        if moved || places.count != home.placedSpots.count { home.placedSpots = places }
         home.arrange(next.layout)
         city?.arrange(next)
         #if DEBUG || LABS_YES
@@ -35,17 +38,17 @@ extension RoomController {
         #endif
     }
 
-    /// Where the cat goes to use each kind of piece the player stood: round whatever is in the way to the floor
-    /// beside it, then up onto a seat.
-    private static func cat(places layout: DecorLayout, occupancy: Occupancy) -> [NookiSpot: CatWalker.Destination] {
+    /// Where the cat goes to use each kind of piece the player stood: down from her bed, to the floor beside the
+    /// piece by whatever way the floor leaves her when she sets off, then up onto a seat.
+    private static func cat(places layout: DecorLayout) -> [NookiSpot: CatWalker.Destination] {
         let floor: Float = 0.023
+        let spawn = layout.spawnSpot()
         var spots: [NookiSpot: CatWalker.Destination] = [:]
         for plan in layout.catSpots() {
-            func waypoint(_ point: Occupancy.Point) -> CatWalker.Waypoint {
-                .init(at: [Float(point.x), floor, Float(point.z)])
+            func waypoint(_ point: Occupancy.Point, _ move: CatWalker.Waypoint.Move) -> CatWalker.Waypoint {
+                .init(at: [Float(point.x), floor, Float(point.z)], move: move)
             }
-            var path = (occupancy.route(from: layout.spawn(), to: plan.approach) ?? []).map(waypoint)
-            path.append(waypoint(plan.approach))
+            var path = [waypoint(spawn, .jump), waypoint(plan.approach, .walk)]
             var yaw = Float.pi * 0.75
             if let top = plan.top {
                 path.append(.init(at: [Float(top.point.x), 0.014 + Float(top.height), Float(top.point.z)], move: .jump))
