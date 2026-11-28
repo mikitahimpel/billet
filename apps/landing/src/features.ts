@@ -267,6 +267,7 @@ export const featureList: Feature[] = [
         heading: "Other apps that draw on your partner's Lock Screen",
         body: [
           "A few apps put drawings or photos on someone else's screen. Some are only for drawing, some are for friends rather than a partner:",
+          "Ourio pairs with one partner only. To draw on a group of friends' Lock Screens, see our list of apps to draw on each other's Lock Screen, linked below.",
         ],
         table: {
           caption:
@@ -348,7 +349,13 @@ export const featureList: Feature[] = [
           "Ourio, Tuyo and Lovly all put a drawing on your partner's Lock Screen. Ourio is free with no subscription and adds notes, a shared cat and games; Tuyo and Lovly focus on drawing and have paid tiers.",
       },
     ],
-    related: ["widgets-and-notifications", "moments", "games", "best-couple-widget-apps"],
+    related: [
+      "draw-on-each-others-lock-screen",
+      "widgets-and-notifications",
+      "moments",
+      "games",
+      "best-couple-widget-apps",
+    ],
   },
   {
     slug: "moments",
@@ -890,7 +897,7 @@ export const featureList: Feature[] = [
         id: "other-apps",
         heading: "Other apps that pick a movie for two",
         body: [
-          "If a movie picker is all you need, there are apps that do only that. Pick tonight comes inside a couples app, next to date ideas, games and the shared To watch list.",
+          "If a movie picker is all you need, there are apps that do only that. Pick tonight comes inside a couples app, next to date ideas, games and the shared To watch list. Our list of movie picker apps for couples, linked below, compares five of them.",
         ],
         table: {
           caption:
@@ -947,7 +954,7 @@ export const featureList: Feature[] = [
           "Matched is a movie app with Matched Premium at $2.99 a month or $19.99 a year. Ourio's Pick tonight is one part of a free couples app that also has date ideas, games, wishlists and a shared cat.",
       },
     ],
-    related: ["date-night", "shared-lists", "us", "games"],
+    related: ["movie-picker-app-for-couples", "date-night", "shared-lists", "us", "games"],
   },
   {
     slug: "calendar-and-countdown",

@@ -1,7 +1,8 @@
 ---
 import type { GetStaticPaths } from "astro";
+import CompareTable from "../components/compare-table.astro";
 import DocArticle from "../components/doc-article.astro";
-import { alternatives, apps, capabilities, checked, ourio } from "../compare";
+import { alternatives, apps, capabilities, checked, nearby, ourio } from "../compare";
 import Page from "../layouts/page.astro";
 import { roundups, type Roundup } from "../roundups";
 
@@ -10,13 +11,15 @@ export const getStaticPaths = (() =>
 
 const { page } = Astro.props as { page: Roundup };
 const entries = page.picks.map((pick, i) => {
-  const app = pick.app === ourio.name ? ourio : apps.find((other) => other.name === pick.app)!;
+  const app = pick.app === ourio.name ? ourio : [...apps, ...nearby].find((other) => other.name === pick.app)!;
   return {
     ...pick,
     app,
     id: app.name.toLowerCase().replace(/[^a-z0-9]+/g, "-"),
     rank: i + 1,
-    has: capabilities.filter((capability) => app.has.includes(capability.key)).map((capability) => capability.label),
+    has: capabilities
+      .filter((capability) => app.has.includes(capability.key) && (!page.rows || page.rows.includes(capability.key)))
+      .map((capability) => capability.label),
     alternative: alternatives.find((alternative) => alternative.app === app.name),
     read: app === ourio ? null : (app.checked ?? checked),
     site: app.sources.find((url) => !url.startsWith("https://apps.apple.com/")) ?? app.sources[0],
@@ -24,6 +27,7 @@ const entries = page.picks.map((pick, i) => {
 });
 const topics = [
   { id: "picks", label: "The list at a glance" },
+  { id: "table", label: "Side by side" },
   ...entries.map((entry) => ({ id: entry.id, label: `${entry.rank}. ${entry.app.name}` })),
   { id: "questions", label: "Questions" },
 ];
@@ -64,6 +68,14 @@ const schema = [
       }
     </ol>
 
+    <h2 id="table">Side by side</h2>
+    <CompareTable
+      apps={entries.map((entry) => entry.app)}
+      caption={`${page.h1}, compared.`}
+      rows={page.rows}
+      lead={{ label: "Best for", cells: entries.map((entry) => entry.bestFor) }}
+    />
+
     {
       entries.map((entry) => (
         <>
@@ -90,14 +102,22 @@ const schema = [
               <dt>App Store rating</dt>
               <dd>{entry.app.rating}</dd>
             </div>
-            <div>
-              <dt>Features</dt>
-              <dd>{entry.has.join(", ")}</dd>
-            </div>
+            {entry.has.length > 0 && (
+              <div>
+                <dt>Features</dt>
+                <dd>{entry.has.join(", ")}</dd>
+              </div>
+            )}
           </dl>
           {entry.app === ourio ? (
             <p>
-              See <a href="/features/">every Ourio feature</a> or <a href="/how-it-works/">how pairing works</a>.
+              See{" "}
+              {page.feature && (
+                <>
+                  <a href={`/features/${page.feature.slug}/`}>{page.feature.label}</a>,{" "}
+                </>
+              )}
+              <a href="/features/">every Ourio feature</a> or <a href="/how-it-works/">how pairing works</a>.
             </p>
           ) : (
             <p>

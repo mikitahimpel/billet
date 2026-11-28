@@ -1,4 +1,4 @@
-import { november19, type Checked } from "./compare";
+import { november19, november28, type Capability, type Checked } from "./compare";
 
 // Ranked lists of apps for one need, each a page at the site's root. Facts about the apps come from `apps` in
 // compare.ts; only the verdict ("best for") is written here.
@@ -17,6 +17,10 @@ export type Roundup = {
   picks: { app: string; bestFor: string }[];
   questions: { question: string; answer: string }[];
   updated: Checked;
+  // Feature rows of the table, all by default.
+  rows?: Capability[];
+  // The Ourio feature page the list is about.
+  feature?: { slug: string; label: string };
 };
 
 export const roundups: Roundup[] = [
@@ -192,5 +196,158 @@ export const roundups: Roundup[] = [
       },
     ],
     updated: november19,
+  },
+  {
+    slug: "draw-on-each-others-lock-screen",
+    title: "Apps to draw on each other's Lock Screen (friends and couples)",
+    description:
+      "8 apps to draw on each other's Lock Screen or Home Screen, for couples and groups of friends: Ourio, Widgetable, UsTwo, Drawing Together, Lovly, noteit and more.",
+    summary:
+      "Eight apps that put your drawing on a partner's or a friend's Lock Screen, and which ones work for a group.",
+    label: "Draw on each other's Lock Screen",
+    h1: "Apps to draw on each other's Lock Screen, for friends and couples",
+    lead: "We compared 8 iPhone apps that let you draw something that shows up on another person's Lock Screen or Home Screen: three are made for a couple and five work with friends. Ourio, which we make, pairs with exactly one partner, so for a group of friends Widgetable or Drawing Together on Lockscreen fit better. No app can change someone's wallpaper, so every one of them delivers the drawing through a widget.",
+    method:
+      "We make Ourio, so it's first and you should read this as our view. The other apps' facts come from their US App Store pages, websites and Google Play. The rest is ordered by how directly each puts a drawing on the other person's Lock Screen, then by App Store ratings. We left out Locket Widget (photos, no drawing), Artmate (drawing lessons inside the app, nothing on the other phone), and LoveBliss and DuoArt (ratings under 3 and no update in over a year).",
+    picks: [
+      {
+        app: "Ourio",
+        bestFor:
+          "A couple: drawings and notes on your partner's Lock Screen, live drawing together and a shared cat, free. It pairs with one person only, so it isn't for a group.",
+      },
+      {
+        app: "Widgetable",
+        bestFor:
+          "A group of friends: shared Home Screen and Lock Screen widgets with doodles and pets, on iPhone and Android.",
+      },
+      {
+        app: "UsTwo",
+        bestFor:
+          "A couple on iPhone and Android: a shared live canvas on home and lock screen widgets, with questions, games and a pet.",
+      },
+      {
+        app: "Drawing Together on Lockscreen",
+        bestFor:
+          "Friends or family drawing live on each other's lock screens. Its last update was in August 2024.",
+      },
+      {
+        app: "Lovly",
+        bestFor:
+          "A couple who want one shared canvas on the Lock Screen and nothing else, with no ads or streaks.",
+      },
+      {
+        app: "noteit",
+        bestFor:
+          "Quick notes, pics and drawings to a partner's or best friends' Home Screen, on iPhone and Android.",
+      },
+      {
+        app: "Skizz",
+        bestFor:
+          "Friends or a couple sending drawings to a widget, and drawing over photos and videos.",
+      },
+      {
+        app: "Getwid",
+        bestFor: "Sending a free doodle, photo or countdown widget to a friend's Home Screen.",
+      },
+    ],
+    questions: [
+      {
+        question: "Can friends draw on each other's Lock Screen?",
+        answer:
+          "Yes. Widgetable, Drawing Together on Lockscreen, noteit, Skizz and Getwid work with friends, not only a partner. Ourio, UsTwo and Lovly are made for a couple.",
+      },
+      {
+        question: "Can I use Ourio with a group of friends?",
+        answer:
+          "No. Ourio pairs your iPhone with one partner's, and drawings only go to the person you paired with. For a group of friends, Widgetable or Drawing Together on Lockscreen fit better.",
+      },
+      {
+        question: "Does the drawing change the other person's wallpaper?",
+        answer:
+          "No. iOS doesn't let an app change the wallpaper, so the drawing appears in the app's widget on the Lock Screen or Home Screen. The other person adds that widget once.",
+      },
+      {
+        question: "Which of these apps is free with no subscription?",
+        answer:
+          "Ourio and Getwid list no subscription on the App Store. The others are free to download with a paid tier, for example Widgetable Premium at $4.99 a month or $19.99 a year and Drawing Together on Lockscreen at $3.99 a week or $14.99 a year.",
+      },
+      {
+        question: "Which work on Android?",
+        answer:
+          "Widgetable, UsTwo and noteit are on Google Play as well as the App Store. We didn't find Ourio, Drawing Together on Lockscreen, Lovly, Skizz or Getwid on Google Play.",
+      },
+    ],
+    updated: november28,
+    rows: ["drawing", "widgets", "pet", "games"],
+    feature: { slug: "lock-screen-drawings", label: "how Lock Screen drawings work" },
+  },
+  {
+    slug: "movie-picker-app-for-couples",
+    title: "Movie picker apps for couples: swipe and match a film to watch tonight",
+    description:
+      "5 movie picker apps for couples compared: Ourio's Pick tonight, Matched, ReelMatch, CineDuo and Movie Night. How the swipe and match works, prices and Android.",
+    summary: "Five apps where two people swipe movies and match on one to watch tonight, compared.",
+    label: "Movie picker apps for couples",
+    h1: "Movie picker apps for couples: swipe and match a film to watch tonight",
+    lead: "We compared 5 iPhone apps that let two people swipe through movies on their own phones and match on one they both want to watch: Ourio's Pick tonight, Matched, ReelMatch, CineDuo and Movie Night. Only Matched and ReelMatch are on Android too, and only Ourio has no paid tier.",
+    method:
+      "We make Ourio, so it's first and you should read this as our view. The other apps' facts come from their US App Store pages, websites and Google Play. The rest is ordered by App Store ratings. Newer apps that do the same swipe and match with one rating or none, MoviePicker, WatchPick, Shared Watchlist and What's NxtUp, are left out; CineDuo and Movie Night stay as the newest for couples and for groups. Swatched no longer shows on the US App Store.",
+    picks: [
+      {
+        app: "Ourio",
+        bestFor:
+          "A movie picker free inside a couples app: you each swipe on your own iPhone, two Want to on one title within 24 hours is a match, and each title shows where it streams in the US.",
+      },
+      {
+        app: "Matched",
+        bestFor:
+          "The most-rated movie picker for couples, on iPhone and Android, with matches filtered by mood or streaming service.",
+      },
+      {
+        app: "ReelMatch",
+        bestFor:
+          "Deciding from trailers, then comparing Liked lists with friends or family, on iPhone and Android.",
+      },
+      {
+        app: "CineDuo",
+        bestFor:
+          "A couples-only matcher with a joint watchlist and stats on where your tastes clash, with a one-time upgrade.",
+      },
+      {
+        app: "Movie Night",
+        bestFor:
+          "A group: private rooms where friends or a partner swipe in real time until everyone matches.",
+      },
+    ],
+    questions: [
+      {
+        question: "What is the best movie picker app for couples?",
+        answer:
+          "For a free one inside a couples app, Ourio's Pick tonight. For the most-rated standalone app, on Android too, Matched. For picking from trailers, ReelMatch. For more than two people, Movie Night.",
+      },
+      {
+        question: "How do movie matching apps for couples work?",
+        answer:
+          "Each of you swipes through movies and shows on your own phone, and when you both say yes to the same title, the app calls it a match. In Ourio a match is two Want to swipes on one title within 24 hours, and your partner gets a notification naming it.",
+      },
+      {
+        question: "Is there a free movie picker app for couples?",
+        answer:
+          "Ourio's Pick tonight is free, with no subscription and no in-app purchases. Matched, ReelMatch, CineDuo and Movie Night are free to download with a paid tier, for example Matched Premium at $2.99 a month or $19.99 a year and CineDuo Premium at $4.99 once.",
+      },
+      {
+        question: "Can we pick a movie together when we're long distance?",
+        answer:
+          "Yes. In Ourio you swipe on your own phones, even hours apart, and the match lands when the second Want to does. Then start the film at the same time on a call.",
+      },
+      {
+        question: "Which movie picker apps work on Android?",
+        answer:
+          "Matched and ReelMatch are on Google Play as well as the App Store. We didn't find Ourio, CineDuo or Movie Night on Google Play.",
+      },
+    ],
+    updated: november28,
+    rows: [],
+    feature: { slug: "movie-night", label: "how Pick tonight works" },
   },
 ];
