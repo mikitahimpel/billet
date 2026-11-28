@@ -44,6 +44,7 @@ export type App = {
 const november13: Checked = { iso: "2026-11-13", label: "November 13, 2026" };
 export const november19: Checked = { iso: "2026-11-19", label: "November 19, 2026" };
 export const november22: Checked = { iso: "2026-11-22", label: "November 22, 2026" };
+export const november28: Checked = { iso: "2026-11-28", label: "November 28, 2026" };
 
 export const ourio: App = {
   name: "Ourio",
@@ -123,12 +124,13 @@ export const apps: App[] = [
     price:
       "Free; Widgetable Premium $19.99 a year or $4.99 a month, plus pets and food sold separately",
     android: true,
-    rating: "4.9 (388k ratings)",
+    rating: "4.9 (390k ratings)",
     has: ["widgets", "drawing", "pet"],
     sources: [
       "https://apps.apple.com/us/app/widgetable-besties-couples/id1641107226",
       "https://widgetable.net",
     ],
+    checked: november28,
   },
   {
     name: "Agapé",
@@ -226,11 +228,14 @@ export const apps: App[] = [
     name: "noteit",
     what: "Live notes, pics and drawings from your partner or best friend on your Home Screen",
     price: "Free; Diamond subscription $1.99 to $7.99, streak repairs $2.99 to $6.99",
-    android: false,
+    android: true,
     rating: "4.8 (99k ratings)",
     has: ["widgets", "drawing"],
-    sources: ["https://apps.apple.com/us/app/id1570369625"],
-    checked: november19,
+    sources: [
+      "https://apps.apple.com/us/app/id1570369625",
+      "https://play.google.com/store/apps/details?id=me.bukovitz.noteit",
+    ],
+    checked: november28,
   },
   {
     name: "Cozy Couples",
@@ -244,7 +249,8 @@ export const apps: App[] = [
   },
 ];
 
-// Apps a compare page names beside its main rival that aren't couples apps, so the /compare/ table leaves them out.
+// Apps a compare page or a roundup names that the /compare/ table leaves out: not couples apps, or checked for one
+// page only. Android is true only when we found the app on Google Play.
 export const nearby: App[] = [
   {
     name: "Getwid",
@@ -254,7 +260,7 @@ export const nearby: App[] = [
     rating: "5.0 (2 ratings)",
     has: ["widgets", "drawing", "calendar"],
     sources: ["https://apps.apple.com/us/app/id6761107656", "https://getwid.app"],
-    checked: november22,
+    checked: november28,
   },
   {
     name: "PebWorld",
@@ -275,6 +281,102 @@ export const nearby: App[] = [
     has: ["questions"],
     sources: ["https://apps.apple.com/us/app/id1292398843", "https://www.gottman.com"],
     checked: november22,
+  },
+  {
+    name: "Drawing Together on Lockscreen",
+    what: "Draw in real time on each other's lock screens with friends, family or a partner",
+    price: "Free; subscription $3.99 a week or $14.99 a year",
+    android: false,
+    rating: "4.5 (371 ratings)",
+    has: ["widgets", "drawing"],
+    sources: ["https://apps.apple.com/us/app/id6602887656", "https://cemsoftwareltd.com"],
+    checked: november28,
+  },
+  {
+    name: "UsTwo",
+    what: "A couples app with a shared live canvas, home and lock screen widgets, daily questions, games and a pet",
+    price: "Free; UsTwo Pro $2.99 to $4.99 a week or $19.99 to $39.99 a year, coins from $0.99",
+    android: true,
+    rating: "4.6 (861 ratings)",
+    has: ["questions", "games", "widgets", "drawing", "pet"],
+    sources: [
+      "https://apps.apple.com/us/app/id6759428131",
+      "https://us-two.app",
+      "https://play.google.com/store/apps/details?id=com.rushilpatel.ustwo",
+    ],
+    checked: november28,
+  },
+  {
+    name: "Lovly",
+    what: "One shared canvas for a couple that turns up on your partner's Lock Screen",
+    price: "Free; Lovly+ $4.99 a month, $20.99 to $29.99 a year or $49.99 to $89.99 lifetime",
+    android: false,
+    rating: "5.0 (1 rating)",
+    has: ["widgets", "drawing"],
+    sources: ["https://apps.apple.com/us/app/id6760272304", "https://getlovly.app"],
+    checked: november28,
+  },
+  {
+    name: "Skizz",
+    what: "Drawings for friends and couples that show in a widget, plus drawing on photos and videos",
+    price:
+      "Free; Skizz Premium $2.99 to $3.99 a week, $5.49 to $8.99 a month, $24.99 a year or $35.99 lifetime",
+    android: false,
+    rating: "4.3 (2.5k ratings)",
+    has: ["widgets", "drawing"],
+    sources: ["https://apps.apple.com/us/app/id6505097805", "https://volio.store"],
+    checked: november28,
+  },
+  {
+    name: "Matched",
+    what: "A movie app for couples: swipe movies and shows, match when you both swipe right",
+    price: "Free; Matched Premium $2.99 a month or $19.99 a year",
+    android: true,
+    rating: "4.7 (286 ratings)",
+    has: [],
+    sources: [
+      "https://apps.apple.com/us/app/id1623287922",
+      "https://www.taste.io",
+      "https://play.google.com/store/apps/details?id=io.taste.matched",
+    ],
+    checked: november28,
+  },
+  {
+    name: "ReelMatch",
+    what: "Trailers one at a time to like or skip, then compare Liked lists with friends or family",
+    price: "Free; Basic $1.99, Pro $2.99, Pro version $14.99, Pro lifetime $44.99",
+    android: true,
+    rating: "2.7 (3 ratings)",
+    has: [],
+    sources: [
+      "https://apps.apple.com/us/app/id6457263386",
+      "https://reelmatch.app",
+      "https://play.google.com/store/apps/details?id=team.dsa.reelmatch",
+    ],
+    checked: november28,
+  },
+  {
+    name: "Movie Night",
+    what: "Swipe movies in private rooms with friends or a partner until everyone matches, plus a movie roulette",
+    price: "Free; Weekly Plus $4.99 a week",
+    android: false,
+    rating: "New, no ratings yet",
+    has: [],
+    sources: ["https://apps.apple.com/us/app/id6769997701"],
+    checked: november28,
+  },
+  {
+    name: "CineDuo",
+    what: "A movie and series matcher for couples: swipe, get notified on a match, keep a joint watchlist",
+    price: "Free; CineDuo Premium lifetime $4.99",
+    android: false,
+    rating: "New, no ratings yet",
+    has: [],
+    sources: [
+      "https://apps.apple.com/us/app/id6758887873",
+      "https://sites.google.com/view/cineduo/ana-sayfa",
+    ],
+    checked: november28,
   },
 ];
 

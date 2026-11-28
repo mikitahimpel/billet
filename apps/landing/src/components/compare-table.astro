@@ -1,12 +1,17 @@
 ---
-import { capabilities, checked, type App } from "../compare";
+import { capabilities, checked, type App, type Capability } from "../compare";
 
 interface Props {
   apps: App[];
   caption: string;
+  // Feature rows to show, all by default.
+  rows?: Capability[];
+  // A first row of page-specific text, one cell per app.
+  lead?: { label: string; cells: string[] };
 }
 
-const { apps, caption } = Astro.props;
+const { apps, caption, rows, lead } = Astro.props;
+const shown = rows ? capabilities.filter((capability) => rows.includes(capability.key)) : capabilities;
 // Each date the shown apps were read on, oldest first, naming the apps when there is more than one date.
 const read = apps.filter((app) => app.sources.length);
 const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.checked ?? checked])).values()]
@@ -16,7 +21,7 @@ const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.c
 
 <figure class="tbl-fig">
   <figcaption id="compare-caption">
-      {caption} ✓ means the app's App Store page or website lists it; a dash means we didn't find it listed. Checked {
+      {caption}{shown.length > 0 && " ✓ means the app's App Store page or website lists it; a dash means we didn't find it listed."} Checked {
         dates.map((date, i) => (
           <>
             {i > 0 && "; "}
@@ -35,6 +40,14 @@ const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.c
       </tr>
     </thead>
     <tbody>
+      {
+        lead && (
+          <tr>
+            <th scope="row">{lead.label}</th>
+            {lead.cells.map((cell) => <td>{cell}</td>)}
+          </tr>
+        )
+      }
       <tr>
         <th scope="row">Price</th>
         {apps.map((app) => <td>{app.price}</td>)}
@@ -44,7 +57,7 @@ const dates = [...new Map(read.map((app) => [(app.checked ?? checked).iso, app.c
         {apps.map((app) => <td>{app.android ? "Yes" : "No, iPhone only"}</td>)}
       </tr>
       {
-        capabilities.map((capability) => (
+        shown.map((capability) => (
           <tr>
             <th scope="row">{capability.label}</th>
             {apps.map((app) =>
